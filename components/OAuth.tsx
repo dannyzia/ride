@@ -1,79 +1,26 @@
-import { useUser } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { ActivityIndicator, Alert, Image, Text, View } from "react-native";
 import CustomButton from "@/components/CustomButton";
-import * as WebBrowser from 'expo-web-browser'
-import * as AuthSession from 'expo-auth-session'
-import { useSSO } from '@clerk/clerk-expo'
 import { icons } from "@/constants/data";
-// import { googleOAuth } from "@/lib/auth";
-import { useCallback, useEffect, useState } from "react";
-
-
-export const useWarmUpBrowser = () => {
-    useEffect(() => {
-        // Preloads the browser for Android devices to reduce authentication load time
-        // See: https://docs.expo.dev/guides/authentication/#improving-user-experience
-        void WebBrowser.warmUpAsync()
-        return () => {
-            // Cleanup: closes browser when component unmounts
-            void WebBrowser.coolDownAsync()
-        }
-    }, [])
-}
-
-// Handle any pending authentication sessions
-WebBrowser.maybeCompleteAuthSession()
+import { useCallback, useState } from "react";
 
 const OAuth = () => {
-    useWarmUpBrowser()
-    // const { setUser } = useUserStore();
-
-    // Use the `useSSO()` hook to access the `startSSOFlow()` method
-    const { startSSOFlow } = useSSO()
-
-    const [loading, setLoading] = useState<boolean>(false)
+    const [loading, setLoading] = useState<boolean>(false);
 
     const handleGoogleSignIn = useCallback(async () => {
-        setLoading(true)
+        setLoading(true);
         try {
-            const redirectUri = AuthSession.makeRedirectUri({
-                scheme: 'myapp',
-                path: '/(auth)/complete-sign-up'
-            });
-
-
-            // Start the authentication process by calling `startSSOFlow()`
-            const { createdSessionId, setActive, signIn, signUp } = await startSSOFlow({
-                strategy: 'oauth_google',
-                redirectUrl: redirectUri
-            });
-
-            if (createdSessionId) {
-                setActive!({ session: createdSessionId })
-            } else {
-                // If there is no `createdSessionId`,
-                // there are missing requirements, such as MFA
-                // Use the `signIn` or `signUp` returned from `startSSOFlow`
-                // to handle next steps
-                console.error("No session or setActive is undefined");
-
-                Alert.alert("Authentication incomplete", "Redirecting you back.");
-                router.replace("/(auth)/sign-in"); // 👈 Your fallback or safe page
-            }
+            Alert.alert(
+                "Coming Soon",
+                "Google Sign-In will be available in Phase 4 with Firebase Auth."
+            );
+            router.replace("/(auth)/welcome");
         } catch (err: any) {
-            if (err.type === 'cancel' || err.type === 'dismiss') {
-                Alert.alert("Sign-in cancelled", "You closed the sign-in flow before completion.");
-            } else {
-                console.error("❌ Google Sign-in Error:", err);
-                Alert.alert("Sign-in error", "Something went wrong during authentication.");
-            }
+            console.error("❌ Sign-in Error:", err);
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
     }, []);
-
-
 
     return (
         <View>
@@ -99,7 +46,6 @@ const OAuth = () => {
                             className="w-5 h-5 mx-2"
                         />
                     )
-                    //ActivityIndicator size small color black
                 )}
                 bgVariant="outline"
                 textVariant="primary"

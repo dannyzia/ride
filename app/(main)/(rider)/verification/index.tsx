@@ -5,7 +5,7 @@ import { Rating } from 'react-native-ratings';
 import { useTheme } from 'react-native-paper';
 import { uploadImageToFirebase } from '@/lib/imageToURL';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUser } from '@clerk/clerk-expo';
+import { useUser } from '@/lib/useUser';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import ReactNativeModal from 'react-native-modal';
 import CustomButton from '@/components/CustomButton';

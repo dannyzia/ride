@@ -6,7 +6,7 @@ import { icons } from '@/constants/data';
 import CustomButton from '@/components/CustomButton';
 import { useRouter } from 'expo-router';
 import { useCustomer } from '@/store';
-import { useUser } from '@clerk/clerk-expo';
+import { useUser } from '@/lib/useUser';
 
 
 const FindRidePage = () => {

@@ -19,7 +19,6 @@ export async function POST(request: Request) {
             user_id
         } = body;
 
-
         if (
             !origin_address ||
             !destination_address ||
@@ -38,6 +37,7 @@ export async function POST(request: Request) {
             );
         }
 
+        // Use defaults for Ride-specific required columns not provided by legacy caller
         await db.insert(rides)
             .values({
                 origin_address,
@@ -47,11 +47,15 @@ export async function POST(request: Request) {
                 destination_latitude,
                 destination_longitude,
                 payment_status,
-                fare_price,
+                fare_price: String(fare_price),
                 driver_id,
                 user_id,
+                vehicle_type: 'car_economy',
+                zone_id: '00000000-0000-0000-0000-000000000000',
+                pricing_id: '00000000-0000-0000-0000-000000000000',
+                fare_breakdown: {},
+                distance_km: '0',
             })
-
 
         return Response.json(
             { message: "Ride created" },

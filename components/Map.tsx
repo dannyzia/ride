@@ -66,7 +66,7 @@ import { usePathname } from 'expo-router'
 import { FontAwesome6 } from '@expo/vector-icons';
 import { Driver } from '@/types/type'
 import Constants from "expo-constants";
-import { useUser } from '@clerk/clerk-expo'
+import { useUser } from '@/lib/useUser'
 
 
 let MapView, Marker, PROVIDER_GOOGLE, MapViewDirections;

@@ -1,68 +1,37 @@
-// import * as Linking from "expo-linking";
-// import * as SecureStore from "expo-secure-store";
+import * as admin from 'firebase-admin';
+import { db } from '../src/db';
+import { users } from '../src/db/schema';
+import { eq } from 'drizzle-orm';
 
+let initialised = false;
+function initFirebaseAdmin() {
+  if (!initialised && !admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId:   process.env.FIREBASE_PROJECT_ID!,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
+        privateKey:  process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+      }),
+    });
+    initialised = true;
+  }
+}
 
-// export const tokenCache = {
-//     async getToken(key: string) {
-//         try {
-//             const item = await SecureStore.getItemAsync(key);
-//             if (item) {
-//                 console.log(`${key} was used 🔐 \n`);
-//             } else {
-//                 console.log("No values stored under key: " + key);
-//             }
-//             return item;
-//         } catch (error) {
-//             console.error("SecureStore get item error: ", error);
-//             await SecureStore.deleteItemAsync(key);
-//             return null;
-//         }
-//     },
-//     async saveToken(key: string, value: string) {
-//         try {
-//             return SecureStore.setItemAsync(key, value);
-//         } catch (err) {
-//             return;
-//         }
-//     },
-// };
+export async function verifyFirebaseIdToken(request: Request) {
+  initFirebaseAdmin();
+  const authHeader = request.headers.get('Authorization') ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) throw Object.assign(new Error('Missing token'), { status: 401 });
+  try { return await admin.auth().verifyIdToken(token); }
+  catch { throw Object.assign(new Error('Invalid token'), { status: 401 }); }
+}
 
-// export const googleOAuth = async (startOAuthFlow: any) => {
-//     try {
-//         const { createdSessionId, setActive, signUp } = await startOAuthFlow({
-//             redirectUrl: Linking.createURL("/(main)/(tabs)/home"),
-//         });
-
-//         if (createdSessionId) {
-//             if (setActive) {
-//                 await setActive({ session: createdSessionId });
-
-//                 if (signUp.createdUserId) {
-//                     await api.post("/(api)/user", {
-//                         name: `${signUp.firstName} ${signUp.lastName}`,
-//                         email: signUp.emailAddress,
-//                         clerkId: signUp.createdUserId,
-//                     })
-//                 }
-
-//                 return {
-//                     success: true,
-//                     code: "success",
-//                     message: "You have successfully signed in with Google",
-//                 };
-//             }
-//         }
-
-//         return {
-//             success: false,
-//             message: "An error occurred while signing in with Google",
-//         };
-//     } catch (err: any) {
-//         console.error(err);
-//         return {
-//             success: false,
-//             code: err.code,
-//             message: err?.errors[0]?.longMessage,
-//         };
-//     }
-// };
+export function requireRole(role: 'rider' | 'driver' | 'admin') {
+  return async (request: Request) => {
+    const decoded = await verifyFirebaseIdToken(request);
+    const [user] = await db.select().from(users).where(eq(users.firebase_uid, decoded.uid)).limit(1);
+    if (!user || user.role !== role)
+      throw Object.assign(new Error('Insufficient role'), { status: 403 });
+    return { decoded, user };
+  };
+}

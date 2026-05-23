@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "verification_requests": {
+      ".indexOn": ["createdAt"],
+      "$sessionCode": {
+        ".read": false,
+        "receipt": {
+          ".write": "auth != null && !data.exists() && root.child('verification_requests').child($sessionCode).exists() && auth.uid === root.child('verification_requests').child($sessionCode).child('initiator_uid').val()",
+          ".validate": "newData.hasChild('sender') && newData.child('sender').isString()"
+        }
+      }
+    }
+  }
+}

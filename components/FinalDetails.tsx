@@ -2,7 +2,7 @@ import { View, Text, Image, TouchableOpacity, Linking } from 'react-native'
 import { useCustomer, useDriverStore } from '@/store'
 import { icons } from '@/constants/data'
 import { MaterialIcons } from '@expo/vector-icons'
-import { useUser } from '@clerk/clerk-expo';
+import { useUser } from '@/lib/useUser';
 import Payment from './Payment';
 
 const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid: (value: boolean) => void, page: string, number?: string }) => {

@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/clerk-expo";
+import { useUser } from "@/lib/useUser";
 import { Image, RefreshControl, ScrollView, Text, View } from "react-native";
 import InputField from "@/components/InputField";
 import { SafeAreaView } from "react-native-safe-area-context";

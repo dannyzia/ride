@@ -1,18 +1,16 @@
 import { db } from "@/src/db";
-import { eq } from "drizzle-orm";
-// import { clerkClient } from "@clerk/express";
+import { eq, sql } from "drizzle-orm";
 import dotenv from "dotenv";
 import { drivers, rides, users } from "@/src/db/schema";
 
 dotenv.config({ path: './.env.local' });
 
 export async function GET(request: Request) {
-    console.log('haha')
     try {
         const url = new URL(request.url);
-        const clerkId = url.searchParams.get('clerk_id');
-        if (!clerkId) {
-            return Response.json({ error: "clerk_id is required" }, { status: 400 });
+        const firebaseUid = url.searchParams.get('firebase_uid');
+        if (!firebaseUid) {
+            return Response.json({ error: "firebase_uid is required" }, { status: 400 });
         }
 
         const allRidesWithDrivers = await db
@@ -40,10 +38,9 @@ export async function GET(request: Request) {
                 }
             })
             .from(rides)
-            .where(eq(rides.user_id, clerkId))
-            .innerJoin(drivers, eq(rides.driver_id, drivers.user_id))
-            .innerJoin(users, eq(drivers.user_id, users.clerk_id));
-        // .toSQL();
+            .innerJoin(users, eq(rides.user_id, users.id))
+            .leftJoin(drivers, eq(rides.driver_id, drivers.id))
+            .where(eq(users.firebase_uid, firebaseUid));
 
         return Response.json({ data: allRidesWithDrivers }, { status: 200 })
 

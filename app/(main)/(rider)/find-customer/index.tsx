@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import SlideButton from '@/components/SlideButton';
 import Map from '@/components/Map';
 import { useDriver, useRideOfferStore, useWSStore } from '@/store';
-import { useUser } from '@clerk/clerk-expo';
+import { useUser } from '@/lib/useUser';
 import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
 import Constants from 'expo-constants';

@@ -2,23 +2,19 @@ import { db } from "@/src/db";
 import { drivers, users } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 
-
-
-
 export async function GET(request: Request) {
     try {
         const url = new URL(request.url);
-        const clerkId = url.searchParams.get('clerk_id');
+        const firebaseUid = url.searchParams.get('firebase_uid');
 
-        if (!clerkId) {
-            return Response.json({ error: "clerk_id is required" }, { status: 400 });
+        if (!firebaseUid) {
+            return Response.json({ error: "firebase_uid is required" }, { status: 400 });
         }
-
 
         const data = await db.select({
             full_name: users.name,
             email: users.email,
-            clerk_id: users.clerk_id,
+            firebase_uid: users.firebase_uid,
             number: users.number,
             role: users.role,
             profile_image_url: users.profile_image_url,
@@ -27,8 +23,8 @@ export async function GET(request: Request) {
             rating: drivers.rating
 
         }).from(users)
-            .where(eq(users.clerk_id, clerkId))
-            .innerJoin(drivers, eq(users.clerk_id, drivers.user_id))
+            .where(eq(users.firebase_uid, firebaseUid))
+            .innerJoin(drivers, eq(users.id, drivers.user_id))
 
         return Response.json(data, { status: 200 })
     } catch (error) {

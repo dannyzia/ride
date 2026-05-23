@@ -2,7 +2,7 @@ import { View, Text, FlatList, Image, ActivityIndicator, Platform, Alert } from 
 import React, { useEffect, useRef, useState } from 'react'
 import RiderHeader from '@/components/RiderHeader'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useUser } from '@clerk/clerk-expo'
+import { useUser } from '@/lib/useUser'
 import CustomButton from '@/components/CustomButton'
 import ReactNativeModal from 'react-native-modal'
 import { router, usePathname } from 'expo-router'
@@ -301,7 +301,7 @@ const RideHome = () => {
         setLoading(true)
         const getDriverData = async () => {
             try {
-                const res = await fetch(`${API_URL}/api/driver/get?clerk_id=${user?.id}`);
+                const res = await fetch(`${API_URL}/api/driver/get?firebase_uid=${user?.id}`);
                 const data = await res.json();
                 if (data.length === 0 || data[0].profile_image_url === "") {
                     setIsVerified(false);
@@ -324,7 +324,7 @@ const RideHome = () => {
         setLoading(true)
         const getDriverData = async () => {
             try {
-                const res = await fetch(`${API_URL}/api/driver/calculate-price?clerk_id=${user?.id}`);
+                const res = await fetch(`${API_URL}/api/driver/calculate-price?firebase_uid=${user?.id}`);
                 const data = await res.json();
 
                 setTodayEarnings(data.totalEarnings)

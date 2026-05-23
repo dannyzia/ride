@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, Image } from 'react-native'
 import React from 'react'
 import { MaterialIcons } from '@expo/vector-icons'
 import { icons } from '@/constants/data'
-import { useClerk } from '@clerk/clerk-expo'
+import { useClerk } from '@/lib/useUser'
 import { router } from 'expo-router'
 import { useDriverDetails } from '@/store'
 

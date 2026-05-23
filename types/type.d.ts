@@ -1,5 +1,4 @@
 import { TextInputProps, TouchableOpacityProps } from "react-native";
-import { UserResource } from '@clerk/types';
 
 
 type PlainDriver = Omit<Driver, 'setCarImageURL' | 'setCarSeats' | 'setTime' | 'setPrice' | 'setUser' | 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;

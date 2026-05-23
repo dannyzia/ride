@@ -13,5 +13,9 @@
     "**/*.ts",
     "**/*.tsx",
     "nativewind-env.d.ts"
-, "app/(main)/(customer)/show-ride", "socket/server.js"  ]
+, "app/(main)/(customer)/show-ride", "socket/server.js"  ],
+  "exclude": [
+    "functions",
+    "node_modules"
+  ]
 }

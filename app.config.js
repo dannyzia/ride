@@ -5,13 +5,11 @@ dotenv.config({ path: "./.env.local" });
 const MAPS_KEY =
   process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
   process.env.GOOGLE_MAPS_API_KEY;
-const STRIPE_KEY =
-  process.env.EXPO_PUBLIC_STRIPE_API_KEY || process.env.STRIPE_API_KEY;
 
 export default {
   expo: {
     name: "Ride",
-    slug: "ride",
+    slug: "ride-bd",
     platforms: ["ios", "android"],
     sdkVersion: "53.0.0",
     version: "1.0.4",
@@ -31,7 +29,7 @@ export default {
     assetBundlePatterns: ["**/*"],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.gauravvbh.ride",
+      bundleIdentifier: "com.ride.bd",
       config: {
         googleMapsApiKey: MAPS_KEY,
       },
@@ -41,7 +39,7 @@ export default {
       },
     },
     android: {
-      package: "com.gauravvbh.ride",
+      package: "com.ride.bd",
       hermesEnabled: true,
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
@@ -101,7 +99,6 @@ export default {
         projectId: "43ad45d8-f2b4-456e-a48f-cfb48faeb6aa",
       },
       EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: MAPS_KEY,
-      EXPO_PUBLIC_STRIPE_API_KEY: STRIPE_KEY,
       EXPO_PUBLIC_SERVER_URL: process.env.EXPO_PUBLIC_SERVER_URL,
       EXPO_PUBLIC_WEB_SOCKET_SERVER_URL:
         process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL,

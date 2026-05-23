@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
         await db.update(users).set({
             profile_image_url: profileImage
-        }).where(eq(users.clerk_id, id))
+        }).where(eq(users.firebase_uid, id))
 
         return Response.json({ message: 'Driver verified' }, { status: 200 })
 

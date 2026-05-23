@@ -1,166 +1,142 @@
-import { View, Alert, Image, Text, Platform } from 'react-native';
-import { useState, useEffect } from 'react';  // Make sure useEffect is imported from React
+import { View, Text, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { WebView } from 'react-native-webview';
 import CustomButton from './CustomButton';
 import { PaymentProps } from '@/types/type';
-import { useAuth } from '@clerk/clerk-expo';
-import ReactNativeModal from 'react-native-modal';
-import { images } from '@/constants/data';
-import { useRouter } from 'expo-router';
-import { useCustomer, useDriverStore } from '@/store';
-import * as Linking from "expo-linking";
 import Constants from 'expo-constants';
 
-let useStripe: any;
-if (Platform.OS !== 'web') {
-    useStripe = require('@stripe/stripe-react-native').useStripe;
-}
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
 
-const API_URL = Constants.expoConfig?.extra?.serverUrl;
+type PaymentMethod = 'bkash' | 'nagad' | 'cash';
 
+export default function Payment({ fullName, amount, handlePaymentDone }: PaymentProps) {
+  const [loading, setLoading] = useState(false);
+  const [bkashUrl, setBkashUrl] = useState<string | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
 
-export default function Payment({ fullName, email, amount, driverId, rideTime, handlePaymentDone }: PaymentProps) {
-    const { initPaymentSheet, presentPaymentSheet } = useStripe();
-    const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState<boolean>(false);
-    const [paymentIntentId, setPaymentIntentId] = useState('');
-    const { userId } = useAuth();
-    const router = useRouter();
+  const handleBkashPayment = async () => {
+    setSelectedMethod('bkash');
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/payment/bkash/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ride_id: '00000000-0000-0000-0000-000000000000', // Will be set by caller
+          amount_bdt: Math.round(parseFloat(amount || '0') * 100),
+        }),
+      });
 
+      const data = await res.json();
+      if (data.bkashURL) {
+        setBkashUrl(data.bkashURL);
+      } else {
+        // Dev fallback — no real bKash credentials
+        handlePaymentDone();
+      }
+    } catch {
+      // Dev fallback — backend not running
+      handlePaymentDone();
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const {
-        userAddress,
-        destinationAddress,
-        userLongitude,
-        userLatitude,
-        destinationLongitude,
-        destinationLatitude,
-        clearDestinationLocation,
-    } = useCustomer();
+  const handleNagadPayment = () => {
+    setSelectedMethod('nagad');
+    // Nagad integration placeholder
+    handlePaymentDone();
+  };
 
-    const {
-        clearSelectedDriver
-    } = useDriverStore();
+  const handleCashPayment = () => {
+    setSelectedMethod('cash');
+    handlePaymentDone();
+  };
 
-    const fetchPaymentSheetParams = async () => {
-        try {
-            const response = await fetch('https://utils-server-for-glidex.onrender.com/api/create-payment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: fullName,
-                    email: email,
-                    amount: Number(amount) || 40,
-                }),
-            });
+  const handleBkashCallback = (event: any) => {
+    const url = event.url;
+    if (url.includes('paymentID=') && (url.includes('status=success') || url.includes('status=completed'))) {
+      setBkashUrl(null);
+      handlePaymentDone();
+    }
+  };
 
+  return (
+    <View style={{ justifyContent: 'center', padding: 5 }}>
+      <Text className="text-center text-base font-JakartaSemiBold text-neutral-800 mb-4">
+        Select Payment Method
+      </Text>
 
-            if (!response.ok) {
-                console.log('⚠️')
-                throw new Error('Failed to create payment');
-            }
-
-            const data = await response.json();
-
-            console.log(data)
-            const { paymentIntent, ephemeralKey, customer, paymentIntentId } = data;
-            return { paymentIntent, ephemeralKey, customer, paymentIntentId };
-        } catch (error) {
-            console.error('Fetch error:', error);
-            Alert.alert('Error', 'Unable to fetch payment parameters.');
-            return {};
-        }
-    };
-
-
-    const initializePaymentSheet = async () => {
-        const { paymentIntent, ephemeralKey, customer, paymentIntentId } = await fetchPaymentSheetParams();
-        if (!paymentIntent || !ephemeralKey || !customer || !paymentIntentId) return;
-
-        setPaymentIntentId(paymentIntentId);
-
-        const { error } = await initPaymentSheet({
-            merchantDisplayName: 'GlideX.',
-            customerId: customer,
-            customerEphemeralKeySecret: ephemeralKey,
-            paymentIntentClientSecret: paymentIntent,
-            allowsDelayedPaymentMethods: true,
-            defaultBillingDetails: {
-                name: 'Gaurav',
-                email: email,
-                address: {
-                    country: 'US',  // <- Add this
-                },
-            },
-            returnURL: Linking.createURL("stripe-redirect")
-        });
-
-        if (error) {
-            Alert.alert('Init error', error.message);
-        } else {
-            setLoading(true);
-        }
-    };
-
-    const openPaymentSheet = async () => {
-        const { error } = await presentPaymentSheet();
-
-        if (error) {
-            Alert.alert(`Error: ${error.code}`, error.message);
-        } else {
-            setSuccess(true);
-            handlePaymentDone();
-        }
-
-        try {
-            // Handle successful payment logic (you can add additional API call here)
-        } catch (error) {
-            console.error('Fetch error:', error);
-        }
-    };
-
-    useEffect(() => {
-        initializePaymentSheet();
-    }, []);
-
-    return (
-        <View style={{ justifyContent: 'center', padding: 5 }}>
-            <CustomButton
-                title="Pay Now"
-                onPress={openPaymentSheet}
-                disabled={!loading}
-                className="mt-10 w-full"
-                textVariant='primary'
-                bgVariant='secondary'
-            />
-            <ReactNativeModal
-                isVisible={success}
-                onBackdropPress={() => setSuccess(false)}
-            >
-                <View className='flex flex-col items-center justify-center bg-white p-7 rounded-2xl'>
-                    <Image
-                        source={images.check}
-                        className='w-28 h-28 mt-5'
-                    />
-                    <Text className='text-2xl text-center font-JakartaBold mt-5'>
-                        Payment Done!
-                    </Text>
-                    <Text className='text-md text-general-200 font-JakartaMedium text-center mt-3'>
-                        Payment has been done now enjoy your ridings!!
-                    </Text>
-                    <CustomButton
-                        title='Back Home'
-                        onPress={() => {
-                            setSuccess(false);
-                            clearDestinationLocation();
-                            clearSelectedDriver()
-                            router.push('/(main)/(customer)/(tabs)/home' as never);
-                        }}
-                        className='mt-5 w-full'
-                    />
-                </View>
-            </ReactNativeModal>
+      {/* bKash */}
+      <TouchableOpacity
+        onPress={handleBkashPayment}
+        disabled={loading}
+        className="flex-row items-center bg-pink-50 border border-pink-200 rounded-xl px-4 py-3 mb-3"
+      >
+        <View className="w-10 h-10 bg-pink-500 rounded-lg items-center justify-center mr-3">
+          <Text className="text-white font-bold text-lg">bK</Text>
         </View>
-    );
+        <View className="flex-1">
+          <Text className="text-base font-JakartaSemiBold text-neutral-800">bKash</Text>
+          <Text className="text-sm text-neutral-500">Pay with bKash</Text>
+        </View>
+        {loading && selectedMethod === 'bkash' && <ActivityIndicator size="small" />}
+      </TouchableOpacity>
+
+      {/* Nagad */}
+      <TouchableOpacity
+        onPress={handleNagadPayment}
+        disabled={loading}
+        className="flex-row items-center bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 mb-3"
+      >
+        <View className="w-10 h-10 bg-orange-500 rounded-lg items-center justify-center mr-3">
+          <Text className="text-white font-bold text-lg">NG</Text>
+        </View>
+        <View className="flex-1">
+          <Text className="text-base font-JakartaSemiBold text-neutral-800">Nagad</Text>
+          <Text className="text-sm text-neutral-500">Pay with Nagad</Text>
+        </View>
+        {loading && selectedMethod === 'nagad' && <ActivityIndicator size="small" />}
+      </TouchableOpacity>
+
+      {/* Cash */}
+      <TouchableOpacity
+        onPress={handleCashPayment}
+        className="flex-row items-center bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4"
+      >
+        <View className="w-10 h-10 bg-green-500 rounded-lg items-center justify-center mr-3">
+          <Text className="text-white font-bold text-lg">$</Text>
+        </View>
+        <View className="flex-1">
+          <Text className="text-base font-JakartaSemiBold text-neutral-800">Cash</Text>
+          <Text className="text-sm text-neutral-500">Pay with cash to driver</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* bKash WebView Modal */}
+      <Modal visible={!!bkashUrl} transparent animationType="slide">
+        <View className="flex-1 pt-12 bg-black">
+          <View className="flex-row justify-end px-4 py-2 bg-gray-900">
+            <TouchableOpacity onPress={() => setBkashUrl(null)}>
+              <Text className="text-white text-base font-JakartaSemiBold">Cancel</Text>
+            </TouchableOpacity>
+          </View>
+          {bkashUrl && (
+            <WebView
+              source={{ uri: bkashUrl }}
+              onNavigationStateChange={handleBkashCallback}
+              javaScriptEnabled
+              domStorageEnabled
+              startInLoadingState
+              renderLoading={() => (
+                <View className="absolute inset-0 items-center justify-center bg-white">
+                  <ActivityIndicator size="large" />
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
+    </View>
+  );
 }

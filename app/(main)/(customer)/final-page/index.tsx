@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import RideLayout from '@/components/RideLayout';
 import { useCustomer, useDriverStore, useRideOfferStore, useWSStore } from '@/store';
 import PaymentPage from "@/components/Payment";
-import { useUser } from '@clerk/clerk-expo';
+import { useUser } from '@/lib/useUser';
 import Start from '@/components/Start';
 import Middle from '@/components/Middle';
 import End from '@/components/End';
@@ -23,21 +23,8 @@ import { Driver, RideOfferDetails } from '@/types/type';
 
 type PlainDriver = Omit<Driver, 'setCarImageURL' | 'setCarSeats' | 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
 
-const publishableKey = Constants.expoConfig?.extra?.stripeApiKey;
 const API_URL = Constants.expoConfig?.extra?.serverUrl;
 const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
-
-// Only import StripeProvider in non-web environments to avoid bundling issues
-let StripeProvider: any = ({ children }: any) => <>{children}</>;
-
-if (Platform.OS !== 'web') {
-    try {
-        StripeProvider = require('@stripe/stripe-react-native').StripeProvider;
-    } catch (e) {
-        console.warn('Stripe native module not available. Falling back.');
-        StripeProvider = ({ children }: any) => <>{children}</>;
-    }
-}
 
 
 const FinalPage = () => {
@@ -222,7 +209,7 @@ const FinalPage = () => {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        to: user?.emailAddresses[0].emailAddress,
+                        to: user?.emailAddresses[0]?.emailAddress,
                         subject: `Ride Alert – Destination Not Confirmed by ${user?.firstName}`,
                         html: getDangerEmailHtml(selectedDriverDetails!, user!),
                     }),
@@ -331,11 +318,7 @@ const FinalPage = () => {
     };
 
     return (
-        <StripeProvider
-            publishableKey={publishableKey}
-            merchantIdentifier="merchant.uber.com"
-            urlScheme="myapp"
-        >
+        <>
             <RideLayout title='final page' disabled={(page === 'Loading' || page === 'OnWay' || page === 'Start') ? true : false}>
                 {page === 'OnWay' && <OnWay />}
                 {page === 'Start' && <Start otp={otp} />}
@@ -398,7 +381,7 @@ const FinalPage = () => {
 
                                     <PaymentPage
                                         fullName={user?.fullName!}
-                                        email={user?.emailAddresses[0].emailAddress!}
+                                        email={user?.emailAddresses[0]?.emailAddress!}
                                         amount={selectedDriverDetails?.price!}
                                         driverId={selectedDriverDetails?.id!}
                                         rideTime={selectedDriverDetails?.distanceAway!}
@@ -466,7 +449,7 @@ const FinalPage = () => {
 
 
             </RideLayout>
-        </StripeProvider>
+        </>
     );
 };
 

@@ -1,5 +1,4 @@
 import { Driver } from "@/types/type";
-import type { UserResource } from "@clerk/types"; // Clerk's user type
 
 type PlainDriver = Omit<
   Driver,
@@ -16,7 +15,7 @@ type PlainDriver = Omit<
   | "setRole"
 >;
 
-export const getDangerEmailHtml = (driver: PlainDriver, user: UserResource) => `
+export const getDangerEmailHtml = (driver: PlainDriver, user: { id: string; fullName: string | null; firstName?: string | null; emailAddresses: Array<{ emailAddress: string }>; phoneNumbers: Array<{ phoneNumber: string }>; primaryEmailAddress?: { emailAddress: string } | null }) => `
   <html>
     <head>
       <meta charset="UTF-8" />

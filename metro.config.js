@@ -8,7 +8,7 @@ config.resolver.sourceExts = [...config.resolver.sourceExts, "cjs", "web.js", "w
 
 config.resolver.alias = {
     "react-native-maps": path.resolve(__dirname, "mocks/react-native-maps.js"),
-    "@stripe/stripe-react-native": path.resolve(__dirname, "mocks/empty.js"),
+    // "@stripe/stripe-react-native": path.resolve(__dirname, "mocks/empty.js"),
     "react-native/Libraries/Utilities/codegenNativeCommands": path.resolve(__dirname, "mocks/empty.js"),
 };
 module.exports = withNativeWind(config, {

@@ -1,0 +1,20 @@
+{
+  "name": "ride-utils-server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch index.ts",
+    "start": "node index.ts"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "h3-js": "^4.1.0",
+    "firebase-admin": "^12.0.0",
+    "drizzle-orm": "^0.42.0",
+    "@neondatabase/serverless": "^1.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "@types/ws": "^8.5.0"
+  }
+}

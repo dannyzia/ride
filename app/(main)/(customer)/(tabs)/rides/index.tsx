@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList, Text, View, Image, ActivityIndicator } from 'react-native';
-import { useUser } from '@clerk/clerk-expo';
+import { useUser } from '@/lib/useUser';
 import { useRidesStore } from '@/store';
 import RideCard from '@/components/RideCard';
 import Constants from 'expo-constants';
@@ -19,7 +19,7 @@ const ShowAllRides = () => {
       if (!user?.id) return;
       setLoading(true);
       try {
-        const url = `${API_URL}/api/ride/get-all?clerk_id=${user.id}`;
+        const url = `${API_URL}/api/ride/get-all?firebase_uid=${user.id}`;
         const res = await fetch(url);
         const { data } = await res.json();
         setRides(Array.isArray(data) ? data : []);

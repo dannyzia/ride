@@ -8,7 +8,7 @@ import Map from '@/components/Map';
 import { useDriver, useRideOfferStore, useWSStore } from '@/store';
 import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
-import { useUser } from '@clerk/clerk-expo';
+import { useUser } from '@/lib/useUser';
 import ReactNativeModal from 'react-native-modal';
 import CustomButton from '@/components/CustomButton';
 import { Linking } from 'react-native';

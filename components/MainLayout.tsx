@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Redirect, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useAuth, useUser } from '@clerk/clerk-expo';
+import { useAuth, useUser } from '@/lib/useUser';
 
 const MainLayout = ({ isFontsLoaded }: { isFontsLoaded: boolean }) => {
     const { isLoaded: isAuthLoaded } = useAuth();

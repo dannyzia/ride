@@ -1,6 +1,5 @@
 import { db } from "@/src/db";
 import { eq } from "drizzle-orm";
-// import { clerkClient } from "@clerk/express";
 import dotenv from "dotenv";
 import { users } from "@/src/db/schema";
 

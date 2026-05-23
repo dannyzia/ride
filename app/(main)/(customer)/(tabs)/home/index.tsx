@@ -1,4 +1,4 @@
-import { useClerk, useUser } from '@clerk/clerk-expo';
+import { useClerk, useUser } from '@/lib/useUser';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Alert, AppState, FlatList, Image, Platform, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
@@ -157,7 +157,7 @@ const HomePage = () => {
         const getAllRides = async () => {
             setLoading(true)
             try {
-                const url = `${API_URL}/api/ride/get-all?clerk_id=${user.id}`;
+                const url = `${API_URL}/api/ride/get-all?firebase_uid=${user.id}`;
 
 
                 const response = await fetch(url, {

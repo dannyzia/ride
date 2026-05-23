@@ -19,7 +19,7 @@ export async function GET() {
                 number: users.number
             })
             .from(users)
-            .innerJoin(drivers, eq(users.clerk_id, drivers.user_id))
+            .innerJoin(drivers, eq(users.id, drivers.user_id))
             .where(
                 and(
                     eq(users.role, 'rider'),

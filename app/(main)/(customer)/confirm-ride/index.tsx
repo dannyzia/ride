@@ -7,7 +7,7 @@ import { useRouter } from "expo-router";
 import CustomButton from "@/components/CustomButton";
 import { formatTime } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { useUser } from "@clerk/clerk-expo";
+import { useUser } from "@/lib/useUser";
 import Constants from 'expo-constants';
 
 const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
