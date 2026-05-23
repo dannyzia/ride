@@ -14,14 +14,9 @@ import { GoogleInputProps } from '@/types/type';
 import { icons } from '@/constants/data';
 import { useCustomer } from '@/store';
 import Constants from 'expo-constants';
+import { getBarikoiAutocompleteUrl, getBarikoiPlaceDetailUrl } from '@/lib/useBarikoiMapStyle';
 
-// const googlePlacesApiKey =
-//     process.env.NODE_ENV === 'production'
-//         ? process.env.EXPO_PUBLIC_GOOGLE_API_KEY
-//         : process.env.EXPO_PUBLIC_GOOGLE_API_KEY_DEV;
-
-
-const googlePlacesApiKey = Constants.expoConfig?.extra?.googleMapsApiKey;
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
 
 const GoogleTextInput = ({
     icon,
@@ -47,13 +42,13 @@ const GoogleTextInput = ({
         const fetchSuggestions = async () => {
             setLoading(true);
             try {
-                const response = await fetch(
-                    `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-                        query
-                    )}&key=${googlePlacesApiKey}&location=${userLatitude},${userLongitude}&radius=5000&language=en&components=country:in`
-                );
+                // Use Barikoi autocomplete API
+                const url = getBarikoiAutocompleteUrl(query, userLatitude ?? undefined, userLongitude ?? undefined);
+                const response = await fetch(url);
                 const data = await response.json();
-                setSuggestions(data.predictions || []);
+                // Barikoi returns { places: [...] } or { data: [...] }
+                const places = data.places || data.data || [];
+                setSuggestions(places);
                 setShowSuggestions(true);
             } catch (err) {
                 console.error('Autocomplete fetch error:', err);
@@ -65,24 +60,26 @@ const GoogleTextInput = ({
         fetchSuggestions();
     }, [query]);
 
-    const handleSelect = async (place_id: string, description: string) => {
+    const handleSelect = async (place: any) => {
         try {
-            const response = await fetch(
-                `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&key=${googlePlacesApiKey}`
-            );
+            const placeId = place.place_id || place.id;
+            const response = await fetch(getBarikoiPlaceDetailUrl(placeId));
             const data = await response.json();
-            const location = data.result.geometry.location;
+            // Barikoi returns coordinates in different formats
+            const location = data.location || data.place || data;
+            const lat = parseFloat(location.lat || location.latitude || 0);
+            const lng = parseFloat(location.lng || location.lon || location.longitude || 0);
 
             handlePress({
-                latitude: location.lat,
-                longitude: location.lng,
-                address: description,
+                latitude: lat,
+                longitude: lng,
+                address: place.address || place.place_name || place.description || place.name || query,
             });
 
-            // Truncate the address to display only a portion in the input field
-            setQuery(description.length > 40 ? description.slice(0, 40) + '...' : description);
+            const display = (place.address || place.place_name || place.description || place.name || query);
+            setQuery(display.length > 40 ? display.slice(0, 40) + '...' : display);
             setSuggestions([]);
-            setShowSuggestions(false); // 🔑 Hide list immediately after selecting
+            setShowSuggestions(false);
         } catch (err) {
             console.error('Place details fetch error:', err);
         }
@@ -130,13 +127,13 @@ const GoogleTextInput = ({
             {showSuggestions && suggestions.length > 0 && (
                 <FlatList
                     data={suggestions}
-                    keyExtractor={(item) => item.place_id}
+                    keyExtractor={(item, idx) => item.place_id || item.id || String(idx)}
                     renderItem={({ item }) => (
                         <TouchableOpacity
-                            onPress={() => handleSelect(item.place_id, item.description)}
+                            onPress={() => handleSelect(item)}
                             className="bg-white px-4 py-3 border-b border-neutral-200"
                         >
-                            <Text className="text-black">{item.description}</Text>
+                            <Text className="text-black">{item.address || item.place_name || item.description || item.name}</Text>
                         </TouchableOpacity>
                     )}
                     className="mt-2 max-h-60 rounded-xl bg-white"

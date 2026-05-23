@@ -11,21 +11,14 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { icons } from '@/constants/data'; // Your icon paths
+import { icons } from '@/constants/data';
 import { useCustomer } from '@/store';
 import { router } from 'expo-router';
-import Constants from 'expo-constants';
-
-const googlePlacesApiKey = Constants.expoConfig?.extra?.googleMapsApiKey;
-
-type Suggestion = {
-    description: string;
-    place_id: string;
-};
+import { getBarikoiAutocompleteUrl, getBarikoiPlaceDetailUrl } from '@/lib/useBarikoiMapStyle';
 
 const AutocompletePage = () => {
     const [query, setQuery] = useState('');
-    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+    const [suggestions, setSuggestions] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const { userLatitude, userLongitude, setDestinationLocation } = useCustomer();
 
@@ -47,13 +40,11 @@ const AutocompletePage = () => {
         const fetchPlaces = async () => {
             setLoading(true);
             try {
-                const response = await fetch(
-                    `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-                        query
-                    )}&key=${googlePlacesApiKey}&location=${userLatitude},${userLongitude}&radius=5000&language=en&components=country:in`
-                );
+                const url = getBarikoiAutocompleteUrl(query, userLatitude ?? undefined, userLongitude ?? undefined);
+                const response = await fetch(url);
                 const data = await response.json();
-                setSuggestions(data.predictions || []);
+                const places = data.places || data.data || [];
+                setSuggestions(places);
             } catch (error) {
                 console.error('Error fetching autocomplete:', error);
             } finally {
@@ -64,21 +55,22 @@ const AutocompletePage = () => {
         fetchPlaces();
     }, [query]);
 
-    const fetchPlaceDetailsAndHandle = async (placeId: string, description: string) => {
+    const handlePlaceSelect = async (place: any) => {
         try {
-            const response = await fetch(
-                `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${googlePlacesApiKey}`
-            );
+            const placeId = place.place_id || place.id;
+            const response = await fetch(getBarikoiPlaceDetailUrl(placeId));
             const data = await response.json();
-            const location = data.result.geometry.location;
+            const location = data.location || data.place || data;
+            const lat = parseFloat(location.lat || location.latitude || 0);
+            const lng = parseFloat(location.lng || location.lon || location.longitude || 0);
 
             handleDestinationPress({
-                latitude: location.lat,
-                longitude: location.lng,
-                address: description,
+                latitude: lat,
+                longitude: lng,
+                address: place.address || place.place_name || place.description || place.name || query,
             });
 
-            setQuery(description);
+            setQuery(place.address || place.place_name || place.description || place.name || query);
             setSuggestions([]);
         } catch (error) {
             console.error('Error fetching place details:', error);
@@ -126,17 +118,19 @@ const AutocompletePage = () => {
 
                 <FlatList
                     data={suggestions}
-                    keyExtractor={(item) => item.place_id}
+                    keyExtractor={(item, idx) => item.place_id || item.id || String(idx)}
                     keyboardShouldPersistTaps="handled"
                     contentContainerStyle={{ paddingBottom: 50 }}
                     showsVerticalScrollIndicator={false}
                     showsHorizontalScrollIndicator={false}
                     renderItem={({ item }) => (
                         <TouchableOpacity
-                            onPress={() => fetchPlaceDetailsAndHandle(item.place_id, item.description)}
+                            onPress={() => handlePlaceSelect(item)}
                             className="p-4 border-b border-borderColor"
                         >
-                            <Text className="text-primaryTextColor text-xl">{item.description}</Text>
+                            <Text className="text-primaryTextColor text-xl">
+                                {item.address || item.place_name || item.description || item.name}
+                            </Text>
                         </TouchableOpacity>
                     )}
                 />

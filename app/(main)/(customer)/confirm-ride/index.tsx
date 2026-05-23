@@ -11,7 +11,7 @@ import { useUser } from "@/lib/useUser";
 import Constants from 'expo-constants';
 
 const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
-const googleMapsApiKey = Constants.expoConfig?.extra?.googleMapsApiKey;
+const BARIKOI_API_KEY = Constants.expoConfig?.extra?.BARIKOI_API_KEY || '';
 
 
 
@@ -100,47 +100,33 @@ const ConfirmRidePage = () => {
     }
 
     useEffect(() => {
-        const fetchRideDuration = async () => {
-            const calRideDuration = async (): Promise<string> => {
-                const responseToDest = await fetch(
-                    `https://maps.googleapis.com/maps/api/directions/json?origin=${userLatitude},${userLongitude}&destination=${destinationLatitude},${destinationLongitude}&key=${googleMapsApiKey}`
-                );
+        const fetchRideDurationAndDistance = async () => {
+            try {
+                const url = `https://barikoi.xyz/v1/api/distance/directions/${BARIKOI_API_KEY}?from=${userLongitude},${userLatitude}&to=${destinationLongitude},${destinationLatitude}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                // Barikoi directions: { status, distance, duration, ... }
+                const seconds = data.duration || (data.routes?.[0]?.duration) || 0;
+                const meters = data.distance || (data.routes?.[0]?.distance) || 0;
 
-                const dataToDest = await responseToDest.json();
-                const timeToDest = dataToDest.routes[0].legs[0].duration.value; // in seconds
-                const finalTimeToDest = timeToDest + 300; //jam
-                const timeInMinutes = Math.round(finalTimeToDest / 60);
+                const finalSeconds = seconds + 300; // jam buffer
+                const timeInMinutes = Math.round(finalSeconds / 60);
+                const duration = timeInMinutes < 60
+                    ? `${timeInMinutes} mins`
+                    : `${(timeInMinutes / 60).toFixed(1)} hours`;
 
-                if (timeInMinutes < 60) {
-                    return `${timeInMinutes} mins`;
-                } else {
-                    const timeInHours = (timeInMinutes / 60).toFixed(1);
-                    return `${timeInHours} hours`;
-                }
-            };
+                const km = (meters / 1000);
+                const distance = km >= 1 ? `${km.toFixed(1)} km` : `${Math.round(meters)} m`;
 
-            const duration = await calRideDuration();
-            setRideDuration(duration);
+                setRideDuration(duration);
+                setRideDistance(distance);
+            } catch {
+                setRideDuration('N/A');
+                setRideDistance('N/A');
+            }
         };
 
-
-        const fetchRideDistance = async () => {
-            const calRideDistance = async (): Promise<string> => {
-                const responseToDest = await fetch(
-                    `https://maps.googleapis.com/maps/api/directions/json?origin=${userLatitude},${userLongitude}&destination=${destinationLatitude},${destinationLongitude}&key=${googleMapsApiKey}`
-                );
-
-                const dataToDest = await responseToDest.json();
-                const DistToDest = dataToDest.routes[0].legs[0].distance.text;
-                return DistToDest;
-            };
-
-            const distance = await calRideDistance();
-            setRideDistance(distance);
-        };
-
-        fetchRideDuration();
-        fetchRideDistance();
+        fetchRideDurationAndDistance();
     }, [])
 
 

@@ -1,32 +1,7 @@
 import { Driver } from "@/types/type";
-import Constants from 'expo-constants';
-
-const googleMapsApiKey = Constants.expoConfig?.extra?.googleMapsApiKey;
-
+import { getBarikoiDistanceMatrixUrl, getBarikoiDirectionsUrl } from '@/lib/useBarikoiMapStyle';
 
 type PlainDriver = Omit<Driver, 'setCarImageURL' | 'setCarSeats' | 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
-
-// export const generateMarkersFromData = ({
-//     data,
-//     customerLatitude,
-//     customerLongitude,
-// }: {
-//     data: PlainDriver[];
-//     customerLatitude: number;
-//     customerLongitude: number;
-// }): (PlainDriver & { latitude: number, longitude: number })[] => {
-//     return data.map((driver) => {
-//         const latOffset = (Math.random() - 0.5) * 0.01;
-//         const lngOffset = (Math.random() - 0.5) * 0.01;
-
-//         return {
-//             latitude: customerLatitude + latOffset,
-//             longitude: customerLongitude + lngOffset,
-//             title: driver.full_name,
-//             ...driver,
-//         };
-//     });
-// };
 
 export const calculateRegion = ({
     userLatitude,
@@ -41,10 +16,10 @@ export const calculateRegion = ({
 }) => {
     if (userLatitude == null || userLongitude == null) {
         return {
-            latitude: 22.6125732,
-            longitude: 88.3953292,
-            latitudeDelta: 0.0007,
-            longitudeDelta: 0.0007,
+            latitude: 23.8103, // Dhaka center
+            longitude: 90.4125,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
         };
     }
 
@@ -76,6 +51,11 @@ export const calculateRegion = ({
     };
 };
 
+type BarikoiDistanceResult = {
+    distance?: number;
+    duration?: number;
+    [key: string]: unknown;
+};
 
 export const getNearbyDrivers = async (
     userLatitude: number,
@@ -85,71 +65,46 @@ export const getNearbyDrivers = async (
     destinationLongitude?: number,
     maxDistanceKm: number = 5
 ): Promise<PlainDriver[]> => {
-    console.log('drivers passed on getNearbyDrivers')
-    console.log(drivers)
     const validDrivers = drivers?.filter(
         (driver) => driver.userLatitude && driver.userLongitude
     ) || [];
-    console.log('validDrivers', validDrivers)
+
     if (validDrivers.length === 0) return [];
 
-    const destinations = validDrivers
-        .map((driver) => `${driver.userLatitude},${driver.userLongitude}`)
-        .join("|");
-
-    const origin = `${userLatitude},${userLongitude}`;
-
-    // to get the distance between the user and each driver.
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destinations}&key=${googleMapsApiKey}&units=metric`;
+    const origins = [{ lat: 0, lng: 0 }]; // placeholder — Barikoi matrix expects from/to arrays
+    const destinations = validDrivers.map(d => ({ lat: d.userLatitude!, lng: d.userLongitude! }));
 
     try {
+        // Use Barikoi distance matrix API
+        const url = getBarikoiDistanceMatrixUrl(
+            [{ lat: userLatitude, lng: userLongitude }],
+            destinations
+        );
+
         const res = await fetch(url);
         const json = await res.json();
 
-        if (json.status !== "OK") throw new Error("Google API error");
-
-        const elements = json.rows[0].elements;
+        // Barikoi matrix response: { data: [...] } or { distances: [...] }
+        const matrix = json.data || json.distances || json.rows || [];
+        const elements = matrix[0] || json; // first row = distances from user to each driver
 
         const nearbyDrivers: PlainDriver[] = [];
 
-        for (let i = 0; i < elements.length; i++) {
-            const element = elements[i];
+        for (let i = 0; i < validDrivers.length; i++) {
+            const element: BarikoiDistanceResult = elements[i] || elements.destinations?.[i] || {};
+            const distanceMeters = element.distance || (element as any).value || 0;
 
-            if (
-                element.status === "OK" &&
-                element.distance?.value != null
-                // element.distance.value <= maxDistanceKm * 1000
-            ) {
+            if (distanceMeters && distanceMeters <= maxDistanceKm * 1000) {
                 const driver = validDrivers[i];
-
-                // Estimate total travel time (driver -> user -> destination)
-                let price = '';
-                if (destinationLatitude && destinationLongitude) {
-                    const responseToUser = await fetch(
-                        `https://maps.googleapis.com/maps/api/directions/json?origin=${driver.userLatitude},${driver.userLongitude}&destination=${userLatitude},${userLongitude}&key=${googleMapsApiKey}`
-                    );
-                    const dataToUser = await responseToUser.json();
-                    const timeToUser = dataToUser.routes[0].legs[0].duration.value; // in seconds
-
-                    const responseToDest = await fetch(
-                        `https://maps.googleapis.com/maps/api/directions/json?origin=${userLatitude},${userLongitude}&destination=${destinationLatitude},${destinationLongitude}&key=${googleMapsApiKey}`
-                    );
-                    const dataToDest = await responseToDest.json();
-                    const timeToDest = dataToDest.routes[0].legs[0].duration.value; // in seconds
-
-                    const totalTime = (timeToUser + timeToDest) / 60; // minutes
-                    price = (totalTime * 0.5).toFixed(2); // your rate logic
-                }
 
                 nearbyDrivers.push({
                     ...driver,
-                    distanceAway: element.distance.value / 1000,
-                    price
+                    distanceAway: distanceMeters / 1000,
+                    price: '',
                 });
             }
         }
 
-        console.log('Nearby drivers with price:', nearbyDrivers);
         return nearbyDrivers;
     } catch (err) {
         console.error("Error in getNearbyDrivers:", err);

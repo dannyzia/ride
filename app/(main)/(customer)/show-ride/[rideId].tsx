@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { icons } from '@/constants/data';
 import Constants from 'expo-constants';
 
-const googleMapsApiKey = Constants.expoConfig?.extra?.googleMapsApiKey;
+const BARIKOI_API_KEY = Constants.expoConfig?.extra?.BARIKOI_API_KEY || '';
 
 const ShowRide = () => {
     const { rideId } = useLocalSearchParams();
@@ -82,12 +82,9 @@ const ShowRide = () => {
                     {/* Map */}
                     <View className="mb-6 mx-5">
                         <Text className="text-white text-2xl font-JakartaSemiBold mb-3">Route Map</Text>
-                        <Image
-                            source={{
-                                uri: `https://maps.googleapis.com/maps/api/staticmap?center=${destination_latitude},${destination_longitude}&zoom=12&size=250x250&maptype=roadmap&key=${googleMapsApiKey}`
-                            }}
-                            className="w-full h-56 rounded-xl border border-zinc-800"
-                        />
+                        <View className="w-full h-56 rounded-xl border border-zinc-800 bg-zinc-900 items-center justify-center">
+                            <Text className="text-zinc-400 text-base">Map: {origin_address} → {destination_address}</Text>
+                        </View>
                     </View>
 
                     {/* Ride Info */}

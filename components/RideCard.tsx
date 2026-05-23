@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router'
 import { formatDate, formatTime } from '@/lib/utils'
 import Constants from 'expo-constants';
 
-const googleMapsApiKey = Constants.expoConfig?.extra?.googleMapsApiKey;
+const BARIKOI_API_KEY = Constants.expoConfig?.extra?.BARIKOI_API_KEY || '';
 
 
 const RideCard = ({ ride }: { ride: RideData }) => {
@@ -33,12 +33,9 @@ const RideCard = ({ ride }: { ride: RideData }) => {
 
             {/* Top Map + Route Info */}
             <View className="flex flex-row items-center justify-between">
-              <Image
-                source={{
-                  uri: `https://maps.googleapis.com/maps/api/staticmap?center=${destination_latitude},${destination_longitude}&zoom=15&size=200x200&maptype=roadmap&key=${googleMapsApiKey}`
-                }}
-                className="w-[80px] h-[90px] rounded-lg"
-              />
+              <View className="w-[80px] h-[90px] rounded-lg bg-neutral-800 items-center justify-center">
+                <Image source={icons.point} className="w-8 h-8 tint-primary-500" />
+              </View>
               <View className="flex flex-col mx-5 gap-y-4 flex-1">
                 <View className="flex flex-row items-center gap-x-2">
                   <Image source={icons.to} className="w-5 h-5 tint-white/80" />

@@ -2,9 +2,7 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: "./.env.local" });
 
-const MAPS_KEY =
-  process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
-  process.env.GOOGLE_MAPS_API_KEY;
+const BARIKOI_API_KEY = process.env.BARIKOI_API_KEY || '';
 
 export default {
   expo: {
@@ -30,9 +28,6 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.ride.bd",
-      config: {
-        googleMapsApiKey: MAPS_KEY,
-      },
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           "We need your location to show it on the map",
@@ -51,20 +46,9 @@ export default {
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
       ],
-      config: {
-        googleMaps: {
-          apiKey: MAPS_KEY,
-        },
-      },
     },
     plugins: [
       "expo-secure-store",
-      [
-        "react-native-maps-expo-plugin",
-        {
-          googleMapsApiKey: MAPS_KEY,
-        },
-      ],
       [
         "expo-notifications",
         {
@@ -98,7 +82,7 @@ export default {
       eas: {
         projectId: "43ad45d8-f2b4-456e-a48f-cfb48faeb6aa",
       },
-      EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: MAPS_KEY,
+      BARIKOI_API_KEY: process.env.BARIKOI_API_KEY,
       EXPO_PUBLIC_SERVER_URL: process.env.EXPO_PUBLIC_SERVER_URL,
       EXPO_PUBLIC_WEB_SOCKET_SERVER_URL:
         process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL,
@@ -121,7 +105,6 @@ export default {
         process.env.EXPO_PUBLIC_FIREBASE_APP_ID || process.env.FIREBASE_APP_ID,
       EXPO_PUBLIC_SUPPORT_PHONE: process.env.EXPO_PUBLIC_SUPPORT_PHONE,
     },
-    owner: "gauravvbh",
     web: {
       bundler: "metro",
       output: "server",
