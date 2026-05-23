@@ -1,0 +1,304 @@
+<p align="center">
+  <img src="https://firebasestorage.googleapis.com/v0/b/glidex-83723.firebasestorage.app/o/app_assets%2Ficon.png?alt=media&token=dc64c455-792e-4562-8f5b-b87566240b8c" alt="GlideX Logo" width="150" />
+</p>
+
+<h1 align="center">GlideX</h1>
+
+<p align="center">
+  <a href="#"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
+  <a href="#"><img src="https://img.shields.io/badge/platform-Android%20%7C%20iOS-blue" alt="Platform"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Expo-SDK%2053-000" alt="Expo SDK"></a>
+  <a href="#"><img src="https://img.shields.io/badge/EAS-Build-blueviolet" alt="EAS Build"></a>
+  <a href="#"><img src="https://img.shields.io/badge/ORM-Drizzle-yellow" alt="Drizzle ORM"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Auth-Clerk-orange" alt="Clerk Auth"></a>
+</p>
+
+
+<p align="center"> <strong>GlideX</strong> is a feature-rich, production-ready ride-hailing platform designed to deliver a seamless and intuitive experience for both customers and drivers. Customers can book rides, track drivers live on interactive maps, pay securely via Stripe, and rate their journey — all in real-time. Drivers can manage their availability, receive and respond to ride offers through WebSocket-powered updates, and maintain their profiles and vehicle details. With push notifications, email alerts, and an engaging, animated UI, GlideX ensures users stay informed and engaged throughout the ride process. </p> <p align="center"> Built with a modern, serverless-friendly architecture, GlideX leverages React Native (Expo), PostgreSQL with Drizzle ORM, Neon serverless hosting, Clerk authentication, Firebase cloud storage, and a secure Node.js utility backend for sensitive operations. The platform is fully responsive, themeable, horizontally scalable, and tested for performance on Android and iOS, offering a polished and reliable experience backed by cutting-edge technology. </p>
+
+
+---
+
+## 📋 Table of Contents
+
+- [✨ Features](#-features)
+- [🧰 Tech Stack](#-tech-stack)
+- [🔑 Environment Variables](#-environment-variables)
+- [🚀 Setup & Installation](#-setup--installation)
+- [🗃️ Database Schema](#️-database-schema)
+- [🗂️ State Management](#️-state-management)
+- [🔧 Utility Backend Server](#-utility-backend-server)
+- [🎨 UI Screenshots](#-ui-screenshots)
+- [🌐 API & Integrations](#-api--integrations)
+- [🧪 Testing](#-testing)
+- [📈 Performance & Scalability](#-performance--scalability)
+- [🛠️ Deployment](#️-deployment)
+- [📜 Scripts](#-scripts)
+- [🌟 Future Roadmap](#-future-roadmap)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+
+---
+
+## ✨ Features
+
+- Clerk-based User Authentication & Role Management  
+- Real-time Driver-Customer Tracking via WebSocket  
+- Google Maps Integration for Geolocation & Routing
+- Ride Offer System: Drivers receive & respond to customer ride requests via WebSocket
+- Secure Mobile Payments via Stripe
+- Email Notifications for Transactions & Updates via Nodemailer  
+- Driver Profile & Car Details Management 
+- Push Notifications via Expo Notifications  
+- Rating system for drivers  
+- Fully Responsive, Themeable UI built with TailwindCSS + NativeWind  
+- Serverless-friendly, scales with Neon & Clerk
+- Animations with LottieFiles  
+
+---
+
+## 🧰 Tech Stack
+
+| Category               | Technology                    |
+|------------------------|-------------------------------|
+| **Frontend**           | React Native (Expo SDK 53)    |
+| **UI Styling**         | TailwindCSS with NativeWind   |
+| **State Management**   | Zustand                       |
+| **Authentication**     | Clerk                         |
+| **Database**           | PostgreSQL (via Neon)         |
+| **ORM / DB Migrations**| Drizzle                       |
+| **Maps & Geocoding**   | Google Maps API               |
+| **Payments**           | Stripe                        |
+| **Storage**            | Firebase                      |
+| **Notifications**      | Expo Notifications            |
+| **Real-time Updates**  | WebSockets                    |
+| **Utility Backend**    | Node.js (Express, Nodemailer) |
+| **Animations**         | LottieFiles                   |
+
+---
+
+## 🔑 Environment Variables
+**App**
+
+```env
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
+CLERK_SECRET_KEY
+EXPO_PUBLIC_SERVER_URL
+EXPO_PUBLIC_WEB_SOCKET_SERVER_URL
+DATABASE_URL
+EXPO_PUBLIC_GOOGLE_API_KEY
+EXPO_PUBLIC_STRIPE_API_KEY
+STRIPE_SECRET_KEY
+FIREBASE_API_KEY
+FIREBASE_PROJECT_ID
+FIREBASE_STORAGE_BUCKET
+FIREBASE_MESSAGING_SENDER_ID
+FIREBASE_APP_ID
+```
+**Utility Backend Server**
+
+```env
+PORT
+STRIPE_SECRET_KEY
+GMAIL_USER
+GMAIL_PASS
+```
+
+## 🚀 Setup & Installation
+
+###  Install dependencies
+
+```bash
+npm install
+```
+###  Setup environment
+
+Create .env.local and .env files with the keys mentioned in [Environment Variables](#-environment-variables).
+
+###  Run database migrations
+
+```bash
+npx drizzle-kit generate:pg
+npx drizzle-kit push:pg
+```
+
+###  Start the development server
+
+```bash
+npx expo start
+```
+###  Optional: Setup Clerk Webhooks
+
+For syncing user data and events. See [Clerk Webhooks](https://clerk.com/docs/webhooks/overview).
+
+
+## 🗃️ Database Schema
+
+**Tables:**
+
+- **users**  
+  `id`, `name`, `email`, `clerk_id`, `number`, `role`, `profile_image_url`
+
+- **drivers**  
+  `id`, `user_id (FK)`, `car_image_url`, `car_seats`, `rating`
+
+- **rides**  
+  `id`, `origin_address`, `destination_address`, `origin_latitude`, `origin_longitude`, `destination_latitude`, `destination_longitude`, `fare_price`, `payment_status`, `driver_id (FK)`, `user_id (FK)`, `created_at`
+
+See `src/db/schema.ts` for exact schema.
+
+---
+
+## 🗂️ State Management
+
+Uses Zustand with custom stores:
+
+- `useDriverStore`
+- `useRideOfferStore`
+- `useCustomer`
+- `useDriver`
+- `useRidesStore`
+- `useDriverDetails`
+- `useUserStore`
+- `useWSStore`
+
+All stores are defined under `src/store`.
+
+---
+
+## 🔧 Utility Backend Server
+
+GlideX includes a lightweight **Express-based server** for handling tasks that require sensitive server-side credentials and cannot be run on the client.
+
+### 📦 Features 
+
+- Stripe Payment Intent Creation  
+- Ephemeral Keys for Stripe Mobile SDK  
+- Email Sending via Nodemailer + Gmail SMTP  
+- CORS & JSON support  
+
+### 🚀 Run the server
+
+```bash
+cd utils-server
+npm install
+npm start
+```
+
+Accessible at:  [http://localhost:3000](http://localhost:3000).
+
+---
+
+
+## 🎨 UI Screenshots
+
+Here are some screens showcasing the GlideX user experience for both customers and drivers.
+
+| 📱 Customer Home | 🚘 Driver Dashboard |
+|------------------|---------------------|
+| <img src="https://firebasestorage.googleapis.com/v0/b/glidex-83723.firebasestorage.app/o/app_assets%2FScreenshot_20250714-181147.png?alt=media&token=055057c0-15dd-4ea8-a6ca-962565d72d2e" alt="Customer Home" width="250"> | <img src="https://firebasestorage.googleapis.com/v0/b/glidex-83723.firebasestorage.app/o/app_assets%2FScreenshot_20250714-181504.png?alt=media&token=77134acd-a6a9-4e70-a9aa-276eebc7778a" alt="Driver Dashboard" width="250"> |
+
+| 📍 Live Ride Tracking | 📍 Ride Completion |
+|-----------------------|--------------------|
+| <img src="https://firebasestorage.googleapis.com/v0/b/glidex-83723.firebasestorage.app/o/app_assets%2FScreenshot_20250714-180647.png?alt=media&token=3577d2f7-3e0f-48d7-a560-e30d916e5472" alt="Live Ride Tracking" width="250"> | <img src="https://firebasestorage.googleapis.com/v0/b/glidex-83723.firebasestorage.app/o/app_assets%2FScreenshot_20250714-181400.png?alt=media&token=0e377859-65ce-4316-bc6a-38d2b0c32264" alt="Ride Completion" width="250"> |
+
+
+---
+
+## 🌐 API & Integrations
+
+| Integration         | Purpose                         |
+|----------------------|---------------------------------|
+| **Clerk**           | Authentication, User Management |
+| **Neon**            | Serverless PostgreSQL          |
+| **Drizzle**         | Database ORM and migrations    |
+| **Stripe**          | Payment processing             |
+| **Google Maps**     | Geolocation, Routing, AutoComplete|
+| **Firebase**        | Media Storage                  |
+| **Expo Notifications** | Push Notifications         |
+| **WebSocket**       | Real-time location updates     |
+| **Nodemailer**       | Email notifications    |
+
+---
+
+## 🧪 Testing
+
+- Unit tests for business logic (**Coming Soon**)  
+
+- End-to-end flow tested on Android & iOS Simulators 
+
+- Manual QA for real-time updates, payments, and notifications
+
+- Tested on Expo Go and EAS production builds
+- Basic load testing and error handling verified
+
+---
+
+## 📈 Performance & Scalability
+
+- Stateless, serverless-friendly architecture
+
+- Real-time updates using WebSockets
+
+- Optimistic UI updates for better UX
+
+- Secure OAuth & HTTPS-ready
+
+- Horizontally scalable backend
+---
+
+## 🛠️ Deployment
+
+Built & deployed via **Expo Application Services (EAS)**.
+
+### 📦 Build
+
+Build for Android or iOS using your preferred EAS build profile (`production`, `development`, etc.):
+
+```bash
+eas build --platform android --profile production
+eas build --platform ios --profile production
+```
+
+For the web export:
+
+```bash
+npx expo export --platform web
+eas deploy --prod
+```
+
+See [EAS Build Docs](https://docs.expo.dev/build/introduction/) and [EAS Submit Docs](https://docs.expo.dev/submit/introduction/).
+
+---
+
+## 📜 Scripts
+
+| Command                          | Description              |
+|----------------------------------|--------------------------|
+| `npx expo start`                | Start development server   |
+| `npx drizzle-kit generate:pg`  | Generate migrations      |
+| `npx drizzle-kit push:pg`      | Run migrations           |
+| `npm start`                     | Start utility backend    |
+| `eas build`           | Build production app            |
+
+---
+## 🌟 Future Roadmap
+- Admin dashboard
+- Promo codes & discounts
+- In-app chat
+- Multi-language support
+---
+
+## 🤝 Contributing
+Contributions are welcome!
+
+- Fork the repository
+- Create a feature branch
+- Commit your changes
+- Open a Pull Request
+
+---
+
+## 📄 License
+
+MIT License — feel free to use, modify, and distribute.

@@ -1,0 +1,31 @@
+{
+  "cli": {
+    "version": ">= 16.3.1",
+    "appVersionSource": "remote",
+    "requireCommit": true
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EAS_BUILD_PROFILE": "development"
+      }
+    },
+    "production": {
+      "releaseChannel": "production",
+      "autoIncrement": true,
+      "developmentClient": false,
+      "distribution": "store",
+      "env": {
+        "EAS_BUILD_PROFILE": "production"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
