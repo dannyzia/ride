@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     } else {
       // Fallback: query param (legacy)
       const url = new URL(request.url);
-      firebaseUid = url.searchParams.get('firebase_uid');
+      firebaseUid = url.searchParams.get('auth_uid');
     }
 
     if (!firebaseUid) {
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
       .from(rides)
       .innerJoin(users, eq(rides.user_id, users.id))
       .leftJoin(drivers, eq(rides.driver_id, drivers.id))
-      .where(eq(users.firebase_uid, firebaseUid));
+      .where(eq(users.auth_uid, firebaseUid));
 
     return Response.json({ data: allRides }, { status: 200 });
   } catch (err: any) {

@@ -13,11 +13,11 @@ export async function GET(request: Request) {
       firebaseUid = decoded.uid;
     } else {
       const url = new URL(request.url);
-      firebaseUid = url.searchParams.get('firebase_uid');
+      firebaseUid = url.searchParams.get('auth_uid');
     }
 
     if (!firebaseUid) {
-      return Response.json({ error: "firebase_uid is required" }, { status: 400 });
+      return Response.json({ error: "auth_uid is required" }, { status: 400 });
     }
 
     const now = new Date();
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       .innerJoin(users, eq(rides.driver_id, users.id))
       .where(
         and(
-          eq(users.firebase_uid, firebaseUid),
+          eq(users.auth_uid, firebaseUid),
           gte(rides.created_at, startOfDay),
           lt(rides.created_at, endOfDay)
         )

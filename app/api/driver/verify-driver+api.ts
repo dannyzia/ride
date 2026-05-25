@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const decoded = await verifyFirebaseIdToken(request);
 
     const [user] = await db.select({ id: users.id })
-      .from(users).where(eq(users.firebase_uid, decoded.uid)).limit(1);
+      .from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
     const body = await request.json();

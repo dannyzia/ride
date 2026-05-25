@@ -8,7 +8,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   try {
     const decoded = await verifyFirebaseIdToken(req);
 
-    const [admin] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.firebase_uid, decoded.uid)).limit(1);
+    const [admin] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
     if (!admin) return Response.json({ error: 'user_not_found' }, { status: 404 });
     if (admin.role !== 'admin') return Response.json({ error: 'forbidden' }, { status: 403 });
 

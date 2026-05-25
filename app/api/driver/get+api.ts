@@ -13,23 +13,23 @@ export async function GET(request: Request) {
       firebaseUid = decoded.uid;
     } else {
       const url = new URL(request.url);
-      firebaseUid = url.searchParams.get('firebase_uid');
+      firebaseUid = url.searchParams.get('auth_uid');
     }
 
     if (!firebaseUid) {
-      return Response.json({ error: "firebase_uid is required" }, { status: 400 });
+      return Response.json({ error: "auth_uid is required" }, { status: 400 });
     }
 
     const data = await db.select({
       full_name: users.name,
       email: users.email,
-      firebase_uid: users.firebase_uid,
+      auth_uid: users.auth_uid,
       number: users.number,
       role: users.role,
       profile_image_url: users.profile_image_url,
       rating: drivers.rating,
     }).from(users)
-      .where(eq(users.firebase_uid, firebaseUid))
+      .where(eq(users.auth_uid, firebaseUid))
       .innerJoin(drivers, eq(users.id, drivers.user_id));
 
     return Response.json(data, { status: 200 });

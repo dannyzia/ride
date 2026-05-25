@@ -29,7 +29,7 @@ export async function verifyFirebaseIdToken(request: Request) {
 export function requireRole(role: 'rider' | 'driver' | 'admin') {
   return async (request: Request) => {
     const decoded = await verifyFirebaseIdToken(request);
-    const [user] = await db.select().from(users).where(eq(users.firebase_uid, decoded.uid)).limit(1);
+    const [user] = await db.select().from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
     if (!user || user.role !== role)
       throw Object.assign(new Error('Insufficient role'), { status: 403 });
     return { decoded, user };

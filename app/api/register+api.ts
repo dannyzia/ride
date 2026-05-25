@@ -14,7 +14,7 @@ const schema = z.object({
 export async function POST(request: Request) {
   const body = await request.json();
 
-  if ('firebase_uid' in body || 'phone' in body)
+  if ('auth_uid' in body || 'phone' in body)
     return Response.json({ error: 'body_field_forbidden' }, { status: 400 });
 
   const parsed = schema.safeParse(body);
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
   const { challenge_jwt, name, role, vehicle_type } = parsed.data;
 
-  let payload: { firebase_uid: string; phone: string; jti: string };
+  let payload: { auth_uid: string; phone: string; jti: string };
   try { payload = verifyChallenge(challenge_jwt); }
   catch { return Response.json({ error: 'invalid_challenge' }, { status: 401 }); }
 
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       if (existing) throw { status: 409, error: 'phone_exists' };
 
       const [user] = await tx.insert(users).values({
-        firebase_uid: payload.firebase_uid, phone: payload.phone, name, role,
+        auth_uid: payload.auth_uid, phone: payload.phone, name, role,
       }).returning();
 
       if (role === 'driver') {

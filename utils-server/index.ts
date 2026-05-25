@@ -228,7 +228,7 @@ wss.on('connection', (ws: WebSocket) => {
             initFirebaseAdmin();
             const decoded = await admin.auth().verifyIdToken(firebaseIdToken);
             const [user] = await db.select({ id: users.id, role: users.role })
-              .from(users).where(eq(users.firebase_uid, decoded.uid)).limit(1);
+              .from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
             if (!user) {
               send(ws, { type: 'auth:error', message: 'user_not_found' });
               return;

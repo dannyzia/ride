@@ -27,10 +27,10 @@ export const checkAuth = functions.https.onRequest(async (req, res) => {
 
   await ref.remove();
 
-  const firebase_uid = 'phone:' + crypto.createHash('sha256').update(data.phone).digest('hex').slice(0,32);
-  const firebase_custom_token = await admin.auth().createCustomToken(firebase_uid);
+  const auth_uid = 'phone:' + crypto.createHash('sha256').update(data.phone).digest('hex').slice(0,32);
+  const firebase_custom_token = await admin.auth().createCustomToken(auth_uid);
   const challenge_jwt = jwt.sign(
-    { firebase_uid, phone: data.phone, jti: crypto.randomUUID() },
+    { auth_uid, phone: data.phone, jti: crypto.randomUUID() },
     JWT_SECRET(), { algorithm: 'HS256', expiresIn: '5m' }
   );
 

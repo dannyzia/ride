@@ -6,7 +6,7 @@ import { verifyFirebaseIdToken } from '@/lib/auth';
 export async function GET(request: Request) {
   try {
     const decoded = await verifyFirebaseIdToken(request);
-    const [user] = await db.select().from(users).where(eq(users.firebase_uid, decoded.uid)).limit(1);
+    const [user] = await db.select().from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
     if (!user || user.role !== 'rider') {
       return Response.json({ error: 'forbidden' }, { status: 403 });
     }

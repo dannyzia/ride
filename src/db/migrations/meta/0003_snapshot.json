@@ -2339,8 +2339,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "firebase_uid": {
-          "name": "firebase_uid",
+        "auth_uid": {
+          "name": "auth_uid",
           "type": "varchar(128)",
           "primaryKey": false,
           "notNull": true
@@ -2411,11 +2411,11 @@
         }
       },
       "indexes": {
-        "users_firebase_uid_idx": {
-          "name": "users_firebase_uid_idx",
+        "users_auth_uid_idx": {
+          "name": "users_auth_uid_idx",
           "columns": [
             {
-              "expression": "firebase_uid",
+              "expression": "auth_uid",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2445,11 +2445,11 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "users_firebase_uid_unique": {
-          "name": "users_firebase_uid_unique",
+        "users_auth_uid_unique": {
+          "name": "users_auth_uid_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "firebase_uid"
+            "auth_uid"
           ]
         },
         "users_phone_unique": {

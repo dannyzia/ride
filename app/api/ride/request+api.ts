@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const decoded = await verifyFirebaseIdToken(request);
     const uid = decoded.uid;
 
-    const [user] = await db.select().from(sql`users` as any).where(sql`firebase_uid = ${uid}`).limit(1) as any[];
+    const [user] = await db.select().from(sql`users` as any).where(sql`auth_uid = ${uid}`).limit(1) as any[];
     if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
     if (user.role !== 'rider') return Response.json({ error: 'forbidden' }, { status: 403 });
 

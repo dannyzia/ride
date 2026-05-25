@@ -36,7 +36,7 @@ export const vehicleClassLetterEnum= pgEnum('vehicle_class_letter',['KA','KHA','
 
 export const users = pgTable('users', {
   id:               uuid('id').defaultRandom().primaryKey(),
-  firebase_uid:     varchar('firebase_uid', { length: 128 }).notNull().unique(),
+  auth_uid:     varchar('auth_uid', { length: 128 }).notNull().unique(),
   phone:            varchar('phone', { length: 20 }).notNull().unique(),
   number:           varchar('number', { length: 20 }),
   name:             varchar('name', { length: 255 }).notNull(),
@@ -48,7 +48,7 @@ export const users = pgTable('users', {
   created_at:       timestamptz('created_at').notNull().defaultNow(),
   updated_at:       timestamptz('updated_at').notNull().defaultNow(),
 }, (t) => [
-  uniqueIndex('users_firebase_uid_idx').on(t.firebase_uid),
+  uniqueIndex('users_auth_uid_idx').on(t.auth_uid),
   uniqueIndex('users_phone_idx').on(t.phone),
 ]);
 

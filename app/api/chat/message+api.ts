@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const body = await sendSchema.parseAsync(await request.json());
 
     // Resolve Firebase uid to DB user id
-    const [sender] = await db.select({ id: users.id }).from(users).where(eq(users.firebase_uid, decoded.uid)).limit(1);
+    const [sender] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
     if (!sender) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
     // Verify sender is participant in this ride
