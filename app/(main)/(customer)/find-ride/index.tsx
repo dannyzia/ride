@@ -1,12 +1,11 @@
 import { View, Text } from 'react-native'
 import React, { useEffect } from 'react'
 import RideLayout from '@/components/RideLayout';
-import GoogleTextInput from '@/components/GoogleTextInput';
+import BarikoiAutocomplete from '@/components/BarikoiAutocomplete';
 import { icons } from '@/constants/data';
 import CustomButton from '@/components/CustomButton';
 import { useRouter } from 'expo-router';
 import { useCustomer } from '@/store';
-import { useUser } from '@/lib/useUser';
 
 
 const FindRidePage = () => {
@@ -14,8 +13,6 @@ const FindRidePage = () => {
     const {
         userAddress,
         destinationAddress,
-        destinationLatitude,
-        destinationLongitude,
         setUserLocation,
         setDestinationLocation
     } = useCustomer();
@@ -27,7 +24,7 @@ const FindRidePage = () => {
         <RideLayout title='Ride' disabled={false}>
             <View className=''>
                 <Text className='text-lg font-JakartaSemiBold mb-3'>From</Text>
-                <GoogleTextInput
+                <BarikoiAutocomplete
                     icon={icons.target}
                     initialLocation={
                         (userAddress && userAddress.length > 49)
@@ -41,7 +38,7 @@ const FindRidePage = () => {
 
             <View className=''>
                 <Text className='text-lg font-JakartaSemiBold mb-3'>To</Text>
-                <GoogleTextInput
+                <BarikoiAutocomplete
                     icon={icons.map}
                     initialLocation={
                         (destinationAddress && destinationAddress.length > 49)

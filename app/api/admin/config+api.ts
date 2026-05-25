@@ -12,16 +12,14 @@ const ALLOWED_KEYS = new Set([
 ]);
 
 export async function GET(req: Request) {
-  const decoded = await requireRole('admin')(req);
-  if (!decoded) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  await requireRole('admin')(req);
 
   const config = await db.select().from(platformConfig);
   return Response.json({ config });
 }
 
 export async function PATCH(req: Request) {
-  const decoded = await requireRole('admin')(req);
-  if (!decoded) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  await requireRole('admin')(req);
 
   const body = await req.json() as { updates: Array<{ key: string; value: string }> };
   if (!Array.isArray(body.updates) || body.updates.length === 0) {

@@ -19,7 +19,7 @@ try {
   // MapLibre not installed or not available
 }
 
-type PlainDriver = Omit<Driver, 'setCarImageURL' | 'setCarSeats' | 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
+type PlainDriver = Omit<Driver, 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
 
 const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL as string | undefined;
 

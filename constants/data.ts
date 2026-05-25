@@ -7,7 +7,6 @@ import close from "@/assets/icons/close.png";
 import dollar from "@/assets/icons/dollar.png";
 import email from "@/assets/icons/email.png";
 import eyecross from "@/assets/icons/eyecross.png";
-import google from "@/assets/icons/google.png";
 import home from "@/assets/icons/home.png";
 import list from "@/assets/icons/list.png";
 import lock from "@/assets/icons/lock.png";
@@ -66,7 +65,6 @@ export const icons = {
     dollar,
     email,
     eyecross,
-    google,
     home,
     list,
     lock,
@@ -128,8 +126,7 @@ export const rides = [
         "destination_latitude": 28.209583,
         "destination_longitude": 83.985567,
         "ride_time": 391,
-        "fare_price": 19500.00,
-        "payment_status": "paid",
+        "fare_breakdown": {},
         "driver_id": 2,
         "user_id": "1",
         "created_at": "2024-08-12 05:19:20.620007",
@@ -152,8 +149,7 @@ export const rides = [
         "destination_latitude": 18.520430,
         "destination_longitude": 73.856744,
         "ride_time": 491,
-        "fare_price": 24500.00,
-        "payment_status": "paid",
+        "fare_breakdown": {},
         "driver_id": 1,
         "user_id": "1",
         "created_at": "2024-08-12 06:12:17.683046",
@@ -176,8 +172,7 @@ export const rides = [
         "destination_latitude": 45.327063,
         "destination_longitude": 14.442176,
         "ride_time": 124,
-        "fare_price": 6200.00,
-        "payment_status": "paid",
+        "fare_breakdown": {},
         "driver_id": 1,
         "user_id": "1",
         "created_at": "2024-08-12 08:49:01.809053",
@@ -200,8 +195,7 @@ export const rides = [
         "destination_latitude": 34.693725,
         "destination_longitude": 135.502254,
         "ride_time": 159,
-        "fare_price": 7900.00,
-        "payment_status": "paid",
+        "fare_breakdown": {},
         "driver_id": 3,
         "user_id": "1",
         "created_at": "2024-08-12 18:43:54.297838",

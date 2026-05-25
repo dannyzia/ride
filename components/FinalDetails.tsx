@@ -4,6 +4,7 @@ import { icons } from '@/constants/data'
 import { MaterialIcons } from '@expo/vector-icons'
 import { useUser } from '@/lib/useUser';
 import Payment from './Payment';
+import { logger } from "@/lib/logger";
 
 const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid: (value: boolean) => void, page: string, number?: string }) => {
     const {
@@ -20,8 +21,8 @@ const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid:
 
     const { user } = useUser();
 
-    console.log('⚠️')
-    console.log(page)
+    logger.info('⚠️')
+    logger.info(page)
 
 
 

@@ -1,4 +1,3 @@
-import { useClerk, useUser } from '@/lib/useUser';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Alert, AppState, FlatList, Image, Platform, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
@@ -9,6 +8,7 @@ import * as Location from 'expo-location';
 import { useCustomer, useRidesStore, useUserStore, useWSStore } from '@/store';
 import Map from '@/components/Map';
 import Constants from 'expo-constants';
+import { auth } from '@/lib/firebase';
 let LottieView: any = () => null;
 
 if (Platform.OS !== 'web') {
@@ -29,10 +29,9 @@ const HomePage = () => {
     const { setRides, Rides } = useRidesStore();
     const { ws, setWebSocket } = useWSStore();
 
-    const { user } = useUser();
+    const user = auth.currentUser;
     const { role } = useUserStore();
-    const data = user?.publicMetadata;
-    const { signOut } = useClerk();
+    const data = user ? { role: 'customer' } : null;
     const [hasPermissions, setHasPermissions] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [address, setAddress] = useState<string>('');
@@ -45,13 +44,12 @@ const HomePage = () => {
         let newWs: WebSocket;
 
         if (!ws && user) {
-            // newWs = new WebSocket('ws://192.168.0.146:8080'); //wss://websocket-server-for-glidex.onrender.com
             newWs = new WebSocket(WEBSOCKET_API_URL);
 
             newWs.onopen = () => {
                 newWs.send(JSON.stringify({
                     type: 'register',
-                    id: user?.id,
+                    id: user.uid,
                     role: 'customer',
                 }));
 
@@ -109,9 +107,9 @@ const HomePage = () => {
 
                 if (role) setCustomerRole({ role });
                 if (user) {
-                    setCustomerId({ customerId: user.id });
-                    setCustomerFullName({ full_name: user.fullName ?? '' });
-                    setCustomerProfileImageURL({ profile_image_url: user.imageUrl });
+                    setCustomerId({ customerId: user.uid });
+                    setCustomerFullName({ full_name: user.displayName ?? '' });
+                    setCustomerProfileImageURL({ profile_image_url: user.photoURL ?? '' });
                 }
             }
         } catch (error) {
@@ -142,8 +140,8 @@ const HomePage = () => {
 
     const handleSignOut = async () => {
         try {
-            await signOut();
-            router.replace('/(auth)/sign-in');
+            await auth.signOut();
+            router.replace('/(auth)/phone-entry');
         } catch (err) {
             console.error(JSON.stringify(err, null, 2));
         }
@@ -152,18 +150,16 @@ const HomePage = () => {
 
     //getting all rides from api
     useEffect(() => {
-        if (!user?.id) return;
+        if (!user?.uid) return;
 
         const getAllRides = async () => {
             setLoading(true)
             try {
-                const url = `${API_URL}/api/ride/get-all?firebase_uid=${user.id}`;
-
-
-                const response = await fetch(url, {
-                    method: 'GET',
+                const token = await user.getIdToken();
+                const response = await fetch(`${API_URL}/api/ride/get-all`, {
                     headers: {
                         'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
                     },
                 });
                 const { data } = await response.json();
@@ -177,7 +173,7 @@ const HomePage = () => {
         };
 
         getAllRides();
-    }, [user?.id]);
+    }, [user?.uid]);
 
     return (
         <SafeAreaView className='bg-bgColor text-primaryTextColor flex-1'>
@@ -213,7 +209,7 @@ const HomePage = () => {
                     <>
                         <View className='flex flex-row items-center justify-between my-5'>
                             <Text className='text-xl text-primaryTextColor capitalize font-JakartaExtraBold'>
-                                Welcome{","} {user?.firstName} 👋
+                                Welcome{","} {user?.displayName ?? 'Rider'}
                             </Text>
                             <TouchableOpacity onPress={handleSignOut} className='flex justify-center items-center w-10 h-10 rounded-full bg-white'>
                                 <Image source={icons.out} className='w-4 h-4' />

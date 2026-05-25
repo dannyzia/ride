@@ -10,21 +10,22 @@ import {
     KeyboardAvoidingView,
     Platform,
 } from 'react-native';
-import { GoogleInputProps } from '@/types/type';
+import { BarikoiInputProps } from '@/types/type';
 import { icons } from '@/constants/data';
 import { useCustomer } from '@/store';
 import Constants from 'expo-constants';
 import { getBarikoiAutocompleteUrl, getBarikoiPlaceDetailUrl } from '@/lib/useBarikoiMapStyle';
+import { logger } from "@/lib/logger";
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
 
-const GoogleTextInput = ({
+const BarikoiAutocomplete = ({
     icon,
     containerStyle,
     handlePress,
     initialLocation,
     textInputBackgroundColor,
-}: GoogleInputProps) => {
+}: BarikoiInputProps) => {
     const inputRef = useRef<TextInput>(null);
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -42,16 +43,14 @@ const GoogleTextInput = ({
         const fetchSuggestions = async () => {
             setLoading(true);
             try {
-                // Use Barikoi autocomplete API
                 const url = getBarikoiAutocompleteUrl(query, userLatitude ?? undefined, userLongitude ?? undefined);
                 const response = await fetch(url);
                 const data = await response.json();
-                // Barikoi returns { places: [...] } or { data: [...] }
                 const places = data.places || data.data || [];
                 setSuggestions(places);
                 setShowSuggestions(true);
             } catch (err) {
-                console.error('Autocomplete fetch error:', err);
+                logger.error('Autocomplete fetch error:', err);
             } finally {
                 setLoading(false);
             }
@@ -65,7 +64,6 @@ const GoogleTextInput = ({
             const placeId = place.place_id || place.id;
             const response = await fetch(getBarikoiPlaceDetailUrl(placeId));
             const data = await response.json();
-            // Barikoi returns coordinates in different formats
             const location = data.location || data.place || data;
             const lat = parseFloat(location.lat || location.latitude || 0);
             const lng = parseFloat(location.lng || location.lon || location.longitude || 0);
@@ -81,7 +79,7 @@ const GoogleTextInput = ({
             setSuggestions([]);
             setShowSuggestions(false);
         } catch (err) {
-            console.error('Place details fetch error:', err);
+            logger.error('Place details fetch error:', err);
         }
     };
 
@@ -146,4 +144,4 @@ const GoogleTextInput = ({
     );
 };
 
-export default GoogleTextInput;
+export default BarikoiAutocomplete;

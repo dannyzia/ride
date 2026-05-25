@@ -1,7 +1,8 @@
 import { Driver } from "@/types/type";
 import { getBarikoiDistanceMatrixUrl, getBarikoiDirectionsUrl } from '@/lib/useBarikoiMapStyle';
+import { logger } from "@/lib/logger";
 
-type PlainDriver = Omit<Driver, 'setCarImageURL' | 'setCarSeats' | 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
+type PlainDriver = Omit<Driver, 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
 
 export const calculateRegion = ({
     userLatitude,
@@ -107,7 +108,7 @@ export const getNearbyDrivers = async (
 
         return nearbyDrivers;
     } catch (err) {
-        console.error("Error in getNearbyDrivers:", err);
+        logger.error("Error in getNearbyDrivers:", err);
         return [];
     }
 };

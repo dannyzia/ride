@@ -9,19 +9,21 @@ const {
   EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: FIREBASE_STORAGE_BUCKET,
   EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: FIREBASE_MESSAGING_SENDER_ID,
   EXPO_PUBLIC_FIREBASE_APP_ID: FIREBASE_APP_ID,
+  EXPO_PUBLIC_FIREBASE_RTDB_URL: FIREBASE_RTDB_URL,
 } = Constants.expoConfig?.extra || {};
 
 if (!FIREBASE_API_KEY || !FIREBASE_PROJECT_ID || !FIREBASE_STORAGE_BUCKET || !FIREBASE_MESSAGING_SENDER_ID || !FIREBASE_APP_ID) {
   throw new Error('Missing Firebase configuration. Check your environment variables.');
 }
 
-const firebaseConfig = {
+const firebaseConfig: Record<string, string> = {
   apiKey: FIREBASE_API_KEY,
   projectId: FIREBASE_PROJECT_ID,
   storageBucket: FIREBASE_STORAGE_BUCKET,
   messagingSenderId: FIREBASE_MESSAGING_SENDER_ID,
   appId: FIREBASE_APP_ID,
 };
+if (FIREBASE_RTDB_URL) firebaseConfig.databaseURL = FIREBASE_RTDB_URL;
 
 const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);

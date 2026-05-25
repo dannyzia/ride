@@ -6,13 +6,14 @@ import { getH3Ring } from '../../../../lib/h3';
 import { getDriversInCells } from '../../../../utils-server/h3Index';
 import { calculateFare } from '../../../../lib/fareCalc';
 import { VEHICLE_TYPE_VALUES } from '../../../../lib/vehicleTypes';
+import { logger } from '../../../../lib/logger';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const decoded = await requireRole('rider')(req);
-  if (!decoded) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const { user } = await requireRole('rider')(req);
 
   const [ride] = await db.select().from(rides)
-    .where(and(eq(rides.id, params.id), eq(rides.user_id, decoded.user.id)))
+    .where(and(eq(rides.id, params.id), eq(rides.user_id, user.id)))
     .limit(1);
   if (!ride) return Response.json({ error: 'Ride not found' }, { status: 404 });
   if (ride.status !== 'no_drivers' && ride.status !== 'pending') {
@@ -58,4 +59,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     requested_vehicle_type: ride.vehicle_type,
     alternatives,
   });
+  } catch (err: any) {
+    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    logger.error('[ride/alternatives] error', err);
+    return Response.json({ error: 'internal_error' }, { status: 500 });
+  }
 }

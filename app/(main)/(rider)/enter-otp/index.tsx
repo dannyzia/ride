@@ -5,6 +5,7 @@ import { useRideOfferStore, useWSStore } from '@/store';
 import { router } from 'expo-router';
 import { OtpInput } from "react-native-otp-entry";
 import Constants from 'expo-constants';
+import { logger } from "@/lib/logger";
 
 const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
 
@@ -17,8 +18,8 @@ const EnterOtp = () => {
     const [error, setError] = useState('')
 
 
-    console.log(customerOTP)
-    console.log(customerOTP)
+    logger.info(customerOTP)
+    logger.info(customerOTP)
 
 
     useEffect(() => {
@@ -29,11 +30,11 @@ const EnterOtp = () => {
             const newWs = new WebSocket(WEBSOCKET_API_URL);
 
             newWs.onopen = () => {
-                console.log('WebSocket connected');
+                logger.info('WebSocket connected');
             };
 
             newWs.onerror = (err) => {
-                console.log('WebSocket error:', err);
+                logger.info('WebSocket error:', err);
             };
 
             setWebSocket(newWs);
@@ -45,9 +46,9 @@ const EnterOtp = () => {
         // Attach onmessage regardless
         socket.onmessage = (event) => {
             const message = JSON.parse(event.data);
-            console.log('message received')
-            console.log(message.otp)
-            console.log(message.otp)
+            logger.info('message received')
+            logger.info(message.otp)
+            logger.info(message.otp)
             if (message.type === 'OTP') {
                 if (activeRideId === message.id) {
                     setCustomerOTP(message.otp)
@@ -57,15 +58,15 @@ const EnterOtp = () => {
     }, [ws]);
 
 
-    console.log("WebSocket instance in EnterOtp", ws);
+    logger.info("WebSocket instance in EnterOtp", ws);
 
 
     const handleVerify = () => {
         if (customerOTP && riderOTP && (customerOTP === riderOTP) && activeRideId) {
             const rideDetails = giveRideDetails(activeRideId)
-            console.log('ride details from enter otp page')
-            console.log(activeRideId)
-            console.log(rideDetails)
+            logger.info('ride details from enter otp page')
+            logger.info(activeRideId)
+            logger.info(rideDetails)
             if (rideDetails) {
 
                 changeStatus(rideDetails?.id, 'Start')
@@ -78,7 +79,7 @@ const EnterOtp = () => {
                     }))
                 }
             } else {
-                console.log('ride details not found on page enter OTP')
+                logger.info('ride details not found on page enter OTP')
             }
             router.replace('/(main)/(rider)/finish-ride');
         } else {

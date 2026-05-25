@@ -1,7 +1,8 @@
 import { Customer, Driver, DriverDetails, DriverStore, RideOffer, RideOfferDetails, RidesStore, StoreRole, UserData, WSStore } from '@/types/type'
 import { create } from 'zustand'
+import { logger } from "@/lib/logger";
 
-type PlainDriver = Omit<Driver, 'setCarImageURL' | 'setCarSeats' | 'setTime' | 'setPrice' | 'setUser' | 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
+type PlainDriver = Omit<Driver, 'setTime' | 'setPrice' | 'setUser' | 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
 
 // export const useDriverStore = create<DriverStore>((set) => ({
 //     drivers: [], //from database all drivers
@@ -343,21 +344,9 @@ export const useDriver = create<Driver>((set) => ({
     userLatitude: null,
     userLongitude: null,
     userAddress: null,
-    car_image_url: null,
-    car_seats: null,
     time: null,
     email: null,
     price: null,
-    setCarImageURL: ({ car_image_url }: { car_image_url: string }) => {
-        set(() => ({
-            car_image_url
-        }))
-    },
-    setCarSeats: ({ car_seats }: { car_seats: number }) => {
-        set(() => ({
-            car_seats
-        }))
-    },
     setUserLocation: ({ latitude, longitude, address }) => {
         set(() => ({
             userLatitude: latitude,
@@ -424,7 +413,7 @@ export const useCustomer = create<Customer>((set) => ({
         set(() => ({ role }));
     },
     setDestinationLocation: ({ latitude, longitude, address }) => {
-        console.log(latitude, longitude, address)
+        logger.info(latitude, longitude, address)
         set(() => ({
             destinationLatitude: latitude,
             destinationLongitude: longitude,

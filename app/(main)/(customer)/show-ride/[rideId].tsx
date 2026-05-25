@@ -33,9 +33,7 @@ const ShowRide = () => {
         destination_longitude,
         origin_latitude,
         origin_longitude,
-        driver,
-        fare_price,
-        payment_status
+        driver
     } = selectedRide;
 
     return (
@@ -64,18 +62,6 @@ const ShowRide = () => {
                         <View className="flex-1">
                             <Text className="text-white text-2xl font-JakartaSemiBold">{driver.full_name}</Text>
                             <Text className="text-zinc-400 text-base">Rating: {driver.rating} ★</Text>
-                            <Text className="text-zinc-400 text-base">Seats: {driver.car_seats}</Text>
-                        </View>
-                    </View>
-
-                    {/* Car Image */}
-                    <View className="flex-row items-center mb-6 p-4 bg-zinc-900 rounded-2xl mx-5 justify-between border border-zinc-800">
-                        <Text className="text-white font-JakartaSemiBold text-xl">Travelled by:</Text>
-                        <View className="bg-zinc-700 p-1 rounded-full">
-                            <Image
-                                source={{ uri: driver.car_image_url || 'default-car-image-url' }}
-                                className="w-20 h-20 rounded-full"
-                            />
                         </View>
                     </View>
 
@@ -92,8 +78,7 @@ const ShowRide = () => {
                         <Text className="text-white text-2xl font-JakartaBold mb-4">Ride Information</Text>
                         <Text className="text-zinc-300 text-base mb-2">Origin: {origin_address}</Text>
                         <Text className="text-zinc-300 text-base mb-2">Destination: {destination_address}</Text>
-                        <Text className="text-zinc-300 text-base mb-2">Fare: ${fare_price}</Text>
-                        <Text className="text-zinc-300 text-base">Payment: {payment_status}</Text>
+
                     </View>
 
                 </View>

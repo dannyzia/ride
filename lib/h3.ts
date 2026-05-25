@@ -10,6 +10,3 @@ export function getH3Ring(lat: number, lng: number, k: number): string[] {
   return gridDisk(latLngToCell(lat, lng, RESOLUTION), k);
 }
 
-export function findNearbyDrivers(lat: number, lng: number, k = 2): string[] {
-  return gridDisk(latLngToCell(lat, lng, RESOLUTION), k);
-}

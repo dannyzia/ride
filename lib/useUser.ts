@@ -73,10 +73,13 @@ export function useAuth() {
   return { userId, isLoaded, isSignedIn };
 }
 
-export function useClerk() {
+export function useSignOut() {
   return {
     signOut: async () => { await firebaseSignOut(auth); },
   };
 }
+
+/** @deprecated Use useSignOut instead */
+export const useClerk = useSignOut;
 
 export type { FirebaseUser };

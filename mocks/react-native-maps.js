@@ -1,5 +1,5 @@
 // mocks/react-native-maps.js — replaced by @maplibre/maplibre-react-native
-// Kept for compatibility during transition
+// Web fallback stub kept for metro.config.js alias safety
 
 import React from 'react';
 import { View, Text } from 'react-native';

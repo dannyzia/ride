@@ -6,12 +6,14 @@ import { useTheme } from 'react-native-paper';
 import { uploadImageToFirebase } from '@/lib/imageToURL';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '@/lib/useUser';
+import { auth } from '@/lib/firebase';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import ReactNativeModal from 'react-native-modal';
 import CustomButton from '@/components/CustomButton';
 import { router } from 'expo-router';
 import { useDriver, useDriverDetails } from '@/store';
 import Constants from 'expo-constants'
+import { logger } from "@/lib/logger";
 
 
 const API_URL = Constants.expoConfig?.extra?.serverUrl;
@@ -32,7 +34,7 @@ const VerificationPage = () => {
     const [profileImageLoading, setProfileImageLoading] = useState<boolean>(false)
     const [loading, setLoading] = useState<boolean>(false)
 
-    const { setCarImageURL, setCarSeats: setStoreCarSeats, setProfileImageURL, setRating: setStoreRating } = useDriver();
+    const { setProfileImageURL, setRating: setStoreRating } = useDriver();
 
     const {
         setIsVerified
@@ -58,11 +60,11 @@ const VerificationPage = () => {
                     const imageUrl = await uploadImageToFirebase(uri, fileName);
                     setCarImageUri(imageUrl);
                 } catch (error) {
-                    console.error("Error uploading image to Firebase:", error);
+                    logger.error("Error uploading image to Firebase:", error);
                 }
             }
         } catch (error: any) {
-            console.log(error)
+            logger.info(error)
             Alert.alert('Car Image Upload Failed', error.message)
         } finally {
             setCarImageLoading(false)
@@ -88,12 +90,12 @@ const VerificationPage = () => {
                     const imageUrl = await uploadImageToFirebase(uri, fileName);
                     setProfileImage(imageUrl);
                 } catch (error: any) {
-                    console.error("Error uploading image to Firebase:", error);
+                    logger.error("Error uploading image to Firebase:", error);
                     Alert.alert('Profile Image Upload Faileddd', error.message)
                 }
             }
         } catch (error: any) {
-            console.log(error)
+            logger.info(error)
             Alert.alert('Profile Image Upload Failed', error.message)
         } finally {
             setProfileImageLoading(false)
@@ -111,13 +113,14 @@ const VerificationPage = () => {
 
         setLoading(true)
         try {
+            const token = await auth.currentUser?.getIdToken();
             const doneUpdate = await fetch(`${API_URL}/api/driver/verify-driver`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    id: user?.id,
                     carImageUri,
                     profileImage,
                     rating,
@@ -125,15 +128,13 @@ const VerificationPage = () => {
                 })
             })
 
-            setCarImageURL({ car_image_url: carImageUri! })
-            setStoreCarSeats({ car_seats: Number(carSeats) })
             setProfileImageURL({ profile_image_url: profileImage! })
             setStoreRating({ rating })
             setIsVerified(true);
 
             router.replace('/(rider)/home')
         } catch (error: any) {
-            console.log('error in driver verification page', error)
+            logger.info('error in driver verification page', error)
             Alert.alert('Submission Failed', error.message)
         } finally {
             setLoading(false)

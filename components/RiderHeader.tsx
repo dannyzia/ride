@@ -5,6 +5,7 @@ import { icons } from '@/constants/data'
 import { useClerk } from '@/lib/useUser'
 import { router } from 'expo-router'
 import { useDriverDetails } from '@/store'
+import { logger } from "@/lib/logger";
 
 const RiderHeader = ({ hasPermissions, todayEarnings }: { hasPermissions: boolean, todayEarnings: string }) => {
 
@@ -22,7 +23,7 @@ const RiderHeader = ({ hasPermissions, todayEarnings }: { hasPermissions: boolea
             await signOut();
             router.replace('/(auth)/sign-in');
         } catch (err) {
-            console.error(JSON.stringify(err, null, 2));
+            logger.error(JSON.stringify(err, null, 2));
         }
     };
 

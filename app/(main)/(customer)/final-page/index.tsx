@@ -1,456 +1,305 @@
-import { View, Text, Platform } from 'react-native';
-import React, { useEffect, useRef, useState } from 'react';
-import RideLayout from '@/components/RideLayout';
-import { useCustomer, useDriverStore, useRideOfferStore, useWSStore } from '@/store';
-import PaymentPage from "@/components/Payment";
-import { useUser } from '@/lib/useUser';
-import Start from '@/components/Start';
-import Middle from '@/components/Middle';
-import End from '@/components/End';
-import FinalDetails from '@/components/FinalDetails';
-import CustomButton from '@/components/CustomButton';
-import LoadingRider from '@/components/LoadingRider';
-import * as Linking from "expo-linking";
-import ErrorFindDriver from '@/components/ErrorFindDriver';
-import { useRouter } from 'expo-router';
-import OnWay from '@/components/OnWay';
-import ReactNativeModal from 'react-native-modal';
+import { View, Text, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import Constants from 'expo-constants';
-import SlideButton from '@/components/SlideButton';
-import { getDangerEmailHtml } from '@/lib/dangerAlertTemplate';
-import { getNearbyDrivers } from '@/lib/calcRegion';
-import { Driver, RideOfferDetails } from '@/types/type';
+import { auth } from '@/lib/firebase';
+import { useRiderStore } from '@/store/useRiderStore';
+import { VEHICLE_TYPES } from '@/lib/vehicleTypes';
+import CustomButton from '@/components/CustomButton';
 
-type PlainDriver = Omit<Driver, 'setCarImageURL' | 'setCarSeats' | 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? '';
 
-const API_URL = Constants.expoConfig?.extra?.serverUrl;
-const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
+export default function FinalPage() {
+  const {
+    activeRide, searchingRideId, rideStatus,
+    setActiveRide, setRideStatus, setSearchingRideId, clearRoute,
+  } = useRiderStore();
 
+  const [polling, setPolling] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const [elapsed, setElapsed] = useState(0);
 
-const FinalPage = () => {
-    if (Platform.OS === 'web') {
+  const vehicleDef = activeRide?.vehicle_type
+    ? VEHICLE_TYPES.find(v => v.key === activeRide.vehicle_type as any)
+    : null;
+
+  // Poll ride status while finding
+  useEffect(() => {
+    const rideId = searchingRideId || activeRide?.id;
+    if (!rideId || rideStatus === 'completed' || rideStatus === 'cancelled' || rideStatus === 'expired') {
+      setPolling(false);
+      return;
+    }
+
+    setPolling(true);
+    const apiBase = API_URL;
+
+    const poll = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
+        const token = await user.getIdToken();
+
+        const res = await fetch(`${apiBase}/api/ride/${rideId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.ride) {
+          setActiveRide(data.ride);
+          const newStatus = mapStatus(data.ride.status);
+          setRideStatus(newStatus);
+        }
+      } catch {
+        // Network error — retry on next poll
+      }
+    };
+
+    // Immediate first poll
+    poll();
+    pollRef.current = setInterval(poll, 5000);
+
+    // Elapsed timer
+    const elapsedInt = setInterval(() => setElapsed(p => p + 1), 1000);
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      clearInterval(elapsedInt);
+    };
+  }, [searchingRideId, activeRide?.id, rideStatus]);
+
+  const handleCancel = useCallback(async () => {
+    if (!searchingRideId && !activeRide?.id) return;
+    const rideId = searchingRideId || activeRide?.id;
+    if (!rideId) return;
+
+    setCancelling(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      const res = await fetch(`${API_URL}/api/ride/${rideId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ cancelled_by: 'rider', reason: 'rider_cancelled' }),
+      });
+      if (res.ok) {
+        setRideStatus('cancelled');
+        setSearchingRideId(null);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to cancel ride');
+    } finally {
+      setCancelling(false);
+    }
+  }, [searchingRideId, activeRide?.id]);
+
+  const handleGoHome = () => {
+    clearRoute();
+    setActiveRide(null);
+    setSearchingRideId(null);
+    setRideStatus('idle');
+    router.replace('/(main)/(customer)/(tabs)/home');
+  };
+
+  const renderFinding = () => (
+    <View className="flex-1 items-center justify-center px-6">
+      <ActivityIndicator size="large" color="#0CC25F" />
+      <Text className="text-xl font-urbanist-bold text-[#212121] mt-6">
+        Finding your ride...
+      </Text>
+      <Text className="text-sm font-inter text-gray-500 mt-2 text-center">
+        Searching for nearby drivers
+      </Text>
+      <View className="mt-8 p-4 bg-white rounded-2xl w-full border border-[#DADADA]">
+        <Text className="text-sm font-inter text-gray-500">Searching for</Text>
+        <Text className="text-lg font-urbanist-bold text-[#212121] mt-1">
+          {vehicleDef?.display_en ?? activeRide?.vehicle_type ?? 'Vehicle'}
+        </Text>
+        <Text className="text-sm font-inter text-gray-400 mt-1">
+          Elapsed: {Math.floor(elapsed / 60)}:{(elapsed % 60).toString().padStart(2, '0')}
+        </Text>
+      </View>
+      <CustomButton
+        title={cancelling ? 'Cancelling...' : 'Cancel Request'}
+        onPress={handleCancel}
+        bgVariant="danger"
+        disabled={cancelling}
+        className="w-full mt-6"
+      />
+    </View>
+  );
+
+  const renderMatched = () => (
+    <View className="flex-1 px-4 pt-4">
+      {/* Driver info card */}
+      <View className="p-4 bg-white rounded-2xl border border-[#DADADA]">
+        <Text className="text-lg font-urbanist-bold text-[#212121]">
+          Driver Found!
+        </Text>
+        <View className="flex-row items-center mt-3">
+          <View className="w-14 h-14 rounded-full bg-[#0CC25F]/10 items-center justify-center">
+            <Text className="text-2xl text-[#0CC25F] font-urbanist-bold">
+              {activeRide?.driver?.name?.charAt(0) ?? 'D'}
+            </Text>
+          </View>
+          <View className="ml-3 flex-1">
+            <Text className="text-base font-urbanist-bold text-[#212121]">
+              {activeRide?.driver?.name ?? 'Driver'}
+            </Text>
+            <Text className="text-sm font-inter text-gray-500">
+              {activeRide?.driver?.vehicle_type
+                ? VEHICLE_TYPES.find(v => v.key === activeRide.driver!.vehicle_type as any)?.display_en ?? activeRide.driver.vehicle_type
+                : vehicleDef?.display_en ?? ''}
+            </Text>
+          </View>
+          <View className="items-end">
+            <Text className="text-base font-urbanist-bold text-[#212121]">
+              {activeRide?.driver?.rating ? `${parseFloat(activeRide.driver.rating.toString()).toFixed(1)}` : '5.0'}
+            </Text>
+            <Text className="text-xs font-inter text-gray-400">Rating</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Trip info */}
+      <View className="mt-4 p-4 bg-white rounded-2xl border border-[#DADADA]">
+        <View className="flex-row items-center">
+          <View className="w-8 h-8 rounded-full bg-[#0CC25F]/10 items-center justify-center">
+            <Text className="text-[#0CC25F] text-xs">●</Text>
+          </View>
+          <Text className="ml-3 text-sm font-inter text-[#212121] flex-1" numberOfLines={1}>
+            {activeRide?.origin_address ?? 'Pickup'}
+          </Text>
+        </View>
+        <View className="h-4 w-0.5 bg-gray-300 ml-4" />
+        <View className="flex-row items-center">
+          <View className="w-8 h-8 rounded-full bg-[#E31D1C]/10 items-center justify-center">
+            <Text className="text-[#E31D1C] text-xs">■</Text>
+          </View>
+          <Text className="ml-3 text-sm font-inter text-[#212121] flex-1" numberOfLines={1}>
+            {activeRide?.destination_address ?? 'Dropoff'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Fare */}
+      <View className="mt-4 p-4 bg-white rounded-2xl border border-[#DADADA]">
+        <View className="flex-row justify-between">
+          <Text className="text-sm font-inter text-gray-500">Est. Fare</Text>
+          <Text className="text-lg font-urbanist-bold text-[#0CC25F]">
+            ৳{activeRide?.fare_breakdown?.total_bdt
+              ? (Number(activeRide.fare_breakdown.total_bdt) / 100).toFixed(0)
+              : '—'}
+          </Text>
+        </View>
+        <View className="flex-row justify-between mt-1">
+          <Text className="text-sm font-inter text-gray-500">Distance</Text>
+          <Text className="text-sm font-inter text-[#212121]">
+            {activeRide?.distance_km ? `${activeRide.distance_km.toFixed(1)} km` : '—'}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderCompleted = () => (
+    <View className="flex-1 items-center justify-center px-6">
+      <View className="w-20 h-20 rounded-full bg-[#0CC25F]/10 items-center justify-center mb-4">
+        <Text className="text-4xl text-[#0CC25F]">✓</Text>
+      </View>
+      <Text className="text-2xl font-urbanist-bold text-[#212121]">
+        Ride Complete!
+      </Text>
+      <View className="mt-6 p-4 bg-white rounded-2xl w-full border border-[#DADADA]">
+        <View className="flex-row justify-between">
+          <Text className="text-sm font-inter text-gray-500">Total Fare</Text>
+          <Text className="text-lg font-urbanist-bold text-[#0CC25F]">
+            ৳{activeRide?.fare_breakdown?.total_bdt
+              ? (Number(activeRide.fare_breakdown.total_bdt) / 100).toFixed(0)
+              : '—'}
+          </Text>
+        </View>
+      </View>
+      <CustomButton
+        title="Back to Home"
+        onPress={handleGoHome}
+        className="w-full mt-6"
+      />
+    </View>
+  );
+
+  const renderError = () => (
+    <View className="flex-1 items-center justify-center px-6">
+      <Text className="text-4xl mb-4">😔</Text>
+      <Text className="text-xl font-urbanist-bold text-[#212121] text-center">
+        No drivers available
+      </Text>
+      <Text className="text-sm font-inter text-gray-500 mt-2 text-center">
+        Please try again later
+      </Text>
+      <CustomButton
+        title="Back to Home"
+        onPress={handleGoHome}
+        className="w-full mt-6"
+      />
+    </View>
+  );
+
+  const renderState = () => {
+    switch (rideStatus) {
+      case 'finding':
+        return renderFinding();
+      case 'matched':
+      case 'arriving':
+      case 'in_progress':
+        return renderMatched();
+      case 'completed':
+        return renderCompleted();
+      case 'cancelled':
+      case 'expired':
+        return renderError();
+      default:
         return (
-            <View>
-                <Text>Not available on web platform</Text>
-            </View>
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#0CC25F" />
+          </View>
         );
     }
-
-    const { user } = useUser();
-    const { userAddress, destinationAddress, userLongitude, userLatitude, destinationLatitude, destinationLongitude } = useCustomer();
-    const [page, setPage] = useState<string>('Loading');
-    const [paid, setPaid] = useState(false);
-    const { nearbyDrivers, selectedDriverId, selectedDriverDetails } = useDriverStore();
-    const { ws, setWebSocket } = useWSStore();
-    const router = useRouter();
-    const [otp, setOtp] = useState('0000');
-    const [driverReached, setDriverReached] = useState(false);
-    const { removeRideOffer, setActiveRideId, giveRideDetails, rideOffer, activeRideId, changeStatus } = useRideOfferStore(state => state);
-    const [showModal, setShowModal] = useState<boolean>(false);
-    const [verifyReached, setVerifyReached] = useState<boolean>(false);
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const [countdown, setCountdown] = useState(10);
-    const [alertSent, setAlertSent] = useState(false);
-    const [rideDetails, setRideDetails] = useState<RideOfferDetails>()
-
-
-
-
-    const {
-        setDrivers,
-        drivers,
-        setNearbyDrivers,
-        updateDriverLocation,
-        removeDriverLocation,
-        removeNearbyDriver,
-        updateSelectedDriverLocation,
-        clearSelectedDriver
-    } = useDriverStore();
-
-    const { clearDestinationLocation } = useCustomer();
-
-    const generateOtp = () => {
-        const randomOtp = Math.floor(1000 + Math.random() * 9000);
-        return randomOtp.toString();
-    };
-
-    useEffect(() => {
-        let socket: WebSocket;
-
-        if (!ws) {
-            const newWs = new WebSocket(WEBSOCKET_API_URL);
-
-            newWs.onopen = () => console.log('WebSocket connected');
-            newWs.onerror = (err) => console.log('WebSocket error:', err);
-            setWebSocket(newWs);
-            socket = newWs;
-        } else {
-            socket = ws;
-        }
-
-        socket.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            console.log("📝 Received WS message:", message);
-
-            if (message.type === 'riderLocationUpdated') {
-                console.log('📍 Rider location update:', message);
-                updateDriverLocation(message.driverId, message.latitude, message.longitude, message.address)
-                updateSelectedDriverLocation(message.latitude, message.longitude, message.address)
-
-
-
-                const updatedDrivers = useDriverStore.getState().nearbyDrivers?.filter(
-                    (driver) => driver.userLatitude && driver.userLongitude
-                ) || [];
-
-                updateMarkersOnMap(updatedDrivers);
-            }
-
-            if (message.type === 'riderLocationUpdate') {
-                console.log('📍 Rider location update:', message);
-                updateDriverLocation(message.driverId, message.latitude, message.longitude, message.address)
-                updateSelectedDriverLocation(message.latitude, message.longitude, message.address)
-            }
-
-            if (message.type === 'rideOfferRejected') {
-                removeRideOffer(message.id);
-                setPage('Error');
-            }
-
-            if (message.type === 'rideofferAccepted') {
-                setPage('OnWay');
-                setActiveRideId(message.id);
-            }
-
-            if (message.type === 'driverReached') {
-                setPage('Start');
-                const newOtp = generateOtp();
-                setOtp(newOtp);
-                const details = giveRideDetails(message.id);
-
-                if (socket && socket.readyState === WebSocket.OPEN && details) {
-                    socket.send(JSON.stringify({
-                        type: 'providingOTP',
-                        role: 'customer',
-                        id: details.id,
-                        otp: newOtp,
-                        customer_id: user?.id,
-                        driver_id: details.rider_id
-                    }));
-                }
-            }
-
-            if (message.type === 'rideBegins') {
-                setPage('Middle');
-                changeStatus(message.id, 'Start');
-                // removeRideOffer(message.id);
-            }
-
-            if (message.type === 'rideEnded') {
-                setVerifyReached(true)
-            }
-
-            if (message.type === 'driverOffline') {
-                if (page === 'Loading') {
-                    removeDriverLocation(message.driverId)
-                    removeNearbyDriver(message.driverId)
-                    clearSelectedDriver()
-
-                    const updatedDrivers = useDriverStore.getState().nearbyDrivers
-                    console.log('⭐⭐⭐⭐')
-                    console.log(updatedDrivers)
-                    updateMarkersOnMap(updatedDrivers);
-
-                    setPage('Error')
-                }
-            }
-        };
-    }, [ws]);
-
-    useEffect(() => {
-        if (!activeRideId) return;
-
-        const details = giveRideDetails(activeRideId);
-        if (details) {
-            setRideDetails(details);
-        }
-    }, [activeRideId]);
-
-
-
-    const updateMarkersOnMap = async (driversToUse?: PlainDriver[]) => {
-        if (userLatitude && userLongitude) {
-            let driversWithDistanceAway: PlainDriver[] = [];
-            const driversToPass = driversToUse ?? nearbyDrivers;
-
-            if (destinationLatitude && destinationLongitude) {
-                driversWithDistanceAway = await getNearbyDrivers(userLatitude, userLongitude, driversToPass, destinationLatitude, destinationLongitude);
-            } else {
-                driversWithDistanceAway = await getNearbyDrivers(userLatitude, userLongitude, driversToPass);
-            }
-
-
-            // console.log('drivers with distance away')
-            // console.log(driversWithDistanceAway)
-            setNearbyDrivers(driversWithDistanceAway)
-        }
-    }
-
-    useEffect(() => {
-        if (verifyReached) {
-            setCountdown(10);
-
-            timeoutRef.current = setTimeout(() => {
-                console.log("🔔 Timer done. Sending email...");
-
-                setAlertSent(true);
-
-                fetch("https://utils-server-for-glidex.onrender.com/api/send-email", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        to: user?.emailAddresses[0]?.emailAddress,
-                        subject: `Ride Alert – Destination Not Confirmed by ${user?.firstName}`,
-                        html: getDangerEmailHtml(selectedDriverDetails!, user!),
-                    }),
-                }).catch(err => console.log("❌ Email send error", err));
-
-                const rideDetails = giveRideDetails(activeRideId!);
-                if (ws && ws.readyState === WebSocket.OPEN && rideDetails) {
-                    ws.send(JSON.stringify({
-                        type: 'noConfirmationAlert',
-                        role: 'customer',
-                        rider_id: rideDetails.rider_id,
-                        id: rideDetails.id,
-                    }));
-                }
-
-
-            }, 10000);
-
-            const countdownInterval = setInterval(() => {
-                setCountdown(prev => {
-                    if (prev <= 1) {
-                        clearInterval(countdownInterval);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-
-            return () => {
-                if (timeoutRef.current) {
-                    clearTimeout(timeoutRef.current);
-                    timeoutRef.current = null;
-                }
-                clearInterval(countdownInterval);
-            };
-        }
-    }, [verifyReached]);
-
-
-
-
-    useEffect(() => {
-        const saveRideToDB = async () => {
-            if (activeRideId && page === 'End') {
-                const rideDetails = giveRideDetails(activeRideId);
-                try {
-                    const url = `${API_URL}/api/ride/create`;
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            origin_address: rideDetails?.pickupDetails.pickupAddress,
-                            destination_address: rideDetails?.dropoffDetails.dropoffAddress,
-                            origin_latitude: rideDetails?.pickupDetails.pickupLatitude,
-                            origin_longitude: rideDetails?.pickupDetails.pickupLongitude,
-                            destination_latitude: rideDetails?.dropoffDetails.dropoffLatitude,
-                            destination_longitude: rideDetails?.dropoffDetails.dropoffLongitude,
-                            fare_price: selectedDriverDetails?.price,
-                            payment_status: 'Paid',
-                            driver_id: rideDetails?.rider_id,
-                            user_id: rideDetails?.customer_id
-                        })
-                    });
-
-                    const { data } = await response.json();
-                } catch (error) {
-                    console.log('Error fetching rides:', error);
-                }
-            }
-        };
-
-        saveRideToDB();
-    }, [page]);
-
-
-    const handleSlideComplete = () => {
-
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-            console.log("🛑 Timer cancelled by user sliding");
-        }
-
-        if (activeRideId) {
-            const rideDetails = giveRideDetails(activeRideId)
-            console.log('rideDetails')
-            console.log(rideDetails)
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'reachedDestinationVerified',
-                    role: 'customer',
-                    rider_id: rideDetails?.rider_id,
-                    id: rideDetails?.id,
-                }))
-            }
-        }
-        setPage('End');
-        setVerifyReached(false)
-        setTimeout(() => setShowModal(true), 5000);
-    }
-
-    const handleGoBack = () => {
-        clearDestinationLocation();
-        clearSelectedDriver();
-        router.replace('/(main)/(customer)/(tabs)/home');
-    };
-
-    return (
-        <>
-            <RideLayout title='final page' disabled={(page === 'Loading' || page === 'OnWay' || page === 'Start') ? true : false}>
-                {page === 'OnWay' && <OnWay />}
-                {page === 'Start' && <Start otp={otp} />}
-                {page === 'Middle' && <Middle />}
-                {page === 'End' && <End />}
-                {page === 'Error' && <ErrorFindDriver />}
-                {page === 'Loading' && <LoadingRider />}
-
-                <View className='h-[1px] bg-gray-300 my-4' />
-
-                <FinalDetails
-                    paid={paid}
-                    setPaid={setPaid}
-                    page={page}
-                    {...(page !== 'Loading' && page !== 'Error' && { number: selectedDriverDetails?.number })}
-                />
-
-                <ReactNativeModal isVisible={showModal}>
-                    <View className="bg-white p-6 rounded-2xl border border-neutral-200 w-11/12 self-center">
-
-                        {/* Header */}
-                        <View className="items-center mb-4">
-                            <Text className="text-xl font-JakartaBold text-black text-center mb-1">
-                                🎉 Ride Completed!
-                            </Text>
-                            <Text className="text-sm font-JakartaLight text-neutral-600 text-center">
-                                Thank you for riding with us.
-                            </Text>
-                        </View>
-
-                        {/* Fare Summary Section */}
-                        <View className="my-4 bg-neutral-100 rounded-lg p-4">
-                            <View className="flex-row justify-between mb-2">
-                                <Text className="text-sm font-JakartaMedium text-neutral-700">Total Fare</Text>
-                                <Text className="text-base font-JakartaSemiBold text-black">
-                                    ${selectedDriverDetails?.price ?? '0.00'}
-                                </Text>
-                            </View>
-                            <View className="flex-row justify-between">
-                                <Text className="text-sm text-neutral-500">Distance</Text>
-                                <Text className="text-sm text-neutral-500">
-                                    {(rideDetails && rideDetails.distance) ?? 'N/A'}
-                                </Text>
-                            </View>
-                            <View className="flex-row justify-between">
-                                <Text className="text-sm text-neutral-500">Duration</Text>
-                                <Text className="text-sm text-neutral-500">
-                                    {(rideDetails && rideDetails.duration) ?? 'N/A'}
-                                </Text>
-                            </View>
-                        </View>
-
-                        {/* Payment Section */}
-                        {!paid ? (
-                            <>
-                                <View className="my-2">
-                                    <Text className="text-base font-JakartaMedium text-neutral-800 mt-5 text-center">
-                                        Please complete your payment
-                                    </Text>
-
-                                    <PaymentPage
-                                        fullName={user?.fullName!}
-                                        email={user?.emailAddresses[0]?.emailAddress!}
-                                        amount={selectedDriverDetails?.price!}
-                                        driverId={selectedDriverDetails?.id!}
-                                        rideTime={selectedDriverDetails?.distanceAway!}
-                                        handlePaymentDone={() => setPaid(true)}
-                                    />
-
-                                    <Text className="text-center my-3 text-neutral-500">— OR —</Text>
-
-                                    <Text className="text-center text-base text-neutral-700">
-                                        Pay with cash to the driver
-                                    </Text>
-                                </View>
-                            </>
-                        ) : (
-                            <View className="items-center my-4">
-                                <Text className="text-green-600 font-JakartaSemiBold text-lg text-center">
-                                    ✅ Payment completed
-                                </Text>
-                            </View>
-                        )}
-
-                        {/* Action Button */}
-                        <CustomButton
-                            title="Return to Home"
-                            onPress={handleGoBack}
-                            className="w-full mt-4"
-                        />
-                    </View>
-                </ReactNativeModal>
-
-
-                <ReactNativeModal isVisible={verifyReached}>
-                    <View className="bg-white p-5 rounded-lg items-center">
-
-                        {alertSent ? (
-                            <>
-                                <Text className="text-red-600 text-xl font-JakartaSemiBold text-center mb-2">
-                                    🚨 Safety Alert Sent
-                                </Text>
-                                <Text className="text-center text-lg text-gray-600 mb-4">
-                                    You didn’t confirm your destination in time. An alert was sent to your email.
-                                </Text>
-                                <CustomButton title="Return to Home" onPress={handleGoBack} className='w-1/2' />
-                            </>
-                        ) : (
-                            <>
-                                <Text className="text-red-600 text-lg font-semibold text-center mb-2">
-                                    ⚠️ Please confirm your destination
-                                </Text>
-                                <Text className="text-gray-600 text-center mb-4">
-                                    If you don’t confirm within <Text className="font-bold">{countdown}</Text> seconds,
-                                    an emergency alert will be sent to your email.
-                                </Text>
-                                <SlideButton
-                                    title="Slide to Confirm the Destination Location"
-                                    onComplete={handleSlideComplete}
-                                    bgColor="#0F9D58"
-                                    textColor="#fff"
-                                />
-                            </>
-                        )}
-                    </View>
-                </ReactNativeModal>
-
-
-
-            </RideLayout>
-        </>
-    );
-};
-
-export default FinalPage;
+  };
+
+  return (
+    <SafeAreaView className="flex-1 bg-[#F7FCFF]">
+      <View className="flex-1">
+        {renderState()}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function mapStatus(dbStatus: string): 'finding' | 'arriving' | 'in_progress' | 'completed' | 'cancelled' | 'expired' | 'idle' {
+  switch (dbStatus) {
+    case 'pending':
+    case 'dispatching':
+      return 'finding';
+    case 'matched':
+    case 'driver_arriving':
+      return 'arriving';
+    case 'in_progress':
+      return 'in_progress';
+    case 'completed':
+      return 'completed';
+    case 'cancelled':
+      return 'cancelled';
+    case 'expired':
+    case 'no_drivers':
+      return 'expired';
+    default:
+      return 'idle';
+  }
+}

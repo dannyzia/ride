@@ -1,5 +1,5 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import React, { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Constants from 'expo-constants';
 
@@ -8,100 +8,70 @@ const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
 export default function RegisterScreen() {
   const router = useRouter();
   const { challenge_jwt, role } = useLocalSearchParams<{
-    challenge_jwt: string;
-    role: string;
+    challenge_jwt: string; role: string;
   }>();
 
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleRegister = async () => {
-    if (name.trim().length < 2) return;
+  const handleRegister = useCallback(async () => {
+    if (name.trim().length < 2) { Alert.alert('Error', 'Name must be at least 2 characters.'); return; }
     setLoading(true);
-    setError(null);
-
     try {
       const res = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          challenge_jwt,
-          name: name.trim(),
-          role,
-        }),
+        body: JSON.stringify({ challenge_jwt, name: name.trim(), role }),
       });
 
       if (res.status === 201) {
-        const data = await res.json();
-        // Navigate to role home
-        router.replace(
-          data.role === 'driver' ? '/(main)/(rider)' : '/(main)/(customer)'
-        );
+        router.replace(role === 'driver' ? '/(main)/(rider)' : '/(main)/(customer)');
       } else if (res.status === 409) {
-        setError('This number is already registered. Please log in.');
-        setTimeout(() => router.replace('/(auth)/phone-entry'), 2000);
+        Alert.alert('Error', 'This number is already registered. Please log in.');
+        router.replace('/(auth)/phone-entry');
       } else if (res.status === 401) {
-        setError('Session expired. Start over.');
-        setTimeout(() => router.replace('/(auth)/phone-entry'), 2000);
+        Alert.alert('Error', 'Session expired. Start over.');
+        router.replace('/(auth)/phone-entry');
       } else {
         const data = await res.json();
-        setError(data.error || 'Registration failed. Try again.');
+        Alert.alert('Error', data?.message ?? 'Registration failed.');
       }
     } catch {
-      setError('Network error. Check your connection.');
+      Alert.alert('Error', 'Connection failed. Try again.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const roleLabel = role === 'driver' ? 'Driver' : 'Rider';
+  }, [name, challenge_jwt, role, router]);
 
   return (
-    <View className="flex-1 bg-white justify-center px-6">
-      <Text className="text-2xl font-JakartaBold text-center mb-2">Create your account</Text>
-      <Text className="text-base text-gray-500 text-center mb-8">Enter your name to get started</Text>
+    <View className="flex-1 bg-white px-6 justify-center">
+      <Text className="text-3xl font-heading text-gray-900 mb-2">Create Account</Text>
+      <Text className="text-base font-body text-gray-500 mb-8">Enter your name to get started</Text>
 
-      {/* Role pill */}
-      <View className="flex-row justify-center mb-6">
-        <View className="bg-primary-100 rounded-full px-4 py-2">
-          <Text className="text-primary-600 font-JakartaSemiBold">
-            Signing up as {roleLabel}
-          </Text>
+      <View className="flex-row items-center mb-6">
+        <View className="bg-primary/10 px-4 py-2 rounded-full">
+          <Text className="text-primary font-body text-sm capitalize">{role}</Text>
         </View>
       </View>
 
-      {/* Name Input */}
-      <View className="bg-gray-50 rounded-xl px-4 mb-6 border border-gray-200">
-        <TextInput
-          className="py-4 text-lg"
-          placeholder="Full Name"
-          placeholderTextColor="#9CA3AF"
-          autoFocus
-          value={name}
-          onChangeText={setName}
-          editable={!loading}
-          autoCapitalize="words"
-        />
-      </View>
+      <TextInput
+        className="border border-gray-300 rounded-2xl px-4 py-3 text-lg font-body text-gray-900 mb-8"
+        placeholder="Full Name"
+        autoFocus
+        value={name}
+        onChangeText={setName}
+        maxLength={100}
+      />
 
-      {/* Error */}
-      {error && (
-        <Text className="text-red-500 text-sm text-center mb-4">{error}</Text>
-      )}
-
-      {/* Create Account Button */}
       <TouchableOpacity
-        onPress={handleRegister}
+        className={`py-4 rounded-full items-center ${name.trim().length >= 2 && !loading ? 'bg-primary' : 'bg-gray-300'}`}
         disabled={name.trim().length < 2 || loading}
-        className={`py-4 rounded-xl ${name.trim().length < 2 || loading ? 'bg-gray-300' : 'bg-primary-500'}`}
+        onPress={handleRegister}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color="white" />
         ) : (
-          <Text className="text-white text-center font-JakartaSemiBold text-lg">
-            Create Account
-          </Text>
+          <Text className="text-white font-body text-lg font-semibold">Create Account</Text>
         )}
       </TouchableOpacity>
     </View>

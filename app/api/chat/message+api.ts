@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { db } from '../../../src/db';
-import { chatMessages, rides } from '../../../src/db/schema';
+import { chatMessages, rides, users } from '../../../src/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { verifyFirebaseIdToken } from '../../../lib/auth';
 
@@ -14,16 +14,20 @@ export async function POST(request: Request) {
     const decoded = await verifyFirebaseIdToken(request);
     const body = await sendSchema.parseAsync(await request.json());
 
+    // Resolve Firebase uid to DB user id
+    const [sender] = await db.select({ id: users.id }).from(users).where(eq(users.firebase_uid, decoded.uid)).limit(1);
+    if (!sender) return Response.json({ error: 'user_not_found' }, { status: 404 });
+
     // Verify sender is participant in this ride
     const [ride] = await db.select().from(rides).where(eq(rides.id, body.ride_id)).limit(1);
     if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
-    if (ride.user_id !== decoded.uid && ride.driver_id !== decoded.uid) {
+    if (ride.user_id !== sender.id && ride.driver_id !== sender.id) {
       return Response.json({ error: 'not_ride_participant' }, { status: 403 });
     }
 
     const [msg] = await db.insert(chatMessages).values({
       ride_id: body.ride_id,
-      sender_id: decoded.uid,
+      sender_id: sender.id,
       content: body.content,
     }).returning();
 

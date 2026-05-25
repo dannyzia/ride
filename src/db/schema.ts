@@ -15,7 +15,7 @@ export const vehicleTypeEnum = pgEnum('vehicle_type', [
 ]);
 export const userRoleEnum          = pgEnum('user_role',          ['rider', 'driver', 'admin']);
 export const driverStatusEnum      = pgEnum('driver_status',      ['pending', 'temporary', 'active', 'suspended', 'rejected']);
-export const rideStatusEnum        = pgEnum('ride_status',        ['pending', 'dispatching', 'matched', 'driver_arriving', 'in_progress', 'completed', 'cancelled', 'expired', 'no_drivers']);
+export const rideStatusEnum        = pgEnum('ride_status',        ['pending', 'dispatching', 'matched', 'driver_arriving', 'driver_arrived', 'in_progress', 'completed', 'cancelled', 'expired', 'no_drivers']);
 export const subscriptionStatusEnum= pgEnum('subscription_status',['active', 'expired', 'suspended']);
 export const callEventTypeEnum     = pgEnum('call_event_type',    ['deduction', 'refund', 'credit', 'initial_load', 'expiry_writeoff']);
 export const paymentProviderEnum   = pgEnum('payment_provider',   ['bkash', 'nagad']);
@@ -76,8 +76,6 @@ export const drivers = pgTable('drivers', {
   last_location_at:         timestamptz('last_location_at'),
   h3_cell_res9:             varchar('h3_cell_res9', { length: 20 }),
   stage2_due_at:            timestamptz('stage2_due_at'),
-  car_image_url:            varchar('car_image_url', { length: 500 }),
-  car_seats:                integer('car_seats'),
   created_at:               timestamptz('created_at').notNull().defaultNow(),
   updated_at:               timestamptz('updated_at').notNull().defaultNow(),
 }, (t) => [
@@ -193,8 +191,10 @@ export const rides = pgTable('rides', {
   status:               rideStatusEnum('status').notNull().default('pending'),
   fare_breakdown:       jsonb('fare_breakdown').notNull(),
   distance_km:          numeric('distance_km', { precision: 7, scale: 3 }).notNull(),
+  platform_commission_bdt: integer('platform_commission_bdt'),
   scheduled_at:         timestamptz('scheduled_at'),
   matched_at:           timestamptz('matched_at'),
+  arrived_at:           timestamptz('arrived_at'),
   eta_minutes:          smallint('eta_minutes'),
   started_at:           timestamptz('started_at'),
   completed_at:         timestamptz('completed_at'),
@@ -203,8 +203,6 @@ export const rides = pgTable('rides', {
   cancel_reason:        varchar('cancel_reason', { length: 255 }),
   cancelled_by:         varchar('cancelled_by', { length: 10 }),
   scheduled_dispatched_at: timestamptz('scheduled_dispatched_at'),
-  payment_status:        varchar('payment_status', { length: 20 }).notNull().default('pending'),
-  fare_price:            numeric('fare_price', { precision: 10, scale: 2 }),
   created_at:           timestamptz('created_at').notNull().defaultNow(),
   updated_at:           timestamptz('updated_at').notNull().defaultNow(),
 }, (t) => [
@@ -266,8 +264,8 @@ export const rateLimits = pgTable('rate_limits', {
 
 export const paymentEvents = pgTable('payment_events', {
   id:               uuid('id').defaultRandom().primaryKey(),
-  driver_id:        uuid('driver_id').notNull().references(() => drivers.id),
-  package_id:       uuid('package_id').notNull().references(() => packages.id),
+  driver_id:        uuid('driver_id').references(() => drivers.id),
+  package_id:       uuid('package_id').references(() => packages.id),
   idempotency_key:  varchar('idempotency_key', { length: 64 }).notNull().unique(),
   provider:         paymentProviderEnum('provider').notNull(),
   provider_txn_id:  varchar('provider_txn_id', { length: 255 }),
@@ -276,6 +274,7 @@ export const paymentEvents = pgTable('payment_events', {
   initiated_at:     timestamptz('initiated_at').notNull().defaultNow(),
   confirmed_at:     timestamptz('confirmed_at'),
   subscription_id:  uuid('subscription_id').references(() => subscriptions.id),
+  ride_id:          uuid('ride_id').references(() => rides.id),
   created_at:       timestamptz('created_at').notNull().defaultNow(),
   updated_at:       timestamptz('updated_at').notNull().defaultNow(),
 }, (t) => [
@@ -316,16 +315,17 @@ export const zones = pgTable('zones', {
 ]);
 
 export const pricing = pgTable('pricing', {
-  id:                   uuid('id').defaultRandom().primaryKey(),
-  zone_id:              uuid('zone_id').notNull().references(() => zones.id),
-  vehicle_type:         vehicleTypeEnum('vehicle_type').notNull(),
-  base_fare_bdt:        integer('base_fare_bdt').notNull(),
-  per_km_bdt:           integer('per_km_bdt').notNull(),
-  per_min_wait_bdt:     integer('per_min_wait_bdt').notNull(),
-  free_wait_minutes:    integer('free_wait_minutes').notNull(),
-  is_active:            boolean('is_active').notNull().default(true),
-  brta_fare_ceiling_bdt:integer('brta_fare_ceiling_bdt'),
-  minimum_fare_bdt:     integer('minimum_fare_bdt').notNull(),
+  id:                         uuid('id').defaultRandom().primaryKey(),
+  zone_id:                    uuid('zone_id').notNull().references(() => zones.id),
+  vehicle_type:               vehicleTypeEnum('vehicle_type').notNull(),
+  base_fare_bdt:              integer('base_fare_bdt').notNull(),
+  per_km_bdt:                 integer('per_km_bdt').notNull(),
+  per_min_wait_bdt:           integer('per_min_wait_bdt').notNull(),
+  free_wait_minutes:          integer('free_wait_minutes').notNull(),
+  platform_commission_percent:integer('platform_commission_percent'),
+  is_active:                  boolean('is_active').notNull().default(true),
+  brta_fare_ceiling_bdt:      integer('brta_fare_ceiling_bdt'),
+  minimum_fare_bdt:           integer('minimum_fare_bdt').notNull(),
   created_at:           timestamptz('created_at').notNull().defaultNow(),
   updated_at:           timestamptz('updated_at').notNull().defaultNow(),
 }, (t) => [

@@ -20,14 +20,25 @@ module.exports = {
         JakartaSemiBold: ["Jakarta-SemiBold", "sans-serif"],
       },
       colors: {
-        bgColor: '#121212',              // Main background color (very dark)
-        cardBgColor: '#1E1E1E',          // Card or secondary background
-        hoverBgColor: '#2C2C2C',         // Hover background color
-        borderColor: '#3A3A3A',          // Border and divider color
-        primaryTextColor: '#E0E0E0',     // Main text color (light gray)
-        secondaryTextColor: '#AAAAAA',   // Secondary/muted text color
-        placeholderTextColor: '#555555', // Placeholder or disabled text color
-        accentColor: '#64B5F6',           // Accent (blue-ish) for highlights, links
+        // Ride legacy colors (keep for backward compat)
+        bgColor: '#181A20',              // GoRide bgDark
+        cardBgColor: '#212121',          // GoRide surfaceElevatedDark
+        hoverBgColor: '#2C2C2C',
+        borderColor: '#35383F',          // GoRide borderDark
+        primaryTextColor: '#FFFFFF',     // GoRide textPrimaryDark
+        secondaryTextColor: '#9CA3AF',   // GoRide textSecondaryDark
+        placeholderTextColor: '#555555',
+        accentColor: '#2E42A5',          // GoRide info
+
+        // GoRide token aliases
+        goBg: '#181A20',
+        goSurface: '#212121',
+        goBorder: '#35383F',
+        goTextPrimary: '#FFFFFF',
+        goTextSecondary: '#9CA3AF',
+        goAccent: '#0CC25F',
+        goDanger: '#E31D1C',
+        goInfo: '#2E42A5',
 
         primary: {
           100: "#F5F8FF",
@@ -67,7 +78,7 @@ module.exports = {
           200: "#FED7D7",
           300: "#FEB2B2",
           400: "#FC8181",
-          500: "#F56565",
+          500: "#E31D1C",  // Updated to GoRide danger
           600: "#E53E3E",
           700: "#C53030",
           800: "#9B2C2C",

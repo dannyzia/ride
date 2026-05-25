@@ -1,7 +1,7 @@
 // ReachCustomer.tsx
 
 import { View, Text, TouchableOpacity, Linking, Image } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import SlideButton from '@/components/SlideButton';
 import Map from '@/components/Map';
@@ -10,6 +10,7 @@ import { useUser } from '@/lib/useUser';
 import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
 import Constants from 'expo-constants';
+import { auth } from '@/lib/firebase';
 import { Ionicons } from '@expo/vector-icons';
 import RideLayout from '@/components/RideLayout';
 import { icons } from '@/constants/data';
@@ -27,7 +28,7 @@ const ReachCustomer = () => {
     const { activeRideId, giveRideDetails } = useRideOfferStore();
 
     const { user } = useUser();
-    const [lastLocation, setLastLocation] = useState<Location.LocationObject | null>(null);
+    const lastLocationRef = useRef<Location.LocationObject | null>(null);
 
 
     useEffect(() => {
@@ -37,9 +38,16 @@ const ReachCustomer = () => {
         if (!ws) {
             const newWs = new WebSocket(WEBSOCKET_API_URL);
 
-
-            newWs.onopen = () => {
-                console.log('WebSocket connected');
+            newWs.onopen = async () => {
+                const user = auth.currentUser;
+                if (user) {
+                    const token = await user.getIdToken();
+                    newWs.send(JSON.stringify({
+                        type: 'auth:hello',
+                        firebase_id_token: token,
+                        role: 'driver',
+                    }));
+                }
             };
 
             newWs.onerror = (err) => {
@@ -94,8 +102,8 @@ const ReachCustomer = () => {
                     console.log('📍 Watched location:', location);
 
                     // Check if the location has changed significantly
-                    if (lastLocation) {
-                        const distance = calculateDistance(lastLocation, location);
+                    if (lastLocationRef.current) {
+                        const distance = calculateDistance(lastLocationRef.current, location);
 
                         // If distance exceeds 5 meters, send the location update
                         if (distance >= 5) {
@@ -124,11 +132,11 @@ const ReachCustomer = () => {
                                 address: address[0]?.formattedAddress!,
                             })
                             // Update the last known location
-                            setLastLocation(location);
+                            lastLocationRef.current = location;
                         }
                     } else {
                         // Set the initial location
-                        setLastLocation(location);
+                        lastLocationRef.current = location;
                     }
 
                     // Update the driver location in the store
@@ -154,7 +162,7 @@ const ReachCustomer = () => {
                 locationSubscription = null;
             }
         };
-    }, [user, lastLocation]);
+    }, [user]);
 
 
 

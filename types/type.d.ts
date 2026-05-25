@@ -1,7 +1,7 @@
 import { TextInputProps, TouchableOpacityProps } from "react-native";
 
 
-type PlainDriver = Omit<Driver, 'setCarImageURL' | 'setCarSeats' | 'setTime' | 'setPrice' | 'setUser' | 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
+type PlainDriver = Omit<Driver, 'setTime' | 'setPrice' | 'setUser' | 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
 
 declare interface MapProps {
     destinationLatitude?: number;
@@ -42,7 +42,7 @@ declare interface ButtonProps extends TouchableOpacityProps {
     disabled?: boolean
 }
 
-declare interface GoogleInputProps {
+declare interface BarikoiInputProps {
     icon?: string;
     initialLocation?: string;
     containerStyle?: string;
@@ -133,10 +133,6 @@ declare interface StoreRole {
 declare interface Driver extends UserData {
     distanceAway?: number;
     price?: string | null;
-    car_image_url?: string | null;
-    car_seats?: number | null;
-    setCarImageURL: ({ car_image_url }: { car_image_url: string }) => void;
-    setCarSeats: ({ car_seats }: { car_seats: number }) => void;
 }
 
 
@@ -183,11 +179,10 @@ declare interface RideData {
     destination_longitude: number;
     driver: Driver;
     driver_id: string;
-    fare_price: number;
+    fare_breakdown: any;
     origin_address: string;
     origin_latitude: number;
     origin_longitude: number;
-    payment_status: 'Paid' | 'Unpaid';
     ride_id: string;
     user_id: string;
 }

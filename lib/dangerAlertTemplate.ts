@@ -2,8 +2,6 @@ import { Driver } from "@/types/type";
 
 type PlainDriver = Omit<
   Driver,
-  | "setCarImageURL"
-  | "setCarSeats"
   | "setTime"
   | "setPrice"
   | "setUser"
@@ -78,16 +76,7 @@ export const getDangerEmailHtml = (driver: PlainDriver, user: { id: string; full
           style="margin-top: 24px; padding: 24px; border: 1px solid #2A2A2A; border-radius: 8px; background-color: #141514;"
         >
           <h3 style="margin: 0 0 16px; font-size: 18px; font-weight: 600; color: #7EB6FF;">Car Info</h3>
-          <ul style="list-style: none; padding: 0; margin: 0; color: #E0E0E0;">
-            <li style="margin-bottom: 6px;"><strong style="color: #E0E0E0;">Seats:</strong> ${driver.car_seats}</li>
-            <li><strong style="color: #E0E0E0;">Car Image:</strong></li>
-          </ul>
-          <img
-            src="${driver.car_image_url}"
-            alt="Car Image"
-            width="100"
-            style="margin-top: 12px; border-radius: 6px;"
-          />
+          <p style="color: #E0E0E0;">Vehicle details available in app.</p>
         </div>
 
         <!-- Section: Last Known Location -->

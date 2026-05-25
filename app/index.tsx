@@ -18,7 +18,7 @@ const Page = () => {
     );
   }
 
-  return <Redirect href="/(auth)/welcome" />;
+  return <Redirect href="/(auth)/phone-entry" />;
 };
 
 export default Page;

@@ -15,6 +15,8 @@ import * as Notifications from 'expo-notifications'
 import * as Device from 'expo-device'
 import Constants from 'expo-constants'
 import { RefreshControl } from 'react-native'
+import { auth } from '@/lib/firebase'
+import { logger } from "@/lib/logger";
 // import LottieView from 'lottie-react-native';
 
 const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
@@ -26,7 +28,7 @@ if (Platform.OS !== 'web') {
     try {
         LottieView = require('lottie-react-native').default;
     } catch (err) {
-        console.warn('LottieView native import failed:', err);
+        logger.warn('LottieView native import failed:', err);
         LottieView = () => null;
     }
 }
@@ -40,7 +42,7 @@ const RideHome = () => {
     const [showVerifyModal, setShowVerifyModal] = useState<boolean>(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const locationUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const [lastLocation, setLastLocation] = useState<Location.LocationObject | null>(null);
+    const lastLocationRef = useRef<Location.LocationObject | null>(null);
     const [todayEarnings, setTodayEarnings] = useState('')
     const [refreshing, setRefreshing] = useState(false);
     const [_, forceUpdate] = useState(0);
@@ -100,7 +102,7 @@ const RideHome = () => {
     const sendLocationToWebSocket = async () => {
 
         if (isVerified && onDuty) {
-            console.log('Sending location to all customers')
+            logger.info('Sending location to all customers')
             if (ws && ws.readyState === WebSocket.OPEN) {
                 let location = await Location.getCurrentPositionAsync();
                 const address = await Location.reverseGeocodeAsync({
@@ -129,7 +131,7 @@ const RideHome = () => {
             sendLocationToWebSocket();
             forceUpdate(n => n + 1);
         } catch (error) {
-            console.error("Failed to refresh user:", error);
+            logger.error("Failed to refresh user:", error);
         }
         setRefreshing(false);
     };
@@ -149,7 +151,7 @@ const RideHome = () => {
                 }
                 else {
                     // 🚀 When toggled ON duty, tell the websocket
-                    console.log('bapu on duty')
+                    logger.info('bapu on duty')
                     ws.send(JSON.stringify({
                         type: 'onDuty',
                         role: 'rider',
@@ -209,15 +211,15 @@ const RideHome = () => {
                     id: user.id,
                     role: 'rider',
                 }));
-                console.log("WebSocket connected");
+                logger.info("WebSocket connected");
             };
 
             newWs.onerror = () => {
-                console.log('An error occurred while connecting to the server.');
+                logger.info('An error occurred while connecting to the server.');
             };
 
             newWs.onclose = () => {
-                console.log("WebSocket closed");
+                logger.info("WebSocket closed");
             };
             setWebSocket(newWs);
             socket = newWs;
@@ -227,9 +229,9 @@ const RideHome = () => {
 
         socket.onmessage = (event) => {
             const message = JSON.parse(event.data);
-            console.log('Message received from WebSocket:', message);
-            console.log('😂')
-            console.log(message.rideDetails)
+            logger.info('Message received from WebSocket:', message);
+            logger.info('😂')
+            logger.info(message.rideDetails)
             if (message.type === 'newRideOffer') {
                 addRideOffer(message.rideDetails);
                 Notifications.scheduleNotificationAsync({
@@ -249,7 +251,7 @@ const RideHome = () => {
 
     }, [ws]);
 
-    console.log("WebSocket instance in RideHome", ws);
+    logger.info("WebSocket instance in RideHome", ws);
 
 
     const registerForPushNotificationsAsync = async () => {
@@ -269,7 +271,7 @@ const RideHome = () => {
             token = (await Notifications.getExpoPushTokenAsync({
                 projectId: Constants.expoConfig?.extra?.eas?.projectId,
             })).data;
-            console.log('Expo Push Token:', token);
+            logger.info('Expo Push Token:', token);
         } else {
             alert('Must use physical device for Push Notifications');
         }
@@ -301,7 +303,10 @@ const RideHome = () => {
         setLoading(true)
         const getDriverData = async () => {
             try {
-                const res = await fetch(`${API_URL}/api/driver/get?firebase_uid=${user?.id}`);
+                const token = await auth.currentUser?.getIdToken();
+                const res = await fetch(`${API_URL}/api/driver/get`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
                 const data = await res.json();
                 if (data.length === 0 || data[0].profile_image_url === "") {
                     setIsVerified(false);
@@ -309,7 +314,7 @@ const RideHome = () => {
                 }
                 setIsVerified(true);
             } catch (error: any) {
-                console.log('API fetch error:', error);
+                logger.info('API fetch error:', error);
             } finally {
                 setLoading(false)
             }
@@ -322,21 +327,23 @@ const RideHome = () => {
 
     useEffect(() => {
         setLoading(true)
-        const getDriverData = async () => {
+        const getDriverEarnings = async () => {
             try {
-                const res = await fetch(`${API_URL}/api/driver/calculate-price?firebase_uid=${user?.id}`);
+                const token = await auth.currentUser?.getIdToken();
+                const res = await fetch(`${API_URL}/api/driver/calculate-price`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
                 const data = await res.json();
-
                 setTodayEarnings(data.totalEarnings)
             } catch (error) {
-                console.log('API fetch error:', error);
+                logger.info('API fetch error:', error);
             } finally {
                 setLoading(false)
             }
         };
 
         if (user?.id) {
-            getDriverData();
+            getDriverEarnings();
         }
     }, [user]);
 
@@ -412,11 +419,11 @@ const RideHome = () => {
                     distanceInterval: 2, // in meters
                 },
                 async (location) => {
-                    console.log('📍 Watched location:', location);
+                    logger.info('📍 Watched location:', location);
 
                     // Check if the location has changed significantly
-                    if (lastLocation) {
-                        const distance = calculateDistance(lastLocation, location);
+                    if (lastLocationRef.current) {
+                        const distance = calculateDistance(lastLocationRef.current, location);
 
                         // If distance exceeds 5 meters, send the location update
                         if (distance >= 5) {
@@ -445,11 +452,11 @@ const RideHome = () => {
                                 address: address[0]?.formattedAddress!,
                             })
                             // Update the last known location
-                            setLastLocation(location);
+                            lastLocationRef.current = location;
                         }
                     } else {
                         // Set the initial location
-                        setLastLocation(location);
+                        lastLocationRef.current = location;
                     }
 
                     // Update the driver location in the store
@@ -475,7 +482,7 @@ const RideHome = () => {
                 locationSubscription = null;
             }
         };
-    }, [user, onDuty, lastLocation]);
+    }, [user, onDuty]);
 
 
 
@@ -491,12 +498,12 @@ const RideHome = () => {
                 latitude: location.coords.latitude,
                 longitude: location.coords.longitude
             });
-            console.log(address)
+            logger.info(address)
             setHasPermissions(true)
 
             // Send initial location to WebSocket when permissions are granted
             if (ws && ws.readyState === WebSocket.OPEN) {
-                console.log('sending driver location to the websocket')
+                logger.info('sending driver location to the websocket')
                 sendLocationToWebSocket();
             }
 
@@ -514,7 +521,7 @@ const RideHome = () => {
                 }
             }
         };
-        console.log("Interval running: onDuty=", onDuty, "isVerified=", isVerified);
+        logger.info("Interval running: onDuty=", onDuty, "isVerified=", isVerified);
 
         if (user && onDuty) {
             requestLocation();

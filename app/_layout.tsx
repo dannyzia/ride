@@ -4,6 +4,23 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import Constants from 'expo-constants';
+import { logger } from '@/lib/logger';
+
+// Conditional Sentry init — @sentry/react-native may not be installed in dev
+try {
+  const Sentry = require('@sentry/react-native');
+  Sentry.init({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+    tracesSampleRate: 0.2,
+    // Do not log PII
+    beforeSend: (event: any) => {
+      if (event.request?.url) event.request.url = event.request.url.replace(/\/api\/(?:ride|driver|auth)\/\S+/, '/api/[redacted]');
+      return event;
+    },
+  });
+} catch {
+  logger.info('[sentry] @sentry/react-native not available');
+}
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
 
@@ -49,7 +66,7 @@ export default function RootLayout() {
     });
 
     return unsubscribe;
-  }, []);
+  }, [router, segments, API_URL]);
 
   if (initializing) {
     return (

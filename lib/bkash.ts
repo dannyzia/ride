@@ -9,8 +9,14 @@ async function getToken(): Promise<string> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', username: process.env.BKASH_USERNAME!, password: process.env.BKASH_PASSWORD! },
     body: JSON.stringify({ app_key: process.env.BKASH_APP_KEY, app_secret: process.env.BKASH_APP_SECRET }),
+    signal: AbortSignal.timeout(10_000),
   });
   const data = await res.json();
+  if (!res.ok) {
+    _token = null;
+    _tokenExpiry = 0;
+    throw new Error(`bkash token grant failed: ${res.status} ${data.errorMessage ?? ''}`);
+  }
   _token = data.id_token;
   _tokenExpiry = Date.now() + (data.expires_in ?? 3600) * 1000;
   return _token!;
@@ -23,6 +29,7 @@ export const bkashClient = {
     const res = await fetch(`${process.env.BKASH_BASE_URL}/tokenized/checkout/create`, {
       method: 'POST',
       headers: { 'Content-Type':'application/json', Authorization: token, 'X-APP-Key': process.env.BKASH_APP_KEY! },
+      signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({
         mode: '0011', payerReference: params.idempotencyKey,
         callbackURL: params.callbackUrl,
@@ -39,6 +46,7 @@ export const bkashClient = {
     const token = await getToken();
     const res = await fetch(`${process.env.BKASH_BASE_URL}/tokenized/checkout/payment/status?paymentID=${paymentID}`, {
       headers: { Authorization: token, 'X-APP-Key': process.env.BKASH_APP_KEY! },
+      signal: AbortSignal.timeout(10_000),
     });
     const data = await res.json();
     logger.info('[bKash] queryPayment', { paymentID, status: data.transactionStatus });
@@ -49,6 +57,7 @@ export const bkashClient = {
     const res = await fetch(`${process.env.BKASH_BASE_URL}/tokenized/checkout/execute`, {
       method: 'POST',
       headers: { 'Content-Type':'application/json', Authorization: token, 'X-APP-Key': process.env.BKASH_APP_KEY! },
+      signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({ paymentID }),
     });
     const data = await res.json();

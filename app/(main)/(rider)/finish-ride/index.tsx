@@ -1,7 +1,7 @@
 // ReachCustomer.tsx
 
 import { View, Text, ActivityIndicator, Alert, Image, TouchableOpacity } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import SlideButton from '@/components/SlideButton';
 import Map from '@/components/Map';
@@ -31,7 +31,7 @@ const ReachCustomer = () => {
     const [showModal, setShowModal] = useState<boolean>(false)
     const [verifyReached, setVerifyReached] = useState<boolean>(false)
     const [verifyReachedStage, setVerifyReachedStage] = useState<'waiting' | 'alert'>('waiting');
-    const [lastLocation, setLastLocation] = useState<Location.LocationObject | null>(null);
+    const lastLocationRef = useRef<Location.LocationObject | null>(null);
 
 
 
@@ -119,8 +119,8 @@ const ReachCustomer = () => {
                     console.log('📍 Watched location:', location);
 
                     // Check if the location has changed significantly
-                    if (lastLocation) {
-                        const distance = calculateDistance(lastLocation, location);
+                    if (lastLocationRef.current) {
+                        const distance = calculateDistance(lastLocationRef.current, location);
 
                         // If distance exceeds 5 meters, send the location update
                         if (distance >= 5) {
@@ -149,11 +149,11 @@ const ReachCustomer = () => {
                                 address: address[0]?.formattedAddress!,
                             })
                             // Update the last known location
-                            setLastLocation(location);
+                            lastLocationRef.current = location;
                         }
                     } else {
                         // Set the initial location
-                        setLastLocation(location);
+                        lastLocationRef.current = location;
                     }
 
                     // Update the driver location in the store
@@ -179,7 +179,7 @@ const ReachCustomer = () => {
                 locationSubscription = null;
             }
         };
-    }, [user, lastLocation]);
+    }, [user]);
 
 
 

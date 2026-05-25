@@ -1,269 +1,161 @@
-import { Image, Text, View } from "react-native";
-
+import { Image, Text, View, Alert } from "react-native";
 import RideLayout from "@/components/RideLayout";
-import { useCustomer, useDriverStore, useRideOfferStore, useWSStore } from "@/store";
+import { useCustomer } from "@/store";
 import { icons } from "@/constants/data";
 import { useRouter } from "expo-router";
 import CustomButton from "@/components/CustomButton";
-import { formatTime } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { useUser } from "@/lib/useUser";
+import { useRiderStore, VehicleType } from "@/store/useRiderStore";
+import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import Constants from 'expo-constants';
+import { auth } from '@/lib/firebase';
 
-const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
-const BARIKOI_API_KEY = Constants.expoConfig?.extra?.BARIKOI_API_KEY || '';
-
-
-
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? '';
+const BARIKOI_API_KEY = Constants.expoConfig?.extra?.BARIKOI_API_KEY ?? '';
 
 const ConfirmRidePage = () => {
-    const router = useRouter()
-    const { userAddress, destinationAddress, userLatitude, userLongitude, destinationLatitude, destinationLongitude } = useCustomer();
-    const { selectedDriverId, nearbyDrivers, setSelectedDriverDetails, updateDriverLocation, updateSelectedDriverLocation, selectedDriverDetails } = useDriverStore();
-    const { ws, setWebSocket } = useWSStore();
-    const { user } = useUser()
-    const { addRideOffer } = useRideOfferStore(store => store);
-    const [rideDuration, setRideDuration] = useState<string>('')
-    const [rideDistance, setRideDistance] = useState<string>('')
+  const router = useRouter();
+  const { userAddress, destinationAddress, userLatitude, userLongitude, destinationLatitude, destinationLongitude } = useCustomer();
+  const { selectedVehicleType, estimates, setSearchingRideId, setRideStatus } = useRiderStore();
+  const [rideDuration, setRideDuration] = useState<string>('');
+  const [rideDistance, setRideDistance] = useState<string>('');
+  const [requesting, setRequesting] = useState(false);
 
+  const selectedEstimate = estimates.find(e => e.vehicle_type === selectedVehicleType);
+  const vehicleDef = selectedVehicleType ? VEHICLE_TYPES.find(v => v.key === selectedVehicleType) : null;
 
-    // const findSelectedDriverDetails = nearbyDrivers?.find(
-    //     (driver) => driver.id === selectedDriverId,
-    // );
+  useEffect(() => {
+    if (!userLongitude || !userLatitude || !destinationLongitude || !destinationLatitude) return;
 
-    // console.log(findSelectedDriverDetails?.distanceAway)
-    // console.log('findSelectedDriverDetails')
-    // useEffect(() => {
-    //     if (findSelectedDriverDetails) {
-    //         setSelectedDriverDetails(findSelectedDriverDetails);
-    //     }
-    // }, [findSelectedDriverDetails]);
+    const fetchRoute = async () => {
+      try {
+        const url = `https://barikoi.xyz/v1/api/distance/directions/${BARIKOI_API_KEY}?from=${userLongitude},${userLatitude}&to=${destinationLongitude},${destinationLatitude}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        const seconds = data.duration || data.routes?.[0]?.duration || 0;
+        const meters = data.distance || data.routes?.[0]?.distance || 0;
 
+        const timeInMinutes = Math.round((seconds + 300) / 60);
+        const duration = timeInMinutes < 60
+          ? `${timeInMinutes} mins`
+          : `${(timeInMinutes / 60).toFixed(1)} hours`;
 
-    useEffect(() => {
-        let socket: WebSocket;
+        const km = meters / 1000;
+        const distance = km >= 1 ? `${km.toFixed(1)} km` : `${Math.round(meters)} m`;
 
-        if (!ws) {
-            const newWs = new WebSocket(WEBSOCKET_API_URL);
-
-
-            newWs.onopen = () => {
-                console.log("WebSocket connected");
-            };
-
-            newWs.onerror = () => {
-                console.log('An error occurred while connecting to the server.');
-            };
-
-            socket = newWs;
-            setWebSocket(newWs);
-        } else {
-            socket = ws;
-        }
-
-
-        socket.onmessage = (event) => {
-            console.log('Message received from WebSocket:');
-            console.log(event.data)
-            const message = JSON.parse(event.data);
-            console.log('📍Parsed message from message page:');
-            console.log(message)
-            if (message.type === 'riderLocationUpdated' || message.type === 'riderLocationUpdate') {
-                updateDriverLocation(message.driverId, message.latitude, message.longitude, message.address)
-                updateSelectedDriverLocation(message.latitude, message.longitude, message.address)
-            }
-        };
-    }, [ws]);
-
-
-    function generateRideId(): string {
-        // const timestamp = Date.now().toString(36); // base36 timestamp
-        const random = Math.random().toString(36).substring(2, 6); // 4-char random string
-        return `ride_${random}`;
-    }
-
-
-
-    const makePickup = (): string => {
-        if (userAddress) {
-            return userAddress.split(',')[0].trim();
-        }
-        return '';
-    }
-
-
-    const makeDropoff = (): string => {
-        if (destinationAddress) {
-            return destinationAddress.split(',')[0].trim();
-        }
-        return '';
-    }
-
-    useEffect(() => {
-        const fetchRideDurationAndDistance = async () => {
-            try {
-                const url = `https://barikoi.xyz/v1/api/distance/directions/${BARIKOI_API_KEY}?from=${userLongitude},${userLatitude}&to=${destinationLongitude},${destinationLatitude}`;
-                const response = await fetch(url);
-                const data = await response.json();
-                // Barikoi directions: { status, distance, duration, ... }
-                const seconds = data.duration || (data.routes?.[0]?.duration) || 0;
-                const meters = data.distance || (data.routes?.[0]?.distance) || 0;
-
-                const finalSeconds = seconds + 300; // jam buffer
-                const timeInMinutes = Math.round(finalSeconds / 60);
-                const duration = timeInMinutes < 60
-                    ? `${timeInMinutes} mins`
-                    : `${(timeInMinutes / 60).toFixed(1)} hours`;
-
-                const km = (meters / 1000);
-                const distance = km >= 1 ? `${km.toFixed(1)} km` : `${Math.round(meters)} m`;
-
-                setRideDuration(duration);
-                setRideDistance(distance);
-            } catch {
-                setRideDuration('N/A');
-                setRideDistance('N/A');
-            }
-        };
-
-        fetchRideDurationAndDistance();
-    }, [])
-
-
-    const rideDetails = () => {
-        return {
-            id: generateRideId(),
-            role: 'customer',
-            fare: selectedDriverDetails?.price ?? '0',
-            duration: rideDuration ?? '0',
-            distance: rideDistance,
-            pickupDetails: {
-                pickup: makePickup(),
-                pickupAddress: userAddress ?? '',
-                pickupLongitude: userLongitude ?? 0,
-                pickupLatitude: userLatitude ?? 0,
-                pickupDistance: selectedDriverDetails?.distanceAway ?? 0,
-            },
-            dropoffDetails: {
-                dropoff: makeDropoff(),
-                dropoffAddress: destinationAddress ?? '',
-                dropoffLatitude: destinationLatitude ?? 0,
-                dropoffLongitude: destinationLongitude ?? 0
-            },
-            customerDetails: {
-                full_name: user?.fullName ?? '',
-                email: user?.primaryEmailAddress?.emailAddress ?? '',
-                number: String(user?.publicMetadata.phone_number ?? '')
-            },
-            rider_id: selectedDriverId ?? '',
-            customer_id: user?.id ?? '',
-            status: 'Offer',
-        };
+        setRideDuration(duration);
+        setRideDistance(distance);
+      } catch {
+        setRideDuration(selectedEstimate ? `${selectedEstimate.eta_minutes} min` : 'N/A');
+        setRideDistance(selectedEstimate ? `${selectedEstimate.distance_km.toFixed(1)} km` : 'N/A');
+      }
     };
 
+    fetchRoute();
+  }, []);
 
-    const handleOfferRide = () => {
-        if (ws?.readyState === WebSocket.OPEN) {
-            const ride = rideDetails()
-            ws.send(JSON.stringify({
-                type: 'rideOffer',
-                role: 'customer',
-                rideDetails: ride
-            }))
-            addRideOffer(ride)
-        }
+  const handleRequestRide = async () => {
+    if (!userLatitude || !userLongitude || !destinationLatitude || !destinationLongitude || !selectedVehicleType) {
+      Alert.alert('Error', 'Missing location or vehicle type');
+      return;
     }
 
+    const user = auth.currentUser;
+    if (!user) { Alert.alert('Error', 'Not authenticated'); return; }
 
+    setRequesting(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`${API_URL}/api/ride/request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          pickup_lat: userLatitude,
+          pickup_lng: userLongitude,
+          pickup_address: userAddress || '',
+          dropoff_lat: destinationLatitude,
+          dropoff_lng: destinationLongitude,
+          dropoff_address: destinationAddress || '',
+          vehicle_type: selectedVehicleType,
+        }),
+      });
+      const data = await response.json();
+      if (data.ride_id) {
+        setSearchingRideId(data.ride_id);
+        setRideStatus('finding');
+        router.replace('/(main)/(customer)/final-page');
+      } else {
+        Alert.alert('Request Failed', data.message || data.error || 'Could not find a driver');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Network error');
+    } finally {
+      setRequesting(false);
+    }
+  };
 
-    return (
-        <RideLayout title="Book Ride" disabled={false}>
-            <>
-                <Text className="text-xl font-JakartaSemiBold mb-3">
-                    Ride Information
-                </Text>
+  return (
+    <RideLayout title="Confirm Ride" disabled={false}>
+      <View className="flex-1">
+        {/* Selected vehicle info */}
+        {selectedEstimate && vehicleDef && (
+          <View className="flex-row items-center p-4 mb-5 rounded-2xl bg-cardBgColor">
+            <View className="w-16 h-16 rounded-full bg-bgColor items-center justify-center">
+              <Image source={icons.cab} className="w-8 h-8 tint-primaryTextColor" resizeMode="contain" />
+            </View>
+            <View className="flex-1 ml-4">
+              <Text className="text-primaryTextColor text-lg font-JakartaBold">{vehicleDef.display_en}</Text>
+              <Text className="text-secondaryTextColor text-sm">{selectedEstimate.seats} seats</Text>
+            </View>
+            <View className="items-end">
+              <Text className="text-primaryTextColor text-lg font-JakartaBold">৳{(selectedEstimate.total_bdt / 100).toFixed(0)}</Text>
+              <Text className="text-secondaryTextColor text-xs">{selectedEstimate.eta_minutes} min</Text>
+            </View>
+          </View>
+        )}
 
-                <View className="flex flex-col w-full items-center justify-center mt-10">
-                    {
-                        selectedDriverDetails?.profile_image_url && (
-                            <Image
-                                source={{ uri: selectedDriverDetails?.profile_image_url }}
-                                className="w-28 h-28 rounded-full"
-                            />
-                        )
-                    }
+        {/* Ride info card */}
+        <View className="rounded-2xl bg-cardBgColor p-4 mb-5">
+          <View className="flex-row justify-between py-2 border-b border-borderColor">
+            <Text className="text-secondaryTextColor">Distance</Text>
+            <Text className="text-primaryTextColor font-JakartaSemiBold">{rideDistance}</Text>
+          </View>
+          <View className="flex-row justify-between py-2 border-b border-borderColor">
+            <Text className="text-secondaryTextColor">Duration</Text>
+            <Text className="text-primaryTextColor font-JakartaSemiBold">{rideDuration}</Text>
+          </View>
+          <View className="flex-row justify-between py-2">
+            <Text className="text-secondaryTextColor">Fare</Text>
+            <Text className="text-[#0CC25F] text-lg font-JakartaBold">
+              ৳{selectedEstimate ? (selectedEstimate.total_bdt / 100).toFixed(0) : '—'}
+            </Text>
+          </View>
+        </View>
 
+        {/* Pickup / Dropoff */}
+        <View className="rounded-2xl bg-cardBgColor p-4 mb-5">
+          <View className="flex-row items-center py-2 border-b border-borderColor">
+            <Image source={icons.marker} className="w-5 h-5 tint-[#0CC25F]" resizeMode="contain" />
+            <Text className="text-primaryTextColor ml-3 flex-1" numberOfLines={2}>{userAddress || 'Pickup'}</Text>
+          </View>
+          <View className="flex-row items-center py-2">
+            <Image source={icons.pin} className="w-5 h-5 tint-danger-500" resizeMode="contain" />
+            <Text className="text-primaryTextColor ml-3 flex-1" numberOfLines={2}>{destinationAddress || 'Dropoff'}</Text>
+          </View>
+        </View>
 
-                    <View className="mt-5">
-                        <Text className="text-lg font-JakartaSemiBold">
-                            {selectedDriverDetails?.full_name}
-                        </Text>
-                    </View>
-                    <View className="mt-1">
-                        <View className="flex flex-row items-center space-x-0.5">
-                            <Image
-                                source={icons.star}
-                                className="w-5 h-5"
-                                resizeMode="contain"
-                            />
-                            <Text className="text-lg font-JakartaRegular">
-                                {selectedDriverDetails?.rating}
-                            </Text>
-                        </View>
-                    </View>
-                </View>
-
-                <View
-                    className="flex flex-col w-full items-start justify-center py-3 px-5 rounded-3xl bg-general-600 mt-5">
-                    <View className="flex flex-row items-center justify-between w-full border-b border-white py-3">
-                        <Text className="text-lg font-JakartaRegular">Ride Price</Text>
-                        <Text className="text-lg font-JakartaRegular text-[#0CC25F]">
-                            ${selectedDriverDetails?.price || '_ _'}
-                        </Text>
-                    </View>
-
-                    <View className="flex flex-row items-center justify-between w-full border-b border-white py-3">
-                        <Text className="text-lg font-JakartaRegular">Pickup Time</Text>
-                        <Text className="text-lg font-JakartaRegular">
-                            {formatTime(selectedDriverDetails?.distanceAway! * 5)}
-                        </Text>
-                    </View>
-
-                    <View className="flex flex-row items-center justify-between w-full py-3">
-                        <Text className="text-lg font-JakartaRegular">Car Seats</Text>
-                        <Text className="text-lg font-JakartaRegular">
-                            {selectedDriverDetails?.car_seats}
-                        </Text>
-                    </View>
-                </View>
-
-                <View className="flex flex-col w-full items-start justify-center mt-5">
-                    <View
-                        className="flex flex-row items-center justify-start mt-3 border-t border-b border-general-700 w-full py-3">
-                        <Image source={icons.to} className="w-6 h-6" />
-                        <Text className="text-lg font-JakartaRegular ml-2">
-                            {userAddress}
-                        </Text>
-                    </View>
-
-                    <View className="flex flex-row items-center justify-start border-b border-general-700 w-full py-3">
-                        <Image source={icons.point} className="w-6 h-6" />
-                        <Text className="text-lg font-JakartaRegular ml-2">
-                            {destinationAddress}
-                        </Text>
-                    </View>
-                </View>
-                <CustomButton
-                    title="Confirm Ride"
-                    onPress={() => {
-                        handleOfferRide();
-                        router.replace('/(main)/(customer)/final-page' as never)
-                    }}
-                    className="mt-10 w-full"
-                />
-            </>
-        </RideLayout>
-    );
+        <CustomButton
+          title={requesting ? 'Requesting...' : 'Request Ride'}
+          onPress={handleRequestRide}
+          disabled={requesting || !selectedVehicleType}
+          className="w-full mt-auto"
+        />
+      </View>
+    </RideLayout>
+  );
 };
 
 export default ConfirmRidePage;

@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **modification of existing GlideX code**, not a greenfield build. Follow these execution rules:
 
-1. Use strict execution order from `docs/Plan/23-IMPLEMENTATION-HANDOFF-CHECKLIST.md`, with phase definitions from `docs/Plan/14-DEV-CHECKLIST.yaml` and file-level changes from `docs/Plan/20-DEVELOPER-CHANGE-LIST.md`.
-2. Follow API and WS contracts in `docs/Plan/06-API.md`, UX/UI contracts in `docs/Plan/07-USER-FLOWS.md`, `docs/Plan/08-UI-SPEC.md`, `docs/Plan/09-UX-SPEC.md`, and test requirements in `docs/Plan/22-TEST-TEMPLATES.md`.
+1. Use strict execution order from `D:\My Projects\Current Project\Ride\docs\Plan\23-IMPLEMENTATION-HANDOFF-CHECKLIST.md`, with phase definitions from `D:\My Projects\Current Project\Ride\docs\Plan\14-DEV-CHECKLIST.yaml` and file-level changes from `D:\My Projects\Current Project\Ride\docs\Plan\20-DEVELOPER-CHANGE-LIST.md`.
+2. Follow API and WS contracts in `D:\My Projects\Current Project\Ride\docs\Plan\06-API.md`, UX/UI contracts in `D:\My Projects\Current Project\Ride\docs\Plan\07-USER-FLOWS.md`, `D:\My Projects\Current Project\Ride\docs\Plan\08-UI-SPEC.md`, `D:\My Projects\Current Project\Ride\docs\Plan\09-UX-SPEC.md`, and test requirements in `D:\My Projects\Current Project\Ride\docs\Plan\22-TEST-TEMPLATES.md`.
 3. Complete one handoff step at a time — do not reorder.
-4. Stop immediately on any failure condition from `docs/Plan/14-DEV-CHECKLIST.yaml`, fix, then continue.
+4. Stop immediately on any failure condition from `D:\My Projects\Current Project\Ride\docs\Plan\14-DEV-CHECKLIST.yaml`, fix, then continue.
 5. After each completed step, output: Step completed, Files changed, Commands run, Validation evidence, Remaining risk.
 6. Keep changes minimal and scoped to current step only.
 7. Do not modify checklist scope unless explicitly requested.
@@ -18,29 +18,29 @@ This is a **modification of existing GlideX code**, not a greenfield build. Foll
 
 ## Source of Truth
 
-- **`docs/Plan/14-DEV-CHECKLIST.yaml`** — Canonical machine-readable implementation spec. Parse at start of every session. Treat failure_conditions as hard blockers.
-- **`docs/Plan/23-IMPLEMENTATION-HANDOFF-CHECKLIST.md`** — Strict ordered execution through H-00 through H-17. Do not reorder.
-- **`docs/Plan/20-DEVELOPER-CHANGE-LIST.md`** — File-by-file implementation guide with exact code shapes per phase.
-- **`docs/Plan/02-ARCHITECTURE.md`** — Component map: what's KEEP/REPLACE/DELETE/ADD from GlideX.
-- **`docs/Plan/06-API.md`** — API and WebSocket event contracts.
-- **`docs/Plan/05-DATA-MODEL.md`** — Database schema deltas from GlideX.
-- **`docs/Plan/13-CONVENTIONS.md`** — Coding conventions, naming, and critical Ride-specific rules.
-- **`docs/Plan/07-USER-FLOWS.md`** — User flow specs with all alternate paths.
-- **`docs/Plan/08-UI-SPEC.md`** — Screen specs with GoRide design tokens.
-- **`docs/Plan/09-UX-SPEC.md`** — Interaction contracts and GoRide micro-interactions.
-- **`docs/Plan/01-PRD.md`** — Product requirements with acceptance criteria.
-- **`docs/Plan/03-TECH-STACK.md`** — Package changes from GlideX baseline.
-- **`docs/Plan/04-ADR.md`** — Architecture Decision Records explaining WHY decisions were made.
-- **`docs/Plan/10-DEV-SETUP.md`** — Local dev setup steps (execute in order).
-- **`docs/Plan/11-ENV-VARS.md`** — Complete env var reference.
-- **`docs/Plan/12-FOLDER-STRUCTURE.md`** — File delta from GlideX (delete/replace/add).
-- **`docs/Plan/15-RUNBOOK-DEPLOY.md`** — Deploy procedures for all 3 components.
-- **`docs/Plan/16-INCIDENT-RESPONSE.md`** — Ride-specific incident response (P1-P4).
-- **`docs/Plan/17-MONITORING.md`** — Dashboards and alert thresholds.
-- **`docs/Plan/18-KNOWN-ISSUES.md`** — Known bugs and tech debt (check before fixing bugs).
-- **`docs/Plan/19-GLOSSARY.md`** — Canonical domain term definitions.
-- **`docs/Plan/21-MIGRATION-SQL.md`** — SQL migration reference.
-- **`docs/Plan/22-TEST-TEMPLATES.md`** — Unit test templates for critical modules.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\14-DEV-CHECKLIST.yaml`** — Canonical machine-readable implementation spec. Parse at start of every session. Treat failure_conditions as hard blockers.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\23-IMPLEMENTATION-HANDOFF-CHECKLIST.md`** — Strict ordered execution through H-00 through H-17. Do not reorder.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\20-DEVELOPER-CHANGE-LIST.md`** — File-by-file implementation guide with exact code shapes per phase.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\02-ARCHITECTURE.md`** — Component map: what's KEEP/REPLACE/DELETE/ADD from GlideX.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\06-API.md`** — API and WebSocket event contracts.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\05-DATA-MODEL.md`** — Database schema deltas from GlideX.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\13-CONVENTIONS.md`** — Coding conventions, naming, and critical Ride-specific rules.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\07-USER-FLOWS.md`** — User flow specs with all alternate paths.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\08-UI-SPEC.md`** — Screen specs with GoRide design tokens.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\09-UX-SPEC.md`** — Interaction contracts and GoRide micro-interactions.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\01-PRD.md`** — Product requirements with acceptance criteria.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\03-TECH-STACK.md`** — Package changes from GlideX baseline.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\04-ADR.md`** — Architecture Decision Records explaining WHY decisions were made.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\10-DEV-SETUP.md`** — Local dev setup steps (execute in order).
+- **`D:\My Projects\Current Project\Ride\docs\Plan\11-ENV-VARS.md`** — Complete env var reference.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\12-FOLDER-STRUCTURE.md`** — File delta from GlideX (delete/replace/add).
+- **`D:\My Projects\Current Project\Ride\docs\Plan\15-RUNBOOK-DEPLOY.md`** — Deploy procedures for all 3 components.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\16-INCIDENT-RESPONSE.md`** — Ride-specific incident response (P1-P4).
+- **`D:\My Projects\Current Project\Ride\docs\Plan\17-MONITORING.md`** — Dashboards and alert thresholds.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\18-KNOWN-ISSUES.md`** — Known bugs and tech debt (check before fixing bugs).
+- **`D:\My Projects\Current Project\Ride\docs\Plan\19-GLOSSARY.md`** — Canonical domain term definitions.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\21-MIGRATION-SQL.md`** — SQL migration reference.
+- **`D:\My Projects\Current Project\Ride\docs\Plan\22-TEST-TEMPLATES.md`** — Unit test templates for critical modules.
 
 ## Project Overview
 

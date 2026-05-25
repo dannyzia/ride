@@ -6,8 +6,10 @@ import { logger } from './logger';
 
 export async function activateSubscription(paymentEventId: string): Promise<{ subscriptionId: string }> {
   return db.transaction(async (tx) => {
-    const [evt] = await tx.select().from(paymentEvents).where(eq(paymentEvents.id, paymentEventId));
+    const [evt] = await tx.select().from(paymentEvents).where(eq(paymentEvents.id, paymentEventId)).for('update');
     if (!evt) throw new Error(`payment_event not found: ${paymentEventId}`);
+    if (!evt.driver_id) throw new Error(`payment_event ${paymentEventId} has no driver_id (ride payment?)`);
+    if (!evt.package_id) throw new Error(`payment_event ${paymentEventId} has no package_id (ride payment?)`);
 
     if (evt.subscription_id) {
       logger.info('[activateSub] already activated', { paymentEventId, subscriptionId: evt.subscription_id });

@@ -19,7 +19,6 @@ const RideCard = ({ ride }: { ride: RideData }) => {
     destination_latitude,
     destination_longitude,
     created_at,
-    payment_status,
     driver,
     ride_id
   } = ride;
@@ -65,19 +64,7 @@ const RideCard = ({ ride }: { ride: RideData }) => {
                 <Text className="text-sm text-white/80 font-JakartaMedium">{driver.full_name}</Text>
               </View>
 
-              <View className="flex flex-row justify-between mb-3">
-                <Text className="text-sm text-white/60 font-JakartaMedium">Car Seats</Text>
-                <Text className="text-sm text-white/80 font-JakartaMedium">{driver.car_seats}</Text>
-              </View>
 
-              <View className="flex flex-row justify-between">
-                <Text className="text-sm text-white/60 font-JakartaMedium">Payment Status</Text>
-                <Text
-                  className={`text-sm font-JakartaMedium capitalize ${payment_status === 'Paid' ? 'text-green-400' : 'text-red-400'}`}
-                >
-                  {payment_status}
-                </Text>
-              </View>
             </View>
 
           </View>

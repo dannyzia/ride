@@ -4,6 +4,7 @@ import { eq, and, inArray } from 'drizzle-orm';
 import { getH3Ring } from '../lib/h3';
 import { getDriversInCells } from './h3Index';
 import { checkDriverEligibility } from '../lib/vehicleTypes';
+import { haversineKm } from '../lib/fareCalc';
 import { logger } from '../lib/logger';
 
 const W_DISTANCE    = 0.40;
@@ -106,10 +107,3 @@ export async function scoreAndBatchDrivers(
   return scored.slice(0, batchSize);
 }
 
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = (lat2-lat1) * Math.PI/180;
-  const dLon = (lon2-lon1) * Math.PI/180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}

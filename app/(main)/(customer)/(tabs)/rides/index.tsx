@@ -6,6 +6,8 @@ import { useRidesStore } from '@/store';
 import RideCard from '@/components/RideCard';
 import Constants from 'expo-constants';
 import { images } from '@/constants/data';
+import { auth } from '@/lib/firebase';
+import { logger } from "@/lib/logger";
 
 const API_URL = Constants.expoConfig?.extra?.serverUrl;
 
@@ -19,12 +21,15 @@ const ShowAllRides = () => {
       if (!user?.id) return;
       setLoading(true);
       try {
-        const url = `${API_URL}/api/ride/get-all?firebase_uid=${user.id}`;
-        const res = await fetch(url);
+        const token = await auth.currentUser?.getIdToken();
+        const url = `${API_URL}/api/ride/get-all`;
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const { data } = await res.json();
         setRides(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error('Failed to fetch rides:', err);
+        logger.error('Failed to fetch rides:', err);
         setRides([]);
       } finally {
         setLoading(false);

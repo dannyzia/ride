@@ -38,6 +38,7 @@ yarn-error.*
 # Ride-specific
 functions/.runtimeconfig.json
 functions/lib/
+utils-server/.env
 utils-server/firebase-service-account.json
 firebase-service-account.json
 *.credential.json
