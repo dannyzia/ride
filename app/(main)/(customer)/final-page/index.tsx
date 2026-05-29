@@ -1,14 +1,19 @@
-import { View, Text, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { colors } from '@/theme/goRide';
+import { View, Text, ActivityIndicator, Alert, Dimensions } from 'react-native';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
-import { auth } from '@/lib/firebase';
+import MapLibreGL from '@maplibre/maplibre-react-native';
+import { supabase } from '@/lib/supabase';
 import { useRiderStore } from '@/store/useRiderStore';
+import { useWSStore } from '@/store';
 import { VEHICLE_TYPES } from '@/lib/vehicleTypes';
 import CustomButton from '@/components/CustomButton';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? '';
+const MAP_STYLE = 'https://map.barikoi.com/styles/osm-liberty/style.json?key=' + (Constants.expoConfig?.extra?.EXPO_PUBLIC_BARIKOI_API_KEY ?? '');
+const { height } = Dimensions.get('window');
 
 export default function FinalPage() {
   const {
@@ -16,59 +21,73 @@ export default function FinalPage() {
     setActiveRide, setRideStatus, setSearchingRideId, clearRoute,
   } = useRiderStore();
 
-  const [polling, setPolling] = useState(false);
+  const ws = useWSStore((s) => s.ws);
+
   const [cancelling, setCancelling] = useState(false);
-  const pollRef = useRef<NodeJS.Timeout | null>(null);
   const [elapsed, setElapsed] = useState(0);
+
+  // Driver tracking state (WebSocket-based)
+  const [driverLat, setDriverLat] = useState<number | null>(null);
+  const [driverLng, setDriverLng] = useState<number | null>(null);
+  const [driverEta, setDriverEta] = useState<number | null>(null);
+  const wsSubscribedRef = useRef(false);
 
   const vehicleDef = activeRide?.vehicle_type
     ? VEHICLE_TYPES.find(v => v.key === activeRide.vehicle_type as any)
     : null;
 
-  // Poll ride status while finding
+  // WebSocket subscription for ride status + driver location updates
   useEffect(() => {
     const rideId = searchingRideId || activeRide?.id;
     if (!rideId || rideStatus === 'completed' || rideStatus === 'cancelled' || rideStatus === 'expired') {
-      setPolling(false);
+      wsSubscribedRef.current = false;
       return;
     }
 
-    setPolling(true);
-    const apiBase = API_URL;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (wsSubscribedRef.current) return;
+    wsSubscribedRef.current = true;
 
-    const poll = async () => {
+    // Subscribe to ride updates via WebSocket
+    ws.send(JSON.stringify({ type: 'ride:subscribe', ride_id: rideId }));
+
+    const onMessage = (ev: MessageEvent) => {
       try {
-        const user = auth.currentUser;
-        if (!user) return;
-        const token = await user.getIdToken();
+        const msg = JSON.parse(ev.data);
+        if (msg.ride_id !== rideId) return;
 
-        const res = await fetch(`${apiBase}/api/ride/${rideId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.ride) {
-          setActiveRide(data.ride);
-          const newStatus = mapStatus(data.ride.status);
-          setRideStatus(newStatus);
+        switch (msg.type) {
+          case 'ride:status': {
+            if (msg.status) {
+              setRideStatus(mapStatus(msg.status));
+              if (msg.ride) setActiveRide(msg.ride);
+            }
+            break;
+          }
+          case 'location:driver': {
+            if (msg.lat != null) setDriverLat(msg.lat);
+            if (msg.lng != null) setDriverLng(msg.lng);
+            if (msg.eta_minutes != null) setDriverEta(msg.eta_minutes);
+            break;
+          }
         }
       } catch {
-        // Network error — retry on next poll
+        // Ignore non-JSON messages
       }
     };
 
-    // Immediate first poll
-    poll();
-    pollRef.current = setInterval(poll, 5000);
+    ws.addEventListener('message', onMessage);
 
     // Elapsed timer
     const elapsedInt = setInterval(() => setElapsed(p => p + 1), 1000);
 
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+      ws.removeEventListener('message', onMessage);
+      ws.send(JSON.stringify({ type: 'ride:unsubscribe', ride_id: rideId }));
+      wsSubscribedRef.current = false;
       clearInterval(elapsedInt);
     };
-  }, [searchingRideId, activeRide?.id, rideStatus]);
+  }, [searchingRideId, activeRide?.id, rideStatus, ws]);
 
   const handleCancel = useCallback(async () => {
     if (!searchingRideId && !activeRide?.id) return;
@@ -77,9 +96,9 @@ export default function FinalPage() {
 
     setCancelling(true);
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-      const token = await user.getIdToken();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
       const res = await fetch(`${API_URL}/api/ride/${rideId}/cancel`, {
         method: 'POST',
         headers: {
@@ -109,16 +128,16 @@ export default function FinalPage() {
 
   const renderFinding = () => (
     <View className="flex-1 items-center justify-center px-6">
-      <ActivityIndicator size="large" color="#0CC25F" />
-      <Text className="text-xl font-urbanist-bold text-[#212121] mt-6">
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text className="text-xl font-urbanist-bold text-goTextPrimaryLight mt-6">
         Finding your ride...
       </Text>
       <Text className="text-sm font-inter text-gray-500 mt-2 text-center">
         Searching for nearby drivers
       </Text>
-      <View className="mt-8 p-4 bg-white rounded-2xl w-full border border-[#DADADA]">
+      <View className="mt-8 p-4 bg-white rounded-2xl w-full border border-goBorderLight">
         <Text className="text-sm font-inter text-gray-500">Searching for</Text>
-        <Text className="text-lg font-urbanist-bold text-[#212121] mt-1">
+        <Text className="text-lg font-urbanist-bold text-goTextPrimaryLight mt-1">
           {vehicleDef?.display_en ?? activeRide?.vehicle_type ?? 'Vehicle'}
         </Text>
         <Text className="text-sm font-inter text-gray-400 mt-1">
@@ -137,19 +156,73 @@ export default function FinalPage() {
 
   const renderMatched = () => (
     <View className="flex-1 px-4 pt-4">
+      {/* Map with driver location pin */}
+      <View className="w-full rounded-2xl overflow-hidden border border-goBorderLight mb-4" style={{ height: height * 0.35 }}>
+        <MapLibreGL.MapView
+          style={{ flex: 1 }}
+          styleURL={MAP_STYLE}
+          logoEnabled={false}
+          attributionEnabled={false}
+          scrollEnabled
+          pitchEnabled={false}
+          rotateEnabled={false}
+          {...({} as any)}
+        >
+          {driverLat != null && driverLng != null && (
+            <MapLibreGL.Camera
+              centerCoordinate={[driverLng, driverLat]}
+              zoomLevel={15}
+              animationDuration={500}
+            />
+          )}
+          {/* Driver pin */}
+          {driverLat != null && driverLng != null && (
+            <MapLibreGL.PointAnnotation
+              id="driver-location"
+              coordinate={[driverLng, driverLat]}
+            >
+              <View className="w-10 h-10 rounded-full bg-goAccent/20 items-center justify-center">
+                <View className="w-6 h-6 rounded-full bg-goAccent items-center justify-center">
+                  <Text className="text-white text-xs">🚗</Text>
+                </View>
+              </View>
+            </MapLibreGL.PointAnnotation>
+          )}
+          {/* Pickup marker */}
+          {activeRide?.origin_latitude != null && activeRide?.origin_longitude != null && (
+            <MapLibreGL.PointAnnotation
+              id="pickup"
+              coordinate={[parseFloat(activeRide.origin_longitude.toString()), parseFloat(activeRide.origin_latitude.toString())]}
+            >
+              <View className="w-6 h-6 rounded-full bg-green-500 items-center justify-center">
+                <Text className="text-white text-xs">●</Text>
+              </View>
+            </MapLibreGL.PointAnnotation>
+          )}
+        </MapLibreGL.MapView>
+        {/* ETA overlay */}
+        {driverEta != null && (
+          <View className="absolute top-3 left-3 bg-white/90 rounded-full px-3 py-1.5 shadow-sm">
+            <Text className="text-sm font-urbanist-bold text-goTextPrimaryLight">
+              ETA: {Math.round(driverEta)} min
+            </Text>
+          </View>
+        )}
+      </View>
+
       {/* Driver info card */}
-      <View className="p-4 bg-white rounded-2xl border border-[#DADADA]">
-        <Text className="text-lg font-urbanist-bold text-[#212121]">
-          Driver Found!
+      <View className="p-4 bg-white rounded-2xl border border-goBorderLight">
+        <Text className="text-lg font-urbanist-bold text-goTextPrimaryLight">
+          {driverEta != null ? `Arriving in ${Math.round(driverEta)} min` : 'Driver Found!'}
         </Text>
         <View className="flex-row items-center mt-3">
-          <View className="w-14 h-14 rounded-full bg-[#0CC25F]/10 items-center justify-center">
-            <Text className="text-2xl text-[#0CC25F] font-urbanist-bold">
+          <View className="w-14 h-14 rounded-full bg-goAccent/10 items-center justify-center">
+            <Text className="text-2xl text-goAccent font-urbanist-bold">
               {activeRide?.driver?.name?.charAt(0) ?? 'D'}
             </Text>
           </View>
           <View className="ml-3 flex-1">
-            <Text className="text-base font-urbanist-bold text-[#212121]">
+            <Text className="text-base font-urbanist-bold text-goTextPrimaryLight">
               {activeRide?.driver?.name ?? 'Driver'}
             </Text>
             <Text className="text-sm font-inter text-gray-500">
@@ -159,49 +232,33 @@ export default function FinalPage() {
             </Text>
           </View>
           <View className="items-end">
-            <Text className="text-base font-urbanist-bold text-[#212121]">
-              {activeRide?.driver?.rating ? `${parseFloat(activeRide.driver.rating.toString()).toFixed(1)}` : '5.0'}
+            <Text className="text-lg font-urbanist-bold text-goAccent">
+              ৳{activeRide?.fare_breakdown?.total_bdt
+                ? (Number(activeRide.fare_breakdown.total_bdt) / 100).toFixed(0)
+                : '—'}
             </Text>
-            <Text className="text-xs font-inter text-gray-400">Rating</Text>
+            <Text className="text-xs font-inter text-gray-400">Est. Fare</Text>
           </View>
         </View>
       </View>
 
       {/* Trip info */}
-      <View className="mt-4 p-4 bg-white rounded-2xl border border-[#DADADA]">
+      <View className="mt-4 p-4 bg-white rounded-2xl border border-goBorderLight">
         <View className="flex-row items-center">
-          <View className="w-8 h-8 rounded-full bg-[#0CC25F]/10 items-center justify-center">
-            <Text className="text-[#0CC25F] text-xs">●</Text>
+          <View className="w-8 h-8 rounded-full bg-goAccent/10 items-center justify-center">
+            <Text className="text-goAccent text-xs">●</Text>
           </View>
-          <Text className="ml-3 text-sm font-inter text-[#212121] flex-1" numberOfLines={1}>
+          <Text className="ml-3 text-sm font-inter text-goTextPrimaryLight flex-1" numberOfLines={1}>
             {activeRide?.origin_address ?? 'Pickup'}
           </Text>
         </View>
         <View className="h-4 w-0.5 bg-gray-300 ml-4" />
         <View className="flex-row items-center">
-          <View className="w-8 h-8 rounded-full bg-[#E31D1C]/10 items-center justify-center">
-            <Text className="text-[#E31D1C] text-xs">■</Text>
+          <View className="w-8 h-8 rounded-full bg-goDanger/10 items-center justify-center">
+            <Text className="text-goDanger text-xs">■</Text>
           </View>
-          <Text className="ml-3 text-sm font-inter text-[#212121] flex-1" numberOfLines={1}>
+          <Text className="ml-3 text-sm font-inter text-goTextPrimaryLight flex-1" numberOfLines={1}>
             {activeRide?.destination_address ?? 'Dropoff'}
-          </Text>
-        </View>
-      </View>
-
-      {/* Fare */}
-      <View className="mt-4 p-4 bg-white rounded-2xl border border-[#DADADA]">
-        <View className="flex-row justify-between">
-          <Text className="text-sm font-inter text-gray-500">Est. Fare</Text>
-          <Text className="text-lg font-urbanist-bold text-[#0CC25F]">
-            ৳{activeRide?.fare_breakdown?.total_bdt
-              ? (Number(activeRide.fare_breakdown.total_bdt) / 100).toFixed(0)
-              : '—'}
-          </Text>
-        </View>
-        <View className="flex-row justify-between mt-1">
-          <Text className="text-sm font-inter text-gray-500">Distance</Text>
-          <Text className="text-sm font-inter text-[#212121]">
-            {activeRide?.distance_km ? `${activeRide.distance_km.toFixed(1)} km` : '—'}
           </Text>
         </View>
       </View>
@@ -210,16 +267,16 @@ export default function FinalPage() {
 
   const renderCompleted = () => (
     <View className="flex-1 items-center justify-center px-6">
-      <View className="w-20 h-20 rounded-full bg-[#0CC25F]/10 items-center justify-center mb-4">
-        <Text className="text-4xl text-[#0CC25F]">✓</Text>
+      <View className="w-20 h-20 rounded-full bg-goAccent/10 items-center justify-center mb-4">
+        <Text className="text-4xl text-goAccent">✓</Text>
       </View>
-      <Text className="text-2xl font-urbanist-bold text-[#212121]">
+      <Text className="text-2xl font-urbanist-bold text-goTextPrimaryLight">
         Ride Complete!
       </Text>
-      <View className="mt-6 p-4 bg-white rounded-2xl w-full border border-[#DADADA]">
+      <View className="mt-6 p-4 bg-white rounded-2xl w-full border border-goBorderLight">
         <View className="flex-row justify-between">
           <Text className="text-sm font-inter text-gray-500">Total Fare</Text>
-          <Text className="text-lg font-urbanist-bold text-[#0CC25F]">
+          <Text className="text-lg font-urbanist-bold text-goAccent">
             ৳{activeRide?.fare_breakdown?.total_bdt
               ? (Number(activeRide.fare_breakdown.total_bdt) / 100).toFixed(0)
               : '—'}
@@ -237,7 +294,7 @@ export default function FinalPage() {
   const renderError = () => (
     <View className="flex-1 items-center justify-center px-6">
       <Text className="text-4xl mb-4">😔</Text>
-      <Text className="text-xl font-urbanist-bold text-[#212121] text-center">
+      <Text className="text-xl font-urbanist-bold text-goTextPrimaryLight text-center">
         No drivers available
       </Text>
       <Text className="text-sm font-inter text-gray-500 mt-2 text-center">
@@ -267,14 +324,14 @@ export default function FinalPage() {
       default:
         return (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#0CC25F" />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         );
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7FCFF]">
+    <SafeAreaView className="flex-1 bg-goBgLight">
       <View className="flex-1">
         {renderState()}
       </View>

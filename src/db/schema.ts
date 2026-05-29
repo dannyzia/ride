@@ -18,7 +18,7 @@ export const driverStatusEnum      = pgEnum('driver_status',      ['pending', 't
 export const rideStatusEnum        = pgEnum('ride_status',        ['pending', 'dispatching', 'matched', 'driver_arriving', 'driver_arrived', 'in_progress', 'completed', 'cancelled', 'expired', 'no_drivers']);
 export const subscriptionStatusEnum= pgEnum('subscription_status',['active', 'expired', 'suspended']);
 export const callEventTypeEnum     = pgEnum('call_event_type',    ['deduction', 'refund', 'credit', 'initial_load', 'expiry_writeoff']);
-export const paymentProviderEnum   = pgEnum('payment_provider',   ['bkash', 'nagad']);
+export const paymentProviderEnum   = pgEnum('payment_provider',   ['portpos']);
 export const paymentStatusEnum     = pgEnum('payment_status',     ['initiated', 'paid', 'failed', 'callback_pending']);
 export const documentTypeEnum      = pgEnum('document_type',      [
   'license_front', 'license_back',
@@ -309,7 +309,7 @@ export const zones = pgTable('zones', {
   is_active:  boolean('is_active').notNull().default(false),
   created_at: timestamptz('created_at').notNull().defaultNow(),
   updated_at: timestamptz('updated_at').notNull().defaultNow(),
-}, (t) => [
+}, (_t) => [
   uniqueIndex('zones_one_active').on(sql`(1)`)
     .where(sql`is_active = true`),
 ]);

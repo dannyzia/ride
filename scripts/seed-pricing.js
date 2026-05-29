@@ -1,5 +1,5 @@
-const { drizzle } = require('drizzle-orm/neon-serverless');
-const { neon } = require('@neondatabase/serverless');
+const postgres = require('postgres');
+const { drizzle } = require('drizzle-orm/postgres-js');
 
 const PRICING = [
   { vehicle_type: 'bike_basic',    base_fare_bdt: 2000, per_km_bdt:  900, per_min_wait_bdt:  50, free_wait_minutes: 2, minimum_fare_bdt:  6000 },
@@ -15,8 +15,8 @@ const PRICING = [
 async function seed() {
   const zoneId = process.env.ACTIVE_ZONE_ID;
   if (!zoneId) throw new Error('ACTIVE_ZONE_ID env var required');
-  const sql = neon(process.env.DATABASE_URL);
-  const db = drizzle(sql);
+  const client = postgres(process.env.DATABASE_URL, { ssl: 'require' });
+  const db = drizzle(client);
   for (const row of PRICING) {
     await db.execute(`
       INSERT INTO pricing

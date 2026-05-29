@@ -1,17 +1,28 @@
-import { storage, ref, uploadBytesResumable, getDownloadURL } from './firebase';
+import { supabase } from './supabase';
 import { logger } from "@/lib/logger";
-import * as FileSystem from 'expo-file-system';
 
-export const uploadImageToFirebase = async (uri: string, fileName: string) => {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    logger.info(blob)
+export const uploadImage = async (uri: string, fileName: string) => {
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  logger.info(blob);
 
-    const storageRef = ref(storage, 'images/' + fileName);
-    const uploadTaskSnapshot = await uploadBytesResumable(storageRef, blob); // wait for upload to finish
+  const { data, error } = await supabase.storage
+    .from('driver-documents')
+    .upload(fileName, blob, {
+      upsert: true,
+    });
 
-    const downloadURL = await getDownloadURL(uploadTaskSnapshot.ref); // get public URL
-    logger.info('File available at', downloadURL);
+  if (error) {
+    logger.error('[storage] upload failed', error);
+    throw error;
+  }
 
-    return downloadURL;
+  const { data: publicUrlData } = supabase.storage
+    .from('driver-documents')
+    .getPublicUrl(data.path);
+
+  const downloadURL = publicUrlData.publicUrl;
+  logger.info('File available at', downloadURL);
+
+  return downloadURL;
 };

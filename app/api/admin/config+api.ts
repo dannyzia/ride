@@ -1,3 +1,4 @@
+// Auth: verifySupabaseToken via requireRole
 import { db } from '../../../src/db';
 import { platformConfig } from '../../../src/db/schema';
 import { eq } from 'drizzle-orm';
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
 export async function PATCH(req: Request) {
   await requireRole('admin')(req);
 
-  const body = await req.json() as { updates: Array<{ key: string; value: string }> };
+  const body = await req.json() as { updates: { key: string; value: string }[] };
   if (!Array.isArray(body.updates) || body.updates.length === 0) {
     return Response.json({ error: 'updates must be a non-empty array' }, { status: 400 });
   }
@@ -44,7 +45,7 @@ export async function PATCH(req: Request) {
       }
     }
   }
-  if (errors.length) return Response.json({ errors }, { status: 400 });
+  if (errors.length) return Response.json({ error: 'validation_failed', message: errors.join('; ') }, { status: 400 });
 
   for (const { key, value } of body.updates) {
     if (!ALLOWED_KEYS.has(key)) continue;

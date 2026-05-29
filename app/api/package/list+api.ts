@@ -1,12 +1,12 @@
 import { db } from '@/src/db';
 import { packages } from '@/src/db/schema';
 import { eq, asc } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '@/lib/auth';
+import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const _user = await verifySupabaseToken(request);
 
     const pkgList = await db
       .select({

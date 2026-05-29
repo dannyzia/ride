@@ -1,3 +1,4 @@
+import { colors } from '@/theme/goRide';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Alert, AppState, FlatList, Image, Platform, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
@@ -5,10 +6,12 @@ import { icons, images } from '@/constants/data';
 import RideCard from '@/components/RideCard';
 import { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
-import { useCustomer, useRidesStore, useUserStore, useWSStore } from '@/store';
+import { useCustomer, useRidesStore, useAppUserStore, useWSStore } from '@/store';
 import Map from '@/components/Map';
 import Constants from 'expo-constants';
-import { auth } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
+import { useSession } from '@/lib/session';
+import { logger } from '@/lib/logger';
 let LottieView: any = () => null;
 
 if (Platform.OS !== 'web') {
@@ -16,7 +19,7 @@ if (Platform.OS !== 'web') {
         LottieView = require('lottie-react-native').default;
     } catch (err) {
         console.warn('LottieView native import failed:', err);
-        LottieView = () => null;
+        LottieView = function LottieViewFallback() { return null; };
     }
 }
 
@@ -29,8 +32,8 @@ const HomePage = () => {
     const { setRides, Rides } = useRidesStore();
     const { ws, setWebSocket } = useWSStore();
 
-    const user = auth.currentUser;
-    const { role } = useUserStore();
+    const { user } = useSession();
+    const { role } = useAppUserStore();
     const data = user ? { role: 'customer' } : null;
     const [hasPermissions, setHasPermissions] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
@@ -53,15 +56,15 @@ const HomePage = () => {
                     role: 'customer',
                 }));
 
-                console.log("WebSocket connected");
+                logger.info("WebSocket connected");
             };
 
             newWs.onerror = () => {
-                console.log('An error occurred while connecting to the server.');
+                logger.warn('An error occurred while connecting to the server.');
             };
 
             newWs.onclose = () => {
-                console.log("WebSocket closed");
+                logger.info("WebSocket closed");
             };
 
             setWebSocket(newWs);
@@ -108,12 +111,12 @@ const HomePage = () => {
                 if (role) setCustomerRole({ role });
                 if (user) {
                     setCustomerId({ customerId: user.uid });
-                    setCustomerFullName({ full_name: user.displayName ?? '' });
-                    setCustomerProfileImageURL({ profile_image_url: user.photoURL ?? '' });
+                    setCustomerFullName({ full_name: user.fullName ?? '' });
+                    setCustomerProfileImageURL({ profile_image_url: user.imageUrl ?? '' });
                 }
             }
         } catch (error) {
-            console.log('Error in requestLocation:', error);
+            logger.warn('Error in requestLocation:', error);
         }
     };
 
@@ -140,10 +143,10 @@ const HomePage = () => {
 
     const handleSignOut = async () => {
         try {
-            await auth.signOut();
+            await supabase.auth.signOut();
             router.replace('/(auth)/phone-entry');
         } catch (err) {
-            console.error(JSON.stringify(err, null, 2));
+            logger.error('Sign out failed:', err);
         }
     };
 
@@ -155,7 +158,8 @@ const HomePage = () => {
         const getAllRides = async () => {
             setLoading(true)
             try {
-                const token = await user.getIdToken();
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
                 const response = await fetch(`${API_URL}/api/ride/get-all`, {
                     headers: {
                         'Content-Type': 'application/json',
@@ -165,7 +169,7 @@ const HomePage = () => {
                 const { data } = await response.json();
                 setRides(data);
             } catch (error) {
-                console.log('Error fetching rides:', error);
+                logger.warn('Error fetching rides:', error);
             }
             finally {
                 setLoading(false)
@@ -209,7 +213,7 @@ const HomePage = () => {
                     <>
                         <View className='flex flex-row items-center justify-between my-5'>
                             <Text className='text-xl text-primaryTextColor capitalize font-JakartaExtraBold'>
-                                Welcome{","} {user?.displayName ?? 'Rider'}
+                                Welcome{","} {user?.fullName ?? 'Rider'}
                             </Text>
                             <TouchableOpacity onPress={handleSignOut} className='flex justify-center items-center w-10 h-10 rounded-full bg-white'>
                                 <Image source={icons.out} className='w-4 h-4' />
@@ -245,7 +249,7 @@ const HomePage = () => {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        colors={['#000000']} // Android
+                        colors={[colors.black]} // Android
                         tintColor="#000"     // iOS
                     />
                 }

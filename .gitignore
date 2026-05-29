@@ -30,6 +30,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env.local
 .env*.local
 
 # typescript
@@ -47,3 +48,4 @@ firebase-service-account.json
 .vercel
 
 app-example
+.eslintrc.json

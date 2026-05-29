@@ -1,26 +1,13 @@
+// Auth: verifySupabaseToken via Bearer token
 import { db } from "@/src/db";
 import { eq } from "drizzle-orm";
 import { rides, users, drivers } from "@/src/db/schema";
-import { verifyFirebaseIdToken } from "@/lib/auth";
+import { verifySupabaseToken } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
-    let firebaseUid: string | null = null;
-
-    // Try Bearer token first
-    const authHeader = request.headers.get('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const decoded = await verifyFirebaseIdToken(request);
-      firebaseUid = decoded.uid;
-    } else {
-      // Fallback: query param (legacy)
-      const url = new URL(request.url);
-      firebaseUid = url.searchParams.get('auth_uid');
-    }
-
-    if (!firebaseUid) {
-      return Response.json({ error: 'unauthorized' }, { status: 401 });
-    }
+    const user = await verifySupabaseToken(request);
 
     const allRides = await db
       .select({
@@ -45,11 +32,12 @@ export async function GET(request: Request) {
       .from(rides)
       .innerJoin(users, eq(rides.user_id, users.id))
       .leftJoin(drivers, eq(rides.driver_id, drivers.id))
-      .where(eq(users.auth_uid, firebaseUid));
+      .where(eq(users.auth_uid, user.id));
 
     return Response.json({ data: allRides }, { status: 200 });
   } catch (err: any) {
-    console.error('Error getting rides:', err);
+    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    logger.error('[ride/get-all] error', err);
     return Response.json({ error: 'internal_error' }, { status: 500 });
   }
 }

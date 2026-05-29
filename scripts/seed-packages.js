@@ -1,5 +1,5 @@
-const { drizzle } = require('drizzle-orm/neon-serverless');
-const { neon } = require('@neondatabase/serverless');
+const postgres = require('postgres');
+const { drizzle } = require('drizzle-orm/postgres-js');
 
 const packages = [
   { name:'Free Trial',   call_count:5,   duration_days:7,  price_bdt:0,     is_trial:true,  daily_cap:5   },
@@ -9,8 +9,8 @@ const packages = [
 ];
 
 async function seed() {
-  const sql = neon(process.env.DATABASE_URL);
-  const db = drizzle(sql);
+  const client = postgres(process.env.DATABASE_URL, { ssl: 'require' });
+  const db = drizzle(client);
   for (const pkg of packages) {
     await db.execute(`
       INSERT INTO packages (name, call_count, duration_days, price_bdt, is_trial, daily_cap, created_at, updated_at)

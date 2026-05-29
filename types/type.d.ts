@@ -69,15 +69,6 @@ declare interface InputFieldProps extends TextInputProps {
     className?: string;
 }
 
-declare interface PaymentProps {
-    fullName: string;
-    email: string;
-    amount: string;
-    driverId: string;
-    rideTime: number;
-    handlePaymentDone: () => void;
-}
-
 declare interface DriverCardProps {
     item: PlainDriver;
     selected: string;

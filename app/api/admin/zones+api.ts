@@ -1,6 +1,7 @@
+// Auth: verifySupabaseToken via requireRole
 import { db } from '@/src/db';
 import { zones, pricing } from '@/src/db/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { VEHICLE_TYPE_VALUES } from '@/lib/vehicleTypes';
 import { logger } from '@/lib/logger';

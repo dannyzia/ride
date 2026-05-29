@@ -1,12 +1,12 @@
 import { db } from '@/src/db';
 import { rides, users, drivers } from '@/src/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '@/lib/auth';
+import { verifySupabaseToken } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
-    const [user] = await db.select().from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
+    const supabaseUser = await verifySupabaseToken(request);
+    const [user] = await db.select().from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user || user.role !== 'rider') {
       return Response.json({ error: 'forbidden' }, { status: 403 });
     }

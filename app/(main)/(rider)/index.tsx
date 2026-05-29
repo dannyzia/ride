@@ -1,10 +1,10 @@
-import { View, Text, TouchableOpacity, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import Constants from 'expo-constants';
-import { auth } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { useDriverStore } from '@/store/useDriverStore';
 import { useRideOfferStore, useWSStore } from '@/store';
 import CustomButton from '@/components/CustomButton';
@@ -28,10 +28,10 @@ export default function DriverHome() {
     let reconnectAttempts = 0;
 
     async function connect() {
-      const user = auth.currentUser;
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
 
-      const token = await user.getIdToken();
       ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
@@ -39,7 +39,7 @@ export default function DriverHome() {
         useWSStore.getState().setWebSocket(ws);
         ws.send(JSON.stringify({
           type: 'auth:hello',
-          firebase_id_token: token,
+          access_token: token,
           role: 'driver',
         }));
       };
@@ -81,7 +81,7 @@ export default function DriverHome() {
             Alert.alert('Suspended', msg.reason ?? 'Your account has been suspended.');
             setIsOnline(false);
           }
-        } catch (e) {
+        } catch (_e) {
           // ignore parse errors
         }
       };
@@ -150,9 +150,9 @@ export default function DriverHome() {
   // ── Load driver profile ──────────────────────────────────────────
   const loadDriverProfile = useCallback(async () => {
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-      const token = await user.getIdToken();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
       const res = await fetch(
         `${Constants.expoConfig?.extra?.serverUrl ?? ''}/api/driver/me`,
         { headers: { Authorization: `Bearer ${token}` } },
@@ -179,9 +179,9 @@ export default function DriverHome() {
   // ── Online/Offline Toggle ────────────────────────────────────────
   const toggleOnline = async () => {
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-      const token = await user.getIdToken();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
 
       const newState = !isOnline;
       const res = await fetch(
@@ -213,11 +213,11 @@ export default function DriverHome() {
 
   // ── Render ───────────────────────────────────────────────────────
   return (
-    <SafeAreaView className="flex-1 bg-[#F7FCFF]">
+    <SafeAreaView className="flex-1 bg-goBgLight">
       {/* Header */}
       <View className="px-4 py-3 flex-row items-center justify-between">
         <View>
-          <Text className="text-lg font-urbanist-bold text-[#212121]">
+          <Text className="text-lg font-urbanist-bold text-goTextPrimaryLight">
             {driver?.name ?? 'Driver'}
           </Text>
           <Text className="text-sm text-gray-500 font-inter">
@@ -225,7 +225,7 @@ export default function DriverHome() {
           </Text>
         </View>
         <View className="flex-row items-center">
-          <View className={`w-2 h-2 rounded-full mr-2 ${wsConnected ? 'bg-[#0CC25F]' : 'bg-[#E31D1C]'}`} />
+          <View className={`w-2 h-2 rounded-full mr-2 ${wsConnected ? 'bg-goAccent' : 'bg-goDanger'}`} />
           <Text className="text-xs text-gray-500">{wsConnected ? 'Connected' : 'Offline'}</Text>
         </View>
       </View>
@@ -237,10 +237,10 @@ export default function DriverHome() {
 
       {/* Wallet Card */}
       {activeSubscription && (
-        <View className="mx-4 mt-4 p-4 bg-white rounded-2xl shadow-sm border border-[#DADADA]">
+        <View className="mx-4 mt-4 p-4 bg-white rounded-2xl shadow-sm border border-goBorderLight">
           <View className="flex-row justify-between items-center">
             <Text className="text-sm font-inter text-gray-500">Calls Remaining</Text>
-            <Text className="text-lg font-urbanist-bold text-[#212121]">
+            <Text className="text-lg font-urbanist-bold text-goTextPrimaryLight">
               {activeSubscription.calls_remaining === -1
                 ? 'Unlimited'
                 : activeSubscription.calls_remaining}
@@ -248,7 +248,7 @@ export default function DriverHome() {
           </View>
           <View className="flex-row justify-between items-center mt-2">
             <Text className="text-sm font-inter text-gray-500">Today</Text>
-            <Text className="text-sm font-inter text-[#212121]">
+            <Text className="text-sm font-inter text-goTextPrimaryLight">
               {activeSubscription.daily_calls_used} used
             </Text>
           </View>
@@ -264,9 +264,9 @@ export default function DriverHome() {
       {!activeSubscription && (
         <TouchableOpacity
           onPress={() => router.push('/(main)/(rider)/packages')}
-          className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-[#DADADA] items-center"
+          className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-goBorderLight items-center"
         >
-          <Text className="text-[#0CC25F] font-urbanist-bold">Buy a Package to Start</Text>
+          <Text className="text-goAccent font-urbanist-bold">Buy a Package to Start</Text>
         </TouchableOpacity>
       )}
 

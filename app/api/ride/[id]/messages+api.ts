@@ -1,29 +1,33 @@
 import { db } from '../../../../src/db';
 import { chatMessages, rides, users } from '../../../../src/db/schema';
 import { eq, and, lt, desc } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '../../../../lib/auth';
+import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '../../../../lib/logger';
 
 const PAGE_SIZE = 50;
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(req);
+    const url = new URL(req.url);
+    const segments = url.pathname.split('/');
+    const rideId = segments[segments.indexOf('ride') + 1];
+    if (!rideId) return Response.json({ error: 'missing_ride_id' }, { status: 400 });
 
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
+    const supabaseUser = await verifySupabaseToken(req);
+
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
-    const [ride] = await db.select().from(rides).where(eq(rides.id, params.id)).limit(1);
+    const [ride] = await db.select().from(rides).where(eq(rides.id, rideId)).limit(1);
     if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
 
     if (ride.user_id !== user.id && ride.driver_id !== user.id) {
       return Response.json({ error: 'not_ride_participant' }, { status: 403 });
     }
 
-    const url = new URL(req.url);
     const before = url.searchParams.get('before');
 
-    const conditions = [eq(chatMessages.ride_id, params.id)];
+    const conditions = [eq(chatMessages.ride_id, rideId)];
     if (before) {
       conditions.push(lt(chatMessages.created_at, new Date(before)));
     }

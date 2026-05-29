@@ -1,5 +1,5 @@
 import { db } from '../src/db';
-import { drivers, dispatchOffers, rides, systemConfig, pricing } from '../src/db/schema';
+import { drivers, dispatchOffers, systemConfig, pricing } from '../src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { getH3Ring } from '../lib/h3';
 import { getDriversInCells } from './h3Index';
@@ -105,5 +105,31 @@ export async function scoreAndBatchDrivers(
 
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, batchSize);
+}
+
+export async function updateDriverAcceptanceRate(driverId: string): Promise<void> {
+  try {
+    const recentOffers = await db.select({ outcome: dispatchOffers.outcome })
+      .from(dispatchOffers)
+      .where(and(
+        eq(dispatchOffers.driver_id, driverId),
+        inArray(dispatchOffers.outcome, ['accepted', 'rejected', 'expired'] as any),
+      ))
+      .orderBy(dispatchOffers.sent_at)
+      .limit(50);
+
+    if (recentOffers.length === 0) return;
+
+    const accepted = recentOffers.filter(o => o.outcome === 'accepted').length;
+    const rate = Math.round((accepted / recentOffers.length) * 100);
+
+    await db.update(drivers).set({
+      acceptance_rate: String(rate),
+    }).where(eq(drivers.id, driverId));
+
+    logger.debug('[dispatch] acceptance rate updated', { driverId, rate, total: recentOffers.length });
+  } catch (e: any) {
+    logger.error('[dispatch] acceptance rate update failed', { driverId, error: e.message });
+  }
 }
 

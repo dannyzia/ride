@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList, Text, View, Image, ActivityIndicator } from 'react-native';
-import { useUser } from '@/lib/useUser';
+import { useSession } from '@/lib/session';
 import { useRidesStore } from '@/store';
 import RideCard from '@/components/RideCard';
 import Constants from 'expo-constants';
 import { images } from '@/constants/data';
-import { auth } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { logger } from "@/lib/logger";
 
 const API_URL = Constants.expoConfig?.extra?.serverUrl;
 
 const ShowAllRides = () => {
-  const { user } = useUser();
+  const { user } = useSession();
   const { setRides, Rides = [] } = useRidesStore();
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +21,8 @@ const ShowAllRides = () => {
       if (!user?.id) return;
       setLoading(true);
       try {
-        const token = await auth.currentUser?.getIdToken();
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
         const url = `${API_URL}/api/ride/get-all`;
         const res = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },

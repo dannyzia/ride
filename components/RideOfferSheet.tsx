@@ -54,11 +54,47 @@ export default function RideOfferSheet() {
   };
 
   const handleAccept = () => {
-    sendWS('fetch:confirm', {});
-    sendWS('offer:accept', {});
-    Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
-      setActiveOffer(null);
-    });
+    if (!ws || ws.readyState !== WebSocket.OPEN || !activeOffer) {
+      logger.warn('[RideOfferSheet] WS not ready for accept');
+      return;
+    }
+
+    const rideId = activeOffer.ride_id;
+    ws.send(JSON.stringify({ type: 'fetch:confirm', ride_id: rideId }));
+
+    // Wait for server ACK before sending offer:accept
+    const onMessage = (ev: MessageEvent) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.ride_id === rideId) {
+          if (msg.type === 'fetch:confirmed') {
+            ws.send(JSON.stringify({ type: 'offer:accept', ride_id: rideId }));
+            ws.removeEventListener('message', onMessage);
+            Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+              setActiveOffer(null);
+            });
+          } else if (msg.type === 'fetch:error') {
+            ws.removeEventListener('message', onMessage);
+            logger.warn('[RideOfferSheet] fetch:confirm failed', { rideId, error: msg.error });
+          }
+        }
+      } catch {
+        // Ignore non-JSON messages
+      }
+    };
+
+    ws.addEventListener('message', onMessage);
+
+    // Timeout fallback — if no ACK within 3s, still try offer:accept
+    setTimeout(() => {
+      ws.removeEventListener('message', onMessage);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'offer:accept', ride_id: rideId }));
+      }
+      Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+        setActiveOffer(null);
+      });
+    }, 3000);
   };
 
   const handleReject = () => {

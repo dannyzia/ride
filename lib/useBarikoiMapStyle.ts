@@ -16,45 +16,64 @@ export function getBarikoiMapStyle(dark: boolean = false): string {
   return dark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE;
 }
 
-// Helper: construct Barikoi autocomplete URL
+// Helper: construct Barikoi autocomplete URL (v2)
 export function getBarikoiAutocompleteUrl(query: string, lat?: number, lng?: number): string {
   const params = new URLSearchParams({
     q: query,
     api_key: BARIKOI_API_KEY,
+    city: 'dhaka',
+    sub_area: 'true',
+    sub_district: 'true',
   });
   if (lat !== undefined && lng !== undefined) {
-    params.set('lat', String(lat));
-    params.set('lon', String(lng));
+    params.set('latitude', String(lat));
+    params.set('longitude', String(lng));
   }
-  return `https://barikoi.xyz/v1/api/search/autocomplete/${BARIKOI_API_KEY}/place?${params}`;
+  return `https://barikoi.xyz/v2/api/search/autocomplete/place?${params}`;
 }
 
-// Helper: construct Barikoi place details URL
+// Helper: construct Barikoi place details URL (v2)
 export function getBarikoiPlaceDetailUrl(placeId: string): string {
-  return `https://barikoi.xyz/v1/api/search/details/${BARIKOI_API_KEY}/place?place_id=${placeId}`;
+  return `https://barikoi.xyz/v2/api/search/details/place?api_key=${BARIKOI_API_KEY}&place_id=${placeId}`;
 }
 
-// Helper: construct Barikoi reverse geocode URL
+// Helper: construct Barikoi reverse geocode URL (v2)
 export function getBarikoiReverseGeocodeUrl(lat: number, lng: number): string {
-  return `https://barikoi.xyz/v1/api/search/reverse/${BARIKOI_API_KEY}/geocode?lat=${lat}&lon=${lng}`;
+  const params = new URLSearchParams({
+    api_key: BARIKOI_API_KEY,
+    longitude: String(lng),
+    latitude: String(lat),
+    district: 'true',
+    post_code: 'true',
+    country: 'true',
+    sub_district: 'true',
+    union: 'true',
+    pauroshova: 'true',
+    location_type: 'true',
+    division: 'true',
+    address: 'true',
+    area: 'true',
+    bangla: 'true',
+  });
+  return `https://barikoi.xyz/v2/api/search/reverse/geocode?${params}`;
 }
 
-// Helper: construct Barikoi directions URL
+// Helper: construct Barikoi directions URL (v2)
 export function getBarikoiDirectionsUrl(
   originLat: number, originLng: number,
   destLat: number, destLng: number
 ): string {
-  return `https://barikoi.xyz/v1/api/distance/directions/${BARIKOI_API_KEY}?from=${originLng},${originLat}&to=${destLng},${destLat}`;
+  return `https://barikoi.xyz/v2/api/route/${originLng},${originLat};${destLng},${destLat}?api_key=${BARIKOI_API_KEY}&geometries=polyline`;
 }
 
-// Helper: construct Barikoi distance matrix URL
+// Helper: construct Barikoi distance matrix URL (v2)
 export function getBarikoiDistanceMatrixUrl(
   origins: { lat: number; lng: number }[],
   destinations: { lat: number; lng: number }[]
 ): string {
   const src = origins.map(o => `${o.lng},${o.lat}`).join('|');
   const dst = destinations.map(d => `${d.lng},${d.lat}`).join('|');
-  return `https://barikoi.xyz/v1/api/distance/matrix/${BARIKOI_API_KEY}?src=${src}&dst=${dst}`;
+  return `https://barikoi.xyz/v2/api/distance/matrix?api_key=${BARIKOI_API_KEY}&src=${src}&dst=${dst}`;
 }
 
 // MapLibre-friendly coordinate order: [longitude, latitude] (GeoJSON)

@@ -1,8 +1,8 @@
+import { colors } from '@/theme/goRide';
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { supabase } from '@/lib/supabase';
 import Constants from 'expo-constants';
 import { logger } from '@/lib/logger';
 
@@ -30,11 +30,10 @@ export default function RootLayout() {
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
-      if (user) {
-        // User has Firebase session — check if registered
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
         try {
-          const token = await user.getIdToken();
+          const token = session.access_token;
           const res = await fetch(`${API_URL}/api/auth/verify-token`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
@@ -43,20 +42,20 @@ export default function RootLayout() {
           if (res.ok) {
             const data = await res.json();
             const inAuthGroup = segments[0] === '(auth)';
-            if (inAuthGroup) {
+            if (data.exists && inAuthGroup) {
               router.replace(
                 data.role === 'driver' ? '/(main)/(rider)' : '/(main)/(customer)'
               );
+            } else if (!data.exists) {
+              router.replace('/(auth)/phone-entry');
             }
           } else {
-            // User has Firebase token but no DB record — must register
             router.replace('/(auth)/phone-entry');
           }
         } catch {
           router.replace('/(auth)/phone-entry');
         }
       } else {
-        // No user — go to auth
         const inAuthGroup = segments[0] === '(auth)';
         if (!inAuthGroup) {
           router.replace('/(auth)/phone-entry');
@@ -65,13 +64,13 @@ export default function RootLayout() {
       setInitializing(false);
     });
 
-    return unsubscribe;
+    return () => subscription.unsubscribe();
   }, [router, segments, API_URL]);
 
   if (initializing) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#6366f1" />
+        <ActivityIndicator size="large" color={colors.indigo} />
       </View>
     );
   }

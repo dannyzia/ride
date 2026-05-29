@@ -1,3 +1,4 @@
+import { colors } from '@/theme/goRide';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -36,8 +37,8 @@ const ADMIN_MENU = [
 
 export default function AdminDashboard() {
   const handleSignOut = async () => {
-    const { auth } = await import('@/lib/firebase');
-    await auth.signOut();
+    const { supabase } = await import('@/lib/supabase');
+    await supabase.auth.signOut();
     router.replace('/(auth)/phone-entry');
   };
 
@@ -51,7 +52,7 @@ export default function AdminDashboard() {
             <Text className="text-secondaryTextColor text-sm mt-1">Manage your Ride platform</Text>
           </View>
           <TouchableOpacity onPress={handleSignOut} className="bg-hoverBgColor rounded-full p-3">
-            <AntDesign name="logout" size={20} color="#E0E0E0" />
+            <AntDesign name="logout" size={20} color={colors.adminSubtle} />
           </TouchableOpacity>
         </View>
 
@@ -63,13 +64,13 @@ export default function AdminDashboard() {
             className="bg-cardBgColor rounded-2xl p-5 mb-4 flex-row items-center"
           >
             <View className="w-12 h-12 rounded-full bg-accentColor/20 items-center justify-center mr-4">
-              <AntDesign name={item.icon} size={22} color="#64B5F6" />
+              <AntDesign name={item.icon} size={22} color={colors.adminAccent} />
             </View>
             <View className="flex-1">
               <Text className="text-primaryTextColor font-semibold text-base">{item.title}</Text>
               <Text className="text-secondaryTextColor text-xs mt-1">{item.description}</Text>
             </View>
-            <AntDesign name="right" size={16} color="#555555" />
+            <AntDesign name="right" size={16} color={colors.textDisabledDark} />
           </TouchableOpacity>
         ))}
       </ScrollView>

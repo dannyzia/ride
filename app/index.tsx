@@ -6,7 +6,7 @@ const Page = () => {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Firebase auth check will be wired in Phase 4
+    // Supabase auth check will be wired in Phase 4
     setReady(true);
   }, []);
 

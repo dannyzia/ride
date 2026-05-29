@@ -1,9 +1,10 @@
 import { db } from '@/src/db';
 import { pricing } from '@/src/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '@/lib/auth';
+import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
 import { calculateFare, haversineKm } from '@/lib/fareCalc';
+import { getRouteDistance } from '@/lib/barikoi';
 import { VEHICLE_TYPE_VALUES, VEHICLE_TYPES } from '@/lib/vehicleTypes';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -18,7 +19,7 @@ const estimateSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const _user = await verifySupabaseToken(request);
     const body = await request.json();
     const parsed = estimateSchema.safeParse(body);
     if (!parsed.success) {
@@ -34,7 +35,9 @@ export async function POST(request: Request) {
     }
     const zoneId = zoneCheck.zone?.id ?? '00000000-0000-0000-0000-000000000000';
 
-    const distanceKm = haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+    // Route-based distance with Haversine fallback
+    const route = await getRouteDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng).catch(() => null);
+    const distanceKm = route?.distanceKm ?? haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
 
     // If specific vehicle type requested, return single estimate
     if (vehicle_type) {

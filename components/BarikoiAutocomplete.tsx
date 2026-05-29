@@ -17,14 +17,14 @@ import Constants from 'expo-constants';
 import { getBarikoiAutocompleteUrl, getBarikoiPlaceDetailUrl } from '@/lib/useBarikoiMapStyle';
 import { logger } from "@/lib/logger";
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
+const _API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
 
 const BarikoiAutocomplete = ({
     icon,
     containerStyle,
     handlePress,
     initialLocation,
-    textInputBackgroundColor,
+    textInputBackgroundColor: _textInputBackgroundColor,
 }: BarikoiInputProps) => {
     const inputRef = useRef<TextInput>(null);
     const [query, setQuery] = useState('');

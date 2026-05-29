@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Platform } from 'react-native';
 import { logger } from '@/lib/logger';
+import { colors } from '@/theme/goRide';
 
 // Graceful import for @react-native-community/slider — falls back to a no-op
 // if the native module is not installed.
@@ -65,9 +66,9 @@ export default function MinRateSlider({ systemPerKmBdt, minPerKmBdt, onChange }:
         step={1}
         value={clamped}
         onValueChange={onChange}
-        minimumTrackTintColor="#0CC25F"
-        maximumTrackTintColor="#35383F"
-        thumbTintColor="#0CC25F"
+        minimumTrackTintColor={colors.primary}
+        maximumTrackTintColor={colors.borderDark}
+        thumbTintColor={colors.primary}
       />
 
       {/* Range labels */}

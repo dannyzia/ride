@@ -4,15 +4,15 @@ import { Text, TouchableOpacity } from 'react-native';
 const getBgVariantStyle = (variant: ButtonProps['bgVariant']) => {
     switch (variant) {
         case "secondary":
-            return 'bg-[#1E1E22] shadow-lg shadow-[#0286FF]/40 border border-[#0286FF]/60'; // Dark but glowing effect
+            return 'bg-goDarkSecondary shadow-lg shadow-goBlue/40 border border-goBlue/60'; // Dark but glowing effect
         case "danger":
-            return 'bg-[#DC2626] shadow-md shadow-red-500/40 border border-red-500/60';
+            return 'bg-goRedVariant shadow-md shadow-red-500/40 border border-red-500/60';
         case "success":
-            return 'bg-[#16A34A] shadow-md shadow-green-500/40 border border-green-500/60';
+            return 'bg-goGreenVariant shadow-md shadow-green-500/40 border border-green-500/60';
         case "outline":
-            return 'bg-transparent border border-[#0286FF]/50';
+            return 'bg-transparent border border-goBlue/50';
         default:
-            return 'bg-[#0286FF] shadow-xl shadow-[#0286FF]/50'; // Bright blue glow
+            return 'bg-goBlue shadow-xl shadow-goBlue/50'; // Bright blue glow
     }
 };
 
@@ -22,11 +22,11 @@ const getTextVariantStyle = (variant: ButtonProps['textVariant']) => {
         case "primary":
             return 'text-white';
         case "secondary":
-            return 'text-[#F0F0F0]'; // Soft white glow
+            return 'text-goLightGray'; // Soft white glow
         case "success":
-            return 'text-[#BBF7D0]';
+            return 'text-goLightGreenText';
         case "danger":
-            return 'text-[#FCA5A5]';
+            return 'text-goLightRedText';
         default:
             return 'text-white';
     }

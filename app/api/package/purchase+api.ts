@@ -1,24 +1,25 @@
-// [auth-required] Initiate bKash package purchase for driver
+// [auth-required] Initiate package purchase via PortPos hosted checkout
+// PortPos supports bKash, Nagad, Rocket, Visa, Mastercard, and more.
 // Idempotency-Key header required — prevents double-charge
 
 import { z } from 'zod';
 import { db } from '@/src/db';
 import { packages, paymentEvents, users, drivers, subscriptions } from '@/src/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '@/lib/auth';
-import { bkashClient } from '@/lib/bkash';
+import { verifySupabaseToken } from '@/lib/auth';
+import { portposClient } from '@/lib/portpos';
 import { logger } from '@/lib/logger';
 
 const purchaseSchema = z.object({
   package_id: z.string().uuid(),
-  provider: z.enum(['bkash', 'nagad']),
+  provider: z.enum(['portpos']),
 }).strict();
 
 export async function POST(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const supabaseUser = await verifySupabaseToken(request);
 
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
     const [driver] = await db
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return Response.json({ error: 'invalid_body', message: parsed.error.flatten() }, { status: 400 });
     }
-    const { package_id, provider } = parsed.data;
+    const { package_id } = parsed.data;
 
     const idempotencyKey = request.headers.get('Idempotency-Key');
     if (!idempotencyKey || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
@@ -67,17 +68,13 @@ export async function POST(request: Request) {
       }
     }
 
-    if (provider === 'nagad') {
-      return Response.json({ error: 'provider_unavailable', message: 'Nagad is coming soon' }, { status: 400 });
-    }
-
     const [evt] = await db
       .insert(paymentEvents)
       .values({
         driver_id: driver.id,
         package_id: pkg.id,
         idempotency_key: idempotencyKey,
-        provider: 'bkash',
+        provider: 'portpos',
         amount_bdt: pkg.price_bdt,
         status: 'initiated',
       })
@@ -95,25 +92,30 @@ export async function POST(request: Request) {
       }
     }
 
-    const callbackUrl = `${process.env.EXPO_PUBLIC_SERVER_URL}/api/payment/bkash/callback`;
-    const { paymentID, bkashURL } = await bkashClient.createPayment({
+    // Create PortPos invoice — user picks bKash/Nagad/Rocket/card on PortPos's hosted checkout
+    const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL ?? '';
+    const { invoice_id, payment_url } = await portposClient.createInvoice({
       amount: pkg.price_bdt,
-      idempotencyKey,
-      callbackUrl,
+      reference: idempotencyKey,
+      redirectUrl: `${serverUrl}/api/payment/portpos/callback`,
+      ipnUrl: `${serverUrl}/api/payment/portpos/callback`,
+      packageName: pkg.name,
+      billing: {
+        customer: { name: 'Driver', email: 'driver@ride.app', phone: '+880' },
+        address: { street: 'N/A', city: 'Dhaka', state: 'Dhaka', zipcode: '1200', country: 'BD' },
+      },
     });
 
-    await db
-      .update(paymentEvents)
-      .set({ provider_txn_id: paymentID })
-      .where(eq(paymentEvents.id, evt!.id));
+    await db.update(paymentEvents).set({
+      provider_txn_id: invoice_id,
+      status: 'callback_pending',
+    }).where(eq(paymentEvents.id, evt!.id));
 
-    logger.info('[package/purchase] payment initiated', {
-      paymentEventId: evt!.id,
-      paymentID,
-      driverId: driver.id,
+    logger.info('[package/purchase] PortPos payment initiated', {
+      paymentEventId: evt!.id, invoice_id, driverId: driver.id,
     });
 
-    return Response.json({ payment_url: bkashURL, payment_event_id: evt!.id });
+    return Response.json({ payment_url, payment_event_id: evt!.id });
   } catch (e: any) {
     if (e.status === 401) {
       return Response.json({ error: 'unauthorized' }, { status: 401 });

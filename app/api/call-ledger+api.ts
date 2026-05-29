@@ -1,14 +1,14 @@
 import { db } from '@/src/db';
 import { callLedger, drivers, users } from '@/src/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '@/lib/auth';
+import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const supabaseUser = await verifySupabaseToken(request);
 
-    const [user] = await db.select().from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
+    const [user] = await db.select().from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
     const [driver] = await db.select({ id: drivers.id }).from(drivers).where(eq(drivers.user_id, user.id)).limit(1);

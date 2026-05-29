@@ -1,3 +1,4 @@
+import { colors } from '@/theme/goRide';
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -115,7 +116,7 @@ export default function PackagesScreen() {
       <View className="flex-row items-center justify-between px-5 py-4">
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()}>
-            <AntDesign name="arrowleft" size={24} color="#E0E0E0" />
+            <AntDesign name="arrowleft" size={24} color={colors.adminSubtle} />
           </TouchableOpacity>
           <Text className="text-primaryTextColor text-lg font-bold ml-4">Call Packages</Text>
         </View>
@@ -125,7 +126,7 @@ export default function PackagesScreen() {
       </View>
 
       {loading ? (
-        <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color="#64B5F6" /></View>
+        <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color={colors.adminAccent} /></View>
       ) : packages.length === 0 ? (
         <View className="flex-1 items-center justify-center"><Text className="text-secondaryTextColor">No packages defined.</Text></View>
       ) : (
@@ -134,7 +135,7 @@ export default function PackagesScreen() {
           keyExtractor={item => item.id}
           renderItem={renderPackage}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPackages(); }} tintColor="#64B5F6" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPackages(); }} tintColor={colors.adminAccent} />}
         />
       )}
 
@@ -143,14 +144,14 @@ export default function PackagesScreen() {
           <View className="bg-cardBgColor rounded-t-3xl p-6">
             <View className="flex-row justify-between items-center mb-5">
               <Text className="text-primaryTextColor text-lg font-bold">New Package</Text>
-              <TouchableOpacity onPress={() => setShowForm(false)}><AntDesign name="close" size={24} color="#E0E0E0" /></TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowForm(false)}><AntDesign name="close" size={24} color={colors.adminSubtle} /></TouchableOpacity>
             </View>
             {(['name', 'call_count', 'duration_days', 'price_bdt', 'daily_cap'] as const).map(field => (
               <TextInput
                 key={field}
                 className="bg-hoverBgColor text-primaryTextColor rounded-xl px-4 py-3 mb-3"
                 placeholder={field.replace(/_/g, ' ')}
-                placeholderTextColor="#555555"
+                placeholderTextColor={colors.textDisabledDark}
                 value={form[field]}
                 onChangeText={v => setForm(prev => ({ ...prev, [field]: v }))}
                 keyboardType={field === 'name' ? 'default' : 'numeric'}
@@ -161,7 +162,7 @@ export default function PackagesScreen() {
               className="flex-row items-center mb-5"
             >
               <View className={`w-5 h-5 rounded border-2 mr-3 items-center justify-center ${form.is_trial ? 'bg-accentColor border-accentColor' : 'border-borderColor'}`}>
-                {form.is_trial && <AntDesign name="check" size={12} color="#121212" />}
+                {form.is_trial && <AntDesign name="check" size={12} color={colors.darkSurface} />}
               </View>
               <Text className="text-primaryTextColor">Trial package</Text>
             </TouchableOpacity>

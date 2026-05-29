@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { db } from '../../../../src/db';
 import { chatMessages, rides, users } from '../../../../src/db/schema';
-import { eq, inArray } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '../../../../lib/auth';
+import { eq } from 'drizzle-orm';
+import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '../../../../lib/logger';
 
 const schema = z.object({
@@ -11,9 +11,14 @@ const schema = z.object({
 
 const CHAT_ENABLED_STATUSES = ['matched', 'driver_arriving', 'in_progress'] as const;
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(req);
+    const url = new URL(req.url);
+    const segments = url.pathname.split('/');
+    const rideId = segments[segments.indexOf('ride') + 1];
+    if (!rideId) return Response.json({ error: 'missing_ride_id' }, { status: 400 });
+
+    const supabaseUser = await verifySupabaseToken(req);
 
     const body = await req.json();
     const parsed = schema.safeParse(body);
@@ -21,10 +26,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     const { content } = parsed.data;
 
-    const [user] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
+    const [user] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
-    const [ride] = await db.select().from(rides).where(eq(rides.id, params.id)).limit(1);
+    const [ride] = await db.select().from(rides).where(eq(rides.id, rideId)).limit(1);
     if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
 
     if (ride.user_id !== user.id && ride.driver_id !== user.id) {
@@ -36,7 +41,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     const [msg] = await db.insert(chatMessages).values({
-      ride_id: params.id,
+      ride_id: rideId,
       sender_id: user.id,
       content,
     }).returning();
@@ -51,7 +56,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${internalSecret}` },
         signal: AbortSignal.timeout(5_000),
         body: JSON.stringify({
-          ride_id: params.id,
+          ride_id: rideId,
           recipient_user_id: otherUserId,
           message: {
             id: msg.id,

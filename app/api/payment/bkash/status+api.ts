@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { paymentEvents } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '@/lib/auth';
+import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 
 /**
@@ -16,7 +16,7 @@ import { logger } from '@/lib/logger';
  */
 export async function GET(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const _user = await verifySupabaseToken(request);
 
     const url = new URL(request.url);
     const paymentID = url.searchParams.get('paymentID');

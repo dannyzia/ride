@@ -4,9 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useRidesStore } from '@/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { icons } from '@/constants/data';
-import Constants from 'expo-constants';
 
-const BARIKOI_API_KEY = Constants.expoConfig?.extra?.BARIKOI_API_KEY || '';
 
 const ShowRide = () => {
     const { rideId } = useLocalSearchParams();
@@ -29,16 +27,16 @@ const ShowRide = () => {
     const {
         destination_address,
         origin_address,
-        destination_latitude,
-        destination_longitude,
-        origin_latitude,
-        origin_longitude,
+        destination_latitude: _destination_latitude,
+        destination_longitude: _destination_longitude,
+        origin_latitude: _origin_latitude,
+        origin_longitude: _origin_longitude,
         driver
     } = selectedRide;
 
     return (
-        <SafeAreaView className="flex-1 bg-[#0F0F0F]">
-            <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-[#0F0F0F]">
+        <SafeAreaView className="flex-1 bg-goNearBlack">
+            <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-goNearBlack">
                 <View className="flex-1 justify-between">
 
                     {/* Header */}

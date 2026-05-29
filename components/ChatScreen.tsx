@@ -1,10 +1,11 @@
-import React, { useEffect, useCallback, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useCallback, useRef } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { GiftedChat, Send, Bubble, IMessage, InputToolbar } from 'react-native-gifted-chat';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useChatStore, ChatMessage } from '@/store/useChatStore';
+import { colors } from '@/theme/goRide';
 
 interface ChatScreenProps {
   rideId: string;
@@ -81,12 +82,12 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
     <Bubble
       {...props}
       wrapperStyle={{
-        right: { backgroundColor: '#0CC25F' },
-        left: { backgroundColor: '#E8E8E8' },
+        right: { backgroundColor: colors.primary },
+        left: { backgroundColor: colors.borderLight },
       }}
       textStyle={{
-        right: { color: '#FFFFFF' },
-        left: { color: '#212121' },
+        right: { color: colors.textPrimaryDark },
+        left: { color: colors.textPrimaryLight },
       }}
       timeTextStyle={{
         right: { color: 'rgba(255,255,255,0.7)', fontSize: 11 },
@@ -98,7 +99,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
   const renderSend = (props: any) => (
     <Send {...props} containerStyle={{ justifyContent: 'center', marginRight: 8 }}>
       <View style={styles.sendButton}>
-        <Ionicons name="send" size={16} color="#FFFFFF" />
+        <Ionicons name="send" size={16} color={colors.textPrimaryDark} />
       </View>
     </Send>
   );
@@ -129,7 +130,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
   if (loading && messages.length === 0) {
     return (
       <View style={[styles.centerContainer, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color="#0CC25F" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -138,7 +139,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
   if (error && messages.length === 0) {
     return (
       <View style={[styles.centerContainer, { paddingTop: insets.top }]}>
-        <Ionicons name="alert-circle-outline" size={48} color="#E31D1C" />
+        <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => loadMessages(rideId)}>
           <Text style={styles.retryText}>Retry</Text>
@@ -152,14 +153,14 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={onBackPress ?? (() => router.back())}>
-          <Ionicons name="chevron-back" size={24} color="#212121" />
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimaryLight} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle} numberOfLines={1}>Chat with {otherUserName}</Text>
         </View>
         {onCallPress ? (
           <TouchableOpacity style={styles.callButton} onPress={onCallPress}>
-            <Ionicons name="call" size={22} color="#0CC25F" />
+            <Ionicons name="call" size={22} color={colors.primary} />
           </TouchableOpacity>
         ) : (
           <View style={{ width: 44 }} />
@@ -191,13 +192,13 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7FCFF',
+    backgroundColor: colors.bgLight,
   },
   centerContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F7FCFF',
+    backgroundColor: colors.bgLight,
     paddingHorizontal: 24,
   },
   header: {
@@ -206,8 +207,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#DADADA',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.surfaceLight,
   },
   backButton: {
     width: 44,
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#212121',
+    color: colors.textPrimaryLight,
   },
   callButton: {
     width: 44,
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#0CC25F',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -242,19 +243,19 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     paddingHorizontal: 8,
     paddingBottom: 4,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceLight,
   },
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#0CC25F',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
   },
   avatarText: {
-    color: '#FFFFFF',
+    color: colors.textPrimaryDark,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -269,10 +270,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 1000,
-    backgroundColor: '#0CC25F',
+    backgroundColor: colors.primary,
   },
   retryText: {
-    color: '#FFFFFF',
+    color: colors.textPrimaryDark,
     fontWeight: '600',
     fontSize: 14,
   },

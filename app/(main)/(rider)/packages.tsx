@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { colors } from '@/theme/goRide';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { AntDesign } from '@expo/vector-icons';
@@ -22,6 +23,11 @@ export default function PackagesScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [pendingPkgId, setPendingPkgId] = useState<string | null>(null);
 
+  // Payment confirmation state
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
+  const [confirmingElapsed, setConfirmingElapsed] = useState(0);
+  const confirmingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Payment flow state
   const [paymentURL, setPaymentURL] = useState<string | null>(null);
   const [paymentID, setPaymentID] = useState<string | null>(null);
@@ -43,48 +49,116 @@ export default function PackagesScreen() {
 
   useEffect(() => { fetchPackages(); }, [fetchPackages]);
 
-  /** Initiate a purchase for the selected package and open the bKash PaymentWebView. */
+  /** Initiate a purchase via PortPos (supports bKash, Nagad, Rocket, cards) */
   const handleBuy = async (pkg: CallPackage) => {
     setPurchasing(true);
     setPendingPkgId(pkg.id);
     try {
+      const idempotencyKey = crypto.randomUUID();
       const res = await fetch('/api/package/purchase', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ package_id: pkg.id }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify({ package_id: pkg.id, provider: 'portpos' }),
       });
       if (res.ok) {
         const data = await res.json();
-        setPaymentURL(data.bkashURL);
-        setPaymentID(data.paymentID);
+        setPaymentURL(data.payment_url);
+        setPaymentID(data.payment_event_id);
       } else {
         const err = await res.json().catch(() => ({ message: 'Purchase failed' }));
         Alert.alert('Error', err.message || 'Could not initiate purchase');
+        setPurchasing(false);
+        setPendingPkgId(null);
       }
     } catch {
       Alert.alert('Error', 'Network error — could not initiate purchase');
-    } finally {
       setPurchasing(false);
       setPendingPkgId(null);
     }
   };
 
+  /** Poll /api/package/active after payment to confirm subscription activation */
+  const startPollingActiveSubscription = useCallback(() => {
+    const POLL_INTERVAL_MS = 3000;
+    const MAX_DURATION_MS = 120000;
+    let elapsed = 0;
+
+    setConfirmingPayment(true);
+    setConfirmingElapsed(0);
+
+    confirmingIntervalRef.current = setInterval(() => {
+      elapsed += POLL_INTERVAL_MS;
+      setConfirmingElapsed(Math.floor(elapsed / 1000));
+
+      if (elapsed >= MAX_DURATION_MS) {
+        stopPolling();
+        Alert.alert(
+          'Payment Not Confirmed',
+          'If you were charged, please contact support with your package details.',
+          [{ text: 'OK', onPress: () => {} }]
+        );
+        return;
+      }
+
+      fetch('/api/package/active')
+        .then(res => res.json())
+        .then(data => {
+          if (data.subscription && data.subscription.id) {
+            stopPolling();
+            Alert.alert(
+              'Success',
+              'Package purchased successfully!',
+              [
+                { text: 'OK', onPress: () => {
+                  router.replace('/(main)/(rider)');
+                }},
+              ]
+            );
+          }
+        })
+        .catch(() => {
+          // Silently retry on next interval
+        });
+    }, POLL_INTERVAL_MS);
+
+    const stopPolling = () => {
+      if (confirmingIntervalRef.current) {
+        clearInterval(confirmingIntervalRef.current);
+        confirmingIntervalRef.current = null;
+      }
+      setConfirmingPayment(false);
+      setConfirmingElapsed(0);
+    };
+  }, [router]);
+
   const handlePaymentSuccess = () => {
     setPaymentURL(null);
     setPaymentID(null);
-    Alert.alert('Success', 'Package purchased successfully!');
-    fetchPackages();
+    startPollingActiveSubscription();
   };
 
   const handlePaymentError = (error: string) => {
     setPaymentURL(null);
     setPaymentID(null);
     Alert.alert('Payment Failed', error);
+    setPurchasing(false);
+    setPendingPkgId(null);
   };
+
+  /** Cleanup intervals on unmount */
+  useEffect(() => {
+    return () => {
+      if (confirmingIntervalRef.current) {
+        clearInterval(confirmingIntervalRef.current);
+      }
+    };
+  }, []);
 
   const renderPackage = ({ item }: { item: CallPackage }) => (
     <View className="bg-cardBgColor rounded-2xl p-5 mb-3">
-      {/* Top row: name + trial badge */}
       <View className="flex-row items-center justify-between mb-2">
         <Text className="text-primaryTextColor font-semibold text-base">{item.name}</Text>
         {item.is_trial && (
@@ -94,7 +168,6 @@ export default function PackagesScreen() {
         )}
       </View>
 
-      {/* Tags row */}
       <View className="flex-row flex-wrap gap-2 mb-3">
         <View className="bg-hoverBgColor rounded-full px-3 py-1">
           <Text className="text-secondaryTextColor text-xs">{item.call_count} calls</Text>
@@ -107,7 +180,6 @@ export default function PackagesScreen() {
         </View>
       </View>
 
-      {/* Price + Buy button */}
       <View className="flex-row items-center justify-between mt-1">
         <Text className="text-primaryTextColor text-xl font-bold">৳{(item.price_bdt / 100).toFixed(0)}</Text>
         <TouchableOpacity
@@ -127,10 +199,9 @@ export default function PackagesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-bgColor">
-      {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4">
         <TouchableOpacity onPress={() => router.back()}>
-          <AntDesign name="arrowleft" size={24} color="#E0E0E0" />
+          <AntDesign name="arrowleft" size={24} color={colors.adminSubtle} />
         </TouchableOpacity>
         <Text className="text-primaryTextColor text-lg font-bold">Call Packages</Text>
         <View style={{ width: 24 }} />
@@ -138,11 +209,11 @@ export default function PackagesScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#64B5F6" />
+          <ActivityIndicator size="large" color={colors.adminAccent} />
         </View>
       ) : packages.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <AntDesign name="database" size={64} color="#3A3A3A" />
+          <AntDesign name="database" size={64} color={colors.adminIconDark} />
           <Text className="text-secondaryTextColor text-base mt-4 text-center">
             No packages available. Check back later.
           </Text>
@@ -157,13 +228,13 @@ export default function PackagesScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => { setRefreshing(true); fetchPackages(); }}
-              tintColor="#64B5F6"
+              tintColor={colors.adminAccent}
             />
           }
         />
       )}
 
-      {/* Payment WebView (renders as a full-screen Modal) */}
+      {/* Payment WebView (PortPos hosted checkout — supports bKash/Nagad/Rocket/cards) */}
       {paymentURL && paymentID && (
         <PaymentWebView
           bkashURL={paymentURL}
@@ -171,6 +242,33 @@ export default function PackagesScreen() {
           onSuccess={handlePaymentSuccess}
           onError={handlePaymentError}
         />
+      )}
+
+      {/* Confirming Payment Overlay */}
+      {confirmingPayment && (
+        <Modal visible={confirmingPayment} transparent animationType="none">
+          <View className="flex-1 bg-black/50 items-center justify-center">
+            <View className="bg-cardBgColor rounded-2xl p-6 mx-8 items-center">
+              <ActivityIndicator size="large" color={colors.adminAccent} />
+              <Text className="text-primaryTextColor text-lg font-semibold mt-4">Confirming Payment...</Text>
+              <Text className="text-secondaryTextColor text-sm mt-2">
+                {confirmingElapsed}s / 120s
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (confirmingIntervalRef.current) {
+                    clearInterval(confirmingIntervalRef.current);
+                    confirmingIntervalRef.current = null;
+                  }
+                  setConfirmingPayment(false);
+                }}
+                className="mt-4 px-4 py-2 bg-hoverBgColor rounded-full"
+              >
+                <Text className="text-secondaryTextColor text-sm">Dismiss</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       )}
     </SafeAreaView>
   );

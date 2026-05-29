@@ -2,8 +2,6 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: "./.env.local" });
 
-const BARIKOI_API_KEY = process.env.BARIKOI_API_KEY || '';
-
 export default {
   expo: {
     name: "Ride",
@@ -77,6 +75,7 @@ export default {
             "The app accesses your camera to allow you to take photos.",
         },
       ],
+      "@maplibre/maplibre-react-native",
     ],
     extra: {
       eas: {
@@ -86,23 +85,10 @@ export default {
       EXPO_PUBLIC_SERVER_URL: process.env.EXPO_PUBLIC_SERVER_URL,
       EXPO_PUBLIC_WEB_SOCKET_SERVER_URL:
         process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL,
-      EXPO_PUBLIC_FIREBASE_API_KEY:
-        process.env.EXPO_PUBLIC_FIREBASE_API_KEY ||
-        process.env.FIREBASE_API_KEY,
-      EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN:
-        process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      EXPO_PUBLIC_FIREBASE_PROJECT_ID:
-        process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ||
-        process.env.FIREBASE_PROJECT_ID,
-      EXPO_PUBLIC_FIREBASE_RTDB_URL: process.env.EXPO_PUBLIC_FIREBASE_RTDB_URL,
-      EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET:
-        process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET ||
-        process.env.FIREBASE_STORAGE_BUCKET,
-      EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
-        process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ||
-        process.env.FIREBASE_MESSAGING_SENDER_ID,
-      EXPO_PUBLIC_FIREBASE_APP_ID:
-        process.env.EXPO_PUBLIC_FIREBASE_APP_ID || process.env.FIREBASE_APP_ID,
+      EXPO_PUBLIC_SUPABASE_URL:
+        process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
+      EXPO_PUBLIC_SUPABASE_ANON_KEY:
+        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       EXPO_PUBLIC_SUPPORT_PHONE: process.env.EXPO_PUBLIC_SUPPORT_PHONE,
     },
     web: {

@@ -1,4 +1,4 @@
-import { latLngToCell, gridDisk, cellToBoundary } from 'h3-js';
+import { latLngToCell, gridDisk } from 'h3-js';
 
 const RESOLUTION = 9;
 

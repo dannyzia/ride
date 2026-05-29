@@ -2,14 +2,14 @@ import { View, Text, TouchableOpacity, Image } from 'react-native'
 import React from 'react'
 import { MaterialIcons } from '@expo/vector-icons'
 import { icons } from '@/constants/data'
-import { useClerk } from '@/lib/useUser'
+import { useSignOut } from '@/lib/session'
 import { router } from 'expo-router'
 import { useDriverDetails } from '@/store'
 import { logger } from "@/lib/logger";
 
-const RiderHeader = ({ hasPermissions, todayEarnings }: { hasPermissions: boolean, todayEarnings: string }) => {
+const RiderHeader = ({ hasPermissions: _hasPermissions, todayEarnings }: { hasPermissions: boolean, todayEarnings: string }) => {
 
-    const { signOut } = useClerk();
+    const { signOut } = useSignOut();
 
     const {
         isVerified,
@@ -29,7 +29,7 @@ const RiderHeader = ({ hasPermissions, todayEarnings }: { hasPermissions: boolea
 
     return (
         <>
-            <View className='bg-#EDD228 p-3 flex-row justify-between items-center h-20'>
+            <View className='bg-goYellow p-3 flex-row justify-between items-center h-20'>
                 <MaterialIcons
                     name='logout'
                     color='white'
@@ -66,7 +66,7 @@ const RiderHeader = ({ hasPermissions, todayEarnings }: { hasPermissions: boolea
                 <MaterialIcons name='notifications' size={24} color='white' />
             </View>
             <View className="h-16 px-5 py-3 flex-row items-center justify-between bg-gray-500">
-                <Text className='font-JakartaMedium text-lg text-white'>Today's Earning</Text>
+                <Text className='font-JakartaMedium text-lg text-white'>Today&apos;s Earning</Text>
                 <View className="flex-row items-center gap-4">
                     <Text className='text-md font-JakartaMedium text-white'>
                         $ {isVerified ? todayEarnings : '_ _'}

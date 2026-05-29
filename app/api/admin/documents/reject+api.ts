@@ -1,3 +1,4 @@
+// Auth: verifySupabaseToken via requireRole
 import { db } from '../../../../src/db';
 import { documents } from '../../../../src/db/schema';
 import { eq } from 'drizzle-orm';
@@ -12,7 +13,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const { user: admin } = await requireRole('admin')(request);
+    const { supabaseUser: admin } = await requireRole('admin')(request);
 
     const body = await request.json();
     const parsed = schema.safeParse(body);

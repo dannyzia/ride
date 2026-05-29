@@ -1,11 +1,12 @@
-import { useUser } from "@/lib/useUser";
+import { colors } from '@/theme/goRide';
+import { useSession } from "@/lib/session";
 import { Image, RefreshControl, ScrollView, Text, View } from "react-native";
 import InputField from "@/components/InputField";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState } from "react";
 
 const Profile = () => {
-  const { user } = useUser();
+  const { user } = useSession();
 
   console.log(user)
 
@@ -35,7 +36,7 @@ const Profile = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#000000']} // Android spinner color
+            colors={[colors.black]} // Android spinner color
             tintColor="#000"      // iOS spinner color
           />
         }

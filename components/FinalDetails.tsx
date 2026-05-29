@@ -2,8 +2,6 @@ import { View, Text, Image, TouchableOpacity, Linking } from 'react-native'
 import { useCustomer, useDriverStore } from '@/store'
 import { icons } from '@/constants/data'
 import { MaterialIcons } from '@expo/vector-icons'
-import { useUser } from '@/lib/useUser';
-import Payment from './Payment';
 import { logger } from "@/lib/logger";
 
 const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid: (value: boolean) => void, page: string, number?: string }) => {
@@ -18,8 +16,6 @@ const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid:
         (driver) => driver.id === selectedDriverId,
     );
 
-
-    const { user } = useUser();
 
     logger.info('⚠️')
     logger.info(page)
@@ -78,16 +74,14 @@ const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid:
 
                         ) : (
                             <>
-                                <Payment
-                                    fullName={user?.fullName!}
-                                    email={user?.emailAddresses[0].emailAddress!}
-                                    amount={selectedDriverDetails?.price!}
-                                    driverId={selectedDriverDetails?.id!}
-                                    rideTime={selectedDriverDetails?.distanceAway!}
-                                    handlePaymentDone={() => setPaid(true)}
-                                />
-                                <Text className='my-4 text-center text-gray-500'>OR</Text>
-                                <Text className='text-center text-lg'>Pay the driver in cash</Text>
+                                <TouchableOpacity
+                                    onPress={() => setPaid(true)}
+                                    className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-3"
+                                >
+                                    <Text className="text-base font-JakartaSemiBold text-center text-green-700">
+                                        Pay with cash to driver
+                                    </Text>
+                                </TouchableOpacity>
                             </>
                         )}
                     </View>

@@ -2,7 +2,7 @@ import type { FareBreakdown } from '../lib/fareCalc';
 
 export interface AuthHelloMessage {
   type: 'auth:hello';
-  firebase_id_token: string;
+  access_token: string;
   role: 'driver' | 'rider';
 }
 
@@ -69,4 +69,4 @@ export type OutboundMessage =
   | { type: 'ride:matched'; ride_id: string; driver_id: string; driver_phone: string }
   | { type: 'ride:cancelled'; ride_id: string; reason?: string }
   | { type: 'error'; message: string }
-  | { type: 'ride:alternatives'; ride_id: string; alternatives: Array<{ vehicle_type: string; fare_breakdown: Record<string, unknown> }> };
+  | { type: 'ride:alternatives'; ride_id: string; alternatives: { vehicle_type: string; fare_breakdown: Record<string, unknown> }[] };

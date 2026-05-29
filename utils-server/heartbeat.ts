@@ -1,9 +1,9 @@
 import { db } from '../src/db';
-import { subscriptions, callLedger, dispatchOffers, rides } from '../src/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { subscriptions, callLedger, packages } from '../src/db/schema';
+import { eq } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 
-const DEDUCTION_GRACE_MS = parseInt(process.env.CALL_DEDUCTION_GRACE_MS ?? '500');
+const _DEDUCTION_GRACE_MS = parseInt(process.env.CALL_DEDUCTION_GRACE_MS ?? '500');
 
 interface HeartbeatContext {
   driverId: string;
@@ -21,8 +21,9 @@ export async function recordCallDeduction(ctx: HeartbeatContext): Promise<{ dedu
     }
 
     const isUnlimited = sub.calls_remaining === -1;
-    const pkg = { daily_cap: 200 };
-    if (sub.daily_calls_used >= pkg.daily_cap) {
+    const [pkg] = await tx.select({ daily_cap: packages.daily_cap }).from(packages).where(eq(packages.id, sub.package_id)).limit(1);
+    const dailyCap = pkg?.daily_cap ?? 200;
+    if (sub.daily_calls_used >= dailyCap) {
       logger.warn('[heartbeat] daily cap reached', ctx);
       return { deducted: false };
     }

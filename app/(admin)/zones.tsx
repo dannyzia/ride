@@ -1,5 +1,6 @@
+import { colors } from '@/theme/goRide';
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl, Modal } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { AntDesign } from '@expo/vector-icons';
@@ -71,7 +72,7 @@ export default function ZonesScreen() {
               <Text className="text-secondaryTextColor text-xs">{item.polygon.length} polygon points</Text>
             </View>
           </View>
-          <AntDesign name={isExpanded ? 'up' : 'down'} size={16} color="#555555" />
+          <AntDesign name={isExpanded ? 'up' : 'down'} size={16} color={colors.textDisabledDark} />
         </View>
         {isExpanded && renderPricing(item.pricing)}
       </TouchableOpacity>
@@ -82,16 +83,16 @@ export default function ZonesScreen() {
     <SafeAreaView className="flex-1 bg-bgColor">
       <View className="flex-row items-center px-5 py-4">
         <TouchableOpacity onPress={() => router.back()}>
-          <AntDesign name="arrowleft" size={24} color="#E0E0E0" />
+          <AntDesign name="arrowleft" size={24} color={colors.adminSubtle} />
         </TouchableOpacity>
         <Text className="text-primaryTextColor text-lg font-bold ml-4">Zones & Pricing</Text>
       </View>
 
       {loading ? (
-        <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color="#64B5F6" /></View>
+        <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color={colors.adminAccent} /></View>
       ) : zones.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <AntDesign name="enviromento" size={64} color="#3A3A3A" />
+          <AntDesign name="enviromento" size={64} color={colors.adminIconDark} />
           <Text className="text-secondaryTextColor text-base mt-4 text-center">No zones configured yet.</Text>
         </View>
       ) : (
@@ -100,7 +101,7 @@ export default function ZonesScreen() {
           keyExtractor={item => item.id}
           renderItem={renderZone}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchZones(); }} tintColor="#64B5F6" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchZones(); }} tintColor={colors.adminAccent} />}
         />
       )}
     </SafeAreaView>

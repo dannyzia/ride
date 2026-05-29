@@ -29,6 +29,20 @@
       "when": 1779716476173,
       "tag": "0003_productive_titania",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780026397624,
+      "tag": "0004_add_rocket_provider",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780030046402,
+      "tag": "0005_add_portpos_provider",
+      "breakpoints": true
     }
   ]
 }

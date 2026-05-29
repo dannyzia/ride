@@ -1,10 +1,11 @@
+import { colors } from '@/theme/goRide';
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { AntDesign } from '@expo/vector-icons';
-import { uploadImageToFirebase } from '@/lib/imageToURL';
+import { uploadImage } from '@/lib/imageToURL';
 import { useDriverFlowStore } from '@/store/useDriverFlowStore';
 
 const REQUIRED_DOCUMENTS = [
@@ -47,7 +48,7 @@ export default function DocumentsScreen() {
       if (!result.canceled && result.assets?.[0]?.uri) {
         const uri = result.assets[0].uri;
         const fileName = `${docKey}_${Date.now()}.jpg`;
-        const imageUrl = await uploadImageToFirebase(uri, fileName);
+        const imageUrl = await uploadImage(uri, fileName);
         setDocuments(prev => ({ ...prev, [docKey]: imageUrl }));
       }
     } catch (error: any) {
@@ -101,7 +102,7 @@ export default function DocumentsScreen() {
         {/* Header */}
         <View className="flex-row items-center justify-between mt-4 mb-6">
           <TouchableOpacity onPress={() => router.back()}>
-            <AntDesign name="arrowleft" size={24} color="#E0E0E0" />
+            <AntDesign name="arrowleft" size={24} color={colors.adminSubtle} />
           </TouchableOpacity>
           <Text className="text-primaryTextColor text-lg font-bold">
             {step === 'upload' ? 'Upload Documents' : 'Owner Consent'}
@@ -136,7 +137,7 @@ export default function DocumentsScreen() {
                       className="bg-success-500/20 rounded-lg px-3 py-2"
                     >
                       <View className="flex-row items-center">
-                        <AntDesign name="check" size={14} color="#22C55E" />
+                        <AntDesign name="check" size={14} color={colors.checkGreen} />
                         <Text className="text-success-500 text-xs ml-1">Done</Text>
                       </View>
                     </TouchableOpacity>
@@ -147,7 +148,7 @@ export default function DocumentsScreen() {
                       className="bg-accentColor/20 rounded-lg px-4 py-2"
                     >
                       {uploading === doc.key ? (
-                        <ActivityIndicator size="small" color="#64B5F6" />
+                        <ActivityIndicator size="small" color={colors.adminAccent} />
                       ) : (
                         <Text className="text-accentColor text-sm font-medium">Upload</Text>
                       )}
@@ -175,7 +176,7 @@ export default function DocumentsScreen() {
                 className="bg-cardBgColor rounded-xl p-4 mb-3 flex-row items-start"
               >
                 <View className={`w-5 h-5 rounded border-2 mr-3 mt-0.5 items-center justify-center ${consentChecked[index] ? 'bg-accentColor border-accentColor' : 'border-borderColor'}`}>
-                  {consentChecked[index] && <AntDesign name="check" size={12} color="#121212" />}
+                  {consentChecked[index] && <AntDesign name="check" size={12} color={colors.darkSurface} />}
                 </View>
                 <Text className="text-primaryTextColor flex-1 text-sm leading-5">{item}</Text>
               </TouchableOpacity>
@@ -188,7 +189,7 @@ export default function DocumentsScreen() {
               className={`rounded-full py-4 mt-6 items-center ${allConsentGiven && !submitting ? 'bg-general-400' : 'bg-borderColor'}`}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={colors.surfaceLight} />
               ) : (
                 <Text className={`text-base font-bold ${allConsentGiven ? 'text-white' : 'text-secondaryTextColor'}`}>
                   Submit Documents

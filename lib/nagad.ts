@@ -7,24 +7,12 @@ const PUBLIC_KEY    = process.env.NAGAD_MERCHANT_PUBLIC_KEY;
 const BASE_URL      = process.env.NAGAD_BASE_URL;
 
 /**
- * Custom error thrown when Nagad is not yet available.
- * Per TD-06: Nagad sandbox credentials are unavailable at MVP.
- * Ship bKash-only; Nagad shows "Coming soon" in the UI.
- */
-export class NagadUnavailableError extends Error {
-  constructor(msg?: string) {
-    super(msg ?? 'Nagad payment is unavailable in MVP. Please use bKash instead. (TD-06)');
-    this.name = 'NagadUnavailableError';
-  }
-}
-
-/**
  * RSA-encrypt sensitive payload data using the merchant's public key.
  * Nagad requires the merchant to encrypt the payment data with their
  * own public key; Nagad decrypts it server-side using the merchant's private key.
  */
 function rsaEncrypt(data: string): string {
-  if (!PUBLIC_KEY) throw new NagadUnavailableError('NAGAD_MERCHANT_PUBLIC_KEY not configured');
+  if (!PUBLIC_KEY) throw new Error('NAGAD_MERCHANT_PUBLIC_KEY not configured');
   return crypto.publicEncrypt(PUBLIC_KEY, Buffer.from(data)).toString('base64');
 }
 
@@ -36,13 +24,10 @@ export const nagadClient = {
    *   {NAGAD_BASE_URL}/api/dfs/check-out/initialize/{NAGAD_MERCHANT_ID}/{orderId}
    *
    * Amount is converted from integer paisa to taka (string) before sending.
-   *
-   * At MVP this throws NagadUnavailableError unless valid sandbox credentials
-   * are present in the environment (see TD-06).
    */
   async initPayment(params: { amount: number; orderId: string; callbackUrl: string }): Promise<{ url: string }> {
     if (!MERCHANT_ID || !BASE_URL || !PRIVATE_KEY || !PUBLIC_KEY) {
-      throw new NagadUnavailableError();
+      throw new Error('Nagad payment not configured (NAGAD_MERCHANT_ID, NAGAD_BASE_URL, NAGAD_MERCHANT_PRIVATE_KEY, NAGAD_MERCHANT_PUBLIC_KEY required)');
     }
 
     // Convert paisa to taka for the Nagad API
@@ -90,7 +75,7 @@ export const nagadClient = {
    */
   async verifyPayment(orderId: string): Promise<{ status: string; transactionId: string }> {
     if (!MERCHANT_ID || !BASE_URL) {
-      throw new NagadUnavailableError();
+      throw new Error('Nagad payment not configured (NAGAD_MERCHANT_ID, NAGAD_BASE_URL required)');
     }
 
     const res = await fetch(

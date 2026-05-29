@@ -1,14 +1,14 @@
 import { db } from '../../../../../src/db';
 import { chatMessages, rides, users, drivers } from '../../../../../src/db/schema';
 import { eq, asc } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '../../../../../lib/auth';
+import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '../../../../../lib/logger';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
-    const decoded = await verifyFirebaseIdToken(req);
+    const user = await verifySupabaseToken(req);
 
-    const [admin] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
+    const [admin] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.auth_uid, user.id)).limit(1);
     if (!admin) return Response.json({ error: 'user_not_found' }, { status: 404 });
     if (admin.role !== 'admin') return Response.json({ error: 'forbidden' }, { status: 403 });
 

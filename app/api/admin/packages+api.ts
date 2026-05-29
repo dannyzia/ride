@@ -1,3 +1,4 @@
+// Auth: verifySupabaseToken via requireRole
 import { db } from '@/src/db';
 import { packages } from '@/src/db/schema';
 import { eq, desc } from 'drizzle-orm';

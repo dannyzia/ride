@@ -4,6 +4,7 @@ import { rides, paymentEvents } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { verifySupabaseToken } from '@/lib/auth';
 
 const schema = z.object({
   ride_id:   z.string().uuid(),
@@ -12,6 +13,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
+    await verifySupabaseToken(request);
     const body = await schema.parseAsync(await request.json());
     const { ride_id, paymentID } = body;
 

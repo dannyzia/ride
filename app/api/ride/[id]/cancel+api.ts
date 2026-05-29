@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { rides } from '@/src/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '@/lib/auth';
+import { eq } from 'drizzle-orm';
+import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -10,9 +10,14 @@ const cancelSchema = z.object({
   cancelled_by: z.enum(['rider', 'driver', 'system']).optional().default('rider'),
 });
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const url = new URL(request.url);
+    const segments = url.pathname.split('/');
+    const rideId = segments[segments.indexOf('ride') + 1];
+    if (!rideId) return Response.json({ error: 'missing_ride_id' }, { status: 400 });
+
+    const _user = await verifySupabaseToken(request);
 
     const body = await request.json().catch(() => ({}));
     const parsed = cancelSchema.safeParse(body);
@@ -23,7 +28,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const { reason, cancelled_by } = parsed.data;
 
     // Verify ownership for rider/driver cancellations
-    const [ride] = await db.select().from(rides).where(eq(rides.id, params.id)).limit(1);
+    const [ride] = await db.select().from(rides).where(eq(rides.id, rideId)).limit(1);
     if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
 
     // Only allow cancellation of pending/dispatching/matched rides
@@ -35,9 +40,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
       status: 'cancelled',
       cancelled_by,
       cancel_reason: reason ?? null,
-    }).where(eq(rides.id, params.id));
+    }).where(eq(rides.id, rideId));
 
-    logger.info('[ride/cancel] ride cancelled', { rideId: params.id, cancelled_by, reason });
+    logger.info('[ride/cancel] ride cancelled', { rideId, cancelled_by, reason });
 
     return Response.json({ ok: true, status: 'cancelled' });
   } catch (e: any) {

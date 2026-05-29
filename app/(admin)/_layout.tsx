@@ -1,7 +1,8 @@
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { colors } from '@/theme/goRide';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { AntDesign } from '@expo/vector-icons';
 
 export default function AdminLayout() {
@@ -9,13 +10,15 @@ export default function AdminLayout() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const user = session?.user ?? null;
       if (!user) {
         router.replace('/(auth)/phone-entry');
         return;
       }
       try {
-        const token = await user.getIdToken();
+        const token = session?.access_token;
+        if (!token) throw new Error('No token');
         const res = await fetch('/api/auth/verify-token', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -29,13 +32,13 @@ export default function AdminLayout() {
         setChecking(false);
       }
     });
-    return unsubscribe;
+    return () => subscription.unsubscribe();
   }, []);
 
   if (checking) {
     return (
       <View className="flex-1 items-center justify-center bg-bgColor">
-        <ActivityIndicator size="large" color="#64B5F6" />
+        <ActivityIndicator size="large" color={colors.adminAccent} />
       </View>
     );
   }
@@ -43,7 +46,7 @@ export default function AdminLayout() {
   if (!isAdmin) {
     return (
       <View className="flex-1 items-center justify-center bg-bgColor px-6">
-        <AntDesign name="lock" size={48} color="#E31D1C" />
+        <AntDesign name="lock" size={48} color={colors.danger} />
         <Text className="text-primaryTextColor text-xl font-bold mt-4">Access Denied</Text>
         <Text className="text-secondaryTextColor text-center mt-2">Admin privileges required.</Text>
       </View>
@@ -54,7 +57,7 @@ export default function AdminLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#121212' },
+        contentStyle: { backgroundColor: colors.darkSurface },
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Admin' }} />

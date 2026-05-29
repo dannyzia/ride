@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { WebView, WebViewNavigation } from 'react-native-webview';
+import { WebView } from 'react-native-webview';
+import { colors } from '@/theme/goRide';
 
 interface PaymentWebViewProps {
-  /** The bKash checkout URL to load in the WebView */
+  /** The PortPos checkout URL to load in the WebView */
   bkashURL: string;
-  /** bKash paymentID returned from createPayment — used for status polling */
+  /** Payment event ID used for status polling */
   paymentID: string;
   /** Called when polling confirms the payment has been completed */
   onSuccess: () => void;
@@ -14,10 +15,10 @@ interface PaymentWebViewProps {
 }
 
 /**
- * Modal WebView wrapper for bKash mobile payment.
+ * Modal WebView wrapper for PortPos hosted checkout payment.
  *
- * 1. Opens the bKash checkout URL inside a full-screen Modal WebView.
- * 2. Polls GET /api/payment/bkash/status?paymentID=... every 2 seconds
+ * 1. Opens the PortPos checkout URL inside a full-screen Modal WebView.
+ * 2. Polls GET /api/payment/portpos/status?invoice_id=... every 2 seconds
  *    to detect when the payment is confirmed.
  * 3. On success (status === 'paid'): calls onSuccess and closes.
  * 4. On failure: calls onError and closes.
@@ -30,7 +31,7 @@ export default function PaymentWebView({ bkashURL, paymentID, onSuccess, onError
 
   const checkStatus = useCallback(async () => {
     try {
-      const res = await fetch(`/api/payment/bkash/status?paymentID=${encodeURIComponent(paymentID)}`);
+      const res = await fetch(`/api/payment/portpos/status?invoice_id=${encodeURIComponent(paymentID)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.status === 'paid') {
@@ -64,7 +65,6 @@ export default function PaymentWebView({ bkashURL, paymentID, onSuccess, onError
 
   useEffect(() => {
     if (visible && bkashURL) {
-      // Start polling once the WebView has loaded
       const timer = setTimeout(() => startPolling(), 1000);
       return () => {
         clearTimeout(timer);
@@ -79,16 +79,6 @@ export default function PaymentWebView({ bkashURL, paymentID, onSuccess, onError
     return () => stopPolling();
   }, [stopPolling]);
 
-  const handleNavigationStateChange = (navState: WebViewNavigation) => {
-    const url = navState.url;
-
-    // Detect a redirect back to our callback URL (bKash redirects after payment)
-    if (url.includes('paymentID=') && url.includes('status=success')) {
-      // bKash has redirected with success — polling will pick up the status
-      // No action needed here, the polling loop handles it.
-    }
-  };
-
   const handleClose = () => {
     stopPolling();
     setVisible(false);
@@ -100,7 +90,7 @@ export default function PaymentWebView({ bkashURL, paymentID, onSuccess, onError
       <View className="flex-1 bg-bgColor">
         {/* Header bar */}
         <View className="flex-row items-center justify-between px-4 py-3 bg-cardBgColor border-b border-borderColor">
-          <Text className="text-primaryTextColor text-base font-bold">bKash Payment</Text>
+          <Text className="text-primaryTextColor text-base font-bold">Payment</Text>
           <TouchableOpacity onPress={handleClose} className="px-3 py-1">
             <Text className="text-danger-500 text-base">Close</Text>
           </TouchableOpacity>
@@ -110,7 +100,7 @@ export default function PaymentWebView({ bkashURL, paymentID, onSuccess, onError
         {polling && (
           <View className="absolute top-14 left-0 right-0 items-center z-10">
             <View className="bg-white/90 rounded-full px-4 py-2 flex-row items-center shadow-sm">
-              <ActivityIndicator size="small" color="#0CC25F" />
+              <ActivityIndicator size="small" color={colors.primary} />
               <Text className="ml-2 text-sm text-gray-700 font-medium">Verifying payment...</Text>
             </View>
           </View>
@@ -119,13 +109,12 @@ export default function PaymentWebView({ bkashURL, paymentID, onSuccess, onError
         {/* WebView */}
         <WebView
           source={{ uri: bkashURL }}
-          onNavigationStateChange={handleNavigationStateChange}
           javaScriptEnabled
           domStorageEnabled
           startInLoadingState
           renderLoading={() => (
             <View className="absolute inset-0 items-center justify-center bg-bgColor">
-              <ActivityIndicator size="large" color="#0CC25F" />
+              <ActivityIndicator size="large" color={colors.primary} />
             </View>
           )}
         />

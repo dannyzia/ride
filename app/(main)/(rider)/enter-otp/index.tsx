@@ -1,4 +1,5 @@
-import { View, Text, TextInput, Alert } from 'react-native';
+import { colors } from '@/theme/goRide';
+import { View, Text } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import CustomButton from '@/components/CustomButton';
 import { useRideOfferStore, useWSStore } from '@/store';
@@ -14,7 +15,7 @@ const EnterOtp = () => {
     const [riderOTP, setRiderOTP] = useState('');
     const [customerOTP, setCustomerOTP] = useState('');
     const { ws, setWebSocket } = useWSStore();
-    const { activeRideId, giveRideDetails, changeStatus, removeRideOffer } = useRideOfferStore();
+    const { activeRideId, giveRideDetails, changeStatus, removeRideOffer: _removeRideOffer } = useRideOfferStore();
     const [error, setError] = useState('')
 
 
@@ -119,7 +120,7 @@ const EnterOtp = () => {
                     },
                     pinCodeContainerStyle: {
                         borderWidth: 1,
-                        borderColor: '#D1D5DB', // Tailwind: border-gray-300
+                        borderColor: colors.textDisabledLight, // Tailwind: border-gray-300
                         borderRadius: 8,
                         paddingVertical: 12,
                         width: 60,
@@ -141,13 +142,13 @@ const EnterOtp = () => {
                         borderColor: 'black',
                     },
                     filledPinCodeContainerStyle: {
-                        borderColor: '#4B5563', // Tailwind: border-gray-600
+                        borderColor: colors.gray600, // Tailwind: border-gray-600
                     },
                     disabledPinCodeContainerStyle: {
-                        backgroundColor: '#E5E7EB', // Tailwind: bg-gray-200
+                        backgroundColor: colors.gray200, // Tailwind: bg-gray-200
                     },
                     placeholderTextStyle: {
-                        color: '#9CA3AF', // Tailwind: text-gray-400
+                        color: colors.textSecondaryDark, // Tailwind: text-gray-400
                     },
                 }}
             />

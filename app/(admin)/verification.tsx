@@ -1,3 +1,4 @@
+import { colors } from '@/theme/goRide';
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -140,18 +141,18 @@ export default function VerificationScreen() {
     <SafeAreaView className="flex-1 bg-bgColor">
       <View className="flex-row items-center px-5 py-4">
         <TouchableOpacity onPress={() => router.back()}>
-          <AntDesign name="arrowleft" size={24} color="#E0E0E0" />
+          <AntDesign name="arrowleft" size={24} color={colors.adminSubtle} />
         </TouchableOpacity>
         <Text className="text-primaryTextColor text-lg font-bold ml-4">Document Verification</Text>
       </View>
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#64B5F6" />
+          <ActivityIndicator size="large" color={colors.adminAccent} />
         </View>
       ) : docs.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <AntDesign name="checksquareo" size={64} color="#3A3A3A" />
+          <AntDesign name="checksquareo" size={64} color={colors.adminIconDark} />
           <Text className="text-secondaryTextColor text-base mt-4 text-center">No pending documents.</Text>
         </View>
       ) : (
@@ -160,7 +161,7 @@ export default function VerificationScreen() {
           keyExtractor={item => item.id}
           renderItem={renderDoc}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPending(); }} tintColor="#64B5F6" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPending(); }} tintColor={colors.adminAccent} />}
         />
       )}
 
@@ -184,7 +185,7 @@ export default function VerificationScreen() {
             <TextInput
               className="bg-hoverBgColor text-primaryTextColor rounded-xl px-4 py-3 mb-4"
               placeholder="Enter reason..."
-              placeholderTextColor="#555555"
+              placeholderTextColor={colors.textDisabledDark}
               value={rejectReason}
               onChangeText={setRejectReason}
               multiline

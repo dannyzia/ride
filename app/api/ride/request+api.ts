@@ -1,9 +1,10 @@
 import { db } from '@/src/db';
-import { rides, pricing } from '@/src/db/schema';
-import { eq, and, sql, inArray, lt, gte } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '@/lib/auth';
+import { users, rides, pricing } from '@/src/db/schema';
+import { eq, and, sql, gte } from 'drizzle-orm';
+import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
 import { calculateFare, haversineKm } from '@/lib/fareCalc';
+import { getRouteDistance } from '@/lib/barikoi';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -21,10 +22,10 @@ const requestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
-    const uid = decoded.uid;
+    const supabaseUser = await verifySupabaseToken(request);
+    const uid = supabaseUser.id;
 
-    const [user] = await db.select().from(sql`users` as any).where(sql`auth_uid = ${uid}`).limit(1) as any[];
+    const [user] = await db.select().from(users).where(eq(users.auth_uid, uid)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
     if (user.role !== 'rider') return Response.json({ error: 'forbidden' }, { status: 403 });
 
@@ -59,8 +60,9 @@ export async function POST(request: Request) {
       return Response.json({ error: 'rider_rate_limited' }, { status: 429 });
     }
 
-    // Calculate distance + fare
-    const distanceKm = haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+    // Calculate distance + fare (route-based, with Haversine fallback)
+    const route = await getRouteDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng).catch(() => null);
+    const distanceKm = route?.distanceKm ?? haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
 
     const [activePricing] = await db.select().from(pricing)
       .where(and(

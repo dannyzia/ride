@@ -1,3 +1,4 @@
+import { colors } from '@/theme/goRide';
 import React, { useRef } from 'react';
 import { View, Text, Animated, PanResponder, Dimensions } from 'react-native';
 
@@ -13,7 +14,7 @@ interface SlideButtonProps {
 const SlideButton: React.FC<SlideButtonProps> = ({
     title,
     onComplete,
-    bgColor = '#0F9D58',
+    bgColor = colors.slideGreen,
     textColor = '#fff',
 }) => {
     const sliderWidth = SCREEN_WIDTH * 0.85;

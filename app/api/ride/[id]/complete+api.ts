@@ -1,13 +1,19 @@
+// Auth: verifySupabaseToken via requireRole
 import { db } from '@/src/db';
-import { rides, pricing, drivers, users } from '@/src/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { rides, pricing, drivers } from '@/src/db/schema';
+import { eq } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { calculateFare } from '@/lib/fareCalc';
 import { logger } from '@/lib/logger';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request) {
   try {
-    const { user } = await requireRole('driver')(request);
+    const url = new URL(request.url);
+    const segments = url.pathname.split('/');
+    const rideId = segments[segments.indexOf('ride') + 1];
+    if (!rideId) return Response.json({ error: 'missing_ride_id' }, { status: 400 });
+
+    const { dbUser: user } = await requireRole('driver')(request);
 
     const [driver] = await db.select({ id: drivers.id })
       .from(drivers)
@@ -15,7 +21,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       .limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });
 
-    const [ride] = await db.select().from(rides).where(eq(rides.id, params.id)).limit(1);
+    const [ride] = await db.select().from(rides).where(eq(rides.id, rideId)).limit(1);
     if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
     if (ride.driver_id !== driver.id) {
       return Response.json({ error: 'not_your_ride' }, { status: 403 });
@@ -65,10 +71,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
         fare_breakdown: fare as any,
         updated_at: now,
       })
-      .where(eq(rides.id, params.id));
+      .where(eq(rides.id, rideId));
 
     logger.info('[ride/complete] ride completed', {
-      rideId: params.id,
+      rideId,
       driverId: driver.id,
       totalBdt: fare.total_bdt,
       commissionBdt: fare.platform_commission_bdt,

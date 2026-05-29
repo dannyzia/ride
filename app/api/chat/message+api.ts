@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { db } from '../../../src/db';
 import { chatMessages, rides, users } from '../../../src/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '../../../lib/auth';
+import { eq } from 'drizzle-orm';
+import { verifySupabaseToken } from '../../../lib/auth';
 
 const sendSchema = z.object({
   ride_id: z.string().uuid(),
@@ -11,11 +11,11 @@ const sendSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const user = await verifySupabaseToken(request);
     const body = await sendSchema.parseAsync(await request.json());
 
-    // Resolve Firebase uid to DB user id
-    const [sender] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
+    // Resolve auth uid to DB user id
+    const [sender] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, user.id)).limit(1);
     if (!sender) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
     // Verify sender is participant in this ride
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const _user = await verifySupabaseToken(request);
     const url = new URL(request.url);
     const rideId = url.searchParams.get('ride_id');
     if (!rideId) return Response.json({ error: 'ride_id_required' }, { status: 400 });
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       .limit(100);
 
     return Response.json({ messages });
-  } catch (e: any) {
+  } catch (_e: any) {
     return Response.json({ error: 'unauthorized' }, { status: 401 });
   }
 }

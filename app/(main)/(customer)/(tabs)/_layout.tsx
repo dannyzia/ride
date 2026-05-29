@@ -1,3 +1,4 @@
+import { colors } from '@/theme/goRide';
 import { Tabs } from 'expo-router';
 import { Image, ImageSourcePropType, View, TouchableWithoutFeedback, StyleSheet } from 'react-native';
 import { icons } from '@/constants/data';
@@ -9,7 +10,7 @@ const TabIcon = ({ focused, source }: { focused: boolean; source: ImageSourcePro
             style={focused ? styles.tabIconContainerFocused : {}}
         >
             <View
-                className={`rounded-full items-center justify-center ${focused ? 'bg-[#0286FF]' : 'bg-[#1F1F22]'}`}
+                className={`rounded-full items-center justify-center ${focused ? 'bg-goBlue' : 'bg-goDarkSecondaryAlt'}`}
                 style={{ width: 48, height: 48 }}
             >
                 <Image
@@ -41,7 +42,7 @@ export default function TabsLayout() {
                 tabBarInactiveTintColor: 'white',
                 tabBarShowLabel: false,
                 tabBarStyle: {
-                    backgroundColor: '#262628',
+                    backgroundColor: colors.darkTabBar,
                     borderRadius: 50,
                     marginHorizontal: 20,
                     marginBottom: 20,

@@ -1,13 +1,18 @@
 import { db } from '@/src/db';
 import { rides, users, drivers } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '@/lib/auth';
+import { verifySupabaseToken } from '@/lib/auth';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const url = new URL(request.url);
+    const segments = url.pathname.split('/');
+    const rideId = segments[segments.indexOf('ride') + 1];
+    if (!rideId) return Response.json({ error: 'missing_ride_id' }, { status: 400 });
 
-    const [ride] = await db.select().from(rides).where(eq(rides.id, params.id)).limit(1);
+    const _user = await verifySupabaseToken(request);
+
+    const [ride] = await db.select().from(rides).where(eq(rides.id, rideId)).limit(1);
     if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
 
     // Get driver info if assigned

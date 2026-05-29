@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { drivers, users, subscriptions, pricing, platformConfig } from '@/src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '@/lib/auth';
+import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -11,9 +11,9 @@ const patchSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const supabaseUser = await verifySupabaseToken(request);
 
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
     const [driver] = await db.select().from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
@@ -41,9 +41,9 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const supabaseUser = await verifySupabaseToken(request);
 
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
     const [driver] = await db.select().from(drivers).where(eq(drivers.user_id, user.id)).limit(1);

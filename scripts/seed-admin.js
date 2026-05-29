@@ -22,7 +22,7 @@ async function seedViaApi() {
       query: `INSERT INTO users (phone, name, role, auth_uid, created_at, updated_at) SELECT '${phone}', 'Admin', 'admin', 'admin-seed-' || gen_random_uuid()::text, now(), now() WHERE NOT EXISTS (SELECT 1 FROM users WHERE phone = '${phone}')`
     })
   });
-  const data = await res.json();
+  await res.json();
   console.log('Admin user seeded');
 }
 
@@ -48,7 +48,7 @@ async function seed() {
     `);
     console.log('Admin user seeded');
     await sql.end();
-  } catch (e) {
+  } catch (_e) {
     console.log('Direct connection failed, trying Management API...');
     await seedViaApi();
   }

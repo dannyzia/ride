@@ -3,11 +3,11 @@ import { View, Text, TextInput, Button, Image, ScrollView, TouchableOpacity, Ale
 import * as ImagePicker from 'expo-image-picker';
 import { Rating } from 'react-native-ratings';
 import { useTheme } from 'react-native-paper';
-import { uploadImageToFirebase } from '@/lib/imageToURL';
+import { uploadImage } from '@/lib/imageToURL';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUser } from '@/lib/useUser';
-import { auth } from '@/lib/firebase';
-import { AntDesign, Ionicons } from '@expo/vector-icons';
+import { useSession } from '@/lib/session';
+import { supabase } from '@/lib/supabase';
+import { AntDesign } from '@expo/vector-icons';
 import ReactNativeModal from 'react-native-modal';
 import CustomButton from '@/components/CustomButton';
 import { router } from 'expo-router';
@@ -19,7 +19,7 @@ import { logger } from "@/lib/logger";
 const API_URL = Constants.expoConfig?.extra?.serverUrl;
 
 const VerificationPage = () => {
-    const { user } = useUser();
+    const { user } = useSession();
     const { colors } = useTheme();
 
     const [carImageUri, setCarImageUri] = useState<string | null>(null);
@@ -57,10 +57,10 @@ const VerificationPage = () => {
                 const fileName = result.assets?.[0]?.fileName ?? `${Date.now()}.jpg`;
 
                 try {
-                    const imageUrl = await uploadImageToFirebase(uri, fileName);
+                    const imageUrl = await uploadImage(uri, fileName);
                     setCarImageUri(imageUrl);
                 } catch (error) {
-                    logger.error("Error uploading image to Firebase:", error);
+                    logger.error("Error uploading image:", error);
                 }
             }
         } catch (error: any) {
@@ -87,10 +87,10 @@ const VerificationPage = () => {
                 const fileName = result.assets?.[0]?.fileName ?? `${Date.now()}.jpg`;
 
                 try {
-                    const imageUrl = await uploadImageToFirebase(uri, fileName);
+                    const imageUrl = await uploadImage(uri, fileName);
                     setProfileImage(imageUrl);
                 } catch (error: any) {
-                    logger.error("Error uploading image to Firebase:", error);
+                    logger.error("Error uploading image:", error);
                     Alert.alert('Profile Image Upload Faileddd', error.message)
                 }
             }
@@ -113,8 +113,9 @@ const VerificationPage = () => {
 
         setLoading(true)
         try {
-            const token = await auth.currentUser?.getIdToken();
-            const doneUpdate = await fetch(`${API_URL}/api/driver/verify-driver`, {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            const _doneUpdate = await fetch(`${API_URL}/api/driver/verify-driver`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

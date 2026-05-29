@@ -1,16 +1,20 @@
+// Auth: verifySupabaseToken via requireRole
 import { db } from '@/src/db';
-import { drivers, pricing, platformConfig } from '@/src/db/schema';
+import { drivers, pricing, platformConfig, users } from '@/src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
-    const { user } = await requireRole('driver')(request);
+    const { supabaseUser } = await requireRole('driver')(request);
+
+    const [dbUser] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
+    if (!dbUser) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
     const [driver] = await db.select({ vehicle_type: drivers.vehicle_type })
       .from(drivers)
-      .where(eq(drivers.user_id, user.id))
+      .where(eq(drivers.user_id, dbUser.id))
       .limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });
 

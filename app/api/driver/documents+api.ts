@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { documents, drivers, users } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { verifyFirebaseIdToken } from '@/lib/auth';
+import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -18,9 +18,9 @@ const docSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const supabaseUser = await verifySupabaseToken(request);
 
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
     const [driver] = await db.select({ id: drivers.id, status: drivers.status }).from(drivers).where(eq(drivers.user_id, user.id)).limit(1);

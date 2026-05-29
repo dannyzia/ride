@@ -1,4 +1,4 @@
-import { View, Text, KeyboardAvoidingView, TouchableWithoutFeedback, Image, TextInput, Keyboard, TouchableOpacity } from 'react-native'
+import { View, Text, KeyboardAvoidingView, Image, TextInput, TouchableOpacity } from 'react-native'
 import { useState } from 'react'
 import { InputFieldProps } from '@/types/type'
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,7 @@ const InputField = ({
     containerStyle,
     inputStyle,
     iconStyle,
-    className,
+    className: _className,
     ...props
 }: InputFieldProps) => {
     const [isFocused, setIsFocused] = useState(false);

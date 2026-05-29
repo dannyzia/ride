@@ -1,21 +1,21 @@
-import { View, Text, FlatList, Image, ActivityIndicator, Platform, Alert } from 'react-native'
+import { colors } from '@/theme/goRide';
+import { View, Text, FlatList, ActivityIndicator, Platform , RefreshControl } from 'react-native'
 import React, { useEffect, useRef, useState } from 'react'
 import RiderHeader from '@/components/RiderHeader'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useUser } from '@/lib/useUser'
+import { useSession } from '@/lib/session'
 import CustomButton from '@/components/CustomButton'
 import ReactNativeModal from 'react-native-modal'
 import { router, usePathname } from 'expo-router'
 import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
-import { useDriver, useDriverDetails, useRideOfferStore, useUserStore, useWSStore } from '@/store'
+import { useDriver, useDriverDetails, useRideOfferStore, useAppUserStore, useWSStore } from '@/store'
 import { AntDesign } from '@expo/vector-icons'
 import RiderRidesItem from '@/components/RiderRidesItem'
 import * as Notifications from 'expo-notifications'
 import * as Device from 'expo-device'
 import Constants from 'expo-constants'
-import { RefreshControl } from 'react-native'
-import { auth } from '@/lib/firebase'
+import { supabase } from '@/lib/supabase'
 import { logger } from "@/lib/logger";
 // import LottieView from 'lottie-react-native';
 
@@ -29,7 +29,7 @@ if (Platform.OS !== 'web') {
         LottieView = require('lottie-react-native').default;
     } catch (err) {
         logger.warn('LottieView native import failed:', err);
-        LottieView = () => null;
+        LottieView = function LottieViewFallback() { return null; };
     }
 }
 
@@ -38,7 +38,7 @@ const RideHome = () => {
 
     const [loading, setLoading] = useState<boolean>(true);
     const [hasPermissions, setHasPermissions] = useState<boolean>(false)
-    const { user, isLoaded } = useUser();
+    const { user, isLoaded } = useSession();
     const [showVerifyModal, setShowVerifyModal] = useState<boolean>(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const locationUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -68,7 +68,7 @@ const RideHome = () => {
         onDuty
     } = useDriverDetails()
 
-    const { role } = useUserStore();
+    const { role } = useAppUserStore();
     const data = user?.publicMetadata;
 
 
@@ -241,7 +241,7 @@ const RideHome = () => {
                         data: { rideId: message.rideDetails.id },
                         badge: 1,
                         sound: 'default',
-                        color: '#ffffff'  // White badge for dark logo
+                        color: colors.surfaceLight  // White badge for dark logo
                     },
                     trigger: null
 
@@ -281,7 +281,7 @@ const RideHome = () => {
                 name: 'default',
                 importance: Notifications.AndroidImportance.MAX,
                 vibrationPattern: [0, 250, 250, 250],
-                lightColor: '#FFFFFF',
+                lightColor: colors.surfaceLight,
                 enableLights: true,
                 enableVibrate: true,
                 showBadge: true,
@@ -303,7 +303,8 @@ const RideHome = () => {
         setLoading(true)
         const getDriverData = async () => {
             try {
-                const token = await auth.currentUser?.getIdToken();
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
                 const res = await fetch(`${API_URL}/api/driver/get`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -329,7 +330,8 @@ const RideHome = () => {
         setLoading(true)
         const getDriverEarnings = async () => {
             try {
-                const token = await auth.currentUser?.getIdToken();
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
                 const res = await fetch(`${API_URL}/api/driver/calculate-price`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -630,7 +632,7 @@ const RideHome = () => {
                                 onDuty ? <RefreshControl
                                     refreshing={refreshing}
                                     onRefresh={onRefresh}
-                                    colors={['#000000']} // Android
+                                    colors={[colors.black]} // Android
                                     tintColor="#000"     // iOS
                                 /> : undefined
                             }

@@ -1,5 +1,6 @@
+import { colors } from '@/theme/goRide';
 import { View, Text } from 'react-native'
-import React, { useEffect } from 'react'
+import React from 'react'
 import RideLayout from '@/components/RideLayout';
 import BarikoiAutocomplete from '@/components/BarikoiAutocomplete';
 import { icons } from '@/constants/data';
@@ -31,7 +32,7 @@ const FindRidePage = () => {
                             ? userAddress.slice(0, 49) + '...'
                             : userAddress || 'Enter Address'
                     }
-                    textInputBackgroundColor='#f5f5f5'
+                    textInputBackgroundColor={colors.gray100}
                     handlePress={(location) => setUserLocation(location)}
                 />
             </View>

@@ -1,6 +1,6 @@
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { View, Text, TouchableOpacity, Image } from 'react-native'
-import React, { useCallback, useEffect, useRef } from 'react'
+import React, { useCallback, useRef } from 'react'
 import { useRouter } from 'expo-router'
 import { icons } from '@/constants/data'
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'

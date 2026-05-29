@@ -5,10 +5,10 @@ import { icons } from "@/constants/data";
 import { useRouter } from "expo-router";
 import CustomButton from "@/components/CustomButton";
 import { useEffect, useState } from "react";
-import { useRiderStore, VehicleType } from "@/store/useRiderStore";
+import { useRiderStore } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import Constants from 'expo-constants';
-import { auth } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? '';
 const BARIKOI_API_KEY = Constants.expoConfig?.extra?.BARIKOI_API_KEY ?? '';
@@ -60,12 +60,13 @@ const ConfirmRidePage = () => {
       return;
     }
 
-    const user = auth.currentUser;
-    if (!user) { Alert.alert('Error', 'Not authenticated'); return; }
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) { Alert.alert('Error', 'Not authenticated'); return; }
 
     setRequesting(true);
     try {
-      const token = await user.getIdToken();
+
       const response = await fetch(`${API_URL}/api/ride/request`, {
         method: 'POST',
         headers: {
@@ -129,7 +130,7 @@ const ConfirmRidePage = () => {
           </View>
           <View className="flex-row justify-between py-2">
             <Text className="text-secondaryTextColor">Fare</Text>
-            <Text className="text-[#0CC25F] text-lg font-JakartaBold">
+            <Text className="text-goAccent text-lg font-JakartaBold">
               ৳{selectedEstimate ? (selectedEstimate.total_bdt / 100).toFixed(0) : '—'}
             </Text>
           </View>
@@ -138,7 +139,7 @@ const ConfirmRidePage = () => {
         {/* Pickup / Dropoff */}
         <View className="rounded-2xl bg-cardBgColor p-4 mb-5">
           <View className="flex-row items-center py-2 border-b border-borderColor">
-            <Image source={icons.marker} className="w-5 h-5 tint-[#0CC25F]" resizeMode="contain" />
+            <Image source={icons.marker} className="w-5 h-5 tint-goAccent" resizeMode="contain" />
             <Text className="text-primaryTextColor ml-3 flex-1" numberOfLines={2}>{userAddress || 'Pickup'}</Text>
           </View>
           <View className="flex-row items-center py-2">

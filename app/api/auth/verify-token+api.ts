@@ -1,15 +1,32 @@
-import { verifyFirebaseIdToken } from '../../../lib/auth';
-import { db } from '../../../src/db';
-import { users } from '../../../src/db/schema';
-import { eq } from 'drizzle-orm';
+// [public]
+import { supabaseAdmin } from '../../../lib/supabaseServer';
 
 export async function POST(request: Request) {
-  try {
-    const decoded = await verifyFirebaseIdToken(request);
-    const [user] = await db.select().from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
-    if (!user) return Response.json({ error: 'user_not_found', message: 'Register first via /api/register' }, { status: 404 });
-    return Response.json({ user_id: user.id, role: user.role, phone: user.phone });
-  } catch (e: any) {
-    return Response.json({ error: 'unauthorized' }, { status: e.status ?? 401 });
+  const authHeader = request.headers.get('Authorization') ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) {
+    return Response.json({ error: 'missing_token' }, { status: 401 });
   }
+
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !user) {
+    return Response.json({ error: 'invalid_token' }, { status: 401 });
+  }
+
+  const { data: dbUser } = await supabaseAdmin
+    .from('users')
+    .select('id, role, phone')
+    .eq('auth_uid', user.id)
+    .single();
+
+  if (!dbUser) {
+    return Response.json({ exists: false });
+  }
+
+  return Response.json({
+    exists: true,
+    user_id: dbUser.id,
+    role: dbUser.role,
+    phone: dbUser.phone,
+  });
 }

@@ -21,7 +21,7 @@ export default function AlternativesSheet({ visible, alternatives, onSelect, onC
 
   return (
     <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6 shadow-xl z-50">
-      <Text className="text-lg font-urbanist-bold text-[#212121] text-center mb-2">
+      <Text className="text-lg font-urbanist-bold text-goTextPrimaryLight text-center mb-2">
         No drivers available
       </Text>
       <Text className="text-sm font-inter text-gray-500 text-center mb-4">
@@ -36,10 +36,10 @@ export default function AlternativesSheet({ visible, alternatives, onSelect, onC
           return (
             <TouchableOpacity
               onPress={() => onSelect(item.vehicle_type)}
-              className="flex-row items-center justify-between p-4 mb-2 bg-[#F7FCFF] rounded-2xl border border-[#DADADA]"
+              className="flex-row items-center justify-between p-4 mb-2 bg-goBgLight rounded-2xl border border-goBorderLight"
             >
               <View className="flex-1">
-                <Text className="text-base font-urbanist-bold text-[#212121]">
+                <Text className="text-base font-urbanist-bold text-goTextPrimaryLight">
                   {def?.display_en ?? item.vehicle_type}
                 </Text>
                 <Text className="text-sm font-inter text-gray-500">
@@ -47,7 +47,7 @@ export default function AlternativesSheet({ visible, alternatives, onSelect, onC
                 </Text>
               </View>
               <View className="items-end">
-                <Text className="text-base font-urbanist-bold text-[#0CC25F]">
+                <Text className="text-base font-urbanist-bold text-goAccent">
                   ৳{(item.fare_breakdown.total_bdt / 100).toFixed(0)}
                 </Text>
                 <Text className="text-xs font-inter text-general-400 font-semibold mt-1">
@@ -61,9 +61,9 @@ export default function AlternativesSheet({ visible, alternatives, onSelect, onC
 
       <TouchableOpacity
         onPress={onCancel}
-        className="mt-2 py-4 items-center rounded-full border border-[#E31D1C]"
+        className="mt-2 py-4 items-center rounded-full border border-goDanger"
       >
-        <Text className="text-sm font-inter text-[#E31D1C] font-semibold">Cancel Request</Text>
+        <Text className="text-sm font-inter text-goDanger font-semibold">Cancel Request</Text>
       </TouchableOpacity>
     </View>
   );

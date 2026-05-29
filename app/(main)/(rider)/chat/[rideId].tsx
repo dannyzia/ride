@@ -1,3 +1,4 @@
+import { colors } from '@/theme/goRide';
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, Text, Linking } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
@@ -27,16 +28,16 @@ export default function DriverChatRoute() {
 
   if (error) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FCFF' }}>
-        <Text style={{ color: '#E31D1C', fontSize: 15 }}>{error}</Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgLight }}>
+        <Text style={{ color: colors.danger, fontSize: 15 }}>{error}</Text>
       </View>
     );
   }
 
   if (!ctx) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FCFF' }}>
-        <ActivityIndicator size="large" color="#0CC25F" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgLight }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }

@@ -1,3 +1,4 @@
+import { colors } from '@/theme/goRide';
 import React, { useState, useEffect } from 'react';
 import {
     Text,
@@ -100,7 +101,7 @@ const AutocompletePage = () => {
                     <Image source={icons.search} className="w-6 h-6 tint-primaryTextColor" />
                     <TextInput
                         placeholder="Search destination..."
-                        placeholderTextColor="#E0E0E0"
+                        placeholderTextColor={colors.adminSubtle}
                         value={query}
                         onChangeText={setQuery}
                         className="flex-1 text-primaryTextColor text-base ml-3"
@@ -113,7 +114,7 @@ const AutocompletePage = () => {
                 </View>
 
                 {loading && (
-                    <ActivityIndicator size="large" color="#555555" className="mt-5" />
+                    <ActivityIndicator size="large" color={colors.textDisabledDark} className="mt-5" />
                 )}
 
                 <FlatList

@@ -1,3 +1,4 @@
+import { colors } from '@/theme/goRide';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Image } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import RideLayout from '@/components/RideLayout'
@@ -6,7 +7,7 @@ import { useCustomer } from '@/store'
 import { useRiderStore, VehicleType } from '@/store/useRiderStore'
 import CustomButton from '@/components/CustomButton'
 import { VEHICLE_TYPES } from '@/lib/vehicleTypes'
-import { auth } from '@/lib/firebase'
+import { supabase } from '@/lib/supabase'
 import { icons } from '@/constants/data'
 import Constants from 'expo-constants'
 
@@ -39,8 +40,8 @@ const BookRidePage = () => {
     setEstimating(true)
     setError(null)
     try {
-      const user = auth.currentUser;
-      const token = user ? await user.getIdToken() : '';
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? '';
       const response = await fetch(`${API_URL}/api/ride/estimate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -57,7 +58,7 @@ const BookRidePage = () => {
       } else if (data.error) {
         setError(data.message || data.error)
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to fetch estimates')
     } finally {
       setEstimating(false)
@@ -77,7 +78,7 @@ const BookRidePage = () => {
       <TouchableOpacity
         onPress={() => handleSelectVehicle(item.vehicle_type)}
         className={`flex-row items-center p-4 mb-3 rounded-2xl border ${
-          selected ? 'border-[#0CC25F] bg-[#0CC25F]/10' : 'border-transparent bg-cardBgColor'
+          selected ? 'border-goAccent bg-goAccent/10' : 'border-transparent bg-cardBgColor'
         }`}
       >
         <View className="w-16 h-16 rounded-full bg-bgColor items-center justify-center">
@@ -104,7 +105,7 @@ const BookRidePage = () => {
       <View className="flex-1">
         <View className="mb-4">
           <View className="flex-row items-center mb-2">
-            <Image source={icons.marker} className="w-4 h-4 tint-[#0CC25F]" resizeMode="contain" />
+            <Image source={icons.marker} className="w-4 h-4 tint-goAccent" resizeMode="contain" />
             <Text className="text-primaryTextColor text-sm font-JakartaMedium ml-2 flex-1" numberOfLines={1}>
               {userAddress || 'Current location'}
             </Text>
@@ -119,7 +120,7 @@ const BookRidePage = () => {
 
         {estimating ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#0CC25F" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text className="text-secondaryTextColor mt-3">Finding available vehicles...</Text>
           </View>
         ) : error ? (

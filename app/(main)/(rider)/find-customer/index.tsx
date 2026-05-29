@@ -1,17 +1,16 @@
+import { colors } from '@/theme/goRide';
 // ReachCustomer.tsx
 
 import { View, Text, TouchableOpacity, Linking, Image } from 'react-native';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import SlideButton from '@/components/SlideButton';
-import Map from '@/components/Map';
 import { useDriver, useRideOfferStore, useWSStore } from '@/store';
-import { useUser } from '@/lib/useUser';
+import { useSession } from '@/lib/session';
 import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
 import Constants from 'expo-constants';
-import { auth } from '@/lib/firebase';
-import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
 import RideLayout from '@/components/RideLayout';
 import { icons } from '@/constants/data';
 
@@ -21,30 +20,30 @@ const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
 const ReachCustomer = () => {
     const router = useRouter();
 
-    const { userAddress, setUserLocation: setDriverLocation, setId: setDriverId, setRole: setDriverRole, setFullName: setDriverFullName } = useDriver();
+    const { userAddress: _userAddress, setUserLocation: setDriverLocation, setId: _setDriverId, setRole: _setDriverRole, setFullName: _setDriverFullName } = useDriver();
 
     const { ws, setWebSocket } = useWSStore();
 
     const { activeRideId, giveRideDetails } = useRideOfferStore();
 
-    const { user } = useUser();
+    const { user } = useSession();
     const lastLocationRef = useRef<Location.LocationObject | null>(null);
 
 
     useEffect(() => {
-        let socket: WebSocket;
+        let _socket: WebSocket | null = null;
 
         // Either create a new one or use existing one
         if (!ws) {
             const newWs = new WebSocket(WEBSOCKET_API_URL);
 
             newWs.onopen = async () => {
-                const user = auth.currentUser;
-                if (user) {
-                    const token = await user.getIdToken();
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+                if (token) {
                     newWs.send(JSON.stringify({
                         type: 'auth:hello',
-                        firebase_id_token: token,
+                        access_token: token,
                         role: 'driver',
                     }));
                 }
@@ -55,9 +54,9 @@ const ReachCustomer = () => {
             };
 
             setWebSocket(newWs);
-            socket = newWs;
+            _socket = newWs;
         } else {
-            socket = ws;
+            _socket = ws;
         }
     }, [ws]);
 
@@ -182,7 +181,7 @@ const ReachCustomer = () => {
     };
 
     const rideDetails = giveRideDetails(activeRideId!);
-    const customerName = rideDetails?.customerDetails.full_name || 'Customer';
+    const _customerName = rideDetails?.customerDetails.full_name || 'Customer';
     const customerPhone = rideDetails?.customerDetails.number || '';
     const pickupAddress = rideDetails?.pickupDetails.pickupAddress || 'Pickup location';
     const destinationAddress = rideDetails?.dropoffDetails.dropoffAddress || 'Destination not set';
@@ -248,12 +247,12 @@ const ReachCustomer = () => {
                 {/* Slide Button */}
                 <View className="mt-10">
                     <Text className="text-center text-neutral-600 text-sm mb-3">
-                        Slide to confirm once you've reached the pickup location
+                        Slide to confirm once you&apos;ve reached the pickup location
                     </Text>
                     <SlideButton
                         title="Slide to Confirm Arrival"
                         onComplete={handleSlideComplete}
-                        bgColor="#0F9D58"
+                        bgColor={colors.slideGreen}
                         textColor="#fff"
                     />
                 </View>

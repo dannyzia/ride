@@ -1,4 +1,3 @@
-import { Link, Stack } from 'expo-router';
 import { StyleSheet, Text } from 'react-native';
 
 export default function NotFoundScreen() {
@@ -9,7 +8,7 @@ export default function NotFoundScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const _styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',

@@ -1,6 +1,7 @@
+import { colors } from '@/theme/goRide';
 import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
-import { auth } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import Constants from 'expo-constants';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
@@ -23,11 +24,15 @@ export default function Chat({ rideId, visible, onClose }: ChatProps) {
   const [input, setInput] = useState('');
   const flatListRef = useRef<FlatList>(null);
 
+  const getAccessToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  };
+
   const fetchMessages = async () => {
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-      const token = await user.getIdToken();
+      const token = await getAccessToken();
+      if (!token) return;
       const res = await fetch(`${API_URL}/api/chat/message?ride_id=${rideId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -47,9 +52,8 @@ export default function Chat({ rideId, visible, onClose }: ChatProps) {
   const handleSend = async () => {
     if (!input.trim()) return;
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-      const token = await user.getIdToken();
+      const token = await getAccessToken();
+      if (!token) return;
       await fetch(`${API_URL}/api/chat/message`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -60,7 +64,12 @@ export default function Chat({ rideId, visible, onClose }: ChatProps) {
     } catch {}
   };
 
-  const currentUserId = auth.currentUser?.uid;
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setCurrentUserId(session?.user?.id ?? null);
+    });
+  }, []);
 
   return (
     <KeyboardAvoidingView
@@ -104,7 +113,7 @@ export default function Chat({ rideId, visible, onClose }: ChatProps) {
         <TextInput
           className="flex-1 bg-gray-100 rounded-full px-4 py-2 mr-2"
           placeholder="Type a message..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.textSecondaryDark}
           value={input}
           onChangeText={setInput}
         />

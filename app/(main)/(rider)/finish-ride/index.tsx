@@ -1,17 +1,16 @@
+import { colors } from '@/theme/goRide';
 // ReachCustomer.tsx
 
-import { View, Text, ActivityIndicator, Alert, Image, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, Alert, Image, TouchableOpacity , Linking } from 'react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import SlideButton from '@/components/SlideButton';
-import Map from '@/components/Map';
 import { useDriver, useRideOfferStore, useWSStore } from '@/store';
 import * as Location from 'expo-location';
 import { LocationObject } from 'expo-location';
-import { useUser } from '@/lib/useUser';
+import { useSession } from '@/lib/session';
 import ReactNativeModal from 'react-native-modal';
 import CustomButton from '@/components/CustomButton';
-import { Linking } from 'react-native';
 import Constants from 'expo-constants';
 import RideLayout from '@/components/RideLayout';
 import { icons } from '@/constants/data';
@@ -22,9 +21,9 @@ const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
 
 const ReachCustomer = () => {
     const router = useRouter();
-    const { user } = useUser();
+    const { user } = useSession();
 
-    const { userAddress, setUserLocation: setDriverLocation, setId: setDriverId, setRole: setDriverRole, setFullName: setDriverFullName } = useDriver();
+    const { userAddress: _userAddress, setUserLocation: setDriverLocation, setId: _setDriverId, setRole: _setDriverRole, setFullName: _setDriverFullName } = useDriver();
 
     const { activeRideId, giveRideDetails, removeRideOffer } = useRideOfferStore(state => state);
     const { ws, setWebSocket } = useWSStore();
@@ -64,7 +63,7 @@ const ReachCustomer = () => {
 
             if (message.type === 'reachedVerified') {
                 if (activeRideId) {
-                    const rideDetails = giveRideDetails(activeRideId)
+                    const _rideDetails = giveRideDetails(activeRideId!)
                     setVerifyReached(false)
                     setVerifyReachedStage('waiting');
                     setShowModal(true)
@@ -185,7 +184,7 @@ const ReachCustomer = () => {
 
     const handleSlideComplete = () => {
         if (activeRideId) {
-            const rideDetails = giveRideDetails(activeRideId)
+            const _rideDetails = giveRideDetails(activeRideId!)
             console.log('rideDetails')
             console.log(rideDetails)
             if (ws && ws.readyState === WebSocket.OPEN) {
@@ -204,7 +203,7 @@ const ReachCustomer = () => {
         console.log('❤️')
         console.log(activeRideId)
         if (activeRideId) {
-            const rideDetails = giveRideDetails(activeRideId)
+            const _rideDetails = giveRideDetails(activeRideId!)
 
             console.log('❤️')
             console.log(rideDetails)
@@ -231,14 +230,14 @@ const ReachCustomer = () => {
         setVerifyReached(false);
         setVerifyReachedStage("waiting");
         if (activeRideId) {
-            const rideDetails = giveRideDetails(activeRideId)
+            const _rideDetails = giveRideDetails(activeRideId!)
             removeRideOffer(rideDetails?.id!)
         }
         router.replace('/(main)/(rider)/home');
     }
 
     const rideDetails = giveRideDetails(activeRideId!);
-    const customerName = rideDetails?.customerDetails.full_name || 'Customer';
+    const _customerName = rideDetails?.customerDetails.full_name || 'Customer';
     const customerPhone = rideDetails?.customerDetails.number || '';
     const rideDuration = rideDetails?.duration || '0 mins';
     const rideFare = rideDetails?.fare || '0';
@@ -298,12 +297,12 @@ const ReachCustomer = () => {
                 {/* Slide Button */}
                 <View className="mt-10">
                     <Text className="text-center text-neutral-600 text-sm mb-3">
-                        Slide to confirm once you've reached the dropoff location
+                        Slide to confirm once you&apos;ve reached the dropoff location
                     </Text>
                     <SlideButton
                         title="Slide to Confirm Drop-off"
                         onComplete={handleSlideComplete}
-                        bgColor="#0F9D58"
+                        bgColor={colors.slideGreen}
                         textColor="#fff"
                     />
                 </View>
@@ -318,7 +317,7 @@ const ReachCustomer = () => {
                             Ride Completed ✅
                         </Text>
                         <Text className="text-sm font-JakartaLight text-neutral-600 text-center">
-                            You've successfully dropped off the customer.
+                            You&apos;ve successfully dropped off the customer.
                         </Text>
                     </View>
 
@@ -362,7 +361,7 @@ const ReachCustomer = () => {
                             <Text className="text-center text-gray-600 mb-5">
                                 Request sent to customer. Awaiting their drop-off confirmation.
                             </Text>
-                            <ActivityIndicator size="small" color="#64B5F6" />
+                            <ActivityIndicator size="small" color={colors.adminAccent} />
                         </>
                     ) : (
                         <>
@@ -370,7 +369,7 @@ const ReachCustomer = () => {
                                 ⚠️ No Response from Customer
                             </Text>
                             <Text className="text-center text-gray-600 mb-6">
-                                Customer hasn't confirmed. Please check their safety or report the situation.
+                                Customer hasn&apos;t confirmed. Please check their safety or report the situation.
                             </Text>
 
                             <View className="flex-row items-center mb-5 gap-x-2">

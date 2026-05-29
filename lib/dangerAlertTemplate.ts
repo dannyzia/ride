@@ -13,7 +13,7 @@ type PlainDriver = Omit<
   | "setRole"
 >;
 
-export const getDangerEmailHtml = (driver: PlainDriver, user: { id: string; fullName: string | null; firstName?: string | null; emailAddresses: Array<{ emailAddress: string }>; phoneNumbers: Array<{ phoneNumber: string }>; primaryEmailAddress?: { emailAddress: string } | null }) => `
+export const getDangerEmailHtml = (driver: PlainDriver, user: { id: string; fullName: string | null; firstName?: string | null; emailAddresses: { emailAddress: string }[]; phoneNumbers: { phoneNumber: string }[]; primaryEmailAddress?: { emailAddress: string } | null }) => `
   <html>
     <head>
       <meta charset="UTF-8" />
@@ -28,7 +28,7 @@ export const getDangerEmailHtml = (driver: PlainDriver, user: { id: string; full
         <!-- Header -->
         <div style="text-align: center; padding-bottom: 24px;">
           <img
-            src="https://firebasestorage.googleapis.com/v0/b/glidex-83723.firebasestorage.app/o/app_assets%2Ficon.png?alt=media&token=dc64c455-792e-4562-8f5b-b87566240b8c"
+            src="https://swzgkhwjvikyfaqnbrix.supabase.co/storage/v1/object/public/driver-documents/app_assets/icon.png"
             alt="App Logo"
             style="height: 100px; background-color: #0D0E0D; padding: 4px; border-radius: 8px;"
           />

@@ -1,5 +1,5 @@
 import { Driver } from "@/types/type";
-import { getBarikoiDistanceMatrixUrl, getBarikoiDirectionsUrl } from '@/lib/useBarikoiMapStyle';
+import { getBarikoiDistanceMatrixUrl } from '@/lib/useBarikoiMapStyle';
 import { logger } from "@/lib/logger";
 
 type PlainDriver = Omit<Driver, 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
@@ -72,7 +72,7 @@ export const getNearbyDrivers = async (
 
     if (validDrivers.length === 0) return [];
 
-    const origins = [{ lat: 0, lng: 0 }]; // placeholder — Barikoi matrix expects from/to arrays
+    const _origins = [{ lat: 0, lng: 0 }]; // placeholder — Barikoi matrix expects from/to arrays
     const destinations = validDrivers.map(d => ({ lat: d.userLatitude!, lng: d.userLongitude! }));
 
     try {

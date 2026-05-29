@@ -3,7 +3,7 @@ import { db } from '@/src/db';
 import { rides, paymentEvents } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { verifyFirebaseIdToken } from '@/lib/auth';
+import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 
 const schema = z.object({
@@ -13,7 +13,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const decoded = await verifyFirebaseIdToken(request);
+    const user = await verifySupabaseToken(request);
 
     const body = await schema.parseAsync(await request.json());
     const { ride_id, amount_bdt } = body;
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     // Verify ride exists and belongs to this user
     const [ride] = await db.select().from(rides).where(eq(rides.id, ride_id)).limit(1);
     if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
-    if (ride.user_id !== decoded.uid) {
+    if (ride.user_id !== user.id) {
       return Response.json({ error: 'forbidden' }, { status: 403 });
     }
 
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       await db.insert(paymentEvents).values({
         ride_id,
         idempotency_key: idempotencyKey,
-        provider: 'bkash',
+        provider: 'bkash' as 'portpos',
         amount_bdt,
         status: 'initiated',
         provider_txn_id: paymentID,

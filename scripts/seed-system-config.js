@@ -1,9 +1,9 @@
-const { drizzle } = require('drizzle-orm/neon-serverless');
-const { neon } = require('@neondatabase/serverless');
+const postgres = require('postgres');
+const { drizzle } = require('drizzle-orm/postgres-js');
 
 async function seed() {
-  const sql = neon(process.env.DATABASE_URL);
-  const db = drizzle(sql);
+  const client = postgres(process.env.DATABASE_URL, { ssl: 'require' });
+  const db = drizzle(client);
   await db.execute(`
     INSERT INTO system_config (key, value, updated_at) VALUES
       ('dispatch_paused',        'false',  now()),

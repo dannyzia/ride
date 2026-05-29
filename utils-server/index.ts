@@ -1,43 +1,47 @@
+import 'dotenv/config';
 import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
-import * as admin from 'firebase-admin';
+import { createClient } from '@supabase/supabase-js';
 import { validateServerEnv } from '../lib/env';
-import { startH3IndexRefresh, refreshH3Index, updateDriver, removeDriver } from './h3Index';
+import { startH3IndexRefresh, refreshH3Index, updateDriver, removeDriver , getDriversInCells } from './h3Index';
 import { startCompensationWorker } from './compensationWorker';
 import { startScheduler } from './scheduler';
-import { scoreAndBatchDrivers, isDispatchPaused } from './dispatch';
+import { scoreAndBatchDrivers, isDispatchPaused, updateDriverAcceptanceRate } from './dispatch';
 import { recordCallDeduction } from './heartbeat';
 import { db } from '../src/db';
 import { users, drivers, rides, dispatchOffers, driverOnlineSessions, subscriptions, pricing } from '../src/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { getH3Cell, getH3Ring } from '../lib/h3';
-import { getDriversInCells } from './h3Index';
 import { calculateFare } from '../lib/fareCalc';
 import { VEHICLE_TYPE_VALUES } from '../lib/vehicleTypes';
 
 validateServerEnv();
 
-// ── Firebase Admin (lazy init) ────────────────────────────────────────────
-let firebaseInitialised = false;
-function initFirebaseAdmin() {
-  if (!firebaseInitialised && !admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId:   process.env.FIREBASE_PROJECT_ID!,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-        privateKey:  process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-      }),
-    });
-    firebaseInitialised = true;
-  }
+// ── Single-Instance Guard ──────────────────────────────────────────────────
+const INSTANCE_COUNT = parseInt(process.env.INSTANCE_COUNT ?? '1');
+if (INSTANCE_COUNT !== 1) {
+  logger.error('[startup] INSTANCE_COUNT must be 1. In-process maps prevent multi-replica operation. See TD-11.');
+  process.exit(1);
 }
+
+// ── Supabase Admin Client ─────────────────────────────────────────────────
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  },
+);
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface WSClient {
   ws: WebSocket;
   userId?: string;
-  firebaseUid?: string;
+  supabaseUid?: string;
   role?: 'driver' | 'rider';
   driverId?: string;
   subscribedRideId?: string; // rider: which ride they are tracking
@@ -47,6 +51,10 @@ interface WSClient {
 const connectedDrivers = new Map<string, WSClient>(); // driverId → client
 const connectedRiders  = new Map<string, WSClient>(); // userId → client (rider)
 const allClients       = new Map<WebSocket, WSClient>();
+
+// ── Offer Locks (double-deduction prevention) ─────────────────────────────
+const offerLocks = new Map<string, true>();
+const OFFER_LOCK_TTL_MS = 10_000;
 
 // ── Helper ─────────────────────────────────────────────────────────────────
 function send(ws: WebSocket, msg: Record<string, unknown>) {
@@ -134,7 +142,7 @@ const server = http.createServer(async (req, res) => {
         });
 
         writeJson(200, { ok: true, status: 'dispatching' });
-      } catch (e: any) {
+      } catch {
         writeJson(400, { error: 'invalid_body' });
       }
     });
@@ -158,7 +166,7 @@ const server = http.createServer(async (req, res) => {
 
         await db.update(drivers).set({ is_online: false }).where(eq(drivers.id, driver_id));
         writeJson(200, { ok: true });
-      } catch (e: any) {
+      } catch {
         writeJson(400, { error: 'invalid_body' });
       }
     });
@@ -180,7 +188,7 @@ const server = http.createServer(async (req, res) => {
           message,
         });
         writeJson(200, { ok: true });
-      } catch (e: any) {
+      } catch {
         writeJson(400, { error: 'invalid_body' });
       }
     });
@@ -217,18 +225,22 @@ wss.on('connection', (ws: WebSocket) => {
       /* ── Auth ──────────────────────────────────────────────────── */
       case 'auth': {
         if (action === 'hello') {
-          const firebaseIdToken = msg.firebase_id_token as string;
+          const supabaseAccessToken = msg.access_token as string;
           const role = msg.role as 'driver' | 'rider';
-          if (!firebaseIdToken || !role) {
+          if (!supabaseAccessToken || !role) {
             send(ws, { type: 'auth:error', message: 'missing_credentials' });
             return;
           }
 
           try {
-            initFirebaseAdmin();
-            const decoded = await admin.auth().verifyIdToken(firebaseIdToken);
+            const { data: { user: supabaseUser }, error } = await supabaseAdmin.auth.getUser(supabaseAccessToken);
+            if (error || !supabaseUser) {
+              send(ws, { type: 'auth:error', message: 'invalid_token' });
+              return;
+            }
+
             const [user] = await db.select({ id: users.id, role: users.role })
-              .from(users).where(eq(users.auth_uid, decoded.uid)).limit(1);
+              .from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
             if (!user) {
               send(ws, { type: 'auth:error', message: 'user_not_found' });
               return;
@@ -240,7 +252,7 @@ wss.on('connection', (ws: WebSocket) => {
             }
 
             client.userId = user.id;
-            client.firebaseUid = decoded.uid;
+            client.supabaseUid = supabaseUser.id;
             client.role = role;
 
             if (role === 'driver') {
@@ -261,11 +273,15 @@ wss.on('connection', (ws: WebSocket) => {
             logger.warn('[ws] auth:hello failed', { error: e.message });
           }
         } else if (action === 'refresh') {
-          const firebaseIdToken = msg.firebase_id_token as string;
-          if (!firebaseIdToken) { send(ws, { type: 'auth:error', message: 'missing_token' }); return; }
+          const supabaseAccessToken = msg.access_token as string;
+          if (!supabaseAccessToken) { send(ws, { type: 'auth:error', message: 'missing_token' }); return; }
           try {
-            initFirebaseAdmin();
-            await admin.auth().verifyIdToken(firebaseIdToken);
+            const { data: { user }, error } = await supabaseAdmin.auth.getUser(supabaseAccessToken);
+            if (error || !user) {
+              send(ws, { type: 'auth:error', message: 'token_expired' });
+              ws.close();
+              return;
+            }
             send(ws, { type: 'auth:ok', user_id: client.userId, role: client.role });
           } catch {
             send(ws, { type: 'auth:error', message: 'token_expired' });
@@ -279,7 +295,6 @@ wss.on('connection', (ws: WebSocket) => {
       case 'heartbeat': {
         const lat = msg.lat as number;
         const lng = msg.lng as number;
-        const ts = msg.ts as string;
         if (client.role !== 'driver' || !client.driverId) {
           send(ws, { type: 'error', message: 'not_a_driver' });
           return;
@@ -311,7 +326,7 @@ wss.on('connection', (ws: WebSocket) => {
           const rideId = msg.ride_id as string;
           if (rideId) {
             // Find rider tracking this ride
-            for (const [uid, riderClient] of connectedRiders) {
+            for (const [, riderClient] of connectedRiders) {
               if (riderClient.subscribedRideId === rideId) {
                 send(riderClient.ws, {
                   type: 'location:driver',
@@ -333,6 +348,22 @@ wss.on('connection', (ws: WebSocket) => {
           const rideId = msg.ride_id as string;
           if (!rideId) { send(ws, { type: 'error', message: 'missing_ride_id' }); return; }
 
+          // ── Offer lock: prevent duplicate deductions ──────────────
+          const lockKey = `${rideId}:${client.driverId}`;
+          if (offerLocks.has(lockKey)) {
+            logger.debug('[ws] fetch:confirm duplicate dropped', { rideId, driverId: client.driverId, lockKey });
+            break;
+          }
+          offerLocks.set(lockKey, true);
+          logger.debug('[ws] offer lock set', { lockKey });
+
+          // Auto-release after TTL
+          setTimeout(() => {
+            if (offerLocks.delete(lockKey)) {
+              logger.debug('[ws] offer lock expired', { lockKey });
+            }
+          }, OFFER_LOCK_TTL_MS);
+
           // Record fetch confirmation timestamp
           await db.update(dispatchOffers).set({
             fetch_confirmed_at: new Date(),
@@ -350,13 +381,27 @@ wss.on('connection', (ws: WebSocket) => {
             ))
             .limit(1);
 
+          const releaseLock = () => {
+            offerLocks.delete(lockKey);
+            logger.debug('[ws] offer lock released', { lockKey });
+          };
+
           if (sub) {
             recordCallDeduction({
               driverId: client.driverId,
               subscriptionId: sub.id,
               rideId,
               confirmedAt: new Date(),
-            }).catch(e => logger.error('[ws] fetch:confirm deduction error', { rideId, driverId: client.driverId, error: e.message }));
+            })
+              .then(() => send(ws, { type: 'fetch:confirmed', ride_id: rideId }))
+              .catch(e => {
+                logger.error('[ws] fetch:confirm deduction error', { rideId, driverId: client.driverId, error: e.message });
+                send(ws, { type: 'fetch:error', ride_id: rideId, error: 'deduction_failed' });
+              })
+              .finally(releaseLock);
+          } else {
+            releaseLock();
+            send(ws, { type: 'fetch:confirmed', ride_id: rideId });
           }
         }
         break;
@@ -419,6 +464,11 @@ wss.on('connection', (ws: WebSocket) => {
           }
 
           send(ws, { type: 'offer:accepted', ride_id: rideId });
+
+          // Background acceptance rate update
+          updateDriverAcceptanceRate(client.driverId).catch(e =>
+            logger.error('[ws] update acceptance rate failed', { driverId: client.driverId, error: e.message })
+          );
         } else if (action === 'reject' && client.role === 'driver' && client.driverId) {
           const rideId = msg.ride_id as string;
           const reason = msg.reason as string | undefined;
@@ -433,6 +483,11 @@ wss.on('connection', (ws: WebSocket) => {
           ));
 
           send(ws, { type: 'offer:rejected', ride_id: rideId });
+
+          // Background acceptance rate update
+          updateDriverAcceptanceRate(client.driverId).catch(e =>
+            logger.error('[ws] update acceptance rate failed', { driverId: client.driverId, error: e.message })
+          );
         }
         break;
       }
@@ -587,7 +642,7 @@ async function handleNoDrivers(ride: typeof rides.$inferSelect, allowDowngrade =
       parseFloat(ride.origin_longitude?.toString() ?? '0'),
       1,
     );
-    const alternatives: Array<{ vehicle_type: string; fare_breakdown: Record<string, unknown> }> = [];
+    const alternatives: { vehicle_type: string; fare_breakdown: Record<string, unknown> }[] = [];
     for (const vt of VEHICLE_TYPE_VALUES) {
       if (vt === ride.vehicle_type) continue;
       const candidateIds = getDriversInCells(cells, vt);
@@ -626,6 +681,23 @@ async function startup() {
   startH3IndexRefresh();
   startCompensationWorker();
   startScheduler();
+
+  // Recovery: re-dispatch rides stuck in 'dispatching' for >60s
+  try {
+    const stuckRides = await db.select().from(rides)
+      .where(and(
+        eq(rides.status, 'dispatching'),
+        sql`updated_at < now() - interval '60 seconds'`,
+      ));
+    for (const stuck of stuckRides) {
+      logger.info('[startup] recovering stuck dispatching ride', { ride_id: stuck.id });
+      dispatchRidePipeline(stuck).catch(e => {
+        logger.error('[startup] recovery dispatch failed', { ride_id: stuck.id, error: e.message });
+      });
+    }
+  } catch (e: any) {
+    logger.error('[startup] recovery query failed', { error: e.message });
+  }
 
   const PORT = parseInt(process.env.UTILS_SERVER_PORT ?? '3001');
   server.listen(PORT, () => logger.info(`[ws] dispatch server listening on :${PORT}`));

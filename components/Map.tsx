@@ -1,12 +1,14 @@
-import { View, Text, TouchableOpacity, Keyboard, Platform } from 'react-native'
-import { useEffect, useRef, useState } from 'react'
-import { useCustomer, useDriver, useDriverStore, useRideOfferStore, useWSStore } from '@/store'
+import { View, Text, Keyboard } from 'react-native'
+import { useEffect, useState } from 'react'
+import { useCustomer, useDriver, useDriverStore, useWSStore } from '@/store'
 import { calculateRegion } from '@/lib/calcRegion'
 import { usePathname, useRouter } from 'expo-router'
+import { colors } from '@/theme/goRide'
 import { FontAwesome6 } from '@expo/vector-icons';
 import { Driver } from '@/types/type'
 import Constants from "expo-constants";
-import { useUser } from '@/lib/useUser'
+import { useSession } from '@/lib/session'
+import { useBarikoiMapStyle, createBarikoiClient } from '@/utils/mapUtils';
 
 // MapLibre dynamic import (native only)
 let MapViewLib: any = null;
@@ -15,69 +17,71 @@ try {
   const ML = require('@maplibre/maplibre-react-native');
   MapViewLib = ML.MapView || ML.default;
   PointAnnotation = ML.PointAnnotation;
-} catch (e) {
+} catch (_e) {
   // MapLibre not installed or not available
 }
 
-type PlainDriver = Omit<Driver, 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
+type _PlainDriver = Omit<Driver, 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
 
 const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL as string | undefined;
 
 const Map = () => {
-  const router = useRouter();
-  const [region, setRegion] = useState<any>(undefined);
+  const _router = useRouter();
+  const [_region, setRegion] = useState<any>(undefined);
+  const mapStyleURL = useBarikoiMapStyle(false); // light theme
 
   const {
     userLongitude,
     userLatitude,
     destinationLatitude,
     destinationLongitude,
-    destinationAddress,
+    destinationAddress: _destinationAddress,
   } = useCustomer();
 
-  const { userLatitude: driverLatitude, userLongitude: driverLongitude, userAddress: driverAddress } = useDriver();
+  const { userLatitude: _driverLatitude, userLongitude: _driverLongitude, userAddress: _driverAddress } = useDriver();
 
-  const { user } = useUser();
+  const { user } = useSession();
 
-  const role = user?.publicMetadata?.role;
+  const _role = user?.publicMetadata?.role;
 
-  const { setWebSocket, ws } = useWSStore();
+  const { setWebSocket, ws: _ws } = useWSStore();
 
   const path = usePathname();
 
-  const isDriverUI = (path === '/find-customer' || path === '/finish-ride') ? true : false;
+  const _isDriverUI = (path === '/find-customer' || path === '/finish-ride') ? true : false;
 
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<any>(null);
+  const [_loading, _setLoading] = useState<boolean>(false);
+  const [_error, _setError] = useState<any>(null);
 
-  const [driverPickupLatitude, setDriverPickupLatitude] = useState<number>();
-  const [driverPickupLongitude, setDriverPickupLongitude] = useState<number>();
-  const [driverDropoffLatitude, setDriverDropoffLatitude] = useState<number>();
-  const [driverDropoffLongitude, setDriverDropoffLongitude] = useState<number>();
-  const [rideStatus, setRideStatus] = useState<string>('Offer');
+  const [_driverPickupLatitude, _setDriverPickupLatitude] = useState<number>();
+  const [_driverPickupLongitude, _setDriverPickupLongitude] = useState<number>();
+  const [driverDropoffLatitude, _setDriverDropoffLatitude] = useState<number>();
+  const [driverDropoffLongitude, _setDriverDropoffLongitude] = useState<number>();
+  const [_rideStatus, _setRideStatus] = useState<string>('Offer');
 
-  const [offerSentToDriver, setOfferSentToDriver] = useState(false);
-  const [tripConfirmed, setTripConfirmed] = useState(false);
-  const [tripStarted, setTripStarted] = useState(false);
-  const [arrived, setArrived] = useState(false);
-  const [driverArrived, setDriverArrived] = useState(false);
-  const [pickup, setPickup] = useState(false);
-  const [dropoff, setDropoff] = useState(false);
-  const [rideID, setRideID] = useState('');
-  const [amount, setAmount] = useState('');
-  const [selectedDriverRideStatus, setSelectedDriverRideStatus] = useState('');
-  const [driverDestinationLatitude, setDriverDestinationLatitude] = useState(0);
-  const [driverDestinationLongitude, setDriverDestinationLongitude] = useState(0);
-  const [driverDestinationAddress, setDriverDestinationAddress] = useState('');
-  const [rideOfferMap, setRideOfferMap] = useState<any>();
+  const [_offerSentToDriver, _setOfferSentToDriver] = useState(false);
+  const [_tripConfirmed, setTripConfirmed] = useState(false);
+  const [_tripStarted, _setTripStarted] = useState(false);
+  const [_arrived, setArrived] = useState(false);
+  const [_driverArrived, _setDriverArrived] = useState(false);
+  const [_pickup, _setPickup] = useState(false);
+  const [_dropoff, _setDropoff] = useState(false);
+  const [_rideID, setRideID] = useState('');
+  const [_amount, _setAmount] = useState('');
+  const [_selectedDriverRideStatus, setSelectedDriverRideStatus] = useState('');
+  const [_driverDestinationLatitude, _setDriverDestinationLatitude] = useState(0);
+  const [_driverDestinationLongitude, _setDriverDestinationLongitude] = useState(0);
+  const [_driverDestinationAddress, _setDriverDestinationAddress] = useState('');
+  const [_rideOfferMap, setRideOfferMap] = useState<any>();
 
-  const { selectedDriverId, nearbyDrivers, setSelectedDriverDetails, setNearbyDrivers, updateDriverLocation, updateSelectedDriverLocation, selectedDriverDetails } = useDriverStore();
-  const { userAddress } = useCustomer();
+  const { selectedDriverId: _selectedDriverId, nearbyDrivers: _nearbyDrivers, setSelectedDriverDetails: _setSelectedDriverDetails, setNearbyDrivers: _setNearbyDrivers, updateDriverLocation: _updateDriverLocation, updateSelectedDriverLocation, selectedDriverDetails: _selectedDriverDetails } = useDriverStore();
+  const { userAddress: _userAddress } = useCustomer();
 
 
 
   // Setting initial Region
   useEffect(() => {
+    createBarikoiClient();
     if (userLatitude && userLongitude) {
       const initialRegion = calculateRegion({
         userLatitude,
@@ -154,6 +158,7 @@ const Map = () => {
       {MapViewLib && userLatitude && userLongitude ? (
         <MapViewLib
           style={{ width: '100%', height: '100%', borderRadius: 16 }}
+          styleURL={mapStyleURL}
           centerCoordinate={[userLongitude, userLatitude]}
           zoomLevel={14}
           onPress={handleMapInteraction}
@@ -172,7 +177,7 @@ const Map = () => {
               coordinate={[destinationLongitude, destinationLatitude]}
             >
               <View className="w-8 h-8 items-center justify-center">
-                <FontAwesome6 name="location-dot" size={24} color="#E31D1C" />
+                <FontAwesome6 name="location-dot" size={24} color={colors.danger} />
               </View>
             </PointAnnotation>
           )}

@@ -56,7 +56,7 @@ interface DriverFlowState {
   setActiveOffer: (offer: RideOffer | null) => void;
 }
 
-export const useDriverFlowStore = create<DriverFlowState>((set, get) => ({
+export const useDriverFlowStore = create<DriverFlowState>((set, _get) => ({
   driver: null,
   activeSubscription: null,
   isOnline: false,

@@ -1,3 +1,4 @@
+import { colors } from '@/theme/goRide';
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,11 +21,11 @@ interface GroupedEntries {
 }
 
 const EVENT_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
-  deduction: { label: 'Ride Deduction', icon: 'minuscircleo', color: '#E31D1C' },
-  credit: { label: 'Credit Added', icon: 'pluscircleo', color: '#0CC25F' },
-  initial_load: { label: 'Subscription Activated', icon: 'arrowdown', color: '#0CC25F' },
-  expiry_writeoff: { label: 'Expired Credits', icon: 'clockcircleo', color: '#AAAAAA' },
-  pro_rata_credit: { label: 'Pro-rata Compensation', icon: 'gift', color: '#64B5F6' },
+  deduction: { label: 'Ride Deduction', icon: 'minuscircleo', color: colors.danger },
+  credit: { label: 'Credit Added', icon: 'pluscircleo', color: colors.primary },
+  initial_load: { label: 'Subscription Activated', icon: 'arrowdown', color: colors.primary },
+  expiry_writeoff: { label: 'Expired Credits', icon: 'clockcircleo', color: colors.mediumGray },
+  pro_rata_credit: { label: 'Pro-rata Compensation', icon: 'gift', color: colors.adminAccent },
 };
 
 function formatDate(dateStr: string): string {
@@ -79,13 +80,13 @@ export default function CallLedgerScreen() {
   const groupByDate = (entries: LedgerEntry[]): GroupedEntries[] => {
     const groups: Record<string, LedgerEntry[]> = {};
     for (const entry of entries) {
-      const dateKey = new Date(entry.created_at).toDateString();
-      if (!groups[dateKey]) groups[dateKey] = [];
-      groups[dateKey].push(entry);
+      const dk = new Date(entry.created_at).toDateString();
+      if (!groups[dk]) groups[dk] = [];
+      groups[dk].push(entry);
     }
     return Object.entries(groups)
-      .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-      .map(([dateKey, entries]) => ({
+      .sort(([_a], [_b]) => 0)
+      .map(([_dk, entries]) => ({
         date: formatDate(entries[0].created_at),
         entries: entries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
       }));
@@ -94,7 +95,7 @@ export default function CallLedgerScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-bgColor items-center justify-center">
-        <ActivityIndicator size="large" color="#64B5F6" />
+        <ActivityIndicator size="large" color={colors.adminAccent} />
       </SafeAreaView>
     );
   }
@@ -106,7 +107,7 @@ export default function CallLedgerScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4">
         <TouchableOpacity onPress={() => router.back()}>
-          <AntDesign name="arrowleft" size={24} color="#E0E0E0" />
+          <AntDesign name="arrowleft" size={24} color={colors.adminSubtle} />
         </TouchableOpacity>
         <Text className="text-primaryTextColor text-lg font-bold">Call Ledger</Text>
         <View style={{ width: 24 }} />
@@ -123,7 +124,7 @@ export default function CallLedgerScreen() {
 
       {entries.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <AntDesign name="clockcircleo" size={64} color="#3A3A3A" />
+          <AntDesign name="clockcircleo" size={64} color={colors.adminIconDark} />
           <Text className="text-secondaryTextColor text-base mt-4 text-center">
             No call history yet. Your call usage will appear here once you start accepting rides.
           </Text>
@@ -133,14 +134,14 @@ export default function CallLedgerScreen() {
           data={grouped}
           keyExtractor={item => item.date}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#64B5F6" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.adminAccent} />
           }
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
           renderItem={({ item: group }) => (
             <View className="mb-5">
               <Text className="text-secondaryTextColor text-sm font-semibold mb-2">{group.date}</Text>
               {group.entries.map(entry => {
-                const config = EVENT_CONFIG[entry.event_type] ?? { label: entry.event_type, icon: 'infocirlceo', color: '#AAAAAA' };
+                const config = EVENT_CONFIG[entry.event_type] ?? { label: entry.event_type, icon: 'infocirlceo', color: colors.mediumGray };
                 return (
                   <View key={entry.id} className="bg-cardBgColor rounded-xl p-4 mb-2 flex-row items-center">
                     <View className="w-9 h-9 rounded-full bg-hoverBgColor items-center justify-center mr-3">

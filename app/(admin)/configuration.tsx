@@ -1,3 +1,4 @@
+import { colors } from '@/theme/goRide';
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -111,7 +112,7 @@ export default function ConfigurationScreen() {
         value={edits[item.key] ?? item.value}
         onChangeText={v => setEdits(prev => ({ ...prev, [item.key]: v }))}
         keyboardType="decimal-pad"
-        placeholderTextColor="#555555"
+        placeholderTextColor={colors.textDisabledDark}
       />
       {edits[item.key] !== item.value && (
         <Text className="text-general-400 text-xs mt-1">Modified</Text>
@@ -125,7 +126,7 @@ export default function ConfigurationScreen() {
       <View className="flex-row items-center justify-between px-5 py-4">
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()}>
-            <AntDesign name="arrowleft" size={24} color="#E0E0E0" />
+            <AntDesign name="arrowleft" size={24} color={colors.adminSubtle} />
           </TouchableOpacity>
           <Text className="text-primaryTextColor text-lg font-bold ml-4">Configuration</Text>
         </View>
@@ -146,11 +147,11 @@ export default function ConfigurationScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#64B5F6" />
+          <ActivityIndicator size="large" color={colors.adminAccent} />
         </View>
       ) : config.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <AntDesign name="setting" size={64} color="#3A3A3A" />
+          <AntDesign name="setting" size={64} color={colors.adminIconDark} />
           <Text className="text-secondaryTextColor text-base mt-4 text-center">
             No configuration values found.
           </Text>
@@ -165,7 +166,7 @@ export default function ConfigurationScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => { setRefreshing(true); fetchConfig(); }}
-              tintColor="#64B5F6"
+              tintColor={colors.adminAccent}
             />
           }
         />

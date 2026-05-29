@@ -1,4 +1,4 @@
-import { Customer, Driver, DriverDetails, DriverStore, RideOffer, RideOfferDetails, RidesStore, StoreRole, UserData, WSStore } from '@/types/type'
+import { Customer, Driver, DriverDetails, DriverStore, RideOffer, RideOfferDetails, RidesStore, StoreRole, WSStore } from '@/types/type'
 import { create } from 'zustand'
 import { logger } from "@/lib/logger";
 
@@ -371,7 +371,7 @@ export const useDriver = create<Driver>((set) => ({
     },
 }))
 
-export const useUserStore = create<StoreRole>((set) => ({
+export const useAppUserStore = create<StoreRole>((set) => ({
     role: null,
     setRole: ({ role }) => set(() => ({ role })),
 }));
