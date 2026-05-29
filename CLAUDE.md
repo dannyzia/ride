@@ -48,7 +48,7 @@ This is a **modification of existing GlideX code**, not a greenfield build. Foll
 
 Key differences from GlideX:
 - **Auth**: Clerk (email/social) → Supabase Auth phone OTP
-- **Payments**: Stripe → bKash + Nagad mobile money
+- **Payments**: Stripe → PortPos (unified gateway supporting bKash, Nagad, Rocket, cards)
 - **Map**: Google Maps → Barikoi Maps API (via @maplibre/maplibre-react-native)
 - **Driver monetization**: Per-ride fare → Subscription call-package wallet
 - **Dispatch**: None → H3 hexagonal indexing + WebSocket batch broadcast
@@ -113,7 +113,7 @@ eas build --platform ios --profile production
 - **Database**: Supabase PostgreSQL + Drizzle ORM (`src/db/schema.ts`) — 22 tables
 - **Auth**: Supabase Auth phone OTP (`lib/auth.ts`, `lib/supabase.ts`, `lib/supabaseServer.ts`)
 - **Storage**: Supabase Storage (`driver-documents` bucket via `lib/imageToURL.ts`)
-- **Payments**: bKash/Nagad via WebView (`lib/bkash.ts`, `lib/nagad.ts`, `components/PaymentWebView.tsx`)
+- **Payments**: PortPos via WebView (`lib/portpos.ts`, `components/PaymentWebView.tsx`). Old `lib/bkash.ts` and `lib/nagad.ts` kept as inert fallback.
 - **WebSocket**: `ws` library in `utils-server/` (dispatch.ts, heartbeat.ts, h3Index.ts, scheduler.ts, compensationWorker.ts)
 - **Geo**: H3 hex grid (`lib/h3.ts`) at resolution 9. Import only via `lib/h3.ts` and `utils-server/h3Index.ts`.
 - **SMS**: Supabase Auth handles OTP delivery natively. Android SMS_RETRIEVER_API via `react-native-otp-verify`.
@@ -160,7 +160,7 @@ users, drivers, vehicles, packages, subscriptions, creditVouchers, callLedger, r
 | 2 | Database Schema (new tables, enums, migrations) | 1 |
 | 3 | Firebase Cloud Functions (startVerification, checkAuth) | 1 |
 | 4 | Auth Layer (screens, middleware, verify-token) | 2, 3 |
-| 5 | Payment System (bKash/Nagad, idempotent activation) | 2, 4 |
+| 5 | Payment System (PortPos unified gateway, idempotent activation) | 2, 4 |
 | 6 | Dispatch Engine (WebSocket, H3, heartbeat, scheduler) | 2, 4 |
 | 7 | Driver Flows (onboarding, home, offers, ledger) | 5, 6 |
 | 8 | Rider Flows (request, pricing, tracking, cancel) | 6 |
@@ -178,7 +178,7 @@ users, drivers, vehicles, packages, subscriptions, creditVouchers, callLedger, r
 | H-03 | Phase 2 completion | Migrations applied, seeds execute |
 | H-04 | Phase 3 completion | Emulator tests: OTP start, auth check, replay resistance |
 | H-05 | Phase 4 completion | Auth screens + protected routes work for all roles |
-| H-06 | Phase 5 completion | Payment callbacks + subscription activation + audit trail |
+| H-06 | Phase 5 completion | PortPos callback + subscription activation + audit trail |
 | H-07 | Phase 6 completion | Dispatch scenarios + ledger invariants + stale recovery |
 | H-08 | Phase 7 completion | Driver lifecycle E2E |
 | H-09 | Phase 8 completion | Rider lifecycle E2E |
@@ -244,12 +244,13 @@ users, drivers, vehicles, packages, subscriptions, creditVouchers, callLedger, r
 |----|------|---------|----------|
 | TD-01 | SMS receiver | OEM battery optimisation kills BroadcastReceiver (30-60% of Android devices). Manual OTP entry is fallback. | high |
 | TD-04 | Scheduled rides | setInterval timers lost on utils-server restart. Startup recovery has 5s gap. | med |
-| TD-06 | Nagad | Sandbox credentials unavailable. Ship bKash-only; Nagad shows "Coming soon". | med |
+| TD-06 | Nagad **Superseded by ADR-018** — PortPos handles all payment methods including Nagad. Old Nagad callback file kept as inert fallback. | resolved |
 | TD-07 | Admin auth | No MFA for admin login. Admin phone compromise = full access. | med |
 | TD-11 | Scaling | In-process maps prevent >1 replica. Set replicas=1. | high (post-MVP) |
 | TD-15 | Recovery | utils-server loses all in-memory state on crash. Startup recovery added. | high |
 | TD-20 | Version enforcement | No mechanism to force driver updates. GET /api/app-config added. | med |
 | TD-25 | BRTA ceiling | Fare ceiling is logged, not blocked. Admin must verify pricing. | low |
+| TD-31 | Supabase Data API grants | After Oct 30 2026, new tables need explicit GRANT statements for supabase-js/PostgREST access. Server-side Drizzle unaffected. | med |
 
 ## Monitoring Alert Thresholds (key metrics)
 
