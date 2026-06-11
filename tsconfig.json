@@ -4,19 +4,9 @@
     "strict": true,
     "module": "esnext",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
-    }
+      "@/*": ["./*"],
+    },
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "nativewind-env.d.ts"
-  ],
-  "exclude": [
-    "functions",
-    "node_modules",
-    "utils-server"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", "nativewind-env.d.ts"],
+  "exclude": ["functions", "node_modules", "utils-server", "_reference"],
 }

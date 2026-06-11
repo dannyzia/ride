@@ -40,7 +40,12 @@ interface RideOffer {
   };
   vehicle_type: string;
   rider_first_name: string;
+  rider_rating: number | null;
   distance_km: number;
+  pickup_distance_km: number;
+  pickup_eta_minutes: number;
+  is_scheduled: boolean;
+  preference_ids: string[];
   expires_in_ms: number;
   expires_at: string;
 }

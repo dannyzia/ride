@@ -96,14 +96,14 @@ export const onboarding = [
         id: 1,
         title: "The perfect ride is just a tap away!",
         description:
-            "Your journey begins with GlideX. Find your ideal ride effortlessly.",
+            "Your journey begins with Ride. Find your ideal ride effortlessly.",
         image: images.onboarding1,
     },
     {
         id: 2,
-        title: "Best car in your hands with GlideX",
+        title: "Best ride in your hands with Ride",
         description:
-            "Discover the convenience of finding your perfect ride with GlideX",
+            "Discover the convenience of finding your perfect ride with Ride",
         image: images.onboarding2,
     },
     {

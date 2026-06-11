@@ -5,6 +5,8 @@ const path = require("path");
 
 const config = getDefaultConfig(__dirname);
 config.resolver.sourceExts = [...config.resolver.sourceExts, "cjs", "web.js", "web.ts", "web.tsx"];
+// Allow .riv files to be bundled as assets (required for rive-react-native)
+config.resolver.assetExts = [...(config.resolver.assetExts ?? []), "riv"];
 
 config.resolver.alias = {
     "react-native-maps": path.resolve(__dirname, "mocks/react-native-maps.js"),

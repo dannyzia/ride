@@ -1,7 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { WebView } from 'react-native-webview';
-import { colors } from '@/theme/goRide';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
+import { WebView } from "react-native-webview";
+import { colors } from "@/theme/goRide";
+import Constants from "expo-constants";
+
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
 
 interface PaymentWebViewProps {
   /** The PortPos checkout URL to load in the WebView */
@@ -24,24 +33,31 @@ interface PaymentWebViewProps {
  * 4. On failure: calls onError and closes.
  * 5. Shows a loading spinner overlay while polling.
  */
-export default function PaymentWebView({ bkashURL, paymentID, onSuccess, onError }: PaymentWebViewProps) {
+export default function PaymentWebView({
+  bkashURL,
+  paymentID,
+  onSuccess,
+  onError,
+}: PaymentWebViewProps) {
   const [visible, setVisible] = useState(true);
   const [polling, setPolling] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const checkStatus = useCallback(async () => {
     try {
-      const res = await fetch(`/api/payment/portpos/status?invoice_id=${encodeURIComponent(paymentID)}`);
+      const res = await fetch(
+        `${API_URL}/api/payment/portpos/status?invoice_id=${encodeURIComponent(paymentID)}`,
+      );
       if (res.ok) {
         const data = await res.json();
-        if (data.status === 'paid') {
+        if (data.status === "paid") {
           stopPolling();
           setVisible(false);
           onSuccess();
-        } else if (data.status === 'failed') {
+        } else if (data.status === "failed") {
           stopPolling();
           setVisible(false);
-          onError('Payment failed');
+          onError("Payment failed");
         }
         // 'initiated' / 'callback_pending' → continue polling
       }
@@ -82,7 +98,7 @@ export default function PaymentWebView({ bkashURL, paymentID, onSuccess, onError
   const handleClose = () => {
     stopPolling();
     setVisible(false);
-    onError('User cancelled payment');
+    onError("User cancelled payment");
   };
 
   return (
@@ -90,7 +106,9 @@ export default function PaymentWebView({ bkashURL, paymentID, onSuccess, onError
       <View className="flex-1 bg-bgColor">
         {/* Header bar */}
         <View className="flex-row items-center justify-between px-4 py-3 bg-cardBgColor border-b border-borderColor">
-          <Text className="text-primaryTextColor text-base font-bold">Payment</Text>
+          <Text className="text-primaryTextColor text-base font-bold">
+            Payment
+          </Text>
           <TouchableOpacity onPress={handleClose} className="px-3 py-1">
             <Text className="text-danger-500 text-base">Close</Text>
           </TouchableOpacity>
@@ -101,7 +119,9 @@ export default function PaymentWebView({ bkashURL, paymentID, onSuccess, onError
           <View className="absolute top-14 left-0 right-0 items-center z-10">
             <View className="bg-white/90 rounded-full px-4 py-2 flex-row items-center shadow-sm">
               <ActivityIndicator size="small" color={colors.primary} />
-              <Text className="ml-2 text-sm text-gray-700 font-medium">Verifying payment...</Text>
+              <Text className="ml-2 text-sm text-gray-700 font-medium">
+                Verifying payment...
+              </Text>
             </View>
           </View>
         )}

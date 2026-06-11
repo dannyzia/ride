@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList, Text, View, Image, ActivityIndicator } from 'react-native';
+import { colors, spacing } from '@/theme/goRide';
 import { useSession } from '@/lib/session';
 import { useRidesStore } from '@/store';
 import RideCard from '@/components/RideCard';
@@ -41,8 +42,10 @@ const ShowAllRides = () => {
   }, [user?.id]);
 
   return (
-    <SafeAreaView className="flex-1 bg-black px-5 mb-10">
-      <Text className="text-white text-3xl font-bold mt-4 mb-6">Rides History</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgDark, paddingHorizontal: spacing.xl, marginBottom: spacing['2xl'] }}>
+      <Text style={{ color: colors.textPrimaryDark, fontSize: 28, fontWeight: '800', fontFamily: 'Urbanist', marginTop: spacing.lg, marginBottom: spacing['2xl'] }}>
+        Rides History
+      </Text>
 
       <FlatList
         data={Rides}
@@ -53,17 +56,18 @@ const ShowAllRides = () => {
         showsHorizontalScrollIndicator={false}
         ListEmptyComponent={() =>
           loading ? (
-            <ActivityIndicator size="large" color="#fff" style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
           ) : (
-            <View className="items-center justify-center mt-10">
-              <Image source={images.noResult} className="w-40 h-40" resizeMode="contain" />
-              <Text className="text-gray-400 mt-3">No recent rides found</Text>
+            <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: 40 }}>
+              <Image source={images.noResult} style={{ width: 160, height: 160 }} resizeMode="contain" />
+              <Text style={{ color: colors.textSecondaryDark, marginTop: 12, fontFamily: 'Urbanist', fontSize: 15 }}>
+                No recent rides found
+              </Text>
             </View>
           )
         }
       />
     </SafeAreaView>
-
   );
 };
 

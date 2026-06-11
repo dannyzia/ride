@@ -55,6 +55,10 @@ interface RiderState {
   activeRide: ActiveRide | null;
   searchingRideId: string | null;
   rideStatus: 'idle' | 'finding' | 'matched' | 'arriving' | 'in_progress' | 'completed' | 'cancelled' | 'expired';
+  scheduledAt: string | null;
+  promoCode: string | null;
+  promoDiscountBdt: number;
+  selectedPrefIds: string[];
   setSelectedVehicleType: (vt: VehicleType | null) => void;
   setEstimates: (estimates: FareEstimate[]) => void;
   setEstimating: (v: boolean) => void;
@@ -64,6 +68,10 @@ interface RiderState {
   setActiveRide: (ride: ActiveRide | null) => void;
   setSearchingRideId: (id: string | null) => void;
   setRideStatus: (status: RiderState['rideStatus']) => void;
+  setScheduledAt: (iso: string | null) => void;
+  setPromoCode: (code: string | null) => void;
+  setPromoDiscount: (bdt: number) => void;
+  setSelectedPrefIds: (ids: string[]) => void;
   updateDriverLocation: (lat: number, lng: number) => void;
   fetchActiveRide: (token: string) => Promise<void>;
 }
@@ -83,6 +91,10 @@ export const useRiderStore = create<RiderState>((set, get) => ({
   activeRide: null,
   searchingRideId: null,
   rideStatus: 'idle',
+  scheduledAt: null,
+  promoCode: null,
+  promoDiscountBdt: 0,
+  selectedPrefIds: [],
 
   setSelectedVehicleType: (vt) => set({ selectedVehicleType: vt }),
   setEstimates: (estimates) => set({ estimates }),
@@ -98,10 +110,18 @@ export const useRiderStore = create<RiderState>((set, get) => ({
     pickupLng: null,
     dropoffLat: null,
     dropoffLng: null,
+    scheduledAt: null,
+    promoCode: null,
+    promoDiscountBdt: 0,
+    selectedPrefIds: [],
   }),
   setActiveRide: (ride) => set({ activeRide: ride }),
   setSearchingRideId: (id) => set({ searchingRideId: id }),
   setRideStatus: (status) => set({ rideStatus: status }),
+  setScheduledAt: (iso) => set({ scheduledAt: iso }),
+  setPromoCode: (code) => set({ promoCode: code }),
+  setPromoDiscount: (bdt) => set({ promoDiscountBdt: bdt }),
+  setSelectedPrefIds: (ids) => set({ selectedPrefIds: ids }),
   updateDriverLocation: (lat, lng) => {
     const ride = get().activeRide;
     if (ride) set({ activeRide: { ...ride, driver_lat: lat, driver_lng: lng } });

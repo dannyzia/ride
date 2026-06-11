@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Image, StatusBar } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { logger } from '@/lib/logger';
 import Constants from 'expo-constants';
+import { colors } from '@/theme/goRide';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
 
@@ -56,35 +58,59 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white px-6 justify-center">
-      <Text className="text-2xl font-bold text-center mb-2">Create Account</Text>
-      <Text className="text-gray-500 text-center mb-8">
-        {role === 'driver' ? 'Driver' : 'Rider'} account
-      </Text>
+    <SafeAreaView className="flex-1 bg-goBgDark">
+      <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
+      <View className="flex-1 px-[spacing['2xl']] justify-center">
 
-      <View className="border border-gray-300 rounded-xl px-4 mb-6">
-        <TextInput
-          className="py-4 text-base"
-          placeholder="Full Name"
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-        />
+        {/* Logo */}
+        <View className="items-center mb-[spacing['4xl']]">
+          <Image
+            source={require('@/assets/logo/logo.png')}
+            className="w-18 h-18 rounded-lg"
+            resizeMode="contain"
+          />
+        </View>
+
+        <Text className="text-[24px] font-[Urbanist] font-bold text-goTextPrimaryDark mb-[spacing['xs']]">
+          Create Account
+        </Text>
+        <Text className="text-[14px] font-[Urbanist] text-goTextSecondaryDark mb-[spacing['2xl']]">
+          {role === 'driver' ? 'Driver' : 'Rider'} account
+        </Text>
+
+        {/* Name Input */}
+        <View className="bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-[spacing['lg']] mb-[spacing['2xl']]">
+          <TextInput
+            className="py-[spacing['lg']] text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+            placeholder="Full Name"
+            placeholderTextColor={colors.textDisabledDark}
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
+        </View>
+
+        {error ? (
+          <Text className="text-[14px] font-[Urbanist] text-goDanger text-center mb-[spacing['md']]">
+            {error}
+          </Text>
+        ) : null}
+
+        <TouchableOpacity
+          className={`py-[spacing['lg']] rounded-full 
+                       ${loading ? 'bg-goBorderDark' : 'bg-goPrimary'}`}
+          onPress={handleRegister}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size={20} color={colors.white} />
+          ) : (
+            <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">
+              Create Account
+            </Text>
+          )}
+        </TouchableOpacity>
       </View>
-
-      {error ? <Text className="text-red-500 text-center mb-4">{error}</Text> : null}
-
-      <TouchableOpacity
-        className="bg-goAccent py-4 rounded-xl"
-        onPress={handleRegister}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="white" />
-        ) : (
-          <Text className="text-white text-center font-semibold text-lg">Create Account</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }

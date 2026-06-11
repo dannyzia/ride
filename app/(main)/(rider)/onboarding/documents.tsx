@@ -97,7 +97,7 @@ export default function DocumentsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-bgColor">
+    <SafeAreaView className="flex-1 bg-goBgColor">
       <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Header */}
         <View className="flex-row items-center justify-between mt-4 mb-6">

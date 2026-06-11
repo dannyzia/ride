@@ -1,10 +1,12 @@
 import { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Image, StatusBar } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import Constants from 'expo-constants';
+import { colors } from '@/theme/goRide';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
 
@@ -40,7 +42,6 @@ export default function OtpVerifyScreen() {
         return;
       }
 
-      // Store session securely
       if (data.session?.access_token) {
         await SecureStore.setItemAsync('supabase_access_token', data.session.access_token);
       }
@@ -50,7 +51,6 @@ export default function OtpVerifyScreen() {
         return;
       }
 
-      // Check if user is registered
       const res = await fetch(`${API_URL}/api/auth/verify-token`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${data.session?.access_token}` },
@@ -59,12 +59,10 @@ export default function OtpVerifyScreen() {
       const result = await res.json();
 
       if (result.exists) {
-        // Already registered — navigate to role home
         router.replace(
           result.role === 'driver' ? '/(main)/(rider)' : '/(main)/(customer)'
         );
       } else {
-        // New user — navigate to register
         router.push(`/(auth)/register?role=${role}`);
       }
     } catch (e: any) {
@@ -79,8 +77,6 @@ export default function OtpVerifyScreen() {
     const newOtp = [...otp];
     newOtp[index] = text.replace(/[^0-9]/g, '');
     setOtp(newOtp);
-
-    // Auto-advance to next input
     if (text && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -93,42 +89,67 @@ export default function OtpVerifyScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white px-6 justify-center">
-      <Text className="text-2xl font-bold text-center mb-2">Verify Code</Text>
-      <Text className="text-gray-500 text-center mb-8">
-        Enter the 6-digit code sent to {phone}
-      </Text>
+    <SafeAreaView className="flex-1 bg-goBgDark">
+      <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
+      <View className="flex-1 px-[spacing['2xl']] justify-center">
 
-      <View className="flex-row justify-center mb-8 space-x-3">
-        {otp.map((digit, index) => (
-          <TextInput
-            key={index}
-            ref={(ref) => { inputRefs.current[index] = ref; }}
-            className="w-12 h-14 border border-gray-300 rounded-xl text-center text-xl font-bold"
-            keyboardType="number-pad"
-            maxLength={1}
-            value={digit}
-            onChangeText={(text) => handleOtpChange(text, index)}
-            onKeyPress={({ nativeEvent }) => {
-              if (nativeEvent.key === 'Backspace') handleKeyDown(index);
-            }}
+        {/* Logo */}
+        <View className="items-center mb-[spacing['4xl']]">
+          <Image
+            source={require('@/assets/logo/logo.png')}
+            className="w-18 h-18 rounded-lg"
+            resizeMode="contain"
           />
-        ))}
+        </View>
+
+        <Text className="text-[24px] font-[Urbanist] font-bold text-goTextPrimaryDark mb-[spacing['xs']]">
+          Verify Code
+        </Text>
+        <Text className="text-[14px] font-[Urbanist] text-goTextSecondaryDark mb-[spacing['3xl']]">
+          Enter the 6-digit code sent to {phone}
+        </Text>
+
+        {/* OTP Boxes */}
+        <View className="flex-row justify-between mb-[spacing['3xl']]">
+          {otp.map((digit, index) => (
+            <TextInput
+              key={index}
+              ref={(ref) => { inputRefs.current[index] = ref; }}
+              className={`w-[48px] h-[56px] rounded-md border-[1.5] 
+                         ${digit ? 'border-goPrimary' : 'border-goBorderDark'}
+                         bg-goSurfaceElevatedDark text-center text-[20px] font-[Urbanist] font-bold text-goTextPrimaryDark`}
+              keyboardType="number-pad"
+              maxLength={1}
+              value={digit}
+              onChangeText={(text) => handleOtpChange(text, index)}
+              onKeyPress={({ nativeEvent }) => {
+                if (nativeEvent.key === 'Backspace') handleKeyDown(index);
+              }}
+            />
+          ))}
+        </View>
+
+        {error ? (
+          <Text className="text-[14px] font-[Urbanist] text-goDanger text-center mb-[spacing['md']]">
+            {error}
+          </Text>
+        ) : null}
+
+        <TouchableOpacity
+          className={`py-[spacing['lg']] rounded-full 
+                       ${loading || otpString.length !== 6 ? 'bg-goBorderDark' : 'bg-goPrimary'}`}
+          onPress={handleVerify}
+          disabled={loading || otpString.length !== 6}
+        >
+          {loading ? (
+            <ActivityIndicator size={20} color={colors.white} />
+          ) : (
+            <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">
+              Verify
+            </Text>
+          )}
+        </TouchableOpacity>
       </View>
-
-      {error ? <Text className="text-red-500 text-center mb-4">{error}</Text> : null}
-
-      <TouchableOpacity
-        className="bg-goAccent py-4 rounded-xl"
-        onPress={handleVerify}
-        disabled={loading || otpString.length !== 6}
-      >
-        {loading ? (
-          <ActivityIndicator color="white" />
-        ) : (
-          <Text className="text-white text-center font-semibold text-lg">Verify</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }

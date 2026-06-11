@@ -137,7 +137,7 @@ export default function ConfigurationScreen() {
             className="bg-general-400 rounded-full px-4 py-2"
           >
             {saving ? (
-              <ActivityIndicator size="small" color="#FFF" />
+              <ActivityIndicator size="small" color={colors.white} />
             ) : (
               <Text className="text-white font-semibold text-sm">Save</Text>
             )}

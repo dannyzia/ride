@@ -1,6 +1,9 @@
 import expoFlat from 'eslint-config-expo/flat.js';
 
 export default [
+  {
+    ignores: ['_reference/**', 'utils-server/**'],
+  },
   ...expoFlat,
   {
     files: ['**/*.{ts,tsx}'],

@@ -1,0 +1,128 @@
+{
+  "task_id": "14-DEV-CHECKLIST",
+  "priority": "high | medium | low",
+  "dependencies": [
+    "01-PRD.md",
+    "05-DATA-MODEL.md",
+    "06-API.md",
+    "07-USER-FLOWS.md",
+    "08-UI-SPEC.md",
+    "09-UX-SPEC.md"
+  ],
+  "objective": "Verify every requirement, database change, backend implementation, frontend implementation, test, and documentation update is complete before a feature is considered done. No exceptions.",
+  "inputs": [
+    "01-PRD.md — requirements read, acceptance criteria understood",
+    "05-DATA-MODEL.md — schema changes identified",
+    "06-API.md — API contract written or endpoints confirmed",
+    "07-USER-FLOWS.md — flows for this feature reviewed",
+    "08-UI-SPEC.md — screen spec reviewed",
+    "09-UX-SPEC.md — UX rules reviewed"
+  ],
+  "constraints": [
+    "No open blocking questions before coding begins — resolve them first",
+    "Input must be validated at the route boundary, not inside the service",
+    "All success and error responses must match the API contract exactly (field names, types, HTTP codes)",
+    "Auth and permissions must be enforced on every new route",
+    "No stack traces returned to the client",
+    "All user-facing copy must match the UX spec exactly — no paraphrasing",
+    "No color used as the sole indicator of meaning",
+    "No console.log, print, debugger, or TODO comments without a linked issue"
+  ],
+  "deliverables": [
+    {
+      "category": "database",
+      "items": [
+        "Migration file created",
+        "Migration tested: up succeeds on a clean DB",
+        "Migration tested: down fully reverses the up",
+        "New fields and tables added to 05-DATA-MODEL.md",
+        "Indexes added as specified in data model",
+        "Soft delete column present if required by data model rules"
+      ]
+    },
+    {
+      "category": "backend",
+      "items": [
+        "Service function(s) written in the correct layer (see 12-FOLDER-STRUCTURE.md)",
+        "Input validated at the route boundary — not inside the service",
+        "All success responses match the API contract exactly",
+        "All error responses match the API contract exactly",
+        "Auth and permissions enforced on every new route",
+        "No stack traces returned to the client"
+      ]
+    },
+    {
+      "category": "frontend",
+      "items": [
+        "Components created in the correct directory per 12-FOLDER-STRUCTURE.md",
+        "All states implemented: loading, empty, error, success (see 09-UX-SPEC.md)",
+        "All user-facing copy matches the UX spec exactly — no paraphrasing",
+        "Responsive behavior implemented for all breakpoints in 08-UI-SPEC.md",
+        "Keyboard navigation works for all interactive elements",
+        "No color used as the sole indicator of meaning"
+      ]
+    },
+    {
+      "category": "tests",
+      "items": [
+        "Unit tests written for all service functions",
+        "Unit tests written for all validation logic",
+        "E2E test covers the happy path",
+        "E2E test covers at least one error path",
+        "All tests pass"
+      ]
+    },
+    {
+      "category": "documentation",
+      "items": [
+        "05-DATA-MODEL.md updated if schema changed",
+        "06-API.md updated if endpoints changed",
+        "04-ADR.md updated if a significant decision was made",
+        "18-KNOWN-ISSUES.md updated if new tech debt was introduced",
+        "11-ENV-VARS.md updated if new variables were added"
+      ]
+    },
+    {
+      "category": "feature: commission and waiting time",
+      "items": [
+        "Commission System schema and logic implemented",
+        "Waiting Time / Driver Arrived mechanism implemented",
+        "Platform commission calculated post minimum floor",
+        "Driver arrived status integrated into UI and API"
+      ]
+    },
+    {
+      "category": "GoRide Design System Integration",
+      "items": [
+        "Extract colors/fonts/spacing from GoRide.css into a React Native theme",
+        "Replace all hardcoded colors in existing components with theme references",
+        "Update screen layouts (Auth, Onboarding, Home, Offer, Fare, Admin) to match GoRide screens",
+        "Copy logo to assets and update splash screen, auth screens, app icon, and in-app header branding",
+        "Copy marker icons from Elements and update map marker usage"
+      ]
+    }
+  ],
+  "definition_of_done": [
+    "Linter passes with zero warnings",
+    "Type checker passes with zero errors",
+    "All tests pass",
+    "No console.log, print, debugger, or TODO comments without a linked issue",
+    "Code reviewed by human or AI reviewer using the code-reviewer agent"
+  ],
+  "validation_steps": [
+    "Run linter and confirm zero warnings",
+    "Run type checker and confirm zero errors",
+    "Run full test suite and confirm all pass",
+    "Confirm all deliverable categories (database, backend, frontend, tests, documentation) are fully completed",
+    "Confirm all inputs were read before coding began"
+  ],
+  "failure_conditions": [
+    "Any checklist item left incomplete",
+    "Linter or type checker errors remain",
+    "Any test is failing",
+    "Open blocking questions existed and coding proceeded anyway",
+    "Stack traces are returned to the client",
+    "API responses do not match the contract",
+    "Auth or permissions are missing on any new route"
+  ]
+}

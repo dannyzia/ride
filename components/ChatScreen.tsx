@@ -91,7 +91,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
       }}
       timeTextStyle={{
         right: { color: 'rgba(255,255,255,0.7)', fontSize: 11 },
-        left: { color: '#999', fontSize: 11 },
+        left: { color: colors.grayMedium, fontSize: 11 },
       }}
     />
   );
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 15,
-    color: '#666',
+    color: colors.gray,
     textAlign: 'center',
     marginTop: 12,
   },

@@ -1,0 +1,55 @@
+Phase 1 — Architecture (Sonnet / Gemini)
+High-level system design
+Data model definition
+API contracts (explicit and strict)
+Failure mode mapping
+
+✔ Output: “contract-first spec”
+
+Phase 2 — Contract Lock (critical missing step)
+
+Use Gemini/Opus here:
+
+Validate schema consistency
+Define API boundaries
+Lock type definitions (DTOs, interfaces)
+Define state machine rules if applicable
+
+This is your anti-drift layer.
+
+Phase 3 — Parallelized Implementation (not strictly sequential)
+
+Instead of sequential model hopping:
+
+Frontend track
+Kimi K2.5 → UI scaffolding + layout + components
+Backend track
+Composer 2.0 → services, logic, data layer
+Constraint rule:
+
+Both must adhere strictly to Phase 2 contracts
+
+Phase 4 — Integration Build (missing in your plan)
+
+Single pass using SWE-1.6 or Composer:
+
+API wiring
+contract enforcement checks
+runtime validation
+edge-case alignment
+
+This is where most real-world bugs are found.
+
+Phase 5 — Refactor + Debug Loop (SWE-1.6)
+multi-file consistency fixes
+dependency cleanup
+performance tuning
+test stabilization
+Phase 6 — Architectural Audit (Opus / Gemini)
+
+Not just “final review”, but:
+
+system correctness verification
+scalability stress assumptions
+security and failure analysis
+contract violations detection

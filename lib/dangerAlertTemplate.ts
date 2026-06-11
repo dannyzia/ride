@@ -13,7 +13,17 @@ type PlainDriver = Omit<
   | "setRole"
 >;
 
-export const getDangerEmailHtml = (driver: PlainDriver, user: { id: string; fullName: string | null; firstName?: string | null; emailAddresses: { emailAddress: string }[]; phoneNumbers: { phoneNumber: string }[]; primaryEmailAddress?: { emailAddress: string } | null }) => `
+export const getDangerEmailHtml = (
+  driver: PlainDriver,
+  user: {
+    id: string;
+    fullName: string | null;
+    firstName?: string | null;
+    emailAddresses: { emailAddress: string }[];
+    phoneNumbers: { phoneNumber: string }[];
+    primaryEmailAddress?: { emailAddress: string } | null;
+  },
+) => `
   <html>
     <head>
       <meta charset="UTF-8" />
@@ -96,7 +106,7 @@ export const getDangerEmailHtml = (driver: PlainDriver, user: { id: string; full
           style="margin-top: 40px; text-align: center; font-size: 13px; color: #888;"
         >
           <p style="color: #888;">This alert was auto-generated for safety monitoring purposes.</p>
-          <p style="color: #888;">&copy; ${new Date().getFullYear()} GlideX. All rights reserved.</p>
+          <p style="color: #888;">&copy; ${new Date().getFullYear()} Digital-Papyrus. All rights reserved.</p>
         </div>
       </div>
     </body>

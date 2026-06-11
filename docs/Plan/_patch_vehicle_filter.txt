@@ -1,0 +1,18 @@
+### VEHICLE TYPE FILTER — dispatch must match driver vehicle_type to ride
+```typescript
+// CORRECT — in dispatch.ts candidate query:
+// The candidate pool must filter by vehicle_type BEFORE H3 scoring.
+// A car_economy driver cannot receive a bike_basic request and vice versa.
+// The 8 types are (EXACT LOWERCASE STRINGS — match the Drizzle pgEnum):
+//   'bike_basic', 'bike_standard', 'bike_plus', 'cng',
+//   'car_economy', 'car_comfort', 'car_premium', 'car_xl'
+// These are defined in src/db/schema.ts vehicleTypeEnum and lib/vehicleTypes.ts.
+// SCREAMING_SNAKE_CASE (BIKE_BASIC etc.) is WRONG — the DB rejects it.
+WHERE drivers.vehicle_type = rides.vehicle_type  -- exact match, lowercase
+  AND drivers.is_online = true
+  AND drivers.status IN ('active', 'temporary')
+
+// WRONG — uppercase casing will cause a DB enum violation:
+WHERE drivers.vehicle_type = 'BIKE_BASIC'  // ❌ wrong case
+WHERE drivers.vehicle_type = 'MOTORCYCLE'  // ❌ old 4-type enum value — removed
+```

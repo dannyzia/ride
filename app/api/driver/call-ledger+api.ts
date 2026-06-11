@@ -1,8 +1,16 @@
 import { db } from '@/src/db';
 import { callLedger, subscriptions, drivers, users } from '@/src/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, gte, lte } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+const querySchema = z.object({
+  event_type: z.enum(['deduction', 'credit', 'initial_load', 'expiry_writeoff']).optional(),
+  from_date: z.string().datetime().optional(),
+  to_date: z.string().datetime().optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(200),
+});
 
 export async function GET(request: Request) {
   try {
@@ -19,11 +27,35 @@ export async function GET(request: Request) {
       .where(and(eq(subscriptions.driver_id, driver.id), eq(subscriptions.status, 'active')))
       .limit(1);
 
+    const url = new URL(request.url);
+    const parsed = querySchema.safeParse({
+      event_type: url.searchParams.get('event_type') ?? undefined,
+      from_date: url.searchParams.get('from_date') ?? undefined,
+      to_date: url.searchParams.get('to_date') ?? undefined,
+      limit: url.searchParams.get('limit') ?? undefined,
+    });
+    if (!parsed.success) {
+      return Response.json({ error: 'validation_error', message: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const { event_type, from_date, to_date, limit } = parsed.data;
+
+    const conditions = [eq(callLedger.driver_id, driver.id)];
+    if (event_type) {
+      conditions.push(eq(callLedger.event_type, event_type as any));
+    }
+    if (from_date) {
+      conditions.push(gte(callLedger.created_at, new Date(from_date)));
+    }
+    if (to_date) {
+      conditions.push(lte(callLedger.created_at, new Date(to_date)));
+    }
+
     const entries = await db.select()
       .from(callLedger)
-      .where(eq(callLedger.driver_id, driver.id))
+      .where(and(...conditions))
       .orderBy(desc(callLedger.created_at))
-      .limit(200);
+      .limit(limit);
 
     return Response.json({
       entries,

@@ -7,39 +7,40 @@ import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
 import Map from './Map'
 import { useCustomer, useDriverStore } from '@/store'
 import { useFocusEffect } from '@react-navigation/native'
+import { colors, radii, spacing } from '@/theme/goRide'
 
-const RideLayout = ({ title, children, snapPoints, disabled }: { title: string, children: React.ReactNode, snapPoints?: string[], disabled: boolean }) => {
+const RideLayout = ({ title, children, snapPoints, disabled }: {
+    title: string,
+    children: React.ReactNode,
+    snapPoints?: string[],
+    disabled: boolean
+}) => {
 
-
-    const {
-        clearDestinationLocation,
-    } = useCustomer();
-    const {
-        clearSelectedDriver
-    } = useDriverStore();
+    const { clearDestinationLocation } = useCustomer();
+    const { clearSelectedDriver } = useDriverStore();
 
     const bottomSheetRef = useRef<BottomSheet>(null);
     const router = useRouter()
 
-    // useEffect(() => {
-    //     // make sure the sheet is always open at index 0 when mounted
-    //     bottomSheetRef.current?.snapToIndex(0);
-    // }, []);
-
-    //as we are using expo-router so normal useeffect is not enough
     useFocusEffect(
         useCallback(() => {
             bottomSheetRef.current?.snapToIndex(0);
         }, [])
-      );
-
-
+    );
 
     return (
         <GestureHandlerRootView>
-            <View className='flex-1 bg-red-600'>
-                <View className='flex flex-1 h-screen bg-blue-500'>
-                    <View className='flex flex-row absolute z-10 top-16  items-center justify-start px-5'>
+            <View style={{ flex: 1, backgroundColor: colors.bgDark }}>
+                <View style={{ flex: 1 }}>
+                    <View style={{
+                        flexDirection: 'row',
+                        position: 'absolute',
+                        zIndex: 10,
+                        top: 64,
+                        alignItems: 'center',
+                        justifyContent: 'flex-start',
+                        paddingHorizontal: spacing.xl,
+                    }}>
                         <TouchableOpacity
                             onPress={() => {
                                 if (title === 'Ride') {
@@ -50,22 +51,32 @@ const RideLayout = ({ title, children, snapPoints, disabled }: { title: string, 
                             }}
                             disabled={disabled}
                         >
-                            {
-                                !disabled && (
-                                    <View className='w-10 h-10 bg-white rounded-full items-center justify-center'>
-                                        <Image
-                                            source={icons.backArrow}
-                                            className='w-6 h-6'
-                                        />
-                                    </View>
-                                )
-                            }
+                            {!disabled && (
+                                <View style={{
+                                    width: 40,
+                                    height: 40,
+                                    backgroundColor: colors.surfaceElevatedDark,
+                                    borderRadius: radii.pill,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderWidth: 1,
+                                    borderColor: colors.borderDark,
+                                }}>
+                                    <Image source={icons.backArrow} style={{ width: 20, height: 20 }} />
+                                </View>
+                            )}
                         </TouchableOpacity>
-                        {
-                            !disabled && (
-                                <Text className='text-xl text-white font-JakartaSemiBold ml-5'>{title || 'Go back'}</Text>
-                            )
-                        }
+                        {!disabled && (
+                            <Text style={{
+                                fontSize: 18,
+                                color: colors.textPrimaryDark,
+                                fontFamily: 'Urbanist',
+                                fontWeight: '600',
+                                marginLeft: spacing.md,
+                            }}>
+                                {title || 'Go back'}
+                            </Text>
+                        )}
                     </View>
                     <Map />
                 </View>
@@ -76,13 +87,14 @@ const RideLayout = ({ title, children, snapPoints, disabled }: { title: string, 
                     snapPoints={snapPoints ?? ['40%', '70%']}
                     index={0}
                     enablePanDownToClose={false}
-                    style={{
-
-                        borderTopEndRadius: 50
-                    }}
-
+                    backgroundStyle={{ backgroundColor: colors.surfaceElevatedDark, borderTopLeftRadius: radii['3xl'], borderTopRightRadius: radii['3xl'] }}
+                    handleIndicatorStyle={{ backgroundColor: colors.borderDark }}
                 >
-                    <BottomSheetView style={{ flex: 1, padding: 20, borderRadius: 50, backgroundColor: 'white' }}>
+                    <BottomSheetView style={{
+                        flex: 1,
+                        padding: spacing.xl,
+                        backgroundColor: colors.surfaceElevatedDark,
+                    }}>
                         {children}
                     </BottomSheetView>
                 </BottomSheet>

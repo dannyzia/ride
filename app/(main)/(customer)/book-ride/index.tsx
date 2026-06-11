@@ -1,11 +1,13 @@
-import { colors } from '@/theme/goRide';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Image } from 'react-native'
+import { colors, spacing } from '@/theme/goRide';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Image, TextInput, Alert } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import RideLayout from '@/components/RideLayout'
 import { useRouter } from 'expo-router'
 import { useCustomer } from '@/store'
 import { useRiderStore, VehicleType } from '@/store/useRiderStore'
 import CustomButton from '@/components/CustomButton'
+import SchedulePicker from '@/components/SchedulePicker'
+import PreferenceChips from '@/components/PreferenceChips'
 import { VEHICLE_TYPES } from '@/lib/vehicleTypes'
 import { supabase } from '@/lib/supabase'
 import { icons } from '@/constants/data'
@@ -27,8 +29,11 @@ const VEHICLE_ICONS: Record<string, any> = {
 const BookRidePage = () => {
   const router = useRouter()
   const { userAddress, destinationAddress, userLatitude, userLongitude, destinationLatitude, destinationLongitude } = useCustomer()
-  const { selectedVehicleType, setSelectedVehicleType, estimates, setEstimates, estimating, setEstimating } = useRiderStore()
+  const { selectedVehicleType, setSelectedVehicleType, estimates, setEstimates, estimating, setEstimating, scheduledAt, setScheduledAt, setPromoCode, setPromoDiscount, selectedPrefIds, setSelectedPrefIds } = useRiderStore()
   const [error, setError] = useState<string | null>(null)
+  const [promoInput, setPromoInput] = useState('')
+  const [promoApplying, setPromoApplying] = useState(false)
+  const [promoApplied, setPromoApplied] = useState(false)
 
   useEffect(() => {
     if (userLatitude && userLongitude && destinationLatitude && destinationLongitude) {
@@ -50,6 +55,8 @@ const BookRidePage = () => {
           pickup_lng: userLongitude,
           dropoff_lat: destinationLatitude,
           dropoff_lng: destinationLongitude,
+          preference_ids: selectedPrefIds.length > 0 ? selectedPrefIds : undefined,
+          promo_code: promoApplied && promoInput ? promoInput.trim() : undefined,
         }),
       })
       const data = await response.json()
@@ -117,6 +124,90 @@ const BookRidePage = () => {
             </Text>
           </View>
         </View>
+
+        {/* Schedule Picker */}
+        <SchedulePicker
+          selectedIndex={scheduledAt ? undefined : 0}
+          onSelect={(iso, _option) => setScheduledAt(iso)}
+        />
+
+        {/* Promo Code Input */}
+        <View style={{ marginBottom: spacing.md }}>
+          <Text style={{ fontFamily: 'Urbanist', fontWeight: '600', fontSize: 13, color: colors.textSecondaryLight, marginBottom: spacing.sm }}>
+            Promo Code
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TextInput
+              value={promoInput}
+              onChangeText={(t) => { setPromoInput(t.toUpperCase()); setPromoApplied(false); }}
+              placeholder="Enter code"
+              placeholderTextColor={colors.textDisabledLight}
+              editable={!promoApplied}
+              autoCapitalize="characters"
+              style={{
+                flex: 1, height: 44, borderRadius: 12, borderWidth: 1,
+                borderColor: promoApplied ? colors.primary : colors.borderDark,
+                backgroundColor: colors.surfaceElevatedDark, paddingHorizontal: 14,
+                fontFamily: 'Inter', fontSize: 14, color: colors.textPrimaryDark,
+              }}
+            />
+            {promoApplied ? (
+              <TouchableOpacity
+                onPress={() => { setPromoCode(null); setPromoDiscount(0); setPromoInput(''); setPromoApplied(false); }}
+                style={{ height: 44, paddingHorizontal: 16, borderRadius: 12, backgroundColor: colors.danger + '20', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Text style={{ fontFamily: 'Inter', fontSize: 13, fontWeight: '600', color: colors.danger }}>Remove</Text>
+              </TouchableOpacity>
+            ) : (
+              <CustomButton
+                title={promoApplying ? '...' : 'Apply'}
+                onPress={async () => {
+                  if (!promoInput.trim() || !userLatitude || !userLongitude) return;
+                  setPromoApplying(true);
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const token = session?.access_token ?? '';
+                    const res = await fetch(`${API_URL}/api/promo/redeem`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                      body: JSON.stringify({
+                        code: promoInput.trim(),
+                        vehicle_type: selectedVehicleType ?? 'bike_basic',
+                        pickup_lat: userLatitude,
+                        pickup_lng: userLongitude,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.status === 'valid') {
+                      setPromoCode(promoInput.trim());
+                      // We'll compute actual discount on confirm; stage is set server-side
+                      setPromoApplied(true);
+                    } else {
+                      Alert.alert('Invalid Promo', data.error || 'Could not apply promo code');
+                    }
+                  } catch {
+                    Alert.alert('Error', 'Network error');
+                  } finally {
+                    setPromoApplying(false);
+                  }
+                }}
+                disabled={!promoInput.trim() || promoApplying}
+                className="w-24"
+              />
+            )}
+          </View>
+          {promoApplied && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              <Text style={{ fontFamily: 'Inter', fontSize: 12, color: colors.primary }}>✓ Promo code applied</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Preference Chips */}
+        <PreferenceChips
+          selectedIds={selectedPrefIds}
+          onChange={(ids) => setSelectedPrefIds(ids)}
+        />
 
         {estimating ? (
           <View className="flex-1 items-center justify-center">

@@ -1,4 +1,4 @@
-import { colors } from '@/theme/goRide';
+import { colors, spacing } from '@/theme/goRide';
 import { View, Text } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import CustomButton from '@/components/CustomButton';
@@ -112,12 +112,12 @@ const EnterOtp = () => {
                 placeholder="*"
                 type="numeric"
                 theme={{
-                    containerStyle: {
-                        width: '100%',
-                        justifyContent: 'space-between',
-                        flexDirection: 'row',
-                        marginBottom: 24,
-                    },
+containerStyle: {
+                         width: '100%',
+                         justifyContent: 'space-between',
+                         flexDirection: 'row',
+                         marginBottom: spacing['2xl'],
+                     },
                     pinCodeContainerStyle: {
                         borderWidth: 1,
                         borderColor: colors.textDisabledLight, // Tailwind: border-gray-300

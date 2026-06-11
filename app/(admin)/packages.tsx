@@ -171,7 +171,7 @@ export default function PackagesScreen() {
               disabled={saving}
               className="bg-general-400 rounded-full py-4 items-center"
             >
-              {saving ? <ActivityIndicator size="small" color="#FFF" /> : <Text className="text-white font-bold">Save Package</Text>}
+              {saving ? <ActivityIndicator size="small" color={colors.white} /> : <Text className="text-white font-bold">Save Package</Text>}
             </TouchableOpacity>
           </View>
         </View>

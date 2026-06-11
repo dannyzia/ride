@@ -20,8 +20,10 @@ export async function GET(request: Request) {
 
     const [activePricing] = await db.select({
       per_km_bdt: pricing.per_km_bdt,
+      per_min_bdt: pricing.per_min_bdt,
       base_fare_bdt: pricing.base_fare_bdt,
-      minimum_fare_bdt: pricing.minimum_fare_bdt,
+      floor_length_km: pricing.floor_length_km,
+      floor_min: pricing.floor_min,
       brta_fare_ceiling_bdt: pricing.brta_fare_ceiling_bdt,
     })
       .from(pricing)
@@ -44,8 +46,10 @@ export async function GET(request: Request) {
     return Response.json({
       vehicle_type: driver.vehicle_type,
       per_km_bdt: activePricing.per_km_bdt,
+      per_min_bdt: activePricing.per_min_bdt,
       base_fare_bdt: activePricing.base_fare_bdt,
-      minimum_fare_bdt: activePricing.minimum_fare_bdt,
+      floor_length_km: Number(activePricing.floor_length_km),
+      floor_min: activePricing.floor_min,
       brta_fare_ceiling_bdt: activePricing.brta_fare_ceiling_bdt,
       min_per_km_floor_bdt: Math.floor(activePricing.per_km_bdt * minRatio),
       min_per_km_ceiling_bdt: Math.ceil(activePricing.per_km_bdt * maxRatio),

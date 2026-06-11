@@ -15,7 +15,7 @@ const SlideButton: React.FC<SlideButtonProps> = ({
     title,
     onComplete,
     bgColor = colors.slideGreen,
-    textColor = '#fff',
+    textColor = colors.white,
 }) => {
     const sliderWidth = SCREEN_WIDTH * 0.85;
     const handleWidth = 56;

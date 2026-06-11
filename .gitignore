@@ -29,23 +29,76 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files (SECRETS — never commit)
+.env
 .env.local
 .env*.local
 
 # typescript
 *.tsbuildinfo
 
-# Ride-specific
-functions/.runtimeconfig.json
-functions/lib/
-utils-server/.env
-utils-server/firebase-service-account.json
-firebase-service-account.json
-*.credential.json
+# IDE / Editor
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# AI / Agent tools
+.claude/
+.kilo/
+.serena/
+.mcp.json
 
 # Vercel
 .vercel
 
+# Logs
+*.log
+expo-server*.log
+
+# OS artifacts
+Thumbs.db
+Desktop.ini
+nul
+
+# Build artifacts
+android/
+ios/
+
+# Firebase (removed from project — do not track)
+google-services.json
+GoogleService-Info.plist
+firebase-service-account.json
+ride-*-firebase-adminsdk-*.json
+*.credential.json
+
+# Supabase local CLI
+supabase/
+
+# Ride-specific
+functions/.runtimeconfig.json
+functions/lib/
+utils-server/.env
+
+# Sync lock files
+sync.ffs_lock
+
+# Temp / scratch files
+eslint_full_output.txt
+eslint_results.json
+C*eslint_output.txt
+_get_ids.ts
+_schema_check.ts
+_reference/
+plans/
+financials/
+utils/
+scripts/start-metro.cmd
+
+App Design/
+
+# Legacy config
 app-example
 .eslintrc.json

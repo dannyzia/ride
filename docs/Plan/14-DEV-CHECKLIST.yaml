@@ -11,7 +11,7 @@
 version: "1.0"
 project: Ride
 base_codebase: Ride
-total_phases: 11
+total_phases: 13
 critical_path:
   - phase: 1
     name: Foundation — GlideX Cleanup
@@ -41,6 +41,54 @@ critical_path:
     name: Commission System & Waiting Time
     must_complete_before: []
     reason: "Post-MVP features to be implemented after core flows"
+  - phase: 13
+    name: Driver SOS
+    must_complete_before: []
+    reason: "Safety feature for drivers that can be implemented after core flows"
+  - phase: F7
+    name: "Polished Offer Sheet"
+    must_complete_before: [F4, F5, F6]
+    reason: "Pure UI enrichment with zero risk to existing flows. F7-02 provides the offer sheet that F6-10 cross-references."
+  - phase: F4
+    name: "Coupon-Funded Rider Promos"
+    must_complete_before: [F6]
+    reason: "Has DB dependencies but no dispatch impact. F4-05 must complete before F6-04 extends the same endpoint with preferences."
+  - phase: F5
+    name: "Driver Incentive Dashboard"
+    must_complete_before: [F6]
+    reason: "Reuses existing credit_vouchers table. F5 completion allows F6-14 (consecutive_accepts) to build on established incentive infrastructure."
+  - phase: F6
+    name: "Rider Preference Add-Ons"
+    must_complete_before: []
+    reason: "Touches dispatch.ts — do last when everything else is stable. Most sensitive change in the feature set."
+  - phase: F8
+    name: "Enhanced SOS Button"
+    must_complete_before: []
+    reason: "Safety feature extending SOS to both riders and drivers with triple SMS dispatch. Independent of other features."
+  - phase: F9
+    name: "Wallet System"
+    must_complete_before: [F10]
+    reason: "Wallet tables must exist before referral rewards can write wallet transactions."
+  - phase: F10
+    name: "Referral & Points System"
+    must_complete_before: []
+    reason: "Depends on F9 wallet tables for reward credits. Implements referral codes, points ledger, and reward redemption."
+  - phase: F11
+    name: "Enhanced Promo Workflow"
+    must_complete_before: []
+    reason: "Extends existing promo system with usage intervals, promo list, and driver wallet receivable integration."
+  - phase: F12
+    name: "Vehicle Model Reference & Auto-Classification"
+    must_complete_before: [F13]
+    reason: "vehicle_models table and auto-suggest logic must exist before onboarding screens can use them."
+  - phase: F13
+    name: "Driver Photo & Face Match"
+    must_complete_before: []
+    reason: "Independent safety/identity feature for onboarding."
+  - phase: F14
+    name: "Vehicle Photo & Video Guidelines"
+    must_complete_before: []
+    reason: "Enhanced vehicle documentation. Independent of other features."
 
 # ============================================================
 # PHASE 1: Foundation — GlideX Cleanup
@@ -247,7 +295,7 @@ phases:
           - "Use zod z.object({ ... }).parse(process.env) to validate all required env vars."
           - "On missing or invalid var: throw a descriptive Error listing the missing var name and where to get it."
           - "Never import EXPO_PUBLIC_ vars — they are bundled client-side."
-          - "Required server vars: DATABASE_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, BKASH_APP_KEY, BKASH_APP_SECRET, BKASH_CALLBACK_URL, WEBSOCKET_INTERNAL_SECRET, GOOGLE_MAPS_SERVER_API_KEY."
+          - "Required server vars: DATABASE_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, PORTPOS_API_KEY, PORTPOS_BASE_URL, PORTPOS_CALLBACK_URL, WEBSOCKET_INTERNAL_SECRET, GOOGLE_MAPS_SERVER_API_KEY."
           - "Required utils-server vars: DATABASE_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, WEBSOCKET_INTERNAL_SECRET, INSTANCE_COUNT (must equal '1')."
         verification:
           - type: file_exists
@@ -256,9 +304,9 @@ phases:
             file: "lib/env.ts"
             patterns:
               - "z.object\\|z.string\\|zod"
-               - "DATABASE_URL"
-               - "SUPABASE_URL"
-               - "BKASH_APP_KEY"
+              - "DATABASE_URL"
+              - "SUPABASE_URL"
+              - "PORTPOS_API_KEY"
           - type: anti_pattern_check
             file: "lib/env.ts"
             forbidden: "EXPO_PUBLIC_"
@@ -569,7 +617,7 @@ phases:
           - "driver_id: uuid NULL FK → drivers.id -- was NOT NULL; nullable until match"
           - "zone_id: uuid NOT NULL FK → zones.id  -- operational zone at request time"
           - "pricing_id: uuid NOT NULL FK → pricing.id  -- pricing row used for fare calculation"
-          - "fare_breakdown: jsonb NOT NULL  -- {base_fare_bdt, distance_charge_bdt, wait_charge_bdt, total_bdt, distance_km}"
+          - "fare_breakdown: jsonb NOT NULL  -- {base_fare_bdt, distance_charge_bdt, time_charge_bdt, total_bdt, floor_fare_bdt, distance_km, platform_commission_percent, platform_commission_bdt, driver_net_bdt}"
           - "distance_km: numeric(7,3) NOT NULL  -- extracted from fare_breakdown for query convenience"
           - "vehicle_type: vehicleTypeEnum NOT NULL"
           - "status: rideStatusEnum NOT NULL DEFAULT 'pending'"
@@ -769,6 +817,7 @@ phases:
               - "window_start"
               - "count"
         depends_on: [P2-01]
+      - id: P2-07d
         task: "Add credit_vouchers table"
         files_to_modify: ["src/db/schema.ts"]
         table_name: "credit_vouchers"
@@ -790,6 +839,7 @@ phases:
               - "redeemed_subscription_id"
               - "expires_at"
         depends_on: [P2-01, P2-03]
+      - id: P2-07e
         task: "Add dispatch_offers table"
         files_to_modify: ["src/db/schema.ts"]
         table_name: "dispatch_offers"
@@ -820,6 +870,8 @@ phases:
           call_ledger has its OWN partial unique index on (ride_id, driver_id) WHERE event_type='deduction'.
           Do NOT confuse the two — dispatch_offers has NO event_type column.
           Verify both indexes exist in the generated migration SQL.
+
+      - id: P2-07f
         task: "Add vehicles table — one vehicle per driver, BRTA registration details"
         files_to_modify: ["src/db/schema.ts"]
         table_name: "vehicles"
@@ -860,6 +912,9 @@ phases:
               - "passenger_seats"
         depends_on: [P2-01, P2-03]
         priority: critical
+
+      - id: P2-07g
+        task: "Add chat_messages table"
         files_to_modify: ["src/db/schema.ts"]
         table_name: "chat_messages"
         columns:
@@ -950,6 +1005,7 @@ phases:
           - "key='dispatch_paused', value='false'  -- runtime dispatch toggle (TD-19)"
           - "key='min_app_version', value='1.0.0'  -- min client version (TD-20/TD-24)"
           - "key='brta_fare_ceiling_bdt', value='50000'  -- BRTA govt taxi fare ceiling in paisa (500 BDT default; admin must review and update). Referenced by lib/fareCalc.ts warning log and 17-MONITORING.md. TD-25."
+          - "key='max_free_wait_seconds', value='60'  -- platform-wide free wait constant (seconds); auto-start timer uses this; ride complete uses min(arrived_at + max_free_wait_ms, started_at) as timer_start"
         notes: "Seed via scripts/seed-system-config.js. DO NOT hardcode these values — always read from DB at runtime."
         verification:
           - type: contains
@@ -959,6 +1015,7 @@ phases:
               - "dispatch_paused"
               - "min_app_version"
               - "brta_fare_ceiling_bdt"
+              - "max_free_wait_seconds"
         depends_on: [P2-01]
         priority: critical
 
@@ -1093,8 +1150,9 @@ phases:
           - "vehicle_type: vehicleTypeEnum NOT NULL"
           - "base_fare_bdt: integer NOT NULL  -- in paisa"
           - "per_km_bdt: integer NOT NULL  -- in paisa per km"
-          - "per_min_wait_bdt: integer NOT NULL  -- in paisa per minute"
-          - "free_wait_minutes: integer NOT NULL DEFAULT 3  -- Default is 3 (bikes and CNG). Car types (CAR_ECONOMY through CAR_XL) must explicitly set 5. Seed script and admin must not rely on the default for car types. See 05-DATA-MODEL.md § pricing seed values."
+          - "per_min_bdt: integer NOT NULL  -- in paisa per minute of billable ride time (unified timer: post-60s-free-wait OR ride start, whichever first)"
+          - "floor_length_km: numeric(10,2) NOT NULL  -- min km for floor fare; floor = base + round(per_km × floor_length_km) + (floor_min × per_min_bdt)"
+          - "floor_min: integer NOT NULL  -- min minutes for floor fare (same formula)"
           - "is_active: boolean NOT NULL DEFAULT true"
           - "brta_fare_ceiling_bdt: integer NULL  -- BRTA govt fare ceiling in paisa; system warns (does NOT block) if fare exceeds"
           - "created_at: timestamptz NOT NULL DEFAULT now()"
@@ -1107,8 +1165,9 @@ phases:
               - "zone_id"
               - "base_fare_bdt"
               - "per_km_bdt"
-              - "per_min_wait_bdt"
-              - "free_wait_minutes"
+              - "per_min_bdt"
+              - "floor_length_km"
+              - "floor_min"
         depends_on: [P2-01, P2-10]
         priority: high
 
@@ -1417,8 +1476,8 @@ phases:
           Prerequisites: (a) migrations have been applied, (b) a default zone row exists in the zones table
           (created by seed-system-config.js or a separate seed-zone.js step) so that zone_id can be a real FK.
           Each row: vehicle_type, zone_id (FK to the default zone), base_fare_bdt, per_km_bdt,
-          per_min_wait_bdt, free_wait_minutes, brta_fare_ceiling_bdt (NULL is acceptable for initial seed).
-          All monetary values in paisa. Values must match the fare table from 05-DATA-MODEL.md § pricing.
+          per_min_bdt, floor_length_km, floor_min, brta_fare_ceiling_bdt (NULL is acceptable for initial seed).
+          All monetary values in paisa; floor_length_km is decimal km. Values must match the fare table from 05-DATA-MODEL.md § pricing.
           Script should be idempotent (upsert on conflict vehicle_type+zone_id) and runnable with:
           node scripts/seed-pricing.js
         verification:
@@ -1875,7 +1934,7 @@ phases:
   # PHASE 5: Payment System
   # ============================================================
   - id: 5
-    name: "Payment System — bKash & Nagad Integration"
+    name: "Payment System — PortPos Unified Gateway"
     blocking: true
     description: >
       Build the full package purchase and payment confirmation pipeline.
@@ -1886,36 +1945,34 @@ phases:
       All payment initiations use idempotency keys. Payment credentials are server-side only.
     items:
       - id: P5-01
-        task: "Create lib/bkash.ts — bKash Merchant API client"
+        task: "Create lib/portpos.ts — PortPos unified payment gateway client"
         files_to_create:
-          - "lib/bkash.ts"
+          - "lib/portpos.ts"
         required_exports:
-          - "bkashClient.getToken(): Promise<string>"
-          - "bkashClient.createPayment(params: { amount: number, idempotencyKey: string, callbackUrl: string }): Promise<{ paymentID: string, bkashURL: string }>"
-          - "bkashClient.queryPayment(paymentID: string): Promise<{ transactionStatus: string, trxID: string }>"
-          - "bkashClient.executePayment(paymentID: string): Promise<{ transactionStatus: string, trxID: string }>"
+          - "portposClient.createInvoice(params: { amount: number, currency: 'BDT', idempotencyKey: string, callbackUrl: string, paymentMethod: string }): Promise<{ invoice_id: string, payment_url: string }>"
+          - "portposClient.verifyPayment(invoiceId: string): Promise<{ status: string, transaction_id: string }>"
+          - "portposClient.queryInvoice(invoiceId: string): Promise<{ status: string, amount: number }>"
         implementation_rules:
-          - "Read BKASH_APP_KEY, BKASH_APP_SECRET, BKASH_USERNAME, BKASH_PASSWORD, BKASH_BASE_URL from process.env."
+          - "Read PORTPOS_API_KEY, PORTPOS_BASE_URL, PORTPOS_CALLBACK_URL from process.env."
           - "Token caching: cache access token in module scope. Refresh 60s before expiry."
-          - "All amounts: integer paisa passed in. Convert to taka (divide by 100) before sending to bKash."
-          - "createPayment: POST to {BKASH_BASE_URL}/tokenized/checkout/create. Include idempotencyKey as merchantInvoiceNumber."
-          - "queryPayment: GET to {BKASH_BASE_URL}/tokenized/checkout/payment/status."
+          - "All amounts: integer paisa passed in. Convert to taka (divide by 100) before sending to PortPos."
+          - "createInvoice: POST to {PORTPOS_BASE_URL}/invoices. Include idempotencyKey as reference. Supports bKash, Nagad, Rocket, and card methods."
+          - "verifyPayment: GET to {PORTPOS_BASE_URL}/invoices/{invoiceId}/verify."
           - "On token expiry (mid-request 401): refresh token once and retry. Do not retry indefinitely."
-          - "Log every bKash API call with logger.info — include paymentID and response status. Never log secrets."
+          - "Log every PortPos API call with logger.info — include invoice_id and response status. Never log secrets."
         verification:
           - type: file_exists
-            path: "lib/bkash.ts"
+            path: "lib/portpos.ts"
           - type: contains
-            file: "lib/bkash.ts"
+            file: "lib/portpos.ts"
             patterns:
-              - "getToken"
-              - "createPayment"
-              - "queryPayment"
-              - "executePayment"
-              - "merchantInvoiceNumber\\|idempotencyKey"
-              - "BKASH_APP_KEY"
+              - "createInvoice"
+              - "verifyPayment"
+              - "queryInvoice"
+              - "idempotencyKey"
+              - "PORTPOS_API_KEY"
           - type: anti_pattern_check
-            file: "lib/bkash.ts"
+            file: "lib/portpos.ts"
             forbidden: "EXPO_PUBLIC_\\|console.log"
           - type: command
             run: "npx tsc --noEmit"
@@ -1924,38 +1981,26 @@ phases:
         priority: critical
 
       - id: P5-02
-        task: "Create lib/nagad.ts — Nagad Merchant API client"
+        task: "Create inert lib/bkash.ts and lib/nagad.ts — legacy payment client stubs (not active)"
         files_to_create:
+          - "lib/bkash.ts"
           - "lib/nagad.ts"
-        required_exports:
-          - "nagadClient.initPayment(params: { amount: number, orderId: string, callbackUrl: string }): Promise<{ url: string }>"
-          - "nagadClient.verifyPayment(orderId: string): Promise<{ status: string, transactionId: string }>"
         implementation_rules:
-          - "Read NAGAD_MERCHANT_ID, NAGAD_MERCHANT_PRIVATE_KEY, NAGAD_MERCHANT_PUBLIC_KEY, NAGAD_BASE_URL from process.env."
-          - "Nagad requires RSA encryption of payment data using merchant's private key."
-          - "initPayment: POST to {NAGAD_BASE_URL}/api/dfs/check-out/initialize/{NAGAD_MERCHANT_ID}/{orderId}."
-          - "All amounts: integer paisa passed in. Convert to taka before sending to Nagad."
-          - "Log every API call with logger.info — never log RSA key or decrypted data."
-          - "See TD-06 in 18-KNOWN-ISSUES.md: Nagad sandbox credentials may not be available at MVP. Show 'Coming soon' in UI until credentials confirmed."
+          - "These are INERT FALLBACK files only. PortPos handles all payment methods."
+          - "Export stub functions that throw 'Use lib/portpos.ts instead' errors."
+          - "Kept for backwards compatibility with any residual GlideX imports."
+          - "See TD-06 in 18-KNOWN-ISSUES.md: superseded by PortPos unified gateway."
         verification:
           - type: file_exists
+            path: "lib/bkash.ts"
+          - type: file_exists
             path: "lib/nagad.ts"
-          - type: contains
-            file: "lib/nagad.ts"
-            patterns:
-              - "initPayment"
-              - "verifyPayment"
-              - "NAGAD_MERCHANT_ID"
-              - "NAGAD_MERCHANT_PRIVATE_KEY"
-          - type: anti_pattern_check
-            file: "lib/nagad.ts"
-            forbidden: "EXPO_PUBLIC_\\|console.log"
           - type: command
             run: "npx tsc --noEmit"
             expect_exit: 0
         depends_on: []
-        priority: high
-        notes: "If Nagad sandbox credentials are unavailable, implement the client but stub initPayment to throw 'NagadUnavailableError'. The UI will show Coming Soon."
+        priority: low
+        notes: "Inert fallback files. Not used in production. PortPos is the sole payment gateway."
 
       - id: P5-03
         task: "Create lib/activateSubscription.ts — shared, idempotent subscription activation (do this BEFORE callback handlers)"
@@ -1964,7 +2009,7 @@ phases:
         required_exports:
           - "activateSubscription(db: DrizzleDb, paymentEventId: string): Promise<{ subscriptionId: string }>"
         implementation_rules:
-          - "Contains the Drizzle transaction that all three callers use: bKash callback, Nagad callback, compensation worker."
+          - "Contains the Drizzle transaction that both callers use: PortPos callback, compensation worker."
           - "Idempotent: if payment_events.subscription_id is already set, return existing subscription_id without re-running."
           - "Steps (all in db.transaction()): (1) Verify payment_events.amount_bdt = packages.price_bdt. (2) INSERT subscriptions { daily_reset_at = nextBdtMidnightUtc(), total_deductions=0, is_trial from package }. (3) INSERT call_ledger event_type='initial_load', delta=call_count, balance_after=call_count. (4) UPDATE payment_events status='paid', confirmed_at=now(), subscription_id=new_id. (5) COMMIT."
           - "If subscription has credit vouchers (status='active'): apply them inside the same transaction → UPDATE calls_remaining += voucher.calls, UPDATE credit_vouchers status='redeemed'."
@@ -2042,7 +2087,7 @@ phases:
           403: "Driver status not active/temporary"
           409: "Active subscription exists OR trial already used"
           422: "Package not found or inactive"
-          502: "bKash/Nagad API error"
+          502: "PortPos API error"
         verification:
           - type: file_exists
             path: "app/api/package/purchase+api.ts"
@@ -2088,75 +2133,59 @@ phases:
         priority: critical
 
       - id: P5-07
-        task: "Create app/api/payment/bkash/callback+api.ts — bKash payment callback handler"
+        task: "Create app/api/payment/portpos/callback+api.ts — PortPos payment callback handler"
         files_to_create:
-          - "app/api/payment/bkash/callback+api.ts"
+          - "app/api/payment/portpos/callback+api.ts"
         implementation_rules:
-          - "Method: POST. [public] — called by bKash servers, not the app."
-          - "Parse body: { paymentID, status, merchantInvoiceNumber (= idempotency_key) }."
-          - "Verify callback signature: compute HMAC-SHA256 of 'amount|currency|merchantInvoiceNumber|paymentID' using BKASH_APP_SECRET. Compare to x-api-signature header. Mismatch → discard, log security warning, return 200."
-          - "Verify with bKash API: call bkashClient.queryPayment(paymentID) to confirm transactionStatus. Do not trust body alone."
-          - "If transactionStatus != 'Completed': update payment_events.status='failed'. Return 200 (must always 200 to bKash)."
-          - "If 'Completed':"
+          - "Method: GET. [public] — called by PortPos servers, not the app."
+          - "Parse query params: { invoice_id, status, reference (= idempotency_key) }."
+          - "Verify with PortPos API: call portposClient.verifyPayment(invoice_id) to confirm payment status. Do not trust query params alone."
+          - "If status != 'completed': update payment_events.status='failed'. Return 200."
+          - "If 'completed':"
           - "  1. Lookup payment_events by idempotency_key. If not found: log warn, return 200."
           - "  2. Call activateSubscription(db, payment_event_id) from lib/activateSubscription.ts. This handles: idempotency (subscription_id already set → no-op), INSERT subscriptions, INSERT call_ledger initial_load, UPDATE payment_events — all in one Drizzle transaction. Do NOT duplicate these steps inline."
           - "  3. If activateSubscription throws: INSERT a row into compensation_queue DB table { payment_event_id, status='pending', next_retry_at=now(), attempt_count=0 }. Log error. Return 200."
-          - "Always return 200 to bKash — a non-200 causes bKash to retry indefinitely."
+          - "Always return 200 to PortPos — a non-200 causes PortPos to retry indefinitely."
         verification:
           - type: file_exists
-            path: "app/api/payment/bkash/callback+api.ts"
+            path: "app/api/payment/portpos/callback+api.ts"
           - type: contains
-            file: "app/api/payment/bkash/callback+api.ts"
+            file: "app/api/payment/portpos/callback+api.ts"
             patterns:
-              - "queryPayment"
+              - "verifyPayment"
               - "activateSubscription"
               - "compensation_queue"
-              - "BKASH_APP_SECRET.*x-api-signature\\|hmac.*bkash\\|signature.*verify"
           - type: anti_pattern_check
-            file: "app/api/payment/bkash/callback+api.ts"
+            file: "app/api/payment/portpos/callback+api.ts"
             forbidden: "INSERT.*subscriptions|INSERT.*call_ledger"
             description: "Callback must NOT inline activation — must delegate to activateSubscription()"
-          - type: anti_pattern_check
-            file: "app/api/payment/bkash/callback+api.ts"
-            forbidden: "return.*4[0-9][0-9]\\|return.*500"
-            description: "Must always return 200 to bKash — never return error status codes to the provider"
           - type: command
             run: "npx tsc --noEmit"
             expect_exit: 0
         depends_on: [P5-01, P5-03, P5-05]
         priority: critical
-        notes: "This is the most critical endpoint in the payment pipeline. Every path must return 200 to bKash. All DB writes delegate to activateSubscription() from lib/activateSubscription.ts. Failures are persisted to the compensation_queue DB table for automatic retry by compensationWorker.ts."
+        notes: "This is the most critical endpoint in the payment pipeline. Every path must return 200 to PortPos. All DB writes delegate to activateSubscription() from lib/activateSubscription.ts. Failures are persisted to the compensation_queue DB table for automatic retry by compensationWorker.ts."
 
       - id: P5-08
-        task: "Create app/api/payment/nagad/callback+api.ts — Nagad payment callback handler"
+        task: "Create inert callback stubs for legacy bKash and Nagad paths (not active)"
         files_to_create:
+          - "app/api/payment/bkash/callback+api.ts"
           - "app/api/payment/nagad/callback+api.ts"
         implementation_rules:
-          - "⚠ NOT identical to bKash despite similar activation logic. Key differences:"
-          - "  (1) HTTP method: GET (not POST) — Nagad sends callback as GET request with query params."
-          - "  (2) Data source: query params (not request body) — parse orderId, status from URL query string."
-          - "  (3) Signature verification: RSA JWT (not HMAC-SHA256) — use NAGAD_MERCHANT_PUBLIC_KEY to verify the Nagad JWT from query params."
-          - "  (4) Provider client: nagadClient.verifyPayment(orderId) (not bkashClient.queryPayment)."
-          - "Activation logic after verification is the same: call activateSubscription(db, payment_event_id)."
-          - "Parse: orderId (= idempotency_key), status from query params."
-          - "Verify with nagadClient.verifyPayment(orderId) — do not trust query params alone."
-          - "Same activation transaction as P5-07."
-          - "Always return 200."
-          - "Skip implementation if Nagad credentials unavailable (TD-06) — stub with logger.warn and 200."
+          - "These are INERT FALLBACK files. PortPos handles all payments via P5-07."
+          - "Both return 200 immediately with logger.warn('Legacy payment callback received — use PortPos instead')."
+          - "Kept for backwards compatibility with any residual GlideX routes."
         verification:
           - type: file_exists
+            path: "app/api/payment/bkash/callback+api.ts"
+          - type: file_exists
             path: "app/api/payment/nagad/callback+api.ts"
-          - type: contains
-            file: "app/api/payment/nagad/callback+api.ts"
-            patterns:
-              - "verifyPayment"
-              - "db.transaction\\|transaction"
-              - "initial_load"
           - type: command
             run: "npx tsc --noEmit"
             expect_exit: 0
-        depends_on: [P5-02, P5-03, P5-07]
-        priority: high
+        depends_on: []
+        priority: low
+        notes: "Inert fallback. Not used in production. PortPos is the sole payment gateway."
 
       - id: P5-09
         task: "Create utils-server/compensationWorker.ts — periodic retry for failed activations"
@@ -2191,14 +2220,14 @@ phases:
         priority: critical
 
       - id: P5-11
-        task: "Create components/PaymentWebView.tsx — bKash/Nagad payment WebView"
+        task: "Create components/PaymentWebView.tsx — PortPos payment WebView"
         files_to_create:
           - "components/PaymentWebView.tsx"
         ui_requirements:
           - "Wraps react-native-webview. Receives payment_url prop."
           - "Props: { paymentUrl: string, onSuccess: () => void, onCancel: () => void, onError: (msg: string) => void }."
           - "Show full-screen WebView. Back button at top-left closes and calls onCancel."
-          - "Monitor URL changes (onNavigationStateChange). If URL matches BKASH_CALLBACK_URL or NAGAD_CALLBACK_URL pattern: close WebView and call onSuccess."
+          - "Monitor URL changes (onNavigationStateChange). If URL matches PORTPOS_CALLBACK_URL pattern: close WebView and call onSuccess."
           - "EXPO_PUBLIC_SERVER_URL is used to construct the expected callback URL pattern."
           - "On WebView error: call onError with message."
           - "Do NOT embed payment credentials. This component only renders a URL returned by the server."
@@ -2302,7 +2331,7 @@ phases:
           - "Load packages from GET /api/package/list. Show skeleton cards while loading."
           - "For each package: show name, call_count, duration_days, price (÷100 for display in ৳). TRIAL badge if is_trial."
           - "Payment method: PortPos single gateway. No in-app provider selector — user picks bKash/Nagad/Rocket/card on PortPos hosted checkout page."
-          - "Proceed button: generates idempotencyKey = uuid(). Calls POST /api/package/purchase with header 'Idempotency-Key: <idempotencyKey>' and body { package_id, provider }. IMPORTANT: idempotency_key must be a HEADER, not a body field — the API returns 400 if it is in the body."
+          - "Proceed button: generates idempotencyKey = uuid(). Calls POST /api/package/purchase with header 'Idempotency-Key: <idempotencyKey>' and body { package_id, provider: 'portpos' }. IMPORTANT: idempotency_key must be a HEADER, not a body field — the API returns 400 if it is in the body."
           - "On success: open PaymentWebView. On WebView onSuccess: start polling GET /api/package/active every 3s."
           - "Polling: show 'Confirming payment...' overlay. On subscription found: navigate to driver home with success toast."
           - "After 2 minutes of polling with no result: show 'Taking longer than expected. Check back later.' + Dismiss button."
@@ -2326,14 +2355,14 @@ phases:
         priority: critical
 
       - id: P5-13
-        task: "Sandbox smoke test — full bKash payment flow"
+        task: "Sandbox smoke test — full PortPos payment flow"
         manual_test_steps:
           - step: "Driver logs in, navigates to Buy Calls"
             expected: "Package list loads with correct call_count and prices in ৳"
-          - step: "Select Micro-trial package, select bKash, tap Proceed"
-            expected: "POST /api/package/purchase returns 200 with payment_url. WebView opens bKash sandbox page."
-          - step: "Complete bKash sandbox payment"
-            expected: "bKash sandbox sends callback to BKASH_CALLBACK_URL (via ngrok in dev). WebView navigates to callback URL."
+          - step: "Select Micro-trial package, tap Proceed"
+            expected: "POST /api/package/purchase returns 200 with payment_url. WebView opens PortPos checkout page."
+          - step: "Complete PortPos sandbox payment (bKash or other method)"
+            expected: "PortPos sandbox sends callback to PORTPOS_CALLBACK_URL (via ngrok in dev). WebView navigates to callback URL."
           - step: "WebView closes. Polling starts."
             expected: "GET /api/package/active returns subscription within 30s. 'Package activated' screen shown."
           - step: "Replay same request (same idempotency_key)"
@@ -2345,7 +2374,7 @@ phases:
             description: "All 6 steps pass. payment_events.status = 'paid'. subscriptions.status = 'active'. call_ledger has initial_load row."
         depends_on: [P5-12]
         priority: critical
-        notes: "Requires ngrok to expose local server to bKash sandbox callback. Set BKASH_CALLBACK_URL to ngrok URL."
+        notes: "Requires ngrok to expose local server to PortPos sandbox callback. Set PORTPOS_CALLBACK_URL to ngrok URL."
 
   # ============================================================
   # PHASE 6: Dispatch Engine
@@ -2433,13 +2462,14 @@ phases:
         files_to_create:
           - "lib/fareCalc.ts"
         required_exports:
-          - "calculateFare(params: { vehicleType: VehicleType, distanceKm: number, estimatedWaitMin?: number, zoneId: string }): Promise<FareBreakdown>"
-          - "interface FareBreakdown { base_fare_bdt: number, distance_charge_bdt: number, wait_charge_bdt: number, total_bdt: number, final_fare_bdt: number, minimum_fare_bdt: number, distance_km: number }  -- final_fare_bdt = max(total_bdt, minimum_fare_bdt); field names MUST match 05-DATA-MODEL.md rides.fare_breakdown and 06-API.md response schema exactly"
+          - "calculateFare(pricing: PricingRow, distanceKm: number, rideTimeMin: number, ceilings?: PlatformCeilings): FareBreakdown"
+          - "interface FareBreakdown { base_fare_bdt: number, distance_charge_bdt: number, time_charge_bdt: number, total_bdt: number, floor_fare_bdt: number, distance_km: number, platform_commission_percent: number, platform_commission_bdt: number, driver_net_bdt: number }  -- total_bdt = max(computed_total, floor_fare_bdt); field names MUST match 05-DATA-MODEL.md rides.fare_breakdown and 06-API.md response schema exactly"
         implementation_rules:
           - "All values returned in paisa (integer). No floats."
           - "Query pricing WHERE zone_id = zoneId AND vehicle_type = vehicleType AND is_active = true."
-          - "Formula: total = base_fare_bdt + (per_km_bdt * distanceKm) + max(0, estimatedWaitMin - free_wait_minutes) * per_min_wait_bdt."
-          - "Apply minimum fare: final_fare = max(total, minimum_fare_bdt). Always return final_fare_bdt alongside total_bdt."
+          - "Formula: distance_charge = round(per_km_bdt * distanceKm); time_charge = rideTimeMin * per_min_bdt; computed_total = base_fare_bdt + distance_charge + time_charge."
+          - "Floor fare: floor_fare = base_fare_bdt + round(per_km_bdt * floor_length_km) + (floor_min * per_min_bdt). Apply: total_bdt = max(computed_total, floor_fare)."
+          - "Pass rideTimeMin=0 at estimate/request time. At completion, caller computes: timer_start = min(arrived_at + 60_000, started_at); ride_time_min = CEIL((completed_at - timer_start) / 60000). Free wait is a platform-wide constant: 60 seconds (system_config.max_free_wait_seconds)."
           - "BRTA ceiling check: read platform_config.brta_max_per_km_bdt and brta_max_base_bdt. If pricing.per_km_bdt > brta_max_per_km_bdt OR pricing.base_fare_bdt > brta_max_base_bdt: logger.warn('[fareCalc] BRTA ceiling exceeded'). Do NOT block the ride."
           - "Round all intermediate calculations to nearest integer (Math.round)."
           - "If no pricing row found: throw FarePricingNotFoundError (caller returns 422)."
@@ -2454,9 +2484,9 @@ phases:
               - "FareBreakdown"
               - "base_fare_bdt"
               - "distance_charge_bdt"
-              - "wait_charge_bdt"
-              - "minimum_fare_bdt"
-              - "final_fare_bdt"
+              - "time_charge_bdt"
+              - "floor_fare_bdt"
+              - "floor_length_km"
               - "brta_max_per_km_bdt\\|brta.*ceiling\\|BRTA"
               - "Math.round"
           - type: anti_pattern_check
@@ -3003,7 +3033,64 @@ phases:
         depends_on: []
         priority: high
 
-      - id: P7-07
+      - id: P7-08
+        task: "Add call-ledger API filters and summary counts"
+        files_to_modify:
+          - "docs/Plan/06-API.md"
+        changes:
+          - "Document `outcome`, `vehicle_type`, `from_date`, and `to_date` query parameters on GET /api/call-ledger."
+          - "Document response summary counts for accepted, expired, refunded, and filtered rows."
+        verification:
+          - type: contains
+            file: "docs/Plan/06-API.md"
+            patterns:
+              - "outcome (accepted, expired, refunded, filtered)"
+              - "summary"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: medium
+
+      - id: P7-09
+        task: "Add call-ledger filter UI to driver screen"
+        files_to_modify:
+          - "docs/Plan/08-UI-SPEC.md"
+        ui_requirements:
+          - "Add filter chips/bar: All, Accepted, Ignored, Refunded, Filtered."
+          - "Add vehicle type dropdown."
+          - "Add optional date range picker."
+        verification:
+          - type: contains
+            file: "docs/Plan/08-UI-SPEC.md"
+            patterns:
+              - "Filter bar"
+              - "All | Accepted | Ignored | Refunded | Filtered"
+              - "Date range picker"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: medium
+
+      - id: P7-10
+        task: "Add call-ledger period summary card"
+        files_to_modify:
+          - "docs/Plan/08-UI-SPEC.md"
+        ui_requirements:
+          - "Add a summary card at the top of call ledger: This period: X accepted, Y missed, Z filtered by your minimum rate."
+        verification:
+          - type: contains
+            file: "docs/Plan/08-UI-SPEC.md"
+            patterns:
+              - "This period: X accepted, Y missed, Z filtered by your minimum rate"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: medium
+
+      - id: P7-11
         task: "End-to-End Driver Flow Smoke Test"
         manual_test_steps:
           - step: "New driver registers. Login."
@@ -3136,6 +3223,98 @@ phases:
         depends_on: [P8-02, P8-03]
         priority: critical
 
+      - id: P8-05
+        task: "Update rider scheduled ride UI to preset offsets"
+        files_to_modify:
+          - "docs/Plan/08-UI-SPEC.md"
+        ui_requirements:
+          - "Replace free-form datetime input with a horizontal segmented control: Now, 15 min, 30 min, 45 min, 60 min."
+          - "Show the selected scheduled time as a badge on the confirm-ride screen."
+        verification:
+          - type: contains
+            file: "docs/Plan/08-UI-SPEC.md"
+            patterns:
+              - "Horizontal segmented control"
+              - "Show the selected time as a badge"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [P8-02]
+        priority: medium
+
+      - id: P8-ADDR
+        task: "Add rider_addresses table and CRUD API routes"
+        files_to_create:
+          - "app/api/rider/addresses/index+api.ts"
+          - "app/api/rider/addresses/[id]+api.ts"
+        files_to_modify:
+          - "src/db/schema.ts"
+        implementation_rules:
+          - "Add rider_addresses table to Drizzle schema: id, user_id (FK→users.id), label, address, details, lat, lng, is_favorite, created_at, updated_at, deleted_at."
+          - "Max 20 active addresses per user (application-layer check in POST)."
+          - "GET: list active addresses WHERE deleted_at IS NULL, ordered by created_at DESC."
+          - "POST: create address. Zod: { label: z.string().max(100), address: z.string(), details: z.string().max(500).optional(), lat: z.number(), lng: z.number(), is_favorite: z.boolean().optional() }."
+          - "PUT /addresses/:id: update address fields."
+          - "DELETE /addresses/:id: soft delete (SET deleted_at = now()). Return undo_token."
+          - "POST /addresses/:id/undo-delete: clear deleted_at using undo_token."
+          - "All routes require rider auth via verifySupabaseToken()."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "rider_addresses"
+              - "deleted_at"
+              - "is_favorite"
+          - type: contains
+            file: "app/api/rider/addresses/index+api.ts"
+            patterns:
+              - "verifySupabaseToken"
+              - "deleted_at"
+              - "z.object"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [P2-01]
+        priority: medium
+
+      - id: P8-SETTINGS
+        task: "Add user settings JSONB columns and API routes"
+        files_to_create:
+          - "app/api/rider/preferences/notifications+api.ts"
+          - "app/api/rider/preferences/security+api.ts"
+          - "app/api/rider/linked-accounts/index+api.ts"
+          - "app/api/rider/linked-accounts/[provider]/connect+api.ts"
+          - "app/api/rider/linked-accounts/[provider]/disconnect+api.ts"
+          - "app/api/rider/data-controls+api.ts"
+        files_to_modify:
+          - "src/db/schema.ts"
+        implementation_rules:
+          - "Add to users table in Drizzle schema: notification_prefs (jsonb, nullable), security_settings (jsonb, nullable), linked_accounts (jsonb, nullable), data_controls (jsonb, nullable)."
+          - "All settings endpoints read/write their respective JSONB column on the authenticated user's row."
+          - "GET returns the JSONB blob or {} if NULL. PUT does a partial merge (Object.assign pattern)."
+          - "Zod schemas per 06-API.md: notification_prefs { ride_offers, promotions, chat, sounds }, security_settings { two_factor_enabled, biometric_enabled }, data_controls { share_location, share_analytics }."
+          - "linked_accounts: GET returns provider status array. Connect starts OAuth flow, writes provider data on callback. Disconnect sets provider key to null."
+          - "All routes require rider auth via verifySupabaseToken()."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "notification_prefs"
+              - "security_settings"
+              - "linked_accounts"
+              - "data_controls"
+          - type: contains
+            file: "app/api/rider/preferences/notifications+api.ts"
+            patterns:
+              - "verifySupabaseToken"
+              - "z.object"
+              - "notification_prefs"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [P2-01]
+        priority: low
+
   # ============================================================
   # PHASE 9: Admin Panel + Quality
   # ============================================================
@@ -3227,7 +3406,7 @@ phases:
           - "app/api/admin/config/*"
         ui_requirements:
           - "Package Management: Form to create/edit call packages (price, call count, duration). Must support creating the micro-trial package."
-          - "Pricing config: Fields to update base_fare, per_km_bdt, per_min_wait_bdt dynamically."
+          - "Pricing config: Fields to update base_fare_bdt, per_km_bdt, per_min_bdt, floor_length_km, floor_min dynamically."
           - "Zone config: UI to update the active operational zone boundaries."
         verification:
           - type: file_exists
@@ -3530,31 +3709,32 @@ phases:
         priority: high
 
       - id: P9-PC-04
-        task: "Enforce minimum_fare_bdt hard floor in lib/fareCalc.ts and pricing migration"
+        task: "Implement floor fare in lib/fareCalc.ts: replace minimum_fare_bdt with computed floor (floor_length_km × per_km_bdt + floor_min × per_min_bdt) and update pricing schema"
         files_to_modify:
           - "lib/fareCalc.ts"
           - "src/db/schema.ts"
         implementation_rules:
-          - "Add minimum_fare_bdt integer NOT NULL column to pricing table in schema.ts (already done in 20-DEVELOPER-CHANGE-LIST.md Phase 2 schema if following that file)."
-          - "Seed initial values in migration (see 21-MIGRATION-SQL.md M-03 and M-04 for SQL and 05-DATA-MODEL.md pricing seed table for values)."
-          - "calculateFare() formula: distanceCharge=round(per_km*km), waitCharge=max(0,wait-free)*per_min, total=base+dist+wait, final=max(total, minimum_fare_bdt)."
-          - "The FareBreakdown interface: { base_fare_bdt, distance_charge_bdt, wait_charge_bdt, total_bdt (= final after floor), minimum_fare_bdt, distance_km }."
-          - "total_bdt is the amount to charge the rider — it IS the post-floor value. There is no separate 'final_fare_bdt' field."
-          - "Add unit tests: bike_basic 1km → total_bdt=6000 (floor); bike_basic 10km → total_bdt=11000 (above floor)."
+          - "Add floor_length_km (numeric) and floor_min (integer) columns to pricing table; remove minimum_fare_bdt and per_min_wait_bdt. See 21-MIGRATION-SQL.md M-03 for migration SQL."
+          - "Seed initial values per 05-DATA-MODEL.md pricing seed table and 21-MIGRATION-SQL.md M-04."
+          - "calculateFare() formula: distanceCharge=round(per_km*km), timeCharge=rideTimeMin*per_min_bdt, computedTotal=base+dist+time, floorFare=base+round(per_km*floor_length_km)+(floor_min*per_min_bdt), total=max(computedTotal, floorFare)."
+          - "The FareBreakdown interface: { base_fare_bdt, distance_charge_bdt, time_charge_bdt, total_bdt (= post-floor), floor_fare_bdt, distance_km, platform_commission_percent, platform_commission_bdt, driver_net_bdt }."
+          - "total_bdt is the amount to charge the rider — it IS the post-floor value."
+          - "Add unit tests: bike_basic 1km 0min → total_bdt=5800 (floor=5800); bike_basic 4km 30min → total_bdt=10850 (above floor)."
           - "See 20-DEVELOPER-CHANGE-LIST.md Phase 6 — lib/fareCalc.ts for the complete implementation."
           - "See 22-TEST-TEMPLATES.md lib/__tests__/fareCalc.test.ts for test coverage."
         verification:
           - type: contains
             file: "lib/fareCalc.ts"
             patterns:
-              - "minimum_fare_bdt"
-              - "Math.max.*minimum_fare\\|minimum_fare.*Math.max"
+              - "floor_fare_bdt"
+              - "floor_length_km"
+              - "Math.max.*floorFare\\|floorFare.*Math.max"
               - "total_bdt"
               - "calculateFare"
           - type: contains
             file: "src/db/schema.ts"
             patterns:
-              - "minimum_fare_bdt"
+              - "floor_fare_bdt"
           - type: command
             run: "npx tsc --noEmit"
             expect_exit: 0
@@ -3996,9 +4176,10 @@ phases:
           - "Add driver_arrived to ride_status enum"
           - "Create POST /api/ride/:id/arrive"
           - "Update POST /api/ride/:id/start pre-condition"
-          - "Update fareCalc actualWaitMinutes logic"
-          - "Add system_config seed rows for geofence and stale-arrived"
+          - "Update fareCalc rideTimeMin logic: timer_start = min(arrived_at + 60_000, started_at); ride_time_min = CEIL((completed_at - timer_start) / 60000)"
+          - "Add system_config seed rows for geofence, stale-arrived, and max_free_wait_seconds=60"
           - "Add auto-cancel to scheduler for stale driver_arrived"
+          - "Add auto-start timer to scheduler: when driver_arrived + 60s expires, auto-set started_at = arrived_at + 60s, status = in_progress"
           - "Update Screen 7b UI in driver app"
           - "Add rider WebSocket banner and Screen 7c final fare summary"
           - "Add driver_arrived and ride_completed (with fare breakdown) events to registry"
@@ -4070,6 +4251,1735 @@ phases:
           - type: command
             run: "ls assets/icons | grep -i 'marker'"
             expect_exit: 0
+
+  # PHASE 13: Driver SOS
+  - id: 13
+    name: "Driver SOS"
+    blocking: false
+    description: >
+      Build the driver SOS audit flow, API contract, and home-screen safety UI.
+    items:
+      - id: P13-01
+        task: "Create sos_alerts migration and update Drizzle schema"
+        files_to_modify:
+          - "src/db/schema.ts"
+          - "drizzle.config.js"
+          - "docs/Plan/21-MIGRATION-SQL.md"
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "sos_alerts"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+      - id: P13-02
+        task: "Add POST /api/sos/alert endpoint (both rider and driver)"
+        files_to_modify:
+          - "docs/Plan/06-API.md"
+        verification:
+          - type: contains
+            file: "docs/Plan/06-API.md"
+            patterns:
+              - "POST /api/sos/alert"
+              - "sos_alerts"
+        depends_on: []
+        priority: high
+      - id: P13-03
+        task: "Seed default SOS contact (999)"
+        files_to_modify:
+          - "scripts/seed-platform-config.js"
+          - "docs/Plan/05-DATA-MODEL.md"
+        verification:
+          - type: contains
+            file: "docs/Plan/05-DATA-MODEL.md"
+            patterns:
+              - "sos_contacts"
+              - "999"
+        depends_on: []
+        priority: medium
+      - id: P13-04
+        task: "Implement SOS button and bottom sheet on driver home screen"
+        files_to_modify:
+          - "docs/Plan/08-UI-SPEC.md"
+        ui_requirements:
+          - "Driver home adds shield SOS icon and emergency contact bottom sheet."
+          - "Selection sends POST /api/sos/alert then opens tel: URL."
+        verification:
+          - type: contains
+            file: "docs/Plan/08-UI-SPEC.md"
+            patterns:
+              - "Screen: Driver Home — SOS Button"
+              - "POST /api/sos/alert"
+              - "Linking.openURL('tel:…')"
+        depends_on: []
+        priority: high
+      - id: P13-05
+        task: "Verification: TypeScript compiles, ESLint clean"
+        verification:
+          - type: command
+            run: "npx tsc --noEmit && npx eslint ."
+            expect_exit: 0
+        depends_on: [P13-01, P13-02, P13-04]
+        priority: high
+
+  # ==========================================================================
+  # FEATURE 7: Polished Offer Sheet
+  # Recommended order: 1st (no DB changes, UI only, builds on existing WebSocket)
+  # ==========================================================================
+  - id: F7
+    name: "Polished Offer Sheet"
+    blocking: false
+    description: >
+      Enrich the driver ride offer sheet with pickup distance, ETA, rider rating,
+      scheduled badge, preference chips, and sound/vibration alerts.
+      No DB schema changes required — extends existing WebSocket payload and UI only.
+    items:
+      - id: F7-01
+        task: "Extend ride:offer WebSocket event payload in utils-server"
+        files_to_modify:
+          - "utils-server/dispatch.ts"
+        changes:
+          - field: "ride:offer payload"
+            add_fields:
+              - "rider_rating (number, from users table JOIN)"
+              - "pickup_distance_km (number, H3 distance estimate)"
+              - "pickup_eta_minutes (number, distance / average_speed)"
+              - "is_scheduled (boolean, from rides.scheduled_at IS NOT NULL)"
+              - "preferences (array of {name, display_label_en, icon} from ride_preferences JOIN)"
+              - "driver_fare_bdt (integer, from rides.driver_fare_bdt — the FULL amount the driver earns including preference surcharges. MUST be shown as the fare on the offer card, NOT fare_breakdown.total_bdt)"
+        verification:
+          - type: contains
+            file: "utils-server/dispatch.ts"
+            patterns:
+              - "rider_rating"
+              - "pickup_distance_km"
+              - "pickup_eta_minutes"
+              - "is_scheduled"
+              - "preferences"
+              - "driver_fare_bdt"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F7-02
+        task: "Update RideOfferSheet component with enriched layout"
+        files_to_modify:
+          - "components/RideOfferSheet.tsx"
+        ui_requirements:
+          - "Add scheduled badge (info blue background, calendar icon, shows scheduled time)"
+          - "Add distance-to-pickup and ETA row in details section"
+          - "Add rider avatar with first initial + rating badge (⭐ X.X)"
+          - "Add preference chips horizontal scroll (shown only when preferences array non-empty)"
+          - "Add fare row with ৳ amount from fare_breakdown.total_bdt"
+        verification:
+          - type: contains
+            file: "components/RideOfferSheet.tsx"
+            patterns:
+              - "pickup_distance_km"
+              - "pickup_eta_minutes"
+              - "rider_rating"
+              - "is_scheduled"
+              - "preferences"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F7-01]
+        priority: high
+
+      - id: F7-03
+        task: "Add sound and vibration alert on offer arrival"
+        files_to_create:
+          - "lib/offerAlert.ts"
+        implementation_rules:
+          - "Use expo-av for short notification sound on ride:offer received."
+          - "Use expo-haptics for vibration pattern on ride:offer received."
+          - "Both gated by driver settings toggles (sound_enabled, vibration_enabled)."
+          - "Alerts fire only when offer sheet appears, not on subsequent interactions."
+          - "Use logger.info, not console.log."
+        verification:
+          - type: file_exists
+            path: "lib/offerAlert.ts"
+          - type: contains
+            file: "lib/offerAlert.ts"
+            patterns:
+              - "expo-av"
+              - "expo-haptics"
+              - "sound_enabled"
+              - "vibration_enabled"
+        depends_on: []
+        priority: medium
+
+      - id: F7-04
+        task: "Add offer alert settings screen and driver store toggles"
+        files_to_create:
+          - "app/(main)/(rider)/settings/offer-alerts.tsx"
+        files_to_modify:
+          - "store/index.ts"
+        ui_requirements:
+          - "Two toggles: 'Sound on new offer' (default ON), 'Vibration on new offer' (default ON)"
+          - "Persist toggles in AsyncStorage via Zustand persist middleware."
+          - "Navigate from driver settings menu."
+        verification:
+          - type: file_exists
+            path: "app/(main)/(rider)/settings/offer-alerts.tsx"
+          - type: contains
+            file: "store/index.ts"
+            patterns:
+              - "sound_enabled"
+              - "vibration_enabled"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F7-03]
+        priority: medium
+
+  # ==========================================================================
+  # FEATURE 4: Coupon-Funded Rider Promos
+  # Recommended order: 2nd (has DB dependencies but no dispatch impact)
+  # ==========================================================================
+  - id: F4
+    name: "Coupon Promos"
+    blocking: false
+    description: >
+      Platform-funded promo codes for rider fare discounts. Driver fare is unchanged;
+      the platform absorbs the discount. Includes promo_codes and promo_redemptions tables,
+      validation API, fare estimate integration, and admin CRUD.
+    items:
+      - id: F4-01
+        task: "Add promo_codes, promo_redemptions tables and promo columns to rides table in Drizzle schema"
+        files_to_modify:
+          - "src/db/schema.ts"
+        changes:
+          - "Add promo_codes table with code, discount_type, discount_value, max_uses, expires_at, is_active."
+          - "Add promo_redemptions table with promo_code_id, rider_id, ride_id, discounted_amount_bdt, driver_fare_bdt, rider_payable_bdt, platform_subsidy_bdt."
+          - "Add to rides table: promo_code_id (FK), promo_discount_bdt, driver_fare_bdt, rider_payable_bdt, platform_subsidy_bdt, preference_surcharge_bdt."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "promo_codes"
+              - "promo_redemptions"
+              - "discount_type"
+              - "discounted_amount_bdt"
+              - "driver_fare_bdt"
+              - "rider_payable_bdt"
+              - "platform_subsidy_bdt"
+              - "preference_surcharge_bdt"
+              - "promo_code_id"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F4-01b
+        task: "Update lib/fareCalc.ts to support preference surcharges and promo discounts"
+        files_to_modify:
+          - "lib/fareCalc.ts"
+        changes:
+          - "Add preference_surcharge_bdt parameter to the fare calculation flow (after calculateFare returns)."
+          - "Add driver_fare_bdt = total_bdt + preference_surcharge_bdt to the API response."
+          - "Add promoDiscountBdt calculation (percent or flat) to the return object."
+          - "Add riderPayableBdt = driver_fare_bdt − promo_discount_bdt."
+          - "Add platformSubsidyBdt = promo_discount_bdt."
+          - "Preserve existing BRTA ceiling logging (preference surcharge is EXEMPT from ceiling check — it is a rider opt-in, not a fare component)."
+        verification:
+          - type: contains
+            file: "lib/fareCalc.ts"
+            patterns:
+              - "preference_surcharge"
+              - "driver_fare"
+              - "promo_discount"
+              - "rider_payable"
+        depends_on: []
+        priority: high
+        notes: "No DB dependency — this is a pure logic update. Can be done in parallel with F4-01."
+
+      - id: F4-02
+        task: "Run migration and verify tables exist"
+        commands:
+          - "npx drizzle-kit generate"
+          - "npx drizzle-kit push"
+        verification:
+          - type: command
+            run: "npx drizzle-kit studio --port 0 & sleep 3 && curl -s http://localhost:4985/api/pg/tables | grep -q 'promo_codes' && grep -q 'promo_redemptions'"
+            expect_exit: 0
+            description: "Verify promo_codes and promo_redemptions tables exist in DB"
+        depends_on: [F4-01]
+        priority: critical
+
+      - id: F4-03
+        task: "Create POST /api/promo/validate endpoint"
+        files_to_create:
+          - "app/api/promo/validate.ts"
+        implementation_rules:
+          - "Zod-validated input: code, vehicle_type, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng."
+          - "Lookup promo_codes by LOWER(code). Check is_active, valid_from, expires_at, max_uses, max_uses_per_rider."
+          - "Return {valid, promo, preview} with driver_fare_bdt, rider_payable_bdt, platform_subsidy_bdt."
+          - "Error codes: 404 promo_not_found, 410 promo_expired, 422 promo_ineligible, 429 promo_max_uses_reached."
+          - "Use logger.info, not console.log."
+        verification:
+          - type: file_exists
+            path: "app/api/promo/validate.ts"
+          - type: contains
+            file: "app/api/promo/validate.ts"
+            patterns:
+              - "promo_codes"
+              - "discount_type"
+              - "driver_fare_bdt"
+              - "platform_subsidy_bdt"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F4-01]
+        priority: high
+
+      - id: F4-04
+        task: "Modify GET /api/ride/estimate to accept promo_code and preferences params"
+        files_to_modify:
+          - "app/api/ride/estimate.ts"
+        changes:
+          - "Add optional promo_code query param — call promo validation logic."
+          - "Add optional preferences query param (comma-separated UUIDs) — sum surcharges."
+          - "Add preference_surcharge_bdt and promo object to each estimate response."
+          - "Add preferences_applied array to top-level response."
+        verification:
+          - type: contains
+            file: "app/api/ride/estimate.ts"
+            patterns:
+              - "promo_code"
+              - "preferences"
+              - "preference_surcharge_bdt"
+              - "rider_payable_bdt"
+              - "driver_fare_bdt"
+        depends_on: [F4-01]
+        priority: high
+
+      - id: F4-05
+        task: "Modify POST /api/ride/request to apply promo, write promo_redemptions, compute fare breakdown"
+        files_to_modify:
+          - "app/api/ride/request.ts"
+        changes:
+          - "Accept promo_code in body. Validate and compute discount."
+          - "Set rides.promo_code_id, promo_discount_bdt, driver_fare_bdt, rider_payable_bdt, platform_subsidy_bdt."
+          - "preference_surcharge_bdt defaults to 0 (preferences handled by F6-04)."
+          - "On success: INSERT promo_redemptions row within the ride creation transaction."
+          - "Return response with driver_fare_bdt, promo, rider_payable_bdt, platform_subsidy_bdt."
+          - "Note: preference handling (F6-04) will extend this same endpoint later."
+        verification:
+          - type: contains
+            file: "app/api/ride/request.ts"
+            patterns:
+              - "promo_redemptions"
+              - "platform_subsidy_bdt"
+              - "rider_payable_bdt"
+              - "driver_fare_bdt"
+        depends_on: [F4-01, F4-03]
+        priority: high
+
+      - id: F4-06
+        task: "Add promo code input and discount breakdown to FareBreakdownSheet"
+        files_to_modify:
+          - "components/FareBreakdownSheet.tsx"
+        ui_requirements:
+          - "Add promo code input row with Apply button below fare breakdown."
+          - "Show green badge when promo applied (code + discount %)."
+          - "Show promo discount breakdown: original fare, discount, you pay, driver receives, platform subsidy."
+        verification:
+          - type: contains
+            file: "components/FareBreakdownSheet.tsx"
+            patterns:
+              - "promo"
+              - "discount"
+              - "rider_payable"
+        depends_on: [F4-03]
+        priority: high
+
+      - id: F4-07
+        task: "Create admin promo CRUD endpoints"
+        files_to_create:
+          - "app/api/admin/promo.ts"
+          - "app/api/admin/promos.ts"
+          - "app/api/admin/promo/[id].ts"
+        implementation_rules:
+          - "POST /api/admin/promo — create promo with Zod validation."
+          - "PATCH /api/admin/promo/:id — update fields including is_active toggle."
+          - "GET /api/admin/promos — list with usage stats (COUNT promo_redemptions)."
+          - "All require admin role via requireRole()."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/promo.ts"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F4-01]
+        priority: medium
+
+      - id: F4-08
+        task: "Update GET /api/ride/:id/status and GET /api/ride/:id/details to include promo and preference fields"
+        files_to_modify:
+          - "app/api/ride/[id]/status.ts"
+          - "app/api/ride/[id]/details.ts"
+        changes:
+          - "Add preference_surcharge_bdt, driver_fare_bdt, promo, rider_payable_bdt, platform_subsidy_bdt, preferences to status response."
+          - "Add preference_surcharge_bdt, driver_fare_bdt, rider_payable_bdt, platform_subsidy_bdt, preferences, promo to details pricing section."
+        verification:
+          - type: contains
+            file: "app/api/ride/[id]/status.ts"
+            patterns:
+              - "driver_fare_bdt"
+              - "rider_payable_bdt"
+              - "preferences"
+          - type: contains
+            file: "app/api/ride/[id]/details.ts"
+            patterns:
+              - "driver_fare_bdt"
+              - "rider_payable_bdt"
+              - "preferences"
+        depends_on: [F4-01]
+        priority: high
+
+      - id: F4-09
+        task: "Update POST /api/ride/:id/complete to use driver_fare_bdt (with preference surcharge)"
+        files_to_modify:
+          - "app/api/ride/[id]/complete.ts"
+        changes:
+          - "Compute driver_fare_bdt = total_bdt + preference_surcharge_bdt."
+          - "Platform fee based on driver_fare_bdt, not total_bdt."
+          - "Return preference_surcharge_bdt, driver_fare_bdt, rider_payable_bdt, promo_discount_bdt in response."
+        verification:
+          - type: contains
+            file: "app/api/ride/[id]/complete.ts"
+            patterns:
+              - "preference_surcharge_bdt"
+              - "driver_fare_bdt"
+        depends_on: [F4-01]
+        priority: high
+
+      - id: F4-10
+        task: "Add admin promo management screen"
+        files_to_create:
+          - "app/(admin)/promos.tsx"
+        ui_requirements:
+          - "Table with Code, Title, Discount, Max Uses, Times Used, Active, Period columns."
+          - "Create/Edit modal with all promo fields."
+          - "Toggle active, filter by status."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/promos.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F4-07]
+        priority: medium
+
+      - id: F4-11
+        task: "Create seed script for sample promo codes"
+        files_to_create:
+          - "scripts/seed-promos.js"
+        changes:
+          - "Insert 3–5 sample promo codes (percent and flat types)."
+          - "Include at least one expired promo for testing."
+          - "Include one with max_uses_per_rider > 1."
+        verification:
+          - type: file_exists
+            path: "scripts/seed-promos.js"
+          - type: command
+            run: "node scripts/seed-promos.js"
+            expect_exit: 0
+        depends_on: [F4-01]
+        priority: low
+
+  # ==========================================================================
+  # FEATURE 5: Driver Incentive Dashboard
+  # Recommended order: 3rd (depends on credit_vouchers which already exist)
+  # ==========================================================================
+  - id: F5
+    name: "Driver Incentives"
+    blocking: false
+    description: >
+      Drivers earn bonus call credits for meeting activity targets. Admin defines
+      incentive campaigns. System awards bonus via credit_vouchers on completion.
+      Includes incentive_definitions and driver_incentives tables, driver-facing
+      dashboard with progress rings, and admin CRUD.
+    items:
+      - id: F5-01
+        task: "Add incentive_definitions and driver_incentives tables to Drizzle schema"
+        files_to_modify:
+          - "src/db/schema.ts"
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "incentive_definitions"
+              - "driver_incentives"
+              - "target_metric"
+              - "target_value"
+              - "reward_calls"
+              - "current_progress"
+              - "reward_voucher_id"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F5-02
+        task: "Run migration and verify tables exist"
+        commands:
+          - "npx drizzle-kit generate"
+          - "npx drizzle-kit push"
+        verification:
+          - type: command
+            run: "echo 'Check incentive_definitions and driver_incentives tables exist'"
+            expect_exit: 0
+        depends_on: [F5-01]
+        priority: critical
+
+      - id: F5-03
+        task: "Create GET /api/driver/incentives endpoint"
+        files_to_create:
+          - "app/api/driver/incentives.ts"
+        implementation_rules:
+          - "Return active incentives (completed_at IS NULL) with progress and completed history."
+          - "Compute total_bonus_calls_earned from completed incentives."
+          - "Auth: driver role required."
+        verification:
+          - type: file_exists
+            path: "app/api/driver/incentives.ts"
+          - type: contains
+            file: "app/api/driver/incentives.ts"
+            patterns:
+              - "driver_incentives"
+              - "incentive_definitions"
+              - "current_progress"
+              - "total_bonus_calls_earned"
+        depends_on: [F5-01]
+        priority: high
+
+      - id: F5-04
+        task: "Build driver incentive dashboard screen"
+        files_to_create:
+          - "app/(main)/(rider)/incentives.tsx"
+        ui_requirements:
+          - "Active incentives with circular progress rings (SVG animated arcs)."
+          - "Progress text: X / Y [metric]."
+          - "Reward label: +Z bonus calls."
+          - "Completed section with ✅ badge."
+          - "Summary card: total bonus calls earned."
+        verification:
+          - type: file_exists
+            path: "app/(main)/(rider)/incentives.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F5-03]
+        priority: high
+
+      - id: F5-05
+        task: "Add incentive progress update to ride completion flow"
+        files_to_modify:
+          - "app/api/ride/[id]/complete.ts"
+        changes:
+          - "After ride completion, update driver_incentives.current_progress for active incentives with target_metric='completed_rides'."
+          - "If progress >= target_value: set completed_at=now(), INSERT credit_vouchers row for reward_calls, set reward_voucher_id."
+          - "Wrap in same Drizzle transaction as ride completion."
+        verification:
+          - type: contains
+            file: "app/api/ride/[id]/complete.ts"
+            patterns:
+              - "driver_incentives"
+              - "completed_rides"
+              - "credit_vouchers"
+              - "reward_voucher_id"
+        depends_on: [F5-01]
+        priority: high
+
+      - id: F5-06
+        task: "Add scheduler job for online_hours and acceptance_rate incentive metrics"
+        files_to_modify:
+          - "utils-server/scheduler.ts"
+        changes:
+          - "Add periodic job (every 5 min) to update driver_incentives progress for online_hours and acceptance_rate metrics."
+          - "On completion: INSERT credit_vouchers row with source='incentive_reward', source_ref_id=driver_incentives.id, set reward_voucher_id."
+          - |
+            Online hours aggregation query:
+              SELECT driver_id, SUM(EXTRACT(EPOCH FROM (COALESCE(went_offline_at, now()) - went_online_at))) / 3600 AS online_hours
+              FROM driver_online_sessions
+              WHERE went_online_at >= :incentive_starts_at
+                AND went_online_at < COALESCE(went_offline_at, now())
+              GROUP BY driver_id
+          - |
+            Acceptance rate query:
+              SELECT driver_id,
+                COUNT(*) FILTER (WHERE outcome = 'accepted')::numeric / NULLIF(COUNT(*) FILTER (WHERE outcome IN ('accepted','rejected','expired')), 0) AS acceptance_rate
+              FROM dispatch_offers
+              WHERE sent_at >= :incentive_starts_at
+              GROUP BY driver_id
+        verification:
+          - type: contains
+            file: "utils-server/scheduler.ts"
+            patterns:
+              - "online_hours"
+              - "acceptance_rate"
+              - "driver_incentives"
+        depends_on: [F5-01]
+        priority: medium
+
+      - id: F5-07
+        task: "Create admin incentive CRUD endpoints"
+        files_to_create:
+          - "app/api/admin/incentive.ts"
+          - "app/api/admin/incentives.ts"
+          - "app/api/admin/incentive/[id].ts"
+        implementation_rules:
+          - "POST /api/admin/incentive — create with Zod validation."
+          - "PATCH /api/admin/incentive/:id — update including is_active toggle."
+          - "GET /api/admin/incentives — list with participation/completion counts."
+          - "On creation: auto-enroll eligible drivers (INSERT driver_incentives rows)."
+          - "All require admin role."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/incentive.ts"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F5-01]
+        priority: medium
+
+      - id: F5-08
+        task: "Add admin incentive management screen"
+        files_to_create:
+          - "app/(admin)/incentives.tsx"
+        ui_requirements:
+          - "Table with Name, Metric, Target, Reward, Participants, Completed, Active, Period columns."
+          - "Create/Edit modal with all incentive fields."
+          - "Toggle active, filter by status."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/incentives.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F5-07]
+        priority: medium
+
+      - id: F5-09
+        task: "Create seed script for sample incentive campaigns"
+        files_to_create:
+          - "scripts/seed-incentives.js"
+        changes:
+          - "Insert 2–3 sample incentive campaigns (completed_rides, online_hours)."
+          - "Include one with vehicle_type_filter set."
+          - "Include one ended campaign for testing history display."
+        verification:
+          - type: file_exists
+            path: "scripts/seed-incentives.js"
+          - type: command
+            run: "node scripts/seed-incentives.js"
+            expect_exit: 0
+        depends_on: [F5-01]
+        priority: low
+
+  # ==========================================================================
+  # FEATURE 6: Rider Preference Add-Ons
+  # Recommended order: 4th (touches dispatch, do last after everything stable)
+  # ==========================================================================
+  - id: F6
+    name: "Rider Preferences"
+    blocking: false
+    description: >
+      Riders select practical add-ons during booking (luggage, quiet ride, etc.).
+      Some preferences affect pricing and driver matching. Includes preferences,
+      driver_preferences, and ride_preferences tables, preference dispatch filter,
+      and admin CRUD.
+    items:
+      - id: F6-01
+        task: "Add preferences, driver_preferences, ride_preferences tables to Drizzle schema"
+        files_to_modify:
+          - "src/db/schema.ts"
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "preferences"
+              - "driver_preferences"
+              - "ride_preferences"
+              - "display_label_en"
+              - "display_label_bn"
+              - "charge_bdt"
+              - "affects_matching"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F6-02
+        task: "Run migration and verify tables exist"
+        commands:
+          - "npx drizzle-kit generate"
+          - "npx drizzle-kit push"
+        verification:
+          - type: command
+            run: "echo 'Check preferences, driver_preferences, ride_preferences tables exist'"
+            expect_exit: 0
+        depends_on: [F6-01]
+        priority: critical
+
+      - id: F6-03
+        task: "Create GET /api/reference/preferences endpoint"
+        files_to_create:
+          - "app/api/reference/preferences.ts"
+        implementation_rules:
+          - "Public endpoint — no auth required."
+          - "Return all active preferences with id, name, display_label_en, display_label_bn, icon, charge_bdt, affects_matching."
+        verification:
+          - type: file_exists
+            path: "app/api/reference/preferences.ts"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F6-01]
+        priority: high
+
+      - id: F6-04
+        task: "Add preferences array to POST /api/ride/request body and ride_preferences writes"
+        files_to_modify:
+          - "app/api/ride/request.ts"
+        changes:
+          - "Add optional preferences field: array of preference UUIDs."
+          - "Validate against preferences table (must be active)."
+          - "Calculate preference_surcharge_bdt = SUM(charge_bdt) for selected preferences."
+          - "INSERT ride_preferences rows within ride creation transaction."
+        verification:
+          - type: contains
+            file: "app/api/ride/request.ts"
+            patterns:
+              - "ride_preferences"
+              - "preference_surcharge_bdt"
+        depends_on: [F6-01]
+        priority: high
+
+      - id: F6-05
+        task: "Add preference matching filter to utils-server/dispatch.ts"
+        files_to_modify:
+          - "utils-server/dispatch.ts"
+        changes:
+          - "After vehicle_type and min_per_km filters, check ride_preferences with affects_matching=true."
+          - "If any matching preferences exist: only include drivers who have opted into ALL matching preferences via driver_preferences."
+          - "If no preferences have affects_matching=true: skip filter entirely."
+        verification:
+          - type: contains
+            file: "utils-server/dispatch.ts"
+            patterns:
+              - "ride_preferences"
+              - "driver_preferences"
+              - "affects_matching"
+        depends_on: [F6-01]
+        priority: high
+        notes: "This is the most sensitive change — touches dispatch. Must be tested with full dispatch scenarios."
+
+      - id: F6-06
+        task: "Add preference chips to FareBreakdownSheet / book-ride screen"
+        files_to_modify:
+          - "components/FareBreakdownSheet.tsx"
+        ui_requirements:
+          - "Horizontal scroll of preference chips from GET /api/reference/preferences."
+          - "Tap to toggle selection. Selected chips show accent green border."
+          - "Chips with charge_bdt > 0 show surcharge badge."
+        verification:
+          - type: contains
+            file: "components/FareBreakdownSheet.tsx"
+            patterns:
+              - "preferences"
+              - "charge_bdt"
+        depends_on: [F6-03]
+        priority: high
+
+      - id: F6-07
+        task: "Create driver preference opt-in screen"
+        files_to_create:
+          - "app/(main)/(rider)/settings/preferences.tsx"
+        ui_requirements:
+          - "Vertical list of toggleable preferences."
+          - "POST /api/driver/preferences with selected IDs on save."
+          - "Optimistic UI updates."
+        verification:
+          - type: file_exists
+            path: "app/(main)/(rider)/settings/preferences.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F6-01]
+        priority: high
+
+      - id: F6-08
+        task: "Create POST /api/driver/preferences endpoint"
+        files_to_create:
+          - "app/api/driver/preferences.ts"
+        implementation_rules:
+          - "Accept preference_ids array. Validate against active preferences."
+          - "DELETE existing driver_preferences for this driver, INSERT new set (full replace)."
+          - "Auth: driver role required."
+        verification:
+          - type: file_exists
+            path: "app/api/driver/preferences.ts"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F6-01]
+        priority: high
+
+      - id: F6-09
+        task: "Create admin preference CRUD endpoints"
+        files_to_create:
+          - "app/api/admin/preference.ts"
+          - "app/api/admin/preferences.ts"
+          - "app/api/admin/preference/[id].ts"
+        implementation_rules:
+          - "POST /api/admin/preference — create with name, labels, icon, charge, affects_matching."
+          - "PATCH /api/admin/preference/:id — update including is_active toggle."
+          - "GET /api/admin/preferences — list with driver adoption counts."
+          - "All require admin role."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/preference.ts"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F6-01]
+        priority: medium
+
+      - id: F6-10
+        task: "Add preference indicators to driver offer sheet (already done in F7-02)"
+        verification:
+          - type: contains
+            file: "components/RideOfferSheet.tsx"
+            patterns:
+              - "preferences"
+        depends_on: [F6-01, F7-02]
+        priority: medium
+        notes: "Preference chips on the offer sheet are already added by F7-02. This task is a cross-check verification only."
+
+      - id: F6-11
+        task: "Add admin preference management screen"
+        files_to_create:
+          - "app/(admin)/preferences.tsx"
+        ui_requirements:
+          - "Table with Name, English Label, Bengali Label, Surcharge, Affects Matching, Drivers Opted In, Active columns."
+          - "Create/Edit modal with all preference fields."
+          - "Toggle active."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/preferences.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F6-09]
+        priority: medium
+
+      - id: F6-12
+        task: "Add driver preference opt-in to onboarding flow (Step 4)"
+        files_to_modify:
+          - "app/(main)/(rider)/home.tsx"
+          - "components/OnboardingPreferences.tsx"
+        implementation_rules:
+          - "After admin approval, on first launch with status=active, show preference opt-in screen."
+          - "Fetch preferences from GET /api/reference/preferences."
+          - "On Continue: POST /api/driver/preferences."
+          - "On Skip: no API call. Track with AsyncStorage flag."
+        verification:
+          - type: file_exists
+            path: "components/OnboardingPreferences.tsx"
+          - type: contains
+            file: "components/OnboardingPreferences.tsx"
+            patterns:
+              - "preferences"
+              - "onboarding_preferences_completed"
+        depends_on: [F6-01, F6-08]
+
+      - id: F6-13
+        task: "Create seed script for default preference definitions"
+        files_to_create:
+          - "scripts/seed-preferences.js"
+        changes:
+          - "Insert default preferences: large_luggage, quiet_ride, female_friendly, ac_required."
+          - "Set appropriate charge_bdt and affects_matching values."
+          - "Include English and Bengali labels."
+        verification:
+          - type: file_exists
+            path: "scripts/seed-preferences.js"
+          - type: command
+            run: "node scripts/seed-preferences.js"
+            expect_exit: 0
+        depends_on: [F6-01]
+        priority: low
+
+      - id: F6-14
+        task: "Add consecutive_accepts tracking to offer accept/reject flow"
+        files_to_modify:
+          - "utils-server/dispatch.ts"
+        changes:
+          - "On offer:accept: reset or increment a consecutive_accepts counter on driver_incentives for incentives with target_metric='consecutive_accepts'."
+          - "On offer:reject or offer:expired: reset consecutive_accepts counter to 0 for matching incentives."
+          - "Counter stored in driver_incentives.current_progress (reused across metrics)."
+        verification:
+          - type: contains
+            file: "utils-server/dispatch.ts"
+            patterns:
+              - "consecutive_accepts"
+        depends_on: [F6-01, F5-01]
+        priority: medium
+        notes: "Must be coordinated with F5 feature but has no circular dependency — can be done after both F5-01 and F6-01."
+        priority: high
+
+  # ==========================================================================
+  # FEATURE IMPLEMENTATION ORDER
+  # ==========================================================================
+  #
+  # Recommended implementation order (documented for coding agent guidance):
+  #
+  #   1. F7 — Polished Offer Sheet (no DB changes, UI only, builds on existing WebSocket)
+  #   2. F4 — Coupon Promos (has DB dependencies but no dispatch impact)
+  #   3. F5 — Driver Incentives (depends on credit_vouchers which already exist)
+  #   4. F6 — Rider Preferences (touches dispatch, do last after everything else is stable)
+  #
+  # Rationale:
+  #   - F7 is pure UI enrichment with zero risk to existing flows.
+  #   - F4 adds new tables and APIs but does not modify dispatch behavior.
+  #   - F5 adds new tables and a scheduler job but reuses credit_vouchers.
+  #   - F6 modifies dispatch.ts which is the most critical system component,
+  #     so it should be done last when all other features are verified stable.
+  #
+  # Dependencies between these features:
+  #   - F6-10 (preference indicators on offer sheet) depends on F7-02.
+  #   - No other cross-feature dependencies exist.
+  # ==========================================================================
+
+  - id: F8
+    name: "Enhanced SOS Button"
+    blocking: false
+    description: >
+      Implements the 3-way SMS dispatch SOS for both riders and drivers.
+      Covers: sos_alerts table extension, system_config SOS numbers, SMS gateway integration,
+      SOS modal UI (Call Police + custom SMS + Send SOS), personal SOS contact management,
+      and admin dashboard alert.
+    items:
+      - id: F8-01
+        task: "Update Drizzle schema for sos_alerts with user_id, role, message, contacts_notified columns and users.sos_contact"
+        files_to_modify:
+          - "src/db/schema.ts"
+          - "drizzle.config.js"
+        changes:
+          - "sos_alerts: add columns user_id (FK users.id), role (varchar 'rider'|'driver'), message (text nullable), contacts_notified (jsonb)."
+          - "users: add sos_contact (varchar(20) nullable) for personal SOS number."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "sos_alerts"
+              - "sos_contact"
+              - "contacts_notified"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F8-02
+        task: "Seed sos_police_number and sos_ride_number in system_config"
+        files_to_modify:
+          - "scripts/seed-system-config.js"
+          - "docs/Plan/21-MIGRATION-SQL.md"
+        changes:
+          - "Add INSERT for sos_police_number = '999' and sos_ride_number = '' into system_config seed."
+        verification:
+          - type: contains
+            file: "scripts/seed-system-config.js"
+            patterns:
+              - "sos_police_number"
+              - "sos_ride_number"
+        depends_on: []
+        priority: high
+
+      - id: F8-03
+        task: "Implement POST /api/sos/alert, GET /api/user/sos-contact, PATCH /api/user/sos-contact"
+        files_to_create:
+          - "app/api/sos/alert+api.ts"
+        files_to_modify:
+          - "app/api/user/sos-contact+api.ts"
+        implementation_rules:
+          - "POST /api/sos/alert: auth required (rider or driver). Body: {lat, lng, message?}. Side effects: INSERT sos_alerts, send 3 SMS (sos_police_number, users.sos_contact, sos_ride_number)."
+          - "GET /api/user/sos-contact: return users.sos_contact (nullable)."
+          - "PATCH /api/user/sos-contact: update users.sos_contact. Body: {phone: E.164 or null}."
+          - "All phone numbers read from system_config at runtime. Never hardcode."
+          - "Use logger.info/logger.error, never console.log."
+          - "Zod validation on all inputs."
+        verification:
+          - type: contains
+            file: "app/api/sos/alert+api.ts"
+            patterns:
+              - "sos_alerts"
+              - "sos_police_number"
+              - "sos_ride_number"
+              - "verifySupabaseToken"
+          - type: contains
+            file: "app/api/user/sos-contact+api.ts"
+            patterns:
+              - "sos_contact"
+              - "verifySupabaseToken"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F8-01, F8-02]
+        priority: high
+
+      - id: F8-04
+        task: "Build SOS modal (Call Police, SMS text area, Send SOS) on both Rider and Driver Home"
+        files_to_modify:
+          - "app/(main)/(rider)/home.tsx"
+          - "app/(main)/(customer)/home.tsx"
+          - "components/SOSModal.tsx"
+        ui_requirements:
+          - "Shield icon on both Rider and Driver home screens (header or floating action button)."
+          - "Tapping shield opens bottom sheet with: Call Police button (opens tel: with system_config.sos_police_number), SMS text area (max 160 chars, optional), Send SOS button."
+          - "Send SOS calls POST /api/sos/alert, shows confirmation."
+          - "Call Police opens native dialer AND triggers POST /api/sos/alert in background."
+          - "SOS contact management in profile settings via PATCH /api/user/sos-contact."
+          - "Use GoRide design tokens: primary accent #0CC25F, error #E31D1C for SOS actions."
+        verification:
+          - type: contains
+            file: "components/SOSModal.tsx"
+            patterns:
+              - "POST /api/sos/alert"
+              - "sos_police_number"
+              - "Linking.openURL"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F8-03]
+        priority: high
+
+      - id: F8-05
+        task: "Verification: TypeScript compiles, ESLint clean"
+        verification:
+          - type: command
+            run: "npx tsc --noEmit && npx eslint ."
+            expect_exit: 0
+        depends_on: [F8-01, F8-03, F8-04]
+        priority: high
+
+  - id: F9
+    name: "Wallet System"
+    blocking: false
+    description: >
+      Implements separate Rider and Driver wallets with balance tracking,
+      transaction history, top-up, and withdrawal. Covers driver_wallet_transactions
+      and rider_wallet_transactions tables, wallet balance APIs, and wallet UI screens.
+    items:
+      - id: F9-01
+        task: "Update Drizzle schema for driver_wallet_transactions and rider_wallet_transactions tables"
+        files_to_modify:
+          - "src/db/schema.ts"
+          - "drizzle.config.js"
+        changes:
+          - "Add driver_wallet_transactions: driver_id (FK), transaction_type enum, amount_bdt, reference_id, balance_after, created_at."
+          - "Add rider_wallet_transactions: rider_id (FK), transaction_type enum, amount_bdt, reference_id, balance_after, created_at."
+          - "Add drivers.driver_wallet_balance_bdt (integer, default 0)."
+          - "Add users.rider_wallet_balance_bdt (integer, default 0)."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "driver_wallet_transactions"
+              - "rider_wallet_transactions"
+              - "driver_wallet_balance_bdt"
+              - "rider_wallet_balance_bdt"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F9-02
+        task: "Implement GET /api/driver/wallet and GET /api/rider/wallet endpoints"
+        files_to_create:
+          - "app/api/driver/wallet+api.ts"
+          - "app/api/rider/wallet+api.ts"
+        implementation_rules:
+          - "GET /api/driver/wallet: auth required (driver). Return balance_bdt + paginated transactions. Balance from drivers.driver_wallet_balance_bdt, transactions from driver_wallet_transactions ordered by created_at DESC."
+          - "GET /api/rider/wallet: auth required (rider). Return balance_bdt + paginated transactions. Balance from users.rider_wallet_balance_bdt, transactions from rider_wallet_transactions."
+          - "All amounts in integer paisa."
+          - "Zod validation on query params (limit, offset, cursor)."
+        verification:
+          - type: contains
+            file: "app/api/driver/wallet+api.ts"
+            patterns:
+              - "driver_wallet_transactions"
+              - "driver_wallet_balance_bdt"
+              - "verifySupabaseToken"
+          - type: contains
+            file: "app/api/rider/wallet+api.ts"
+            patterns:
+              - "rider_wallet_transactions"
+              - "rider_wallet_balance_bdt"
+              - "verifySupabaseToken"
+        depends_on: [F9-01]
+        priority: high
+
+      - id: F9-03
+        task: "Implement rider wallet top-up flow (POST /api/wallet/topup with PortPos payment)"
+        files_to_create:
+          - "app/api/wallet/topup+api.ts"
+          - "app/api/wallet/topup/[id]/confirm+api.ts"
+        implementation_rules:
+          - "Top-up creates payment_events entry and redirects to PortPos."
+          - "On callback: INSERT rider_wallet_transactions, UPDATE users.rider_wallet_balance_bdt."
+          - "Idempotency key required."
+          - "All in integer paisa, db.transaction for multi-writes."
+        verification:
+          - type: contains
+            file: "app/api/wallet/topup+api.ts"
+            patterns:
+              - "rider_wallet_transactions"
+              - "idempotency"
+              - "verifySupabaseToken"
+        depends_on: [F9-01]
+        priority: medium
+
+      - id: F9-04
+        task: "Build Rider Wallet UI (balance card, top-up, transaction history)"
+        files_to_create:
+          - "app/(main)/(customer)/wallet/index.tsx"
+          - "app/(main)/(customer)/wallet/top-up.tsx"
+        ui_requirements:
+          - "Wallet home: balance card (GoRide style), transaction list, Top Up CTA."
+          - "Top-up: preset chip amounts, manual keypad, payment method selector, confirm CTA."
+          - "Source: GET /api/rider/wallet, POST /api/wallet/topup."
+          - "Use GoRide design tokens."
+        verification:
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F9-02, F9-03]
+        priority: medium
+
+      - id: F9-05
+        task: "Build Driver Wallet Payout UI (balance card, withdraw form, transaction history)"
+        files_to_create:
+          - "app/(main)/(rider)/wallet/index.tsx"
+          - "app/(main)/(rider)/wallet/payout.tsx"
+        ui_requirements:
+          - "Wallet home: balance card showing platform receivables, transaction list, Withdraw CTA."
+          - "Payout: amount input, withdrawal method selector (bKash/Nagad/Rocket/bank via PortPos), account number, Submit CTA."
+          - "Source: GET /api/driver/wallet."
+          - "Use GoRide design tokens."
+        verification:
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F9-02]
+        priority: medium
+
+      - id: F9-06
+        task: "Verification: TypeScript compiles, ESLint clean"
+        verification:
+          - type: command
+            run: "npx tsc --noEmit && npx eslint ."
+            expect_exit: 0
+        depends_on: [F9-01, F9-02, F9-04, F9-05]
+        priority: high
+
+  - id: F10
+    name: "Referral & Points System"
+    blocking: false
+    description: >
+      Implements referral codes, referral campaigns, points ledger, point offers, and reward redemption.
+      Covers referral_campaigns, referral_codes, referrals, points, point_transactions, point_offers tables,
+      all user-facing and admin APIs, and UI screens.
+    items:
+      - id: F10-01
+        task: "Update Drizzle schema for referral_campaigns, referral_codes, referrals, points, point_transactions, point_offers"
+        files_to_modify:
+          - "src/db/schema.ts"
+          - "drizzle.config.js"
+        changes:
+          - "Add referral_campaigns: id, name, referrer_reward_percent, referee_reward_percent, max_uses_per_referrer, max_uses_per_campaign, is_active, created_at, updated_at."
+          - "Add referral_codes: id, user_id (FK unique), code (unique), created_at."
+          - "Add referrals: id, referrer_id (FK), referee_id (FK unique), campaign_id (FK), status, rewarded_at, created_at."
+          - "Add points: id, user_id (FK unique), balance, created_at, updated_at."
+          - "Add point_transactions: id, user_id (FK), transaction_type, source_type, amount, reference_id, balance_after, created_at."
+          - "Add point_offers: id, title, points_required, reward_type, reward_value, is_active, created_at, updated_at."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "referral_campaigns"
+              - "referral_codes"
+              - "referrals"
+              - "point_transactions"
+              - "point_offers"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F9-01]
+        priority: high
+
+      - id: F10-02
+        task: "Implement GET /api/referral/code, POST /api/referral/apply, GET /api/user/referral-rewards"
+        files_to_create:
+          - "app/api/referral/code+api.ts"
+          - "app/api/referral/apply+api.ts"
+          - "app/api/user/referral-rewards+api.ts"
+        implementation_rules:
+          - "GET /api/referral/code: return user's unique code, generate if not exists (format RIDE-XXXXXX)."
+          - "POST /api/referral/apply: validate referral code, create referrals row. Body: {code}. 404 if invalid, 410 if campaign expired/inactive, 422 if max uses reached."
+          - "GET /api/user/referral-rewards: return available unused referral rewards with status and amounts."
+          - "Zod validation on all inputs. Use logger, not console.log."
+        verification:
+          - type: contains
+            file: "app/api/referral/code+api.ts"
+            patterns:
+              - "referral_codes"
+              - "verifySupabaseToken"
+          - type: contains
+            file: "app/api/referral/apply+api.ts"
+            patterns:
+              - "referrals"
+              - "referral_campaigns"
+        depends_on: [F10-01]
+        priority: high
+
+      - id: F10-03
+        task: "Implement GET /api/user/points, GET /api/points/offers, POST /api/points/redeem"
+        files_to_create:
+          - "app/api/user/points+api.ts"
+          - "app/api/points/offers+api.ts"
+          - "app/api/points/redeem+api.ts"
+        implementation_rules:
+          - "GET /api/user/points: return balance + paginated transactions from point_transactions."
+          - "GET /api/points/offers: return active point_offers."
+          - "POST /api/points/redeem: validate offer_id, check balance, deduct points, apply reward (INSERT wallet transaction or grant package). Body: {offer_id}. All in db.transaction."
+          - "Insufficient points → 422. Offer not found → 404."
+        verification:
+          - type: contains
+            file: "app/api/points/redeem+api.ts"
+            patterns:
+              - "point_transactions"
+              - "points"
+              - "db.transaction"
+        depends_on: [F10-01]
+        priority: high
+
+      - id: F10-04
+        task: "Implement admin CRUD for referral campaigns and point offers"
+        files_to_create:
+          - "app/api/admin/referral-campaign/index+api.ts"
+          - "app/api/admin/referral-campaign/[id]+api.ts"
+          - "app/api/admin/point-offer/index+api.ts"
+          - "app/api/admin/point-offer/[id]+api.ts"
+        implementation_rules:
+          - "All require requireRole('admin')."
+          - "Referral campaigns: GET (list), POST (create), PATCH (update). Only 1 active at a time."
+          - "Point offers: GET (list), POST (create), PATCH (update/toggle)."
+          - "Zod validation on all inputs."
+        verification:
+          - type: contains
+            file: "app/api/admin/referral-campaign/index+api.ts"
+            patterns:
+              - "referral_campaigns"
+              - "requireRole"
+          - type: contains
+            file: "app/api/admin/point-offer/index+api.ts"
+            patterns:
+              - "point_offers"
+              - "requireRole"
+        depends_on: [F10-01]
+        priority: medium
+
+      - id: F10-05
+        task: "Build Referral Program UI (code display, share, stats)"
+        files_to_create:
+          - "app/(main)/(rider)/referral.tsx"
+          - "app/(main)/(customer)/referral.tsx"
+        ui_requirements:
+          - "Header: 'Invite & Earn'. Hero image. Reward text."
+          - "Code card: display code, Copy button, Share button (native share sheet)."
+          - "Stats: Friends Invited, Total Earned."
+          - "Source: GET /api/referral/code."
+        verification:
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F10-02]
+        priority: medium
+
+      - id: F10-06
+        task: "Build Points & Rewards UI (balance, offers, history)"
+        files_to_create:
+          - "app/(main)/(rider)/points.tsx"
+          - "app/(main)/(customer)/points.tsx"
+        ui_requirements:
+          - "Points balance card with total and earning explanation."
+          - "Tab selector: Offers | History."
+          - "Offers tab: scrollable offer cards with Redeem button."
+          - "History tab: transaction list with +/- amounts."
+          - "Redeem: confirmation modal, optimistic update, revert on failure."
+          - "Source: GET /api/user/points, GET /api/points/offers, POST /api/points/redeem."
+        verification:
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F10-03]
+        priority: medium
+
+      - id: F10-07
+        task: "Verification: TypeScript compiles, ESLint clean"
+        verification:
+          - type: command
+            run: "npx tsc --noEmit && npx eslint ."
+            expect_exit: 0
+        depends_on: [F10-01, F10-02, F10-03, F10-05, F10-06]
+        priority: high
+
+  - id: F11
+    name: "Enhanced Promo Workflow"
+    blocking: false
+    description: >
+      Implements usage interval eligibility check, rider promo list screen,
+      staged promo cache, and driver wallet receivable on ride completion.
+      Extends the existing F4 promo system.
+    items:
+      - id: F11-01
+        task: "Update schema for promo_codes.usage_interval column and interval tracking"
+        files_to_modify:
+          - "src/db/schema.ts"
+        changes:
+          - "Add usage_interval (integer nullable) to promo_codes. NULL = no interval."
+          - "Verify promo_redemptions already tracks rider_id + created_at for interval calculation."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "usage_interval"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F4-01]
+        priority: high
+
+      - id: F11-02
+        task: "Implement GET /api/promo/available and update POST /api/promo/redeem with interval check"
+        files_to_create:
+          - "app/api/promo/available+api.ts"
+        files_to_modify:
+          - "app/api/promo/redeem+api.ts"
+        implementation_rules:
+          - "GET /api/promo/available: return active promos with eligibility status per rider. Check usage_interval by counting completed rides since last promo_redemptions for this rider."
+          - "POST /api/promo/redeem: add interval eligibility check. Count rider's completed rides (rides WHERE user_id=rider_id AND status='completed') since their most recent promo_redemptions.created_at. If count < usage_interval, return 422 promo_interval_not_met."
+          - "Zod validation. Use logger."
+        verification:
+          - type: contains
+            file: "app/api/promo/available+api.ts"
+            patterns:
+              - "promo_codes"
+              - "usage_interval"
+              - "is_eligible"
+          - type: contains
+            file: "app/api/promo/redeem+api.ts"
+            patterns:
+              - "usage_interval"
+              - "promo_interval_not_met"
+        depends_on: [F11-01]
+        priority: high
+
+      - id: F11-03
+        task: "Update POST /api/ride/:id/complete to create driver_wallet_transaction for promo receivable"
+        files_to_modify:
+          - "app/api/ride/[id]/complete+api.ts"
+        implementation_rules:
+          - "After fare recalculation and promo discount computation: if promo was applied and platform_subsidy_bdt > 0, INSERT driver_wallet_transactions with transaction_type='promo_receivable', amount_bdt=platform_subsidy_bdt, reference_id=ride_id."
+          - "UPDATE drivers.driver_wallet_balance_bdt += platform_subsidy_bdt."
+          - "Must be inside existing db.transaction."
+        verification:
+          - type: contains
+            file: "app/api/ride/[id]/complete+api.ts"
+            patterns:
+              - "driver_wallet_transactions"
+              - "promo_receivable"
+        depends_on: [F9-01, F11-01]
+        priority: high
+
+      - id: F11-04
+        task: "Build Rider Promo List UI"
+        files_to_create:
+          - "app/(main)/(customer)/promos.tsx"
+        ui_requirements:
+          - "List of active promo cards with: code, title, discount, valid period, terms."
+          - "Each card shows eligibility status (eligible / interval not met / expired)."
+          - "Tap to copy code or apply directly."
+          - "Source: GET /api/promo/available."
+          - "Use GoRide design tokens."
+        verification:
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F11-02]
+        priority: medium
+
+      - id: F11-05
+        task: "Verification: TypeScript compiles, ESLint clean"
+        verification:
+          - type: command
+            run: "npx tsc --noEmit && npx eslint ."
+            expect_exit: 0
+        depends_on: [F11-01, F11-02, F11-03, F11-04]
+        priority: high
+
+  # ==========================================================================
+  # FEATURE 12: Vehicle Model Reference & Auto-Classification
+  # ==========================================================================
+  - id: F12
+    name: "Vehicle Model Reference & Auto-Classification"
+    blocking: false
+    description: >
+      Implements the vehicle_models reference table, Brand/Model/Year auto-classification,
+      AC selection rules per car category, and admin-maintainable vehicle model database.
+      Redefines Car Economy as kei car / very compact category.
+    items:
+      - id: F12-01
+        task: "Add vehicle_models table to Drizzle schema"
+        files_to_modify:
+          - "src/db/schema.ts"
+          - "drizzle.config.js"
+        changes:
+          - "Add vehicle_models table: id, brand, model, year_start, year_end, default_vehicle_type, typical_cc_min, typical_cc_max, has_ac, passenger_seats, is_active, created_at, updated_at."
+          - "Add unique constraint on (brand, model, year_start, year_end)."
+          - "Update vehicles.has_ac validation: car_economy and car_comfort allow true or false; car_premium and car_xl require true."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "vehicle_models"
+              - "default_vehicle_type"
+              - "typical_cc_min"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F12-02
+        task: "Create seed script for vehicle_models with top 50+ Bangladesh vehicles"
+        files_to_create:
+          - "scripts/seed-vehicle-models.js"
+        implementation_rules:
+          - "Seed at minimum the vehicles listed in 05-DATA-MODEL.md vehicle_models sample rows."
+          - "Include all 8 vehicle types. Cover Toyota, Honda, Suzuki, Bajaj, Yamaha, Daihatsu, Mitsubishi, Tata, Maruti, Hyundai, Nissan brands."
+          - "Use upsert to be idempotent."
+        verification:
+          - type: contains
+            file: "scripts/seed-vehicle-models.js"
+            patterns:
+              - "vehicle_models"
+              - "Toyota"
+              - "Honda"
+              - "Suzuki"
+        depends_on: [F12-01]
+        priority: high
+
+      - id: F12-03
+        task: "Implement GET /api/reference/vehicle-models and GET /api/reference/vehicle-suggest"
+        files_to_create:
+          - "app/api/reference/vehicle-models+api.ts"
+          - "app/api/reference/vehicle-suggest+api.ts"
+        implementation_rules:
+          - "GET /api/reference/vehicle-models: public endpoint. Query params: search (brand or model string, ILIKE). Returns matching vehicle_models rows."
+          - "GET /api/reference/vehicle-suggest: public endpoint. Query params: brand, model, year. Queries vehicle_models for matching row. Returns {suggested_type, has_ac, passenger_seats, confidence} or {suggested: false} if no match."
+          - "Zod validation on all inputs."
+        verification:
+          - type: contains
+            file: "app/api/reference/vehicle-suggest+api.ts"
+            patterns:
+              - "vehicle_models"
+              - "default_vehicle_type"
+              - "has_ac"
+        depends_on: [F12-01]
+        priority: high
+
+      - id: F12-04
+        task: "Add suggestVehicleType() to lib/vehicleTypes.ts with fallback logic"
+        files_to_modify:
+          - "lib/vehicleTypes.ts"
+        changes:
+          - "Add suggestVehicleType(brand, model, year): queries vehicle_models. Returns suggestion or null."
+          - "Add fallback logic: if no model match, use BRTA Vehicle Class Letter + CC range."
+          - "Add AC selection rules: car_economy and car_comfort allow optional AC; car_premium and car_xl require AC."
+        verification:
+          - type: contains
+            file: "lib/vehicleTypes.ts"
+            patterns:
+              - "suggestVehicleType"
+              - "vehicle_models"
+        depends_on: [F12-01]
+        priority: high
+
+      - id: F12-05
+        task: "Update onboarding vehicle registration screen with Brand/Model/Year autocomplete and AC selector"
+        files_to_modify:
+          - "app/(main)/(rider)/onboarding/vehicle-registration.tsx"
+        ui_requirements:
+          - "Brand input with autocomplete from vehicle_models."
+          - "Model input filtered by selected brand."
+          - "Year input triggers auto-suggestion banner."
+          - "AC selector: radio buttons for car_economy/car_comfort, locked AC for car_premium/car_xl."
+          - "Red warning text on Non-AC selection for economy/comfort."
+          - "Red disqualification text if Non-AC on premium/XL."
+        verification:
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F12-03, F12-04]
+        priority: high
+
+      - id: F12-06
+        task: "Add admin vehicle_models CRUD endpoints and UI"
+        files_to_create:
+          - "app/api/admin/vehicle-model/index+api.ts"
+          - "app/api/admin/vehicle-model/[id]+api.ts"
+        files_to_modify:
+          - "docs/Plan/08-UI-SPEC.md"
+        implementation_rules:
+          - "Admin CRUD: GET (list), POST (create), PATCH (update/toggle). requireRole('admin')."
+          - "UI: admin table with brand, model, year range, vehicle type, AC, seats. Create/edit modal."
+        verification:
+          - type: contains
+            file: "app/api/admin/vehicle-model/index+api.ts"
+            patterns:
+              - "vehicle_models"
+              - "requireRole"
+        depends_on: [F12-01]
+        priority: medium
+
+      - id: F12-07
+        task: "Verification: TypeScript compiles, ESLint clean"
+        verification:
+          - type: command
+            run: "npx tsc --noEmit && npx eslint ."
+            expect_exit: 0
+        depends_on: [F12-01, F12-03, F12-04, F12-05]
+        priority: high
+
+  # ==========================================================================
+  # FEATURE 13: Driver Photo & Face Match
+  # ==========================================================================
+  - id: F13
+    name: "Driver Photo & Face Match"
+    blocking: false
+    description: >
+      Implements mandatory driver selfie/passport photo capture during onboarding,
+      face-match comparison against driving licence photo, confidence scoring,
+      and admin dashboard integration for low-confidence flags.
+    items:
+      - id: F13-01
+        task: "Add driver_photo to document_type enum and face_match columns to documents table"
+        files_to_modify:
+          - "src/db/schema.ts"
+        changes:
+          - "Add 'driver_photo' to documentTypeEnum."
+          - "Add face_match_score (numeric(5,2) nullable) to documents table."
+          - "Add face_match_status (varchar default 'pending') to documents table. Enum: pending, matched, low_confidence, failed, not_applicable."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "driver_photo"
+              - "face_match_score"
+              - "face_match_status"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F13-02
+        task: "Create lib/faceMatch.ts with face-match API interface"
+        files_to_create:
+          - "lib/faceMatch.ts"
+        implementation_rules:
+          - "Define interface FaceMatchResult { score: number; status: 'matched' | 'low_confidence' | 'failed'; vendorRequestId?: string }."
+          - "Implement compareFaces(driverPhotoUrl: string, licencePhotoUrl: string): Promise<FaceMatchResult>."
+          - "Threshold read from system_config.face_match_min_score (default 70.00)."
+          - "Vendor implementation is pluggable — initial implementation can be a stub that returns { score: 0, status: 'failed' } with a TODO."
+          - "Use logger.info for match results. Never log photos."
+        verification:
+          - type: file_exists
+            path: "lib/faceMatch.ts"
+          - type: contains
+            file: "lib/faceMatch.ts"
+            patterns:
+              - "compareFaces"
+              - "face_match_min_score"
+              - "FaceMatchResult"
+        depends_on: []
+        priority: high
+
+      - id: F13-03
+        task: "Seed face_match_min_score in system_config"
+        files_to_modify:
+          - "scripts/seed-system-config.js"
+        changes:
+          - "Add INSERT for face_match_min_score = '70.00'."
+        verification:
+          - type: contains
+            file: "scripts/seed-system-config.js"
+            patterns:
+              - "face_match_min_score"
+        depends_on: []
+        priority: medium
+
+      - id: F13-04
+        task: "Build driver photo capture screen with live camera preview"
+        files_to_create:
+          - "components/DriverPhotoCapture.tsx"
+        ui_requirements:
+          - "Live camera preview (front-facing) with face outline overlay."
+          - "Capture button. Retake/Use Photo buttons after capture."
+          - "Upload fallback if camera unavailable."
+          - "Client validation: ≥ 720p, 50KB–20MB, JPEG/PNG, blur detection."
+          - "Face detection feedback: green circle when face detected."
+          - "Use GoRide design tokens."
+        verification:
+          - type: file_exists
+            path: "components/DriverPhotoCapture.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F13-01]
+        priority: high
+
+      - id: F13-05
+        task: "Integrate face-match into document upload confirmation and admin approval card"
+        files_to_modify:
+          - "app/api/driver/document/upload-confirm+api.ts"
+        implementation_rules:
+          - "After driver_photo upload confirmed: call lib/faceMatch.ts compareFaces() with the new photo URL and the licence photo URL from documents table."
+          - "Store result in documents.face_match_score and documents.face_match_status."
+          - "Non-blocking for the driver — face match runs asynchronously."
+          - "Admin approval card must show driver photo alongside licence photo with face match score badge."
+        verification:
+          - type: contains
+            file: "app/api/driver/document/upload-confirm+api.ts"
+            patterns:
+              - "driver_photo"
+              - "face_match"
+        depends_on: [F13-02]
+        priority: high
+
+      - id: F13-06
+        task: "Verification: TypeScript compiles, ESLint clean"
+        verification:
+          - type: command
+            run: "npx tsc --noEmit && npx eslint ."
+            expect_exit: 0
+        depends_on: [F13-01, F13-04, F13-05]
+        priority: high
+
+  # ==========================================================================
+  # FEATURE 14: Vehicle Photo & Video Guidelines
+  # ==========================================================================
+  - id: F14
+    name: "Vehicle Photo & Video Guidelines"
+    blocking: false
+    description: >
+      Implements 6-vehicle-photo capture (4 exterior + dashboard + seats), walkaround video,
+      sample reference media from system_config, and inline validation for photos and video.
+    items:
+      - id: F14-01
+        task: "Add vehicle_video and vehicle_photo_seats to document_type enum in Drizzle schema"
+        files_to_modify:
+          - "src/db/schema.ts"
+        changes:
+          - "Add 'vehicle_video' to documentTypeEnum."
+          - "Add 'vehicle_photo_seats' to documentTypeEnum."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "vehicle_video"
+              - "vehicle_photo_seats"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F14-02
+        task: "Seed sample_vehicle_* URLs in system_config"
+        files_to_modify:
+          - "scripts/seed-system-config.js"
+        changes:
+          - "Add INSERTs for: sample_vehicle_photo_front, sample_vehicle_photo_left, sample_vehicle_photo_right, sample_vehicle_photo_rear, sample_vehicle_photo_dashboard, sample_vehicle_photo_seats, sample_vehicle_video. All empty strings initially."
+        verification:
+          - type: contains
+            file: "scripts/seed-system-config.js"
+            patterns:
+              - "sample_vehicle_photo_front"
+              - "sample_vehicle_video"
+        depends_on: []
+        priority: high
+
+      - id: F14-03
+        task: "Build vehicle photos & video capture screen with sample thumbnails"
+        files_to_create:
+          - "components/VehiclePhotoVideoCapture.tsx"
+        ui_requirements:
+          - "2-column, 3-row photo grid: Front, Left, Right, Rear, Dashboard, Front Seats."
+          - "Each cell shows sample thumbnail (from system_config) + capture button."
+          - "Sample thumbnail tappable → full-screen viewer."
+          - "Video section: sample video player + Record button."
+          - "Video: 15-30s, ≥ 720p, ≤ 50MB. Inline errors."
+          - "Client photo validation: ≥ 720p, 50KB–20MB, JPEG/PNG, blur detection."
+          - "Continue button disabled until all 6 photos + 1 video captured."
+          - "Use GoRide design tokens."
+        verification:
+          - type: file_exists
+            path: "components/VehiclePhotoVideoCapture.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F14-01]
+        priority: high
+
+      - id: F14-04
+        task: "Add sample media URL management to admin config panel"
+        files_to_modify:
+          - "docs/Plan/08-UI-SPEC.md"
+        implementation_rules:
+          - "Admin config panel (PATCH /api/admin/config) already supports arbitrary system_config keys."
+          - "Add a 'Vehicle Sample Media' section in the admin settings UI listing all sample_vehicle_* keys with URL inputs and preview thumbnails."
+        verification:
+          - type: contains
+            file: "docs/Plan/08-UI-SPEC.md"
+            patterns:
+              - "sample_vehicle"
+        depends_on: [F14-02]
+        priority: medium
+
+      - id: F14-05
+        task: "Verification: TypeScript compiles, ESLint clean"
+        verification:
+          - type: command
+            run: "npx tsc --noEmit && npx eslint ."
+            expect_exit: 0
+        depends_on: [F14-01, F14-03]
+        priority: high
 
 failure_conditions:
   - condition: "Clerk imports found in source"

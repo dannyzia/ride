@@ -1,0 +1,5744 @@
+openapi: 3.0.0
+info:
+  title: Barikoi Business API
+  version: 1.1.0
+  license:
+    name: Barikoi
+    url: https://www.barikoi.com/
+  description: >
+
+    # Introduction
+
+    Welcome to Barikoi API. Thank you for checking a Bangladeshi location data
+    provider API. Our API helps you to find address, geocode and reverse geocode
+    place and city corporation information in Dhaka in our local context.
+
+      <h3>Overview</h3>
+
+      The currently listed places API's are for autocomplete, post office autocomplete, geocoding, reverse geocoding, nearby, distance & rupantor geocoder. And City Corporation API's are Ward by Geolocation, Zone by Geolocation, Ward and Zone by Geolocation, City Corporation by Geolocation services.
+
+
+
+    # API Management
+
+    [Domain Binding](/api-management/domain-binding) - Restrict your API key
+    usage to specific domains for enhanced security <br/>
+
+    # Get started
+
+    To access our APIs you will need an API key. Generating an API key is easy.
+    You just need to [Sign Up](https://developer.barikoi.com/register) and
+    select your desired package. With our api key you are now ready to use our
+    Bkoigl js data and map.
+
+
+    Each API part has its own documentation. Jump to the desired API part and
+    learn about the API through the given examples and tutorials.
+
+    <br/> <br/>
+
+    <strong>Postman Collection</strong> <br/> To run in Postman, you need to
+    have an API key, which you can obtain from
+    [Barikoi](https://developer.barikoi.com/).
+
+    <br/>
+
+
+    [<img src="https://run.pstmn.io/button.svg" alt="Run In Postman"
+    style="width: 128px; height:
+    32px;">](https://app.getpostman.com/run-collection/11329841-682e91b0-5016-4063-be77-be2c6261bd36?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D11329841-682e91b0-5016-4063-be77-be2c6261bd36%26entityType%3Dcollection%26workspaceId%3D3e08867e-a41f-451d-a78d-34d99d9b828b#?env%5Bprod%5D=W3sia2V5IjoiQkFTRV9VUkwiLCJ2YWx1ZSI6IiIsImVuYWJsZWQiOnRydWUsInR5cGUiOiJkZWZhdWx0Iiwic2Vzc2lvblZhbHVlIjoiaHR0cHM6Ly9iYXJpa29pLnh5eiIsImNvbXBsZXRlU2Vzc2lvblZhbHVlIjoiaHR0cHM6Ly9iYXJpa29pLnh5eiIsInNlc3Npb25JbmRleCI6MH0seyJrZXkiOiJBUElfS0VZIiwidmFsdWUiOiIiLCJlbmFibGVkIjp0cnVlLCJ0eXBlIjoiZGVmYXVsdCIsInNlc3Npb25WYWx1ZSI6Ik1UWXlORHBGUVZnNFZsRmFNVXRCIiwiY29tcGxldGVTZXNzaW9uVmFsdWUiOiJNVFl5TkRwRlFWZzRWbEZhTVV0QiIsInNlc3Npb25JbmRleCI6MX0seyJrZXkiOiJTRVNTSU9OX0lEIiwidmFsdWUiOiIiLCJlbmFibGVkIjp0cnVlLCJ0eXBlIjoiZGVmYXVsdCIsInNlc3Npb25WYWx1ZSI6IlNFU1NJT05fSUQiLCJjb21wbGV0ZVNlc3Npb25WYWx1ZSI6IlNFU1NJT05fSUQiLCJzZXNzaW9uSW5kZXgiOjJ9XQ==)
+
+    <br/>
+
+      ### Version 2
+      * [Reverse Geocoding](#tag/v2.0/operation/revgeo_v2)
+      * [Autocomplete](#tag/v2.0/operation/autocomplete_v2)
+      * [Rupantor Geocoder](#tag/v2.0/operation/rupantor_geocoder_v2)
+      * [Route Overview](#tag/v2.0/operation/route)
+      * [Calculate Detailed Route](#tag/v2.0/operation/route_with_routing_algorithm)
+      * [Route Optimization](#tag/v2.0/operation/route_optimization)
+      * [Route Location Optimized](#tag/v2.0/operation/route_location_optimized)
+      * [Route Match](#tag/v2.0/operation/route_match_v2)
+      * [Search Place](#tag/v2.0/operation/search_place_v2)
+      * [Get Place Details](#tag/v2.0/operation/get_place_details_v2)
+      * [Snap to Road](#tag/v2.0/operation/snap_to_road_v2)
+      * [Districts](#tag/v2.0/operation/district_v2)
+      * [Subdistricts](#tag/v2.0/operation/sub_districts_v2)
+      * [City With Areas](#tag/v2.0/operation/city_v2)
+      * [City Corporation](#tag/v2.0/operation/city_corporation_v2)
+      * [Union](#tag/v2.0/operation/union_v2)
+      * [Area](#tag/v2.0/operation/area_v2)
+      * [Ward & Zone from LatLng](#tag/v2.0/operation/ward_zone_v2)
+      * [Ward From Latlng](#tag/v2.0/operation/ward_from_latLng)
+      * [All Ward Geometry](#tag/v2.0/operation/all_ward_v2)
+      * [Specific Ward Geometry](#tag/v2.0/operation/specific_ward_v2)
+      * [Nearby API with Query Param](#tag/v2.0/operation/nearby_query_param)
+      * [Point in Polygon](#tag/v2.0/operation/point-in-polygon_v2)
+      * [Geofencing Business](#tag/v2.0/operation/point-in-polygon_v2)
+
+
+
+      <br/>
+      <br/>
+      <br/>
+
+      ### Version 1 
+
+       > #### Version 1 will be deprecated after 31/12/2025; therefore, it is strongly advised that everyone switch to V2. For legacy users who still need Version 1 documentation, please visit [Version 1.0 API Documentation](/api/v1/).
+      
+    # Contact Us
+     For any query or tech support please mail at support@barikoi.com
+  termsOfService: https://www.barikoi.com/data-privacy
+  contact:
+    name: API Support
+    email: hello@barikoi.com
+    url: https://www.barikoi.com/
+  x-logo:
+    url: barikoi.png
+    altText: Barikoi
+tags:
+  - name: v2.0
+    x-displayName: Location API
+    description: Version 2.0 Endpoints for Location Services
+servers:
+  - url: https://barikoi.xyz
+    description: Barikoi API Server
+security:
+  - api_key: []
+paths:
+  /v2/api/search/reverse/geocode:
+    get:
+      operationId: revgeo_v2
+      tags:
+        - v2.0
+      summary: Reverse Geocoding
+      description: >
+        This API endpoint performs reverse geocoding to convert geographical
+        coordinates (longitude and latitude) into a human-readable address. It
+        provides detailed location information including the address in both
+        English and Bangla, along with other administrative details such as
+        district, division, and more.
+
+          **IMPORTANT:** ⚠️ Enabling **all** optional parameters will trigger multiple internal API calls, which will consume more of your API credits.  To optimize performance and reduce credit usage, only request the parameters that are essential for your use case.
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/longitude'
+        - $ref: '#/components/parameters/latitude'
+        - $ref: '#/components/parameters/countryCode'
+        - $ref: '#/components/parameters/district'
+        - $ref: '#/components/parameters/post_code'
+        - $ref: '#/components/parameters/country'
+        - $ref: '#/components/parameters/sub_district'
+        - $ref: '#/components/parameters/union'
+        - $ref: '#/components/parameters/pauroshova'
+        - $ref: '#/components/parameters/location_type'
+        - $ref: '#/components/parameters/division'
+        - $ref: '#/components/parameters/address'
+        - $ref: '#/components/parameters/area'
+        - $ref: '#/components/parameters/bangla'
+        - $ref: '#/components/parameters/thana'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location
+            'https://barikoi.xyz/v2/api/search/reverse/geocode?api_key=API_KEY&longitude=90.35722628659195&latitude=23.806703092211507&country=true&district=true&post_code=true&sub_district=true&union=true&pauroshova=true&location_type=true&division=true&address=true&area=true&bangla=true&thana=true'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/search/reverse/geocode?api_key=API_KEY&longitude=90.35722628659195&latitude=23.806703092211507&country=true&district=true&post_code=true&sub_district=true&union=true&pauroshova=true&location_type=true&division=true&address=true&area=true&bangla=true&thana=true"
+
+
+            payload = {}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://barikoi.xyz/v2/api/search/reverse/geocode?api_key=API_KEY&longitude=90.35722628659195&latitude=23.806703092211507&country=true&district=true&post_code=true&sub_district=true&union=true&pauroshova=true&location_type=true&division=true&address=true&area=true&bangla=true&thana=true',
+              headers: { }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/rev_geo_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/autocomplete/place:
+    get:
+      operationId: autocomplete_v2
+      tags:
+        - v2.0
+      summary: Autocomplete
+      description: >-
+        Barikoi Autocomplete API endpoint provides autocomplete suggestions for
+        place names based on a query string. It returns a list of matching
+        places with detailed information including addresses in both English and
+        Bangla, as well as geographic coordinates. Barikoi Autocomplete API is
+        useful for providing real-time, location-based search suggestions to
+        users as they type, enhancing the user experience by quickly narrowing
+        down potential matches based on partial input.
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/q'
+        - $ref: '#/components/parameters/bangla'
+        - $ref: '#/components/parameters/countryCode'
+        - $ref: '#/components/parameters/sub_district'
+        - $ref: '#/components/parameters/thana'
+        - $ref: '#/components/parameters/union'
+        - $ref: '#/components/parameters/city'
+        - $ref: '#/components/parameters/areaString'
+        - $ref: '#/components/parameters/sub_area'
+        - $ref: '#/components/parameters/post_office'
+        - $ref: '#/components/parameters/industrial'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location
+            'https://barikoi.xyz/v2/api/search/autocomplete/place?api_key=api_key&q=barikoi&city=dhaka&sub_area=true&sub_district=true'
+        - lang: Python
+          source: >
+            import requests
+
+            url =
+            "https://barikoi.xyz/v2/api/search/autocomplete/place?api_key=api_key&q=barikoi&city=dhaka&sub_area=true&sub_district=true"
+
+            payload = {}
+
+            headers = {}
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+            print(response.text)
+        - lang: node
+          source: |
+            const axios = require('axios');
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://barikoi.xyz/v2/api/search/autocomplete/place?api_key=api_key&q=barikoi&city=dhaka&sub_area=true&sub_district=true',
+              headers: { }
+            };
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/autocomplete_bangla_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/rupantor/geocode:
+    post:
+      operationId: rupantor_geocoder_v2
+      tags:
+        - v2.0
+      summary: Rupantor Geocoder
+      description: >-
+        Rupantor Geocoder API for Developers. It formats the given address and
+        searches for the address and gives a status if the address is complete
+        or not. Rupantor Geocoder only supports FormData. So use FormData object
+        to send your data. Rupantor Geocoder needs Geocode API to function
+        properly. One Rupantor Geocoder request requires two Geocode API
+        requests.
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location
+            'https://barikoi.xyz/v2/api/search/rupantor/geocode?api_key=API_KEY'
+            \
+
+            --form 'q="shawrapara"' \
+
+            --form 'thana="yes"' \
+
+            --form 'district="yes"' \
+
+            --form 'bangla="yes"'
+        - lang: Python
+          source: >
+            import requests
+
+            url =
+            "https://barikoi.xyz/v2/api/search/rupantor/geocode?api_key=API_KEY"
+
+            payload={'q': 'shawrapara',
+
+            'thana': 'yes',
+
+            'district': 'yes',
+
+            'bangla': 'yes'}
+
+            files=[]
+
+            headers = {}
+
+            response = requests.request("POST", url, headers=headers,
+            data=payload, files=files)
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+            var FormData = require('form-data');
+            var data = new FormData();
+            data.append('q', 'shawrapara');
+            data.append('thana', 'yes');
+            data.append('district', 'yes');
+            data.append('bangla', 'yes');
+            var config = {
+              method: 'post',
+              maxBodyLength: Infinity,
+              url: 'https://barikoi.xyz/v2/api/search/rupantor/geocode?api_key=API_KEY',
+              headers: { 
+                ...data.getHeaders()
+              },
+              data : data
+            };
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/rupantor_geocoder_form_v2'
+      responses:
+        '200':
+          $ref: '#/components/responses/rupantor_geocoder_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/route/{coordinates}:
+    get:
+      operationId: route
+      tags:
+        - v2.0
+      summary: Route Overview
+      description: >-
+        This API endpoint retrieves route information between two geographical
+        points specified by their longitude and latitude coordinates. The
+        response includes details such as the geometry of the route, distance,
+        duration, and waypoints.
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/coordinates'
+        - $ref: '#/components/parameters/geometries'
+        - $ref: '#/components/parameters/overview_profile'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/route/90.362548828125,23.94107556246209;90.31585693359375,24.134221690669204?api_key={{API_KEY}}&geometries=polyline'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/route/90.362548828125,23.94107556246209;90.31585693359375,24.134221690669204?api_key={{API_KEY}}&geometries=polyline"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/route/90.362548828125,23.94107556246209;90.31585693359375,24.134221690669204?api_key={{API_KEY}}&geometries=polyline',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/routing_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/routing:
+    post:
+      operationId: route_with_routing_algorithm
+      tags:
+        - v2.0
+      summary: Calculate Detailed Route
+      description: >-
+        This API response is intended for use in applications requiring detailed
+        route information and navigation instructions. Such applications might
+        include: GPS navigation systems, Mapping services, Route optimization
+        tools for logistics and delivery, Travel planning apps.These can guide
+        users from their starting point to their destination, providing clear,
+        step-by-step directions, estimated travel times, and costs associated
+        with the journey.
+      parameters:
+        - $ref: '#/components/parameters/api_key_query'
+        - $ref: '#/components/parameters/type'
+        - $ref: '#/components/parameters/countryCodeAlpha3'
+        - $ref: '#/components/parameters/profile'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request POST
+            'https://barikoi.xyz/v2/api/routing?key={{API_KEY}} &type=vh' \
+
+            --header 'Content-Type: application/json' \
+
+            --data-raw '{
+                "data":{
+                    "start" : {
+                        "latitude":23.791645065364126,
+                        "longitude":90.36558776260725
+                    },
+                    "destination" : {
+                        "latitude":23.784715477921843,
+                        "longitude": 90.3676300089066
+                    }
+                }
+            }'
+        - lang: Python
+          source: >
+            import requests
+
+            import json
+
+
+            url = "https://barikoi.xyz/v2/api/routing?key={{API_KEY}} &type=vh"
+
+
+            payload = json.dumps({
+              "data": {
+                "start": {
+                  "latitude": 23.791645065364126,
+                  "longitude": 90.36558776260725
+                },
+                "destination": {
+                  "latitude": 23.784715477921843,
+                  "longitude": 90.3676300089066
+                }
+              }
+            })
+
+            headers = {
+              'Content-Type': 'application/json'
+            }
+
+
+            response = requests.request("POST", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var request = require('request');
+            var options = {
+              'method': 'POST',
+              'url': 'https://barikoi.xyz/v2/api/routing?key={{API_KEY}} &type=vh',
+              'headers': {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                "data": {
+                  "start": {
+                    "latitude": 23.791645065364126,
+                    "longitude": 90.36558776260725
+                  },
+                  "destination": {
+                    "latitude": 23.784715477921843,
+                    "longitude": 90.3676300089066
+                  }
+                }
+              })
+
+            };
+            request(options, function (error, response) {
+              if (error) throw new Error(error);
+              console.log(response.body);
+            });
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/route_with_routing_algorithm'
+      responses:
+        '200':
+          $ref: '#/components/responses/routing_algorithm_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/route/optimized:
+    post:
+      operationId: route_optimization
+      tags:
+        - v2.0
+      summary: Route Optimization
+      description: >+
+        This api provides routing details from source to destination points.
+        Additional waypoints can also be included in order to get more precise
+        routing experience. Maximum 50 waypoints can be included as additional
+        points. Content-Types:application/json should be attached to the request
+        header in order to match the correct request format.
+
+
+        Note: Waypoints will be sorted based on given id in ascending order.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/route_optimization_body'
+      x-codeSamples:
+        - lang: Curl
+          source: |
+            curl --location 'https://barikoi.xyz/v2/api/route/optimized' \
+            --header 'Content-Type: application/json' \
+            --data '{
+                "api_key": "API_KEY",
+                "source": "23.746086,90.37368",
+                "destination": "23.746214,90.371654",
+                "profile": "car",
+                "geo_points": [
+                    {
+                        "id": 1,
+                        "point": "23.746086,90.37368"
+                    },
+                    {
+                        "id": 2,
+                        "point": "23.74577,90.373389"
+                    },
+                    {
+                        "id": 3,
+                        "point": "23.74442,90.372909"
+                    },
+                    {
+                        "id": 4,
+                        "point": "23.743961,90.37214"
+                    }
+                ]
+            }'
+        - lang: Python
+          source: >
+            import requests
+
+            import json
+
+
+            url = "https://barikoi.xyz/v2/api/route/optimized"
+
+
+            payload = json.dumps({
+              "api_key": "API_KEY",
+              "source": "23.746086,90.37368",
+              "destination": "23.746214,90.371654",
+              "profile": "car",
+              "geo_points": [
+                {
+                  "id": 1,
+                  "point": "23.746086,90.37368"
+                },
+                {
+                  "id": 2,
+                  "point": "23.74577,90.373389"
+                },
+                {
+                  "id": 3,
+                  "point": "23.74442,90.372909"
+                },
+                {
+                  "id": 4,
+                  "point": "23.743961,90.37214"
+                }
+              ]
+            })
+
+            headers = {
+              'Content-Type': 'application/json'
+            }
+
+
+            response = requests.request("POST", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            const axios = require('axios');
+            let data = JSON.stringify({
+              "api_key": "API_KEY",
+              "source": "23.746086,90.37368",
+              "destination": "23.746214,90.371654",
+              "profile": "car",
+              "geo_points": [
+                {
+                  "id": 1,
+                  "point": "23.746086,90.37368"
+                },
+                {
+                  "id": 2,
+                  "point": "23.74577,90.373389"
+                },
+                {
+                  "id": 3,
+                  "point": "23.74442,90.372909"
+                },
+                {
+                  "id": 4,
+                  "point": "23.743961,90.37214"
+                }
+              ]
+            });
+
+            let config = {
+              method: 'post',
+              maxBodyLength: Infinity,
+              url: 'https://barikoi.xyz/v2/api/route/optimized',
+              headers: { 
+                'Content-Type': 'application/json'
+              },
+              data : data
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/route_optimization_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/route/sorted:
+    post:
+      operationId: route_location_optimized
+      tags:
+        - v2.0
+      summary: Route Location Optimized
+      description: >-
+        Location sorting api takes a set of locations with additional payload
+        attached with each location considering the first one as the source and
+        the last one as the destination. It returns with the sorted location set
+        that was provided considering the distance between the locations in
+        Kilometers from source to destination. Maximum 50 locations can be
+        attached in a row. Content-Types:application/json should be attached to
+        the request header in order to match the correct request format.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/route_location_optimized_body'
+      x-codeSamples:
+        - lang: Curl
+          source: |
+            curl --location 'https://barikoi.xyz/v2/api/route/sorted' \
+            --header 'Content-Type: application/json' \
+            --data '{
+                "api_key": "API_KEY",
+                "locations": [
+                    {
+                        "point": {
+                            "lat": 24.439648,
+                            "lon": 90.731277
+                        },
+                        "additional_payload": [
+                            {
+                                "address": "Kishoreganj Thana"
+                            }
+                        ]
+                    },
+                    {
+                        "point": {
+                            "lat": 23.74608583,
+                            "lon": 90.37368
+                        },
+                        "additional_payload": [
+                            {
+                                "address": "House 36, Road 9/A"
+                            }
+                        ]
+                    },
+                    {
+                        "point": {
+                            "lat": 24.440899,
+                            "lon": 90.771103
+                        },
+                        "additional_payload": [
+                            {
+                                "address": "Monju Villa, House 1244, Hossainpur Road, Nogua"
+                            }
+                        ]
+                    },
+                    {
+                        "point": {
+                            "lat": 23.74577034,
+                            "lon": 90.37338898
+                        },
+                        "additional_payload": [
+                            {
+                                "address": "House 38, Road 9/A"
+                            }
+                        ]
+                    },
+                    {
+                        "point": {
+                            "lat": 23.74441997,
+                            "lon": 90.37290861
+                        },
+                        "additional_payload": [
+                            {
+                                "address": "Dhanmondi, Road 8/a"
+                            }
+                        ]
+                    }
+                ]
+            }'
+        - lang: Python
+          source: >
+            import requests
+
+            import json
+
+
+            url = "https://barikoi.xyz/v2/api/route/sorted"
+
+
+            payload = json.dumps({
+              "api_key": "API_KEY",
+              "locations": [
+                {
+                  "point": {
+                    "lat": 24.439648,
+                    "lon": 90.731277
+                  },
+                  "additional_payload": [
+                    {
+                      "address": "Kishoreganj Thana"
+                    }
+                  ]
+                },
+                {
+                  "point": {
+                    "lat": 23.74608583,
+                    "lon": 90.37368
+                  },
+                  "additional_payload": [
+                    {
+                      "address": "House 36, Road 9/A"
+                    }
+                  ]
+                },
+                {
+                  "point": {
+                    "lat": 24.440899,
+                    "lon": 90.771103
+                  },
+                  "additional_payload": [
+                    {
+                      "address": "Monju Villa, House 1244, Hossainpur Road, Nogua"
+                    }
+                  ]
+                },
+                {
+                  "point": {
+                    "lat": 23.74577034,
+                    "lon": 90.37338898
+                  },
+                  "additional_payload": [
+                    {
+                      "address": "House 38, Road 9/A"
+                    }
+                  ]
+                },
+                {
+                  "point": {
+                    "lat": 23.74441997,
+                    "lon": 90.37290861
+                  },
+                  "additional_payload": [
+                    {
+                      "address": "Dhanmondi, Road 8/a"
+                    }
+                  ]
+                }
+              ]
+            })
+
+            headers = {
+              'Content-Type': 'application/json'
+            }
+
+
+            response = requests.request("POST", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            const axios = require('axios');
+            let data = JSON.stringify({
+              "api_key": "API_KEY",
+              "locations": [
+                {
+                  "point": {
+                    "lat": 24.439648,
+                    "lon": 90.731277
+                  },
+                  "additional_payload": [
+                    {
+                      "address": "Kishoreganj Thana"
+                    }
+                  ]
+                },
+                {
+                  "point": {
+                    "lat": 23.74608583,
+                    "lon": 90.37368
+                  },
+                  "additional_payload": [
+                    {
+                      "address": "House 36, Road 9/A"
+                    }
+                  ]
+                },
+                {
+                  "point": {
+                    "lat": 24.440899,
+                    "lon": 90.771103
+                  },
+                  "additional_payload": [
+                    {
+                      "address": "Monju Villa, House 1244, Hossainpur Road, Nogua"
+                    }
+                  ]
+                },
+                {
+                  "point": {
+                    "lat": 23.74577034,
+                    "lon": 90.37338898
+                  },
+                  "additional_payload": [
+                    {
+                      "address": "House 38, Road 9/A"
+                    }
+                  ]
+                },
+                {
+                  "point": {
+                    "lat": 23.74441997,
+                    "lon": 90.37290861
+                  },
+                  "additional_payload": [
+                    {
+                      "address": "Dhanmondi, Road 8/a"
+                    }
+                  ]
+                }
+              ]
+            });
+
+            let config = {
+              method: 'post',
+              maxBodyLength: Infinity,
+              url: 'https://barikoi.xyz/v2/api/route/sorted',
+              headers: { 
+                'Content-Type': 'application/json'
+              },
+              data : data
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/route_location_optimized_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/routing/matching:
+    get:
+      operationId: route_match_v2
+      tags:
+        - v2.0
+      summary: Route Match
+      description: >-
+        Route Match API endpoint performs map matching, which aligns a series of
+        GPS points to the road network. It returns the matched route geometry,
+        including the coordinates and type of geometry, as well as the total
+        distance of the matched route. Route Match API is useful for snapping
+        raw GPS points to the most likely road paths, providing more accurate
+        and meaningful routes, especially for applications in navigation and
+        tracking.
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/points'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/routing/matching?points=90.38436119310136,23.7267599142696;90.38438265469962,23.726622279057658&api_key=<BARIKOI_API_KEY>'
+        - lang: Python
+          source: >
+            import requests
+
+            url =
+            "https://barikoi.xyz/v2/api/routing/matching?points=90.38436119310136,23.7267599142696;90.38438265469962,23.726622279057658&api_key=API_KEY"
+
+            payload={}
+
+            headers = {}
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)            
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+            maxBodyLength: Infinity,
+              url: 'https://barikoi.xyz/v2/api/routing/matching?points=90.38436119310136,23.7267599142696;90.38438265469962,23.726622279057658&api_key=API_KEY',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/route_match_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /api/v2/search-place:
+    get:
+      operationId: search_place_v2
+      tags:
+        - v2.0
+      summary: Search Place
+      description: >
+        This API endpoint searches for places that match a given query string.
+        It returns a list of matching places, including their addresses and
+        unique place codes. This API is useful for searching and retrieving
+        detailed information about places based on a given query string, which
+        can be helpful for location-based services, mapping, and navigation
+        applications.
+
+
+        **Note: Each request to this API generates a new session ID. The session
+        ID is crucial for testing and tracking API interactions. Make sure to
+        include the session ID in [Get Place
+        Details](#tag/v2.0/operation/Search_PlGet_Place_Detailsace) API request
+        to ensure proper functionality.**
+      parameters:
+        - $ref: '#/components/parameters/q'
+        - $ref: '#/components/parameters/api_key_query'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/api/v2/search-place?q=barikoi&api_key={{API_KEY}}'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/api/v2/search-place?q=barikoi&api_key={{API_KEY}}"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/api/v2/search-place?q=barikoi&api_key={{API_KEY}}',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/search_place'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /api/v2/places:
+    get:
+      operationId: get_place_details_v2
+      tags:
+        - v2.0
+      summary: Get Place Details
+      description: >
+        This API endpoint retrieves information about a specific place
+        identified by the place code (in this case "BKOI2017") from the Barikoi
+        platform. It returns essential details such as the address and
+        geographic coordinates of the requested place, which can be useful for
+        various location-based applications or services.
+
+
+        **Note: It requires the place code for the desired location and utilizes
+        the session ID generated from the previous [Search
+        Place](#tag/v2.0/operation/Search_Place) request for maintaining session
+        continuity.**
+      parameters:
+        - $ref: '#/components/parameters/place_code'
+        - $ref: '#/components/parameters/api_key_query'
+        - $ref: '#/components/parameters/session_id'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/api/v2/places?place_code=BKOI2017&api_key={{API_KEY}}&session_id=8d6a20cb-e07d-4332-a293-d0cf0fce968e'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/api/v2/places?place_code=BKOI2017&api_key={{API_KEY}}&session_id=8d6a20cb-e07d-4332-a293-d0cf0fce968e"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/api/v2/places?place_code=BKOI2017&api_key={{API_KEY}}&session_id=8d6a20cb-e07d-4332-a293-d0cf0fce968e',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/get_place_details'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/routing/nearest:
+    get:
+      operationId: snap_to_road_v2
+      tags:
+        - v2.0
+      summary: Snap to Road
+      description: >-
+        Snap to Road API endpoint retrieves the nearest point on the road
+        network to a specified geographical point (latitude and longitude). It
+        returns the coordinates of the nearest point and the distance from the
+        specified point to this nearest point. Snap to Road API is useful for
+        finding the closest road location to a given geographic point, which can
+        be used in various applications such as route planning, geofencing, and
+        location-based services.
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/point'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location
+            'https://barikoi.xyz/v2/api/routing/nearest?point=23.806525320635505,90.36129978225671&api_key=API_KEY'
+        - lang: Python
+          source: >
+            import requests
+
+            url =
+            "https://barikoi.xyz/v2/api/routing/nearest?point=23.806525320635505,90.36129978225671&api_key=API_KEY"
+
+            payload={}
+
+            headers = {}
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+            maxBodyLength: Infinity,
+              url: 'https://barikoi.xyz/v2/api/routing/nearest?point=23.806525320635505,90.36129978225671&api_key=API_KEY',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/snap_to_road_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/divisions:
+    get:
+      operationId: divisions_v2
+      tags:
+        - v2.0
+      summary: Divisions
+      description: >-
+        Divisions API endpoint retrieves information about divisions that match
+        a given query. It returns a list of matching divisions, including their
+        names, IDs, and geographical center coordinates. Divisions API is useful
+        for retrieving detailed information about divisions, including their
+        geographic center, which can be used for mapping and spatial analysis.
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/qNotReq'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location
+            'https://barikoi.xyz/v2/api/divisions?q=Rangpur&api_key=API_KEY'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/divisions?q=Rangpur&api_key=API_KEY"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/divisions?q=Rangpur&api_key=API_KEY',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/divisions_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/districts:
+    get:
+      operationId: districts_v2
+      tags:
+        - v2.0
+      summary: Districts
+      description: >
+        Retrieves a list of districts in Bangladesh (64 total).  
+
+        • No filters → returns **all 64 districts**  
+
+        • With `q` → returns districts whose name contains the search term
+        (case-insensitive)  
+
+        • With `division_id` → returns only districts belonging to that
+        division  
+
+
+        The response order is not fixed and may vary between requests.
+
+
+        **Common Division IDs**  
+
+        1 → Barishal 2 → Chattogram 3 → Dhaka 4 → Khulna  
+
+        5 → Mymensingh 6 → Rajshahi 7 → Rangpur 8 → Sylhet
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/qNotReq'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/districts?q=khulna&api_key={{API_KEY}}&division_id=7'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/districts?q=khulna&api_key={{API_KEY}}&division_id=7"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/districts?q=khulna&api_key={{API_KEY}}&division_id=7',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/districts_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/sub_districts:
+    get:
+      operationId: sub_districts_v2
+      tags:
+        - v2.0
+      summary: Subdistricts
+      description: >-
+        Sub-districts API endpoint retrieves information about sub-districts
+        that match a given query. It returns a list of matching sub-districts,
+        including their names, IDs, associated districts, and geographical
+        center coordinates.Sub-districts API is useful for retrieving detailed
+        information about sub-districts, including their geographic center,
+        which can be used for mapping, navigation, and spatial analysis.
+      parameters:
+        - $ref: '#/components/parameters/api_key_query'
+        - $ref: '#/components/parameters/q_subdistrictsNotReq'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/sub_districts?q=mirpur&api_key={{API_KEY}}'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/sub_districts?q=mirpur&api_key={{API_KEY}}"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/sub_districts?q=mirpur&api_key={{API_KEY}}',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/subdistricts_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/thanas:
+    get:
+      operationId: thanas_v2
+      tags:
+        - v2.0
+      summary: Thanas
+      description: >
+        Retrieves the full list of **thanas (upazilas/police stations)** in
+        Bangladesh (approximately 500+).  
+
+
+        • No parameters → returns **all thanas** (all 64 districts)  
+
+        • With `q` → fuzzy search on thana name (case-insensitive, partial
+        match)  
+
+        • With `district_id` → returns only thanas belonging to that district  
+
+
+        The response is not sorted alphabetically — order may vary between
+        requests.
+
+
+        **Note**: Use the numeric `district_id` from the `/v2/api/districts`
+        endpoint.
+      parameters:
+        - $ref: '#/components/parameters/api_key_query'
+        - $ref: '#/components/parameters/q_subdistrictsNotReq'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/thanas?q=khulna&api_key={{API_KEY}}&district_id=15'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/thanas?q=khulna&api_key={{API_KEY}}&district_id=15"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/thanas?q=khulna&api_key={{API_KEY}}&district_id=15',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/thana_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/cities:
+    get:
+      operationId: city_v2
+      tags:
+        - v2.0
+      summary: City with Areas
+      description: >-
+        Cities API endpoint retrieves information about cities that match a
+        given query. It returns a list of matching cities, including their names
+        and associated areas within each city. This API is useful for retrieving
+        detailed information about cities, including the areas within each city,
+        which can be helpful for location-based services, mapping, and
+        addressing.
+      parameters:
+        - $ref: '#/components/parameters/api_key_query'
+        - $ref: '#/components/parameters/q_citiesNotReq'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/cities?q=Dhaka&api_key={{API_KEY}}'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/cities?q=Dhaka&api_key={{API_KEY}}"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/cities?q=Dhaka&api_key={{API_KEY}}',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/cities_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/city-corp:
+    get:
+      operationId: city_corporation_v2
+      tags:
+        - v2.0
+      summary: City Corporation
+      description: >-
+        Returns the City Corporation that contains the given latitude and
+        longitude.This API is useful for determining administrative jurisdiction
+        (e.g. Dhaka North or Dhaka South City Corporation) for a specific
+        geographic point.
+      parameters:
+        - $ref: '#/components/parameters/longitude'
+        - $ref: '#/components/parameters/latitude'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location
+            'https://barikoi.xyz/v2/api/search/city-corp?api_key={{API_KEY}}&latitude=23.767750549280972&longitude=90.35293579101564'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/search/city-corp?api_key={{API_KEY}}&latitude=23.767750549280972&longitude=90.35293579101564"
+
+
+            payload = {}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var request = require('request');
+            var options = {
+              'method': 'GET',
+              'url': 'https://barikoi.xyz/v2/api/search/city-corp?api_key={{API_KEY}}&latitude=23.767750549280972&longitude=90.35293579101564',
+              'headers': {
+              }
+            };
+            request(options, function (error, response) {
+              if (error) throw new Error(error);
+              console.log(response.body);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/city_corporation_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/unions:
+    get:
+      operationId: union_v2
+      tags:
+        - v2.0
+      summary: Union
+      description: >-
+        Unions API endpoint retrieves information about unions that match a
+        given query. It returns a list of matching unions, including their
+        names, associated sub-districts, IDs, and geographical center
+        coordinates. This API is useful for retrieving detailed information
+        about unions, including their geographic center, which can be used for
+        mapping, spatial analysis, and addressing purposes.
+      parameters:
+        - $ref: '#/components/parameters/api_key_query'
+        - $ref: '#/components/parameters/q_unionNotReq'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/unions?q=Dhaka&api_key={{API_KEY}}'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/unions?q=Dhaka&api_key={{API_KEY}}"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var request = require('request');
+            var options = {
+              'method': 'GET',
+              'url': 'https://barikoi.xyz/v2/api/unions?q=Dhaka&api_key={{API_KEY}}',
+              'headers': {
+              }
+            };
+            request(options, function (error, response) {
+              if (error) throw new Error(error);
+              console.log(response.body);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/unions_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/area:
+    get:
+      operationId: area_v2
+      tags:
+        - v2.0
+      summary: Area
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/longitude'
+        - $ref: '#/components/parameters/latitude'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location
+            'https://barikoi.xyz/v2/api/search/area?api_key=API_KEY&latitude=23.863233589986915&longitude=90.41347324848176'
+        - lang: Python
+          source: >
+            import requests
+
+            url =
+            "https://barikoi.xyz/v2/api/search/area?api_key=API_KEY&latitude=23.863233589986915&longitude=90.41347324848176"          
+
+            payload={}
+
+            headers = {}          
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)        
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+            maxBodyLength: Infinity,
+              url: 'https://barikoi.xyz/v2/api/search/area?api_key=API_KEY&latitude=23.863233589986915&longitude=90.41347324848176',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/area_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/ward/zone/{longitude}/{latitude}:
+    get:
+      operationId: ward_zone_v2
+      tags:
+        - v2.0
+      summary: Ward & Zone from LatLng
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/longitudePath'
+        - $ref: '#/components/parameters/latitudePath'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/search/ward/zone/90.418619474572/23.83136348674859?key={{API_KEY}}'
+        - lang: Python
+          source: >
+            import requests
+
+            url =
+            "https://barikoi.xyz/v2/api/search/ward/zone/90.418619474572/23.83136348674859?key={{API_KEY}}"
+
+            payload={}
+
+            headers = {}
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/search/ward/zone/90.418619474572/23.83136348674859?key={{API_KEY}}',
+              headers: { }
+            };
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/wardzone_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/ward/{longitude}/{latitude}:
+    get:
+      operationId: ward_from_latLng
+      tags:
+        - v2.0
+      summary: Ward from LatLng
+      parameters:
+        - $ref: '#/components/parameters/api_key_query'
+        - $ref: '#/components/parameters/longitudePath'
+        - $ref: '#/components/parameters/latitudePath'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/search/ward/90.418619474572/23.83136348674859?key={{API_KEY}}'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/search/ward/90.418619474572/23.83136348674859?key={{API_KEY}}"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/search/ward/90.418619474572/23.83136348674859?key={{API_KEY}}',
+              headers: { }
+            };
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/ward_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/get/ward:
+    get:
+      operationId: all_ward_v2
+      tags:
+        - v2.0
+      summary: All Ward Geometry
+      parameters:
+        - $ref: '#/components/parameters/api_key_query'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/search/get/ward?key={{API_KEY}}'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url = "https://barikoi.xyz/v2/api/search/get/ward?key={{API_KEY}}"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/search/get/ward?key={{API_KEY}}',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/all_ward_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/get/ward/geometry:
+    get:
+      operationId: specific_ward_v2
+      tags:
+        - v2.0
+      summary: Specific Ward Geometry
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/ward'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location
+            'https://barikoi.xyz/v2/api/search/get/ward/geometry?api_key=API_KEY&ward_number=31'
+        - lang: Python
+          source: >
+            import requests
+
+            url =
+            "https://barikoi.xyz/v2/api/search/get/ward/geometry?api_key=API_KEY&ward_number=31"
+
+            payload={}
+
+            headers = {}
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+            maxBodyLength: Infinity,
+              url: 'https://barikoi.xyz/v2/api/search/get/ward/geometry?api_key=API_KEY&ward_number=31',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/ward_geometry_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/get/zone:
+    get:
+      operationId: all_zone_v2
+      tags:
+        - v2.0
+      summary: All Zone
+      parameters:
+        - $ref: '#/components/parameters/api_key_query'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/search/get/zone?key={{API_KEY}}'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url = "https://barikoi.xyz/v2/api/search/get/zone?key={{API_KEY}}"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/search/get/zone?key={{API_KEY}}',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/all_zone_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/zone/{longitude}/{latitude}:
+    get:
+      operationId: zone_from_latLng_v2
+      tags:
+        - v2.0
+      summary: Zone from LatLng
+      parameters:
+        - $ref: '#/components/parameters/api_key_query'
+        - $ref: '#/components/parameters/longitudePath'
+        - $ref: '#/components/parameters/latitudePath'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/search/zone/90.418619474572/23.83136348674859?key={{API_KEY}}'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/search/zone/90.418619474572/23.83136348674859?key={{API_KEY}}"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/search/zone/90.418619474572/23.83136348674859?key={{API_KEY}}',
+              headers: { }
+            };
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/zone_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/nearby/0.5/10:
+    get:
+      operationId: nearby_query_param
+      tags:
+        - v2.0
+      summary: Nearby
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/longitude'
+        - $ref: '#/components/parameters/latitude'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location
+            'https://barikoi.xyz/v2/api/search/nearby/0.5/10?api_key=API_KEY&longitude=90.38305163&latitude=23.87188719'
+        - lang: Python
+          source: >
+            import requests
+
+            url =
+            "https://barikoi.xyz/v2/api/search/nearby/0.5/10?api_key=API_KEY&longitude=90.38305163&latitude=23.87188719"
+
+            payload={}
+
+            headers = {}
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+            maxBodyLength: Infinity,
+              url: 'https://barikoi.xyz/v2/api/search/nearby/0.5/10?api_key=API_KEY&longitude=90.38305163&latitude=23.87188719',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/nearby_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/nearby/category/1/10:
+    get:
+      operationId: nearby_api_with_category
+      tags:
+        - v2.0
+      summary: Nearby Api With Category
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/longitude'
+        - $ref: '#/components/parameters/latitude'
+        - $ref: '#/components/parameters/ptype'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/search/nearby/category/1/10?api_key={{API_KEY}}&longitude=90.36668110638857&latitude=23.83723803415923&ptype=School'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/search/nearby/category/1/10?api_key={{API_KEY}}&longitude=90.36668110638857&latitude=23.83723803415923&ptype=School"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/search/nearby/category/1/10?api_key={{API_KEY}}&longitude=90.36668110638857&latitude=23.83723803415923&ptype=School',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/nearby_with_category_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/nearby/multi/type/5/5:
+    get:
+      operationId: nearby_api_with_multiple_types
+      tags:
+        - v2.0
+      summary: Nearby Api With Multiple types
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/longitude'
+        - $ref: '#/components/parameters/latitude'
+        - $ref: '#/components/parameters/q'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/search/nearby/multi/type/5/5?api_key={{API_KEY}}&q=School,ATM&longitude=90.36668110638857&latitude=23.83723803415923'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/search/nearby/multi/type/5/5?api_key={{API_KEY}}&q=School,ATM&longitude=90.36668110638857&latitude=23.83723803415923"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/search/nearby/multi/type/5/5?api_key={{API_KEY}}&q=School,ATM&longitude=90.36668110638857&latitude=23.83723803415923',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/nearby_with_multiple_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/point-in-polygon:
+    post:
+      operationId: point-in-polygon_v2
+      tags:
+        - v2.0
+      summary: Point in Polygon
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location
+            'https://barikoi.xyz/v2/api/point-in-polygon?api_key=API_KEY' \
+
+            --form 'point="90.41697542000593,23.780273491928714"'
+        - lang: Python
+          source: >
+            import requests
+
+            url = "https://barikoi.xyz/v2/api/point-in-polygon?api_key=API_KEY"
+
+            payload={'point': '90.41697542000593,23.780273491928714'}
+
+            files=[
+
+            ]
+
+            headers = {}
+
+            response = requests.request("POST", url, headers=headers,
+            data=payload, files=files)
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+            var FormData = require('form-data');
+            var data = new FormData();
+            data.append('point', '90.41697542000593,23.780273491928714');
+
+            var config = {
+              method: 'post',
+            maxBodyLength: Infinity,
+              url: 'https://barikoi.xyz/v2/api/point-in-polygon?api_key=API_KEY',
+              headers: { 
+                ...data.getHeaders()
+              },
+              data : data
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/point_in_polygon_form'
+      responses:
+        '200':
+          $ref: '#/components/responses/point_in_polygon_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/set-geo-fence-point:
+    post:
+      operationId: set-geo-fence-point
+      tags:
+        - v2.0
+      summary: Set geofence point
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/longitude'
+        - $ref: '#/components/parameters/latitude'
+        - $ref: '#/components/parameters/nameParam'
+        - $ref: '#/components/parameters/radiusParam'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request POST
+            'https://barikoi.xyz/v2/api/set-geo-fence-point?api_key=API_KEY&latitude=23.76245538673939&longitude=90.37852866512583&name=Songsodh
+            vaban&radius=70'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/set-geo-fence-point?api_key=API_KEY&latitude=23.76245538673939&longitude=90.37852866512583&name=Songsodh
+            vaban&radius=70"
+
+
+            payload={}
+
+            files={}
+
+            headers = {}
+
+
+            response = requests.request("POST", url, headers=headers,
+            data=payload, files=files)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+            var FormData = require('form-data');
+            var data = new FormData();
+
+            var config = {
+              method: 'post',
+              url: 'https://barikoi.xyz/v2/api/set-geo-fence-point?api_key=API_KEY&latitude=23.76245538673939&longitude=90.37852866512583&name=Songsodh vaban&radius=70',
+              headers: { 
+                ...data.getHeaders()
+              },
+              data : data
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/add_point_success'
+      responses:
+        '200':
+          $ref: '#/components/responses/add_point_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/get-geo-fence-points:
+    get:
+      operationId: get-geo-fence-points
+      tags:
+        - v2.0
+      summary: Get geo fence points
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/get-geo-fence-points?api_key=API_KEY'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/get-geo-fence-points?api_key=API_KEY"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/get-geo-fence-points?api_key=API_KEY',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/get_single_point_success'
+      responses:
+        '200':
+          $ref: '#/components/responses/get_single_point_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/get-geo-fence-point/{id}:
+    get:
+      operationId: get-single-geo-fence-points
+      tags:
+        - v2.0
+      summary: Get geo fence point by id
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/id_path'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/get-geo-fence-point/65475dbad1e00?api_key=API_KEY'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/get-geo-fence-point/65475dbad1e00?api_key=API_KEY"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/get-geo-fence-point/65475dbad1e00?api_key=API_KEY',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/get_single_point_success'
+      responses:
+        '200':
+          $ref: '#/components/responses/get_single_point_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/update-geo-fence-point/{id}:
+    post:
+      operationId: update-point
+      tags:
+        - v2.0
+      summary: Update Geofence point by id
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/id_path'
+        - $ref: '#/components/parameters/radiusParam'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request POST
+            'https://barikoi.xyz/v2/api/update-geo-fence-point/65475dbad1e00?api_key=API_KEY&radius=55'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/update-geo-fence-point/65475dbad1e00?api_key=API_KEY&radius=55"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("POST", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'post',
+              url: 'https://barikoi.xyz/v2/api/update-geo-fence-point/65475dbad1e00?api_key={{API_KEY}}',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/update_single_point_success'
+      responses:
+        '200':
+          $ref: '#/components/responses/update_single_point_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/delete-geo-fence-point/{id}:
+    delete:
+      operationId: delete-geo-fence-point
+      tags:
+        - v2.0
+      summary: Delete Geofence point by id
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/id_path'
+        - $ref: '#/components/parameters/radiusParam'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request DELETE
+            'https://barikoi.xyz/v2/api/delete-geo-fence-point/65473a46ad910?api_key=API_KEY&radius=55'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/delete-geo-fence-point/65473a46ad910?api_key=API_KEY&radius=55"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("DELETE", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'delete',
+              url: 'https://barikoi.xyz/v2/api/delete-geo-fence-point/65473a46ad910?api_key=API_KEY&radius=55',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/delete_single_point_success'
+      responses:
+        '200':
+          $ref: '#/components/responses/delete_single_point_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/check-geo-fence:
+    get:
+      operationId: check-geo-fence
+      tags:
+        - v2.0
+      summary: Check geo fence
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/longitude'
+        - $ref: '#/components/parameters/latitude'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/check-geo-fence?api_key=API_KEY&latitude=23.762412943322726&longitude=90.37864864706823'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/check-geo-fence?api_key=API_KEY&latitude=23.762412943322726&longitude=90.37864864706823"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/check-geo-fence?api_key=API_KEY&latitude=23.762412943322726&longitude=90.37864864706823',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/check_geo_fence_success'
+      responses:
+        '200':
+          $ref: '#/components/responses/check_geo_fence_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/check/nearby:
+    get:
+      operationId: check-nearby
+      tags:
+        - v2.0
+      summary: Check nearby location within a specified radius
+      parameters:
+        - $ref: '#/components/parameters/api_key'
+        - $ref: '#/components/parameters/destination_latitude'
+        - $ref: '#/components/parameters/destination_longitude'
+        - $ref: '#/components/parameters/radiusParam'
+        - $ref: '#/components/parameters/current_latitude'
+        - $ref: '#/components/parameters/current_longitude'
+      x-codeSamples:
+        - lang: Curl
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/check/nearby?api_key=API_KEY&destination_latitude=23.76245538673939&destination_longitude=90.37852866512583&radius=50&current_latitude=23.762412943322726&current_longitude=90.37864864706823'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/check/nearby?api_key=API_KEY&destination_latitude=23.76245538673939&destination_longitude=90.37852866512583&radius=50&current_latitude=23.762412943322726&current_longitude=90.37864864706823"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var axios = require('axios');
+
+            var config = {
+              method: 'get',
+              url: 'https://barikoi.xyz/v2/api/check/nearby?api_key=API_KEY&destination_latitude=23.76245538673939&destination_longitude=90.37852866512583&radius=50&current_latitude=23.762412943322726&current_longitude=90.37864864706823',
+              headers: { }
+            };
+
+            axios(config)
+            .then(function (response) {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/check_nearby_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+  /v2/api/search/dncc/{longitude}/{latitude}:
+    get:
+      operationId: dncc_v2
+      tags:
+        - v2.0
+      summary: City Corporation by Geolocation
+      parameters:
+        - $ref: '#/components/parameters/api_key_query'
+        - $ref: '#/components/parameters/longitudePath'
+        - $ref: '#/components/parameters/latitudePath'
+      x-codeSamples:
+        - lang: Curl;
+          source: >
+            curl --location --request GET
+            'https://barikoi.xyz/v2/api/search/dncc/90.418619474572/23.83136348674859?key={{API_KEY}}'
+        - lang: Python
+          source: >
+            import requests
+
+
+            url =
+            "https://barikoi.xyz/v2/api/search/dncc/90.418619474572/23.83136348674859?key={{API_KEY}}"
+
+
+            payload={}
+
+            headers = {}
+
+
+            response = requests.request("GET", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+        - lang: Node
+          source: |
+            var request = require('request');
+            var options = {
+              'method': 'GET',
+              'url': 'https://barikoi.xyz/v2/api/search/dncc/90.418619474572/23.83136348674859?key={{API_KEY}}',
+              'headers': {
+              }
+            };
+            request(options, function (error, response) {
+              if (error) throw new Error(error);
+              console.log(response.body);
+            });
+      responses:
+        '200':
+          $ref: '#/components/responses/dncc_success'
+        '400':
+          $ref: '#/components/responses/missing_parameter'
+        '401':
+          $ref: '#/components/responses/no_registered_key'
+        '402':
+          $ref: '#/components/responses/payment_exception'
+        '429':
+          $ref: '#/components/responses/api_limit_exceeded'
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: api_key
+      in: query
+  parameters:
+    addressParam:
+      $ref: '#/components/parameters/address'
+    api_keyParam:
+      $ref: '#/components/parameters/api_key'
+    destination_latitude:
+      name: destination_latitude
+      in: query
+      required: true
+      schema:
+        type: number
+        format: double
+        minimum: -90
+        maximum: 90
+      example: 23.76245538673939
+    destination_longitude:
+      name: destination_longitude
+      in: query
+      required: true
+      schema:
+        type: number
+        format: double
+        minimum: -180
+        maximum: 180
+      example: 90.37852866512583
+    current_latitude:
+      name: current_latitude
+      in: query
+      required: true
+      schema:
+        type: number
+        format: double
+        minimum: -90
+        maximum: 90
+      example: 23.762412943322726
+    current_longitude:
+      name: current_longitude
+      in: query
+      required: true
+      schema:
+        type: number
+        format: double
+        minimum: -180
+        maximum: 180
+      example: 90.37864864706823
+    api_keyPathParam:
+      $ref: '#/components/parameters/api_key_path'
+    api_keyPathParamUpper:
+      $ref: '#/components/parameters/api_key_path_upper'
+    api_keyQueryParam:
+      $ref: '#/components/parameters/api_key_query'
+    areaParam:
+      $ref: '#/components/parameters/area'
+    sub_areaParam:
+      $ref: '#/components/parameters/sub_area'
+    areaParamString:
+      $ref: '#/components/parameters/areaString'
+    banglaParam:
+      $ref: '#/components/parameters/bangla'
+    cityParam:
+      $ref: '#/components/parameters/city'
+    city_PathParam:
+      $ref: '#/components/parameters/city_path'
+    coordinatesParam:
+      $ref: '#/components/parameters/coordinates'
+    countryParam:
+      $ref: '#/components/parameters/country'
+    districtParam:
+      $ref: '#/components/parameters/district'
+    divisionParam:
+      $ref: '#/components/parameters/division'
+    distanceParam:
+      $ref: '#/components/parameters/distance'
+    geometriesParam:
+      $ref: '#/components/parameters/geometries'
+    industrialParam:
+      $ref: '#/components/parameters/industrial'
+    latitudeParam:
+      $ref: '#/components/parameters/latitude'
+    countryCode:
+      name: country_code
+      in: query
+      required: false
+      schema:
+        type: string
+        description: >
+          The **two-letter** country code **(ISO Alpha-2)** representing the
+          desired country. Example: `sa` (Saudi Arabia) 
+
+
+          **Default Value**: `bd` (Bangladesh)  
+
+          **Note**: You can find the country code for your desired country in
+          the ISO Alpha-2 country code standard.
+    countryCodeAlpha3:
+      name: country_code
+      in: query
+      required: false
+      schema:
+        type: string
+        description: >
+          The **three-letter** country code **(ISO Alpha-3)** representing the
+          desired country. Example: `sau` (Saudi Arabia) 
+
+
+          **Default Value**: `bgd` (Bangladesh)  
+
+          **Note**: You can find the country code for your desired country in
+          the ISO Alpha-3 country code standard.
+    profile:
+      name: profile
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - bike
+          - motorcycle
+          - car
+        description: >
+          The mode of transportation profile for calculating route time and
+          information. 
+
+
+          **Default Value**: `car` 
+
+
+          **Accepted Values**:  
+
+          - `bike`: For routes optimized for bicycles.  
+
+          - `motorcycle`: For routes optimized for motorcycles.  
+
+          - `car`: For routes optimized for cars.  
+
+
+          **Note**: The route time and information will vary based on the
+          selected profile.
+    overviewProfile:
+      $ref: '#/components/parameters/overview_profile'
+    latitudePathParam:
+      $ref: '#/components/parameters/latitudePath'
+    limitParam:
+      $ref: '#/components/parameters/limit'
+    location_typeParam:
+      $ref: '#/components/parameters/location_type'
+    longitudeParam:
+      $ref: '#/components/parameters/longitude'
+    longitudePathParam:
+      $ref: '#/components/parameters/longitudePath'
+    matchParam:
+      $ref: '#/components/parameters/match'
+    nameParam:
+      name: name
+      in: query
+      required: true
+      schema:
+        type: string
+        description: Songsodh vaban
+    pointParam:
+      $ref: '#/components/parameters/point'
+    pointsParam:
+      $ref: '#/components/parameters/points'
+    pointsPathParam:
+      $ref: '#/components/parameters/pointsPath'
+    post_codeParam:
+      $ref: '#/components/parameters/post_code'
+    post_officeParam:
+      $ref: '#/components/parameters/post_office'
+    place_code:
+      name: Place Code
+      in: query
+      required: true
+      schema:
+        type: string
+        description: 'true'
+    idPathParam:
+      $ref: '#/components/parameters/id_path'
+    pouroshovaParam:
+      $ref: '#/components/parameters/pauroshova'
+    ptypeParam:
+      $ref: '#/components/parameters/ptype'
+    q2Param:
+      $ref: '#/components/parameters/q2'
+    qParam:
+      $ref: '#/components/parameters/q'
+    qParamCities:
+      $ref: '#/components/parameters/q_cities'
+    qParamCitiesNotRequired:
+      $ref: '#/components/parameters/q_citiesNotReq'
+    qParamDistricts:
+      $ref: '#/components/parameters/q_districts'
+    qParamNotRequired:
+      $ref: '#/components/parameters/qNotReq'
+    qParamSubdistricts:
+      $ref: '#/components/parameters/q_subdistricts'
+    qParamSubdistrictsNotRequired:
+      $ref: '#/components/parameters/q_subdistrictsNotReq'
+    qParamUnionNotRequired:
+      $ref: '#/components/parameters/q_unionNotReq'
+    qParamUnions:
+      $ref: '#/components/parameters/q_unions'
+    radiusParam:
+      name: radius
+      in: query
+      required: true
+      schema:
+        type: number
+        description: '70'
+    sub_districtParam:
+      $ref: '#/components/parameters/sub_district'
+    session_id:
+      name: session_id
+      in: query
+      required: true
+      schema:
+        type: string
+        description: 'true'
+    thanaParam:
+      $ref: '#/components/parameters/thana'
+    typeQuery:
+      $ref: '#/components/parameters/ptype'
+    singletypeQuery:
+      $ref: '#/components/parameters/type'
+    unionParam:
+      $ref: '#/components/parameters/union'
+    wardParam:
+      $ref: '#/components/parameters/ward'
+    api_key:
+      name: api_key
+      in: query
+      required: true
+      schema:
+        type: string
+        description: API_KEY
+    longitude:
+      name: longitude
+      in: query
+      required: true
+      schema:
+        type: number
+        description: '90.35722628659195'
+    latitude:
+      name: latitude
+      in: query
+      required: true
+      schema:
+        type: number
+        description: '23.806703092211507'
+    district:
+      name: district
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    post_code:
+      name: post_code
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    country:
+      name: country
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    sub_district:
+      name: sub_district
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    union:
+      name: union
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    pauroshova:
+      name: pauroshova
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    location_type:
+      name: location_type
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    division:
+      name: division
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    address:
+      name: address
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    area:
+      name: area
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    bangla:
+      name: bangla
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    thana:
+      name: thana
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    q:
+      name: q
+      in: query
+      required: true
+      schema:
+        type: string
+        description: q
+    city:
+      name: city
+      in: query
+      schema:
+        type: string
+        description: dhaka
+    areaString:
+      name: area
+      in: query
+      required: false
+      schema:
+        type: string
+        description: Mirpur
+    sub_area:
+      name: sub_area
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    post_office:
+      name: post_office
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    industrial:
+      name: industrial
+      in: query
+      required: false
+      schema:
+        type: boolean
+        description: 'true'
+    coordinates:
+      name: coordinates
+      in: path
+      required: true
+      schema:
+        type: string
+        description: String of format `{longitude},{latitude};{longitude},{latitude}`.
+    geometries:
+      name: geometries
+      in: query
+      required: false
+      schema:
+        type: string
+        description: >-
+          Returned route geometry format (influences overview and per step).
+          Expected values are, `polyline`, `polyline6`, `geojson`
+        default: polyline
+    overview_profile:
+      name: profile
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - car
+          - foot
+        description: >
+          The mode of transportation profile for calculating route time and
+          information. 
+
+
+          **Default Value**: `car` 
+
+
+          **Accepted Values**:  
+
+          - `car`: For routes optimized for cars.  
+
+          - `foot`: For routes optimized for pedestrians.  
+
+
+          **Note**: The route time and information will vary based on the
+          selected profile.
+    api_key_query:
+      name: api_key
+      in: query
+      required: true
+      schema:
+        type: string
+        description: API_KEY
+    type:
+      name: type
+      in: query
+      required: true
+      schema:
+        type: string
+        description: type
+    points:
+      name: points
+      in: query
+      required: true
+      schema:
+        type: string
+        example: >-
+          90.38436119310136,23.7267599142696;90.38438265469962,23.726622279057658
+    point:
+      name: point
+      in: query
+      required: true
+      schema:
+        type: string
+        example: 23.80474653651567,90.36288913339376
+    qNotReq:
+      name: q
+      in: query
+      schema:
+        type: string
+        description: q
+    q_subdistrictsNotReq:
+      name: q
+      in: query
+      schema:
+        type: string
+        description: mirpur
+    q_citiesNotReq:
+      name: q
+      in: query
+      schema:
+        type: string
+        description: Dhaka
+    q_unionNotReq:
+      name: q
+      in: query
+      schema:
+        type: string
+        description: Dhaka
+    longitudePath:
+      name: longitude
+      in: path
+      required: true
+      schema:
+        type: number
+        description: '90.35722628659195'
+    latitudePath:
+      name: latitude
+      in: path
+      required: true
+      schema:
+        type: number
+        description: '23.806703092211507'
+    ward:
+      name: ward_number
+      in: query
+      required: true
+      schema:
+        type: number
+        description: '31'
+    ptype:
+      name: ptype
+      in: query
+      required: true
+      schema:
+        type: string
+        description: ptype
+    id_path:
+      name: id
+      in: path
+      required: true
+      description: >
+        The unique identifier for the geo-fence point. You can obtain the ID
+        from:
+
+        1. The response when creating a geo-fence point using [Set Geofence
+        Point](#tag/v2.0/operation/set-geo-fence-point) API
+
+        2. The response from [Get All Geo Fence
+        Points](#tag/v2.0/operation/get-geo-fence-points) API
+      schema:
+        type: string
+        example: 65475dbad1e00
+    api_key_path:
+      name: api_key
+      in: path
+      required: true
+      schema:
+        type: string
+        description: API_KEY
+    api_key_path_upper:
+      name: API_KEY
+      in: path
+      required: true
+      schema:
+        type: string
+        description: API_KEY
+    city_path:
+      name: city_path
+      in: path
+      required: true
+      schema:
+        type: boolean
+        description: city
+    distance:
+      name: distance
+      in: path
+      required: true
+      schema:
+        type: number
+        description: distance in meters
+    limit:
+      name: limit
+      in: path
+      required: true
+      schema:
+        type: integer
+        description: limit
+    match:
+      name: match
+      in: query
+      required: true
+      schema:
+        type: boolean
+        description: 'true'
+    pointsPath:
+      name: points
+      in: path
+      required: true
+      schema:
+        type: string
+        example: >-
+          90.38436119310136,23.7267599142696;90.38438265469962,23.726622279057658
+    q2:
+      name: q2
+      in: query
+      required: true
+      schema:
+        type: string
+        description: q2
+    q_cities:
+      name: q
+      in: query
+      required: true
+      schema:
+        type: string
+        description: dhaka
+    q_districts:
+      name: q
+      in: query
+      required: true
+      schema:
+        type: string
+        description: dhaka
+    q_subdistricts:
+      name: q
+      in: query
+      required: true
+      schema:
+        type: string
+        description: khilgaon
+    q_unions:
+      name: q
+      in: query
+      required: true
+      schema:
+        type: string
+        description: abaipur
+  schemas:
+    add_point_success:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Geo fence point added
+        status:
+          type: integer
+          default: 200
+    api_limit_exceeded:
+      type: object
+      properties:
+        message:
+          type: string
+          default: API LIMIT EXCEEDED
+        status:
+          type: integer
+          default: 429
+    area_success:
+      type: object
+      properties:
+        area:
+          type: string
+          default: dakkhinkhan
+        status:
+          type: number
+          default: 200
+    autocomplete_bangla_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 635085
+              longitude:
+                type: number
+                example: 90.369999116958
+              latitude:
+                type: number
+                example: 23.83729875602
+              address:
+                type: string
+                example: Mirpur DOHS, Mirpur DOHS
+              address_bn:
+                type: string
+                example: মিরপুর ডিওএইচএস, মিরপুর ডিওএইচএস, মিরপুর, ঢাকা
+              city:
+                type: string
+                example: Dhaka
+              city_bn:
+                type: string
+                example: ঢাকা
+              area:
+                type: string
+                example: Dhaka University Campus
+              area_bn:
+                type: string
+                example: মিরপুর
+              postCode:
+                type: integer
+                example: 1216
+              pType:
+                type: string
+                example: Admin
+              uCode:
+                type: string
+                example: PFSU6037
+        status:
+          type: integer
+          default: 200
+    autocomplete_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 882513
+              longitude:
+                type: number
+                example: 90.39752920000001
+              latitude:
+                type: number
+                example: 23.726055300000002
+              address:
+                type: string
+                example: Dhaka Medical College Hospital
+              city:
+                type: string
+                example: Dhaka
+              area:
+                type: string
+                example: Dhaka University Campus
+              postCode:
+                type: integer
+                example: 1000
+              pType:
+                type: string
+                example: Healthcare
+              uCode:
+                type: string
+                example: BXXK5816
+        status:
+          type: integer
+          default: 200
+    check_geo_fence_success:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Inside geo fence
+        status:
+          type: integer
+          default: 200
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: '635085'
+            name:
+              type: string
+              example: Songsodh vaban
+            radius:
+              type: string
+              example: '55'
+            longitude:
+              type: string
+              example: '90.37852866512583'
+            latitude:
+              type: string
+              example: '23.76245538673939'
+            user_id:
+              type: number
+              example: 2978
+    cities_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            - type: object
+              properties:
+                name:
+                  type: string
+                  default: Dhaka
+                areas:
+                  type: array
+                  items:
+                    - type: object
+                      properties:
+                        name:
+                          type: string
+                          default: Moghbazar
+                    - type: object
+                      properties:
+                        name:
+                          type: string
+                          default: Dhaka Cantonment
+                    - type: object
+                      properties:
+                        name:
+                          type: string
+                          default: Gendaria
+                    - type: object
+                      properties:
+                        name:
+                          type: string
+                          default: Sher E Bangla Nagar
+                    - type: object
+                      properties:
+                        name:
+                          type: string
+                          default: Tejgaon
+                    - type: object
+                      properties:
+                        name:
+                          type: string
+                          default: Banasree
+                    - type: object
+                      properties:
+                        name:
+                          type: string
+                          default: Dakkhinkhan
+                    - type: object
+                      properties:
+                        name:
+                          type: string
+                          default: Mohakhali
+            - type: object
+              properties:
+                name:
+                  type: string
+                  default: Joldhaka
+                areas:
+                  type: array
+                  items:
+                    - type: object
+        status:
+          type: number
+          default: 200
+    delete_single_point_success:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Geo fence point deleted
+        status:
+          type: integer
+          default: 200
+    divisions_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 7
+              name:
+                type: string
+                example: Rangpur
+              center:
+                type: string
+                example: '{"type":"Point","coordinates":[89.055836225,25.779405193]}'
+        status:
+          type: integer
+          example: 200
+    districts_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 34
+              name:
+                type: string
+                example: Khulna
+              center:
+                type: string
+                example: '{"type":"Point","coordinates":[89.447847757,22.470878222]}'
+    dncc_success:
+      type: object
+      properties:
+        message:
+          type: string
+          default: dncc
+        status:
+          type: integer
+          default: 200
+    get_point_success:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Geo fence points
+        status:
+          type: integer
+          default: 200
+        data:
+          type: array
+          items:
+            - type: object
+              properties:
+                id:
+                  type: string
+                  example: 65475dbad1e00
+                name:
+                  type: string
+                  example: Songsodh vaban
+                radius:
+                  type: string
+                  example: 55
+                longitude:
+                  type: string
+                  example: '90.37852866512583'
+                latitude:
+                  type: string
+                  example: '23.76245538673939'
+                user_id:
+                  type: integer
+                  example: 2978
+            - type: object
+              properties:
+                id:
+                  type: string
+                  example: 65701af5854b8
+                name:
+                  type: string
+                  example: Songsodh vaban
+                radius:
+                  type: string
+                  example: 70
+                longitude:
+                  type: string
+                  example: '90.37852866512583'
+                latitude:
+                  type: string
+                  example: '23.76245538673939'
+                user_id:
+                  type: integer
+                  example: 2978
+    get_single_point_success:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Geo fence points
+        status:
+          type: integer
+          default: 200
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 635085
+              name:
+                type: string
+                example: Songsodh vaban
+              radius:
+                type: integer
+                example: 55
+              longitude:
+                type: number
+                example: 90.37852866512583
+              latitude:
+                type: number
+                example: 23.76245538673939
+    missing_parameter:
+      type: object
+      properties:
+        message:
+          type: string
+          default: Parameter missing
+        status:
+          type: integer
+          default: 400
+    nearby_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 4
+              name:
+                type: string
+                example: Uttara sector 12 Park
+              distance_in_meters:
+                type: number
+                example: 0.00045241879869987946
+              longitude:
+                type: number
+                example: 90.383051633835
+              latitude:
+                type: number
+                example: 23.871887192063
+              pType:
+                type: string
+                example: Recreation
+              Address:
+                type: string
+                example: Road 11, Sector 12
+              area:
+                type: string
+                example: Uttara
+              city:
+                type: string
+                example: Dhaka
+              postCode:
+                type: string
+                example: 1230
+              subType:
+                type: string
+                example: PARK
+              uCode:
+                type: string
+                example: OYFR1074
+              ST_AsText(location):
+                type: string
+                example: POINT(90.383051633835 23.871887192063)
+        status:
+          type: integer
+          default: 200
+    no_registered_key:
+      type: object
+      properties:
+        message:
+          type: string
+          default: Invalid or No Registered Key
+        status:
+          type: integer
+          default: 401
+    payment_exception:
+      type: object
+      properties:
+        message:
+          type: string
+          default: Payment exception
+        status:
+          type: integer
+          default: 402
+    point_in_polygon_form:
+      type: object
+      properties:
+        point:
+          type: string
+          description: 90.41697542000593,23.780273491928714
+    point_in_polygon_success:
+      type: object
+      properties:
+        message:
+          type: string
+          default: Point not inside polygon
+        status:
+          type: number
+          default: 200
+        data:
+          type: 'null'
+    rev_geo_success:
+      type: object
+      properties:
+        place:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 6488
+            distance_within_meters:
+              type: number
+              example: 3.6856
+            address:
+              type: string
+              example: House 8, Road 2, Block C, Section 2, Mirpur, Dhaka
+            area:
+              type: string
+              example: Mirpur
+            city:
+              type: string
+              example: Dhaka
+            postCode:
+              type: string
+              example: '1216'
+            address_bn:
+              type: string
+              example: বাড়ি ৮, রোড ২, ব্লক সি, সেকশন ২, মিরপুর, ঢাকা
+            area_bn:
+              type: string
+              example: মিরপুর
+            city_bn:
+              type: string
+              example: ঢাকা
+            country:
+              type: string
+              example: বাংলাদেশ
+            division:
+              type: string
+              example: ঢাকা
+            district:
+              type: string
+              example: ঢাকা
+            sub_district:
+              type: string
+              example: পল্লবী
+            pauroshova:
+              type: 'null'
+            union:
+              type: 'null'
+            location_type:
+              type: string
+              example: শহর
+            address_components:
+              type: object
+              properties:
+                place_name:
+                  type: 'null'
+                house:
+                  type: string
+                  example: House 8
+                road:
+                  type: string
+                  example: Road 2
+            area_components:
+              type: object
+              properties:
+                area:
+                  type: string
+                  example: Mirpur
+                sub_area:
+                  type: string
+                  example: Section 2
+            thana:
+              type: string
+              example: Mirpur
+            thana_bn:
+              type: string
+              example: মিরপুর
+        status:
+          type: integer
+          default: 200
+    route_location_optimized_body:
+      type: object
+      properties:
+        api_key:
+          type: string
+          description: Your Barikoi API key
+          example: API_KEY
+        locations:
+          type: array
+          description: Array of locations to sort/optimize (max ~50 depending on plan)
+          items:
+            type: object
+            properties:
+              point:
+                type: object
+                properties:
+                  lat:
+                    type: number
+                    example: 24.439648
+                  lon:
+                    type: number
+                    example: 90.731277
+                required:
+                  - lat
+                  - lon
+              additional_payload:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                      example: Kishoreganj Thana
+                description: Optional metadata (commonly used for human-readable address)
+          example:
+            - point:
+                lat: 24.439648
+                lon: 90.731277
+              additional_payload:
+                - address: Kishoreganj Thana
+            - point:
+                lat: 23.74608583
+                lon: 90.37368
+              additional_payload:
+                - address: House 36, Road 9/A
+    route_location_optimized_success:
+      type: object
+      properties:
+        sorted_waypoints:
+          type: array
+          items:
+            - type: object
+              properties:
+                point:
+                  type: object
+                  properties:
+                    lat:
+                      type: number
+                      example: 24.439648
+                    lon:
+                      type: number
+                      example: 90.731277
+                additional_payload:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      address:
+                        type: string
+                        example: Kishoreganj Thana
+                index:
+                  type: integer
+                  example: 1
+            - type: object
+              properties:
+                point:
+                  type: object
+                  properties:
+                    lat:
+                      type: number
+                      example: 24.440899
+                    lon:
+                      type: number
+                      example: 90.771103
+                additional_payload:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      address:
+                        type: string
+                        example: Monju Villa, House 1244, Hossainpur Road, Nogua
+                index:
+                  type: integer
+                  example: 2
+            - type: object
+              properties:
+                point:
+                  type: object
+                  properties:
+                    lat:
+                      type: number
+                      example: 23.74608583
+                    lon:
+                      type: number
+                      example: 90.37368
+                additional_payload:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      address:
+                        type: string
+                        example: House 36, Road 9/A
+                index:
+                  type: integer
+                  example: 3
+            - type: object
+              properties:
+                point:
+                  type: object
+                  properties:
+                    lat:
+                      type: number
+                      example: 23.74577034
+                    lon:
+                      type: number
+                      example: 90.37338898
+                additional_payload:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      address:
+                        type: string
+                        example: House 38, Road 9/A
+                index:
+                  type: integer
+                  example: 4
+            - type: object
+              properties:
+                point:
+                  type: object
+                  properties:
+                    lat:
+                      type: number
+                      example: 23.74441997
+                    lon:
+                      type: number
+                      example: 90.37290861
+                additional_payload:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      address:
+                        type: string
+                        example: Dhanmondi, Road 8/a
+                index:
+                  type: integer
+                  example: 5
+        status:
+          type: integer
+          default: 200
+    route_match_success:
+      type: object
+      properties:
+        geometry:
+          type: object
+          properties:
+            coordinates:
+              type: array
+              items:
+                type: array
+                items:
+                  type: number
+                  format: double
+              format: array
+              example:
+                - - 90.384425
+                  - 23.726761
+                - - 90.384427
+                  - 23.726622
+            type:
+              type: string
+              example: LineString
+        distance:
+          type: number
+          format: double
+          example: 15.5
+        status:
+          type: integer
+          default: 200
+    route_optimization_body:
+      type: object
+      properties:
+        api_key:
+          type: string
+          example: API_KEY
+        source:
+          type: string
+          example: 23.746086,90.37368
+        destination:
+          type: string
+          example: 23.746214,90.371654
+        profile:
+          type: string
+          example: car
+        geo_points:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1
+              point:
+                type: string
+                example: 23.746086,90.37368
+          example:
+            - id: 1
+              point: 23.746086,90.37368
+            - id: 2
+              point: 23.746214,90.371654
+    route_optimization_success:
+      type: object
+      properties:
+        hints:
+          type: object
+          properties:
+            visited_nodes.sum:
+              type: integer
+              example: 50
+            visited_nodes.average:
+              type: integer
+              example: 10
+        info:
+          type: object
+          properties:
+            copyrights:
+              type: array
+              items:
+                type: string
+                example: GraphHopper
+            took:
+              type: number
+              example: 0
+        paths:
+          type: array
+          items:
+            type: object
+            properties:
+              distance:
+                type: number
+                format: double
+                description: The total distance, in meters.
+                example: 1846.266
+              weight:
+                type: number
+                format: double
+                example: 147.083567
+              time:
+                type: integer
+                format: int64
+                description: The total travel time, in milliseconds.
+                example: 147071
+              transfers:
+                type: number
+                example: 0
+              points_encoded:
+                type: boolean
+                description: >
+                  Whether the `points` and `snapped_waypoints` fields are
+                  polyline-encoded strings rather than JSON arrays of
+                  coordinates. See the field description for more information on
+                  the two formats.
+                example: true
+              bbox:
+                type: array
+                items:
+                  type: number
+                  format: double
+                  description: >
+                    The bounding box of the route geometry. Format: [minLon,
+                    minLat, maxLon, maxLat].
+              points:
+                type: string
+                format: EncodedLineString (string) or LineString (object)
+                description: >-
+                  The geometry of the route. The format depends on the value of
+                  `points_encoded`.
+                example: >-
+                  c{|oCacrfPh@hA~B~ErCcBrGwD`Bw@rOkGDNyKtEiChAmIxE~@fB_AgB_L~GK[d@Y
+              instructions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    distance:
+                      type: number
+                      format: double
+                      description: |
+                        The distance for this instruction, in meters.
+                      example: 0
+                    sign:
+                      type: integer
+                      format: int64
+                      description: |
+                        A number which specifies the sign to show.
+                      example: 5
+                    interval:
+                      type: array
+                      description: >
+                        Two indices into `points`, referring to the beginning
+                        and the end of the segment of the route this instruction
+                        refers to.
+                      items:
+                        type: integer
+                        format: int64
+                        example: 0
+                    text:
+                      type: string
+                      description: >
+                        A description what the user has to do in order to follow
+                        the route. The language depends on the locale parameter.
+                      example: Waypoint 1
+                    time:
+                      type: integer
+                      format: int32
+                      description: |
+                        The duration for this instruction, in milliseconds.
+                      example: 0
+                    street_name:
+                      type: string
+                      description: >
+                        The name of the street to turn onto in order to follow
+                        the route.
+                      example: null
+              legs:
+                type: array
+              details:
+                type: object
+              ascend:
+                type: number
+                format: double
+                description: The total ascent, in meters.
+                example: 0
+              descend:
+                type: number
+                format: double
+                description: The total descent, in meters.
+                example: 0
+              snapped_waypoints:
+                type: string
+                format: EncodedLineString (string) or LineString (object)
+                description: >
+                  The snapped input points. The format depends on the value of
+                  `points_encoded`.
+                example: c{|oCacrfP??h@hArGzB|AtBeM`C
+    route_with_routing_algorithm:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            start:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                  description: Latitude of the starting point
+                longitude:
+                  type: number
+                  description: Longitude of the starting point
+              required:
+                - latitude
+                - longitude
+            destination:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                  description: Latitude of the destination point
+                longitude:
+                  type: number
+                  description: Longitude of the destination point
+              required:
+                - latitude
+                - longitude
+          required:
+            - start
+            - destination
+      required:
+        - data
+    routing_success:
+      type: object
+      properties:
+        code:
+          type: string
+          example: OK
+        routes:
+          type: array
+          items:
+            type: object
+            properties:
+              geometry:
+                type: string
+                description: >-
+                  The unsimplified geometry of the route segment, depending on
+                  the geometries parameter.
+                example: >-
+                  bqCmhpfPdMaDqEqO`U}MiFc`BueAjZonBlGisJs_@uh@gManAeJaaBzGsZbQ}v@jsAw`@jwAqt@p`BiBtjAvZzhAga@fAmXbQoi@mmA{vA~Ly`CfE
+              legs:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    steps:
+                      type: array
+                    distance:
+                      type: number
+                      description: >-
+                        The distance traveled by this route leg, in float
+                        meters.
+                      example: 31580.5
+                    duration:
+                      type: number
+                      description: The estimated travel time, in float number of seconds.
+                      example: 5011.5
+                    summary:
+                      type: string
+                      description: Summary of the route taken as string.
+                    weight:
+                      type: number
+                      example: 5011.5
+              distance:
+                type: number
+                description: >-
+                  The distance of travel from the maneuver to the subsequent
+                  step, in float meters.
+                example: 31580.5
+              duration:
+                type: number
+                description: The estimated travel time, in float number of seconds.
+                example: 5011.5
+              weight_name:
+                type: string
+                example: routability
+              weight:
+                type: number
+                example: 5011.5
+        waypoints:
+          type: array
+          items:
+            type: object
+            properties:
+              hint:
+                type: string
+                example: >-
+                  1M4MgNbODIAAAAAAUQAAAAAAAABWAgAAAAAAAFZN10EAAAAA6SFHQwAAAABRAAAAAAAAAFYCAADlAAAA6tliBeZObQG10mIF1E9tAQAATwsayG8z
+              distance:
+                type: number
+                description: >-
+                  The distance of travel from the maneuver to the subsequent
+                  step, in float meters.
+                example: 189.684241
+              name:
+                type: string
+                example: null
+              location:
+                type: array
+                items:
+                  type: number
+                minItems: 2
+                maxItems: 2
+                example:
+                  - 90.364394
+                  - 23.940838
+    rupantor_address_match_form:
+      type: object
+      properties:
+        q:
+          type: string
+          description: হাউস ১৮, রোড ৫, ব্লক জি, সেকশন ২ মিরপুর
+        q2:
+          type: string
+          description: house 18, road 5, block G, section 2, mirpur
+        match:
+          type: boolean
+          description: 'yes'
+      required:
+        - q
+        - q2
+        - match
+    rupantor_address_match_success:
+      type: object
+      properties:
+        match:
+          type: object
+          properties:
+            address 1:
+              type: string
+              example: হাউস ১৮, রোড ৫, ব্লক জি, সেকশন ২ মিরপুর
+            address 2:
+              type: string
+              example: house 18, road 5, block j, section 2, mirpur
+            address_short:
+              type: string
+              example: Shewrapara Koborsthan, East Shewrapara, Shewrapara
+            match percentage:
+              type: string
+              example: 100%
+            match status:
+              type: string
+              example: exact
+        status:
+          type: integer
+          default: 200
+    rupantor_geocoder_form_v1:
+      type: object
+      properties:
+        q:
+          type: string
+          description: matikata rd basa 572/k barikoi
+        thana:
+          type: boolean
+          description: 'yes'
+        district:
+          type: boolean
+          description: 'yes'
+        bangla:
+          type: boolean
+          description: 'yes'
+      required:
+        - q
+    rupantor_geocoder_form_v2:
+      type: object
+      properties:
+        q:
+          type: string
+          description: shawrapara
+        thana:
+          type: boolean
+          description: 'yes'
+        district:
+          type: boolean
+          description: 'yes'
+        bangla:
+          type: boolean
+          description: 'yes'
+      required:
+        - q
+    rupantor_geocoder_success:
+      type: object
+      properties:
+        given_address:
+          type: string
+          example: shawrapara
+        fixed_address:
+          type: string
+          example: shewrapara, mirpur
+        bangla_address:
+          type: string
+          example: শেওড়াপাড়া কবরস্থান, ইস্ট শেওড়াপাড়া, শেওড়াপাড়া, মিরপুর, ঢাকা
+        address_status:
+          type: string
+          example: incomplete
+        geocoded_address:
+          type: object
+          properties:
+            Address:
+              type: string
+              example: >-
+                Shewrapara Koborsthan, East Shewrapara, Shewrapara, Mirpur,
+                Dhaka
+            address:
+              type: string
+              example: >-
+                Shewrapara Koborsthan, East Shewrapara, Shewrapara, Mirpur,
+                Dhaka
+            address_bn:
+              type: string
+              example: >-
+                শেওড়াপাড়া কবরস্থান, ইস্ট শেওড়াপাড়া, শেওড়াপাড়া, মিরপুর,
+                ঢাকা
+            alternate_address:
+              type: string
+              example: >-
+                Shewrapara Koborsthan, East Shewrapara, Shewrapara, Mirpur,
+                Dhaka
+            area:
+              type: string
+              example: Mirpur
+            area_bn:
+              type: string
+              example: মিরপুর
+            bounds:
+              type: string
+              example: >-
+                POLYGON((90.37576053 23.79175613,90.37567053
+                23.79184613,90.37558053 23.79175613,90.37567053
+                23.79166613,90.37576053 23.79175613))
+            business_name:
+              type: string
+              example: Shewrapara Koborsthan
+            city:
+              type: string
+              example: Dhaka
+            city_bn:
+              type: string
+              example: ঢাকা
+            created_at:
+              type: string
+              format: date-time
+              example: '2018-02-06T14:43:12'
+            district:
+              type: string
+              example: Dhaka
+            geo_location:
+              type: array
+              items:
+                type: number
+              example:
+                - 90.37567053
+                - 23.79175613
+            holding_number:
+              type: 'null'
+            id:
+              type: integer
+              example: 221788
+            latitude:
+              type: string
+              example: '23.79175613'
+            location:
+              type: string
+              example: 23.79175613,90.37567053
+            location_shape:
+              type: string
+              example: POINT (90.37567053 23.79175613)
+            longitude:
+              type: string
+              example: '90.37567053'
+            match_freq:
+              type: integer
+              example: 10
+            match_fuzzy:
+              type: integer
+              example: 0
+            matching_diff:
+              type: integer
+              example: 1
+            new_address:
+              type: string
+              example: >-
+                Shewrapara Koborsthan, East Shewrapara, Shewrapara, Mirpur,
+                Dhaka
+            pType:
+              type: string
+              example: Religious Place
+            place_code:
+              type: string
+              example: TOLJ0109
+            popularity_ranking:
+              type: integer
+              example: 1
+            postCode:
+              type: integer
+              example: 1216
+            postcode:
+              type: integer
+              example: 1216
+            road_name_number:
+              type: 'null'
+            score:
+              type: integer
+              example: 0
+            subType:
+              type: string
+              example: Graveyard
+            sub_area:
+              type: string
+              example: Shewrapara
+            sub_district:
+              type: string
+              example: Kafrul
+            sub_type:
+              type: string
+              example: Graveyard
+            super_sub_area:
+              type: string
+              example: East Shewrapara
+            thana:
+              type: string
+              example: Kafrul
+            type:
+              type: string
+              example: Religious Place
+            uCode:
+              type: string
+              example: TOLJ0109
+            union:
+              type: 'null'
+            unions:
+              type: 'null'
+            updated_at:
+              type: string
+              format: date-time
+              example: '2023-10-18T15:20:11'
+            user_id:
+              type: integer
+              example: 1273
+        confidence_score_percentage:
+          type: integer
+          example: 70
+        status:
+          type: integer
+          default: 200
+    snap_to_road_success:
+      type: object
+      properties:
+        coordinates:
+          type: array
+          items:
+            type: number
+            format: double
+          example:
+            - 90.36288583910802
+            - 23.80475086627028
+        distance:
+          type: number
+          format: double
+          example: 0.5866113852736488
+        type:
+          type: string
+          example: Point
+    subdistricts_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 340
+              name:
+                type: string
+                example: Mirpur
+              district:
+                type: string
+                example: Dhaka
+              center:
+                type: string
+                example: '{"type":"Point","coordinates":[90.361755984,23.794160142]}'
+    unions_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1440
+              name:
+                type: string
+                example: Dhaka Dakkhin
+              sub_district:
+                type: string
+                example: Golabganj
+              center:
+                type: string
+                example: '{"type":"Point","coordinates":[92.035110667,24.811296741]}'
+    update_single_point_success:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Geo fence point updated
+        status:
+          type: integer
+          default: 200
+    ward_geometry_success:
+      type: object
+      properties:
+        ward:
+          type: object
+          properties:
+            ward_number:
+              type: number
+              default: 31
+            geometry:
+              type: string
+              default: >-
+                {"type": "Polygon", "coordinates": [[[90.366198, 23.762884],
+                [90.366385, 23.762196], [90.364897, 23.761787], [90.365314,
+                23.76058], [90.365408, 23.760335], [90.365535, 23.759973],
+                [90.365757, 23.759365], [90.366425, 23.759635], [90.367205,
+                23.757316], [90.367301, 23.757033], [90.366696, 23.756858],
+                [90.366887, 23.755973], [90.366429, 23.755908], [90.366556,
+                23.755447], [90.36579, 23.75532], [90.36592, 23.754774],
+                [90.36532, 23.754647], [90.364874, 23.754292], [90.363961,
+                23.755053], [90.363957, 23.75505], [90.363949, 23.755056],
+                [90.363947, 23.75506], [90.363674, 23.755298], [90.363619,
+                23.755345], [90.36357, 23.755387], [90.363358, 23.755567],
+                [90.362842, 23.755997], [90.362214, 23.756507], [90.361939,
+                23.756734], [90.361737, 23.756911], [90.361514, 23.757009],
+                [90.361299, 23.757099], [90.361199, 23.75713], [90.3611,
+                23.757163], [90.360846, 23.75726], [90.360334, 23.757679],
+                [90.360285, 23.75774], [90.359613, 23.758563], [90.359547,
+                23.758677], [90.35929, 23.759151], [90.359081, 23.759592],
+                [90.358951, 23.76], [90.358912, 23.760536], [90.358963,
+                23.760893], [90.358951, 23.76096], [90.358921, 23.761251],
+                [90.35892, 23.761312], [90.358897, 23.761692], [90.358876,
+                23.761962], [90.35885, 23.76219], [90.35885, 23.762254],
+                [90.358819, 23.762396], [90.358897, 23.762418], [90.359483,
+                23.762571], [90.360431, 23.762849], [90.360823, 23.762947],
+                [90.361373, 23.763125], [90.361702, 23.763216], [90.361932,
+                23.763266], [90.362112, 23.763334], [90.362374, 23.763419],
+                [90.362698, 23.7635], [90.362898, 23.763573], [90.363113,
+                23.763628], [90.363989, 23.763872], [90.364428, 23.763995],
+                [90.365048, 23.764177], [90.365204, 23.764218], [90.365492,
+                23.764295], [90.365577, 23.764068], [90.365709, 23.763695],
+                [90.365841, 23.763328], [90.365897, 23.763149], [90.365932,
+                23.763059], [90.366009, 23.762979], [90.366044, 23.762941],
+                [90.366152, 23.762898], [90.366198, 23.762884]]]}
+        status:
+          type: number
+          default: 200
+    ward_success:
+      type: array
+      items:
+        type: object
+        properties:
+          Ward:
+            type: integer
+            default: 7
+    wardzone_success:
+      type: object
+      properties:
+        ward:
+          type: integer
+          default: 7
+        ward area:
+          type: string
+          default: >-
+            {"type": "Polygon", "coordinates": [[[90.366213, 23.815692],
+            [90.366953, 23.812939], [90.367616, 23.810559], [90.367781,
+            23.809919], [90.367905, 23.809467], [90.368214, 23.808347],
+            [90.368475, 23.807438], [90.368488, 23.807388], [90.368568,
+            23.807089], [90.368485, 23.807074], [90.367573, 23.806866],
+            [90.366942, 23.806706], [90.366865, 23.806684], [90.366787,
+            23.806672], [90.366232, 23.80652], [90.365963, 23.806441],
+            [90.365687, 23.806311], [90.365108, 23.806016], [90.364421,
+            23.805636], [90.363533, 23.805096], [90.362932, 23.804733],
+            [90.362015, 23.804151], [90.360848, 23.803413], [90.35955,
+            23.802584], [90.358351, 23.801803], [90.357756, 23.801423],
+            [90.357077, 23.800988], [90.356745, 23.800775], [90.356026,
+            23.800323], [90.355967, 23.800281], [90.355285, 23.799847],
+            [90.355065, 23.800176], [90.35476, 23.800618], [90.354457,
+            23.801035], [90.353916, 23.801826], [90.353375, 23.802613],
+            [90.352968, 23.803212], [90.352523, 23.803857], [90.352153,
+            23.804365], [90.351777, 23.804927], [90.351689, 23.80518],
+            [90.351641, 23.805388], [90.351569, 23.806026], [90.351112,
+            23.807526], [90.354567, 23.809209], [90.353773, 23.809533],
+            [90.353622, 23.810132], [90.354148, 23.810377], [90.354159,
+            23.810603], [90.354041, 23.81079], [90.353655, 23.810897],
+            [90.353408, 23.810867], [90.352924, 23.813075], [90.35491,
+            23.813793], [90.35475, 23.814563], [90.354568, 23.814971],
+            [90.356037, 23.815354], [90.357506, 23.815736], [90.357828,
+            23.815167], [90.358622, 23.815088], [90.358686, 23.813581],
+            [90.35933, 23.812713], [90.361196, 23.812654], [90.362447,
+            23.814799], [90.363237, 23.815187], [90.366213, 23.815692]]]}
+        zone:
+          type: integer
+          default: 2
+    zone_success:
+      type: array
+      items:
+        type: object
+        properties:
+          Zone:
+            type: integer
+            default: 2
+    routing_algorithm_success:
+      type: object
+      properties:
+        trip:
+          type: object
+          properties:
+            locations:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: break
+                  lat:
+                    type: number
+                    format: float
+                    example: 23.791645
+                  lon:
+                    type: number
+                    format: float
+                    example: 90.365587
+                  original_index:
+                    type: integer
+                    example: 0
+            legs:
+              type: array
+              items:
+                type: object
+                properties:
+                  maneuvers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: integer
+                          example: 1
+                        instruction:
+                          type: string
+                          example: Drive north.
+                        verbal_succinct_transition_instruction:
+                          type: string
+                          example: Drive north. Then Bear left.
+                        verbal_pre_transition_instruction:
+                          type: string
+                          example: Drive north. Then Bear left.
+                        verbal_post_transition_instruction:
+                          type: string
+                          example: Continue for 40 feet.
+                        time:
+                          type: number
+                          format: float
+                          example: 1.011
+                        length:
+                          type: number
+                          format: float
+                          example: 0.006
+                        cost:
+                          type: number
+                          format: float
+                          example: 1.238
+                        begin_shape_index:
+                          type: integer
+                          example: 0
+                        end_shape_index:
+                          type: integer
+                          example: 1
+                        verbal_multi_cue:
+                          type: boolean
+                          example: true
+                        travel_mode:
+                          type: string
+                          example: drive
+                        travel_type:
+                          type: string
+                          example: car
+                        street_names:
+                          type: array
+                          items:
+                            type: string
+                          example:
+                            - 60 Feet Kamal Soroni Road
+                            - 60 Feet
+                  summary:
+                    type: object
+                    properties:
+                      has_time_restrictions:
+                        type: boolean
+                        example: false
+                      has_toll:
+                        type: boolean
+                        example: false
+                      has_highway:
+                        type: boolean
+                        example: false
+                      has_ferry:
+                        type: boolean
+                        example: false
+                      min_lat:
+                        type: number
+                        format: float
+                        example: 23.784703
+                      min_lon:
+                        type: number
+                        format: float
+                        example: 90.365201
+                      max_lat:
+                        type: number
+                        format: float
+                        example: 23.791915
+                      max_lon:
+                        type: number
+                        format: float
+                        example: 90.3676
+                      time:
+                        type: number
+                        format: float
+                        example: 97.969
+                      length:
+                        type: number
+                        format: float
+                        example: 0.58
+                      cost:
+                        type: number
+                        format: float
+                        example: 257.358
+                  shape:
+                    type: string
+                    example: >-
+                      w`ckl@_hnjkDyD`A{EtKgCfD`AjA~@j@rADxKsA|FkAfPsHh@mDkCsLi@cCnP}GjGoChEkCbUiItNcDjMwApI}@d[eApF[|GM|MgBhTgHlTmIx^mGr]iDhSoBvWKzIEbZoEtTwEhFy@|\\{IrGaC
+            summary:
+              type: object
+              properties:
+                has_time_restrictions:
+                  type: boolean
+                  example: false
+                has_toll:
+                  type: boolean
+                  example: false
+                has_highway:
+                  type: boolean
+                  example: false
+                has_ferry:
+                  type: boolean
+                  example: false
+                min_lat:
+                  type: number
+                  format: float
+                  example: 23.784703
+                min_lon:
+                  type: number
+                  format: float
+                  example: 90.365201
+                max_lat:
+                  type: number
+                  format: float
+                  example: 23.791915
+                max_lon:
+                  type: number
+                  format: float
+                  example: 90.3676
+                time:
+                  type: number
+                  format: float
+                  example: 97.969
+                length:
+                  type: number
+                  format: float
+                  example: 0.58
+                cost:
+                  type: number
+                  format: float
+                  example: 257.358
+            status_message:
+              type: string
+              example: Found route between points
+            status:
+              type: integer
+              example: 0
+            units:
+              type: string
+              example: miles
+            language:
+              type: string
+              example: en-US
+        id:
+          type: string
+          example: test_route
+    search_place:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              address:
+                type: string
+                example: >-
+                  Barikoi HQ (barikoi.com), Dr Mohsin Plaza, House 2/7, Begum
+                  Rokeya Sarani, Pallabi, Mirpur, Dhaka
+              place_code:
+                type: string
+                example: BKOI2017
+        session_id:
+          type: string
+          example: eec76e23-481f-4060-8959-df5db6219126
+        status:
+          type: integer
+          example: 200
+    get_place_details:
+      type: object
+      properties:
+        session_id:
+          type: string
+          example: 8d6a20cb-e07d-4332-a293-d0cf0fce968e
+        status:
+          type: integer
+          default: 200
+        place:
+          type: object
+          properties:
+            address:
+              type: string
+              example: >-
+                Barikoi HQ (barikoi.com), Dr Mohsin Plaza, House  2/7, Begum
+                Rokeya Sarani, Pallabi, Mirpur, Dhaka
+            place_code:
+              type: string
+              example: BKOI2017
+            latitude:
+              type: string
+              example: '23.823730671721'
+            longitude:
+              type: string
+              example: '90.36402004477634'
+    thana_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 277
+              name:
+                type: string
+                example: Khulna Sadar
+              center:
+                type: string
+                example: '{"type":"Point","coordinates":[89.568639404,22.800607353]}'
+        status:
+          type: integer
+          example: 200
+    city_corporation_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 3
+              name:
+                type: string
+                example: Dhaka North City Corporation
+    all_ward_success:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              ward:
+                type: integer
+                example: 15
+              zone:
+                type: integer
+                example: 1
+              area:
+                type: string
+                example: >-
+                  {"type":"Polygon","coordinates":[[[90.37581,23.737691],[90.376834,23.737794],[90.376266,23.738295],[90.377296,23.738437],[90.378063,23.737651],[90.379264,23.736541],[90.381346,23.736716],[90.380981,23.7376],[90.383492,23.738052],[90.383642,23.738098],[90.382966,23.740853],[90.383631,23.741293],[90.383789,23.741698],[90.384025,23.742373],[90.384326,23.743176],[90.384685,23.744144],[90.385106,23.745332],[90.384224,23.74517],[90.383596,23.745059],[90.382048,23.744679],[90.381716,23.745283],[90.381279,23.746056],[90.380879,23.746759],[90.380402,23.7475],[90.379272,23.749506],[90.378918,23.750157],[90.377215,23.749585],[90.375528,23.749668],[90.375075,23.750562],[90.374576,23.751544],[90.37408,23.752516],[90.373589,23.753488],[90.372869,23.754907],[90.372555,23.754717],[90.37202,23.754399],[90.371191,23.7539],[90.370526,23.753498],[90.369461,23.75283],[90.367799,23.751776],[90.367656,23.751705],[90.36838,23.750606],[90.37044,23.74763],[90.371861,23.745578],[90.372792,23.744237],[90.371662,23.743562],[90.371287,23.743542],[90.370212,23.743606],[90.369494,23.743814],[90.369295,23.743849],[90.368844,23.743666],[90.368754,23.743794],[90.368561,23.743806],[90.368101,23.743904],[90.367815,23.743935],[90.367544,23.743906],[90.367398,23.743847],[90.367173,23.743741],[90.366524,23.743402],[90.366651,23.742953],[90.366734,23.742517],[90.366689,23.741944],[90.366667,23.741628],[90.36682,23.741648],[90.367188,23.741696],[90.367664,23.741753],[90.368514,23.741858],[90.369718,23.742007],[90.370381,23.742358],[90.371274,23.742468],[90.372291,23.742596],[90.372826,23.742437],[90.37328,23.74172],[90.373687,23.741074],[90.374597,23.739631],[90.375657,23.737944],[90.37581,23.737691]]]}
+    all_zone_success:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              zone:
+                type: integer
+                example: 1
+              area:
+                type: string
+                example: >-
+                  {"type":"Polygon","coordinates":[[[90.511637,23.635197],[90.505972,23.636258],[90.505157,23.631819],[90.510607,23.630365],[90.511637,23.635197]]]}
+    nearby_with_category_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 487287
+              name:
+                type: string
+                example: Kids Time Mirpur Dohs
+              distance_in_meters:
+                type: string
+                example: '273.35821539'
+              longitude:
+                type: string
+                example: '90.36803662776947'
+              latitude:
+                type: string
+                example: '23.839360828986447'
+              city:
+                type: string
+                example: Dhaka
+              area:
+                type: string
+                example: Mirpur
+              ST_AsText(location):
+                type: string
+                example: POINT(90.36803662776947 23.839360828986447)
+              pType:
+                type: string
+                example: Education
+              subType:
+                type: string
+                example: Daycare, Special School
+              postCode:
+                type: string
+                example: '1216'
+              Address:
+                type: string
+                example: >-
+                  Kids Time Mirpur Dohs, House 925, Road 13A, Mirpur DOHS,
+                  Mirpur, Dhaka
+              uCode:
+                type: string
+                example: QTJM5353
+    nearby_with_multiple_success:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1774563
+              name:
+                type: string
+                example: Shibpur School
+              distance_in_meters:
+                type: string
+                example: '348.27006271'
+              longitude:
+                type: string
+                example: '90.368641270246'
+              latitude:
+                type: string
+                example: '23.834669948069'
+              city:
+                type: string
+                example: Dhaka
+              area:
+                type: string
+                example: Mirpur
+              ST_AsText(location):
+                type: string
+                example: POINT(90.368641270246 23.834669948069)
+              pType:
+                type: string
+                example: Education
+              subType:
+                type: string
+                example: School
+              postCode:
+                type: string
+                example: '1216'
+              Address:
+                type: string
+                example: Shibpur School, House 263, Road 3, Mirpur DOHS, Mirpur, Dhaka
+              uCode:
+                type: string
+                example: CHDA0183
+        status:
+          type: integer
+          example: 200
+    distance_success:
+      type: object
+      properties:
+        Distance:
+          type: string
+          default: 0.8081 KM
+        status:
+          type: integer
+          default: 200
+    rev_geo_server_success:
+      type: object
+      properties:
+        place:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 534001
+            distance_within_meters:
+              type: number
+              example: 3.9083
+            address:
+              type: string
+              example: House 20, Avenue 3, Lane 25, Block D, Section 11
+            area:
+              type: string
+              example: Mirpur
+            city:
+              type: string
+              example: Dhaka
+            postCode:
+              type: integer
+              example: 1216
+            country:
+              type: string
+              example: Bangladesh
+            division:
+              type: string
+              example: Dhaka
+            sub_district:
+              type: string
+              example: Pallabi
+            district:
+              type: string
+              example: Dhaka
+            pauroshova:
+              type: string
+              example: null
+            union:
+              type: string
+              example: null
+            location_type:
+              type: string
+              example: Urban
+            address_components:
+              type: object
+              properties:
+                place_name:
+                  type: string
+                  example: null
+                house:
+                  type: string
+                  example: House 20
+                road:
+                  type: string
+                  example: Avenue 3
+            area_components:
+              type: object
+              properties:
+                area:
+                  type: string
+                  example: Mirpur
+                sub_area:
+                  type: string
+                  example: Section 11
+        status:
+          type: integer
+          default: 200
+  responses:
+    add_point_success:
+      description: add_point_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/add_point_success'
+    all_ward_success:
+      description: all_ward_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/all_ward_success'
+    all_zone_success:
+      description: all_zone_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/all_zone_success'
+    api_limit_exceeded:
+      description: api_limit_exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/api_limit_exceeded'
+    area_success:
+      description: area_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/area_success'
+    autocomplete_bangla_success:
+      description: autocomplete_bangla_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/autocomplete_bangla_success'
+    autocomplete_success:
+      description: autocomplete_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/autocomplete_success'
+    check_geo_fence_success:
+      description: check_geo_fence_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/check_geo_fence_success'
+    check_nearby_success:
+      description: Successful response for check nearby API
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                description: >-
+                  Status message indicating if location is inside or outside
+                  geofence
+                example: Inside geo fence
+              status:
+                type: integer
+                description: HTTP status code
+                example: 200
+              data:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Unique identifier for the geofence
+                    example: 68e5f2ab382b2
+                  name:
+                    type: string
+                    description: Name of the destination
+                    example: destination
+                  radius:
+                    type: string
+                    description: Radius of the geofence in meters
+                    example: '50'
+                  latitude:
+                    type: string
+                    description: Latitude of the destination point
+                    example: '23.76245538673939'
+                  longitude:
+                    type: string
+                    description: Longitude of the destination point
+                    example: '90.37852866512583'
+                  user_id:
+                    type: integer
+                    description: User ID associated with the geofence
+                    example: 1624
+          example:
+            message: Inside geo fence
+            status: 200
+            data:
+              id: 68e5f2ab382b2
+              name: destination
+              radius: '50'
+              latitude: '23.76245538673939'
+              longitude: '90.37852866512583'
+              user_id: 1624
+    cities_success:
+      description: cities_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/cities_success'
+    distance_success:
+      description: distance_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/distance_success'
+    dncc_success:
+      description: dncc_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/dncc_success'
+    delete_single_point_success:
+      description: delete_point_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/delete_single_point_success'
+    districts_success:
+      description: districts_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/districts_success'
+    divisions_success:
+      description: divisions_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/divisions_success'
+    get_point_success:
+      description: get_point_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/get_point_success'
+    get_single_point_success:
+      description: get_point_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/get_point_success'
+    get_place_details:
+      description: get_place_details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/get_place_details'
+    missing_parameter:
+      description: missing_parameter
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/missing_parameter'
+    nearby_success:
+      description: nearby_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/nearby_success'
+    nearby_with_category_success:
+      description: nearby_success_with_category
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/nearby_with_category_success'
+    nearby_with_multiple_success:
+      description: nearby_success_with_multiple
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/nearby_with_multiple_success'
+    no_registered_key:
+      description: no_registered_key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/no_registered_key'
+    payment_exception:
+      description: payment_exception
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/payment_exception'
+    point_in_polygon_success:
+      description: point_in_polygon_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/point_in_polygon_success'
+    rev_geo_server_success:
+      description: rev_geo_server_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rev_geo_server_success'
+    rev_geo_success:
+      description: rev_geo_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rev_geo_success'
+    route_location_optimized_success:
+      description: route_location_optimized_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/route_location_optimized_success'
+    route_match_success:
+      description: route_match_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/route_match_success'
+    route_optimization_success:
+      description: route_optimization_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/route_optimization_success'
+    routing_algorithm_success:
+      description: routing_algorithm_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/routing_algorithm_success'
+    routing_success:
+      description: routing_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/routing_success'
+    rupantor_address_match_success:
+      description: rupantor_address_match_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rupantor_address_match_success'
+    rupantor_geocoder_success:
+      description: rupantor_geocoder_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/rupantor_geocoder_success'
+    search_place:
+      description: search_place
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/search_place'
+    snap_to_road_success:
+      description: snap_to_road_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/snap_to_road_success'
+    subdistricts_success:
+      description: subdistricts_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/subdistricts_success'
+    thana_success:
+      description: thana_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/thana_success'
+    unions_success:
+      description: unions_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/unions_success'
+    city_corporation_success:
+      description: city_corporation_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/city_corporation_success'
+    update_single_point_success:
+      description: update_point_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/update_single_point_success'
+    ward_geometry_success:
+      description: ward_geometry_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ward_geometry_success'
+    ward_success:
+      description: ward_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ward_success'
+    wardzone_success:
+      description: wardzone_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/wardzone_success'
+    zone_success:
+      description: zone_success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/zone_success'

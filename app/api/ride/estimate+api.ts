@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
-import { pricing } from '@/src/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { pricing, preferences } from '@/src/db/schema';
+import { eq, and, inArray } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
 import { calculateFare, haversineKm } from '@/lib/fareCalc';
@@ -10,11 +10,13 @@ import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
 const estimateSchema = z.object({
-  pickup_lat:  z.number().min(-90).max(90),
-  pickup_lng:  z.number().min(-180).max(180),
-  dropoff_lat: z.number().min(-90).max(90),
-  dropoff_lng: z.number().min(-180).max(180),
-  vehicle_type: z.enum(VEHICLE_TYPE_VALUES).optional(),
+  pickup_lat:     z.number().min(-90).max(90),
+  pickup_lng:     z.number().min(-180).max(180),
+  dropoff_lat:    z.number().min(-90).max(90),
+  dropoff_lng:    z.number().min(-180).max(180),
+  vehicle_type:   z.enum(VEHICLE_TYPE_VALUES).optional(),
+  preference_ids: z.array(z.string().uuid()).max(10).optional(),
+  promo_code:     z.string().min(1).max(30).optional(),
 });
 
 export async function POST(request: Request) {
@@ -26,7 +28,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'validation_error', message: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, vehicle_type } = parsed.data;
+    const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, vehicle_type, preference_ids } = parsed.data;
 
     // Zone check
     const zoneCheck = await validatePickupZone(pickup_lat, pickup_lng);
@@ -38,6 +40,18 @@ export async function POST(request: Request) {
     // Route-based distance with Haversine fallback
     const route = await getRouteDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng).catch(() => null);
     const distanceKm = route?.distanceKm ?? haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+
+    // Compute preference surcharge
+    let preferenceSurchargeBdt = 0;
+    if (preference_ids && preference_ids.length > 0) {
+      const prefs = await db.select({ charge_bdt: preferences.charge_bdt })
+        .from(preferences)
+        .where(and(
+          inArray(preferences.id, preference_ids),
+          eq(preferences.is_active, true),
+        ));
+      preferenceSurchargeBdt = prefs.reduce((sum, p) => sum + p.charge_bdt, 0);
+    }
 
     // If specific vehicle type requested, return single estimate
     if (vehicle_type) {
@@ -53,23 +67,32 @@ export async function POST(request: Request) {
       const fare = calculateFare({
         base_fare_bdt:        activePricing.base_fare_bdt,
         per_km_bdt:           activePricing.per_km_bdt,
-        per_min_wait_bdt:     activePricing.per_min_wait_bdt,
-        free_wait_minutes:    activePricing.free_wait_minutes,
-        minimum_fare_bdt:     Number(activePricing.minimum_fare_bdt ?? 0),
+        per_min_bdt:          activePricing.per_min_bdt,
+        floor_length_km:      Number(activePricing.floor_length_km ?? 0),
+        floor_min:            activePricing.floor_min ?? 0,
         brta_fare_ceiling_bdt: activePricing.brta_fare_ceiling_bdt,
       }, distanceKm, 0);
 
       const vtDef = VEHICLE_TYPES.find(v => v.key === vehicle_type);
+      const driverFare = fare.total_bdt + preferenceSurchargeBdt;
       return Response.json({
         estimates: [{
           vehicle_type,
           display_en:  vtDef?.display_en ?? vehicle_type,
           display_bn:  vtDef?.display_bn ?? vehicle_type,
           seats:       vtDef?.seats ?? 1,
-          ...fare,
+          base_fare_bdt: fare.base_fare_bdt,
+          distance_charge_bdt: fare.distance_charge_bdt,
+          time_charge_bdt: fare.time_charge_bdt,
+          floor_fare_bdt: fare.floor_fare_bdt,
+          total_bdt: fare.total_bdt,
+          preference_surcharge_bdt: preferenceSurchargeBdt,
+          driver_fare_bdt: driverFare,
+          rider_payable_bdt: driverFare,
           eta_minutes: Math.max(2, Math.ceil(distanceKm / 0.5)),
         }],
         distance_km: distanceKm,
+        preferences_applied: preference_ids ?? [],
       });
     }
 
@@ -81,26 +104,34 @@ export async function POST(request: Request) {
       const fare = calculateFare({
         base_fare_bdt:        p.base_fare_bdt,
         per_km_bdt:           p.per_km_bdt,
-        per_min_wait_bdt:     p.per_min_wait_bdt,
-        free_wait_minutes:    p.free_wait_minutes,
-        minimum_fare_bdt:     Number(p.minimum_fare_bdt ?? 0),
+        per_min_bdt:          p.per_min_bdt,
+        floor_length_km:      Number(p.floor_length_km ?? 0),
+        floor_min:            p.floor_min ?? 0,
         brta_fare_ceiling_bdt: p.brta_fare_ceiling_bdt,
       }, distanceKm, 0);
 
       const vtDef = VEHICLE_TYPES.find(v => v.key === p.vehicle_type);
+      const driverFare = fare.total_bdt + preferenceSurchargeBdt;
       return {
         vehicle_type:  p.vehicle_type,
         display_en:    vtDef?.display_en ?? p.vehicle_type,
         display_bn:    vtDef?.display_bn ?? p.vehicle_type,
         seats:         vtDef?.seats ?? 1,
-        ...fare,
+        base_fare_bdt: fare.base_fare_bdt,
+        distance_charge_bdt: fare.distance_charge_bdt,
+        time_charge_bdt: fare.time_charge_bdt,
+        floor_fare_bdt: fare.floor_fare_bdt,
+        total_bdt: fare.total_bdt,
+        preference_surcharge_bdt: preferenceSurchargeBdt,
+        driver_fare_bdt: driverFare,
+        rider_payable_bdt: driverFare,
         eta_minutes:   Math.max(2, Math.ceil(distanceKm / 0.5)),
       };
     });
 
     estimates.sort((a, b) => a.total_bdt - b.total_bdt);
 
-    return Response.json({ estimates, distance_km: distanceKm });
+    return Response.json({ estimates, distance_km: distanceKm, preferences_applied: preference_ids ?? [] });
 
   } catch (err: any) {
     if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });

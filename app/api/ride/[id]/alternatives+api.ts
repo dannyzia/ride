@@ -4,6 +4,7 @@ import { rides, pricing } from '../../../../src/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireRole } from '../../../../lib/auth';
 import { getH3Ring } from '../../../../lib/h3';
+
 import { getDriversInCells } from '../../../../utils-server/h3Index';
 import { calculateFare } from '../../../../lib/fareCalc';
 import { VEHICLE_TYPE_VALUES } from '../../../../lib/vehicleTypes';
@@ -48,8 +49,15 @@ export async function GET(req: Request) {
         .limit(1);
       if (!pricingRow) continue;
 
-      const breakdown = calculateFare(
-        pricingRow,
+      const breakdown = calculateFare({
+        base_fare_bdt:              pricingRow.base_fare_bdt,
+        per_km_bdt:                 pricingRow.per_km_bdt,
+        per_min_bdt:                pricingRow.per_min_bdt,
+        floor_length_km:            Number(pricingRow.floor_length_km ?? 0),
+        floor_min:                  pricingRow.floor_min ?? 0,
+        brta_fare_ceiling_bdt:      pricingRow.brta_fare_ceiling_bdt,
+        platform_commission_percent: Number(pricingRow.platform_commission_percent ?? 0),
+      },
         parseFloat(ride.distance_km?.toString() ?? '0'),
         0,
       );

@@ -1,6 +1,6 @@
 import { db } from '../src/db';
-import { drivers, dispatchOffers, systemConfig, pricing } from '../src/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { drivers, dispatchOffers, systemConfig, pricing, preferences } from '../src/db/schema';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { getH3Ring } from '../lib/h3';
 import { getDriversInCells } from './h3Index';
 import { checkDriverEligibility } from '../lib/vehicleTypes';
@@ -29,6 +29,7 @@ export async function scoreAndBatchDrivers(
   vehicleType: string,
   zoneId: string,
   batchSize = 5,
+  preferenceIds: string[] = [],
 ): Promise<ScoredDriver[]> {
   const cells = getH3Ring(originLat, originLng, 2);
   const candidateIds = getDriversInCells(cells, vehicleType);
@@ -67,9 +68,40 @@ export async function scoreAndBatchDrivers(
     .from(dispatchOffers).where(eq(dispatchOffers.ride_id, rideId));
   const alreadyOffered = new Set(existingOffers.map(o => o.driver_id));
 
+  // ── Preference filter ─────────────────────────────────────────────────
+  // If the ride has requested preferences, only include drivers whose
+  // driver_preferences cover ALL requested affects_matching preferences.
+  let preferenceEligibleIds: Set<string> | null = null;
+  if (preferenceIds.length > 0) {
+    // Filter to only preferences that affect matching
+    const matchingPrefs = await db.select({ id: preferences.id })
+      .from(preferences)
+      .where(and(
+        inArray(preferences.id, preferenceIds),
+        eq(preferences.affects_matching, true),
+      ));
+    const matchingPrefIds = matchingPrefs.map(p => p.id);
+
+    if (matchingPrefIds.length > 0) {
+      // Find drivers who have ALL the required preferences
+      // Using the pattern: GROUP BY driver_id HAVING COUNT(DISTINCT preference_id) = N
+      const eligibleRows = await db.execute<{ driver_id: string }>(sql`
+        SELECT driver_id FROM driver_preferences
+        WHERE preference_id IN ${matchingPrefIds}
+        GROUP BY driver_id
+        HAVING COUNT(DISTINCT preference_id) = ${matchingPrefIds.length}
+      `);
+      preferenceEligibleIds = new Set(eligibleRows.map(r => r.driver_id));
+      logger.debug('[dispatch] preference filter', {
+        requested: matchingPrefIds.length, eligible: preferenceEligibleIds.size,
+      });
+    }
+  }
+
   const scored: ScoredDriver[] = [];
   for (const d of driverRows) {
     if (alreadyOffered.has(d.id)) continue;
+    if (preferenceEligibleIds != null && !preferenceEligibleIds.has(d.id)) continue;
 
     const { eligible } = checkDriverEligibility(vehicleType as any, {
       completed_rides_count: d.completed_rides_count,

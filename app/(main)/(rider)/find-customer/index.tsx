@@ -1,6 +1,4 @@
-import { colors } from '@/theme/goRide';
-// ReachCustomer.tsx
-
+import { colors, spacing, radii } from '@/theme/goRide';
 import { View, Text, TouchableOpacity, Linking, Image } from 'react-native';
 import React, { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
@@ -16,24 +14,18 @@ import { icons } from '@/constants/data';
 
 const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
 
-
 const ReachCustomer = () => {
     const router = useRouter();
 
     const { userAddress: _userAddress, setUserLocation: setDriverLocation, setId: _setDriverId, setRole: _setDriverRole, setFullName: _setDriverFullName } = useDriver();
-
     const { ws, setWebSocket } = useWSStore();
-
     const { activeRideId, giveRideDetails } = useRideOfferStore();
-
     const { user } = useSession();
     const lastLocationRef = useRef<Location.LocationObject | null>(null);
-
 
     useEffect(() => {
         let _socket: WebSocket | null = null;
 
-        // Either create a new one or use existing one
         if (!ws) {
             const newWs = new WebSocket(WEBSOCKET_API_URL);
 
@@ -49,10 +41,7 @@ const ReachCustomer = () => {
                 }
             };
 
-            newWs.onerror = (err) => {
-                console.log('WebSocket error:', err);
-            };
-
+            newWs.onerror = () => {};
             setWebSocket(newWs);
             _socket = newWs;
         } else {
@@ -60,29 +49,20 @@ const ReachCustomer = () => {
         }
     }, [ws]);
 
-
-
     const calculateDistance = (location1: LocationObject, location2: LocationObject) => {
         const lat1 = location1.coords.latitude;
         const lon1 = location1.coords.longitude;
         const lat2 = location2.coords.latitude;
         const lon2 = location2.coords.longitude;
-
         const toRad = (value: number) => (value * Math.PI) / 180;
-
-        const R = 6371; // Radius of the Earth in km
+        const R = 6371;
         const dLat = toRad(lat2 - lat1);
         const dLon = toRad(lon2 - lon1);
-
-        const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
             Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        return R * c * 1000; // Distance in meters
+        return R * c * 1000;
     };
-
-
 
     useEffect(() => {
         let locationSubscription: Location.LocationSubscription | null = null;
@@ -92,168 +72,123 @@ const ReachCustomer = () => {
             if (status !== 'granted') return;
 
             locationSubscription = await Location.watchPositionAsync(
-                {
-                    accuracy: Location.Accuracy.Highest,
-                    timeInterval: 10000,
-                    distanceInterval: 2, // in meters
-                },
+                { accuracy: Location.Accuracy.Highest, timeInterval: 10000, distanceInterval: 2 },
                 async (location) => {
-                    console.log('📍 Watched location:', location);
-
-                    // Check if the location has changed significantly
                     if (lastLocationRef.current) {
                         const distance = calculateDistance(lastLocationRef.current, location);
-
-                        // If distance exceeds 5 meters, send the location update
                         if (distance >= 5) {
                             const address = await Location.reverseGeocodeAsync({
                                 latitude: location.coords.latitude,
                                 longitude: location.coords.longitude,
                             });
-
                             if (ws && ws.readyState === WebSocket.OPEN) {
-                                ws.send(
-                                    JSON.stringify({
-                                        type: 'riderLocationUpdate',
-                                        role: 'rider',
-                                        driverId: user?.id,
-                                        location: {
-                                            latitude: location.coords.latitude,
-                                            longitude: location.coords.longitude,
-                                            address: address[0]?.formattedAddress,
-                                        },
-                                    })
-                                );
+                                ws.send(JSON.stringify({
+                                    type: 'riderLocationUpdate',
+                                    role: 'rider',
+                                    driverId: user?.id,
+                                    location: { latitude: location.coords.latitude, longitude: location.coords.longitude, address: address[0]?.formattedAddress },
+                                }));
                             }
-                            setDriverLocation({
-                                latitude: location.coords.latitude,
-                                longitude: location.coords.longitude,
-                                address: address[0]?.formattedAddress!,
-                            })
-                            // Update the last known location
+                            setDriverLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude, address: address[0]?.formattedAddress! });
                             lastLocationRef.current = location;
                         }
                     } else {
-                        // Set the initial location
                         lastLocationRef.current = location;
                     }
-
-                    // Update the driver location in the store
                     setDriverLocation({
                         latitude: location.coords.latitude,
                         longitude: location.coords.longitude,
-                        address: (await Location.reverseGeocodeAsync({
-                            latitude: location.coords.latitude,
-                            longitude: location.coords.longitude,
-                        }))[0]?.formattedAddress ?? '',
+                        address: (await Location.reverseGeocodeAsync({ latitude: location.coords.latitude, longitude: location.coords.longitude }))[0]?.formattedAddress ?? '',
                     });
                 }
             );
         };
 
-        if (user) {
-            startWatching();
-        }
+        if (user) { startWatching(); }
 
-        return () => {
-            if (locationSubscription) {
-                locationSubscription.remove();
-                locationSubscription = null;
-            }
-        };
+        return () => { if (locationSubscription) { locationSubscription.remove(); locationSubscription = null; } };
     }, [user]);
-
-
 
     const handleSlideComplete = () => {
         const details = giveRideDetails(activeRideId!);
-
         if (ws && ws.readyState === WebSocket.OPEN && details !== undefined) {
-            ws.send(JSON.stringify({
-                type: 'reached',
-                role: 'rider',
-                id: activeRideId,
-                driver_id: user?.id,
-                customer_id: details.customer_id
-            }))
+            ws.send(JSON.stringify({ type: 'reached', role: 'rider', id: activeRideId, driver_id: user?.id, customer_id: details.customer_id }));
         }
         router.replace('/(main)/(rider)/enter-otp');
     };
 
     const rideDetails = giveRideDetails(activeRideId!);
-    const _customerName = rideDetails?.customerDetails.full_name || 'Customer';
     const customerPhone = rideDetails?.customerDetails.number || '';
     const pickupAddress = rideDetails?.pickupDetails.pickupAddress || 'Pickup location';
     const destinationAddress = rideDetails?.dropoffDetails.dropoffAddress || 'Destination not set';
 
-
     const callCustomer = () => {
-        if (customerPhone) {
-            Linking.openURL(`tel:${customerPhone}`);
-        } else {
-            alert('Phone number not available');
-        }
+        if (customerPhone) { Linking.openURL(`tel:${customerPhone}`); }
+        else { alert('Phone number not available'); }
     };
-
 
     return (
         <RideLayout disabled={true} title="" snapPoints={['40%', '50%']}>
-            <View className="justify-between bg-white">
+            <View style={{ justifyContent: 'space-between' }}>
                 {/* Heading */}
                 <View>
-                    <Text className="text-xl font-JakartaBold mb-6 text-black">Ride Details</Text>
+                    <Text style={{ fontSize: 20, fontWeight: '700', fontFamily: 'Urbanist', color: colors.textPrimaryDark, marginBottom: spacing['2xl'] }}>
+                        Ride Details
+                    </Text>
 
                     {/* Pickup Location */}
-                    <View className="flex-row items-start mb-4">
-                        <Image
-                            source={icons.origin}
-                            className="h-6 w-6 mt-1"
-                            resizeMode="contain"
-                        />
-                        <Text className="ml-3 text-base text-black flex-1 leading-6">
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.lg }}>
+                        <Image source={icons.origin} style={{ height: 24, width: 24, marginTop: 2 }} resizeMode="contain" />
+                        <Text style={{ marginLeft: spacing.md, fontSize: 15, color: colors.textPrimaryDark, flex: 1, lineHeight: 22, fontFamily: 'Urbanist' }}>
                             {pickupAddress}
                         </Text>
                     </View>
 
                     {/* Destination */}
-                    <View className="flex-row items-start">
-                        <Image
-                            source={icons.destination}
-                            className="h-6 w-6 mt-1"
-                            resizeMode="contain"
-                        />
-                        <Text className="ml-3 text-base text-black flex-1 leading-6">
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                        <Image source={icons.destination} style={{ height: 24, width: 24, marginTop: 2 }} resizeMode="contain" />
+                        <Text style={{ marginLeft: spacing.md, fontSize: 15, color: colors.textPrimaryDark, flex: 1, lineHeight: 22, fontFamily: 'Urbanist' }}>
                             {destinationAddress}
                         </Text>
                     </View>
                 </View>
 
                 {/* Call Customer */}
-                {customerPhone && (
-                    <View className="mt-8 flex-row items-center justify-between bg-neutral-100 p-4 rounded-lg border border-neutral-300">
+                {customerPhone ? (
+                    <View style={{
+                        marginTop: spacing['3xl'],
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: colors.bgDark,
+                        padding: spacing.lg,
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.borderDark,
+                    }}>
                         <View>
-                            <Text className="text-base font-JakartaMedium text-neutral-700">Need Help?</Text>
-                            <Text className="text-sm text-neutral-500">Call the customer</Text>
+                            <Text style={{ fontSize: 15, fontFamily: 'Urbanist', fontWeight: '500', color: colors.textPrimaryDark }}>Need Help?</Text>
+                            <Text style={{ fontSize: 13, color: colors.textSecondaryDark, fontFamily: 'Urbanist' }}>Call the customer</Text>
                         </View>
                         <TouchableOpacity
                             onPress={callCustomer}
-                            className="bg-black px-4 py-2 rounded-full"
+                            style={{ backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill }}
                         >
-                            <Text className="text-white font-JakartaSemiBold text-base">Call</Text>
+                            <Text style={{ color: colors.white, fontFamily: 'Urbanist', fontWeight: '700', fontSize: 14 }}>Call</Text>
                         </TouchableOpacity>
                     </View>
-                )}
+                ) : null}
 
                 {/* Slide Button */}
-                <View className="mt-10">
-                    <Text className="text-center text-neutral-600 text-sm mb-3">
+                <View style={{ marginTop: spacing['3xl'] }}>
+                    <Text style={{ textAlign: 'center', color: colors.textSecondaryDark, fontSize: 13, fontFamily: 'Urbanist', marginBottom: spacing.md }}>
                         Slide to confirm once you&apos;ve reached the pickup location
                     </Text>
                     <SlideButton
                         title="Slide to Confirm Arrival"
                         onComplete={handleSlideComplete}
                         bgColor={colors.slideGreen}
-                        textColor="#fff"
+                        textColor={colors.white}
                     />
                 </View>
             </View>

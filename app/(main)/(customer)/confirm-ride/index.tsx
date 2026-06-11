@@ -1,4 +1,5 @@
 import { Image, Text, View, Alert } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import RideLayout from "@/components/RideLayout";
 import { useCustomer } from "@/store";
 import { icons } from "@/constants/data";
@@ -9,6 +10,7 @@ import { useRiderStore } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
+import { colors } from "@/theme/goRide";
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? '';
 const BARIKOI_API_KEY = Constants.expoConfig?.extra?.BARIKOI_API_KEY ?? '';
@@ -16,7 +18,7 @@ const BARIKOI_API_KEY = Constants.expoConfig?.extra?.BARIKOI_API_KEY ?? '';
 const ConfirmRidePage = () => {
   const router = useRouter();
   const { userAddress, destinationAddress, userLatitude, userLongitude, destinationLatitude, destinationLongitude } = useCustomer();
-  const { selectedVehicleType, estimates, setSearchingRideId, setRideStatus } = useRiderStore();
+  const { selectedVehicleType, estimates, setSearchingRideId, setRideStatus, scheduledAt, promoCode, selectedPrefIds } = useRiderStore();
   const [rideDuration, setRideDuration] = useState<string>('');
   const [rideDistance, setRideDistance] = useState<string>('');
   const [requesting, setRequesting] = useState(false);
@@ -81,6 +83,9 @@ const ConfirmRidePage = () => {
           dropoff_lng: destinationLongitude,
           dropoff_address: destinationAddress || '',
           vehicle_type: selectedVehicleType,
+          scheduled_at: scheduledAt || undefined,
+          promo_code: promoCode || undefined,
+          preference_ids: selectedPrefIds.length > 0 ? selectedPrefIds : undefined,
         }),
       });
       const data = await response.json();
@@ -120,6 +125,18 @@ const ConfirmRidePage = () => {
 
         {/* Ride info card */}
         <View className="rounded-2xl bg-cardBgColor p-4 mb-5">
+          {/* Scheduled time badge */}
+          {scheduledAt && (
+            <View className="flex-row items-center py-2 border-b border-borderColor">
+              <MaterialIcons name="schedule" size={16} color={colors.primary} />
+              <Text className="text-secondaryTextColor ml-2">Pickup at</Text>
+              <View className="ml-auto px-2.5 py-0.5 rounded-full" style={{ backgroundColor: colors.primaryLight }}>
+                <Text style={{ fontFamily: 'Inter', fontSize: 13, fontWeight: '600', color: colors.primary }}>
+                  {new Date(scheduledAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                </Text>
+              </View>
+            </View>
+          )}
           <View className="flex-row justify-between py-2 border-b border-borderColor">
             <Text className="text-secondaryTextColor">Distance</Text>
             <Text className="text-primaryTextColor font-JakartaSemiBold">{rideDistance}</Text>
@@ -128,6 +145,17 @@ const ConfirmRidePage = () => {
             <Text className="text-secondaryTextColor">Duration</Text>
             <Text className="text-primaryTextColor font-JakartaSemiBold">{rideDuration}</Text>
           </View>
+          {promoCode && (
+            <View className="flex-row justify-between py-2 border-b border-borderColor">
+              <View className="flex-row items-center">
+                <MaterialIcons name="local-offer" size={14} color={colors.primary} />
+                <Text className="text-secondaryTextColor ml-1.5">Promo ({promoCode})</Text>
+              </View>
+              <Text style={{ fontFamily: 'Inter', fontSize: 14, fontWeight: '600', color: colors.primary }}>
+                −৳0
+              </Text>
+            </View>
+          )}
           <View className="flex-row justify-between py-2">
             <Text className="text-secondaryTextColor">Fare</Text>
             <Text className="text-goAccent text-lg font-JakartaBold">

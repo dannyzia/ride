@@ -188,7 +188,7 @@ export default function PackagesScreen() {
           className="bg-general-400 rounded-full px-5 py-2"
         >
           {purchasing && pendingPkgId === item.id ? (
-            <ActivityIndicator size="small" color="#FFF" />
+            <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <Text className="text-white font-semibold text-sm">Buy Now</Text>
           )}

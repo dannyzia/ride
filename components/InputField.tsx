@@ -2,6 +2,7 @@ import { View, Text, KeyboardAvoidingView, Image, TextInput, TouchableOpacity } 
 import { useState } from 'react'
 import { InputFieldProps } from '@/types/type'
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { colors } from '@/theme/goRide';
 
 const InputField = ({
     label,
@@ -33,7 +34,7 @@ const InputField = ({
                         onBlur={() => setIsFocused(false)}
                         className={`text-white rounded-full p-4 font-JakartaSemiBold text-[15px] flex-1 ${inputStyle}`}
                         secureTextEntry={dontShowPassword}
-                        placeholderTextColor="#888"
+                        placeholderTextColor={colors.grayLight}
                         {...props}
                     />
 

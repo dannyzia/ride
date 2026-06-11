@@ -10,13 +10,13 @@ export default {
     sdkVersion: "53.0.0",
     version: "1.0.4",
     orientation: "portrait",
-    icon: "./assets/images/icon.png",
+    icon: "./assets/logo/logo.png",
     userInterfaceStyle: "automatic",
     scheme: "myapp",
     splash: {
-      image: "./assets/images/splash.png",
-      resizeMode: "cover",
-      backgroundColor: "#0C0B0B",
+      image: "./assets/logo/logo.png",
+      resizeMode: "contain",
+      backgroundColor: "#181A20",
     },
     updates: {
       enabled: true,

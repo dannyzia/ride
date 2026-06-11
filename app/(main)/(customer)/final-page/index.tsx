@@ -1,24 +1,31 @@
-import { colors } from '@/theme/goRide';
-import { View, Text, ActivityIndicator, Alert, Dimensions } from 'react-native';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import Constants from 'expo-constants';
-import MapLibreGL from '@maplibre/maplibre-react-native';
-import { supabase } from '@/lib/supabase';
-import { useRiderStore } from '@/store/useRiderStore';
-import { useWSStore } from '@/store';
-import { VEHICLE_TYPES } from '@/lib/vehicleTypes';
-import CustomButton from '@/components/CustomButton';
+import { colors } from "@/theme/goRide";
+import { View, Text, ActivityIndicator, Alert, Dimensions } from "react-native";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import Constants from "expo-constants";
+import MapLibreGL from "@/utils/maplibreLoader";
+import { supabase } from "@/lib/supabase";
+import { useRiderStore } from "@/store/useRiderStore";
+import { useWSStore } from "@/store";
+import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
+import CustomButton from "@/components/CustomButton";
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? '';
-const MAP_STYLE = 'https://map.barikoi.com/styles/osm-liberty/style.json?key=' + (Constants.expoConfig?.extra?.EXPO_PUBLIC_BARIKOI_API_KEY ?? '');
-const { height } = Dimensions.get('window');
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? "";
+const MAP_STYLE =
+  "https://map.barikoi.com/styles/osm-liberty/style.json?key=" +
+  (Constants.expoConfig?.extra?.EXPO_PUBLIC_BARIKOI_API_KEY ?? "");
+const { height } = Dimensions.get("window");
 
 export default function FinalPage() {
   const {
-    activeRide, searchingRideId, rideStatus,
-    setActiveRide, setRideStatus, setSearchingRideId, clearRoute,
+    activeRide,
+    searchingRideId,
+    rideStatus,
+    setActiveRide,
+    setRideStatus,
+    setSearchingRideId,
+    clearRoute,
   } = useRiderStore();
 
   const ws = useWSStore((s) => s.ws);
@@ -33,13 +40,18 @@ export default function FinalPage() {
   const wsSubscribedRef = useRef(false);
 
   const vehicleDef = activeRide?.vehicle_type
-    ? VEHICLE_TYPES.find(v => v.key === activeRide.vehicle_type as any)
+    ? VEHICLE_TYPES.find((v) => v.key === (activeRide.vehicle_type as any))
     : null;
 
   // WebSocket subscription for ride status + driver location updates
   useEffect(() => {
     const rideId = searchingRideId || activeRide?.id;
-    if (!rideId || rideStatus === 'completed' || rideStatus === 'cancelled' || rideStatus === 'expired') {
+    if (
+      !rideId ||
+      rideStatus === "completed" ||
+      rideStatus === "cancelled" ||
+      rideStatus === "expired"
+    ) {
       wsSubscribedRef.current = false;
       return;
     }
@@ -49,7 +61,7 @@ export default function FinalPage() {
     wsSubscribedRef.current = true;
 
     // Subscribe to ride updates via WebSocket
-    ws.send(JSON.stringify({ type: 'ride:subscribe', ride_id: rideId }));
+    ws.send(JSON.stringify({ type: "ride:subscribe", ride_id: rideId }));
 
     const onMessage = (ev: MessageEvent) => {
       try {
@@ -57,14 +69,14 @@ export default function FinalPage() {
         if (msg.ride_id !== rideId) return;
 
         switch (msg.type) {
-          case 'ride:status': {
+          case "ride:status": {
             if (msg.status) {
               setRideStatus(mapStatus(msg.status));
               if (msg.ride) setActiveRide(msg.ride);
             }
             break;
           }
-          case 'location:driver': {
+          case "location:driver": {
             if (msg.lat != null) setDriverLat(msg.lat);
             if (msg.lng != null) setDriverLng(msg.lng);
             if (msg.eta_minutes != null) setDriverEta(msg.eta_minutes);
@@ -76,14 +88,14 @@ export default function FinalPage() {
       }
     };
 
-    ws.addEventListener('message', onMessage);
+    ws.addEventListener("message", onMessage);
 
     // Elapsed timer
-    const elapsedInt = setInterval(() => setElapsed(p => p + 1), 1000);
+    const elapsedInt = setInterval(() => setElapsed((p) => p + 1), 1000);
 
     return () => {
-      ws.removeEventListener('message', onMessage);
-      ws.send(JSON.stringify({ type: 'ride:unsubscribe', ride_id: rideId }));
+      ws.removeEventListener("message", onMessage);
+      ws.send(JSON.stringify({ type: "ride:unsubscribe", ride_id: rideId }));
       wsSubscribedRef.current = false;
       clearInterval(elapsedInt);
     };
@@ -96,23 +108,28 @@ export default function FinalPage() {
 
     setCancelling(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
       const res = await fetch(`${API_URL}/api/ride/${rideId}/cancel`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ cancelled_by: 'rider', reason: 'rider_cancelled' }),
+        body: JSON.stringify({
+          cancelled_by: "rider",
+          reason: "rider_cancelled",
+        }),
       });
       if (res.ok) {
-        setRideStatus('cancelled');
+        setRideStatus("cancelled");
         setSearchingRideId(null);
       }
     } catch {
-      Alert.alert('Error', 'Failed to cancel ride');
+      Alert.alert("Error", "Failed to cancel ride");
     } finally {
       setCancelling(false);
     }
@@ -122,8 +139,8 @@ export default function FinalPage() {
     clearRoute();
     setActiveRide(null);
     setSearchingRideId(null);
-    setRideStatus('idle');
-    router.replace('/(main)/(customer)/(tabs)/home');
+    setRideStatus("idle");
+    router.replace("/(main)/(customer)/(tabs)/home");
   };
 
   const renderFinding = () => (
@@ -138,14 +155,15 @@ export default function FinalPage() {
       <View className="mt-8 p-4 bg-white rounded-2xl w-full border border-goBorderLight">
         <Text className="text-sm font-inter text-gray-500">Searching for</Text>
         <Text className="text-lg font-urbanist-bold text-goTextPrimaryLight mt-1">
-          {vehicleDef?.display_en ?? activeRide?.vehicle_type ?? 'Vehicle'}
+          {vehicleDef?.display_en ?? activeRide?.vehicle_type ?? "Vehicle"}
         </Text>
         <Text className="text-sm font-inter text-gray-400 mt-1">
-          Elapsed: {Math.floor(elapsed / 60)}:{(elapsed % 60).toString().padStart(2, '0')}
+          Elapsed: {Math.floor(elapsed / 60)}:
+          {(elapsed % 60).toString().padStart(2, "0")}
         </Text>
       </View>
       <CustomButton
-        title={cancelling ? 'Cancelling...' : 'Cancel Request'}
+        title={cancelling ? "Cancelling..." : "Cancel Request"}
         onPress={handleCancel}
         bgVariant="danger"
         disabled={cancelling}
@@ -157,7 +175,10 @@ export default function FinalPage() {
   const renderMatched = () => (
     <View className="flex-1 px-4 pt-4">
       {/* Map with driver location pin */}
-      <View className="w-full rounded-2xl overflow-hidden border border-goBorderLight mb-4" style={{ height: height * 0.35 }}>
+      <View
+        className="w-full rounded-2xl overflow-hidden border border-goBorderLight mb-4"
+        style={{ height: height * 0.35 }}
+      >
         <MapLibreGL.MapView
           style={{ flex: 1 }}
           styleURL={MAP_STYLE}
@@ -189,16 +210,20 @@ export default function FinalPage() {
             </MapLibreGL.PointAnnotation>
           )}
           {/* Pickup marker */}
-          {activeRide?.origin_latitude != null && activeRide?.origin_longitude != null && (
-            <MapLibreGL.PointAnnotation
-              id="pickup"
-              coordinate={[parseFloat(activeRide.origin_longitude.toString()), parseFloat(activeRide.origin_latitude.toString())]}
-            >
-              <View className="w-6 h-6 rounded-full bg-green-500 items-center justify-center">
-                <Text className="text-white text-xs">●</Text>
-              </View>
-            </MapLibreGL.PointAnnotation>
-          )}
+          {activeRide?.origin_latitude != null &&
+            activeRide?.origin_longitude != null && (
+              <MapLibreGL.PointAnnotation
+                id="pickup"
+                coordinate={[
+                  parseFloat(activeRide.origin_longitude.toString()),
+                  parseFloat(activeRide.origin_latitude.toString()),
+                ]}
+              >
+                <View className="w-6 h-6 rounded-full bg-green-500 items-center justify-center">
+                  <Text className="text-white text-xs">●</Text>
+                </View>
+              </MapLibreGL.PointAnnotation>
+            )}
         </MapLibreGL.MapView>
         {/* ETA overlay */}
         {driverEta != null && (
@@ -213,29 +238,34 @@ export default function FinalPage() {
       {/* Driver info card */}
       <View className="p-4 bg-white rounded-2xl border border-goBorderLight">
         <Text className="text-lg font-urbanist-bold text-goTextPrimaryLight">
-          {driverEta != null ? `Arriving in ${Math.round(driverEta)} min` : 'Driver Found!'}
+          {driverEta != null
+            ? `Arriving in ${Math.round(driverEta)} min`
+            : "Driver Found!"}
         </Text>
         <View className="flex-row items-center mt-3">
           <View className="w-14 h-14 rounded-full bg-goAccent/10 items-center justify-center">
             <Text className="text-2xl text-goAccent font-urbanist-bold">
-              {activeRide?.driver?.name?.charAt(0) ?? 'D'}
+              {activeRide?.driver?.name?.charAt(0) ?? "D"}
             </Text>
           </View>
           <View className="ml-3 flex-1">
             <Text className="text-base font-urbanist-bold text-goTextPrimaryLight">
-              {activeRide?.driver?.name ?? 'Driver'}
+              {activeRide?.driver?.name ?? "Driver"}
             </Text>
             <Text className="text-sm font-inter text-gray-500">
               {activeRide?.driver?.vehicle_type
-                ? VEHICLE_TYPES.find(v => v.key === activeRide.driver!.vehicle_type as any)?.display_en ?? activeRide.driver.vehicle_type
-                : vehicleDef?.display_en ?? ''}
+                ? (VEHICLE_TYPES.find(
+                    (v) => v.key === (activeRide.driver!.vehicle_type as any),
+                  )?.display_en ?? activeRide.driver.vehicle_type)
+                : (vehicleDef?.display_en ?? "")}
             </Text>
           </View>
           <View className="items-end">
             <Text className="text-lg font-urbanist-bold text-goAccent">
-              ৳{activeRide?.fare_breakdown?.total_bdt
+              ৳
+              {activeRide?.fare_breakdown?.total_bdt
                 ? (Number(activeRide.fare_breakdown.total_bdt) / 100).toFixed(0)
-                : '—'}
+                : "—"}
             </Text>
             <Text className="text-xs font-inter text-gray-400">Est. Fare</Text>
           </View>
@@ -248,8 +278,11 @@ export default function FinalPage() {
           <View className="w-8 h-8 rounded-full bg-goAccent/10 items-center justify-center">
             <Text className="text-goAccent text-xs">●</Text>
           </View>
-          <Text className="ml-3 text-sm font-inter text-goTextPrimaryLight flex-1" numberOfLines={1}>
-            {activeRide?.origin_address ?? 'Pickup'}
+          <Text
+            className="ml-3 text-sm font-inter text-goTextPrimaryLight flex-1"
+            numberOfLines={1}
+          >
+            {activeRide?.origin_address ?? "Pickup"}
           </Text>
         </View>
         <View className="h-4 w-0.5 bg-gray-300 ml-4" />
@@ -257,8 +290,11 @@ export default function FinalPage() {
           <View className="w-8 h-8 rounded-full bg-goDanger/10 items-center justify-center">
             <Text className="text-goDanger text-xs">■</Text>
           </View>
-          <Text className="ml-3 text-sm font-inter text-goTextPrimaryLight flex-1" numberOfLines={1}>
-            {activeRide?.destination_address ?? 'Dropoff'}
+          <Text
+            className="ml-3 text-sm font-inter text-goTextPrimaryLight flex-1"
+            numberOfLines={1}
+          >
+            {activeRide?.destination_address ?? "Dropoff"}
           </Text>
         </View>
       </View>
@@ -277,9 +313,10 @@ export default function FinalPage() {
         <View className="flex-row justify-between">
           <Text className="text-sm font-inter text-gray-500">Total Fare</Text>
           <Text className="text-lg font-urbanist-bold text-goAccent">
-            ৳{activeRide?.fare_breakdown?.total_bdt
+            ৳
+            {activeRide?.fare_breakdown?.total_bdt
               ? (Number(activeRide.fare_breakdown.total_bdt) / 100).toFixed(0)
-              : '—'}
+              : "—"}
           </Text>
         </View>
       </View>
@@ -310,16 +347,16 @@ export default function FinalPage() {
 
   const renderState = () => {
     switch (rideStatus) {
-      case 'finding':
+      case "finding":
         return renderFinding();
-      case 'matched':
-      case 'arriving':
-      case 'in_progress':
+      case "matched":
+      case "arriving":
+      case "in_progress":
         return renderMatched();
-      case 'completed':
+      case "completed":
         return renderCompleted();
-      case 'cancelled':
-      case 'expired':
+      case "cancelled":
+      case "expired":
         return renderError();
       default:
         return (
@@ -332,31 +369,38 @@ export default function FinalPage() {
 
   return (
     <SafeAreaView className="flex-1 bg-goBgLight">
-      <View className="flex-1">
-        {renderState()}
-      </View>
+      <View className="flex-1">{renderState()}</View>
     </SafeAreaView>
   );
 }
 
-function mapStatus(dbStatus: string): 'finding' | 'arriving' | 'in_progress' | 'completed' | 'cancelled' | 'expired' | 'idle' {
+function mapStatus(
+  dbStatus: string,
+):
+  | "finding"
+  | "arriving"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
+  | "expired"
+  | "idle" {
   switch (dbStatus) {
-    case 'pending':
-    case 'dispatching':
-      return 'finding';
-    case 'matched':
-    case 'driver_arriving':
-      return 'arriving';
-    case 'in_progress':
-      return 'in_progress';
-    case 'completed':
-      return 'completed';
-    case 'cancelled':
-      return 'cancelled';
-    case 'expired':
-    case 'no_drivers':
-      return 'expired';
+    case "pending":
+    case "dispatching":
+      return "finding";
+    case "matched":
+    case "driver_arriving":
+      return "arriving";
+    case "in_progress":
+      return "in_progress";
+    case "completed":
+      return "completed";
+    case "cancelled":
+      return "cancelled";
+    case "expired":
+    case "no_drivers":
+      return "expired";
     default:
-      return 'idle';
+      return "idle";
   }
 }

@@ -3,8 +3,9 @@ import {
   rides, subscriptions, vehicleTypeChanges, drivers,
   usedChallenges, documents, chatMessages, compensationQueue, rateLimits,
   creditVouchers, ownerConsents, paymentEvents,
+  incentiveDefinitions, driverIncentives, systemConfig,
 } from '../src/db/schema';
-import { and, eq, lt, lte, isNull, isNotNull, sql, or } from 'drizzle-orm';
+import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte } from 'drizzle-orm';
 import { nextBdtMidnightUtc } from '../lib/time';
 import { logger } from '../lib/logger';
 
@@ -248,5 +249,181 @@ export function startScheduler(): void {
     } catch (e) { logger.error('[scheduler] stale driver_arrived error', e); }
   }, 60_000);
 
-  logger.info('[scheduler] started (16 jobs)');
+  // ── (17) Incentive progress tracking — every 5 min ──────────────────
+  setInterval(async () => {
+    try {
+      const now = new Date();
+
+      // Fetch active, non-expired incentive definitions
+      const activeIncentives = await db.select().from(incentiveDefinitions).where(and(
+        eq(incentiveDefinitions.is_active, true),
+        lte(incentiveDefinitions.starts_at, now),
+        gte(incentiveDefinitions.ends_at, now),
+        sql`incentive_definitions.deleted_at IS NULL`,
+      ));
+
+      for (const incentive of activeIncentives) {
+        // Fetch all driver_incentives for this incentive that aren't completed
+        const progressRows = await db.select({
+          id: driverIncentives.id,
+          driverId: driverIncentives.driver_id,
+          currentProgress: driverIncentives.current_progress,
+        })
+          .from(driverIncentives)
+          .where(and(
+            eq(driverIncentives.incentive_id, incentive.id),
+            isNull(driverIncentives.completed_at),
+          ));
+
+        for (const row of progressRows) {
+          let newProgress: number;
+
+          switch (incentive.target_metric) {
+            case 'completed_rides': {
+              const [{ count: rideCount }] = await db.select({ count: sql<number>`count(*)` })
+                .from(rides)
+                .where(and(
+                  eq(rides.driver_id, row.driverId),
+                  eq(rides.status, 'completed'),
+                  gte(rides.completed_at, incentive.starts_at),
+                  lte(rides.completed_at, incentive.ends_at),
+                ));
+              newProgress = rideCount;
+              break;
+            }
+            case 'online_hours': {
+              // Approximate from driver acceptance_rate as a proxy
+              // For a real implementation, use driver_online_sessions
+              const [{ hours }] = await db.execute<[{ hours: string | null }]>(sql`
+                SELECT COALESCE(SUM(duration_minutes), 0) / 60.0 as hours
+                FROM driver_online_sessions
+                WHERE driver_id = ${row.driverId}
+                  AND went_online_at >= ${incentive.starts_at}
+                  AND (went_offline_at IS NULL OR went_offline_at <= ${incentive.ends_at})
+              `);
+              newProgress = Number(hours ?? 0);
+              break;
+            }
+            case 'acceptance_rate': {
+              const [driverRow] = await db.select({ rate: drivers.acceptance_rate })
+                .from(drivers).where(eq(drivers.id, row.driverId)).limit(1);
+              newProgress = driverRow?.rate != null ? Number(driverRow.rate) : 0;
+              break;
+            }
+            case 'consecutive_accepts': {
+              // Count consecutive accepted offers in the incentive period
+              const [{ maxStreak }] = await db.execute<[{ maxStreak: string | null }]>(sql`
+                WITH ordered AS (
+                  SELECT outcome,
+                	ROW_NUMBER() OVER (ORDER BY sent_at) -
+                	ROW_NUMBER() OVER (PARTITION BY outcome ORDER BY sent_at) as grp
+                  FROM dispatch_offers
+                  WHERE driver_id = ${row.driverId}
+                    AND sent_at >= ${incentive.starts_at}
+                    AND sent_at <= ${incentive.ends_at}
+                )
+                SELECT MAX(COUNT(*)) OVER (PARTITION BY grp) as "maxStreak"
+                FROM ordered
+                WHERE outcome = 'accepted'
+                LIMIT 1
+              `);
+              newProgress = Number(maxStreak ?? 0);
+              break;
+            }
+            default:
+              continue;
+          }
+
+          // Update progress
+          await db.update(driverIncentives)
+            .set({ current_progress: newProgress.toString(), updated_at: now })
+            .where(eq(driverIncentives.id, row.id));
+
+          // Check if target met — then issue reward inside a serializable
+          // transaction with row-level lock to prevent double-issuance.
+          const targetValue = Number(incentive.target_value);
+          if (newProgress >= targetValue) {
+            await db.transaction(async (tx) => {
+              // 1. Lock the driver_incentives row
+              const [lockedRow] = await tx.execute<{ completed_at: Date | null }>(sql`
+                SELECT completed_at FROM driver_incentives
+                WHERE id = ${row.id}
+                FOR UPDATE
+              `);
+
+              // 2. Re-check idempotency — another scheduler tick may have
+              //    already completed and issued the voucher
+              if (lockedRow?.completed_at != null) {
+                logger.debug('[scheduler] incentive already completed, skipping', {
+                  driverIncentiveId: row.id, driverId: row.driverId,
+                });
+                return; // tx commits (no-op)
+              }
+
+              // 3. Issue reward voucher
+              const [voucher] = await tx.insert(creditVouchers).values({
+                driver_id: row.driverId,
+                calls: incentive.reward_calls,
+                expires_at: new Date(Date.now() + 90 * 86400_000), // 90 days
+              }).returning();
+
+              // 4. Mark completed and link voucher
+              await tx.update(driverIncentives)
+                .set({ completed_at: now, reward_voucher_id: voucher.id, updated_at: now })
+                .where(eq(driverIncentives.id, row.id));
+
+              logger.info('[scheduler] incentive completed', {
+                driverId: row.driverId, incentiveId: incentive.id, rewardCalls: incentive.reward_calls,
+              });
+            }).catch((txErr: any) => {
+              // If the tx was rolled back (e.g. serialization failure),
+              // log and skip — the next tick will retry
+              if (txErr?.code === '40001' || txErr?.code === '4P000') {
+                logger.warn('[scheduler] incentive completion tx conflict, will retry', {
+                  driverIncentiveId: row.id, error: txErr.message,
+                });
+              } else {
+                throw txErr; // re-throw for the outer catch
+              }
+            });
+          }
+        }
+      }
+    } catch (e) { logger.error('[scheduler] incentive progress error', e); }
+  }, 300_000);
+
+  // ── (18) Auto-start timer for driver_arrived rides — every 10s ──────
+  setInterval(async () => {
+    try {
+      // Read max_free_wait_seconds from system_config at runtime
+      const [configRow] = await db.select()
+        .from(systemConfig)
+        .where(eq(systemConfig.key, 'max_free_wait_seconds'))
+        .limit(1);
+      const freeWaitMs = (parseInt(configRow?.value ?? '60')) * 1000;
+      const cutoff = new Date(Date.now() - freeWaitMs);
+
+      const stale = await db.update(rides)
+        .set({
+          status: 'in_progress',
+          started_at: sql`arrived_at + interval '1 second' * ${freeWaitMs / 1000}`,
+          updated_at: new Date(),
+        })
+        .where(and(
+          eq(rides.status, 'driver_arrived'),
+          lt(rides.arrived_at, cutoff),
+        ))
+        .returning({ id: rides.id, driver_id: rides.driver_id });
+
+      if (stale.length > 0) {
+        logger.info('[scheduler] auto-start timer triggered', {
+          count: stale.length,
+          ids: stale.map(r => r.id),
+          waitSeconds: freeWaitMs / 1000,
+        });
+      }
+    } catch (e) { logger.error('[scheduler] auto-start timer error', e); }
+  }, 10_000);
+
+  logger.info('[scheduler] started (18 jobs)');
 }

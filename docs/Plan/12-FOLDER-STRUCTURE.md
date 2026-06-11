@@ -202,7 +202,7 @@ app/api/
 lib/
   h3.ts                           ← H3 hex grid: findNearbyDrivers(), getH3Cell(), getH3Ring()
   env.ts                          ← Zod-based startup validation of all required env vars. Throws descriptive error on missing/invalid var. Called before any server handler initialises.
-  fareCalc.ts                     ← calculateFare(pricing, distanceKm, waitMinutes, ceilings?) → FareBreakdown. All arithmetic in integer paisa. Applies minimum_fare_bdt floor. Logs BRTA ceiling warnings (never blocks). paisaToTaka() utility for display boundary only. **Distance source:** Google Maps Directions API (road distance). Fallback: Haversine × 1.3.
+  fareCalc.ts                     ← calculateFare(pricing, distanceKm, rideTimeMin, ceilings?) → FareBreakdown. All arithmetic in integer paisa. Computes floor_fare = base + round(per_km × floor_length_km) + (floor_min × per_min_bdt); applies as hard floor. Logs BRTA ceiling warnings (never blocks). paisaToTaka() utility for display boundary only. **Distance source:** Google Maps Directions API (road distance). Fallback: Haversine × 1.3.
   zone.ts                         ← Point-in-polygon check: isInsideZone(lat, lng)
   auth.ts                         ← Supabase JWT verification middleware: supabase.auth.getUser(jwt). Replaces Clerk and Firebase token verification.
   logger.ts                        ← Structured logger (wraps console with level filtering)

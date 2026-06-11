@@ -16,6 +16,7 @@ import { useCustomer } from '@/store';
 import Constants from 'expo-constants';
 import { getBarikoiAutocompleteUrl, getBarikoiPlaceDetailUrl } from '@/lib/useBarikoiMapStyle';
 import { logger } from "@/lib/logger";
+import { colors } from '@/theme/goRide';
 
 const _API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
 
@@ -120,7 +121,7 @@ const BarikoiAutocomplete = ({
                 )}
             </View>
 
-            {loading && <ActivityIndicator className="mt-3" color="#666" size="small" />}
+            {loading && <ActivityIndicator className="mt-3" color={colors.gray} size="small" />}
 
             {showSuggestions && suggestions.length > 0 && (
                 <FlatList

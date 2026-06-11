@@ -121,7 +121,7 @@ export default function VerificationScreen() {
           className="flex-1 bg-general-400 rounded-full py-3 items-center"
         >
           {actioning === item.id ? (
-            <ActivityIndicator size="small" color="#FFF" />
+            <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <Text className="text-white font-semibold">Approve</Text>
           )}
@@ -195,7 +195,7 @@ export default function VerificationScreen() {
                 <Text className="text-primaryTextColor font-semibold">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={handleReject} disabled={actioning === showReject} className="flex-1 bg-danger-500 rounded-full py-3 items-center">
-                {actioning === showReject ? <ActivityIndicator size="small" color="#FFF" /> : <Text className="text-white font-semibold">Reject</Text>}
+                {actioning === showReject ? <ActivityIndicator size="small" color={colors.white} /> : <Text className="text-white font-semibold">Reject</Text>}
               </TouchableOpacity>
             </View>
           </View>

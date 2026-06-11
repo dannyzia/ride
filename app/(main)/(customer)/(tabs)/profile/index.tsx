@@ -1,4 +1,4 @@
-import { colors } from '@/theme/goRide';
+import { colors, spacing, radii } from '@/theme/goRide';
 import { useSession } from "@/lib/session";
 import { Image, RefreshControl, ScrollView, Text, View } from "react-native";
 import InputField from "@/components/InputField";
@@ -8,8 +8,6 @@ import { useState } from "react";
 const Profile = () => {
   const { user } = useSession();
 
-  console.log(user)
-
   const [refreshing, setRefreshing] = useState(false);
   const [_, forceUpdate] = useState(0);
 
@@ -17,45 +15,48 @@ const Profile = () => {
     setRefreshing(true);
     try {
       await user?.reload();
-      forceUpdate(n => n + 1); // This will force a re-render
-    } catch (error) {
-      console.error("Failed to refresh user:", error);
+      forceUpdate(n => n + 1);
+    } catch (_error) {
+      // silently handle
     }
     setRefreshing(false);
   };
 
-
-
   return (
-    <SafeAreaView className="flex-1 bg-bgColor">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgDark }}>
       <ScrollView
-        className="px-5"
+        style={{ paddingHorizontal: spacing.xl }}
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[colors.black]} // Android spinner color
-            tintColor="#000"      // iOS spinner color
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
       >
-        <Text className="text-2xl text-primaryTextColor font-JakartaBold mt-5 mb-6">
+        <Text style={{ fontSize: 24, color: colors.textPrimaryDark, fontFamily: 'Urbanist', fontWeight: '800', marginTop: spacing.xl, marginBottom: spacing['2xl'] }}>
           My Profile
         </Text>
 
-        <View className="items-center justify-center mb-6">
+        {/* Avatar */}
+        <View style={{ alignItems: 'center', justifyContent: 'center', marginBottom: spacing['2xl'] }}>
           <Image
-            source={{
-              uri: user?.externalAccounts[0]?.imageUrl ?? user?.imageUrl,
+            source={{ uri: user?.externalAccounts?.[0]?.imageUrl ?? user?.imageUrl }}
+            style={{
+              width: 110,
+              height: 110,
+              borderRadius: 55,
+              borderWidth: 3,
+              borderColor: colors.primary,
             }}
-            style={{ width: 110, height: 110, borderRadius: 55 }}
-            className="border-[3px] border-primaryTextColor"
           />
         </View>
 
-        <View className="bg-cardBgColor rounded-xl px-5 py-4">
+        {/* Fields */}
+        <View style={{ backgroundColor: colors.surfaceElevatedDark, borderRadius: radii.xl, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderWidth: 1, borderColor: colors.borderDark }}>
           <InputField
             label="First name"
             placeholder={user?.firstName || "Not Found"}
@@ -82,7 +83,7 @@ const Profile = () => {
 
           <InputField
             label="Phone"
-            placeholder={String(user?.publicMetadata.phone_number) || "Not Found"}
+            placeholder={String(user?.publicMetadata?.phone_number) || "Not Found"}
             containerStyle="w-full"
             inputStyle="bg-cardBgColor text-primaryTextColor"
             editable={false}

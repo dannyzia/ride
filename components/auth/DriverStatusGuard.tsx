@@ -1,5 +1,6 @@
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useDriverFlowStore } from '@/store/useDriverFlowStore';
+import { colors } from '@/theme/goRide';
 
 interface Props {
   children: React.ReactNode;
@@ -11,7 +12,7 @@ export default function DriverStatusGuard({ children }: Props) {
   if (!driver) {
     return (
       <View className="flex-1 items-center justify-center bg-bgColor">
-        <ActivityIndicator size="large" color="#555" />
+        <ActivityIndicator size="large" color={colors.textDisabledDark} />
         <Text className="text-primaryTextColor mt-4 text-base">Loading profile...</Text>
       </View>
     );

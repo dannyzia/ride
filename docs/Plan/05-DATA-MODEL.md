@@ -30,10 +30,10 @@ The old enum values are REMOVED. Existing data must be migrated (see migration n
 
 - PK: `id` uuid, default `gen_random_uuid()`
 - Every table: `created_at timestamptz NOT NULL DEFAULT now()`, `updated_at timestamptz NOT NULL DEFAULT now()`
-- **Exception:** Append-only tables that are never updated (`call_ledger`, `dispatch_offers`, `used_challenges`, `rate_limits`) are exempt from the `updated_at` requirement. These tables only have `created_at`.
+- **Exception:** Append-only tables that are never updated (`call_ledger`, `dispatch_offers`, `used_challenges`, `rate_limits`, `promo_redemptions`, `ride_preferences`, `driver_preferences`) are exempt from the `updated_at` requirement. These tables only have `created_at`.
 - Soft-delete tables (user-facing): add `deleted_at timestamptz NULL`
 - No hard deletes on: users, drivers, riders, packages, call_ledger, rides, documents
-- Exempt from soft delete (append-only audit/ledger): `call_ledger`, `dispatch_offers`
+- Exempt from soft delete (append-only audit/ledger): `call_ledger`, `dispatch_offers`, `promo_redemptions`, `ride_preferences`, `driver_preferences`
 - `daily_reset_at` is stored as the absolute UTC instant equal to next 00:00 Asia/Dhaka. Computed in `lib/time.ts: nextBdtMidnightUtc()`. All callers MUST use this helper.
 - Pricing–ride vehicle_type consistency: `lib/fareCalc.ts` throws if `pricing.vehicle_type !== ride.vehicle_type` (application-layer assertion). A database trigger may be added later for strict enforcement; the application layer is the primary enforcer for MVP.
 
@@ -55,6 +55,12 @@ The old enum values are REMOVED. Existing data must be migrated (see migration n
 | ADD `rating` numeric(3,2) DEFAULT NULL | Rider's average rating as seen by drivers. NULL until first driver rating received. Computed as `rating_sum / NULLIF(rating_count, 0)`. |
 | ADD `rating_count` integer NOT NULL DEFAULT 0 | Total number of ratings received by this rider. Incremented on every `POST /api/ride/:id/rate` (role='driver'). |
 | ADD `rating_sum` integer NOT NULL DEFAULT 0 | Running sum of all ratings received. Updated atomically alongside `rating_count` on each `POST /api/ride/:id/rate` (role='driver'). |
+| ADD `sos_contact` | varchar(20) NULL | User's personal SOS emergency contact phone number in E.164 format. Nullable — not required. Set via `PATCH /api/user/sos-contact`. |
+| ADD `rider_wallet_balance_bdt` | integer NOT NULL DEFAULT 0 | Denormalised rider wallet balance in paisa. Updated on each `rider_wallet_transactions` insert via trigger or application logic. |
+| ADD `notification_prefs` | jsonb NULL | Per-user notification toggles. Shape: `{ ride_offers: boolean, promotions: boolean, chat: boolean, sounds: boolean }`. Read/written by `GET/PUT /api/rider/preferences/notifications`. NULL = no preferences set (app uses defaults). |
+| ADD `security_settings` | jsonb NULL | Per-user security settings. Shape: `{ two_factor_enabled: boolean, biometric_enabled: boolean }`. Read/written by `GET/PUT /api/rider/preferences/security`. NULL = no security preferences set. |
+| ADD `linked_accounts` | jsonb NULL | Third-party account links. Shape: `{ google: { id: string, email: string }, facebook: { id: string, name: string } }`. Read/written by `GET /api/rider/linked-accounts` and connect/disconnect endpoints. NULL = no linked accounts. |
+| ADD `data_controls` | jsonb NULL | Privacy/data-sharing settings. Shape: `{ share_location: boolean, share_analytics: boolean }`. Read/written by `GET/PUT /api/rider/data-controls`. NULL = defaults (share_location: true, share_analytics: false). |
 
 **Rating side effect (role='driver'):** On `POST /api/ride/:id/rate` with `role='driver'`, the server atomically increments `users.rating_count`, adds the rating value to `users.rating_sum`, and recalculates `users.rating = rating_sum / NULLIF(rating_count, 0)`.
 
@@ -86,6 +92,7 @@ The old enum values are REMOVED. Existing data must be migrated (see migration n
 | ADD `h3_cell_res9` varchar(20) NULL | H3 cell index at resolution 9 |
 | ADD `stage2_due_at` timestamptz NULL | Owner consent re-submission deadline (provisional_expires_at for temporary drivers). Set to `provisional_expires_at` when admin sets `status='temporary'`; NULL for `active`/`pending` drivers. |
 | ADD `brta_certificate_url` text NULL | Supabase Storage path of the approved BRTA enlistment certificate for this driver's vehicle. Denormalised from `documents WHERE doc_type='brta_certificate' AND status='approved'`. Set by admin on approval; used for quick admin-queue lookups without a documents JOIN. |
+| ADD `driver_wallet_balance_bdt` | integer NOT NULL DEFAULT 0 | Denormalised driver wallet balance in paisa. Sum of all non-payout `driver_wallet_transactions`. Updated on each transaction insert. |
 
 ### rides (modify existing)
 | Change | Detail |
@@ -96,7 +103,7 @@ The old enum values are REMOVED. Existing data must be migrated (see migration n
 | ADD `zone_id` uuid NOT NULL | FK → zones.id, RESTRICT |
 | ADD `pricing_id` uuid NOT NULL | FK → pricing.id, RESTRICT |
 | ADD `distance_km` numeric(7,3) NOT NULL | Extracted from fare_breakdown |
-| ADD `fare_breakdown` jsonb NOT NULL | `{base_fare_bdt: int (paisa), distance_charge_bdt: int (paisa), wait_charge_bdt: int (paisa), total_bdt: int (paisa), distance_km: number, platform_commission_percent: number, platform_commission_bdt: int \| null, driver_net_bdt: int \| null}` |
+| ADD `fare_breakdown` jsonb NOT NULL | `{base_fare_bdt: int (paisa), distance_charge_bdt: int (paisa), time_charge_bdt: int (paisa), total_bdt: int (paisa), floor_fare_bdt: int (paisa), distance_km: number, platform_commission_percent: number, platform_commission_bdt: int \| null, driver_net_bdt: int \| null}` |
 | ADD `vehicle_type` varchar(20) NOT NULL | **Use vehicleTypeEnum (8 values).** Matches rider's selection at request time. |
 | ADD `status` varchar(30) NOT NULL DEFAULT 'pending' | Enum: see rides_status enum below |
 | ADD `scheduled_at` timestamptz NULL | NULL = immediate; set = scheduled pickup time |
@@ -111,6 +118,12 @@ The old enum values are REMOVED. Existing data must be migrated (see migration n
 | ADD `cancel_reason` varchar(255) NULL | Populated on cancellation |
 | ADD `cancelled_by` varchar(10) NULL | Enum: 'rider', 'driver', 'system'. Populated on cancellation. |
 | ADD `scheduled_dispatched_at` timestamptz NULL | Set when scheduler triggers dispatch for a scheduled ride. Prevents double-dispatch on utils-server restart. NULL until dispatch is triggered. |
+| ADD `promo_code_id` uuid NULL | FK → promo_codes.id. Set when a valid promo code is applied at booking time. NULL if no promo. |
+| ADD `promo_discount_bdt` integer NULL | Actual discount applied in paisa. NULL if no promo. |
+| ADD `driver_fare_bdt` integer NULL | What the driver receives (full fare + preference surcharges, before platform commission). Set at booking time. NULL until ride is created. |
+| ADD `rider_payable_bdt` integer NULL | What the rider pays (driver_fare_bdt − promo_discount_bdt). Set at booking time. NULL until ride is created. |
+| ADD `platform_subsidy_bdt` integer NULL | Platform cost = promo_discount_bdt. NULL if no promo. |
+| ADD `preference_surcharge_bdt` integer NOT NULL DEFAULT 0 | Sum of all preference surcharges in paisa. 0 if no preferences selected. |
 | REMOVE `payment_status` | No in-app payment for rides (cash only, MVP) |
 
 > **Distance vs ETA source note:** Distance for fare calculation uses the **Google Maps Directions API** (returns the most accurate road-route distance). ETA for `rides.eta_minutes` uses the **Google Maps Distance Matrix API** (faster response, no route geometry needed). Both APIs use `GOOGLE_MAPS_SERVER_API_KEY` (server-side only, never exposed to client). See also `02-ARCHITECTURE.md` — fare calculation lifecycle.
@@ -131,7 +144,7 @@ Separated from drivers table. A driver registers exactly ONE vehicle.
 | model | varchar(100) | yes | — | e.g. 'City', 'Axio', 'Pulsar' |
 | manufacturing_year | integer | yes | — | 4-digit year. Must be ≥ current_year - max_vehicle_age for the claimed vehicle_type (validated at admin approval; max_vehicle_age from `lib/vehicleTypes.ts` code constant). |
 | cc_range | varchar(30) | no | NULL | Engine displacement range for motorcycle subtypes: '≤100', '101-150', '>150'. Required when vehicle_type IN ('bike_basic','bike_standard','bike_plus'). NULL for CNG and car types. |
-| has_ac | boolean | no | NULL | Air conditioning present. Required for car types ('car_economy' must be false, 'car_comfort'/'car_premium'/'car_xl' must be true). NULL for motorcycles and CNG. Validated at admin approval via dashboard photo review. |
+| has_ac | boolean | no | NULL | Air conditioning present. Required for car types. For `car_economy` and `car_comfort`: selectable (true or false); selecting false shows a discouragement warning to the driver. For `car_premium` and `car_xl`: must be true (AC mandatory). NULL for motorcycles and CNG. Validated at admin approval via dashboard photo review. Non-AC vehicles are flagged in the admin dashboard. |
 | passenger_seats | integer | yes | — | Seat capacity from `lib/vehicleTypes.ts` code constant (`seats` field). Seeded values: bike_basic/bike_standard/bike_plus=1, cng=3, car_economy/car_comfort/car_premium=4, car_xl=6–7 (7 as stored integer). |
 | registration_area | varchar(30) | yes | — | Enum from BRTA reference: 'DHAKA_METRO', 'CHITTAGONG_METRO', etc. |
 | vehicle_class_letter | varchar(10) | yes | — | Enum from BRTA reference: 'KA', 'KHA', 'GA', 'HA', 'LA', 'DAW', 'THAW', etc. |
@@ -152,6 +165,72 @@ Separated from drivers table. A driver registers exactly ONE vehicle.
 - The 7-day cooling-off on driver-initiated type changes is tracked via `type_change_effective_at`. Dispatch uses the CURRENT `vehicles.vehicle_type`; the new type takes effect only after `type_change_effective_at` passes (scheduler updates the field).
 - Max vehicle age soft limit (admin may override but default is rejection): bike_basic/bike_standard/bike_plus: no limit, cng: no limit, car_economy: 15yr, car_comfort: 12yr, car_premium: 8yr, car_xl: 12yr — all from `max_age_years` code constant in `lib/vehicleTypes.ts`. All have a 1-year minimum age (hard BRTA requirement, code constant `min_age_years`).
 - **`passenger_seats` MUST be updated atomically with every `vehicle_type` change.** When `vehicles.vehicle_type` is updated (via admin downgrade, admin upgrade, or cooling-off completion), `vehicles.passenger_seats` must be set to the corresponding seat count from the vehicle type reference in the same transaction. Never update one without the other.
+
+---
+
+### vehicle_models
+Reference table mapping known Bangladesh vehicle Brand/Model/Year combinations to Ride vehicle categories. Admin-maintainable. Used by the auto-classification engine in `lib/vehicleTypes.ts` to suggest the vehicle type during onboarding.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| brand | varchar(100) | yes | — | Manufacturer name (e.g. 'Toyota', 'Honda', 'Suzuki', 'Bajaj', 'Yamaha') |
+| model | varchar(100) | yes | — | Model name (e.g. 'Axio', 'Vitz', 'Alto', 'FZ-S', 'Pulsar') |
+| year_start | integer | no | NULL | First manufacturing year for this model variant. NULL = no lower bound. |
+| year_end | integer | no | NULL | Last manufacturing year for this model variant. NULL = still in production or no upper bound. |
+| default_vehicle_type | varchar(20) | yes | — | FK-style reference to vehicle_type enum. The Ride category this model maps to. |
+| typical_cc_min | integer | no | NULL | Typical minimum engine CC for this model |
+| typical_cc_max | integer | no | NULL | Typical maximum engine CC for this model |
+| has_ac | boolean | no | NULL | Whether this model typically has factory AC. NULL = varies by variant. |
+| passenger_seats | integer | yes | 4 | Typical seat count |
+| is_active | boolean | yes | true | Admin toggle |
+| created_at | timestamptz | yes | now() | — |
+| updated_at | timestamptz | yes | now() | — |
+
+**Constraints:**
+- `UNIQUE (brand, model, year_start, year_end)` — one entry per model-year range.
+- `CHECK (default_vehicle_type IN ('bike_basic','bike_standard','bike_plus','cng','car_economy','car_comfort','car_premium','car_xl'))`.
+
+**Seed data note:** This table must be seeded with at least the top 50 most common Bangladeshi ride-hailing vehicles. Admin can add/edit entries via admin panel. Seed script: `scripts/seed-vehicle-models.js`.
+
+**Sample seed rows:**
+
+| brand | model | year_start | year_end | default_vehicle_type | typical_cc_min | typical_cc_max | has_ac | passenger_seats |
+|-------|-------|-----------|---------|---------------------|---------------|---------------|--------|----------------|
+| Toyota | Axio | 2007 | 2024 | car_comfort | 1496 | 1798 | true | 4 |
+| Toyota | Vitz | 2005 | 2014 | car_economy | 996 | 1329 | false | 4 |
+| Toyota | Vitz | 2015 | 2024 | car_comfort | 996 | 1329 | true | 4 |
+| Honda | City | 2009 | 2024 | car_comfort | 1497 | 1799 | true | 4 |
+| Suzuki | Alto | 2005 | 2024 | car_economy | 796 | 1061 | false | 4 |
+| Daihatsu | Mira | 2012 | 2024 | car_economy | 660 | 660 | false | 4 |
+| Mitsubishi | eK | 2013 | 2024 | car_economy | 660 | 660 | false | 4 |
+| Maruti | Alto | 2005 | 2024 | car_economy | 796 | 1061 | false | 4 |
+| Tata | Indica | 2005 | 2018 | car_economy | 1396 | 1396 | false | 4 |
+| Toyota | Camry | 2015 | 2024 | car_premium | 2487 | 2487 | true | 4 |
+| Honda | Accord | 2015 | 2024 | car_premium | 1997 | 2400 | true | 4 |
+| Toyota | Corolla | 2018 | 2024 | car_premium | 1798 | 1798 | true | 4 |
+| Hyundai | Sonata | 2018 | 2024 | car_premium | 1999 | 2497 | true | 4 |
+| Toyota | Noah | 2014 | 2024 | car_xl | 1986 | 2493 | true | 7 |
+| Nissan | X-Trail | 2014 | 2024 | car_xl | 1997 | 2488 | true | 7 |
+| Honda | CR-V | 2015 | 2024 | car_xl | 1997 | 2400 | true | 7 |
+| Mitsubishi | Pajero | 2012 | 2024 | car_xl | 2835 | 3200 | true | 7 |
+| Yamaha | FZ-S | 2010 | 2024 | bike_plus | 153 | 153 | n/a | 1 |
+| Suzuki | Gixxer | 2015 | 2024 | bike_plus | 155 | 155 | n/a | 1 |
+| Bajaj | Pulsar | 2005 | 2024 | bike_plus | 150 | 220 | n/a | 1 |
+| Honda | Hornet | 2018 | 2024 | bike_plus | 184 | 184 | n/a | 1 |
+| Honda | CB Shine SP | 2010 | 2024 | bike_standard | 124 | 124 | n/a | 1 |
+| Bajaj | Discover | 2008 | 2024 | bike_standard | 125 | 150 | n/a | 1 |
+| Hero | Glamour | 2010 | 2024 | bike_standard | 124 | 125 | n/a | 1 |
+| Hero | Splendor | 2005 | 2024 | bike_basic | 97 | 97 | n/a | 1 |
+| Bajaj | Platina | 2005 | 2024 | bike_basic | 100 | 102 | n/a | 1 |
+| Runner | Cheeta | 2012 | 2024 | bike_basic | 100 | 108 | n/a | 1 |
+
+**Auto-classification logic (in `lib/vehicleTypes.ts:suggestVehicleType()`):**
+1. Driver enters brand + model + manufacturing year.
+2. System queries `vehicle_models WHERE brand ILIKE input AND model ILIKE input AND year_start <= input_year AND year_end >= input_year AND is_active = true`.
+3. If found: return `default_vehicle_type` as auto-suggestion. Also return `has_ac` and `passenger_seats` for form pre-fill.
+4. If not found: fall back to BRTA Vehicle Class Letter + CC range logic (existing).
+5. Admin sees both the auto-suggested type and the driver's self-selected type. Admin makes the final call.
 
 ---
 
@@ -195,11 +274,15 @@ Separated from drivers table. A driver registers exactly ONE vehicle.
 | id | uuid | yes | gen_random_uuid() | PK |
 | driver_id | uuid | yes | — | FK → drivers.id |
 | calls | integer | yes | — | Pro-rata credit amount in calls |
+| source | varchar(30) | yes | 'pro_rata' | Enum: `'pro_rata'`, `'incentive_reward'`, `'admin_grant'`. Distinguishes credit origin for wallet display and ledger filtering. |
+| source_ref_id | uuid | no | NULL | FK reference to the originating entity. For `incentive_reward`: `driver_incentives.id`. For `pro_rata`: `subscriptions.id`. NULL for `admin_grant`. |
 | expires_at | timestamptz | yes | — | Voucher void after this time (90 days from creation — business rule, not a DB constant) |
 | redeemed_subscription_id | uuid | no | NULL | FK → subscriptions.id when used |
 | status | varchar(20) | yes | 'active' | Enum: 'active', 'redeemed', 'expired' |
 | created_at | timestamptz | yes | now() | — |
 | updated_at | timestamptz | yes | now() | — |
+
+**Constraint:** `CHECK (source IN ('pro_rata', 'incentive_reward', 'admin_grant'))`.
 
 > **Pro-rata shortage check:** query `COUNT(*) FROM dispatch_offers WHERE ride_id IN (SELECT id FROM rides WHERE zone_id=? AND created_at BETWEEN sub.purchased_at AND sub.expires_at)` as `zone_total_offers`, divided by online-driver count for the period. This is computed at expiry time — no additional table needed.
 
@@ -302,6 +385,8 @@ Separated from drivers table. A driver registers exactly ONE vehicle.
 | reviewed_by | uuid | no | NULL | FK → users.id (admin) |
 | reviewed_at | timestamptz | no | NULL | — |
 | rejection_reason | varchar(500) | no | NULL | — |
+| face_match_score | numeric(5,2) | no | NULL | Confidence score from face-match API comparing this document (driver_photo) against the licence photo. NULL for non-photo documents. Values 0.00–100.00. |
+| face_match_status | varchar(20) | no | 'pending' | Enum: 'pending', 'matched', 'low_confidence', 'failed', 'not_applicable'. 'pending' = not yet processed; 'matched' = score above threshold; 'low_confidence' = score below threshold, flagged for admin; 'failed' = API error; 'not_applicable' = non-driver_photo doc type. |
 | file_size_bytes | integer | yes | — | > 50KB for legacy_screenshot |
 | purge_at | timestamptz | no | NULL | Set on account closure: `now() + 90 days`. Scheduler purges Supabase Storage and sets `storage_url = NULL`. |
 | created_at | timestamptz | yes | now() | — |
@@ -335,45 +420,52 @@ Separated from drivers table. A driver registers exactly ONE vehicle.
 | id | uuid | yes | gen_random_uuid() | PK |
 | zone_id | uuid | yes | — | FK → zones.id |
 | vehicle_type | varchar(20) | yes | — | **vehicleTypeEnum (8 values).** One pricing row per vehicle type per zone. |
-| base_fare_bdt | integer | yes | — | In paisa |
-| per_km_bdt | integer | yes | — | In paisa per km |
-| per_min_wait_bdt | integer | yes | — | In paisa per minute after free wait |
-| free_wait_minutes | integer | yes | — | Free waiting minutes before charges begin. Default values (seeded, admin-configurable per zone/vehicle type): 2 for bikes, 1 for CNG, 2 for cars. See also `free_wait_minutes` in `lib/vehicleTypes.ts`. |
-| minimum_fare_bdt | integer | yes | — | Hard floor for the final fare in paisa. `final_fare = max(computed_total, minimum_fare_bdt)`. Applied in `lib/fareCalc.ts`. |
-| platform_commission_percent | numeric(5,2) | yes | 0.00 | Platform's share of the final fare (%). DEFAULT 0.00 = zero commission. Admin-configurable per vehicle type per zone via admin panel. Commission is calculated as a percentage of `final_fare` (post-minimum-floor). |
+| base_fare_bdt | integer | yes | — | In paisa. Charged on every ride. Also included in floor fare computation. |
+| per_km_bdt | integer | yes | — | In paisa per km. Used for both distance charge and floor computation. |
+| per_min_bdt | integer | yes | — | In paisa per minute of billable ride time. Applies to the unified ride timer (see below). |
+| floor_length_km | numeric(10,2) | yes | — | Minimum km used for floor fare computation. `floor_fare = base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)`. |
+| floor_min | integer | yes | — | Minimum minutes used for floor fare computation (same formula as above). |
+| platform_commission_percent | numeric(5,2) | yes | 0.00 | Platform's share of the final fare (%). DEFAULT 0.00 = zero commission. Admin-configurable per vehicle type per zone via admin panel. Commission is calculated as a percentage of `final_fare` (post-floor). |
 | is_active | boolean | yes | true | — |
 | brta_fare_ceiling_bdt | integer | no | NULL | Government BRTA fare ceiling in paisa for this vehicle type. Admin reference only — system logs warning if calculated fare exceeds ceiling but does NOT block the ride. |
 | created_at | timestamptz | yes | now() | — |
 | updated_at | timestamptz | yes | now() | — |
 
-**Initial production values (seed via migration — all amounts in paisa). These are defaults; admin can adjust per zone/vehicle type via admin panel at any time:**
-| vehicle_type | base_fare_bdt | per_km_bdt | per_min_wait_bdt | free_wait_minutes | minimum_fare_bdt | platform_commission_percent |
+**Initial production values (seed via migration — all money in integer paisa; floor_length_km is decimal km). These are defaults; admin can adjust per zone/vehicle type via admin panel at any time:**
+| vehicle_type | base_fare_bdt | per_km_bdt | per_min_bdt | floor_length_km | floor_min | platform_commission_percent |
 |---|---|---|---|---|---|---|
-| bike_basic | 2000 | 900 | 50 | 2 | 6000 | 0.00 |
-| bike_standard | 2400 | 1050 | 50 | 2 | 7000 | 0.00 |
-| bike_plus | 2800 | 1250 | 50 | 2 | 8000 | 0.00 |
-| cng | 4000 | 1200 | 200 | 1 | 8000 | 0.00 |
-| car_economy | 3500 | 1300 | 250 | 2 | 15000 | 0.00 |
-| car_comfort | 4000 | 1600 | 300 | 2 | 18000 | 0.00 |
-| car_premium | 5000 | 1900 | 300 | 2 | 25000 | 0.00 |
-| car_xl | 7000 | 2200 | 350 | 2 | 30000 | 0.00 |
+| bike_basic | 2500 | 775 | 175 | 2.00 | 10 | 0.00 |
+| bike_standard | 2500 | 950 | 180 | 2.00 | 10 | 0.00 |
+| bike_plus | 2500 | 1050 | 190 | 2.00 | 10 | 0.00 |
+| cng | 4000 | 1500 | 200 | 3.00 | 15 | 0.00 |
+| car_economy | 4500 | 1500 | 350 | 4.00 | 20 | 0.00 |
+| car_comfort | 5000 | 1800 | 375 | 4.00 | 20 | 0.00 |
+| car_premium | 6500 | 2100 | 400 | 4.00 | 20 | 0.00 |
+| car_xl | 8000 | 2500 | 425 | 4.00 | 20 | 0.00 |
+
+> **Floor fare verification (BDT):** bike_basic 58 | bike_standard 62 | bike_plus 65 | cng 115 | car_economy 175 | car_comfort 197 | car_premium 229 | car_xl 265
+> Computed as: `base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)` — all in paisa, divide by 100 for BDT display.
 
 **Fare calculation formula (implemented in `lib/fareCalc.ts`):**
 ```
-total          = base_fare_bdt + (per_km_bdt × distance_km) + max(0, actual_wait_min − free_wait_minutes) × per_min_wait_bdt
-final_fare     = max(total, minimum_fare_bdt)
-platform_fee   = round(final_fare × platform_commission_percent / 100)
-driver_net     = final_fare − platform_fee
+distance_charge  = round(per_km_bdt × distance_km)
+time_charge      = ride_time_min × per_min_bdt          // integer arithmetic; per_min_bdt is integer paisa
+computed_total   = base_fare_bdt + distance_charge + time_charge
+floor_fare       = base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)
+final_fare       = max(computed_total, floor_fare)
+platform_fee     = round(driver_fare_bdt × platform_commission_percent / 100)
+driver_net       = final_fare − platform_fee
 ```
-All arithmetic in integer paisa; round after each multiplication.
+All arithmetic in integer paisa; `Math.round` after each multiplication.
 
-**Actual wait time:** At ride completion, `actual_wait_min = max(0, CEIL((started_at − arrived_at) / 60))` if `arrived_at IS NOT NULL`; otherwise the estimated wait from the original fare breakdown is used. The `arrived_at` timestamp is the canonical start of the waiting timer.
+**Ride time definition:** Free waiting is a platform-wide constant: 60 seconds (`system_config.max_free_wait_seconds`). The billable timer starts at `timer_start = min(arrived_at + 60_000, started_at)` — whichever comes **first**. If `arrived_at IS NULL`, `timer_start = started_at`. At ride completion: `ride_time_min = CEIL((completed_at − timer_start) / 60_000)`. At estimation/request time: `ride_time_min = 0` (timer not yet running). **Auto-start:** When a ride enters `driver_arrived` status, the server starts a 60-second timer. On expiry, if status is still `driver_arrived`, the server automatically sets `started_at = arrived_at + 60s` and `status = 'in_progress'`. The `arrived_at` timestamp is set when the driver taps "I've Arrived"; `started_at` is set when the driver taps "Start Ride" (or auto-set after 60s).
 
 **Commission note:** Rider pays `final_fare` to driver in cash. Driver owes platform `platform_fee` (tracked as liability via `rides.platform_commission_bdt`; no automated collection in MVP). Default commission is 0.00% — effectively zero commission unless admin configures otherwise.
 
 **Notes (driver-first framing):**
-- Bike waiting charges are unified at 50 paisa/min across all bike tiers (seeded default in `pricing` table; admin-configurable), consistent with market norms. Differentiation comes from base fare + per-km rate, ensuring drivers earn more per km than on commission platforms.
-- CNG fares respect BRTA meter guidelines. The 1-minute free wait (seeded default in `pricing` table; admin-configurable; vs. competitors' 0) is possible because Ride takes zero commission — the driver is not penalised by platform overhead on each fare.
+- Time rates are differentiated per tier (175 / 180 / 190 paisa/min for bikes; 200 for CNG; 350–425 for cars). This unified timer covers both post-free-wait time and trip duration, ensuring drivers are compensated for traffic delays during the ride.
+- CNG has a 3 km / 15 min floor — the most generous in the matrix — consistent with the longer boarding and traffic context in Dhaka for CNG trips.
+- The floor fare guarantees a minimum driver earning on every trip, even very short ones. It is computed dynamically from `floor_length_km` and `floor_min` rather than stored as a static value, so admin adjustments to `per_km_bdt` or `per_min_bdt` automatically update the floor.
 - `lib/fareCalc.ts` logs a warning if a calculated fare exceeds `brta_fare_ceiling_bdt` (from `pricing` or `system_config` — see below) or `brta_max_per_km_bdt` (from `platform_config`) but does NOT block the ride.
 
 **BRTA fare ceiling lookup order (`lib/fareCalc.ts`):**
@@ -382,7 +474,7 @@ All arithmetic in integer paisa; round after each multiplication.
 3. If both are NULL or `'0'`, skip the ceiling check entirely.
 4. Admin should prefer setting the per-type value in `pricing`; `system_config` serves as a fallback only.
 
-**All `pricing` column values above are seeded defaults in the Drizzle migration. Admin can adjust via admin panel at any time. `minimum_fare_bdt` is a hard floor enforced at fare calculation time — it cannot be overridden per-ride.**
+**All `pricing` column values above are seeded defaults in the Drizzle migration. Admin can adjust via admin panel at any time. The floor fare (`base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)`) is a hard floor enforced at fare calculation time — it cannot be overridden per-ride.**
 
 ### driver_online_sessions
 | Column | Type | Required | Default | Notes |
@@ -421,7 +513,7 @@ All arithmetic in integer paisa; round after each multiplication.
 | created_at | timestamptz | yes | now() | — |
 | updated_at | timestamptz | yes | now() | — |
 
-**Initial rows (all admin-configurable at runtime):** `dispatch_paused = 'false'`, `min_app_version = '1.0.0'`, `brta_fare_ceiling_bdt = '0'` (means "not configured" — `lib/fareCalc.ts` skips ceiling check when value is `'0'`). Admin must set actual BRTA ceiling before first production ride. **Post-deploy checklist:** Set `system_config.brta_fare_ceiling_bdt` to the correct BRTA-mandated value (in paisa) for the operational region. If per-type ceilings are needed, set `pricing.brta_fare_ceiling_bdt` per vehicle type instead; the global value serves as fallback. Referenced by `lib/fareCalc.ts` and 15-RUNBOOK-DEPLOY.md.
+**Initial rows (all admin-configurable at runtime):** `dispatch_paused = 'false'`, `min_app_version = '1.0.0'`, `brta_fare_ceiling_bdt = '0'` (means "not configured" — `lib/fareCalc.ts` skips ceiling check when value is `'0'`). Admin must set actual BRTA ceiling before first production ride. `max_free_wait_seconds = '60'` — platform-wide free waiting constant (seconds); used by `utils-server/scheduler.ts` auto-start timer and `POST /api/ride/:id/complete` to compute `timer_start`. **Post-deploy checklist:** Set `system_config.brta_fare_ceiling_bdt` to the correct BRTA-mandated value (in paisa) for the operational region. If per-type ceilings are needed, set `pricing.brta_fare_ceiling_bdt` per vehicle type instead; the global value serves as fallback. Referenced by `lib/fareCalc.ts` and 15-RUNBOOK-DEPLOY.md.
 
 Additional rows (admin must maintain):
 - `apk_download_url = ''` — Direct download URL for the latest APK. Admin must set after each EAS build. Empty string means no download link available.
@@ -429,6 +521,16 @@ Additional rows (admin must maintain):
 - `geofence_arrival_radius_meters = '100'` — Post-MVP auto-detection: radius (meters) within which driver is considered "arrived" at pickup. Manual "I've Arrived" button is MVP.
 - `geofence_arrival_dwell_seconds = '30'` — Post-MVP auto-detection: dwell time (seconds) driver must remain within geofence radius before auto-arrival triggers.
 - `stale_arrived_timeout_minutes = '15'` — Auto-cancel if `rides.status = 'driver_arrived'` for longer than this value (minutes) after `arrived_at` without progressing to `in_progress`. Cancelled with `cancelled_by = 'system'`, `cancel_reason = 'driver_no_show_after_arrival'`.
+- `sos_police_number = '999'` — National emergency number for SOS alerts (police control room). Used by `POST /api/sos/alert` triple SMS dispatch. Admin-configurable.
+- `sos_ride_number = ''` — Platform's dedicated SOS monitoring number. All SOS alerts are also forwarded here. Admin must configure before production. Used by `POST /api/sos/alert`.
+- `sample_vehicle_photo_front = ''` — Reference image URL showing a properly framed vehicle front photo. Admin must upload to Supabase Storage public bucket and set URL. Displayed to drivers during onboarding photo capture.
+- `sample_vehicle_photo_left = ''` — Reference image URL for left-side photo.
+- `sample_vehicle_photo_right = ''` — Reference image URL for right-side photo.
+- `sample_vehicle_photo_rear = ''` — Reference image URL for rear photo.
+- `sample_vehicle_photo_dashboard = ''` — Reference image URL for dashboard photo (showing AC controls clearly).
+- `sample_vehicle_photo_seats = ''` — Reference image URL for interior front-seats photo.
+- `sample_vehicle_video = ''` — Reference video URL for 15-30s walkaround video example. Admin must upload MP4 to Supabase Storage public bucket.
+- `face_match_min_score = '70.00'` — Minimum face-match confidence score (0.00–100.00) for driver selfie vs licence photo comparison. Scores below this threshold set `documents.face_match_status = 'low_confidence'` and flag for admin review. Admin-configurable.
 
 > **Note:** Driver-slider ratios and BRTA ceiling reference values are stored in the separate `platform_config` table (below), not `system_config`. Keep these tables separate: `system_config` = operational toggles & app version; `platform_config` = pricing policy & driver constraints.
 
@@ -492,6 +594,186 @@ Audit trail for all vehicle type changes — admin downgrades, admin upgrades, a
 
 **Invariant:** For any vehicle with a pending type change: `vehicles.type_change_effective_at = vehicle_type_changes.effective_at` (for the most recent `cooling_off` row for this vehicle's driver). These are set together in `POST /api/admin/driver/type-change-approve`.
 
+### promo_codes
+Platform-funded promo codes for rider fare discounts. Driver fare is unaffected; the platform absorbs the subsidy.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| code | varchar(30) | yes | — | Unique, case-insensitive promo code (e.g. `SAVE20`). Indexed unique. |
+| title | varchar(100) | no | NULL | Display title (e.g. "20% off your next ride") |
+| description | text | no | NULL | Full terms/description |
+| discount_type | varchar(10) | yes | — | Enum: `'percent'`, `'flat'`. Percent = % off; flat = fixed BDT off. |
+| discount_value | integer | yes | — | For `percent`: whole number 1–100. For `flat`: integer paisa. |
+| max_uses | integer | yes | — | Total redemption limit across all riders. `NULL` = unlimited. |
+| max_uses_per_rider | integer | no | 1 | Max times a single rider can redeem. Default 1. |
+| usage_interval | integer | no | NULL | If set, the promo is only eligible every Nth completed ride since the rider's last redemption. NULL = no interval restriction. Admin-configurable. |
+| max_discount_bdt | integer | no | NULL | Cap on discount in paisa (for `percent` type). `NULL` = no cap. |
+| min_spend_bdt | integer | no | NULL | Minimum `total_bdt` required to apply. In paisa. |
+| valid_from | timestamptz | yes | — | Promo becomes active at this time |
+| expires_at | timestamptz | yes | — | Promo expires at this time |
+| is_active | boolean | yes | true | Admin can deactivate without deleting |
+| created_by | uuid | no | NULL | FK → users.id (admin) |
+| created_at | timestamptz | yes | now() | — |
+| updated_at | timestamptz | yes | now() | — |
+| deleted_at | timestamptz | no | NULL | Soft delete. `is_active` toggle is the primary deactivation mechanism; this is for admin permanent removal. |
+
+**Constraints:**
+- `UNIQUE (code)` — case-insensitive via CITEXT or `LOWER(code)` index.
+- `CHECK (discount_value > 0)`.
+- `CHECK (discount_type IN ('percent', 'flat'))`.
+- `CHECK (discount_type != 'percent' OR discount_value <= 100)`.
+
+### promo_redemptions
+Immutable append-only log of every promo code redemption.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| promo_code_id | uuid | yes | — | FK → promo_codes.id |
+| rider_id | uuid | yes | — | FK → users.id |
+| ride_id | uuid | yes | — | FK → rides.id |
+| discount_type | varchar(10) | yes | — | Snapshot from promo_codes at redemption time |
+| discount_value | integer | yes | — | Snapshot from promo_codes |
+| discounted_amount_bdt | integer | yes | — | Actual discount applied in paisa |
+| driver_fare_bdt | integer | yes | — | What the driver receives (full fare, unchanged) |
+| rider_payable_bdt | integer | yes | — | What the rider pays (fare − discount) |
+| platform_subsidy_bdt | integer | yes | — | Platform cost = discounted_amount_bdt |
+| created_at | timestamptz | yes | now() | — |
+
+**Constraints:**
+- `UNIQUE (promo_code_id, rider_id, ride_id)` — prevent double-redemption per ride.
+- No `updated_at` — this is an append-only table.
+
+### incentive_definitions
+Admin-defined incentive campaigns for drivers. Completed incentives award bonus calls via `credit_vouchers`.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| name | varchar(100) | yes | — | e.g. "Complete 20 rides this week" |
+| description | text | no | NULL | Human-readable details |
+| target_metric | varchar(20) | yes | — | Enum: `'completed_rides'`, `'online_hours'`, `'acceptance_rate'`, `'consecutive_accepts'` |
+| target_value | numeric | yes | — | Threshold to complete (e.g. 20 rides, 40 hours, 0.90 rate) |
+| reward_calls | integer | yes | — | Bonus call credits awarded on completion |
+| vehicle_type_filter | varchar(20) | no | NULL | If set, only drivers of this vehicle_type are eligible. FK-style reference to vehicle_type enum. |
+| starts_at | timestamptz | yes | — | Campaign start |
+| ends_at | timestamptz | yes | — | Campaign end |
+| is_active | boolean | yes | true | Admin toggle |
+| created_by | uuid | no | NULL | FK → users.id (admin) |
+| created_at | timestamptz | yes | now() | — |
+| updated_at | timestamptz | yes | now() | — |
+| deleted_at | timestamptz | no | NULL | Soft delete. `is_active` toggle is the primary deactivation mechanism; this is for admin permanent removal. |
+
+**Constraints:**
+- `CHECK (target_metric IN ('completed_rides', 'online_hours', 'acceptance_rate', 'consecutive_accepts'))`.
+- `CHECK (target_value > 0)`.
+- `CHECK (reward_calls > 0)`.
+
+### driver_incentives
+Tracks each driver's progress toward an active incentive.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| driver_id | uuid | yes | — | FK → drivers.id |
+| incentive_id | uuid | yes | — | FK → incentive_definitions.id |
+| current_progress | numeric | yes | 0 | Current value toward target_value |
+| completed_at | timestamptz | no | NULL | Set when `current_progress >= target_value` |
+| reward_voucher_id | uuid | no | NULL | FK → credit_vouchers.id. Set when reward is granted. |
+| created_at | timestamptz | yes | now() | — |
+| updated_at | timestamptz | yes | now() | — |
+
+**Constraints:**
+- `UNIQUE (driver_id, incentive_id)` — one progress row per driver per incentive.
+
+### preferences
+Ride preference definitions managed by admin (e.g. large luggage, quiet ride, AC required).
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| name | varchar(50) | yes | — | Machine key (e.g. `'large_luggage'`, `'quiet_ride'`, `'female_friendly'`, `'ac_required'`) |
+| display_label_en | varchar(100) | yes | — | English display label |
+| display_label_bn | varchar(100) | yes | — | Bengali display label |
+| icon | varchar(50) | no | NULL | Icon name from icon library |
+| charge_bdt | integer | no | 0 | Additional charge in paisa for this preference |
+| affects_matching | boolean | yes | false | If true, dispatch filters by driver_preferences |
+| is_active | boolean | yes | true | Admin toggle |
+| created_at | timestamptz | yes | now() | — |
+| updated_at | timestamptz | yes | now() | — |
+
+**Constraints:**
+- `UNIQUE (name)` — unique machine key.
+
+### driver_preferences
+Which preferences a driver has opted into. Used by dispatch to match rider preferences.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| driver_id | uuid | yes | — | FK → drivers.id |
+| preference_id | uuid | yes | — | FK → preferences.id |
+| created_at | timestamptz | yes | now() | — |
+
+**Constraints:**
+- `UNIQUE (driver_id, preference_id)` — no duplicates.
+
+### ride_preferences
+Records which preferences were selected for a specific ride and any associated surcharge.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| ride_id | uuid | yes | — | FK → rides.id |
+| preference_id | uuid | yes | — | FK → preferences.id |
+| charge_bdt | integer | yes | 0 | Surcharge applied (snapshot from preferences.charge_bdt at booking time) |
+| created_at | timestamptz | yes | now() | — |
+
+**Constraints:**
+- `UNIQUE (ride_id, preference_id)` — no duplicates per ride.
+- No `updated_at` — immutable after creation.
+
+---
+
+### rider_addresses
+Saved favourite addresses for riders. Used for quick pickup/dropoff selection on the ride booking screen.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| user_id | uuid | yes | — | FK → users.id |
+| label | varchar(100) | yes | — | User-assigned label (e.g. "Home", "Office", "Gym") |
+| address | text | yes | — | Full address string from Barikoi autocomplete |
+| details | text | no | NULL | Optional extra info (e.g. "3rd floor", "near the mosque") |
+| lat | numeric(10,7) | yes | — | Latitude |
+| lng | numeric(10,7) | yes | — | Longitude |
+| is_favorite | boolean | yes | false | Marked as favorite for quick access on home screen |
+| created_at | timestamptz | yes | now() | — |
+| updated_at | timestamptz | yes | now() | — |
+| deleted_at | timestamptz | no | NULL | Soft delete. `DELETE /api/rider/addresses/:id` sets this; `POST .../undo-delete` clears it. |
+
+**Constraints:**
+- Max 20 active addresses per user (enforced at application layer in `POST /api/rider/addresses`).
+
+---
+
+### sos_alerts
+Audit log of SOS alert triggers for both riders and drivers. Written by `POST /api/sos/alert`.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| user_id | uuid | yes | — | FK → users.id. The user who triggered the SOS (rider or driver). |
+| role | varchar(10) | yes | — | Enum: `'rider'`, `'driver'`. Role of the user at alert time. |
+| latitude | numeric(10,7) | yes | — | User's location at alert time |
+| longitude | numeric(10,7) | yes | — | User's location at alert time |
+| message | text | no | NULL | Custom SMS message composed by user in the SOS modal. |
+| contacts_notified | jsonb | yes | — | Array of contact objects: `[{type: 'police'|'personal'|'platform', phone: string, sms_sent: boolean}]`. Records which contacts were notified. |
+| created_at | timestamptz | yes | now() | — |
+
+**Note:** Append-only — no `updated_at`. No soft delete (audit log).
+
 ---
 
 ## Enums (define as Drizzle pgEnum)
@@ -506,12 +788,22 @@ Audit trail for all vehicle type changes — admin downgrades, admin upgrades, a
 | call_event_type | 'deduction', 'refund', 'credit', 'initial_load', 'expiry_writeoff' | — |
 | payment_provider | 'portpos' | Formerly 'bkash', 'nagad'. Consolidated to PortPos as unified payment gateway. Old callbacks kept as inert fallback. |
 | payment_status | 'initiated', 'paid', 'failed', 'callback_pending' | — |
-| document_type | 'license_front', 'license_back', 'reg_scan_front', 'reg_scan_back', 'fitness_scan', 'tax_token_scan', 'brta_certificate', 'vehicle_photo_front', 'vehicle_photo_left', 'vehicle_photo_right', 'vehicle_photo_back', 'legacy_screenshot', 'owner_consent_scan', 'helmet_photo', 'dashboard_photo', 'interior_photo', 'third_row_photo' | `brta_certificate` — mandatory BRTA vehicle enlistment certificate for all vehicles; `helmet_photo` — mandatory for bike_basic/bike_standard/bike_plus; `dashboard_photo` — mandatory for all car types (AC verification); `interior_photo` — optional for car types; `third_row_photo` — mandatory for car_xl |
+| document_type | 'license_front', 'license_back', 'reg_scan_front', 'reg_scan_back', 'fitness_scan', 'tax_token_scan', 'brta_certificate', 'vehicle_photo_front', 'vehicle_photo_left', 'vehicle_photo_right', 'vehicle_photo_back', 'legacy_screenshot', 'owner_consent_scan', 'helmet_photo', 'dashboard_photo', 'interior_photo', 'third_row_photo', 'driver_photo', 'vehicle_video', 'vehicle_photo_seats' | `brta_certificate` — mandatory BRTA vehicle enlistment certificate for all vehicles; `helmet_photo` — mandatory for bike_basic/bike_standard/bike_plus; `dashboard_photo` — mandatory for all car types (AC verification); `interior_photo` — optional for car types; `third_row_photo` — mandatory for car_xl; `driver_photo` — mandatory live selfie or passport-style photo for face-match against driving licence; `vehicle_video` — mandatory 15-30s walkaround video for all vehicle types; `vehicle_photo_seats` — mandatory interior front-seats photo for car types |
 | document_status | 'pending', 'approved', 'rejected' | — |
 | offer_outcome | 'delivered', 'accepted', 'rejected', 'expired', 'refunded', 'filtered' | `filtered` added — for min_per_km_bdt exclusions |
+| credit_voucher_source | 'pro_rata', 'incentive_reward', 'admin_grant' | Distinguishes credit origin in `credit_vouchers.source` |
 | owner_consent_status | 'pending', 'approved', 'rejected', 'expired' | — |
 | registration_area | 'DHAKA_METRO', 'CHITTAGONG_METRO', 'KHULNA_METRO', 'RAJSHAHI_METRO', 'BARISAL_METRO', 'SYLHET_METRO', 'RANGPUR_METRO', 'MYMENSINGH_METRO' | — |
 | vehicle_class_letter | 'KA', 'KHA', 'GA', 'GHA', 'CHA', 'CHHA', 'JA', 'JHA', 'TA', 'THA', 'DA', 'NA', 'PA', 'BHA', 'MA', 'DAW', 'THAW', 'HA', 'LA', 'EE', 'YA' | — |
+| wallet_driver_transaction_type | 'promo_receivable', 'referral_receivable', 'payout', 'adjustment' | Driver wallet transaction types |
+| wallet_rider_transaction_type | 'referral_reward', 'ride_discount', 'adjustment' | Rider wallet transaction types |
+| point_transaction_type | 'earned', 'redeemed', 'expired' | Point transaction types |
+| point_source_type | 'ride', 'commission', 'admin_grant' | Source of point earning |
+| point_reward_type | 'package_grant', 'wallet_credit' | How point offer reward is delivered |
+| referral_status | 'pending', 'rewarded' | Referral lifecycle |
+| face_match_status | 'pending', 'matched', 'low_confidence', 'failed', 'not_applicable' | Driver photo face-match result. 'pending' = not yet processed; 'matched' = score above threshold; 'low_confidence' = score below threshold, flagged for admin; 'failed' = API error; 'not_applicable' = non-driver_photo doc type. |
+| vehicle_change_reason | 'admin_downgrade', 'admin_upgrade', 'driver_request' | Why a vehicle type change was initiated |
+| vehicle_change_status | 'pending', 'approved', 'rejected', 'cooling_off' | Vehicle type change lifecycle |
 
 ---
 
@@ -522,16 +814,16 @@ Audit trail for all vehicle type changes — admin downgrades, admin upgrades, a
 > Admin approval screens and dispatch logic import from this file.
 > **cc_range stored values:** `'≤100'`, `'101-150'`, `'>150'` (no 'cc' suffix). These are the exact string values stored in `vehicles.cc_range` and validated by `POST /api/vehicle/register`. Display labels (e.g. "≤100cc") are formatted only in the UI layer.
 
-| vehicle_type | display_en | display_bn | cc_range | has_ac | seats | min_age_years | max_age_years | free_wait_minutes | licence_type | typical_models | extra_docs | driver_req |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| bike_basic | Bike Basic | বাইক বেসিক | ≤100 | n/a | 1 | 1 | none | 2 | Motorcycle | Hero Splendor, Bajah Platina, Runner Cheeta | Helmet photos (driver + spare) | none |
-| bike_standard | Bike Standard | বাইক স্ট্যান্ডার্ড | 101-150 | n/a | 1 | 1 | none | 2 | Motorcycle | Honda CB Shine SP, Bajah Discover, Hero Glamour | Helmet photos | none |
-| bike_plus | Bike Plus | বাইক প্লাস | >150 | n/a | 1 | 1 | none | 2 | Motorcycle | Yamaha FZ-S, Suzuki Gixxer, Bajah Pulsar, Honda Hornet | Helmet photos | none |
-| cng | CNG | সিএনজি | n/a | false | 3 | 1 | none | 1 | Light transport / CNG driver permit | Standard CNG auto-rickshaw | Road-legal check | none |
-| car_economy | Car Economy | কার ইকোনমি | n/a | false | 4 | 1 | 15 | 2 | Private car licence | Toyota Vitz (non-AC), Maruti Alto, Tata Indica | Dashboard photo (no-AC confirmation) | none |
-| car_comfort | Car Comfort | কার কমফোর্ট | n/a | true (OEM) | 4 | 1 | 12 | 2 | Private car licence | Toyota Axio, Honda City, Toyota Vitz (AC) | Dashboard photo (OEM AC controls) | none |
-| car_premium | Car Premium | কার প্রিমিয়াম | n/a | true (OEM) | 4 | 1 | 8 | 2 | Private car licence | Toyota Camry, Honda Accord, newer Corolla, Hyundai Sonata | Premium interior photo | ≥50 rides, rating ≥4.5 (gate enforced after 50 rides) |
-| car_xl | Car XL | কার এক্সএল | n/a | true (OEM) | 6–7 (7 stored) | 1 | 12 | 2 | Private car or light transport licence | Toyota Noah, X-Trail, Honda CR-V, Mitsubishi Pajero | Third-row seat photo | ≥25 rides, rating ≥4.3 (gate enforced after 25 rides) |
+| vehicle_type | display_en | display_bn | cc_range | has_ac | seats | min_age_years | max_age_years | licence_type | typical_models | extra_docs | driver_req |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| bike_basic | Bike Basic | বাইক বেসিক | ≤100 | n/a | 1 | 1 | none | Motorcycle | Hero Splendor, Bajah Platina, Runner Cheeta | Helmet photos (driver + spare) | none |
+| bike_standard | Bike Standard | বাইক স্ট্যান্ডার্ড | 101-150 | n/a | 1 | 1 | none | Motorcycle | Honda CB Shine SP, Bajah Discover, Hero Glamour | Helmet photos | none |
+| bike_plus | Bike Plus | বাইক প্লাস | >150 | n/a | 1 | 1 | none | Motorcycle | Yamaha FZ-S, Suzuki Gixxer, Bajah Pulsar, Honda Hornet | Helmet photos | none |
+| cng | CNG | সিএনজি | n/a | false | 3 | 1 | none | Light transport / CNG driver permit | Standard CNG auto-rickshaw | Road-legal check | none |
+| car_economy | Car Economy | কার ইকোনমি | n/a | optional (Non-AC discouraged) | 4 | 1 | 15 | Private car licence | Suzuki Alto, Toyota Vitz (older), Daihatsu Mira, Mitsubishi eK, Maruti Alto, Tata Indica | Dashboard photo (AC verification); interior seats photo | none |
+| car_comfort | Car Comfort | কার কমফোর্ট | n/a | optional (Non-AC discouraged) | 4 | 1 | 12 | Private car licence | Toyota Axio, Honda City, Toyota Vitz (AC), Hyundai Accent | Dashboard photo (AC verification); interior seats photo | none |
+| car_premium | Car Premium | কার প্রিমিয়াম | n/a | required (AC mandatory) | 4 | 1 | 8 | Private car licence | Toyota Camry, Honda Accord, newer Corolla, Hyundai Sonata | Premium interior photo; dashboard photo (AC required); interior seats photo | ≥50 rides, rating ≥4.5 (gate enforced after 50 rides) |
+| car_xl | Car XL | কার এক্সএল | n/a | required (AC mandatory) | 6–7 (7 stored) | 1 | 12 | Private car or light transport licence | Toyota Noah, X-Trail, Honda CR-V, Mitsubishi Pajero | Third-row seat photo; dashboard photo (AC required); interior seats photo | ≥25 rides, rating ≥4.3 (gate enforced after 25 rides) |
 
 **Driver requirement gate logic (`lib/vehicleTypes.ts: checkDriverEligibility()`):**
 - `car_premium`: if `drivers.completed_rides_count >= 50` → require `drivers.rating >= 4.5`. If count < 50 → gate NOT applied (new drivers start unrestricted).
@@ -578,6 +870,7 @@ Audit trail for all vehicle type changes — admin downgrades, admin upgrades, a
 | rides | `driver_id, status` | btree | Driver history |
 | rides | `vehicle_type` | btree | Vehicle-type ride analytics |
 | rides | `scheduled_at` WHERE `status='pending' AND scheduled_at IS NOT NULL AND scheduled_dispatched_at IS NULL` | btree | Scheduled dispatch sweep |
+| rides | `promo_code_id` WHERE `promo_code_id IS NOT NULL` | btree partial | Promo usage lookup |
 | documents | `driver_id, status` | btree | Admin approval queue |
 | documents | `driver_id, doc_type` WHERE `status IN ('pending','approved') AND deleted_at IS NULL` | unique partial | Max 1 doc per type per driver |
 | documents | `vehicle_id` WHERE `vehicle_id IS NOT NULL` | btree | Vehicle document lookup |
@@ -605,6 +898,151 @@ Audit trail for all vehicle type changes — admin downgrades, admin upgrades, a
 | drivers | `brta_certificate_url` WHERE `brta_certificate_url IS NOT NULL` | btree partial | Admin quick lookup of BRTA cert without documents JOIN |
 | vehicle_type_changes | `driver_id, created_at DESC` | btree | Driver's type change history |
 | vehicle_type_changes | `status, effective_at` WHERE `status='cooling_off'` | btree partial | Cooling-off sweep query |
+| promo_codes | `LOWER(code)` | unique | Case-insensitive code uniqueness |
+| promo_codes | `is_active, valid_from, expires_at` | btree | Active promo lookup |
+| promo_redemptions | `promo_code_id, rider_id, ride_id` | unique | Prevent double-redemption per ride |
+| promo_redemptions | `rider_id, created_at` | btree | Rider promo history |
+| promo_redemptions | `ride_id` | btree | Ride promo lookup |
+| incentive_definitions | `is_active, starts_at, ends_at` | btree | Active incentive lookup |
+| driver_incentives | `driver_id, incentive_id` | unique | One progress row per driver per incentive |
+| driver_incentives | `driver_id, completed_at` WHERE `completed_at IS NULL` | btree partial | Active incentive progress lookup |
+| preferences | `name` | unique | Preference key uniqueness |
+| preferences | `is_active` | btree | Active preference filter |
+| driver_preferences | `driver_id, preference_id` | unique | No duplicate driver-preference pairs |
+| driver_preferences | `preference_id` | btree | Dispatch preference filter |
+| ride_preferences | `ride_id, preference_id` | unique | No duplicate ride-preference pairs |
+| ride_preferences | `ride_id` | btree | Ride preference lookup |
+| sos_alerts | `user_id, created_at` | btree | SOS alert history by user |
+| sos_alerts | `role` | btree | Filter by role |
+| credit_vouchers | `driver_id, status` WHERE `status='active'` | btree partial | Active voucher lookup by source |
+| credit_vouchers | `source, source_ref_id` WHERE `source_ref_id IS NOT NULL` | btree partial | Source traceability lookup |
+| referral_campaigns | `is_active` WHERE `is_active=true` | unique partial | Only one active campaign at a time |
+| referral_codes | `user_id` | unique | One code per user |
+| referral_codes | `code` | unique | Code uniqueness |
+| referrals | `referrer_id, created_at` | btree | Referrer's referral history |
+| referrals | `referee_id` | unique | One referral per referee |
+| referrals | `campaign_id` | btree | Campaign usage tracking |
+| driver_wallet_transactions | `driver_id, created_at` | btree | Driver wallet history |
+| driver_wallet_transactions | `reference_id` WHERE `reference_id IS NOT NULL` | btree partial | Transaction traceability |
+| rider_wallet_transactions | `rider_id, created_at` | btree | Rider wallet history |
+| rider_wallet_transactions | `reference_id` WHERE `reference_id IS NOT NULL` | btree partial | Transaction traceability |
+| points | `user_id` | unique | One balance row per user |
+| point_transactions | `user_id, created_at` | btree | User points history |
+| point_transactions | `reference_id` WHERE `reference_id IS NOT NULL` | btree partial | Transaction traceability |
+| point_offers | `is_active` | btree | Active offer lookup |
+| vehicle_models | `brand, model` | btree | Model lookup by brand+model |
+| vehicle_models | `default_vehicle_type` | btree | Filter by vehicle type |
+| vehicle_models | `is_active` | btree | Active model filter |
+| vehicle_models | `brand, model, year_start, year_end` | unique | One entry per model-year range |
+| documents | `face_match_status` WHERE `face_match_status IN ('pending','low_confidence')` | btree partial | Unprocessed and flagged face matches |
+| rider_addresses | `user_id, created_at DESC` | btree | List user's addresses ordered by recency |
+| rider_addresses | `user_id` WHERE `deleted_at IS NULL` | btree partial | Active addresses lookup |
+| rider_addresses | `user_id, is_favorite` WHERE `deleted_at IS NULL AND is_favorite = true` | btree partial | Quick favorite lookup |
+
+---
+
+### referral_campaigns
+Admin-defined referral reward rules. Only one active at a time.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| name | varchar(100) | yes | — | Campaign name |
+| referrer_reward_percent | integer | yes | — | Discount % for referrer's next ride |
+| referee_reward_percent | integer | yes | — | Discount % for referee's first ride |
+| max_uses_per_referrer | integer | yes | — | Max friends a single user can invite |
+| max_uses_per_campaign | integer | no | NULL | Global limit |
+| is_active | boolean | yes | true | Only 1 can be active at once |
+| created_at | timestamptz | yes | now() | — |
+| updated_at | timestamptz | yes | now() | — |
+
+### referral_codes
+Unique invite codes for every user.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| user_id | uuid | yes | — | FK → users.id |
+| code | varchar(20) | yes | — | e.g. RIDE-A3F9B2. Unique. |
+| created_at | timestamptz | yes | now() | — |
+
+### referrals
+Links referrer and referee. Reward issued on referee's first completed ride.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| referrer_id | uuid | yes | — | FK → users.id |
+| referee_id | uuid | yes | — | FK → users.id |
+| campaign_id | uuid | yes | — | FK → referral_campaigns.id |
+| status | varchar(20) | yes | 'pending' | Enum: 'pending', 'rewarded' |
+| rewarded_at | timestamptz | no | NULL | Set on referee's first completed ride |
+| created_at | timestamptz | yes | now() | — |
+
+### driver_wallet_transactions
+Ledger of platform receivables owed to drivers (subsidies, rewards) minus payouts.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| driver_id | uuid | yes | — | FK → drivers.id |
+| transaction_type | varchar(30) | yes | — | Enum: 'promo_receivable', 'referral_receivable', 'payout', 'adjustment' |
+| amount_bdt | integer | yes | — | Paisa. Positive for receivables (owed to driver), negative for payouts/adjustments. |
+| reference_id | uuid | no | NULL | FK to rides.id or referrals.id |
+| balance_after | integer | yes | — | Snapshot of wallet balance after transaction |
+| created_at | timestamptz | yes | now() | — |
+
+### rider_wallet_transactions
+Ledger of platform credits available to riders. MVP is informational.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| rider_id | uuid | yes | — | FK → users.id |
+| transaction_type | varchar(30) | yes | — | Enum: 'referral_reward', 'ride_discount', 'adjustment' |
+| amount_bdt | integer | yes | — | Paisa. Positive = credit added, Negative = credit used |
+| reference_id | uuid | no | NULL | FK to rides.id or referrals.id |
+| balance_after | integer | yes | — | Snapshot of wallet balance after transaction |
+| created_at | timestamptz | yes | now() | — |
+
+### points
+Current point balance for all users (drivers and riders).
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| user_id | uuid | yes | — | FK → users.id. Unique constraint. |
+| balance | integer | yes | 0 | Current point balance |
+| created_at | timestamptz | yes | now() | — |
+| updated_at | timestamptz | yes | now() | — |
+
+### point_transactions
+Log of all point earnings and redemptions.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| user_id | uuid | yes | — | FK → users.id |
+| transaction_type | varchar(30) | yes | — | Enum: 'earned', 'redeemed', 'expired' |
+| source_type | varchar(30) | no | NULL | Enum: 'ride', 'commission', 'admin_grant' |
+| amount | integer | yes | — | Positive for earned, negative for redeemed/expired |
+| reference_id | uuid | no | NULL | FK to rides.id or point_offers.id |
+| balance_after | integer | yes | — | Snapshot |
+| created_at | timestamptz | yes | now() | — |
+
+### point_offers
+Admin-defined rewards redeemable with points.
+
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| title | varchar(100) | yes | — | e.g. "Free Starter Package" |
+| points_required | integer | yes | — | Points needed to redeem |
+| reward_type | varchar(30) | yes | — | Enum: 'package_grant', 'wallet_credit' |
+| reward_value | varchar(100) | yes | — | Package ID or BDT paisa amount |
+| is_active | boolean | yes | true | — |
+| created_at | timestamptz | yes | now() | — |
+| updated_at | timestamptz | yes | now() | — |
 
 ---
 
@@ -614,7 +1052,7 @@ Reference data is served via API endpoints from typed constants — NOT as DB ta
 
 ### `lib/vehicleTypes.ts` (canonical vehicle type reference)
 Exports:
-- `VEHICLE_TYPES: VehicleTypeDefinition[]` — the 8-row table above, typed (includes `free_wait_minutes: number` field — 2 for bikes, 1 for CNG, 2 for cars)
+- `VEHICLE_TYPES: VehicleTypeDefinition[]` — the 8-row table above, typed (free waiting is a platform-wide constant from `system_config.max_free_wait_seconds`, not a per-type field)
 - `VEHICLE_TYPE_ZOD_ENUM` — Zod enum with the 8 lowercase values (`'bike_basic'` … `'car_xl'`). Import this in all API route Zod schemas; never define vehicle_type inline.
 - `getVehicleType(key: VehicleTypeEnum): VehicleTypeDefinition`
 - `checkDriverEligibility(vehicleType: VehicleTypeEnum, driver: { completed_rides_count: number, rating: number }): { eligible: boolean, reason?: string }`

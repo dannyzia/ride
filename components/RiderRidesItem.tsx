@@ -4,12 +4,15 @@ import Animated, { FadeInLeft, FadeOutRight } from 'react-native-reanimated';
 import { icons } from '@/constants/data';
 import { AntDesign } from '@expo/vector-icons';
 import { RideOfferDetails } from '@/types/type';
+import { colors, spacing, radii } from '@/theme/goRide';
 
 const { width } = Dimensions.get('window');
 
-const RiderRidesItem = ({ item, removeIt, acceptRide }: { item: RideOfferDetails, removeIt: (id: string) => void, acceptRide: (id: string) => void }) => {
-
-
+const RiderRidesItem = ({ item, removeIt, acceptRide }: {
+    item: RideOfferDetails,
+    removeIt: (id: string) => void,
+    acceptRide: (id: string) => void
+}) => {
     const [timer, setTimer] = useState(11);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -19,14 +22,12 @@ const RiderRidesItem = ({ item, removeIt, acceptRide }: { item: RideOfferDetails
             return;
         }
 
-        // Set interval only once when the timer starts
         if (!intervalRef.current) {
             intervalRef.current = setInterval(() => {
                 setTimer(prev => prev - 1);
             }, 1000);
         }
 
-        // Clean up the interval on unmount or when timer reaches 0
         return () => {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
@@ -39,39 +40,53 @@ const RiderRidesItem = ({ item, removeIt, acceptRide }: { item: RideOfferDetails
         <Animated.View
             entering={FadeInLeft.duration(500)}
             exiting={FadeOutRight.duration(500)}
-            className="bg-white rounded-2xl p-6 my-3 self-center shadow-md"
-            style={{ width: width - 32 }}
+            style={{
+                backgroundColor: colors.surfaceElevatedDark,
+                borderRadius: radii['2xl'],
+                padding: spacing['2xl'],
+                marginVertical: spacing.md,
+                alignSelf: 'center',
+                width: width - 32,
+                borderWidth: 1,
+                borderColor: colors.borderDark,
+            }}
         >
             {/* Header */}
-            <View className="flex-row justify-between items-center">
-                <View className="flex-row items-center gap-x-2">
-                    <Image source={icons.cab} className="w-9 h-9" resizeMode="contain" />
-                    <Text className="text-[22px] font-bold text-[#111]">Car</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Image source={icons.cab} style={{ width: 36, height: 36 }} resizeMode="contain" />
+                    <Text style={{ fontSize: 20, fontWeight: '700', color: colors.textPrimaryDark, fontFamily: 'Urbanist' }}>
+                        Car
+                    </Text>
                 </View>
-                <Text className="text-base text-gray-500 font-medium">
+                <Text style={{ fontSize: 13, color: colors.textSecondaryDark, fontFamily: 'Urbanist' }}>
                     #{item?.id?.slice(0, 10).toUpperCase() ?? 'RID12345'}
                 </Text>
             </View>
 
             {/* Pickup & Dropoff */}
-            <View className="mt-6">
+            <View style={{ marginTop: spacing['2xl'] }}>
                 {/* Pickup */}
-                <View className="flex-row gap-x-3 mb-4">
-                    <View className="w-3 h-3 rounded-full bg-green-600 mt-2" />
-                    <View>
-                        <Text className="text-lg text-[#111] font-JakartaBold">{item.pickupDetails.pickup}</Text>
-                        <Text className="text-sm text-gray-500 mt-1 font-JakartaMedium">
+                <View style={{ flexDirection: 'row', gap: 12, marginBottom: spacing.lg }}>
+                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colors.primary, marginTop: 6 }} />
+                    <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 16, color: colors.textPrimaryDark, fontFamily: 'Urbanist', fontWeight: '700' }}>
+                            {item.pickupDetails.pickup}
+                        </Text>
+                        <Text style={{ fontSize: 13, color: colors.textSecondaryDark, marginTop: 4, fontFamily: 'Urbanist' }}>
                             {item.pickupDetails.pickupAddress ?? 'Pickup address'}
                         </Text>
                     </View>
                 </View>
 
                 {/* Dropoff */}
-                <View className="flex-row gap-x-3">
-                    <View className="w-3 h-3 rounded-full bg-red-500 mt-2" />
-                    <View>
-                        <Text className="text-lg font-semibold text-[#111] font-JakartaBold">{item.dropoffDetails.dropoff}</Text>
-                        <Text className="text-sm text-gray-500 mt-1 font-JakartaMedium">
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colors.danger, marginTop: 6 }} />
+                    <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimaryDark, fontFamily: 'Urbanist' }}>
+                            {item.dropoffDetails.dropoff}
+                        </Text>
+                        <Text style={{ fontSize: 13, color: colors.textSecondaryDark, marginTop: 4, fontFamily: 'Urbanist' }}>
                             {item.dropoffDetails.dropoffAddress ?? 'Dropoff address'}
                         </Text>
                     </View>
@@ -79,49 +94,77 @@ const RiderRidesItem = ({ item, removeIt, acceptRide }: { item: RideOfferDetails
             </View>
 
             {/* Customer Details */}
-            <View className="justify-between mt-7">
-                <Text className="font-JakartaSemiBold">Customer Details:</Text>
-                <View className="border border-gray-400 p-2 mt-3 rounded-xl">
-                    <Text>Name: {item.customerDetails.full_name}</Text>
-                    <Text>Email: {item.customerDetails.email}</Text>
-                    <Text>Number: {item.customerDetails.number}</Text>
+            <View style={{ marginTop: spacing['2xl'] }}>
+                <Text style={{ fontFamily: 'Urbanist', fontWeight: '600', color: colors.textSecondaryDark, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: spacing.sm }}>
+                    Customer
+                </Text>
+                <View style={{ backgroundColor: colors.bgDark, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderDark, gap: 4 }}>
+                    <Text style={{ color: colors.textPrimaryDark, fontFamily: 'Urbanist', fontSize: 14 }}>
+                        {item.customerDetails.full_name}
+                    </Text>
+                    <Text style={{ color: colors.textSecondaryDark, fontFamily: 'Urbanist', fontSize: 13 }}>
+                        {item.customerDetails.number}
+                    </Text>
                 </View>
             </View>
 
             {/* Ride Info */}
-            <View className="mt-6">
-                <Text className="font-JakartaSemiBold">Ride Information:</Text>
-                <View className="border border-gray-400 p-2 mt-3 rounded-xl">
-                    <Text>Duration: {item.duration}</Text>
-                    <Text>Fare: ${item.fare}</Text>
-                    <Text>Status: {item.status}</Text>
+            <View style={{ marginTop: spacing.lg }}>
+                <Text style={{ fontFamily: 'Urbanist', fontWeight: '600', color: colors.textSecondaryDark, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: spacing.sm }}>
+                    Ride Info
+                </Text>
+                <View style={{ backgroundColor: colors.bgDark, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderDark, gap: 4 }}>
+                    <Text style={{ color: colors.textSecondaryDark, fontFamily: 'Urbanist', fontSize: 13 }}>Duration: {item.duration}</Text>
+                    <Text style={{ color: colors.primary, fontFamily: 'Urbanist', fontWeight: '700', fontSize: 16 }}>৳{item.fare}</Text>
+                    <Text style={{ color: colors.textSecondaryDark, fontFamily: 'Urbanist', fontSize: 13 }}>Status: {item.status}</Text>
                 </View>
             </View>
 
             {/* Footer */}
-            <View className="flex-row justify-between items-center mt-7">
-                <View className="flex-row space-x-7">
-                    <View>
-                        <Text className="text-base text-gray-500">Pickup</Text>
-                        <Text className="text-lg font-bold text-[#111]">{item.pickupDetails.pickupDistance} km</Text>
-                    </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing['2xl'] }}>
+                <View>
+                    <Text style={{ fontSize: 13, color: colors.textSecondaryDark, fontFamily: 'Urbanist' }}>Pickup distance</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimaryDark, fontFamily: 'Urbanist' }}>
+                        {item.pickupDetails.pickupDistance} km
+                    </Text>
                 </View>
 
-                <View className="flex-row gap-3 items-center justify-center">
-                    <View className="bg-red-600 rounded-full p-2">
-                        <TouchableOpacity onPress={() => removeIt(item.id)}>
-                            <AntDesign name="close" size={25} color="white" />
-                        </TouchableOpacity>
-                    </View>
+                <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                    {/* Reject */}
+                    <TouchableOpacity
+                        onPress={() => removeIt(item.id)}
+                        style={{ backgroundColor: colors.danger, borderRadius: radii.pill, padding: spacing.sm }}
+                    >
+                        <AntDesign name="close" size={22} color={colors.white} />
+                    </TouchableOpacity>
+
+                    {/* Accept */}
                     <TouchableOpacity
                         onPress={() => acceptRide(item.id)}
-                        className="bg-yellow-400 px-7 py-2.5 rounded-full flex-row items-center space-x-2.5"
+                        style={{
+                            backgroundColor: colors.primary,
+                            paddingHorizontal: spacing['2xl'],
+                            paddingVertical: spacing.md,
+                            borderRadius: radii.pill,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 8,
+                        }}
                     >
-                        <View className="flex-row gap-x-2">
-                            <Text className="font-bold text-lg text-[#111]">Accept</Text>
-                            <View className="bg-white rounded-full w-7 h-7 items-center justify-center">
-                                <Text className="font-bold text-sm">{timer}</Text>
-                            </View>
+                        <Text style={{ fontWeight: '700', fontSize: 16, color: colors.white, fontFamily: 'Urbanist' }}>
+                            Accept
+                        </Text>
+                        <View style={{
+                            backgroundColor: colors.primaryPressed,
+                            borderRadius: radii.pill,
+                            width: 28,
+                            height: 28,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <Text style={{ fontWeight: '700', fontSize: 13, color: colors.white, fontFamily: 'Urbanist' }}>
+                                {timer}
+                            </Text>
                         </View>
                     </TouchableOpacity>
                 </View>

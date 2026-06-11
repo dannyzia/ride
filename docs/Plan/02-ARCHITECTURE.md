@@ -23,12 +23,12 @@ When you see "DELETE" — remove entirely from GlideX; it has no equivalent in R
 | Layer | GlideX | Ride (target) |
 |-------|--------|---------------|
 | Auth | Clerk (email/social) | REPLACE → Supabase Auth phone OTP (dprelay SMS gateway) |
-| Payments | Stripe | REPLACE → bKash + Nagad mobile money |
+| Payments | Stripe | REPLACE → PortPos unified payment gateway (bKash, Nagad, Rocket, cards) |
 | Driver monetisation | Per-ride fare collection | REPLACE → Subscription call-package wallet; calls deducted per app-level fetch |
 | Geo matching | None (Stripe/Clerk focused) | ADD → H3 hexagonal indexing, weighted driver scoring |
 | Real-time | WebSocket (exists in socket/) | EXTEND → add heartbeat-gated call deduction, SMS fallback, batch broadcast |
 | Admin | None | ADD → Admin web panel (protected route group or separate React app) |
-| Database schema | users, drivers, rides (thin) | EXTEND → add packages, call_ledger, subscriptions, documents, zones columns. Ratings stored directly on `rides` table (`rider_rating`, `driver_rating` columns) — no separate `ratings` table. |
+| Database schema | users, drivers, rides (thin) | EXTEND → add packages, call_ledger, subscriptions, documents, zones columns, wallets, points, referrals, sos_alerts. Ratings stored directly on `rides` table (`rider_rating`, `driver_rating` columns) — no separate `ratings` table. |
 | Notifications | Expo Notifications (push) | KEEP + EXTEND → Expo Push primary; optional Supabase Edge Function for wake-up push |
 | Storage | Firebase Storage (exists) | REPLACE → Supabase Storage for driver document uploads |
 
@@ -72,25 +72,32 @@ When you see "DELETE" — remove entirely from GlideX; it has no equivalent in R
 - `app/api/package/` — Package CRUD, purchase initiation, activation, idempotency.
 - `app/api/call-ledger/` — Call balance query, deduction audit log.
 - `app/api/document/` — Driver document upload confirmation, admin review endpoints.
-- `app/api/admin/` — Admin-scoped endpoints: driver approval, rejection, escalation, zone write.
+- `app/api/admin/` — Admin-scoped endpoints: driver approval, rejection, escalation, zone write, promo CRUD, incentive CRUD, preference CRUD, referral campaign CRUD, point offer CRUD, vehicle model CRUD.
 - `app/api/driver/owner-consent/` — Owner consent scan-copy submission (Step 3). Creates `owner_consents` rows. No OTP.
-- `app/api/payment/bkash+api.ts` — bKash callback + verification only. Initiation is handled by `POST /api/package/purchase` with `{provider: 'bkash'}`.
-- `app/api/payment/nagad+api.ts` — Nagad callback + verification only. Initiation is handled by `POST /api/package/purchase` with `{provider: 'nagad'}`.
+- `app/api/payment/portpos+api.ts` — PortPos payment callback + verification. Initiation is handled by `POST /api/package/purchase` with `{provider: 'portpos'}`.
+- `app/api/payment/bkash+api.ts` — bKash callback (inert fallback, not active).
+- `app/api/payment/nagad+api.ts` — Nagad callback (inert fallback, not active).
 - `app/api/auth/start-verification+api.ts` — Server-side proxy to `supabase.auth.signInWithOtp({ phone })`. Enforces rate limiting before calling Supabase.
 - `app/api/ride/request+api.ts` — REPLACES GlideX ride/create. Adds zone check, fare breakdown, rate limiting.
 - `lib/h3.ts` — H3 hex grid indexing: `findNearbyDrivers(lat, lng, ringSteps, vehicleType)` returns pre-filtered driver IDs from h3Index by cell+vehicleType. `getH3Cell(lat, lng, res)`. `getH3Ring(cell, ringSteps)`.
 - `lib/auth.ts` — Supabase JWT verification middleware (`supabase.auth.getUser(jwt)`). Replaces Clerk and Firebase token verification.
-- `lib/fareCalc.ts` — Fare breakdown: base + per-km + estimated wait charge. **Minimum fare:** Applies `final_fare = max(total, minimum_fare_bdt)` from the pricing row. **Commission:** At ride completion, `calculateFinalFare()` recomputes wait charge with actual minutes (`CEIL((started_at − arrived_at) / 60)`), then derives `platform_fee = round(final_fare × pricing.platform_commission_percent / 100)` and `driver_net = final_fare − platform_fee`. Writes `rides.platform_commission_bdt` as driver liability (no automated collection in MVP). Post-MVP: `platform_commission_bdt` will be aggregated per driver and deducted from their call-wallet balance or subtracted at subscription renewal. In MVP, admin can query total outstanding via `SELECT SUM(platform_commission_bdt) FROM rides WHERE driver_id=? AND status='completed'`. **Fare ceiling:** Logs a warning if calculated fare exceeds BRTA reference values stored in `platform_config` (`brta_max_per_km_bdt`, `brta_max_base_bdt`) or the per-ride ceiling in `system_config` (`brta_fare_ceiling_bdt`). Does not block the ride; admin must adjust pricing.
+- `lib/fareCalc.ts` — Fare breakdown: base + per-km distance charge + per-min time charge. **Formula:** `distance_charge = round(per_km_bdt × distance_km)`; `time_charge = ride_time_min × per_min_bdt`; `computed_total = base_fare_bdt + distance_charge + time_charge`; `floor_fare = base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)`; `final_fare = max(computed_total, floor_fare)`. **Timer:** Free waiting is a platform-wide constant (60 seconds, from `system_config.max_free_wait_seconds`). At ride completion, `timer_start = min(arrived_at + 60_000, started_at)` (whichever comes first); `ride_time_min = CEIL((completed_at − timer_start) / 60_000)`. At estimation time, `ride_time_min = 0`. **Auto-start:** When `driver_arrived` is set, the scheduler starts a 60-second timer. On expiry, if status is still `driver_arrived`, the server auto-sets `started_at = arrived_at + 60s` and `status = 'in_progress'`. **Commission:** `platform_fee = round(final_fare × pricing.platform_commission_percent / 100)`; `driver_net = final_fare − platform_fee`. Writes `rides.platform_commission_bdt` as driver liability (no automated collection in MVP). Post-MVP: `platform_commission_bdt` will be aggregated per driver and deducted from their call-wallet balance or subtracted at subscription renewal. In MVP, admin can query total outstanding via `SELECT SUM(platform_commission_bdt) FROM rides WHERE driver_id=? AND status='completed'`. **Fare ceiling:** Logs a warning if calculated fare exceeds BRTA reference values stored in `platform_config` (`brta_max_per_km_bdt`, `brta_max_base_bdt`) or the per-ride ceiling in `system_config` (`brta_fare_ceiling_bdt`). Does not block the ride; admin must adjust pricing.
 - `lib/vehicleTypes.ts` — Vehicle type criteria constants (8 types with CC range, AC, seats, age limits, license requirements, driver requirements). Exports `checkDriverEligibility(driver, vehicleType)` used by admin approval and vehicle registration. Called by `POST /api/vehicle/register`, admin approval screen, and `utils-server/dispatch.ts` (filters ineligible `car_premium`/`car_xl` drivers).
 - `lib/zone.ts` — Point-in-polygon check for active zone.
 - `lib/activateSubscription.ts` — Idempotent subscription activation transaction. Called by payment callbacks and compensationWorker. Compensation retries are persisted via the `compensation_queue` DB table — no in-memory queue. **Idempotency check:** at the start of the transaction, read `payment_events.subscription_id`. If already non-null (activation already completed), return early without throwing. This prevents double-activation from concurrent `compensationWorker` and admin recovery calls.
-- `lib/bkash.ts`, `lib/nagad.ts` — Payment provider API clients.
+- `lib/portpos.ts` — PortPos unified payment gateway API client (bKash, Nagad, Rocket, cards). Primary payment integration.
+- `lib/bkash.ts`, `lib/nagad.ts` — Payment provider API clients (inert fallback, not active).
 - `lib/presignUrl.ts` — Supabase Storage signed URLs for admin document review (`supabase.storage.from('driver-documents').createSignedUrl(...)`).
 - `lib/time.ts` — BDT midnight calculation (nextBdtMidnightUtc), ISO formatting.
 - `lib/logger.ts` — Structured logger (wraps console, respects LOG_LEVEL).
-- `components/PaymentWebView.tsx` — REPLACES Payment.tsx; bKash/Nagad WebView.
-- `components/RideOfferSheet.tsx`, `CallWalletCard.tsx`, `FareBreakdownSheet.tsx`, `CountdownRing.tsx`, `DriverStatusBadge.tsx`, `AdminDocumentViewer.tsx`, `DocumentUploadCard.tsx` — See 08-UI-SPEC.md for screen mappings.
-- `store/usePackageStore.ts`, `useCallLedgerStore.ts`, `useDriverStatusStore.ts` — Zustand stores for subscription state.
+- `lib/walletService.ts` — Wallet transaction helpers: createDriverWalletTransaction(), createRiderWalletTransaction(). All wallet writes go through this module to ensure balance_after snapshots are consistent. Used by POST /api/ride/:id/complete, referral reward, and points redemption.
+- `lib/pointsService.ts` — Points calculation and award helpers: awardRidePoints(riderId, riderPayableBdt, rideId), awardCommissionPoints(driverId, commissionBdt, rideId). Called from POST /api/ride/:id/complete within the same transaction.
+- `lib/referralService.ts` — Referral validation and reward helpers: validateReferralCode(), applyReferralReward(). Called from POST /api/referral/apply and POST /api/ride/:id/complete.
+- `lib/smsService.ts` — SMS dispatch for SOS alerts. Sends via configured SMS gateway. Reads sos_police_number and sos_ride_number from system_config at runtime. Never hardcodes phone numbers.
+- `lib/faceMatch.ts` — Pluggable face-match interface for comparing driver selfie against licence photo. Exports `compareFaces(driverPhotoUrl: string, licencePhotoUrl: string): Promise<{ score: number, status: 'matched' | 'low_confidence' | 'failed' }>` and `getFaceMatchMinScore(): Promise<number>`. Vendor implementation is injected at runtime (MVP: stub returning `not_applicable`; production: AWS Rekognition or similar). Called by `POST /api/driver/document/upload-confirm` when `doc_type='driver_photo'`.
+- `components/PaymentWebView.tsx` — REPLACES Payment.tsx; PortPos WebView checkout.
+- `components/RideOfferSheet.tsx`, `CallWalletCard.tsx`, `FareBreakdownSheet.tsx`, `CountdownRing.tsx`, `DriverStatusBadge.tsx`, `AdminDocumentViewer.tsx`, `DocumentUploadCard.tsx`, `SOSModal.tsx`, `WalletCard.tsx`, `ReferralShareCard.tsx`, `PointsBalanceCard.tsx` — See 08-UI-SPEC.md for screen mappings.
+- `store/usePackageStore.ts`, `useCallLedgerStore.ts`, `useDriverStatusStore.ts`, `useWalletStore.ts`, `useReferralStore.ts`, `usePointsStore.ts` — Zustand stores for subscription, wallet, referral, and points state.
 - `utils-server/` — REPLACED internals: dispatch.ts, heartbeat.ts, smsGateway.ts, h3Index.ts, scheduler.ts, compensationWorker.ts — See 12-FOLDER-STRUCTURE.md for complete listing.
 - `src/db/schema.ts` — EXTEND existing schema. See 05-DATA-MODEL.md for all new tables.
 
@@ -111,11 +118,10 @@ Rider app
       → **Distance source:** Google Maps Directions API (road distance in km) between pickup and dropoff.
         Uses server-side `GOOGLE_MAPS_SERVER_API_KEY` (never exposed to client).
         Fallback if API unavailable or over quota: Haversine straight-line distance × 1.3 (urban Dhaka road factor).
-      → Applies formula: `total = base_fare_bdt + (per_km_bdt × distance_km) + max(0, wait_min − free_wait_minutes) × per_min_wait_bdt`
-      → Applies minimum fare: `final_fare = max(total, minimum_fare_bdt)` (hard floor from pricing row)
+      → Applies formula: `distance_charge = round(per_km_bdt × distance_km)`; at request time `ride_time_min = 0` (timer not started); `computed_total = base_fare_bdt + distance_charge`; `floor_fare = base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)`; `final_fare = max(computed_total, floor_fare)`
       → BRTA ceiling check (three-tier): (1) check `pricing.brta_fare_ceiling_bdt` for the ride's vehicle type; if NULL, (2) fallback to `system_config.brta_fare_ceiling_bdt`; if also NULL or '0', (3) skip ceiling check entirely. Logs a warning if fare exceeds the resolved ceiling (does not block the ride; admin must adjust pricing).
-      → Returns {base_fare_bdt, distance_charge_bdt, wait_charge_bdt, total_bdt, final_fare_bdt, minimum_fare_bdt, distance_km}
-      → **Note:** `final_fare_bdt` and `minimum_fare_bdt` are computed-only values used for the API response and minimum-fare enforcement. They are NOT stored in the `fare_breakdown` jsonb column.
+      → Returns {base_fare_bdt, distance_charge_bdt, time_charge_bdt, total_bdt, floor_fare_bdt, distance_km}
+      → **Note:** `floor_fare_bdt` is a computed-only value (not stored in `fare_breakdown` jsonb). `time_charge_bdt = 0` at request time; recomputed with actual `ride_time_min` at ride completion.
       → **Note:** Distance for fare uses Google Maps Directions API (accurate route). ETA for `rides.eta_minutes` uses Google Maps Distance Matrix API (faster, no route details needed). Both use `GOOGLE_MAPS_SERVER_API_KEY`.
   → DB: INSERT rides (status=pending, fare_breakdown=jsonb)
   → internal HTTP: notify WebSocket server of new ride ID
@@ -129,6 +135,7 @@ WebSocket server (utils-server/)
   | key | value | description |
   |-----|-------|-------------|
   | `dispatch_paused` | `false` | Hot toggle to pause all dispatch without restart |
+  | `max_free_wait_seconds` | `60` | Platform-wide free wait constant; auto-start timer and `timer_start` computation at ride completion |
   | `brta_fare_ceiling_bdt` | (value TBD — set by admin) | Current BRTA government taxi fare ceiling for reference |
 
   > **Driver slider ratios and BRTA per-km/base ceiling values are in `platform_config`, not `system_config`.** See 05-DATA-MODEL.md § platform_config for seed rows.
