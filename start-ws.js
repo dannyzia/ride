@@ -8,10 +8,10 @@ const path = require("path");
 const entry = path.join(__dirname, "utils-server", "index.ts");
 const tsx = path.join(__dirname, "utils-server", "node_modules", ".bin", "tsx");
 
-// Render provides PORT (e.g. 10000). The utils-server reads UTILS_SERVER_PORT.
-// If UTILS_SERVER_PORT isn't set, inherit from Render's PORT.
+// On Render, the service MUST listen on the PORT Render provides.
+// Override UTILS_SERVER_PORT with Render's PORT when available.
 const env = { ...process.env };
-if (!env.UTILS_SERVER_PORT && env.PORT) {
+if (env.PORT) {
   env.UTILS_SERVER_PORT = env.PORT;
 }
 
