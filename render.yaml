@@ -1,0 +1,14 @@
+services:
+  - type: web_service
+    name: ride-api
+    runtime: node
+    repo: https://github.com/dannyzia/ride
+    branch: implementation
+    plan: free
+    region: singapore
+    buildCommand: npm install && npx expo export --platform web
+    startCommand: node server.js
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
