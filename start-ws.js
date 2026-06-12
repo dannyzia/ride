@@ -18,35 +18,42 @@ if (env.PORT) {
 }
 env.NODE_OPTIONS = (env.NODE_OPTIONS || "") + " --dns-result-order=ipv4first";
 
-// Debug: print DATABASE_URL with password masked
+// Debug: test DB connection with pg package before starting server
 const dbUrl = env.DATABASE_URL || "(not set)";
 const masked = dbUrl.replace(/:([^@]+)@/, ":****@");
 console.log(`DATABASE_URL: ${masked}`);
 
-// If using Supabase transaction-mode pooler (port 6543), switch to session-mode
-// pooler (port 5432) on the same host. Session mode supports full auth handshake
-// and resolves to IPv4 (the direct connection resolves to IPv6 which Render blocks).
-if (dbUrl.includes(".pooler.supabase.com:6543")) {
-  const sessionUrl = dbUrl.replace(
-    ".pooler.supabase.com:6543",
-    ".pooler.supabase.com:5432",
+async function start() {
+  // Test connection with the 'pg' package to verify credentials
+  try {
+    const { Client } = require("pg");
+    const testClient = new Client({
+      connectionString: dbUrl,
+      ssl: { rejectUnauthorized: false },
+    });
+    await testClient.connect();
+    const res = await testClient.query("SELECT 1 as ok");
+    console.log(`[pg test] Connection OK: ${JSON.stringify(res.rows[0])}`);
+    await testClient.end();
+  } catch (err) {
+    console.error(`[pg test] Connection FAILED: ${err.message}`);
+  }
+
+  // Now start the actual server (which uses postgres.js)
+  console.log(
+    `Starting Ride WebSocket server on port ${env.UTILS_SERVER_PORT || 3001}...`,
   );
-  env.DATABASE_URL = sessionUrl;
-  const sessionMasked = sessionUrl.replace(/:([^@]+)@/, ":****@");
-  console.log(`Switched to session-mode pooler: ${sessionMasked}`);
+
+  try {
+    execSync(`"${tsx}" "${entry}"`, {
+      cwd: __dirname,
+      stdio: "inherit",
+      env,
+    });
+  } catch (err) {
+    console.error("WebSocket server failed:", err.message);
+    process.exit(1);
+  }
 }
 
-console.log(
-  `Starting Ride WebSocket server on port ${env.UTILS_SERVER_PORT || 3001}...`,
-);
-
-try {
-  execSync(`"${tsx}" "${entry}"`, {
-    cwd: __dirname,
-    stdio: "inherit",
-    env,
-  });
-} catch (err) {
-  console.error("WebSocket server failed:", err.message);
-  process.exit(1);
-}
+start();
