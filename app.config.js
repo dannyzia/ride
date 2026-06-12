@@ -81,14 +81,13 @@ export default {
       eas: {
         projectId: "43ad45d8-f2b4-456e-a48f-cfb48faeb6aa",
       },
-      BARIKOI_API_KEY: process.env.BARIKOI_API_KEY,
+      EXPO_PUBLIC_BARIKOI_API_KEY: process.env.BARIKOI_API_KEY,
       EXPO_PUBLIC_SERVER_URL: process.env.EXPO_PUBLIC_SERVER_URL,
       EXPO_PUBLIC_WEB_SOCKET_SERVER_URL:
         process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL,
       EXPO_PUBLIC_SUPABASE_URL:
         process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
-      EXPO_PUBLIC_SUPABASE_ANON_KEY:
-        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       EXPO_PUBLIC_SUPPORT_PHONE: process.env.EXPO_PUBLIC_SUPPORT_PHONE,
     },
     web: {

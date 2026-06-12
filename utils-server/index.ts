@@ -2,7 +2,7 @@ import "dotenv/config";
 import { WebSocketServer, WebSocket } from "ws";
 import http from "http";
 import { createClient } from "@supabase/supabase-js";
-import { validateServerEnv } from "../lib/env";
+import { validateUtilsServerEnv } from "../lib/env";
 import {
   startH3IndexRefresh,
   refreshH3Index,
@@ -34,7 +34,7 @@ import { getH3Cell, getH3Ring } from "../lib/h3";
 import { calculateFare, haversineKm } from "../lib/fareCalc";
 import { VEHICLE_TYPE_VALUES } from "../lib/vehicleTypes";
 
-validateServerEnv();
+validateUtilsServerEnv();
 
 // ── Single-Instance Guard ──────────────────────────────────────────────────
 const INSTANCE_COUNT = parseInt(process.env.INSTANCE_COUNT ?? "1");

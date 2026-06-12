@@ -1,12 +1,15 @@
-import Constants from 'expo-constants';
+import Constants from "expo-constants";
 
-const BARIKOI_API_KEY = Constants.expoConfig?.extra?.BARIKOI_API_KEY as string ?? '';
+const BARIKOI_API_KEY =
+  (Constants.expoConfig?.extra?.EXPO_PUBLIC_BARIKOI_API_KEY as string) ?? "";
 
 // Dark map style JSON for MapLibre (Barikoi vector tile style)
-export const DARK_MAP_STYLE = 'https://tiles.barikoi.com/styles/barikoi-dark/style.json';
+export const DARK_MAP_STYLE =
+  "https://tiles.barikoi.com/styles/barikoi-dark/style.json";
 
 // Light map style JSON for MapLibre
-export const LIGHT_MAP_STYLE = 'https://tiles.barikoi.com/styles/barikoi-light/style.json';
+export const LIGHT_MAP_STYLE =
+  "https://tiles.barikoi.com/styles/barikoi-light/style.json";
 
 export function getBarikoiApiKey(): string {
   return BARIKOI_API_KEY;
@@ -17,17 +20,21 @@ export function getBarikoiMapStyle(dark: boolean = false): string {
 }
 
 // Helper: construct Barikoi autocomplete URL (v2)
-export function getBarikoiAutocompleteUrl(query: string, lat?: number, lng?: number): string {
+export function getBarikoiAutocompleteUrl(
+  query: string,
+  lat?: number,
+  lng?: number,
+): string {
   const params = new URLSearchParams({
     q: query,
     api_key: BARIKOI_API_KEY,
-    city: 'dhaka',
-    sub_area: 'true',
-    sub_district: 'true',
+    city: "dhaka",
+    sub_area: "true",
+    sub_district: "true",
   });
   if (lat !== undefined && lng !== undefined) {
-    params.set('latitude', String(lat));
-    params.set('longitude', String(lng));
+    params.set("latitude", String(lat));
+    params.set("longitude", String(lng));
   }
   return `https://barikoi.xyz/v2/api/search/autocomplete/place?${params}`;
 }
@@ -43,25 +50,27 @@ export function getBarikoiReverseGeocodeUrl(lat: number, lng: number): string {
     api_key: BARIKOI_API_KEY,
     longitude: String(lng),
     latitude: String(lat),
-    district: 'true',
-    post_code: 'true',
-    country: 'true',
-    sub_district: 'true',
-    union: 'true',
-    pauroshova: 'true',
-    location_type: 'true',
-    division: 'true',
-    address: 'true',
-    area: 'true',
-    bangla: 'true',
+    district: "true",
+    post_code: "true",
+    country: "true",
+    sub_district: "true",
+    union: "true",
+    pauroshova: "true",
+    location_type: "true",
+    division: "true",
+    address: "true",
+    area: "true",
+    bangla: "true",
   });
   return `https://barikoi.xyz/v2/api/search/reverse/geocode?${params}`;
 }
 
 // Helper: construct Barikoi directions URL (v2)
 export function getBarikoiDirectionsUrl(
-  originLat: number, originLng: number,
-  destLat: number, destLng: number
+  originLat: number,
+  originLng: number,
+  destLat: number,
+  destLng: number,
 ): string {
   return `https://barikoi.xyz/v2/api/route/${originLng},${originLat};${destLng},${destLat}?api_key=${BARIKOI_API_KEY}&geometries=polyline`;
 }
@@ -69,10 +78,10 @@ export function getBarikoiDirectionsUrl(
 // Helper: construct Barikoi distance matrix URL (v2)
 export function getBarikoiDistanceMatrixUrl(
   origins: { lat: number; lng: number }[],
-  destinations: { lat: number; lng: number }[]
+  destinations: { lat: number; lng: number }[],
 ): string {
-  const src = origins.map(o => `${o.lng},${o.lat}`).join('|');
-  const dst = destinations.map(d => `${d.lng},${d.lat}`).join('|');
+  const src = origins.map((o) => `${o.lng},${o.lat}`).join("|");
+  const dst = destinations.map((d) => `${d.lng},${d.lat}`).join("|");
   return `https://barikoi.xyz/v2/api/distance/matrix?api_key=${BARIKOI_API_KEY}&src=${src}&dst=${dst}`;
 }
 
