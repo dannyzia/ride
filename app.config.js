@@ -78,7 +78,7 @@ export default {
     ],
     extra: {
       eas: {
-        projectId: "43ad45d8-f2b4-456e-a48f-cfb48faeb6aa",
+        projectId: "3293078f-d655-46b9-8a03-c45b2fab2c2d",
       },
       EXPO_PUBLIC_BARIKOI_API_KEY: process.env.BARIKOI_API_KEY,
       EXPO_PUBLIC_SERVER_URL: process.env.EXPO_PUBLIC_SERVER_URL,
