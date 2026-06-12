@@ -13,12 +13,12 @@ module.exports = function (api) {
       [
         "module-resolver",
         {
-          root: ["./"],
           extensions: [".tsx", ".ts", ".js", ".json"],
-          alias: {
-            "@": "./",
-            ...(isWeb ? { "react-native$": "react-native-web" } : {}),
-          },
+          alias: isWeb
+            ? {
+                "react-native$": "react-native-web",
+              }
+            : {},
         },
       ],
     ],
