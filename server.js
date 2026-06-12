@@ -7,12 +7,16 @@ const { execSync } = require("child_process");
 
 const port = process.env.PORT || "10000";
 
+// Force IPv4 DNS resolution — Render blocks IPv6 outbound.
+const nodeOptions =
+  (process.env.NODE_OPTIONS || "") + " --dns-result-order=ipv4first";
+
 console.log(`Starting Ride API server on port ${port}...`);
 
 try {
   execSync(`npx expo serve --port ${port}`, {
     stdio: "inherit",
-    env: { ...process.env },
+    env: { ...process.env, NODE_OPTIONS: nodeOptions },
   });
 } catch (err) {
   console.error("Server failed to start:", err.message);
