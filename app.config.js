@@ -1,6 +1,5 @@
-import dotenv from "dotenv";
-
-dotenv.config({ path: "./.env.local" });
+// Expo SDK 53 loads .env/.env.local natively — no dotenv import needed.
+// On Render, env vars are set via the dashboard.
 
 export default {
   expo: {
