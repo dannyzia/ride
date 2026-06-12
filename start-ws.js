@@ -18,6 +18,11 @@ if (env.PORT) {
 }
 env.NODE_OPTIONS = (env.NODE_OPTIONS || "") + " --dns-result-order=ipv4first";
 
+// Debug: print DATABASE_URL with password masked
+const dbUrl = env.DATABASE_URL || "(not set)";
+const masked = dbUrl.replace(/:([^@]+)@/, ":****@");
+console.log(`DATABASE_URL: ${masked}`);
+
 console.log(
   `Starting Ride WebSocket server on port ${env.UTILS_SERVER_PORT || 3001}...`,
 );
