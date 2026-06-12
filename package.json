@@ -16,6 +16,7 @@
     "preset": "jest-expo"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "@expo/vector-icons": "^14.1.0",
     "@gorhom/bottom-sheet": "^5.1.2",
     "@maplibre/maplibre-react-native": "10.4.2",
