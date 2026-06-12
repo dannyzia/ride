@@ -23,6 +23,19 @@ const dbUrl = env.DATABASE_URL || "(not set)";
 const masked = dbUrl.replace(/:([^@]+)@/, ":****@");
 console.log(`DATABASE_URL: ${masked}`);
 
+// If using Supabase transaction-mode pooler (port 6543), switch to session-mode
+// pooler (port 5432) on the same host. Session mode supports full auth handshake
+// and resolves to IPv4 (the direct connection resolves to IPv6 which Render blocks).
+if (dbUrl.includes(".pooler.supabase.com:6543")) {
+  const sessionUrl = dbUrl.replace(
+    ".pooler.supabase.com:6543",
+    ".pooler.supabase.com:5432",
+  );
+  env.DATABASE_URL = sessionUrl;
+  const sessionMasked = sessionUrl.replace(/:([^@]+)@/, ":****@");
+  console.log(`Switched to session-mode pooler: ${sessionMasked}`);
+}
+
 console.log(
   `Starting Ride WebSocket server on port ${env.UTILS_SERVER_PORT || 3001}...`,
 );
