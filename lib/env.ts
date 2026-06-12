@@ -5,10 +5,10 @@ const serverEnvSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   WEBSOCKET_INTERNAL_SECRET: z.string().min(32),
-  PORTPOS_APP_KEY: z.string().min(1),
-  PORTPOS_SECRET_KEY: z.string().min(1),
-  PORTPOS_BASE_URL: z.string().url(),
-  PORTPOS_CALLBACK_URL: z.string().url(),
+  PORTPOS_APP_KEY: z.string().min(1).optional(),
+  PORTPOS_SECRET_KEY: z.string().min(1).optional(),
+  PORTPOS_BASE_URL: z.string().url().optional(),
+  PORTPOS_CALLBACK_URL: z.string().url().optional(),
   BARIKOI_API_KEY: z.string().min(1),
 });
 
