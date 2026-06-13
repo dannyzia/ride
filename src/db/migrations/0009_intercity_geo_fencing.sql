@@ -18,6 +18,16 @@ CREATE INDEX IF NOT EXISTS city_boundaries_active_idx ON city_boundaries (is_act
 ALTER TABLE pricing
   ADD COLUMN IF NOT EXISTS intercity_per_km_bdt integer NOT NULL DEFAULT 0;
 
+-- 2b. Seed intercity_per_km_bdt values (1.3x–1.5x normal per_km_bdt)
+UPDATE pricing SET intercity_per_km_bdt = 1160 WHERE vehicle_type = 'bike_basic';
+UPDATE pricing SET intercity_per_km_bdt = 1425 WHERE vehicle_type = 'bike_standard';
+UPDATE pricing SET intercity_per_km_bdt = 1575 WHERE vehicle_type = 'bike_plus';
+UPDATE pricing SET intercity_per_km_bdt = 2250 WHERE vehicle_type = 'cng';
+UPDATE pricing SET intercity_per_km_bdt = 2250 WHERE vehicle_type = 'car_economy';
+UPDATE pricing SET intercity_per_km_bdt = 2700 WHERE vehicle_type = 'car_comfort';
+UPDATE pricing SET intercity_per_km_bdt = 3150 WHERE vehicle_type = 'car_premium';
+UPDATE pricing SET intercity_per_km_bdt = 3750 WHERE vehicle_type = 'car_xl';
+
 -- 3. Add platform_commission_percent to rides (if not already present)
 ALTER TABLE rides
   ADD COLUMN IF NOT EXISTS platform_commission_bdt integer;

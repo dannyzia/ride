@@ -64,6 +64,7 @@ export default function AdminLayout() {
       <Stack.Screen name="verification" options={{ title: 'Verification' }} />
       <Stack.Screen name="packages" options={{ title: 'Packages' }} />
       <Stack.Screen name="zones" options={{ title: 'Zones' }} />
+      <Stack.Screen name="city-boundaries" options={{ title: 'City Boundaries' }} />
       <Stack.Screen name="configuration" options={{ title: 'Configuration' }} />
     </Stack>
   );

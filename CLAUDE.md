@@ -2,12 +2,40 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Cross-Reference with AGENTS.md
+
+**Read AGENTS.md first for critical rules and commands.** This file (CLAUDE.md) focuses on:
+- Implementation methodology and execution rules
+- Source of truth hierarchy and what changed from GlideX
+- Development phases and their current status
+- Auth/dispatch flows
+- Glossary
+
+**When updating CLAUDE.md:** You must also update AGENTS.md if you change:
+- Critical rules (money, auth, dispatch, database)
+- Architecture boundaries or package structure
+- Environment variables reference
+- Known issues list
+- Essential commands
+
+**When updating AGENTS.md:** You must also update CLAUDE.md if you change:
+- Implementation status
+- Development phases or gates
+- What's implemented vs planned
+- Any methodology or workflow guidance
+
+**The two files stay in sync.** AGENTS.md is the "quick reference" for day-to-day work. CLAUDE.md is the "deep dive" for implementation context.
+
+## Quick Reference
+
+For the most up-to-date command reference, critical rules, and architecture map, see **AGENTS.md**. This file focuses on implementation methodology, source of truth hierarchy, and what has changed from the original GlideX codebase.
+
 ## Implementation Methodology
 
 This is a **modification of existing GlideX code**, not a greenfield build. Follow these execution rules:
 
 1. Use strict execution order from `docs/Plan/23-IMPLEMENTATION-HANDOFF-CHECKLIST.md`, with phase definitions from `docs/Plan/14-DEV-CHECKLIST.yaml` and file-level changes from `docs/Plan/20-DEVELOPER-CHANGE-LIST.md`.
-2. Follow API and WS contracts in `docs/Plan/06-API.md`, UX/UI contracts in `docs/Plan/07-USER-FLOWS.md`, `docs/Plan/08-UI-SPEC.md`, `docs/Plan/09-UX-SPEC.md`, and test requirements in `docs/Plan/22-TEST-TEMPLATES.md`.
+2. Follow API and WebSocket contracts in `docs/Plan/06-API.md`, UX/UI contracts in `docs/Plan/07-USER-FLOWS.md`, `docs/Plan/08-UI-SPEC.md`, `docs/Plan/09-UX-SPEC.md`, and test requirements in `docs/Plan/22-TEST-TEMPLATES.md`.
 3. Complete one handoff step at a time — do not reorder.
 4. Stop immediately on any failure condition from `docs/Plan/14-DEV-CHECKLIST.yaml`, fix, then continue.
 5. After each completed step, output: Step completed, Files changed, Commands run, Validation evidence, Remaining risk.
@@ -18,97 +46,106 @@ This is a **modification of existing GlideX code**, not a greenfield build. Foll
 
 ## Source of Truth
 
-- **`docs/Plan/14-DEV-CHECKLIST.yaml`** — Canonical machine-readable implementation spec. Parse at start of every session. Treat failure_conditions as hard blockers.
+Read in this order:
+
+**Primary:**
+- **`AGENTS.md`** — Critical rules, essential commands, architecture map, known issues, env vars reference
+- **`docs/Plan/14-DEV-CHECKLIST.yaml`** — Canonical machine-readable implementation spec. Parse at start of every session. Treat `failure_conditions` as hard blockers.
 - **`docs/Plan/23-IMPLEMENTATION-HANDOFF-CHECKLIST.md`** — Strict ordered execution through H-00 through H-17. Do not reorder.
 - **`docs/Plan/20-DEVELOPER-CHANGE-LIST.md`** — File-by-file implementation guide with exact code shapes per phase.
-- **`docs/Plan/02-ARCHITECTURE.md`** — Component map: what's KEEP/REPLACE/DELETE/ADD from GlideX.
+
+**Contracts:**
 - **`docs/Plan/06-API.md`** — API and WebSocket event contracts.
 - **`docs/Plan/05-DATA-MODEL.md`** — Database schema deltas from GlideX.
 - **`docs/Plan/13-CONVENTIONS.md`** — Coding conventions, naming, and critical Ride-specific rules.
-- **`docs/Plan/07-USER-FLOWS.md`** — User flow specs with all alternate paths.
-- **`docs/Plan/08-UI-SPEC.md`** — Screen specs with GoRide design tokens.
-- **`docs/Plan/09-UX-SPEC.md`** — Interaction contracts and GoRide micro-interactions.
-- **`docs/Plan/01-PRD.md`** — Product requirements with acceptance criteria.
-- **`docs/Plan/03-TECH-STACK.md`** — Package changes from GlideX baseline.
-- **`docs/Plan/04-ADR.md`** — Architecture Decision Records explaining WHY decisions were made.
-- **`docs/Plan/10-DEV-SETUP.md`** — Local dev setup steps (execute in order).
-- **`docs/Plan/11-ENV-VARS.md`** — Complete env var reference.
-- **`docs/Plan/12-FOLDER-STRUCTURE.md`** — File delta from GlideX (delete/replace/add).
-- **`docs/Plan/15-RUNBOOK-DEPLOY.md`** — Deploy procedures for all 3 components.
-- **`docs/Plan/16-INCIDENT-RESPONSE.md`** — Ride-specific incident response (P1-P4).
-- **`docs/Plan/17-MONITORING.md`** — Dashboards and alert thresholds.
-- **`docs/Plan/18-KNOWN-ISSUES.md`** — Known bugs and tech debt (check before fixing bugs).
-- **`docs/Plan/19-GLOSSARY.md`** — Canonical domain term definitions.
-- **`docs/Plan/21-MIGRATION-SQL.md`** — SQL migration reference.
-- **`docs/Plan/22-TEST-TEMPLATES.md`** — Unit test templates for critical modules.
+
+**Additional reference (load as needed):**
+- `docs/Plan/02-ARCHITECTURE.md` — Component map: what's KEEP/REPLACE/DELETE/ADD from GlideX.
+- `docs/Plan/07-USER-FLOWS.md` — User flow specs with all alternate paths.
+- `docs/Plan/08-UI-SPEC.md` — Screen specs with GoRide design tokens.
+- `docs/Plan/09-UX-SPEC.md` — Interaction contracts and GoRide micro-interactions.
+- `docs/Plan/01-PRD.md` — Product requirements with acceptance criteria.
+- `docs/Plan/03-TECH-STACK.md` — Package changes from GlideX baseline.
+- `docs/Plan/04-ADR.md` — Architecture Decision Records explaining WHY decisions were made.
+- `docs/Plan/10-DEV-SETUP.md` — Local dev setup steps (execute in order).
+- `docs/Plan/11-ENV-VARS.md` — Complete env var reference.
+- `docs/Plan/12-FOLDER-STRUCTURE.md` — File delta from GlideX (delete/replace/add).
+- `docs/Plan/15-RUNBOOK-DEPLOY.md` — Deploy procedures for all 3 components.
+- `docs/Plan/16-INCIDENT-RESPONSE.md` — Ride-specific incident response (P1-P4).
+- `docs/Plan/17-MONITORING.md` — Dashboards and alert thresholds.
+- `docs/Plan/18-KNOWN-ISSUES.md` — Known bugs and tech debt (check before fixing bugs).
+- `docs/Plan/19-GLOSSARY.md` — Canonical domain term definitions.
+- `docs/Plan/21-MIGRATION-SQL.md` — SQL migration reference.
+- `docs/Plan/22-TEST-TEMPLATES.md` — Unit test templates for critical modules.
 
 ## Project Overview
 
 **Ride** is a subscription-based ride lead distribution platform for Bangladesh. Drivers buy call packages and keep the fare minus optional platform commission. Rebuilt from the GlideX open-source ride-hailing codebase.
 
-Key differences from GlideX:
-- **Auth**: Clerk (email/social) → Supabase Auth phone OTP
-- **Payments**: Stripe → PortPos (unified gateway supporting bKash, Nagad, Rocket, cards)
-- **Map**: Google Maps → Barikoi Maps API (via @maplibre/maplibre-react-native)
-- **Driver monetization**: Per-ride fare → Subscription call-package wallet
-- **Dispatch**: None → H3 hexagonal indexing + WebSocket batch broadcast
-- **Admin**: None → Web admin panel
-- **Database**: Supabase PostgreSQL + Drizzle ORM (migrated from Neon)
+### Key differences from GlideX (current implementation)
+
+| Area | GlideX (Old) | Ride (Current) |
+|------|--------------|----------------|
+| **Auth** | Clerk (email/social) | **Supabase Auth phone OTP** |
+| **Payments** | Stripe | **PortPos unified gateway** (bKash/Nagad stubs kept inert) |
+| **Map** | Google Maps | **Barikoi Maps API** (via @maplibre/maplibre-react-native) |
+| **Driver monetization** | Per-ride fare | Subscription call-package wallet |
+| **Dispatch** | None | H3 hexagonal indexing + WebSocket batch broadcast |
+| **Admin** | None | Web admin panel |
+| **Database** | Neon + Prisma | **Supabase PostgreSQL + Drizzle ORM** |
+| **Cloud Functions** | Firebase (planned) | **None** — all backend in Expo API routes + utils-server |
+
+### Architecture Boundaries
+
+Two independently-typed packages:
+1. **Root** (`package.json`): Expo app — React Native mobile client + Expo API routes (`app/api/`)
+2. **`utils-server/`** (`utils-server/package.json`): WebSocket dispatch server with separate `tsconfig.json` and dependencies
+
+`tsconfig.json` excludes `utils-server/` and `functions/` (functions/ doesn't exist). ESLint ignores `utils-server/` and `_reference/`.
 
 ## Development Commands
 
+See AGENTS.md for the complete command reference. Key commands:
+
 ```bash
-# Start dev server
-npx expo start
+# Expo app
+npx expo start                  # Dev server
+npx expo run:android            # Native build (required after plugin changes)
+npx tsc --noEmit                # Type check (must pass)
+npx eslint .                    # Lint (must pass; unused _-prefixed vars allowed)
+npx jest --testPathPattern="name"  # Single test
 
-# Android dev build (required after native plugin changes)
-npx expo run:android
+# Database
+npx drizzle-kit generate        # Generate migration SQL from schema
+npx drizzle-kit push            # Push to remote Supabase DB
 
-# iOS dev build
-npx expo run:ios
+# utils-server (separate process)
+cd utils-server && npm run dev  # Start WebSocket server with tsx watch
 
-# Database migrations
-npx drizzle-kit generate    # Generate migration SQL
-npx drizzle-kit push         # Push to remote DB
-npx drizzle-kit studio       # Drizzle Studio UI
-
-# Type checking
-npx tsc --noEmit
-
-# Linting
-npx eslint .
-
-# Testing
-npx jest --watchAll          # Watch mode
-npx jest --testPathPattern="testName"  # Single test
-
-# WebSocket server (utils-server)
-cd utils-server && npm start
-
-# EAS builds
-eas build --platform android --profile production
-eas build --platform ios --profile production
+# Commit-time checks (run all)
+grep -r "console\.log" app/ lib/ utils-server/ src/       # must return nothing
+grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 ```
 
-## Architecture
+## Architecture Map
 
 ### Route Structure (Expo Router)
-- `app/(auth)/` — phone-entry → otp-verify → register (Supabase phone OTP)
-- `app/(main)/(customer)/` — Rider screens (keep folder name, "rider" as display label)
+- `app/(auth)/` — Auth screens (phone-entry → otp-verify → register). **Supabase phone OTP**.
+- `app/(main)/(customer)/` — Rider screens (keep folder name `(customer)`, rider is a display label)
 - `app/(main)/(rider)/` — Driver screens
 - `app/(admin)/` — Web-only admin panel (dashboard, verification, packages, zones, configuration)
 - `app/api/` — Expo API routes (file-based backend endpoints)
 
-### Auth System (Supabase)
+### Auth System (Supabase — Implemented)
 - **Client**: `lib/supabase.ts` — client-side Supabase client (`EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY`)
 - **Server**: `lib/supabaseServer.ts` — server-side admin client (`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`)
 - **Middleware**: `lib/auth.ts` — `verifySupabaseToken(request)` and `requireRole(request, role)` using `supabaseAdmin.auth.getUser(jwt)`
-- **Flow**: `signInWithOtp({ phone })` → `verifyOtp({ phone, token, type: 'sms' })` → verify-token API → register API
+- **Flow**: `signInWithOtp({ phone })` → SMS OTP → `verifyOtp({ phone, token, type: 'sms' })` → verify-token API → register API
 - **WebSocket auth**: `utils-server/index.ts` uses `supabaseAdmin.auth.getUser()` for auth:hello and auth:refresh
 
-### Key Libraries
+### Key Libraries (implemented)
 - **UI**: NativeWind (TailwindCSS), Lottie, react-native-paper, GoRide design tokens in `theme/goRide.ts`
-- **State**: Zustand stores in `store/` (8 stores: useDriverStore, useRiderStore, useChatStore, useDriverStatusStore, usePackageStore, useCallLedgerStore, useDriverFlowStore, useAppUserStore/useWSStore in index.ts)
+- **State**: Zustand stores in `store/` (6 stores: useDriverStore, useRiderStore, useChatStore, useDriverStatusStore, usePackageStore, useCallLedgerStore, useDriverFlowStore)
 - **Map**: `@maplibre/maplibre-react-native` + Barikoi API (`barikoiapis`) via `utils/mapUtils.ts`
 - **Database**: Supabase PostgreSQL + Drizzle ORM (`src/db/schema.ts`) — 22 tables
 - **Auth**: Supabase Auth phone OTP (`lib/auth.ts`, `lib/supabase.ts`, `lib/supabaseServer.ts`)
@@ -118,12 +155,13 @@ eas build --platform ios --profile production
 - **Geo**: H3 hex grid (`lib/h3.ts`) at resolution 9. Import only via `lib/h3.ts` and `utils-server/h3Index.ts`.
 - **SMS**: Supabase Auth handles OTP delivery natively. Android SMS_RETRIEVER_API via `react-native-otp-verify`.
 - **Validation**: Zod at every API route boundary (`lib/vehicleTypes.ts` exports `VEHICLE_TYPE_ZOD_ENUM`)
+- **Logging**: `lib/logger.ts` — use `logger.info`, `logger.error`, etc. No `console.log`.
 
-### Backend Services
+### Backend Services (implemented)
 1. **Expo API Routes** (`app/api/`) — Business logic, DB queries, rate limiting. Supabase JWT required (unless marked `[public]` or using `requireRole`).
 2. **Utils Server** (`utils-server/`) — WebSocket dispatch, heartbeat-gated call deduction, H3 index, scheduler, compensation worker. Separate package.json with own dependencies.
 
-### Auth Flow
+### Auth Flow (implemented)
 ```
 phone-entry → supabase.auth.signInWithOtp({ phone }) → SMS OTP
 otp-verify → supabase.auth.verifyOtp({ phone, token, type: 'sms' }) → session
@@ -131,7 +169,7 @@ verify-token → GET /api/auth/verify-token → { exists, role } or { exists: fa
 register → POST /api/register → create user + optional driver record → role home
 ```
 
-### Dispatch Flow
+### Dispatch Flow (implemented)
 ```
 Rider requests ride → POST /api/ride/request → zone check + fare calc
   → WebSocket server: H3 cell lookup → score candidates (distance 40% + rating 30% + acceptance 20% + availability 10%)
@@ -139,11 +177,11 @@ Rider requests ride → POST /api/ride/request → zone check + fare calc
   → Driver fetch:confirm → heartbeat deduction window (call_ledger write, unique on ride_id+driver_id)
 ```
 
-### Database Schema (22 tables)
+### Database Schema (22 tables, implemented)
 users, drivers, vehicles, packages, subscriptions, creditVouchers, callLedger, rides, dispatchOffers, ownerConsents, usedChallenges, rateLimits, paymentEvents, documents, zones, pricing, chatMessages, driverOnlineSessions, compensationQueue, systemConfig, platformConfig, vehicleTypeChanges
 
 ### Seed Scripts (`scripts/`)
-- `seed-system-config.js`, `seed-pricing.js`, `seed-packages.js`, `seed-platform-config.js`, `seed-admin.js`
+`seed-system-config.js`, `seed-pricing.js`, `seed-packages.js`, `seed-platform-config.js`, `seed-admin.js`
 
 ### Deploy Order (dependency-aware)
 ```
@@ -152,47 +190,31 @@ users, drivers, vehicles, packages, subscriptions, creditVouchers, callLedger, r
 3. EAS build + submit (last — references updated API)
 ```
 
-## 11 Development Phases (critical path order)
+## Development Phases (current state)
 
-| Phase | Name | Depends On |
-|-------|------|------------|
-| 1 | Foundation — GlideX Cleanup (remove Clerk/Stripe/Resend) | — |
-| 2 | Database Schema (new tables, enums, migrations) | 1 |
-| 3 | Firebase Cloud Functions (startVerification, checkAuth) | 1 |
-| 4 | Auth Layer (screens, middleware, verify-token) | 2, 3 |
-| 5 | Payment System (PortPos unified gateway, idempotent activation) | 2, 4 |
-| 6 | Dispatch Engine (WebSocket, H3, heartbeat, scheduler) | 2, 4 |
-| 7 | Driver Flows (onboarding, home, offers, ledger) | 5, 6 |
-| 8 | Rider Flows (request, pricing, tracking, cancel) | 6 |
-| 9 | Admin Panel (approval queue, packages, zones) | 2, 4 |
-| 10 | In-App Chat (rider-driver messaging) | 2, 4 |
-| 11 | Commission & Waiting Time (post-MVP decision gate) | — |
+| Phase | Name | Status | Notes |
+|-------|------|--------|-------|
+| 1 | Foundation — GlideX Cleanup | ✅ Done | Clerk/Stripe removed |
+| 2 | Database Schema | ✅ Done | All tables, enums, migrations |
+| 3 | Supabase Auth Integration | ✅ Done | Replaced Firebase HMAC plan |
+| 4 | Auth Layer | ✅ Done | Screens, middleware, verify-token |
+| 5 | Payment System | ✅ Done | PortPos implemented |
+| 6 | Dispatch Engine | ✅ Done | WebSocket, H3, heartbeat, scheduler |
+| 7 | Driver Flows | ✅ Done | Onboarding, home, offers, ledger |
+| 8 | Rider Flows | ✅ Done | Request, pricing, tracking, cancel |
+| 9 | Admin Panel | ✅ Done | Approval queue, packages, zones |
+| 10 | In-App Chat | ✅ Done | Rider-driver messaging |
+| 11 | Commission & Waiting Time | — | Post-MVP decision gate |
 
-## 18 Handoff Gates (H-00 to H-17)
+**Note:** Phase 3 was originally "Firebase Cloud Functions" in planning documents, but was **replaced by Supabase Auth**. The `functions/` directory does not exist. All auth logic is in Expo API routes (`app/api/auth/`) and client screens (`app/(auth)/`).
 
-| Gate | Name | Evidence Required |
-|------|------|-------------------|
-| H-00 | Baseline and branch freeze | Branch name, baseline hash, owner |
-| H-01 | Environment and tooling gate | Expo app + utils-server startup |
-| H-02 | Phase 1 completion | Type-check passes, no Clerk/Stripe references |
-| H-03 | Phase 2 completion | Migrations applied, seeds execute |
-| H-04 | Phase 3 completion | Emulator tests: OTP start, auth check, replay resistance |
-| H-05 | Phase 4 completion | Auth screens + protected routes work for all roles |
-| H-06 | Phase 5 completion | PortPos callback + subscription activation + audit trail |
-| H-07 | Phase 6 completion | Dispatch scenarios + ledger invariants + stale recovery |
-| H-08 | Phase 7 completion | Driver lifecycle E2E |
-| H-09 | Phase 8 completion | Rider lifecycle E2E |
-| H-10 | Phase 9 completion | Admin approval + quality hooks |
-| H-11 | Phase 10 completion | Chat history + real-time delivery |
-| H-12 | Phase 11 decision | Signed decision (defer or include) |
-| H-13 | Phase 12 integration | GoRide assets + theme + no hardcoded styles |
-| H-14 | API contract lock | Verification against 06-API.md |
-| H-15 | Test execution lock | Test templates converted to executable suites |
-| H-16 | Operational readiness | Monitoring + runbook + incident response verified |
-| H-17 | Final handoff sign-off | All gates signed, known issues documented |
+## Handoff Gates (H-00 to H-17)
+
+See `docs/Plan/23-IMPLEMENTATION-HANDOFF-CHECKLIST.md` for full gate definitions.
 
 ## Glossary (key domain terms)
 
+See `docs/Plan/19-GLOSSARY.md` for complete glossary. Key terms:
 - **Call** — a single unit from a driver's subscription; consumed on fetch:confirm
 - **Call Wallet** — driver-visible balance/expiry card
 - **Call Ledger** — immutable append-only log of all call events
@@ -213,6 +235,8 @@ users, drivers, vehicles, packages, subscriptions, creditVouchers, callLedger, r
 
 ## Critical Coding Rules
 
+See AGENTS.md for the complete rules reference. Key rules:
+
 - **Money**: All amounts in integer paisa (BDT), never floats. Divide by 100 only at UI display.
 - **Vehicle types**: 8 lowercase: `bike_basic`, `bike_standard`, `bike_plus`, `cng`, `car_economy`, `car_comfort`, `car_premium`, `car_xl`
 - **call_ledger writes**: ONLY `utils-server/heartbeat.ts` (deductions) and `lib/activateSubscription.ts` (initial_load, credit, expiry_writeoff)
@@ -220,7 +244,7 @@ users, drivers, vehicles, packages, subscriptions, creditVouchers, callLedger, r
 - **Single instance**: `INSTANCE_COUNT=1` required for WebSocket dispatch (no split-brain)
 - **No client secrets**: Payment credentials never in `EXPO_PUBLIC_*` vars
 - **No Clerk/Stripe**: Removed entirely — any reference is a bug
-- **No Firebase**: Removed entirely — any reference is a bug
+- **No Firebase**: Supabase replaced all Firebase auth. Any Firebase reference is a bug.
 - **Timestamps**: Always UTC `timestamptz`, convert to Asia/Dhaka only at display
 - **Zod validation**: Every API route validates input before DB/service calls
 - **Error format**: Always `{ error: 'machine_code', message: '...' }` with appropriate status
@@ -238,32 +262,21 @@ users, drivers, vehicles, packages, subscriptions, creditVouchers, callLedger, r
 - **ESLint**: `eslint.config.mjs` uses `eslint-config-expo/flat.js`. Unused vars with `_` prefix are allowed (`argsIgnorePattern: '^_'`, `varsIgnorePattern: '^_'`).
 - **TypeScript**: `tsconfig.json` excludes `functions/` and `utils-server/`. Those have their own configs.
 
-## Known Issues & Tech Debt (check before fixing bugs)
+## Known Issues & Tech Debt
 
-| ID | Area | Summary | Severity |
-|----|------|---------|----------|
-| TD-01 | SMS receiver | OEM battery optimisation kills BroadcastReceiver (30-60% of Android devices). Manual OTP entry is fallback. | high |
-| TD-04 | Scheduled rides | setInterval timers lost on utils-server restart. Startup recovery has 5s gap. | med |
-| TD-06 | Nagad **Superseded by ADR-018** — PortPos handles all payment methods including Nagad. Old Nagad callback file kept as inert fallback. | resolved |
-| TD-07 | Admin auth | No MFA for admin login. Admin phone compromise = full access. | med |
-| TD-11 | Scaling | In-process maps prevent >1 replica. Set replicas=1. | high (post-MVP) |
-| TD-15 | Recovery | utils-server loses all in-memory state on crash. Startup recovery added. | high |
-| TD-20 | Version enforcement | No mechanism to force driver updates. GET /api/app-config added. | med |
-| TD-25 | BRTA ceiling | Fare ceiling is logged, not blocked. Admin must verify pricing. | low |
-| TD-31 | Supabase Data API grants | After Oct 30 2026, new tables need explicit GRANT statements for supabase-js/PostgREST access. Server-side Drizzle unaffected. | med |
+See `docs/Plan/18-KNOWN-ISSUES.md` before fixing bugs. Key issues:
+- **TD-01:** SMS receiver killed by OEM battery optimisation on 30-60% of Android devices. Manual OTP entry is fallback.
+- **TD-11:** In-process maps prevent >1 replica. `INSTANCE_COUNT=1` always.
+- **TD-15:** utils-server loses all in-memory state on crash. Startup recovery added.
+- **TD-31:** After Oct 30 2026, new tables need explicit GRANT statements for supabase-js/PostgREST access. Server-side Drizzle unaffected.
 
-## Monitoring Alert Thresholds (key metrics)
+## Testing
 
-| Metric | Normal | Alert at | Severity |
-|--------|--------|----------|----------|
-| API error rate | <0.5% | >2% for 5min | P2 |
-| P95 response time | <500ms | >2000ms for 5min | P2 |
-| Connected driver count | >0 in ops hours | 0 for 5min | P1 |
-| Call deduction/offer ratio | 0.8-1.0 | <0.5 or >1.0 for 30min | P1 |
-| Offer broadcast latency | <2s | >5s P95 | P2 |
-| compensation_queue depth | 0 | >5 items for 15min | P2 |
-| callback_pending >10min | 0 | >0 | P2 |
-| callback_pending >60min | 0 | >0 | P1 |
+- `npx jest --testPathPattern="name"` — single test
+- At phase gates run: `npx jest --watchAll=false` (full suite)
+- **Dispatch invariants** that must always pass: (1) single deduction per `(ride_id, driver_id)`, (2) deduction row has matching `dispatch_offers` row with `outcome='delivered'`, (3) `calls_remaining = 0` drivers never in candidate pool, (4) daily cap exceeded drivers never in candidate pool, (5) no driver receives same offer in consecutive batches.
+- **Payment invariants**: (1) same idempotency key → exactly one `payment_events` row, (2) duplicate callback activates subscription exactly once, (3) failed activation → `compensation_queue` entry within 30 seconds.
+- Test templates: `docs/Plan/22-TEST-TEMPLATES.md`.
 
 ## Graph Maintenance
 
@@ -271,16 +284,18 @@ After modifying any code files, run:
 - `code-review-graph update` — always (fast, <2s)
 - `graphify update .` — after large batches of changes only
 
-## GoRide Design Tokens (from 08-UI-SPEC.md)
+## File Naming Conventions
 
+- `lib/`: camelCase (`fareCalc.ts`, `activateSubscription.ts`)
+- `app/api/`: kebab-case with `+api.ts` (`purchase+api.ts`)
+- `components/`: PascalCase (`CallWalletCard.tsx`)
+- `store/`: `use{Name}Store.ts` (`usePackageStore.ts`)
+- WebSocket events: `{domain}:{action}` kebab-case (`ride:offer`, `fetch:confirm`, `location:update`)
+
+## GoRide Design Tokens
+
+See `theme/goRide.ts` for full tokens. Key tokens:
 - Primary accent: `#0CC25F`, pressed: `#0A9B4C`
 - Error/danger: `#E31D1C`, Info/auxiliary: `#2E42A5`
 - Background light: `#F7FCFF`, dark: `#181A20`
-- Surface light: `#FFFFFF`, elevated dark: `#212121`
-- Border light: `#DADADA`, dark: `#35383F`
-- Text primary: `#212121` (light), `#FFFFFF` (dark)
-- Font heading: Urbanist, body/caption: Inter
-- Primary button: filled `#0CC25F`, text white, radius pill(1000)
-- Corner radius scale: 4, 6, 10, 16, 20, 24, 32, pill(1000)
-- Elevation: -32px 32px 48px rgba(24, 26, 32, 0.1)
-- Source: `App Design/GoRide - Ride-Hailing App UI Kit (Preview)/GoRide.css`
+- Font heading: Urbanist, body: Inter

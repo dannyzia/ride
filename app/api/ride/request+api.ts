@@ -175,9 +175,9 @@ export async function POST(request: Request) {
       0,
       undefined,
       outsideKm,
+      origin_city,
+      intercity,
     );
-    fareBreakdown.origin_city = origin_city;
-    fareBreakdown.is_intercity = intercity;
 
     // ── Preference surcharge ───────────────────────────────────────────
     let preferenceSurchargeBdt = 0;

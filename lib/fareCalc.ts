@@ -25,6 +25,7 @@ export interface FareBreakdown {
   time_charge_bdt: number;
   floor_fare_bdt: number;
   total_bdt: number;
+  platform_commission_percent: number;
   platform_commission_bdt: number;
   driver_net_bdt: number;
   distance_km: number;
@@ -50,13 +51,15 @@ export interface FareBreakdown {
  *   driver_net       = total_fare − platform_fee
  *
  * For non-intercity rides: pass outsideKm = 0 (default). The formula collapses to normal v2.
- * For rural-origin rides: pass outsideKm = 0. origin_city and is_intercity are set by the caller.
+ * For rural-origin rides: pass outsideKm = 0. origin_city and is_intercity are passed as parameters.
  *
  * @param pricing - Pricing row from DB
  * @param insideKm - Distance inside origin city (or total distance for non-intercity)
  * @param rideTimeMin - 0 at estimate time; actual ride_time_min at completion
  * @param ceilings - Optional BRTA ceiling values for warning checks
  * @param outsideKm - Distance outside origin city; 0 for non-intercity rides (default)
+ * @param originCity - Name of the origin city, or null for rural pickup
+ * @param isIntercity - Whether the ride is intercity (dropoff outside origin city)
  */
 export function calculateFare(
   pricing: PricingRow,
@@ -64,6 +67,8 @@ export function calculateFare(
   rideTimeMin: number,
   ceilings?: PlatformCeilings,
   outsideKm: number = 0,
+  originCity: string | null = null,
+  isIntercity: boolean = false,
 ): FareBreakdown {
   // Intercity rate fallback: if intercity_per_km_bdt = 0, use normal per_km_bdt for outside km
   const intercityRate = pricing.intercity_per_km_bdt ?? 0;
@@ -140,11 +145,12 @@ export function calculateFare(
     time_charge_bdt: timeCharge,
     floor_fare_bdt: floorFare,
     total_bdt: totalFare,
+    platform_commission_percent: commissionPct,
     platform_commission_bdt: platformFee,
     driver_net_bdt: driverNet,
     distance_km: totalDistanceKm,
-    origin_city: null,
-    is_intercity: false,
+    origin_city: originCity,
+    is_intercity: isIntercity,
     inside_km: insideKm,
     outside_km: outsideKm,
     ride_time_min: rideTimeMin,

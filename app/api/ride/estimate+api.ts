@@ -95,9 +95,7 @@ export async function POST(request: Request) {
         floor_min:            activePricing.floor_min ?? 0,
         brta_fare_ceiling_bdt: activePricing.brta_fare_ceiling_bdt,
         platform_commission_percent: Number(activePricing.platform_commission_percent ?? 0),
-      }, insideKm, 0, undefined, outsideKm);
-      fare.origin_city = origin_city;
-      fare.is_intercity = intercity;
+      }, insideKm, 0, undefined, outsideKm, origin_city, intercity);
 
       const vtDef = VEHICLE_TYPES.find(v => v.key === vehicle_type);
       const driverFare = fare.total_bdt + preferenceSurchargeBdt;
@@ -132,9 +130,7 @@ export async function POST(request: Request) {
         floor_min:            p.floor_min ?? 0,
         brta_fare_ceiling_bdt: p.brta_fare_ceiling_bdt,
         platform_commission_percent: Number(p.platform_commission_percent ?? 0),
-      }, insideKm, 0, undefined, outsideKm);
-      fare.origin_city = origin_city;
-      fare.is_intercity = intercity;
+      }, insideKm, 0, undefined, outsideKm, origin_city, intercity);
 
       const vtDef = VEHICLE_TYPES.find(v => v.key === p.vehicle_type);
       const driverFare = fare.total_bdt + preferenceSurchargeBdt;

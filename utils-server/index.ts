@@ -980,6 +980,10 @@ async function handleNoDrivers(
           pricingRow,
           parseFloat(ride.distance_km?.toString() ?? "0"),
           0,
+          undefined,
+          0,
+          null,
+          false,
         ) as unknown as Record<string, unknown>,
       });
     }

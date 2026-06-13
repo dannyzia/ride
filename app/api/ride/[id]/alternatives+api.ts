@@ -52,6 +52,7 @@ export async function GET(req: Request) {
       const breakdown = calculateFare({
         base_fare_bdt:              pricingRow.base_fare_bdt,
         per_km_bdt:                 pricingRow.per_km_bdt,
+        intercity_per_km_bdt:       pricingRow.intercity_per_km_bdt ?? 0,
         per_min_bdt:                pricingRow.per_min_bdt,
         floor_length_km:            Number(pricingRow.floor_length_km ?? 0),
         floor_min:                  pricingRow.floor_min ?? 0,
@@ -60,6 +61,10 @@ export async function GET(req: Request) {
       },
         parseFloat(ride.distance_km?.toString() ?? '0'),
         0,
+        undefined,
+        0,
+        null,
+        false,
       );
       alternatives.push({
         vehicle_type:      vt,

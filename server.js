@@ -3,6 +3,8 @@
 // Serves the Expo SSR web output directly using @expo/server's createRequestHandler.
 
 const path = require("path");
+const fs = require("fs");
+const http = require("http");
 const { createRequestHandler } = require("@expo/server");
 
 const port = process.env.PORT || "10000";
@@ -17,31 +19,26 @@ console.log(`Serving from: ${distFolder}`);
 
 const handler = createRequestHandler(distFolder);
 
-const http = require("http");
-
 const server = http.createServer(async (req, res) => {
   try {
-    // Rewrite /admin to /(admin) for route group compatibility.
-    // We must construct a full URL for the Request because @expo/server's
-    // updateRequestWithConfig calls new URL(request.url) without a base,
-    // which fails on paths containing parentheses like /(admin).
-    let urlPath = req.url;
-    if (urlPath === "/admin" || urlPath.startsWith("/admin?")) {
-      urlPath = urlPath.replace(/^\/admin/, "/(admin)");
-    }
-
-    // Build a full URL so @expo/server can parse it correctly
-    const fullUrl = `http://localhost:${port}${urlPath}`;
-    const request = new Request(fullUrl, {
+    // Log incoming request details
+    console.log(`Incoming request: ${req.method} ${req.url}`);
+    
+    // Construct full URL from request
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host || `localhost:${port}`;
+    const fullUrl = `${protocol}://${host}${req.url}`;
+    
+    // Create Web Request object
+    const webRequest = new Request(fullUrl, {
       method: req.method,
-      headers: req.headers,
+      headers: new Headers(req.headers),
     });
-
-    const response = await handler(request);
+    
+    const response = await handler(webRequest);
 
     res.statusCode = response.status;
-    const headers = response.headers;
-    for (const [key, value] of headers.entries()) {
+    for (const [key, value] of response.headers.entries()) {
       res.setHeader(key, value);
     }
     const body = await response.text();

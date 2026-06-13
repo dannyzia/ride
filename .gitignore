@@ -101,3 +101,6 @@ App Design/
 # Legacy config
 app-example
 .eslintrc.json
+
+# Code graph output
+graphify-out/

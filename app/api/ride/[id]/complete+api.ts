@@ -79,11 +79,30 @@ export async function POST(request: Request) {
     );
     const distanceKm = parseFloat(ride.distance_km?.toString() ?? "0");
 
+    // Preserve intercity split from the original fare_breakdown.
+    // Scale inside/outside proportionally to actual distance.
+    const existingBreakdown = ride.fare_breakdown as Record<string, unknown> | null;
+    const origInsideKm = Number(existingBreakdown?.inside_km ?? 0);
+    const origOutsideKm = Number(existingBreakdown?.outside_km ?? 0);
+    const origTotalKm = origInsideKm + origOutsideKm;
+    const originCity =
+      (existingBreakdown?.origin_city as string | null) ?? null;
+    const isIntercity = Boolean(existingBreakdown?.is_intercity ?? false);
+
+    let insideKm = distanceKm;
+    let outsideKm = 0;
+    if (origTotalKm > 0 && origOutsideKm > 0) {
+      const scale = distanceKm / origTotalKm;
+      insideKm = Math.round(origInsideKm * scale * 1000) / 1000;
+      outsideKm = Math.round(origOutsideKm * scale * 1000) / 1000;
+    }
+
     // Recalculate fare with actual ride time
     const fare = calculateFare(
       {
         base_fare_bdt: pricingRow.base_fare_bdt,
         per_km_bdt: pricingRow.per_km_bdt,
+        intercity_per_km_bdt: pricingRow.intercity_per_km_bdt ?? 0,
         per_min_bdt: pricingRow.per_min_bdt,
         floor_length_km: Number(pricingRow.floor_length_km ?? 0),
         floor_min: pricingRow.floor_min ?? 0,
@@ -92,8 +111,12 @@ export async function POST(request: Request) {
           pricingRow.platform_commission_percent ?? 0,
         ),
       },
-      distanceKm,
+      insideKm,
       rideTimeMin,
+      undefined,
+      outsideKm,
+      originCity,
+      isIntercity,
     );
 
     await db

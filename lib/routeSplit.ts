@@ -75,6 +75,16 @@ async function splitRouteBarikoi(
   };
 }
 
+function polygonCentroid(polygon: { lat: number; lng: number }[]): { lat: number; lng: number } {
+  let latSum = 0;
+  let lngSum = 0;
+  for (const p of polygon) {
+    latSum += p.lat;
+    lngSum += p.lng;
+  }
+  return { lat: latSum / polygon.length, lng: lngSum / polygon.length };
+}
+
 function splitRouteHaversine(
   pickup: { lat: number; lng: number },
   dropoff: { lat: number; lng: number },
@@ -87,7 +97,14 @@ function splitRouteHaversine(
     return { inside_km: Math.round(totalKm * 1000) / 1000, outside_km: 0 };
   }
 
-  return { inside_km: Math.round(totalKm * 1000) / 1000, outside_km: 0 };
+  const centroid = polygonCentroid(originCityPolygon);
+  const pickupToCentroid = haversineKm(pickup.lat, pickup.lng, centroid.lat, centroid.lng);
+  const insideRatio = totalKm > 0 ? Math.min(pickupToCentroid / totalKm, 1) : 0;
+
+  return {
+    inside_km: Math.round(totalKm * insideRatio * 1.3 * 1000) / 1000,
+    outside_km: Math.round(totalKm * (1 - insideRatio) * 1000) / 1000,
+  };
 }
 
 function pointInPolygonSimple(lat: number, lng: number, polygon: { lat: number; lng: number }[]): boolean {
