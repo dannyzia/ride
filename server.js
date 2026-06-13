@@ -128,9 +128,43 @@ const server = http.createServer(async (req, res) => {
 
     res.statusCode = response.status;
     for (const [key, value] of response.headers.entries()) {
-      res.setHeader(key, value);
+      // Skip Content-Length — we may modify the body below
+      if (key.toLowerCase() !== "content-length") {
+        res.setHeader(key, value);
+      }
     }
-    const body = await response.text();
+
+    let body = await response.text();
+
+    // ───────────────────────────────────────────────────────────
+    // DISABLE SSR HYDRATION — force clean client-side render.
+    //
+    // The pre-rendered HTML contains an empty React Suspense boundary
+    // (because useFonts suspends during SSR). When the browser calls
+    // hydrateRoot(), React detects a mismatch between the SSR output
+    // (empty template) and the client render (ActivityIndicator). In
+    // some React 19 + React Native Web configurations, this mismatch
+    // causes hydrateRoot to silently fail, leaving a blank page.
+    //
+    // Fix: strip the __EXPO_ROUTER_HYDRATE__ flag and clear #root so
+    // AppRegistry.runApplication uses regular render() instead of
+    // hydrateRoot(). This is a clean client-side render with no
+    // hydration mismatch risk.
+    // ───────────────────────────────────────────────────────────
+    if (body.includes("__EXPO_ROUTER_HYDRATE__")) {
+      body = body.replace(
+        /<script type="module">globalThis\.__EXPO_ROUTER_HYDRATE__=true;<\/script>/,
+        ""
+      );
+      // Clear the Suspense boundary content inside #root.
+      // Greedy [\s\S]* with lookahead for <script ensures we match
+      // the outermost </div> (the #root closing tag), not a nested one.
+      body = body.replace(
+        /<div id="root">[\s\S]*<\/div>(?=\s*<script)/,
+        '<div id="root"></div>'
+      );
+    }
+
     res.end(body);
   } catch (err) {
     console.error("Request error:", err);
