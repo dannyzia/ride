@@ -3,6 +3,7 @@ import { logger } from "./logger";
 export interface PricingRow {
   base_fare_bdt: number;
   per_km_bdt: number;
+  intercity_per_km_bdt?: number;
   per_min_bdt: number;
   floor_length_km: number;
   floor_min: number;
@@ -19,19 +20,28 @@ export interface PlatformCeilings {
 export interface FareBreakdown {
   base_fare_bdt: number;
   distance_charge_bdt: number;
+  inside_charge_bdt: number;
+  outside_charge_bdt: number;
   time_charge_bdt: number;
   floor_fare_bdt: number;
   total_bdt: number;
   platform_commission_bdt: number;
   driver_net_bdt: number;
   distance_km: number;
+  origin_city: string | null;
+  is_intercity: boolean;
+  inside_km: number;
+  outside_km: number;
   ride_time_min: number;
 }
 
 /**
- * Calculate fare using the v2 formula:
+ * Calculate fare using the extended v2 formula with intercity split-rate:
  *
- *   distance_charge  = round(per_km_bdt × distance_km)
+ *   effective_outside_rate = intercity_per_km_bdt > 0 ? intercity_per_km_bdt : per_km_bdt
+ *   inside_charge  = round(per_km_bdt × inside_km)
+ *   outside_charge = round(effective_outside_rate × outside_km)
+ *   distance_charge = inside_charge + outside_charge
  *   time_charge      = ride_time_min × per_min_bdt
  *   computed_total   = base_fare_bdt + distance_charge + time_charge
  *   floor_fare       = base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)
@@ -39,19 +49,30 @@ export interface FareBreakdown {
  *   platform_fee     = round(total_fare × platform_commission_percent / 100)
  *   driver_net       = total_fare − platform_fee
  *
- * All arithmetic in integer paisa.
+ * For non-intercity rides: pass outsideKm = 0 (default). The formula collapses to normal v2.
+ * For rural-origin rides: pass outsideKm = 0. origin_city and is_intercity are set by the caller.
  *
- * At ride request / estimate time, pass ride_timeMin = 0 (timer not yet running).
- * At ride completion, pass the actual ride_time_min from the timer.
+ * @param pricing - Pricing row from DB
+ * @param insideKm - Distance inside origin city (or total distance for non-intercity)
+ * @param rideTimeMin - 0 at estimate time; actual ride_time_min at completion
+ * @param ceilings - Optional BRTA ceiling values for warning checks
+ * @param outsideKm - Distance outside origin city; 0 for non-intercity rides (default)
  */
 export function calculateFare(
   pricing: PricingRow,
-  distanceKm: number,
+  insideKm: number,
   rideTimeMin: number,
   ceilings?: PlatformCeilings,
+  outsideKm: number = 0,
 ): FareBreakdown {
-  // Distance charge
-  const distanceCharge = Math.round(pricing.per_km_bdt * distanceKm);
+  // Intercity rate fallback: if intercity_per_km_bdt = 0, use normal per_km_bdt for outside km
+  const intercityRate = pricing.intercity_per_km_bdt ?? 0;
+  const effectiveOutsideRate = intercityRate > 0 ? intercityRate : pricing.per_km_bdt;
+
+  // Distance charges (integer paisa, round after each multiplication)
+  const insideCharge = Math.round(pricing.per_km_bdt * insideKm);
+  const outsideCharge = Math.round(effectiveOutsideRate * outsideKm);
+  const distanceCharge = insideCharge + outsideCharge;
 
   // Time charge (no free-wait subtraction — timer handles that)
   const timeCharge = rideTimeMin * pricing.per_min_bdt;
@@ -77,6 +98,8 @@ export function calculateFare(
 
   // Driver net
   const driverNet = totalFare - platformFee;
+
+  const totalDistanceKm = insideKm + outsideKm;
 
   // BRTA ceiling warnings (logged, never block)
   if (ceilings) {
@@ -112,12 +135,18 @@ export function calculateFare(
   return {
     base_fare_bdt: pricing.base_fare_bdt,
     distance_charge_bdt: distanceCharge,
+    inside_charge_bdt: insideCharge,
+    outside_charge_bdt: outsideCharge,
     time_charge_bdt: timeCharge,
     floor_fare_bdt: floorFare,
     total_bdt: totalFare,
     platform_commission_bdt: platformFee,
     driver_net_bdt: driverNet,
-    distance_km: distanceKm,
+    distance_km: totalDistanceKm,
+    origin_city: null,
+    is_intercity: false,
+    inside_km: insideKm,
+    outside_km: outsideKm,
     ride_time_min: rideTimeMin,
   };
 }

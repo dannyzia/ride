@@ -737,6 +737,22 @@ export const zones = pgTable(
   ],
 );
 
+export const cityBoundaries = pgTable(
+  "city_boundaries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(),
+    polygon: jsonb("polygon").notNull(),
+    is_active: boolean("is_active").notNull().default(true),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("city_boundaries_name_idx").on(t.name),
+    index("city_boundaries_active_idx").on(t.is_active),
+  ],
+);
+
 export const pricing = pgTable(
   "pricing",
   {
@@ -747,6 +763,7 @@ export const pricing = pgTable(
     vehicle_type: vehicleTypeEnum("vehicle_type").notNull(),
     base_fare_bdt: integer("base_fare_bdt").notNull(),
     per_km_bdt: integer("per_km_bdt").notNull(),
+    intercity_per_km_bdt: integer("intercity_per_km_bdt").notNull().default(0),
     per_min_bdt: integer("per_min_bdt").notNull(),
     floor_length_km: numeric("floor_length_km", {
       precision: 10,

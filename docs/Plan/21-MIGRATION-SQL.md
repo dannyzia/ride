@@ -2,8 +2,9 @@
 
 > **Database Note:** Migrations are run via `drizzle-kit migrate` the same way, just against a Supabase PostgreSQL connection string (from Supabase Dashboard → Settings → Database → URI). The database is standard PostgreSQL; Drizzle migrations work identically on Supabase as on any other PostgreSQL host.
 
-> Last updated to reflect the v2 schema additions: `platform_config`, `pricing` floor fare columns (`floor_length_km`, `floor_min`),
-> `dispatch_offers.filtered_reason`, and the canonical vehicle_type enum migration.
+> Last updated to reflect: intercity geo-fencing additions (M-10–M-13), v2 schema additions `platform_config`,
+> `pricing` floor fare columns (`floor_length_km`, `floor_min`), `dispatch_offers.filtered_reason`,
+> and the canonical vehicle_type enum migration.
 >
 > **All migrations must be reviewed by a human before applying to production.**
 > Run against a staging environment first, verify row counts, then apply.
@@ -28,6 +29,10 @@
 | M-07 | Indexes for `dispatch_offers.filtered_reason` | M-02 + M-06 |
 | M-08 | Commission and waiting time columns | Base schema |
 | M-09 | `system_config` waiting time seeds | Base schema |
+| M-10 | `city_boundaries` table + seed 8 divisional city polygons | — |
+| M-11 | Add `intercity_per_km_bdt` to `pricing` + backfill + seed | M-04 |
+| M-12 | Zone polygon UPDATE — Bangladesh mainland border | Base schema |
+| M-13 | Drop `intercity_routes` table (old district-based design) | — |
 
 ---
 
@@ -460,6 +465,230 @@ COMMIT;
 
 ---
 
+## M-10 — Create `city_boundaries` table and seed 8 divisional cities
+
+> **Polygon source:** `divisions.geojson` from https://github.com/ifahimreza/bangladesh-geojson.
+> Each polygon is simplified to 20–40 points using `@turf/simplify` (tolerance 0.05) and converted
+> to `{ lat, lng }` objects. These are **divisional** boundaries — the polygon covers the full
+> administrative division headquartered in each city, not a tight urban footprint. For intercity
+> fare purposes, a ride is intra-city as long as the dropoff stays within this divisional polygon.
+> Admin can replace any polygon via the `/admin/city-boundaries` CRUD panel at any time.
+
+```sql
+-- M-10-city-boundaries.sql
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS city_boundaries (
+  id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       varchar(100) NOT NULL,
+  polygon    jsonb        NOT NULL,   -- array of {lat, lng} objects, 20-40 points
+  is_active  boolean      NOT NULL DEFAULT true,
+  created_at timestamptz  NOT NULL DEFAULT now(),
+  updated_at timestamptz  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS city_boundaries_active_idx ON city_boundaries (is_active);
+
+-- ── Seed: 8 divisional headquarters ──────────────────────────────────────────
+-- Polygons below are representative simplified boundaries.
+-- Replace with extracted + simplified coordinates from divisions.geojson before
+-- applying to production. Each polygon must be a closed ring (first point = last point).
+-- The coding agent must: (1) fetch divisions.geojson from the GitHub source,
+-- (2) run @turf/simplify with tolerance=0.05 on each feature,
+-- (3) extract coordinates as {lat, lng} arrays,
+-- (4) replace the placeholder arrays below with real data.
+
+INSERT INTO city_boundaries (name, polygon, is_active) VALUES
+  ('Dhaka',      '[{"lat":23.5,"lng":89.9},{"lat":24.5,"lng":89.9},{"lat":24.5,"lng":91.0},{"lat":23.5,"lng":91.0},{"lat":23.5,"lng":89.9}]'::jsonb, true),
+  ('Chattogram', '[{"lat":21.8,"lng":91.5},{"lat":23.0,"lng":91.5},{"lat":23.0,"lng":92.6},{"lat":21.8,"lng":92.6},{"lat":21.8,"lng":91.5}]'::jsonb, true),
+  ('Rajshahi',   '[{"lat":24.0,"lng":88.0},{"lat":25.2,"lng":88.0},{"lat":25.2,"lng":89.5},{"lat":24.0,"lng":89.5},{"lat":24.0,"lng":88.0}]'::jsonb, true),
+  ('Khulna',     '[{"lat":21.9,"lng":88.9},{"lat":23.3,"lng":88.9},{"lat":23.3,"lng":90.0},{"lat":21.9,"lng":90.0},{"lat":21.9,"lng":88.9}]'::jsonb, true),
+  ('Sylhet',     '[{"lat":24.0,"lng":91.5},{"lat":25.2,"lng":91.5},{"lat":25.2,"lng":92.5},{"lat":24.0,"lng":92.5},{"lat":24.0,"lng":91.5}]'::jsonb, true),
+  ('Barisal',    '[{"lat":21.8,"lng":89.8},{"lat":23.1,"lng":89.8},{"lat":23.1,"lng":91.0},{"lat":21.8,"lng":91.0},{"lat":21.8,"lng":89.8}]'::jsonb, true),
+  ('Rangpur',    '[{"lat":25.1,"lng":88.7},{"lat":26.4,"lng":88.7},{"lat":26.4,"lng":89.9},{"lat":25.1,"lng":89.9},{"lat":25.1,"lng":88.7}]'::jsonb, true),
+  ('Mymensingh', '[{"lat":24.2,"lng":89.9},{"lat":25.2,"lng":89.9},{"lat":25.2,"lng":91.2},{"lat":24.2,"lng":91.2},{"lat":24.2,"lng":89.9}]'::jsonb, true)
+ON CONFLICT DO NOTHING;
+
+COMMIT;
+```
+
+> ⚠️ **The polygon coordinates above are bounding-box placeholders only.** Before applying to staging
+> or production, the coding agent must replace them with real simplified divisional polygons extracted
+> from `divisions.geojson`. See `lib/cityBoundary.ts` and `lib/routeSplit.ts` for how these are consumed.
+
+**Verify:**
+```sql
+SELECT name, is_active, jsonb_array_length(polygon) AS point_count
+FROM city_boundaries
+ORDER BY name;
+-- Should return 8 rows; point_count should be 20–40 after real polygons are substituted
+```
+
+---
+
+## M-11 — Add `intercity_per_km_bdt` to `pricing`
+
+```sql
+-- M-11-pricing-intercity-per-km.sql
+BEGIN;
+
+-- Add column as nullable first for safe backfill
+ALTER TABLE pricing
+  ADD COLUMN IF NOT EXISTS intercity_per_km_bdt integer;
+
+-- Backfill: set intercity rate to 0 for all existing rows.
+-- 0 means "use normal per_km_bdt for outside-city km" — no surcharge until admin configures it.
+UPDATE pricing SET intercity_per_km_bdt = 0 WHERE intercity_per_km_bdt IS NULL;
+
+-- Now enforce NOT NULL
+ALTER TABLE pricing
+  ALTER COLUMN intercity_per_km_bdt SET NOT NULL,
+  ALTER COLUMN intercity_per_km_bdt SET DEFAULT 0;
+
+COMMIT;
+```
+
+**Seed intercity rates** (run after M-11, requires `ACTIVE_ZONE_ID`):
+
+> **Usage:** `psql $DATABASE_URL -v active_zone_id="'<uuid>'" -f this_file.sql`
+>
+> Intercity rates are approximately 1.3×–1.5× the normal per_km_bdt. All values in integer paisa.
+> Admin can adjust these at any time via `POST /api/admin/pricing`.
+
+```sql
+-- M-11b-pricing-intercity-seed.sql
+BEGIN;
+
+UPDATE pricing SET intercity_per_km_bdt = 1160, updated_at = now()
+  WHERE vehicle_type::text = 'bike_basic'    AND zone_id = :'active_zone_id' AND is_active = true;
+
+UPDATE pricing SET intercity_per_km_bdt = 1425, updated_at = now()
+  WHERE vehicle_type::text = 'bike_standard' AND zone_id = :'active_zone_id' AND is_active = true;
+
+UPDATE pricing SET intercity_per_km_bdt = 1575, updated_at = now()
+  WHERE vehicle_type::text = 'bike_plus'     AND zone_id = :'active_zone_id' AND is_active = true;
+
+UPDATE pricing SET intercity_per_km_bdt = 2250, updated_at = now()
+  WHERE vehicle_type::text = 'cng'           AND zone_id = :'active_zone_id' AND is_active = true;
+
+UPDATE pricing SET intercity_per_km_bdt = 2250, updated_at = now()
+  WHERE vehicle_type::text = 'car_economy'   AND zone_id = :'active_zone_id' AND is_active = true;
+
+UPDATE pricing SET intercity_per_km_bdt = 2700, updated_at = now()
+  WHERE vehicle_type::text = 'car_comfort'   AND zone_id = :'active_zone_id' AND is_active = true;
+
+UPDATE pricing SET intercity_per_km_bdt = 3150, updated_at = now()
+  WHERE vehicle_type::text = 'car_premium'   AND zone_id = :'active_zone_id' AND is_active = true;
+
+UPDATE pricing SET intercity_per_km_bdt = 3750, updated_at = now()
+  WHERE vehicle_type::text = 'car_xl'        AND zone_id = :'active_zone_id' AND is_active = true;
+
+COMMIT;
+```
+
+**Verify:**
+```sql
+SELECT vehicle_type::text, per_km_bdt, intercity_per_km_bdt,
+       ROUND(intercity_per_km_bdt::numeric / per_km_bdt, 2) AS ratio
+FROM pricing
+WHERE is_active = true
+ORDER BY vehicle_type::text;
+-- All ratios should be between 1.30 and 1.50
+```
+
+---
+
+## M-12 — Zone polygon UPDATE — Bangladesh mainland border
+
+> **Source:** `bd-geojson.json` (main polygon) from https://github.com/ifahimreza/bangladesh-geojson.
+> The polygon must have 80–150 points to balance precision and query performance.
+> The coding agent must: (1) fetch the GeoJSON, (2) extract the largest/main polygon feature,
+> (3) run `@turf/simplify` with tolerance=0.01 to reach 80–150 points,
+> (4) convert coordinates `[lng, lat]` → `{ lat, lng }` objects,
+> (5) replace the placeholder array below with real data.
+
+> **Usage:** `psql $DATABASE_URL -v active_zone_id="'<uuid>'" -f this_file.sql`
+
+```sql
+-- M-12-zone-polygon-update.sql
+-- Updates the polygon of the single active operational zone to the Bangladesh mainland border.
+-- The placeholder polygon below is a 4-point bounding box and MUST be replaced with the
+-- real 80-150 point simplified polygon before running.
+
+BEGIN;
+
+UPDATE zones
+SET
+  polygon    = '[
+    {"lat":20.59,"lng":88.01},
+    {"lat":26.63,"lng":88.01},
+    {"lat":26.63,"lng":92.67},
+    {"lat":20.59,"lng":92.67},
+    {"lat":20.59,"lng":88.01}
+  ]'::jsonb,
+  updated_at = now()
+WHERE is_active = true;
+
+-- Verify exactly 1 row was updated
+-- If 0 rows updated, check that an active zone exists: SELECT id FROM zones WHERE is_active=true;
+COMMIT;
+```
+
+> ⚠️ **The polygon above is a bounding box placeholder.** Replace with the real simplified
+> Bangladesh border polygon before applying. See `14-DEV-CHECKLIST.yaml` task GF-01 for the
+> extraction and simplification steps.
+
+**Verify:**
+```sql
+SELECT id, name, jsonb_array_length(polygon) AS point_count, is_active
+FROM zones
+WHERE is_active = true;
+-- point_count should be 80–150 after real polygon is substituted
+```
+
+---
+
+## M-13 — Drop `intercity_routes` table
+
+> Only run this after confirming that no application code references `intercity_routes`.
+> The intercity geo-fencing model replaces all district-based route logic.
+> Search the codebase for any remaining `intercity_routes` references before executing.
+
+```sql
+-- M-13-drop-intercity-routes.sql
+BEGIN;
+
+-- Safety check: confirm table exists before dropping
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_name = 'intercity_routes'
+  ) THEN
+    DROP TABLE intercity_routes;
+    RAISE NOTICE 'intercity_routes dropped successfully';
+  ELSE
+    RAISE NOTICE 'intercity_routes does not exist — skipping';
+  END IF;
+END $$;
+
+-- Also remove any lingering system_config key if it was ever seeded
+DELETE FROM system_config WHERE key = 'intercity_min_distance_km';
+
+COMMIT;
+```
+
+**Verify:**
+```sql
+SELECT table_name FROM information_schema.tables WHERE table_name = 'intercity_routes';
+-- Should return 0 rows
+
+SELECT key FROM system_config WHERE key = 'intercity_min_distance_km';
+-- Should return 0 rows
+```
+
+---
+
 ## Post-migration checklist
 
 After running all migrations on **staging**, verify:
@@ -474,5 +703,10 @@ After running all migrations on **staging**, verify:
 8. Start the application and call `GET /api/reference/vehicle-types` → 8 vehicle types returned with lowercase keys
 9. Call `GET /api/admin/config` → 5 platform_config rows
 10. Attempt `PATCH /api/driver/me` with `{ min_per_km_bdt: 999 }` for a bike_basic driver → 400 with bounds info
+11. `SELECT name, is_active, jsonb_array_length(polygon) AS pts FROM city_boundaries ORDER BY name;` → 8 rows, pts = 20–40 (real polygons substituted)
+12. `SELECT vehicle_type::text, intercity_per_km_bdt FROM pricing WHERE is_active=true ORDER BY 1;` → 8 rows with non-zero intercity rates
+13. `SELECT jsonb_array_length(polygon) AS pts FROM zones WHERE is_active=true;` → pts = 80–150 (real Bangladesh border substituted)
+14. `SELECT table_name FROM information_schema.tables WHERE table_name='intercity_routes';` → 0 rows
+15. `SELECT key FROM system_config WHERE key='intercity_min_distance_km';` → 0 rows
 
 After verifying on staging, apply to production during a low-traffic window.

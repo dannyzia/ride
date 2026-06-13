@@ -102,7 +102,8 @@ If a driver selects a category where AC is optional but they choose Non-AC, the 
 
 #### Rider Features
 15. **Rider Registration**: Sign‑up with phone number verified via Authenticator Service (AC‑AUTH). Minimal profile.
-16. **Ride Request with Upfront Fare Breakdown**: Rider sets pickup (GPS/map pin), drop-off (address search via Google Places Autocomplete), and selects vehicle type from 8 categories: Bike Basic, Bike Standard, Bike Plus, CNG, Car Economy, Car Comfort, Car Premium, Car XL. System shows **full fare breakdown** (base, per‑km, estimated waiting charge) before rider confirms.
+16. **Ride Request with Upfront Fare Breakdown**: Rider sets pickup (GPS/map pin), drop-off (address search via Google Places Autocomplete), and selects vehicle type from 8 categories: Bike Basic, Bike Standard, Bike Plus, CNG, Car Economy, Car Comfort, Car Premium, Car XL. System shows **full fare breakdown** (base, inside/outside distance, estimated waiting charge) before rider confirms.
+17. **Intercity Geo-Fencing Pricing**: On every ride request and estimate, the server checks the pickup coordinate against active `city_boundaries`. If pickup is inside a city, that city becomes `origin_city`; otherwise `origin_city = null` and no intercity surcharge applies. If pickup is inside a city and dropoff is outside the same city polygon, `is_intercity = true`. Intercity rides call the Barikoi Route API with `geometries=polyline`, split the route with Turf.js against the origin city polygon, and calculate `inside_km` and `outside_km` rounded to 3 decimals. If Barikoi is unavailable, the system falls back to Haversine distance with a 1.3 urban factor for the inside segment and 1.0 for the outside segment. City polygons and intercity per-km rates are stored in DB and admin-configurable; no city, rate, or threshold is hardcoded.
 17. **Scheduled Ride**: Rider selects a pickup time from preset options: Now, +15 min, +30 min, +45 min, +60 min. The app computes `scheduled_at = now() + offset` and sends it to the existing `POST /api/ride/request`. Driver call is deducted only when the system broadcasts the request within the scheduled pickup window (not at booking time).
 18. **Mutual Ratings**: Rider rate driver 1‑5 after ride; driver also rates rider. Rider rating used for rider quality scoring and abuse detection.
 49. **Promo Codes (Enhanced)**: Rider can apply a promo code during booking for a fare discount. The driver's fare is unchanged; the platform absorbs the discount. Features include:
@@ -169,7 +170,7 @@ If a driver selects a category where AC is optional but they choose Non-AC, the 
 41. **Comprehensive Admin Dashboard**: A centralized web portal where the admin exercises total control over the platform. Features include:
     - **Driver Management**: Approve/Reject registrations (Stage 1 & 2), suspend accounts, and view detailed driver logs.
     - **Package Management**: Create/edit call packages, set pricing, and manage the micro-trial packages.
-    - **Pricing & Zone Configuration**: Dynamically change the rate per km, rate per minute waiting, and base fare. Set `platform_commission_percent` per vehicle type per zone (default 0.00%). Add new vehicle types. Define and update operational zone polygons.
+    - **Pricing & Zone Configuration**: Dynamically change the normal rate per km, intercity per-km rate, rate per minute waiting, and base fare. Set `platform_commission_percent` per vehicle type per zone (default 0.00%). Add new vehicle types. Define and update the Bangladesh operational zone polygon and manage city-boundary polygons for intercity pricing.
     - **Dispute & Monitoring**: View the approval queue SLA, monitor drivers with negative earnings, and view raw delivery/heartbeat logs for dispute resolution.
 
 #### Data & Compliance
@@ -185,23 +186,29 @@ If a driver selects a category where AC is optional but they choose Non-AC, the 
 
 **Production fare matrix (all money values in integer paisa; BDT shown in parentheses for readability):**
 
-| Vehicle Type | base_fare_bdt | per_km_bdt | per_min_bdt | floor_length_km | floor_min | floor_fare (BDT) |
-|---|---|---|---|---|---|---|
-| bike_basic | 2500 (25) | 775 (7.75) | 175 (1.75) | 2.0 | 10 | 58 |
-| bike_standard | 2500 (25) | 950 (9.50) | 180 (1.80) | 2.0 | 10 | 62 |
-| bike_plus | 2500 (25) | 1050 (10.50) | 190 (1.90) | 2.0 | 10 | 65 |
-| cng | 4000 (40) | 1500 (15.00) | 200 (2.00) | 3.0 | 15 | 115 |
-| car_economy | 4500 (45) | 1500 (15.00) | 350 (3.50) | 4.0 | 20 | 175 |
-| car_comfort | 5000 (50) | 1800 (18.00) | 375 (3.75) | 4.0 | 20 | 197 |
-| car_premium | 6500 (65) | 2100 (21.00) | 400 (4.00) | 4.0 | 20 | 229 |
-| car_xl | 8000 (80) | 2500 (25.00) | 425 (4.25) | 4.0 | 20 | 265 |
+| Vehicle Type | base_fare_bdt | per_km_bdt | intercity_per_km_bdt | per_min_bdt | floor_length_km | floor_min | floor_fare (BDT) |
+|---|---|---|---|---|---|---|---|
+| bike_basic | 2500 (25) | 775 (7.75) | 1160 (11.60) | 175 (1.75) | 2.0 | 10 | 58 |
+| bike_standard | 2500 (25) | 950 (9.50) | 1425 (14.25) | 180 (1.80) | 2.0 | 10 | 62 |
+| bike_plus | 2500 (25) | 1050 (10.50) | 1575 (15.75) | 190 (1.90) | 2.0 | 10 | 65 |
+| cng | 4000 (40) | 1500 (15.00) | 2250 (22.50) | 200 (2.00) | 3.0 | 15 | 115 |
+| car_economy | 4500 (45) | 1500 (15.00) | 2250 (22.50) | 350 (3.50) | 4.0 | 20 | 175 |
+| car_comfort | 5000 (50) | 1800 (18.00) | 2700 (27.00) | 375 (3.75) | 4.0 | 20 | 197 |
+| car_premium | 6500 (65) | 2100 (21.00) | 3150 (31.50) | 400 (4.00) | 4.0 | 20 | 229 |
+| car_xl | 8000 (80) | 2500 (25.00) | 3750 (37.50) | 425 (4.25) | 4.0 | 20 | 265 |
 
-> **Note:** All fare values are defaults stored in the `pricing` table and configurable by admin via `POST /api/admin/pricing`. `floor_fare` column is informational — it is computed at runtime, not stored.
+> **Note:** All fare values are defaults stored in the `pricing` table and configurable by admin via `POST /api/admin/pricing`. `intercity_per_km_bdt = 0` means outside-city kilometers use the normal `per_km_bdt` with no surcharge. `floor_fare` column is informational — it is computed at runtime, not stored.
 
 **Fare calculation formula (in `lib/fareCalc.ts`):**
 ```
 // Meter components
-distance_charge  = round(per_km_bdt × distance_km)
+// For non-intercity rides: inside_km = distance_km, outside_km = 0.
+// For rural-origin rides: origin_city = null, is_intercity = false, outside_km = 0.
+// When intercity_per_km_bdt = 0: effective_outside_rate = per_km_bdt (no surcharge).
+effective_outside_rate = intercity_per_km_bdt > 0 ? intercity_per_km_bdt : per_km_bdt
+inside_charge    = round(per_km_bdt × inside_km)
+outside_charge   = round(effective_outside_rate × outside_km)
+distance_charge  = inside_charge + outside_charge
 time_charge      = ride_time_min × per_min_bdt          // integer — per_min_bdt is integer paisa
 
 // Ride time definition:
@@ -244,6 +251,8 @@ Rider pays `rider_payable_bdt` to driver in cash. Driver receives `driver_fare_b
 - BRTA fare ceiling compliance: `lib/fareCalc.ts` logs a warning if a calculated fare exceeds the BRTA ceiling values stored in `platform_config` (`brta_max_per_km_bdt`, `brta_max_base_bdt`). The ride is NOT blocked; admin must review pricing.
 - Post-MVP commission collection: `platform_commission_bdt` will be aggregated per driver and deducted from their call-wallet balance or subtracted at subscription renewal. In MVP, admin can query total outstanding via `SELECT SUM(platform_commission_bdt) FROM rides WHERE driver_id=? AND status='completed'`.
 
+**Operational zone source:** The active `zones.polygon` is the Bangladesh mainland border, not a rectangle and not a city-only launch area. Source: `https://github.com/ifahimreza/bangladesh-geojson` (`src/data/bangladesh.geojson`). Update method: derive the non-shared exterior boundary from the administrative polygons, keep the largest mainland ring, simplify to 80-150 points, convert `[lng, lat]` coordinates into `{lat, lng}` objects, and update the currently active `zones` row. This operational zone controls service availability only; `city_boundaries` controls intercity pricing.
+
 ### Should‑have (post‑MVP)
 1. Driver earnings dashboard with net income projection and zone/vehicle switching suggestions.
 2. Advanced real‑time ETA using traffic data from third‑party APIs.
@@ -260,7 +269,7 @@ Rider pays `rider_payable_bdt` to driver in cash. Driver receives `driver_fare_b
 3. Rider‑to‑driver payment escrow; initial phase cash only.
 4. Marketplace fare negotiation; fares are fixed.
 5. Real‑time surge pricing.
-6. Multi‑city launch (initial: single Dhaka zone).
+6. Multiple operational countries or region-specific app launches. Bangladesh is the single active operational zone for MVP; city boundaries are an internal pricing layer, not separate launch markets.
 7. Driver multi‑vehicle support per account (one vehicle type per account initially).
 
 ## Non‑functional requirements
@@ -299,6 +308,8 @@ AC\-AUTH\-2 | An SMS with OTP is sent to the entered phone via dprelay. The app 
 | AC‑4 | A driver cannot have two `subscriptions.status='active'` rows simultaneously (DB unique partial index enforced). | Migration verification + concurrent purchase test |
 | AC‑5 | If `subscriptions.calls_remaining=0` (or unlimited capped), `is_online` cannot be set true via `POST /api/driver/status`; the driver does not appear in any dispatch batch. | API test + dispatch query |
 | AC‑6 | Pickup outside `zones.is_active=true` polygon returns 422 `outside_zone` before any `rides` row is inserted. | API test |
+| AC‑6A | Active `zones.polygon` uses the simplified Bangladesh mainland border derived from `ifahimreza/bangladesh-geojson`, contains 80-150 `{lat,lng}` points, and is updated by SQL/migration rather than a hardcoded rectangle. | Migration review + zone test |
+| AC‑6B | If pickup is inside an active `city_boundaries` polygon and dropoff is outside that same polygon, `fare_breakdown.origin_city` is set, `is_intercity=true`, and `inside_km`/`outside_km` drive inside/outside distance charges. Rural pickup (`origin_city=null`) never applies an intercity surcharge. | API test + fare unit test |
 | AC‑7 | `fetch:confirm` followed by driver ignoring offer for full 15s results in a `call_ledger` refund row (`event_type='refund'`, `delta=+1`) and `dispatch_offers.outcome='refunded'`. | Integration test |
 | AC‑8 | Three dispatch batches (5 drivers each) exhausted with no accept → `rides.status='expired'` within 60s of request creation. | Dispatch smoke test |
 | AC\-9 | Scheduled ride (`scheduled_at` set) is NOT dispatched immediately; dispatch begins 60–120 seconds before `scheduled_at`. | Scheduler unit test |

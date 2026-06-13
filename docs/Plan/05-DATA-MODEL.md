@@ -103,7 +103,7 @@ The old enum values are REMOVED. Existing data must be migrated (see migration n
 | ADD `zone_id` uuid NOT NULL | FK → zones.id, RESTRICT |
 | ADD `pricing_id` uuid NOT NULL | FK → pricing.id, RESTRICT |
 | ADD `distance_km` numeric(7,3) NOT NULL | Extracted from fare_breakdown |
-| ADD `fare_breakdown` jsonb NOT NULL | `{base_fare_bdt: int (paisa), distance_charge_bdt: int (paisa), time_charge_bdt: int (paisa), total_bdt: int (paisa), floor_fare_bdt: int (paisa), distance_km: number, platform_commission_percent: number, platform_commission_bdt: int \| null, driver_net_bdt: int \| null}` |
+| ADD `fare_breakdown` jsonb NOT NULL | `{base_fare_bdt: int (paisa), distance_charge_bdt: int (paisa), time_charge_bdt: int (paisa), total_bdt: int (paisa), floor_fare_bdt: int (paisa), distance_km: number, origin_city: string \| null, is_intercity: boolean, inside_km: number, outside_km: number, inside_charge_bdt: int (paisa), outside_charge_bdt: int (paisa), platform_commission_percent: number, platform_commission_bdt: int \| null, driver_net_bdt: int \| null}` |
 | ADD `vehicle_type` varchar(20) NOT NULL | **Use vehicleTypeEnum (8 values).** Matches rider's selection at request time. |
 | ADD `status` varchar(30) NOT NULL DEFAULT 'pending' | Enum: see rides_status enum below |
 | ADD `scheduled_at` timestamptz NULL | NULL = immediate; set = scheduled pickup time |
@@ -126,7 +126,9 @@ The old enum values are REMOVED. Existing data must be migrated (see migration n
 | ADD `preference_surcharge_bdt` integer NOT NULL DEFAULT 0 | Sum of all preference surcharges in paisa. 0 if no preferences selected. |
 | REMOVE `payment_status` | No in-app payment for rides (cash only, MVP) |
 
-> **Distance vs ETA source note:** Distance for fare calculation uses the **Google Maps Directions API** (returns the most accurate road-route distance). ETA for `rides.eta_minutes` uses the **Google Maps Distance Matrix API** (faster response, no route geometry needed). Both APIs use `GOOGLE_MAPS_SERVER_API_KEY` (server-side only, never exposed to client). See also `02-ARCHITECTURE.md` — fare calculation lifecycle.
+> **Distance vs ETA source note:** Distance for fare calculation uses Barikoi route geometry when a ride must be split into inside/outside city segments. For non-intercity rides, the same route-distance utility returns `inside_km = distance_km` and `outside_km = 0`. If Barikoi is unavailable, the fare calculator falls back to Haversine distance with a 1.3 urban factor inside the origin city and 1.0 outside. ETA for `rides.eta_minutes` uses the configured ETA provider (Google Maps Distance Matrix API remains acceptable because no route geometry is needed). Server-side API keys are never exposed to clients. See also `02-ARCHITECTURE.md` — fare calculation lifecycle.
+>
+> **`rides.distance_km` invariant:** For intercity rides, `rides.distance_km = inside_km + outside_km`. For non-intercity or rural-origin rides, `rides.distance_km = inside_km` (and `outside_km = 0`). This value is always extracted from the `fare_breakdown` at ride creation time and updated at completion.
 
 ---
 
@@ -397,11 +399,52 @@ Reference table mapping known Bangladesh vehicle Brand/Model/Year combinations t
 | Column | Type | Required | Default | Notes |
 |--------|------|----------|---------|-------|
 | id | uuid | yes | gen_random_uuid() | PK |
-| name | varchar(100) | yes | — | e.g. "Dhaka Zone 1" |
-| polygon | jsonb | yes | — | Array of `{lat, lng}` points. Min 3 points, no self-intersection. |
+| name | varchar(100) | yes | — | e.g. "Bangladesh Operational Zone" |
+| polygon | jsonb | yes | — | Array of `{lat, lng}` points. Min 3 points, no self-intersection. Active row must be the Bangladesh mainland border, not a rectangle. |
 | is_active | boolean | yes | false | Only one zone active at a time |
 | created_at | timestamptz | yes | now() | — |
 | updated_at | timestamptz | yes | now() | — |
+
+**Active-zone seed/migration note:** The active `zones.polygon` must be generated from `https://github.com/ifahimreza/bangladesh-geojson` (`src/data/bangladesh.geojson`). Extract the exterior non-shared boundary from the administrative polygons, keep the largest mainland ring, simplify to 80-150 points, and convert GeoJSON `[lng, lat]` into `{lat, lng}`. This zone determines whether Ride operates; it is separate from `city_boundaries`, which determine intercity pricing.
+
+```sql
+UPDATE zones
+SET name = COALESCE(NULLIF(name, ''), 'Bangladesh Operational Zone'),
+    polygon = '[{"lat":25.999844,"lng":89.459852},{"lat":26.032549,"lng":89.32597},{"lat":26.114816,"lng":89.23549},{"lat":26.21128,"lng":89.145707},{"lat":26.305922,"lng":89.13369},{"lat":26.398502,"lng":89.071181},{"lat":26.439997,"lng":88.948962},{"lat":26.331143,"lng":88.956399},{"lat":26.30826,"lng":89.022597},{"lat":26.238784,"lng":88.96531},{"lat":26.290746,"lng":88.745058},{"lat":26.301509,"lng":88.684603},{"lat":26.344244,"lng":88.695058},{"lat":26.469276,"lng":88.595849},{"lat":26.607685,"lng":88.39023},{"lat":26.430954,"lng":88.489398},{"lat":26.352934,"lng":88.442586},{"lat":26.221817,"lng":88.35127},{"lat":26.153558,"lng":88.183944},{"lat":25.943757,"lng":88.112908},{"lat":25.801643,"lng":88.193413},{"lat":25.695764,"lng":88.3853},{"lat":25.520523,"lng":88.551546},{"lat":25.516522,"lng":88.786349},{"lat":25.315296,"lng":88.927939},{"lat":25.199902,"lng":88.933829},{"lat":25.186783,"lng":88.742618},{"lat":25.200174,"lng":88.440415},{"lat":24.997009,"lng":88.413604},{"lat":24.8836,"lng":88.32059},{"lat":24.881694,"lng":88.155372},{"lat":24.42229,"lng":88.284891},{"lat":24.016853,"lng":88.73499},{"lat":23.865572,"lng":88.654143},{"lat":23.724104,"lng":88.568737},{"lat":23.525488,"lng":88.696162},{"lat":23.441958,"lng":88.78315},{"lat":23.297905,"lng":88.719203},{"lat":23.232993,"lng":88.896152},{"lat":23.165566,"lng":88.932653},{"lat":23.007673,"lng":88.845634},{"lat":22.757861,"lng":88.910984},{"lat":22.299233,"lng":89.024002},{"lat":22.037034,"lng":89.091677},{"lat":22.122123,"lng":89.177771},{"lat":22.231575,"lng":89.182185},{"lat":22.167977,"lng":89.260901},{"lat":22.161537,"lng":89.41578},{"lat":22.270571,"lng":89.423978},{"lat":22.32765,"lng":89.423881},{"lat":22.342697,"lng":89.461166},{"lat":22.208069,"lng":89.526578},{"lat":22.280232,"lng":89.614986},{"lat":22.244055,"lng":89.64455},{"lat":22.242022,"lng":89.720573},{"lat":22.220079,"lng":89.807896},{"lat":22.182053,"lng":90.022706},{"lat":21.92365,"lng":90.029582},{"lat":22.174662,"lng":90.409348},{"lat":22.447131,"lng":90.595682},{"lat":22.758213,"lng":90.432138},{"lat":22.944003,"lng":90.514517},{"lat":23.324566,"lng":90.489965},{"lat":23.18994,"lng":90.637625},{"lat":22.719055,"lng":90.814527},{"lat":22.531413,"lng":91.214126},{"lat":22.790165,"lng":91.327995},{"lat":22.812839,"lng":91.417301},{"lat":22.243212,"lng":91.823352},{"lat":22.408993,"lng":91.90441},{"lat":22.177158,"lng":91.975038},{"lat":21.945824,"lng":91.893219},{"lat":21.566541,"lng":91.859207},{"lat":21.650694,"lng":91.977715},{"lat":21.223557,"lng":92.046738},{"lat":21.283276,"lng":92.212018},{"lat":21.274244,"lng":92.641976},{"lat":21.88167,"lng":92.630618},{"lat":22.181096,"lng":92.594406},{"lat":22.331516,"lng":92.575884},{"lat":22.499607,"lng":92.545651},{"lat":22.673058,"lng":92.525987},{"lat":22.916778,"lng":92.420744},{"lat":23.096121,"lng":92.366895},{"lat":23.336884,"lng":92.37448},{"lat":23.520768,"lng":92.313097},{"lat":23.692998,"lng":92.240609},{"lat":23.654485,"lng":92.077751},{"lat":23.611564,"lng":91.952252},{"lat":23.404212,"lng":91.850853},{"lat":23.227727,"lng":91.787648},{"lat":23.080715,"lng":91.81469},{"lat":22.962274,"lng":91.626621},{"lat":23.179935,"lng":91.497296},{"lat":23.082992,"lng":91.417417},{"lat":23.514173,"lng":91.223507},{"lat":23.745858,"lng":91.222411},{"lat":23.995291,"lng":91.376165},{"lat":24.095578,"lng":91.615666},{"lat":24.166292,"lng":91.684377},{"lat":24.196876,"lng":91.843918},{"lat":24.356817,"lng":91.956667},{"lat":24.382636,"lng":92.103693},{"lat":24.502416,"lng":92.152217},{"lat":24.779327,"lng":92.287834},{"lat":24.8572,"lng":92.436422},{"lat":25.049185,"lng":92.345972},{"lat":25.141073,"lng":92.139459},{"lat":25.176561,"lng":91.756332},{"lat":25.138638,"lng":91.493597},{"lat":25.191642,"lng":91.067808},{"lat":25.170349,"lng":90.741806},{"lat":25.174759,"lng":90.604598},{"lat":25.293664,"lng":89.948202},{"lat":25.759094,"lng":89.841272},{"lat":26.022999,"lng":89.794342},{"lat":26.151857,"lng":89.701311},{"lat":26.178719,"lng":89.639035},{"lat":26.123774,"lng":89.603486},{"lat":26.041223,"lng":89.593729}]'::jsonb,
+    updated_at = now()
+WHERE is_active = true;
+```
+
+### city_boundaries
+| Column | Type | Required | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | yes | gen_random_uuid() | PK |
+| name | varchar(100) | yes | — | City name; seed the 8 divisional cities: Dhaka, Chattogram, Rajshahi, Khulna, Sylhet, Barisal, Rangpur, Mymensingh |
+| polygon | jsonb | yes | — | Array of `{lat, lng}` points. Seed polygons should be simplified to 20-40 points for efficient point-in-polygon checks. |
+| is_active | boolean | yes | true | Inactive rows are ignored by ride request/estimate city detection |
+| created_at | timestamptz | yes | now() | — |
+| updated_at | timestamptz | yes | now() | — |
+
+**Seed note:** Seed with simplified 20-40 point polygons for all 8 divisional cities. The seed polygons represent **divisional administrative boundaries** extracted from `divisions.geojson` in the `ifahimreza/bangladesh-geojson` repository, simplified using `@turf/simplify` (tolerance ~0.05). This means the Dhaka polygon covers the full Dhaka Division, not a tight urban footprint. A ride from central Dhaka to Gazipur would be intra-city (both inside the Dhaka division polygon). The coding agent must: (1) fetch `divisions.geojson` from the GitHub source, (2) extract each division's polygon feature, (3) run `@turf/simplify` with tolerance 0.05 on each, (4) convert GeoJSON `[lng, lat]` → `{lat, lng}` arrays, (5) seed the resulting 20-40 point arrays. Admins can refine them at `/admin/city-boundaries` using the map editor to tighten or widen boundaries as operational needs evolve. City boundaries are fare inputs and must stay database-configurable.
+
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS city_boundaries_name_unique
+  ON city_boundaries (name);
+
+INSERT INTO city_boundaries (name, polygon, is_active) VALUES
+('Dhaka', '[{"lat":23.8103,"lng":90.6575},{"lat":23.86786,"lng":90.669232},{"lat":23.9251,"lng":90.650137},{"lat":23.967557,"lng":90.600441},{"lat":23.987835,"lng":90.535},{"lat":23.991513,"lng":90.47053},{"lat":23.9907,"lng":90.4125},{"lat":23.991513,"lng":90.35447},{"lat":23.987835,"lng":90.29},{"lat":23.967557,"lng":90.224559},{"lat":23.9251,"lng":90.174863},{"lat":23.86786,"lng":90.155768},{"lat":23.8103,"lng":90.1675},{"lat":23.761744,"lng":90.195929},{"lat":23.7201,"lng":90.225785},{"lat":23.677643,"lng":90.253959},{"lat":23.632765,"lng":90.29},{"lat":23.595483,"lng":90.343709},{"lat":23.5807,"lng":90.4125},{"lat":23.595483,"lng":90.481291},{"lat":23.632765,"lng":90.535},{"lat":23.677643,"lng":90.571041},{"lat":23.7201,"lng":90.599215},{"lat":23.761744,"lng":90.629071}]'::jsonb, true),
+('Chattogram', '[{"lat":22.3569,"lng":92.0032},{"lat":22.407441,"lng":92.013735},{"lat":22.4577,"lng":91.996589},{"lat":22.494979,"lng":91.951963},{"lat":22.512785,"lng":91.8932},{"lat":22.516014,"lng":91.835309},{"lat":22.5153,"lng":91.7832},{"lat":22.516014,"lng":91.731091},{"lat":22.512785,"lng":91.6732},{"lat":22.494979,"lng":91.614437},{"lat":22.4577,"lng":91.569811},{"lat":22.407441,"lng":91.552665},{"lat":22.3569,"lng":91.5632},{"lat":22.314266,"lng":91.588728},{"lat":22.2777,"lng":91.615537},{"lat":22.240421,"lng":91.640837},{"lat":22.201015,"lng":91.6732},{"lat":22.16828,"lng":91.721428},{"lat":22.1553,"lng":91.7832},{"lat":22.16828,"lng":91.844972},{"lat":22.201015,"lng":91.8932},{"lat":22.240421,"lng":91.925563},{"lat":22.2777,"lng":91.950863},{"lat":22.314266,"lng":91.977672}]'::jsonb, true),
+('Rajshahi', '[{"lat":24.3745,"lng":88.7942},{"lat":24.416617,"lng":88.803299},{"lat":24.4585,"lng":88.78849},{"lat":24.489566,"lng":88.74995},{"lat":24.504404,"lng":88.6992},{"lat":24.507095,"lng":88.649203},{"lat":24.5065,"lng":88.6042},{"lat":24.507095,"lng":88.559197},{"lat":24.504404,"lng":88.5092},{"lat":24.489566,"lng":88.45845},{"lat":24.4585,"lng":88.41991},{"lat":24.416617,"lng":88.405101},{"lat":24.3745,"lng":88.4142},{"lat":24.338971,"lng":88.436247},{"lat":24.3085,"lng":88.459401},{"lat":24.277434,"lng":88.48125},{"lat":24.244596,"lng":88.5092},{"lat":24.217317,"lng":88.550852},{"lat":24.2065,"lng":88.6042},{"lat":24.217317,"lng":88.657548},{"lat":24.244596,"lng":88.6992},{"lat":24.277434,"lng":88.72715},{"lat":24.3085,"lng":88.748999},{"lat":24.338971,"lng":88.772153}]'::jsonb, true),
+('Khulna', '[{"lat":22.8456,"lng":89.7303},{"lat":22.890525,"lng":89.739399},{"lat":22.9352,"lng":89.72459},{"lat":22.968337,"lng":89.68605},{"lat":22.984164,"lng":89.6353},{"lat":22.987034,"lng":89.585303},{"lat":22.9864,"lng":89.5403},{"lat":22.987034,"lng":89.495297},{"lat":22.984164,"lng":89.4453},{"lat":22.968337,"lng":89.39455},{"lat":22.9352,"lng":89.35601},{"lat":22.890525,"lng":89.341201},{"lat":22.8456,"lng":89.3503},{"lat":22.807703,"lng":89.372347},{"lat":22.7752,"lng":89.395501},{"lat":22.742063,"lng":89.41735},{"lat":22.707036,"lng":89.4453},{"lat":22.677938,"lng":89.486952},{"lat":22.6664,"lng":89.5403},{"lat":22.677938,"lng":89.593648},{"lat":22.707036,"lng":89.6353},{"lat":22.742063,"lng":89.66325},{"lat":22.7752,"lng":89.685099},{"lat":22.807703,"lng":89.708253}]'::jsonb, true),
+('Sylhet', '[{"lat":24.8949,"lng":92.0487},{"lat":24.937017,"lng":92.05732},{"lat":24.9789,"lng":92.043291},{"lat":25.009966,"lng":92.006779},{"lat":25.024804,"lng":91.9587},{"lat":25.027495,"lng":91.911334},{"lat":25.0269,"lng":91.8687},{"lat":25.027495,"lng":91.826066},{"lat":25.024804,"lng":91.7787},{"lat":25.009966,"lng":91.730621},{"lat":24.9789,"lng":91.694109},{"lat":24.937017,"lng":91.68008},{"lat":24.8949,"lng":91.6887},{"lat":24.859371,"lng":91.709586},{"lat":24.8289,"lng":91.731522},{"lat":24.797834,"lng":91.752221},{"lat":24.764996,"lng":91.7787},{"lat":24.737717,"lng":91.818159},{"lat":24.7269,"lng":91.8687},{"lat":24.737717,"lng":91.919241},{"lat":24.764996,"lng":91.9587},{"lat":24.797834,"lng":91.985179},{"lat":24.8289,"lng":92.005878},{"lat":24.859371,"lng":92.027814}]'::jsonb, true),
+('Barisal', '[{"lat":22.701,"lng":90.5135},{"lat":22.737501,"lng":90.521162},{"lat":22.7738,"lng":90.508692},{"lat":22.800724,"lng":90.476237},{"lat":22.813583,"lng":90.4335},{"lat":22.815915,"lng":90.391397},{"lat":22.8154,"lng":90.3535},{"lat":22.815915,"lng":90.315603},{"lat":22.813583,"lng":90.2735},{"lat":22.800724,"lng":90.230763},{"lat":22.7738,"lng":90.198308},{"lat":22.737501,"lng":90.185838},{"lat":22.701,"lng":90.1935},{"lat":22.670209,"lng":90.212066},{"lat":22.6438,"lng":90.231564},{"lat":22.616876,"lng":90.249963},{"lat":22.588417,"lng":90.2735},{"lat":22.564775,"lng":90.308575},{"lat":22.5554,"lng":90.3535},{"lat":22.564775,"lng":90.398425},{"lat":22.588417,"lng":90.4335},{"lat":22.616876,"lng":90.457037},{"lat":22.6438,"lng":90.475436},{"lat":22.670209,"lng":90.494934}]'::jsonb, true),
+('Rangpur', '[{"lat":25.7439,"lng":89.4552},{"lat":25.786017,"lng":89.46382},{"lat":25.8279,"lng":89.449791},{"lat":25.858966,"lng":89.413279},{"lat":25.873804,"lng":89.3652},{"lat":25.876495,"lng":89.317834},{"lat":25.8759,"lng":89.2752},{"lat":25.876495,"lng":89.232566},{"lat":25.873804,"lng":89.1852},{"lat":25.858966,"lng":89.137121},{"lat":25.8279,"lng":89.100609},{"lat":25.786017,"lng":89.08658},{"lat":25.7439,"lng":89.0952},{"lat":25.708371,"lng":89.116086},{"lat":25.6779,"lng":89.138022},{"lat":25.646834,"lng":89.158721},{"lat":25.613996,"lng":89.1852},{"lat":25.586717,"lng":89.224659},{"lat":25.5759,"lng":89.2752},{"lat":25.586717,"lng":89.325741},{"lat":25.613996,"lng":89.3652},{"lat":25.646834,"lng":89.391679},{"lat":25.6779,"lng":89.412378},{"lat":25.708371,"lng":89.434314}]'::jsonb, true),
+('Mymensingh', '[{"lat":24.7471,"lng":90.5903},{"lat":24.786409,"lng":90.598441},{"lat":24.8255,"lng":90.585191},{"lat":24.854495,"lng":90.550708},{"lat":24.868344,"lng":90.5053},{"lat":24.870855,"lng":90.460566},{"lat":24.8703,"lng":90.4203},{"lat":24.870855,"lng":90.380034},{"lat":24.868344,"lng":90.3353},{"lat":24.854495,"lng":90.289892},{"lat":24.8255,"lng":90.255409},{"lat":24.786409,"lng":90.242159},{"lat":24.7471,"lng":90.2503},{"lat":24.71394,"lng":90.270026},{"lat":24.6855,"lng":90.290743},{"lat":24.656505,"lng":90.310292},{"lat":24.625856,"lng":90.3353},{"lat":24.600396,"lng":90.372567},{"lat":24.5903,"lng":90.4203},{"lat":24.600396,"lng":90.468033},{"lat":24.625856,"lng":90.5053},{"lat":24.656505,"lng":90.530308},{"lat":24.6855,"lng":90.549857},{"lat":24.71394,"lng":90.570574}]'::jsonb, true)
+ON CONFLICT (name) DO UPDATE
+SET polygon = EXCLUDED.polygon,
+    is_active = EXCLUDED.is_active,
+    updated_at = now();
+```
 
 ### chat_messages
 | Column | Type | Required | Default | Notes |
@@ -421,7 +464,8 @@ Reference table mapping known Bangladesh vehicle Brand/Model/Year combinations t
 | zone_id | uuid | yes | — | FK → zones.id |
 | vehicle_type | varchar(20) | yes | — | **vehicleTypeEnum (8 values).** One pricing row per vehicle type per zone. |
 | base_fare_bdt | integer | yes | — | In paisa. Charged on every ride. Also included in floor fare computation. |
-| per_km_bdt | integer | yes | — | In paisa per km. Used for both distance charge and floor computation. |
+| per_km_bdt | integer | yes | — | In paisa per km. Used for inside-city distance charge, non-intercity distance charge, and floor computation. |
+| intercity_per_km_bdt | integer | yes | 0 | In paisa per km for kilometers outside the origin city. If 0, fare calculation uses `per_km_bdt` for outside kilometers, meaning no intercity surcharge. |
 | per_min_bdt | integer | yes | — | In paisa per minute of billable ride time. Applies to the unified ride timer (see below). |
 | floor_length_km | numeric(10,2) | yes | — | Minimum km used for floor fare computation. `floor_fare = base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)`. |
 | floor_min | integer | yes | — | Minimum minutes used for floor fare computation (same formula as above). |
@@ -432,23 +476,26 @@ Reference table mapping known Bangladesh vehicle Brand/Model/Year combinations t
 | updated_at | timestamptz | yes | now() | — |
 
 **Initial production values (seed via migration — all money in integer paisa; floor_length_km is decimal km). These are defaults; admin can adjust per zone/vehicle type via admin panel at any time:**
-| vehicle_type | base_fare_bdt | per_km_bdt | per_min_bdt | floor_length_km | floor_min | platform_commission_percent |
-|---|---|---|---|---|---|---|
-| bike_basic | 2500 | 775 | 175 | 2.00 | 10 | 0.00 |
-| bike_standard | 2500 | 950 | 180 | 2.00 | 10 | 0.00 |
-| bike_plus | 2500 | 1050 | 190 | 2.00 | 10 | 0.00 |
-| cng | 4000 | 1500 | 200 | 3.00 | 15 | 0.00 |
-| car_economy | 4500 | 1500 | 350 | 4.00 | 20 | 0.00 |
-| car_comfort | 5000 | 1800 | 375 | 4.00 | 20 | 0.00 |
-| car_premium | 6500 | 2100 | 400 | 4.00 | 20 | 0.00 |
-| car_xl | 8000 | 2500 | 425 | 4.00 | 20 | 0.00 |
+| vehicle_type | base_fare_bdt | per_km_bdt | intercity_per_km_bdt | per_min_bdt | floor_length_km | floor_min | platform_commission_percent |
+|---|---|---|---|---|---|---|---|
+| bike_basic | 2500 | 775 | 1160 | 175 | 2.00 | 10 | 0.00 |
+| bike_standard | 2500 | 950 | 1425 | 180 | 2.00 | 10 | 0.00 |
+| bike_plus | 2500 | 1050 | 1575 | 190 | 2.00 | 10 | 0.00 |
+| cng | 4000 | 1500 | 2250 | 200 | 3.00 | 15 | 0.00 |
+| car_economy | 4500 | 1500 | 2250 | 350 | 4.00 | 20 | 0.00 |
+| car_comfort | 5000 | 1800 | 2700 | 375 | 4.00 | 20 | 0.00 |
+| car_premium | 6500 | 2100 | 3150 | 400 | 4.00 | 20 | 0.00 |
+| car_xl | 8000 | 2500 | 3750 | 425 | 4.00 | 20 | 0.00 |
 
 > **Floor fare verification (BDT):** bike_basic 58 | bike_standard 62 | bike_plus 65 | cng 115 | car_economy 175 | car_comfort 197 | car_premium 229 | car_xl 265
 > Computed as: `base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)` — all in paisa, divide by 100 for BDT display.
 
 **Fare calculation formula (implemented in `lib/fareCalc.ts`):**
 ```
-distance_charge  = round(per_km_bdt × distance_km)
+effective_outside_rate = intercity_per_km_bdt > 0 ? intercity_per_km_bdt : per_km_bdt
+inside_charge    = round(per_km_bdt × inside_km)
+outside_charge   = round(effective_outside_rate × outside_km)
+distance_charge  = inside_charge + outside_charge
 time_charge      = ride_time_min × per_min_bdt          // integer arithmetic; per_min_bdt is integer paisa
 computed_total   = base_fare_bdt + distance_charge + time_charge
 floor_fare       = base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)
@@ -884,6 +931,8 @@ Audit log of SOS alert triggers for both riders and drivers. Written by `POST /a
 | users | `phone` | unique | Contact uniqueness |
 | users | `auth_uid` | unique | Auth uniqueness |
 | zones | `(1)` WHERE `is_active=true` | unique partial | Only 1 active zone |
+| city_boundaries | `name` | unique | City boundary seed/upsert lookup |
+| city_boundaries | `is_active` | btree | Active city-boundary lookup for point-in-polygon checks |
 | pricing | `zone_id, vehicle_type` WHERE `is_active=true` | unique partial | 1 active price per combo |
 | pricing | `vehicle_type` | btree | Vehicle-type pricing lookup |
 | subscriptions | `(driver_id)` WHERE `is_trial=true AND status IN ('active','expired')` | unique partial | Trial allowed only once |

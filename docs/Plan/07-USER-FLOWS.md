@@ -273,6 +273,21 @@ Two paths depending on whether the driver owns the vehicle:
 ### Alternate path: SMS fallback
 - If driver app does not send `fetch:confirm` within the deduction window of `ride:offer` broadcast: server triggers Expo Push notification (or SMS deep link as fallback). If driver taps link → app opens, offer card renders, `fetch:confirm` sent. Normal deduction flow continues.
 
+### Alternate path: Intercity ride (dropoff outside origin city)
+When the ride request or estimate detects `is_intercity=true` (dropoff is outside the origin city polygon):
+
+1. **Fare estimate screen (before booking):** The fare sheet shows a split breakdown:
+   - Base fare (same as intra-city)
+   - **Inside-city distance** (`inside_km`) at the normal `per_km_bdt` rate
+   - **Outside-city distance** (`outside_km`) at the `intercity_per_km_bdt` rate
+   - Each line shows the per-km rate and the resulting charge
+   - A badge or label reads "Intercity" with the origin city name (e.g., "From Dhaka")
+   - The total fare is the sum of both distance charges + base fare + time estimate
+2. **Rider confirmation step:** Before the rider taps Confirm, a brief informational banner states: *"Your dropoff is outside [origin_city]. A higher per-km rate applies to the portion of your trip outside the city."* This is informational — no additional consent tap is required. The rider sees the full fare before confirming.
+3. **Ride request flow:** The ride is created via the standard `POST /api/ride/request`. The server detects intercity status, splits the route via Barikoi Route API (or Haversine fallback), and stores the split in `fare_breakdown`.
+4. **Ride completion:** At `POST /api/ride/:id/complete`, the actual `inside_km` and `outside_km` are recomputed using actual route distance. The rider sees the final split in the ride completion summary.
+5. **Rural-origin rides:** If the pickup is not inside any active `city_boundaries` polygon, `origin_city = null` and `is_intercity = false`. The fare uses the normal `per_km_bdt` for all distance — no surcharge applies. The rider sees no intercity badge or split.
+
 ### Alternate path: Scheduled ride
 - Rider sets `scheduled_at` (15–60 min in future). Ride created as `status='pending'` but WebSocket dispatch does NOT start yet. Scheduler runs every 60s and queries `rides WHERE scheduled_at BETWEEN now()+60s AND now()+120s AND status='pending' AND scheduled_dispatched_at IS NULL`. This window targets rides whose scheduled time is 1–2 minutes away, so dispatch begins at approximately `scheduled_at - 120s` (AC-9). For each match: set `scheduled_dispatched_at = now()` (prevents double-dispatch on restart), then trigger dispatch exactly as step 4 above. Call deduction happens at dispatch time, not booking time.
 

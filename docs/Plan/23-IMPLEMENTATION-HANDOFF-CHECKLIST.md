@@ -106,10 +106,27 @@ Action: convert docs/Plan/22-TEST-TEMPLATES.md scenarios into executable suites 
 Required targeted scenarios: chat supports text plus image attachments; voice or video overlay returns to ride context after end; fare detail toggle does not reset selected stars; thanks confirmation requires explicit acknowledgement before exit.
 Evidence: green test run with artifact links.
 
-1. [ ] H-16 Operational readiness lock — FUTURE
+1. [ ] H-18 Intercity geo-fencing completion gate
 
-Action: complete docs/Plan/15-RUNBOOK-DEPLOY.md, docs/Plan/16-INCIDENT-RESPONSE.md, and docs/Plan/17-MONITORING.md checks.
-Evidence: health checks operational, alert routing confirmed, and rollback steps tested in dry run.
+Action: implement the intercity geo-fencing model (replaces old district-based intercity design).
+Execution order (do NOT reorder):
+  1. M-10 — `city_boundaries` table + seed 8 divisional city polygons (scripts/seed-city-boundaries.js).
+  2. M-11 — Add `intercity_per_km_bdt` to `pricing` + backfill + seed intercity rates.
+  3. M-12 — Zone polygon UPDATE with Bangladesh mainland border (scripts/update-bangladesh-zone-polygon.js).
+  4. M-13 — DROP `intercity_routes` table + remove `intercity_min_distance_km` from system_config.
+  5. Verify `@turf/turf` and `@mapbox/polyline` are in `package.json` (P1-09). Install if missing.
+  6. Implement `lib/cityBoundary.ts` — point-in-polygon city detection with 60s TTL cache (P6-13).
+  7. Implement `lib/routeSplit.ts` — Barikoi Route API integration with Turf.js route splitting (P6-12).
+  8. Integrate city detection and route splitting into `POST /api/ride/request` and `GET /api/ride/estimate` (P6-14).
+  9. Update `lib/fareCalc.ts` — extend `calculateFare` to accept `inside_km`, `outside_km`, `intercity_per_km_bdt`. Add `inside_charge_bdt`, `outside_charge_bdt`, `origin_city`, `is_intercity` to FareBreakdown. Ensure `intercity_per_km_bdt = 0` fallback uses normal `per_km_bdt`.
+  10. Update `POST /api/ride/:id/complete` to recompute split at completion.
+  11. Add city boundaries admin CRUD endpoints and UI at `/admin/city-boundaries`.
+  12. Update WebSocket `ride:offer` payload to include `is_intercity` and `origin_city`.
+  13. Add intercity test cases to `22-TEST-TEMPLATES.md` and run them.
+  14. Verify `ride:alternatives` and `ride:expired` payloads still work with updated fare_breakdown shape.
+  15. Verify FareBreakdown shape is consistent across `05-DATA-MODEL.md`, `06-API.md`, `01-PRD.md`, and all API responses.
+  16. Verify no references to `intercity_routes`, `intercity_min_distance_km`, or district-based detection remain in codebase.
+Evidence: all 16 sub-steps completed with passing type-check, no intercity_routes references via grep, intercity test cases green, and manual intercity ride smoke test (pickup in Dhaka, dropoff in Gazipur → is_intercity=true, split charges visible in fare breakdown).
 
 1. [ ] H-17 Final handoff sign-off — FUTURE
 

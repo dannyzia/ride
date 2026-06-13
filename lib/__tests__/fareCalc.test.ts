@@ -398,6 +398,110 @@ describe('calculateFare — commission', () => {
   });
 });
 
+// ── Intercity split-rate ─────────────────────────────────────────────────────
+
+describe('calculateFare — intercity split-rate', () => {
+  const BIKE_BASIC_INTERCITY: PricingRow = {
+    ...BIKE_BASIC,
+    intercity_per_km_bdt: 1160,
+  };
+
+  const CAR_PREMIUM_INTERCITY: PricingRow = {
+    ...CAR_PREMIUM,
+    intercity_per_km_bdt: 3150,
+  };
+
+  const BIKE_BASIC_NO_SURCHARGE: PricingRow = {
+    ...BIKE_BASIC,
+    intercity_per_km_bdt: 0,
+  };
+
+  test('intercity bike_basic: 3 inside km, 5 outside km', () => {
+    // inside_charge  = round(775 × 3) = 2325
+    // outside_charge = round(1160 × 5) = 5800
+    // distance_charge = 2325 + 5800 = 8125
+    // computed_total = 2500 + 8125 + 0 = 10625
+    // floor = 5800
+    // final = max(10625, 5800) = 10625
+    const result = calculateFare(BIKE_BASIC_INTERCITY, 3, 0, undefined, 5);
+    expect(result.inside_charge_bdt).toBe(2325);
+    expect(result.outside_charge_bdt).toBe(5800);
+    expect(result.distance_charge_bdt).toBe(8125);
+    expect(result.total_bdt).toBe(10625);
+  });
+
+  test('intercity car_premium: 5 inside km, 10 outside km', () => {
+    // inside_charge  = round(2100 × 5) = 10500
+    // outside_charge = round(3150 × 10) = 31500
+    // distance_charge = 10500 + 31500 = 42000
+    // computed_total = 6500 + 42000 + 0 = 48500
+    // floor = 22900
+    // final = max(48500, 22900) = 48500
+    const result = calculateFare(CAR_PREMIUM_INTERCITY, 5, 0, undefined, 10);
+    expect(result.inside_charge_bdt).toBe(10500);
+    expect(result.outside_charge_bdt).toBe(31500);
+    expect(result.total_bdt).toBe(48500);
+  });
+
+  test('non-intercity collapses to normal v2: outside_km = 0 (default)', () => {
+    // same as normal bike_basic 4 km, 0 min
+    const result = calculateFare(BIKE_BASIC, 4, 0);
+    expect(result.outside_charge_bdt).toBe(0);
+    expect(result.inside_charge_bdt).toBe(3100);
+    expect(result.distance_charge_bdt).toBe(3100);
+    expect(result.total_bdt).toBe(5800); // floor applies
+  });
+
+  test('intercity_per_km_bdt = 0 falls back to normal per_km_bdt', () => {
+    // outside_charge = round(775 × 5) = 3875 (uses per_km_bdt, not 0)
+    const result = calculateFare(BIKE_BASIC_NO_SURCHARGE, 0, 0, undefined, 5);
+    expect(result.outside_charge_bdt).toBe(3875);
+  });
+
+  test('intercity with time charge', () => {
+    // bike_basic: 3 inside, 2 outside, 15 min
+    // inside_charge  = round(775 × 3) = 2325
+    // outside_charge = round(1160 × 2) = 2320
+    // distance_charge = 2325 + 2320 = 4645
+    // time_charge = 15 × 175 = 2625
+    // computed_total = 2500 + 4645 + 2625 = 9770
+    // floor = 5800
+    // final = max(9770, 5800) = 9770
+    const result = calculateFare(BIKE_BASIC_INTERCITY, 3, 15, undefined, 2);
+    expect(result.time_charge_bdt).toBe(2625);
+    expect(result.total_bdt).toBe(9770);
+  });
+
+  test('intercity floor fare still applies when both charges are low', () => {
+    // bike_basic: 1 inside, 1 outside
+    // inside_charge  = round(775 × 1) = 775
+    // outside_charge = round(1160 × 1) = 1160
+    // distance_charge = 775 + 1160 = 1935
+    // computed_total = 2500 + 1935 + 0 = 4435
+    // floor = 5800
+    // final = max(4435, 5800) = 5800
+    const result = calculateFare(BIKE_BASIC_INTERCITY, 1, 0, undefined, 1);
+    expect(result.total_bdt).toBe(5800);
+  });
+
+  test('inside_km and outside_km stored in breakdown', () => {
+    const result = calculateFare(BIKE_BASIC_INTERCITY, 3.456, 0, undefined, 7.891);
+    expect(result.inside_km).toBe(3.456);
+    expect(result.outside_km).toBe(7.891);
+    expect(result.distance_km).toBeCloseTo(11.347, 2);
+  });
+
+  test('new fields have correct defaults for non-intercity', () => {
+    const result = calculateFare(BIKE_BASIC, 5, 0);
+    expect(result.inside_km).toBe(5);
+    expect(result.outside_km).toBe(0);
+    expect(result.inside_charge_bdt).toBe(Math.round(775 * 5));
+    expect(result.outside_charge_bdt).toBe(0);
+    expect(result.origin_city).toBeNull();
+    expect(result.is_intercity).toBe(false);
+  });
+});
+
 // ── paisaToTaka ───────────────────────────────────────────────────────────────
 
 describe('paisaToTaka', () => {

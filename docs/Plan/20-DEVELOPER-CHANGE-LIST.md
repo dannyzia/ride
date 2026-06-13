@@ -1129,6 +1129,7 @@ import { logger } from './logger';
 export interface PricingRow {
   base_fare_bdt:        number;         // paisa — charged on every ride
   per_km_bdt:           number;         // paisa per km
+  intercity_per_km_bdt: number;         // paisa per km outside origin city; 0 = use per_km_bdt (no surcharge)
   per_min_bdt:          number;         // paisa per minute of billable ride time
   floor_length_km:      number;         // decimal km used for floor fare
   floor_min:            number;         // minutes used for floor fare
@@ -1144,11 +1145,17 @@ export interface PlatformCeilings {
 
 export interface FareBreakdown {
   base_fare_bdt:              number;   // paisa (always = pricing.base_fare_bdt)
-  distance_charge_bdt:        number;   // paisa
+  distance_charge_bdt:        number;   // paisa (= inside_charge_bdt + outside_charge_bdt)
+  inside_charge_bdt:          number;   // paisa — round(per_km_bdt × inside_km)
+  outside_charge_bdt:         number;   // paisa — round(effective_outside_rate × outside_km); 0 if not intercity
   time_charge_bdt:            number;   // paisa — 0 at estimate time, actual at completion
   total_bdt:                  number;   // paisa (after floor)
   floor_fare_bdt:             number;   // paisa (computed floor, for client display)
-  distance_km:                number;   // km (for display only)
+  distance_km:                number;   // km (inside_km + outside_km, for display only)
+  origin_city:                string | null; // name of origin city; null if rural pickup
+  is_intercity:               boolean;  // true if dropoff is outside origin city polygon
+  inside_km:                  number;   // km inside origin city, rounded to 3 decimals
+  outside_km:                 number;   // km outside origin city, rounded to 3 decimals; 0 if not intercity
   platform_commission_percent: number;  // e.g. 0.00 for zero commission
   platform_commission_bdt:     number;  // paisa — round(total_bdt × commission_percent / 100)
   driver_net_bdt:              number;  // paisa — total_bdt − platform_commission_bdt
@@ -1157,12 +1164,19 @@ export interface FareBreakdown {
 /**
  * Calculate final fare in integer paisa.
  *
- * Formula:
- *   distance_charge  = round(per_km_bdt × distance_km)
+ * Formula (extended v2 with intercity split):
+ *   effective_outside_rate = intercity_per_km_bdt > 0 ? intercity_per_km_bdt : per_km_bdt
+ *   inside_charge  = round(per_km_bdt × inside_km)
+ *   outside_charge = round(effective_outside_rate × outside_km)
+ *   distance_charge = inside_charge + outside_charge
  *   time_charge      = ride_time_min × per_min_bdt          // integer; per_min_bdt is integer paisa
  *   computed_total   = base_fare_bdt + distance_charge + time_charge
  *   floor_fare       = base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)
  *   final_fare       = max(computed_total, floor_fare)
+ *
+ * For non-intercity rides: inside_km = distance_km, outside_km = 0.
+ * For rural-origin rides: origin_city = null, is_intercity = false, outside_km = 0.
+ * When intercity_per_km_bdt = 0, outside km uses normal per_km_bdt (no surcharge).
  *
  * Ride time (rideTimeMin):
  *   At estimation/request time → pass 0.
@@ -1176,12 +1190,20 @@ export interface FareBreakdown {
  */
 export function calculateFare(
   pricing:      PricingRow,
-  distanceKm:   number,
+  insideKm:     number,         // km inside origin city (or total distance for non-intercity)
+  outsideKm:    number,         // km outside origin city; 0 for non-intercity
   rideTimeMin:  number,         // 0 at estimate time; actual ride_time_min at completion
   ceilings?:    PlatformCeilings,
 ): FareBreakdown {
+  // Intercity rate fallback: if intercity_per_km_bdt = 0, use normal per_km_bdt for outside km
+  const effectiveOutsideRate = pricing.intercity_per_km_bdt > 0
+    ? pricing.intercity_per_km_bdt
+    : pricing.per_km_bdt;
+
   // Integer paisa arithmetic — round after each multiplication
-  const distanceCharge  = Math.round(pricing.per_km_bdt * distanceKm);
+  const insideCharge    = Math.round(pricing.per_km_bdt * insideKm);
+  const outsideCharge   = Math.round(effectiveOutsideRate * outsideKm);
+  const distanceCharge  = insideCharge + outsideCharge;
   const timeCharge      = rideTimeMin * pricing.per_min_bdt;             // already integer
   const computedTotal   = pricing.base_fare_bdt + distanceCharge + timeCharge;
   const floorFare       = pricing.base_fare_bdt
@@ -1219,13 +1241,21 @@ export function calculateFare(
   const commissionBdt = Math.round(finalFare * pricing.platform_commission_percent / 100);
   const driverNetBdt  = finalFare - commissionBdt;
 
+  const totalDistanceKm = insideKm + outsideKm;
+
   return {
     base_fare_bdt:               pricing.base_fare_bdt,
     distance_charge_bdt:         distanceCharge,
+    inside_charge_bdt:           insideCharge,
+    outside_charge_bdt:          outsideCharge,
     time_charge_bdt:             timeCharge,
     total_bdt:                   finalFare,
     floor_fare_bdt:              floorFare,
-    distance_km:                 distanceKm,
+    distance_km:                 totalDistanceKm,
+    origin_city:                 null,  // set by caller
+    is_intercity:                false, // set by caller
+    inside_km:                   insideKm,
+    outside_km:                  outsideKm,
     platform_commission_percent: pricing.platform_commission_percent,
     platform_commission_bdt:     commissionBdt,
     driver_net_bdt:              driverNetBdt,
@@ -1241,6 +1271,8 @@ export function paisaToTaka(paisa: number): number {
 **Usage in `app/api/ride/estimate+api.ts` and `app/api/ride/request+api.ts`:**
 ```typescript
 import { calculateFare } from '../../../lib/fareCalc';
+import { detectOriginCity, isIntercity } from '../../../lib/cityBoundary';
+import { splitRoute } from '../../../lib/routeSplit';
 import { db } from '../../../src/db';
 import { pricing, platformConfig } from '../../../src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
@@ -1261,7 +1293,25 @@ async function loadCeilings() {
 const [pricingRow] = await db.select().from(pricing)
   .where(and(eq(pricing.vehicle_type, vehicleType), eq(pricing.is_active, true)));
 const ceilings = await loadCeilings();
-const breakdown = calculateFare(pricingRow, distanceKm, estimatedWaitMin, ceilings);
+
+// City detection and route splitting
+const { origin_city, origin_city_polygon } = await detectOriginCity(pickup);
+const intercity = origin_city_polygon ? isIntercity(dropoff, origin_city_polygon) : false;
+let insideKm = 0, outsideKm = 0;
+
+if (intercity && origin_city_polygon) {
+  const split = await splitRoute(pickup, dropoff, origin_city_polygon);
+  insideKm = split.inside_km;
+  outsideKm = split.outside_km;
+} else {
+  // Non-intercity: all distance is inside (or rural — use total route distance)
+  insideKm = totalRouteDistanceKm;
+  outsideKm = 0;
+}
+
+const breakdown = calculateFare(pricingRow, insideKm, outsideKm, estimatedWaitMin, ceilings);
+breakdown.origin_city = origin_city;
+breakdown.is_intercity = intercity;
 ```
 
 > ⚠️ **Key Invariant:** `lib/fareCalc.ts` must never import from `utils-server/`. It is a pure
@@ -2067,3 +2117,26 @@ grep -n "ALLOWED_KEYS" app/api/admin/config+api.ts  # must exist
 - **Capabilities:** Commission System (Capability 1) + Waiting Time Clarification (Capability 2)
 - **Files modified:** 01-PRD.md, 02-ARCHITECTURE.md, 05-DATA-MODEL.md, 06-API.md, 07-USER-FLOWS.md, 08-UI-SPEC.md, 09-UX-SPEC.md, 13-CONVENTIONS.md, 14-DEV-CHECKLIST.yaml, 14-DEV-CHECKLIST.json, 19-GLOSSARY.md, 20-DEVELOPER-CHANGE-LIST.md, 21-MIGRATION-SQL.md, 22-TEST-TEMPLATES.md
 - **Migration required:** Yes (ALTER TABLE + enum value + system_config seeds)
+
+### Intercity Geo-Fencing Model (replaces district-based intercity design)
+- **Files ADD:**
+  - `lib/cityBoundary.ts` — point-in-polygon city detection with 60s TTL cache. Exports: `detectOriginCity()`, `isIntercity()`, `clearCityBoundaryCache()`.
+  - `lib/routeSplit.ts` — Barikoi Route API integration with Turf.js route splitting. Exports: `splitRoute()`. Falls back to Haversine with urban factors.
+  - `scripts/seed-city-boundaries.js` — seeds 8 divisional city boundary polygons.
+  - `scripts/update-bangladesh-zone-polygon.js` — updates active zone with Bangladesh mainland border polygon.
+  - `app/(admin)/city-boundaries/` — admin CRUD UI for city boundary management (reuse zone map editor).
+- **Files MODIFY:**
+  - `src/db/schema.ts` — add `city_boundaries` table; add `intercity_per_km_bdt` column to `pricing`.
+  - `lib/fareCalc.ts` — extend `calculateFare` to accept `inside_km`, `outside_km`, `intercity_per_km_bdt`; add `inside_charge_bdt`, `outside_charge_bdt`, `origin_city`, `is_intercity` to FareBreakdown. Ensure `intercity_per_km_bdt = 0` fallback: `effective_outside_rate = intercity_per_km_bdt > 0 ? intercity_per_km_bdt : per_km_bdt`.
+  - `app/api/ride/request+api.ts` — integrate city detection (detectOriginCity) and route splitting (splitRoute) into ride request flow.
+  - `app/api/ride/estimate+api.ts` — same integration for pre-request fare estimates.
+  - `app/api/ride/:id/complete+api.ts` — recompute inside_km/outside_km at ride completion using actual route distance.
+  - `utils-server/dispatch.ts` — no changes needed; intercity detection happens at request time, not dispatch time.
+- **Files REMOVE (old district-based design):**
+  - `intercity_routes` table (DROP via M-13 migration).
+  - `intercity_min_distance_km` from `system_config` (DELETE via M-13 migration).
+  - `intercity_surcharge_bdt`, `pre_promo_total_bdt`, `post_promo_total_bdt` from FareBreakdown (if present).
+- **Migrations:** M-10 (city_boundaries table + seed), M-11 (intercity_per_km_bdt column + seed), M-12 (zone polygon UPDATE), M-13 (DROP intercity_routes).
+- **Env vars:** `BARIKOI_API_KEY` already in 11-ENV-VARS.md. `CITY_BOUNDARY_CACHE_TTL_MS` (default 60000) for cache TTL. Verify `@turf/turf` and `@mapbox/polyline` in package.json.
+- **Package additions:** `@turf/turf@^7`, `@mapbox/polyline@^2` (installed in P1-09).
+- **Zero-hardcoding:** All per-km rates, city polygons, and thresholds are admin-configurable and stored in the DB. No city name or rate is hardcoded in `lib/fareCalc.ts`, `lib/cityBoundary.ts`, or `lib/routeSplit.ts`.

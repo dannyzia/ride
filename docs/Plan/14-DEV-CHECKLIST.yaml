@@ -250,7 +250,7 @@ phases:
 
       - id: P1-09
         task: "Install new Expo app packages"
-        command: "npm install h3-js@^4.1.0 @react-native-community/netinfo@^11.3.1 react-native-otp-verify@^1.x zod@^3.23.8"
+        command: "npm install h3-js@^4.1.0 @react-native-community/netinfo@^11.3.1 react-native-otp-verify@^1.x zod@^3.23.8 @turf/turf@^7 @mapbox/polyline@^2"
         verification:
           - type: json_field_check
             file: "package.json"
@@ -259,6 +259,8 @@ phases:
               - "dependencies.@react-native-community/netinfo"
               - "dependencies.react-native-otp-verify"
               - "dependencies.zod"
+              - "dependencies.@turf/turf"
+              - "dependencies.@mapbox/polyline"
           - type: anti_pattern_check
             file: "package.json"
             forbidden: "expo-sms"
@@ -269,6 +271,7 @@ phases:
             description: "TypeScript still compiles after package changes"
         depends_on: [P1-03, P1-04, P1-05]
         priority: high
+        notes: "@turf/turf is used by lib/routeSplit.ts for intercity route splitting (point-in-polygon, line splitting, distance). @mapbox/polyline decodes Google-encoded polylines from Barikoi Route API. Verify both are present before Phase 6."
 
       - id: P1-10
         task: "Install new utils-server packages"
@@ -1139,6 +1142,28 @@ phases:
         depends_on: [P2-01]
         priority: high
 
+      - id: P2-10A
+        task: "Add city_boundaries table — geo-fencing polygons for intercity pricing"
+        files_to_modify:
+          - "src/db/schema.ts"
+        table_name: "city_boundaries"
+        columns:
+          - "id: uuid PK DEFAULT gen_random_uuid()"
+          - "name: varchar(100) NOT NULL"
+          - "polygon: jsonb NOT NULL  -- Array of {lat, lng} points, 20-40 points recommended"
+          - "is_active: boolean NOT NULL DEFAULT true"
+          - "created_at: timestamptz NOT NULL DEFAULT now()"
+          - "updated_at: timestamptz NOT NULL DEFAULT now()"
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "city_boundaries.*pgTable"
+              - "polygon.*jsonb"
+              - "is_active"
+        depends_on: [P2-01]
+        priority: high
+
       - id: P2-11
         task: "Add pricing table — per-vehicle-type fare rates per zone"
         files_to_modify:
@@ -1150,6 +1175,7 @@ phases:
           - "vehicle_type: vehicleTypeEnum NOT NULL"
           - "base_fare_bdt: integer NOT NULL  -- in paisa"
           - "per_km_bdt: integer NOT NULL  -- in paisa per km"
+          - "intercity_per_km_bdt: integer NOT NULL DEFAULT 0  -- in paisa per km outside origin city; 0 means no surcharge"
           - "per_min_bdt: integer NOT NULL  -- in paisa per minute of billable ride time (unified timer: post-60s-free-wait OR ride start, whichever first)"
           - "floor_length_km: numeric(10,2) NOT NULL  -- min km for floor fare; floor = base + round(per_km × floor_length_km) + (floor_min × per_min_bdt)"
           - "floor_min: integer NOT NULL  -- min minutes for floor fare (same formula)"
@@ -1165,6 +1191,7 @@ phases:
               - "zone_id"
               - "base_fare_bdt"
               - "per_km_bdt"
+              - "intercity_per_km_bdt"
               - "per_min_bdt"
               - "floor_length_km"
               - "floor_min"
@@ -1431,7 +1458,7 @@ phases:
         notes: "Dev only: drizzle-kit push is acceptable. Production: always use generated migration files."
 
       - id: P2-14
-        task: "Verify all 21 tables exist in Neon database"
+        task: "Verify all 22 tables exist in Neon database"
         description: "Connect to Neon dashboard or run psql and confirm all tables are present"
         expected_tables:
           - "users"
@@ -1448,6 +1475,7 @@ phases:
           - "payment_events"
           - "documents"
           - "zones"
+          - "city_boundaries"
           - "chat_messages"
           - "pricing"
           - "driver_online_sessions"
@@ -1458,7 +1486,7 @@ phases:
           - type: manual_check
             description: >
               Run: SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name;
-              Confirm all 21 tables listed above are present.
+              Confirm all 22 tables listed above are present.
               Also confirm: call_ledger has the unique index on (ride_id, driver_id).
               Also confirm: payment_events has unique index on idempotency_key.
           - type: command
@@ -1475,7 +1503,7 @@ phases:
           Creates a Node.js script that inserts 8 pricing rows (one per vehicle type) into the pricing table.
           Prerequisites: (a) migrations have been applied, (b) a default zone row exists in the zones table
           (created by seed-system-config.js or a separate seed-zone.js step) so that zone_id can be a real FK.
-          Each row: vehicle_type, zone_id (FK to the default zone), base_fare_bdt, per_km_bdt,
+          Each row: vehicle_type, zone_id (FK to the default zone), base_fare_bdt, per_km_bdt, intercity_per_km_bdt,
           per_min_bdt, floor_length_km, floor_min, brta_fare_ceiling_bdt (NULL is acceptable for initial seed).
           All monetary values in paisa; floor_length_km is decimal km. Values must match the fare table from 05-DATA-MODEL.md § pricing.
           Script should be idempotent (upsert on conflict vehicle_type+zone_id) and runnable with:
@@ -1501,6 +1529,54 @@ phases:
         depends_on: [P2-13]
         priority: high
         notes: "Run after migrations are applied. See 12-FOLDER-STRUCTURE.md and 15-RUNBOOK-DEPLOY.md for context."
+
+      - id: P2-15A
+        task: "Update active zones.polygon with Bangladesh mainland border"
+        files_to_create:
+          - "scripts/update-bangladesh-zone-polygon.js"
+        implementation_rules:
+          - "Source GeoJSON: https://github.com/ifahimreza/bangladesh-geojson, file src/data/bangladesh.geojson."
+          - "Extract exterior non-shared boundary from administrative polygons, keep largest mainland ring, simplify to 80-150 points."
+          - "Convert GeoJSON [lng, lat] coordinates to zones.polygon array of {lat, lng} objects."
+          - "Run SQL UPDATE against the currently active zones row; do not use a rectangle."
+          - "Operational zone controls service availability only; do not reuse it for intercity surcharge detection."
+        verification:
+          - type: contains
+            file: "scripts/update-bangladesh-zone-polygon.js"
+            patterns:
+              - "bangladesh.geojson"
+              - "UPDATE zones"
+              - "lat"
+              - "lng"
+          - type: manual_check
+            description: "SELECT jsonb_array_length(polygon) FROM zones WHERE is_active=true; result must be between 80 and 150."
+        depends_on: [P2-10, P2-13]
+        priority: critical
+
+      - id: P2-15B
+        task: "Create scripts/seed-city-boundaries.js — seed 8 divisional city geofences"
+        files_to_create:
+          - "scripts/seed-city-boundaries.js"
+        implementation_rules:
+          - "Seed Dhaka, Chattogram, Rajshahi, Khulna, Sylhet, Barisal, Rangpur, and Mymensingh."
+          - "Each polygon is an admin-configurable jsonb array of {lat, lng}; seed polygons should have 20-40 points."
+          - "Script is idempotent using city name conflict/upsert."
+          - "Do not hardcode city logic in fare calculation; fare calculation reads active city_boundaries rows."
+        verification:
+          - type: file_exists
+            path: "scripts/seed-city-boundaries.js"
+          - type: contains
+            file: "scripts/seed-city-boundaries.js"
+            patterns:
+              - "city_boundaries"
+              - "Dhaka"
+              - "Chattogram"
+              - "Mymensingh"
+          - type: command
+            run: "node scripts/seed-city-boundaries.js"
+            expect_exit: 0
+        depends_on: [P2-10A, P2-13]
+        priority: high
 
       - id: P2-16
         task: "Create scripts/seed-packages.js — seed packages table with micro-trial and starter packages"
@@ -2843,6 +2919,101 @@ phases:
           - type: manual_check
             description: "All 9 steps pass. call_ledger has exactly 1 deduction row per accepted offer with fetch:confirm."
         depends_on: [P6-08, P6-10]
+        priority: critical
+
+      - id: P6-12
+        task: "Create lib/routeSplit.ts — Barikoi Route API integration with Turf.js route splitting"
+        files_to_create:
+          - "lib/routeSplit.ts"
+        required_exports:
+          - "splitRoute(pickup: {lat,lng}, dropoff: {lat,lng}, originCityPolygon: Array<{lat,lng}>): Promise<{inside_km: number, outside_km: number}>"
+        implementation_rules:
+          - "Primary path: call Barikoi Directions API (https://barikoi.xyz/v1/api/directions/v1/driving?geometries=polyline&overview=full) with BARIKOI_API_KEY."
+          - "Decode the Google-encoded polyline response using @mapbox/polyline into [lng, lat] coordinates."
+          - "Convert decoded coordinates to GeoJSON LineString for Turf.js."
+          - "Use @turf/turf booleanPointOnLine / booleanPointInPolygon to classify each segment point as inside or outside the origin city polygon."
+          - "Compute inside_km and outside_km using turf.length() on the classified segments, rounded to 3 decimal places."
+          - "Fallback: if Barikoi returns non-200 or times out (>5s), compute Haversine straight-line distance with urban factor 1.3 for inside and 1.0 for outside."
+          - "Never hardcode city polygons or rate thresholds; all inputs come from DB data passed by the caller."
+        verification:
+          - type: file_exists
+            path: "lib/routeSplit.ts"
+          - type: contains
+            file: "lib/routeSplit.ts"
+            patterns:
+              - "splitRoute"
+              - "turf\\|@turf"
+              - "polyline\\|@mapbox/polyline"
+              - "inside_km"
+              - "outside_km"
+              - "BARIKOI_API_KEY"
+          - type: anti_pattern_check
+            file: "lib/routeSplit.ts"
+            forbidden: "EXPO_PUBLIC_"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [P1-09, P2-10A, P2-13]
+        priority: high
+        notes: "Depends on @turf/turf and @mapbox/polyline being installed (P1-09). Uses city_boundary polygons from DB (P2-10A)."
+
+      - id: P6-13
+        task: "Create lib/cityBoundary.ts — point-in-polygon city detection with TTL cache"
+        files_to_create:
+          - "lib/cityBoundary.ts"
+        required_exports:
+          - "detectOriginCity(pickup: {lat,lng}): Promise<{origin_city: string | null, origin_city_polygon: Array<{lat,lng}> | null}>"
+          - "isIntercity(dropoff: {lat,lng}, originCityPolygon: Array<{lat,lng}>): boolean"
+          - "clearCityBoundaryCache(): void"
+        implementation_rules:
+          - "On cache miss or TTL expiry (default 60s), query all active rows from city_boundaries and store in a module-level Map."
+          - "Cache TTL is configurable via CITY_BOUNDARY_CACHE_TTL_MS env var (default 60000)."
+          - "detectOriginCity: iterate active city boundaries, run point-in-polygon (using turf.booleanPointInPolygon) on the pickup coordinate. Return the first matching city or null."
+          - "isIntercity: run point-in-polygon on the dropoff coordinate against the origin city polygon. Returns true if dropoff is OUTSIDE the polygon."
+          - "clearCityBoundaryCache: exported for use by PATCH/DELETE admin city-boundaries routes to force immediate cache invalidation."
+          - "Never hardcode city names or polygons."
+        verification:
+          - type: file_exists
+            path: "lib/cityBoundary.ts"
+          - type: contains
+            file: "lib/cityBoundary.ts"
+            patterns:
+              - "detectOriginCity"
+              - "isIntercity"
+              - "clearCityBoundaryCache"
+              - "city_boundaries"
+              - "turf\\|@turf"
+              - "TTL\\|cache"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [P1-09, P2-10A, P2-13]
+        priority: high
+        notes: "Cache invalidation: PATCH/DELETE /api/admin/city-boundaries/:id must call clearCityBoundaryCache() after DB write. TTL fallback ensures eventual consistency even without explicit invalidation."
+
+      - id: P6-14
+        task: "Integrate city detection and route splitting into ride request/estimate flow"
+        files_to_modify:
+          - "app/api/ride/request+api.ts"
+          - "app/api/ride/estimate+api.ts"
+        implementation_rules:
+          - "In POST /api/ride/request: after zone check, call detectOriginCity(pickup). If origin_city found, call isIntercity(dropoff, origin_city_polygon). If intercity, call splitRoute(pickup, dropoff, origin_city_polygon) to get inside_km/outside_km."
+          - "Pass inside_km, outside_km, origin_city, is_intercity to lib/fareCalc.ts computeBreakdown()."
+          - "In GET /api/ride/estimate: same flow for each vehicle type's fare estimate."
+          - "fare_breakdown must include: origin_city, is_intercity, inside_km, outside_km, inside_charge_bdt, outside_charge_bdt."
+          - "rides.distance_km = inside_km + outside_km (always)."
+        verification:
+          - type: contains
+            file: "app/api/ride/request+api.ts"
+            patterns:
+              - "detectOriginCity"
+              - "is_intercity"
+              - "inside_km"
+              - "outside_km"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [P6-08, P6-12, P6-13]
         priority: critical
 
   # ============================================================

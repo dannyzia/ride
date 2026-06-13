@@ -4,6 +4,8 @@ import { eq, and, inArray } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
 import { calculateFare, haversineKm } from '@/lib/fareCalc';
+import { detectOriginCity, isIntercity } from '@/lib/cityBoundary';
+import { splitRoute } from '@/lib/routeSplit';
 import { getRouteDistance } from '@/lib/barikoi';
 import { VEHICLE_TYPE_VALUES, VEHICLE_TYPES } from '@/lib/vehicleTypes';
 import { logger } from '@/lib/logger';
@@ -39,7 +41,27 @@ export async function POST(request: Request) {
 
     // Route-based distance with Haversine fallback
     const route = await getRouteDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng).catch(() => null);
-    const distanceKm = route?.distanceKm ?? haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+    const totalDistanceKm = route?.distanceKm ?? haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+
+    // City detection and intercity route splitting
+    const { origin_city, origin_city_polygon } = await detectOriginCity({ lat: pickup_lat, lng: pickup_lng });
+    const intercity = origin_city_polygon ? isIntercity({ lat: dropoff_lat, lng: dropoff_lng }, origin_city_polygon) : false;
+
+    let insideKm = 0;
+    let outsideKm = 0;
+
+    if (intercity && origin_city_polygon) {
+      const split = await splitRoute(
+        { lat: pickup_lat, lng: pickup_lng },
+        { lat: dropoff_lat, lng: dropoff_lng },
+        origin_city_polygon,
+      );
+      insideKm = split.inside_km;
+      outsideKm = split.outside_km;
+    } else {
+      insideKm = totalDistanceKm;
+      outsideKm = 0;
+    }
 
     // Compute preference surcharge
     let preferenceSurchargeBdt = 0;
@@ -67,11 +89,14 @@ export async function POST(request: Request) {
       const fare = calculateFare({
         base_fare_bdt:        activePricing.base_fare_bdt,
         per_km_bdt:           activePricing.per_km_bdt,
+        intercity_per_km_bdt: activePricing.intercity_per_km_bdt ?? 0,
         per_min_bdt:          activePricing.per_min_bdt,
         floor_length_km:      Number(activePricing.floor_length_km ?? 0),
         floor_min:            activePricing.floor_min ?? 0,
         brta_fare_ceiling_bdt: activePricing.brta_fare_ceiling_bdt,
-      }, distanceKm, 0);
+      }, insideKm, 0, undefined, outsideKm);
+      fare.origin_city = origin_city;
+      fare.is_intercity = intercity;
 
       const vtDef = VEHICLE_TYPES.find(v => v.key === vehicle_type);
       const driverFare = fare.total_bdt + preferenceSurchargeBdt;
@@ -81,17 +106,13 @@ export async function POST(request: Request) {
           display_en:  vtDef?.display_en ?? vehicle_type,
           display_bn:  vtDef?.display_bn ?? vehicle_type,
           seats:       vtDef?.seats ?? 1,
-          base_fare_bdt: fare.base_fare_bdt,
-          distance_charge_bdt: fare.distance_charge_bdt,
-          time_charge_bdt: fare.time_charge_bdt,
-          floor_fare_bdt: fare.floor_fare_bdt,
-          total_bdt: fare.total_bdt,
+          fare_breakdown: fare,
           preference_surcharge_bdt: preferenceSurchargeBdt,
           driver_fare_bdt: driverFare,
           rider_payable_bdt: driverFare,
-          eta_minutes: Math.max(2, Math.ceil(distanceKm / 0.5)),
+          eta_minutes: Math.max(2, Math.ceil(totalDistanceKm / 0.5)),
         }],
-        distance_km: distanceKm,
+        distance_km: totalDistanceKm,
         preferences_applied: preference_ids ?? [],
       });
     }
@@ -104,11 +125,14 @@ export async function POST(request: Request) {
       const fare = calculateFare({
         base_fare_bdt:        p.base_fare_bdt,
         per_km_bdt:           p.per_km_bdt,
+        intercity_per_km_bdt: p.intercity_per_km_bdt ?? 0,
         per_min_bdt:          p.per_min_bdt,
         floor_length_km:      Number(p.floor_length_km ?? 0),
         floor_min:            p.floor_min ?? 0,
         brta_fare_ceiling_bdt: p.brta_fare_ceiling_bdt,
-      }, distanceKm, 0);
+      }, insideKm, 0, undefined, outsideKm);
+      fare.origin_city = origin_city;
+      fare.is_intercity = intercity;
 
       const vtDef = VEHICLE_TYPES.find(v => v.key === p.vehicle_type);
       const driverFare = fare.total_bdt + preferenceSurchargeBdt;
@@ -117,21 +141,17 @@ export async function POST(request: Request) {
         display_en:    vtDef?.display_en ?? p.vehicle_type,
         display_bn:    vtDef?.display_bn ?? p.vehicle_type,
         seats:         vtDef?.seats ?? 1,
-        base_fare_bdt: fare.base_fare_bdt,
-        distance_charge_bdt: fare.distance_charge_bdt,
-        time_charge_bdt: fare.time_charge_bdt,
-        floor_fare_bdt: fare.floor_fare_bdt,
-        total_bdt: fare.total_bdt,
+        fare_breakdown: fare,
         preference_surcharge_bdt: preferenceSurchargeBdt,
         driver_fare_bdt: driverFare,
         rider_payable_bdt: driverFare,
-        eta_minutes:   Math.max(2, Math.ceil(distanceKm / 0.5)),
+        eta_minutes:   Math.max(2, Math.ceil(totalDistanceKm / 0.5)),
       };
     });
 
-    estimates.sort((a, b) => a.total_bdt - b.total_bdt);
+    estimates.sort((a, b) => a.fare_breakdown.total_bdt - b.fare_breakdown.total_bdt);
 
-    return Response.json({ estimates, distance_km: distanceKm, preferences_applied: preference_ids ?? [] });
+    return Response.json({ estimates, distance_km: totalDistanceKm, preferences_applied: preference_ids ?? [] });
 
   } catch (err: any) {
     if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });

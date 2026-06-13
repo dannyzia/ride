@@ -10,6 +10,8 @@ import { eq, and, sql, gte } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { validatePickupZone } from "@/lib/zone";
 import { calculateFare, haversineKm } from "@/lib/fareCalc";
+import { detectOriginCity, isIntercity } from "@/lib/cityBoundary";
+import { splitRoute } from "@/lib/routeSplit";
 import { getRouteDistance } from "@/lib/barikoi";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
@@ -119,9 +121,29 @@ export async function POST(request: Request) {
       dropoff_lat,
       dropoff_lng,
     ).catch(() => null);
-    const distanceKm =
+    const totalDistanceKm =
       route?.distanceKm ??
       haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+
+    // City detection and intercity route splitting
+    const { origin_city, origin_city_polygon } = await detectOriginCity({ lat: pickup_lat, lng: pickup_lng });
+    const intercity = origin_city_polygon ? isIntercity({ lat: dropoff_lat, lng: dropoff_lng }, origin_city_polygon) : false;
+
+    let insideKm = 0;
+    let outsideKm = 0;
+
+    if (intercity && origin_city_polygon) {
+      const split = await splitRoute(
+        { lat: pickup_lat, lng: pickup_lng },
+        { lat: dropoff_lat, lng: dropoff_lng },
+        origin_city_polygon,
+      );
+      insideKm = split.inside_km;
+      outsideKm = split.outside_km;
+    } else {
+      insideKm = totalDistanceKm;
+      outsideKm = 0;
+    }
 
     const [activePricing] = await db
       .select()
@@ -142,14 +164,19 @@ export async function POST(request: Request) {
       {
         base_fare_bdt: activePricing.base_fare_bdt,
         per_km_bdt: activePricing.per_km_bdt,
+        intercity_per_km_bdt: activePricing.intercity_per_km_bdt ?? 0,
         per_min_bdt: activePricing.per_min_bdt,
         floor_length_km: Number(activePricing.floor_length_km ?? 0),
         floor_min: activePricing.floor_min ?? 0,
         brta_fare_ceiling_bdt: activePricing.brta_fare_ceiling_bdt,
       },
-      distanceKm,
+      insideKm,
       0,
+      undefined,
+      outsideKm,
     );
+    fareBreakdown.origin_city = origin_city;
+    fareBreakdown.is_intercity = intercity;
 
     // ── Preference surcharge ───────────────────────────────────────────
     let preferenceSurchargeBdt = 0;

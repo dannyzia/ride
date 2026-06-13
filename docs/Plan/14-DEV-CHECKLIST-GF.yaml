@@ -1,0 +1,314 @@
+# GF Phase — Intercity Geo-fencing & Bangladesh Operational Zone
+# Companion to 14-DEV-CHECKLIST.yaml
+# Add the critical_path entry and phase block below into 14-DEV-CHECKLIST.yaml
+# by appending to the critical_path list and phases list respectively.
+#
+# critical_path entry to add (after the F14 entry):
+#
+#   - phase: GF
+#     name: "Intercity Geo-fencing & Bangladesh Zone"
+#     must_complete_before: []
+#     reason: "Self-contained schema + lib + API + admin UI change. Must run after Phase 2.
+#              Does not block other features but must complete before intercity rides are accepted."
+
+phases:
+  # ==========================================================================
+  # FEATURE GF: Intercity Geo-fencing & Bangladesh Operational Zone
+  # ==========================================================================
+  - id: GF
+    name: "Intercity Geo-fencing & Bangladesh Operational Zone"
+    blocking: false
+    description: >
+      Replaces district-based intercity logic with a geo-fencing model using city_boundaries polygons.
+      Updates the operational zone polygon to the Bangladesh mainland border.
+      Extends the fare formula to split distance charges into inside/outside-city segments.
+      Adds @turf/turf for point-in-polygon and route splitting.
+      Removes intercity_routes table and intercity_min_distance_km config key.
+    items:
+      - id: GF-01
+        task: "Extract and simplify Bangladesh border polygon; update M-12 and run it"
+        implementation_rules:
+          - "Fetch bd-geojson.json from https://raw.githubusercontent.com/ifahimreza/bangladesh-geojson/master/bd-geojson.json"
+          - "Identify the largest polygon feature (Bangladesh mainland)."
+          - "Ensure @turf/turf is in package.json; if absent run: npm install @turf/turf --save"
+          - "Run @turf/simplify with tolerance=0.01 on the feature geometry to reach 80-150 coordinate points."
+          - "Convert GeoJSON coordinates [lng, lat] -> {lat, lng} objects."
+          - "Replace the placeholder polygon array in M-12 in docs/Plan/21-MIGRATION-SQL.md with the real data."
+          - "Run M-12 against the database."
+        verification:
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: GF-02
+        task: "Extract and simplify 8 divisional city polygons; update M-10 and run it"
+        implementation_rules:
+          - "Fetch the divisions GeoJSON from the ifahimreza/bangladesh-geojson repo (check repo for correct filename: bd-districts.json or divisions.geojson)."
+          - "For each of the 8 division headquarters: Dhaka, Chattogram, Rajshahi, Khulna, Sylhet, Barisal, Rangpur, Mymensingh:"
+          - "  Run @turf/simplify with tolerance=0.05 to reach 20-40 points."
+          - "  Convert coordinates [lng, lat] -> {lat, lng} objects."
+          - "  Replace the corresponding placeholder INSERT value in M-10 in docs/Plan/21-MIGRATION-SQL.md."
+          - "Run M-10 against the database."
+          - "Note: polygons represent administrative division boundaries headquartered in each city."
+          - "  A ride is intra-city while the dropoff stays within this divisional polygon."
+          - "  Admin can replace any polygon at any time via /admin/city-boundaries."
+        verification:
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [GF-01]
+        priority: high
+
+      - id: GF-03
+        task: "Add intercity_per_km_bdt to pricing schema; run M-11 and M-11b"
+        files_to_modify:
+          - "src/db/schema.ts"
+        implementation_rules:
+          - "In src/db/schema.ts add: intercity_per_km_bdt: integer().notNull().default(0) to the pricing table definition."
+          - "Run: npx drizzle-kit generate && npx drizzle-kit migrate"
+          - "Run M-11 SQL from docs/Plan/21-MIGRATION-SQL.md to backfill existing rows to 0."
+          - "Run M-11b SQL with ACTIVE_ZONE_ID env var to seed the production intercity rates."
+          - "Verify: SELECT vehicle_type::text, per_km_bdt, intercity_per_km_bdt FROM pricing WHERE is_active=true;"
+          - "  All 8 rows must have non-zero intercity_per_km_bdt after M-11b."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "intercity_per_km_bdt"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [GF-01]
+        priority: high
+
+      - id: GF-04
+        task: "Install @turf/turf and create lib/cityBoundary.ts"
+        files_to_create:
+          - "lib/cityBoundary.ts"
+        files_to_modify:
+          - "package.json"
+        implementation_rules:
+          - "Run: npm install @turf/turf --save (skip if already in package.json dependencies)."
+          - "Create lib/cityBoundary.ts exporting:"
+          - "  loadActiveCityBoundaries(): Promise<CityBoundary[]>"
+          - "    Queries city_boundaries WHERE is_active=true."
+          - "    Stores result in a module-level cache variable with a lastLoaded timestamp."
+          - "  detectCity(lat: number, lng: number): Promise<string | null>"
+          - "    Calls loadActiveCityBoundaries(), runs @turf/booleanPointInPolygon against each boundary."
+          - "    Returns the matching city name, or null if no match (rural pickup)."
+          - "  resolveIntercityStatus(pickupLat, pickupLng, dropoffLat, dropoffLng):"
+          - "    Promise<{origin_city: string|null, is_intercity: boolean}>"
+          - "    Detects origin_city from pickup. If origin_city is non-null, detects whether dropoff is outside that polygon."
+          - "  invalidateCityBoundaryCache(): void"
+          - "    Resets lastLoaded to 0, forcing reload on next call. Called after any admin write to city_boundaries."
+          - "Cache TTL: 60000ms (60 seconds). On each load call, if Date.now() - lastLoaded > 60000, reload from DB."
+          - "No external cache infrastructure required for MVP."
+        verification:
+          - type: file_exists
+            path: "lib/cityBoundary.ts"
+          - type: contains
+            file: "lib/cityBoundary.ts"
+            patterns:
+              - "booleanPointInPolygon"
+              - "invalidateCityBoundaryCache"
+              - "60000"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [GF-02]
+        priority: high
+
+      - id: GF-05
+        task: "Create lib/routeSplit.ts with Barikoi primary path and Haversine fallback"
+        files_to_create:
+          - "lib/routeSplit.ts"
+        implementation_rules:
+          - "Export: splitRoute(pickupLat, pickupLng, dropoffLat, dropoffLng, originCityPolygon): Promise<{inside_km: number, outside_km: number}>"
+          - "Primary path — Barikoi Route API:"
+          - "  Endpoint: GET https://barikoi.xyz/v2/api/route/direction"
+          - "  Params: api_key={BARIKOI_API_KEY}, origin={pickupLat},{pickupLng}, destination={dropoffLat},{dropoffLng}, geometries=polyline, overview=full"
+          - "  Decode the Google-encoded polyline string at routes[0].geometry into [lat, lng] pairs."
+          - "    Use a polyline decoder (e.g. the 'polyline' npm package or a manual implementation)."
+          - "  Convert decoded points to a GeoJSON LineString feature."
+          - "  Use @turf/lineSplit (or @turf/lineIntersect + manual segmentation) to split at the origin city polygon boundary."
+          - "  Compute inside_km = @turf/length of segments inside polygon (units: 'kilometers'), rounded to 3 decimals."
+          - "  Compute outside_km = @turf/length of segments outside polygon, rounded to 3 decimals."
+          - "Fallback path — when Barikoi returns non-2xx or throws any error:"
+          - "  Compute Haversine full-trip distance in km (use existing haversine utility or implement inline)."
+          - "  inside_km  = parseFloat((haversine * 0.5 * 1.3).toFixed(3))"
+          - "  outside_km = parseFloat((haversine - (inside_km / 1.3)).toFixed(3))"
+          - "  Log a WARN via lib/logger.ts: 'routeSplit: Barikoi unavailable, using Haversine fallback'"
+          - "BARIKOI_API_KEY: read from process.env.BARIKOI_API_KEY. Already defined in 11-ENV-VARS.md. Never hardcode."
+        verification:
+          - type: file_exists
+            path: "lib/routeSplit.ts"
+          - type: contains
+            file: "lib/routeSplit.ts"
+            patterns:
+              - "BARIKOI_API_KEY"
+              - "haversine"
+              - "inside_km"
+              - "outside_km"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [GF-04]
+        priority: high
+
+      - id: GF-06
+        task: "Extend lib/fareCalc.ts with intercity split-rate formula; update test fixtures"
+        files_to_modify:
+          - "lib/fareCalc.ts"
+          - "lib/__tests__/fareCalc.test.ts"
+        implementation_rules:
+          - "Add intercity_per_km_bdt: number to the PricingRow interface."
+          - "Add inside_km: number and outside_km: number to the calculateFare() input parameters."
+          - "Intercity formula (inside calculateFare):"
+          - "  const effective_outside_rate = pricing.intercity_per_km_bdt > 0 ? pricing.intercity_per_km_bdt : pricing.per_km_bdt;"
+          - "  const inside_charge  = Math.round(pricing.per_km_bdt * inside_km);"
+          - "  const outside_charge = Math.round(effective_outside_rate * outside_km);"
+          - "  const distance_charge = inside_charge + outside_charge;"
+          - "  NOTE: when intercity_per_km_bdt === 0, effective_outside_rate === per_km_bdt,"
+          - "        so distance_charge === Math.round(per_km_bdt * (inside_km + outside_km)) = v2 formula. No special branch needed."
+          - "All other formula components unchanged: time_charge, computed_total, floor_fare, final_fare, commission."
+          - "Add inside_charge_bdt and outside_charge_bdt to the returned FareBreakdown object."
+          - "For non-intercity calls: pass outside_km=0; formula collapses to v2 exactly."
+          - "Update lib/__tests__/fareCalc.test.ts:"
+          - "  Add intercity_per_km_bdt: 0 to all existing PricingRow fixtures (preserves all existing expected values)."
+          - "  New test case A: intra-city ride. outside_km=0, intercity_per_km_bdt=0."
+          - "    Result must equal the equivalent v2 expected value. outside_charge_bdt must be 0."
+          - "  New test case B: intercity ride. bike_basic pricing, inside_km=3, outside_km=5, intercity_per_km_bdt=1160."
+          - "    inside_charge = round(775 * 3) = 2325. outside_charge = round(1160 * 5) = 5800."
+          - "    distance_charge = 8125. Verify final_fare >= floor_fare."
+          - "  New test case C: floor fare applies when both inside+outside charges are low."
+          - "    Set inside_km=0.5, outside_km=0.3 for bike_basic. computed_total < floor_fare. Assert final_fare = floor_fare."
+          - "  All assertion values must be integer paisa. No floats in assertions."
+        verification:
+          - type: contains
+            file: "lib/fareCalc.ts"
+            patterns:
+              - "intercity_per_km_bdt"
+              - "effective_outside_rate"
+              - "inside_charge"
+              - "outside_charge"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [GF-05]
+        priority: high
+
+      - id: GF-07
+        task: "Wire city detection + route split into POST /api/ride/request and GET /api/ride/estimate"
+        files_to_modify:
+          - "app/api/ride/request+api.ts"
+          - "app/api/ride/estimate+api.ts"
+        implementation_rules:
+          - "In both endpoints, after zone validation and before fare calculation:"
+          - "  1. Call resolveIntercityStatus(pickupLat, pickupLng, dropoffLat, dropoffLng) from lib/cityBoundary.ts."
+          - "  2. If is_intercity=true: call splitRoute(pickupLat, pickupLng, dropoffLat, dropoffLng, originCityPolygon)"
+          - "     from lib/routeSplit.ts to get {inside_km, outside_km}."
+          - "  3. If is_intercity=false or origin_city=null: inside_km=full_distance_km, outside_km=0."
+          - "  4. Pass inside_km, outside_km, and pricing.intercity_per_km_bdt into calculateFare()."
+          - "  5. Include the full FareBreakdown in the API response body:"
+          - "     origin_city, is_intercity, inside_km, outside_km, inside_charge_bdt, outside_charge_bdt."
+          - "The canonical FareBreakdown shape is defined in docs/Plan/06-API.md. Do not omit any field."
+          - "rides.distance_km must be set to inside_km + outside_km (total trip distance)."
+        verification:
+          - type: contains
+            file: "app/api/ride/request+api.ts"
+            patterns:
+              - "resolveIntercityStatus"
+              - "splitRoute"
+              - "inside_km"
+              - "outside_km"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [GF-06]
+        priority: high
+
+      - id: GF-08
+        task: "Verify ride:offer WebSocket payload passes full fare_breakdown including intercity fields"
+        files_to_modify:
+          - "utils-server/dispatch.ts"
+        implementation_rules:
+          - "The ride:offer WebSocket event payload broadcasts fare_breakdown from rides.fare_breakdown (jsonb)."
+          - "Confirm that no object spread or projection strips the intercity fields before broadcast."
+          - "All 6 intercity fields must reach the driver's offer card:"
+          - "  origin_city, is_intercity, inside_km, outside_km, inside_charge_bdt, outside_charge_bdt."
+          - "If fare_breakdown is projected field-by-field, add the 6 new fields to the projection."
+        verification:
+          - type: contains
+            file: "utils-server/dispatch.ts"
+            patterns:
+              - "fare_breakdown"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [GF-07]
+        priority: medium
+
+      - id: GF-09
+        task: "Add admin CRUD endpoints and UI for city boundaries"
+        files_to_create:
+          - "app/api/admin/city-boundaries+api.ts"
+          - "app/api/admin/city-boundaries/[id]+api.ts"
+          - "app/(admin)/city-boundaries/index.tsx"
+        implementation_rules:
+          - "All endpoints require role='admin' via the existing auth middleware."
+          - "GET  /api/admin/city-boundaries — list all city_boundaries rows (id, name, is_active, point_count)."
+          - "POST /api/admin/city-boundaries — body: {name: string, polygon: {lat,lng}[]}."
+          - "  Validate: polygon must be an array of {lat,lng} objects with 10-200 points."
+          - "  Insert row. Call invalidateCityBoundaryCache() from lib/cityBoundary.ts after insert."
+          - "PATCH /api/admin/city-boundaries/:id — body: {polygon?, is_active?}."
+          - "  Update fields. Call invalidateCityBoundaryCache() after success."
+          - "DELETE /api/admin/city-boundaries/:id — soft delete: set is_active=false, updated_at=now()."
+          - "  Call invalidateCityBoundaryCache() after success."
+          - "Admin UI (app/(admin)/city-boundaries/index.tsx):"
+          - "  Table listing all cities with name, point count, status badge, Edit and Delete actions."
+          - "  Add City form: name input + polygon editor (reuse existing zone map editor component)."
+          - "  Use GoRide design tokens (admin panel variant)."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/city-boundaries+api.ts"
+          - type: contains
+            file: "app/api/admin/city-boundaries+api.ts"
+            patterns:
+              - "invalidateCityBoundaryCache"
+              - "admin"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [GF-04]
+        priority: medium
+
+      - id: GF-10
+        task: "Remove all old intercity_routes references from source; run M-13"
+        implementation_rules:
+          - "Search and fix before running the migration:"
+          - "  grep -rn 'intercity_routes' . --include='*.ts' --exclude-dir=node_modules"
+          - "  grep -rn 'intercity_min_distance_km' . --include='*.ts' --exclude-dir=node_modules"
+          - "  grep -rn 'intercity_surcharge_bdt\\|pre_promo_total_bdt\\|post_promo_total_bdt' . --include='*.ts' --exclude-dir=node_modules"
+          - "  All searches must return 0 lines before proceeding."
+          - "Run M-13 SQL from docs/Plan/21-MIGRATION-SQL.md."
+          - "  M-13 drops the intercity_routes table and deletes the intercity_min_distance_km system_config key."
+        verification:
+          - type: command
+            run: "grep -rn 'intercity_routes' . --include='*.ts' --exclude-dir=node_modules | wc -l"
+            expect_output_contains: "0"
+        depends_on: [GF-07]
+        priority: high
+
+      - id: GF-11
+        task: "Final verification: TypeScript compiles, ESLint clean, zero old intercity references"
+        verification:
+          - type: command
+            run: "npx tsc --noEmit && npx eslint ."
+            expect_exit: 0
+          - type: command
+            run: "grep -rn 'intercity_routes\\|intercity_min_distance_km\\|intercity_surcharge_bdt\\|pre_promo_total_bdt\\|post_promo_total_bdt' . --include='*.ts' --exclude-dir=node_modules | wc -l"
+            expect_output_contains: "0"
+        depends_on: [GF-01, GF-02, GF-03, GF-04, GF-05, GF-06, GF-07, GF-08, GF-09, GF-10]
+        priority: high

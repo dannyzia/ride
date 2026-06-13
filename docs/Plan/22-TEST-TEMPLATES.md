@@ -48,10 +48,26 @@ import { calculateFare, paisaToTaka, PricingRow, PlatformCeilings } from '../far
 // | car_comfort      | 8           | 60            | 41900     |
 // | car_premium      | 8           | 60            | 47300     |
 // | car_xl           | 8           | 60            | 53500     |
+//
+// Intercity fare extension (BDT paisa):
+// | vehicle_type     | inside_km | outside_km | inside_charge | outside_charge | total_bdt (intercity) |
+// |------------------|-----------|------------|---------------|----------------|-----------------------|
+// | bike_basic       | 3         | 5          | 2325          | 5800           | 10625                 |
+// | bike_standard    | 3         | 5          | 2850          | 7125           | 12475                 |
+// | car_premium      | 5         | 10         | 10500         | 31500          | 48500                 |
+//
+// Intercity test: bike_basic, 3 inside km, 5 outside km:
+//   inside_charge  = round(775 × 3) = 2325
+//   outside_charge = round(1160 × 5) = 5800
+//   distance_charge = 2325 + 5800 = 8125
+//   computed_total = 2500 + 8125 + 0 = 10625
+//   floor_fare = 5800
+//   final = max(10625, 5800) = 10625
 
 const BIKE_BASIC: PricingRow = {
   base_fare_bdt:            2500,
   per_km_bdt:               775,
+  intercity_per_km_bdt:     1160,
   per_min_bdt:              175,
   floor_length_km:          2.00,
   floor_min:                10,
@@ -63,6 +79,7 @@ const BIKE_BASIC: PricingRow = {
 const CNG: PricingRow = {
   base_fare_bdt:            4000,
   per_km_bdt:               1500,
+  intercity_per_km_bdt:     2250,
   per_min_bdt:              200,
   floor_length_km:          3.00,
   floor_min:                15,
@@ -74,11 +91,18 @@ const CNG: PricingRow = {
 const CAR_PREMIUM: PricingRow = {
   base_fare_bdt:            6500,
   per_km_bdt:               2100,
+  intercity_per_km_bdt:     3150,
   per_min_bdt:              400,
   floor_length_km:          4.00,
   floor_min:                20,
   brta_fare_ceiling_bdt:    null,
   platform_commission_percent: 0,
+};
+
+// Pricing row with intercity_per_km_bdt = 0 (no surcharge)
+const BIKE_BASIC_NO_SURCHARGE: PricingRow = {
+  ...BIKE_BASIC,
+  intercity_per_km_bdt: 0,
 };
 
 const CEILINGS: PlatformCeilings = {
@@ -633,6 +657,94 @@ describe('calculateFare — commission calculation', () => {
     expect(result.total_bdt).toBe(5800); // floor applies
     // Commission is 10% of 5800 = 580
     expect(result.platform_commission_bdt).toBe(580);
+  });
+});
+```
+
+## Intercity route-split fare calculation (`lib/fareCalc.ts`)
+
+```typescript
+// ── TEST-Intercity: Split-rate fare for intercity rides ───────────────────────
+// The calculateFare function now accepts inside_km and outside_km instead of a single distance_km.
+// Formula: inside_charge = round(per_km_bdt × inside_km), outside_charge = round(intercity_per_km_bdt × outside_km).
+// If is_intercity=false or origin_city=null, outside_km=0 and formula collapses to normal v2.
+
+describe('calculateFare — intercity split-rate', () => {
+  test('intercity bike_basic: 3 inside km, 5 outside km', () => {
+    // inside_charge  = round(775 × 3) = 2325
+    // outside_charge = round(1160 × 5) = 5800
+    // distance_charge = 2325 + 5800 = 8125
+    // computed_total = 2500 + 8125 + 0 = 10625
+    // floor = 5800
+    // final = max(10625, 5800) = 10625
+    const result = calculateFare(BIKE_BASIC, 3, 5, 0);
+    expect(result.inside_charge_bdt).toBe(2325);
+    expect(result.outside_charge_bdt).toBe(5800);
+    expect(result.distance_charge_bdt).toBe(8125);
+    expect(result.total_bdt).toBe(10625);
+  });
+
+  test('intercity car_premium: 5 inside km, 10 outside km', () => {
+    // inside_charge  = round(2100 × 5) = 10500
+    // outside_charge = round(3150 × 10) = 31500
+    // distance_charge = 10500 + 31500 = 42000
+    // computed_total = 6500 + 42000 + 0 = 48500
+    // floor = 22900
+    // final = max(48500, 22900) = 48500
+    const result = calculateFare(CAR_PREMIUM, 5, 10, 0);
+    expect(result.inside_charge_bdt).toBe(10500);
+    expect(result.outside_charge_bdt).toBe(31500);
+    expect(result.total_bdt).toBe(48500);
+  });
+
+  test('non-intercity collapses to normal v2: outside_km = 0', () => {
+    // same as normal bike_basic 4 km, 0 min: 2500 + round(775×4) + 0 = 2500 + 3100 = 5600
+    // floor = 5800, final = 5800
+    const result = calculateFare(BIKE_BASIC, 4, 0, 0);
+    expect(result.outside_charge_bdt).toBe(0);
+    expect(result.distance_charge_bdt).toBe(3100);
+    expect(result.total_bdt).toBe(5800); // floor applies
+  });
+
+  test('intercity_per_km_bdt = 0 falls back to normal per_km_bdt for outside km', () => {
+    // BIKE_BASIC_NO_SURCHARGE has intercity_per_km_bdt = 0
+    // outside_charge = round(COALESCE(NULLIF(0,0), 775) × 5) = round(775 × 5) = 3875
+    const result = calculateFare(BIKE_BASIC_NO_SURCHARGE, 0, 5, 0);
+    expect(result.outside_charge_bdt).toBe(3875);
+  });
+
+  test('intercity with time charge', () => {
+    // bike_basic: 3 inside, 2 outside, 15 min ride time
+    // inside_charge  = round(775 × 3) = 2325
+    // outside_charge = round(1160 × 2) = 2320
+    // distance_charge = 2325 + 2320 = 4645
+    // time_charge = 15 × 175 = 2625
+    // computed_total = 2500 + 4645 + 2625 = 9770
+    // floor = 5800
+    // final = max(9770, 5800) = 9770
+    const result = calculateFare(BIKE_BASIC, 3, 2, 15);
+    expect(result.time_charge_bdt).toBe(2625);
+    expect(result.total_bdt).toBe(9770);
+  });
+
+  test('intercity floor fare still applies when both charges are low', () => {
+    // bike_basic: 1 inside, 1 outside (short intercity)
+    // inside_charge  = round(775 × 1) = 775
+    // outside_charge = round(1160 × 1) = 1160
+    // distance_charge = 775 + 1160 = 1935
+    // computed_total = 2500 + 1935 + 0 = 4435
+    // floor = 5800
+    // final = max(4435, 5800) = 5800
+    const result = calculateFare(BIKE_BASIC, 1, 1, 0);
+    expect(result.total_bdt).toBe(5800); // floor applies
+  });
+
+  test('inside_km and outside_km are always 3-decimal precision', () => {
+    // Caller rounds to 3 decimals before passing to calculateFare
+    // The function stores them in the breakdown as-is
+    const result = calculateFare(BIKE_BASIC, 3.456, 7.891, 0);
+    expect(result.inside_km).toBe(3.456);
+    expect(result.outside_km).toBe(7.891);
   });
 });
 ```

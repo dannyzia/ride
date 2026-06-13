@@ -41,6 +41,32 @@ Import the Zod enum from `lib/vehicleTypes.ts: VEHICLE_TYPE_ZOD_ENUM`. Do not de
 
 ---
 
+## Canonical FareBreakdown shape
+
+Every endpoint or WebSocket payload that returns `fare_breakdown` uses this shape exactly:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `base_fare_bdt` | integer | Base fare in paisa |
+| `distance_charge_bdt` | integer | `inside_charge_bdt + outside_charge_bdt`, in paisa |
+| `time_charge_bdt` | integer | Billable ride-time charge in paisa; 0 at estimate/request time |
+| `total_bdt` | integer | Post-floor fare before preference surcharge and promo |
+| `floor_fare_bdt` | integer | Computed floor fare in paisa |
+| `distance_km` | decimal | `inside_km + outside_km`, rounded to 3 decimals |
+| `origin_city` | string \| null | Origin city name if pickup is inside an active city boundary; null for rural pickup |
+| `is_intercity` | boolean | True when pickup is inside a city and dropoff is outside that origin city polygon |
+| `inside_km` | decimal | Kilometers traveled inside the origin city, rounded to 3 decimals |
+| `outside_km` | decimal | Kilometers traveled outside the origin city, rounded to 3 decimals |
+| `inside_charge_bdt` | integer | Fare from inside km in paisa |
+| `outside_charge_bdt` | integer | Fare from outside km in paisa; 0 if not intercity |
+| `platform_commission_percent` | number | Pricing row commission percent |
+| `platform_commission_bdt` | integer \| null | Commission in paisa; 0/null before completion depending on caller |
+| `driver_net_bdt` | integer \| null | Driver net after commission; 0/null before completion depending on caller |
+
+Intercity detection uses `city_boundaries`, not districts. There is no `intercity_routes` table, no district-based route lookup, and no `intercity_min_distance_km` config key.
+
+---
+
 ## Routes to DELETE from GlideX
 
 | File | Reason |
@@ -130,10 +156,16 @@ On rollback: 500 `registration_failed`. Client may retry.
   "fare_breakdown": {
     "base_fare_bdt": 3000,
     "distance_charge_bdt": 3840,
+    "inside_charge_bdt": 3840,
+    "outside_charge_bdt": 0,
     "time_charge_bdt": 0,
     "total_bdt": 6840,
     "floor_fare_bdt": 5000,
     "distance_km": 3.2,
+    "origin_city": "Dhaka",
+    "is_intercity": false,
+    "inside_km": 3.2,
+    "outside_km": 0,
     "platform_commission_percent": 0.00,
     "platform_commission_bdt": 0,
     "driver_net_bdt": 6840
@@ -153,16 +185,21 @@ On rollback: 500 `registration_failed`. Client may retry.
 }
 ```
 
-**Notes:** `driver_fare_bdt` = `fare_breakdown.total_bdt` + `preference_surcharge_bdt`. `fare_breakdown` also includes `platform_commission_percent`, `platform_commission_bdt`, and `driver_net_bdt` in the response shape. When no promo is applied, `promo` is `null`, `rider_payable_bdt` = `driver_fare_bdt`, and `platform_subsidy_bdt` = 0. When no preferences are selected, `preference_surcharge_bdt` = 0 and `preferences` is `[]`.
+**Notes:** `driver_fare_bdt` = `fare_breakdown.total_bdt` + `preference_surcharge_bdt`. `fare_breakdown` also includes `origin_city`, `is_intercity`, `inside_km`, `outside_km`, `inside_charge_bdt`, `outside_charge_bdt`, `platform_commission_percent`, `platform_commission_bdt`, and `driver_net_bdt` in the response shape. When no promo is applied, `promo` is `null`, `rider_payable_bdt` = `driver_fare_bdt`, and `platform_subsidy_bdt` = 0. When no preferences are selected, `preference_surcharge_bdt` = 0 and `preferences` is `[]`.
 
 **Fare formula:**
 ```
-distance_charge = round(per_km_bdt × distance_km)
+effective_outside_rate = intercity_per_km_bdt > 0 ? intercity_per_km_bdt : per_km_bdt
+inside_charge   = round(per_km_bdt × inside_km)
+outside_charge  = round(effective_outside_rate × outside_km)
+distance_charge = inside_charge + outside_charge
 time_charge     = ride_time_min × per_min_bdt   // 0 at request time; actual at completion
 computed_total  = base_fare_bdt + distance_charge + time_charge
 floor_fare      = base_fare_bdt + round(per_km_bdt × floor_length_km) + (floor_min × per_min_bdt)
 final_fare      = max(computed_total, floor_fare)
 ```
+
+If `origin_city = null` or `is_intercity = false`, `outside_km = 0` and `outside_charge_bdt = 0`, so the formula collapses to normal fare calculation v2. If `intercity_per_km_bdt = 0`, `effective_outside_rate` equals `per_km_bdt` — no surcharge is applied to outside-city kilometers.
 
 **Errors**
 | Code | Condition |
@@ -1657,7 +1694,7 @@ Partial update: merges provided fields into existing JSONB.
       "label_en": "Bike Basic",
       "label_bn": "বাইক বেসিক",
       "seats": 1,
-      "fare_breakdown": { "base_fare_bdt": 2500, "distance_charge_bdt": 3840, "time_charge_bdt": 0, "total_bdt": 6340, "floor_fare_bdt": 5800, "distance_km": 3.2, "platform_commission_percent": 0.00, "platform_commission_bdt": 0, "driver_net_bdt": 6340 },
+      "fare_breakdown": { "base_fare_bdt": 2500, "distance_charge_bdt": 3840, "time_charge_bdt": 0, "total_bdt": 6340, "floor_fare_bdt": 5800, "distance_km": 3.2, "origin_city": "Dhaka", "is_intercity": false, "inside_km": 3.2, "outside_km": 0, "inside_charge_bdt": 3840, "outside_charge_bdt": 0, "platform_commission_percent": 0.00, "platform_commission_bdt": 0, "driver_net_bdt": 6340 },
       "preference_surcharge_bdt": 0,
       "driver_fare_bdt": 6340,
       "rider_payable_bdt": 6340,
@@ -1668,7 +1705,7 @@ Partial update: merges provided fields into existing JSONB.
       "label_en": "Bike Standard",
       "label_bn": "বাইক স্ট্যান্ডার্ড",
       "seats": 1,
-      "fare_breakdown": { "base_fare_bdt": 3000, "distance_charge_bdt": 4800, "time_charge_bdt": 0, "total_bdt": 7800, "floor_fare_bdt": 6200, "distance_km": 3.2, "platform_commission_percent": 0.00, "platform_commission_bdt": 0, "driver_net_bdt": 7800 },
+      "fare_breakdown": { "base_fare_bdt": 3000, "distance_charge_bdt": 4800, "time_charge_bdt": 0, "total_bdt": 7800, "floor_fare_bdt": 6200, "distance_km": 3.2, "origin_city": "Dhaka", "is_intercity": false, "inside_km": 3.2, "outside_km": 0, "inside_charge_bdt": 4800, "outside_charge_bdt": 0, "platform_commission_percent": 0.00, "platform_commission_bdt": 0, "driver_net_bdt": 7800 },
       "preference_surcharge_bdt": 500,
       "driver_fare_bdt": 8300,
       "rider_payable_bdt": 6740,
@@ -1684,7 +1721,7 @@ Partial update: merges provided fields into existing JSONB.
   "preferences_applied": ["large_luggage"]
 }
 ```
-**Notes:** Returns only vehicle types with `is_active=true` pricing for the active zone. Sorted by `total_bdt` ascending. If pickup outside zone → 422 `outside_zone`. Response includes `platform_commission_percent` from each pricing row. `fare_breakdown` includes `platform_commission_percent`, `platform_commission_bdt`, and `driver_net_bdt` as part of the shape. `driver_fare_bdt` = `fare_breakdown.total_bdt` + `preference_surcharge_bdt` (always present — driver receives full amount). `rider_payable_bdt` = `driver_fare_bdt` − `promo.discount_bdt` (when promo applied) or `driver_fare_bdt` (when no promo). When `promo_code` is provided and valid, each estimate includes a `promo` object with the discount breakdown. `preference_surcharge_bdt` is the sum of surcharges for selected preferences.
+**Notes:** Returns only vehicle types with `is_active=true` pricing for the active zone. Sorted by `total_bdt` ascending. If pickup outside zone → 422 `outside_zone`. Response includes `platform_commission_percent` from each pricing row. `fare_breakdown` uses the canonical FareBreakdown shape above, including city/geofence split fields. `driver_fare_bdt` = `fare_breakdown.total_bdt` + `preference_surcharge_bdt` (always present — driver receives full amount). `rider_payable_bdt` = `driver_fare_bdt` − `promo.discount_bdt` (when promo applied) or `driver_fare_bdt` (when no promo). When `promo_code` is provided and valid, each estimate includes a `promo` object with the discount breakdown. `preference_surcharge_bdt` is the sum of surcharges for selected preferences.
 
 **Zone check on estimate is intentional** — prevents riders from seeing fares for areas the service doesn't cover. On 422 `outside_zone`, the client must show the zone error toast on the map screen (not inside the fare sheet which never opens). Rider should reposition the pickup pin.
 
@@ -2213,6 +2250,7 @@ Partial update: merges provided fields into existing JSONB.
 | vehicle_type | string | yes | vehicleTypeEnum (8 values) |
 | base_fare_bdt | integer | yes | In paisa |
 | per_km_bdt | integer | yes | In paisa per km |
+| intercity_per_km_bdt | integer | no | In paisa per km outside the origin city. Default 0 means use `per_km_bdt` with no surcharge. |
 | per_min_bdt | integer | yes | In paisa per minute of ride time |
 | floor_length_km | number | yes | Minimum distance for floor fare calculation |
 | floor_min | integer | yes | Minimum minutes for floor fare calculation |
@@ -2230,6 +2268,50 @@ Partial update: merges provided fields into existing JSONB.
 **Validation:** min 3 points, no self-intersection (turf.js kinks()), auto-close ring if not closed. 400 `invalid_polygon` on failure.
 **Success: 201** `{ "zone_id": "uuid" }`
 **Side effect:** If `is_active=true`, deactivates all other zones in the same transaction.
+
+---
+
+### GET /api/admin/city-boundaries
+**Auth:** Required (admin role, `requireRole('admin')` middleware — same guard as all `/api/admin/**` routes per Security Boundaries in 02-ARCHITECTURE.md). Part of the `app/(admin)/` route group.
+**Purpose:** List all city boundaries used for intercity fare detection.
+
+**Success: 200**
+```json
+{
+  "cities": [
+    {
+      "id": "uuid",
+      "name": "Dhaka",
+      "polygon": [{ "lat": 23.8103, "lng": 90.6575 }],
+      "is_active": true,
+      "updated_at": "ISO-8601"
+    }
+  ]
+}
+```
+
+### POST /api/admin/city-boundaries
+**Auth:** Required (admin role, `requireRole('admin')` middleware). Part of the `app/(admin)/` route group.
+**Purpose:** Create a city boundary. Admin UI lives at `/admin/city-boundaries` and reuses the zone map editor for polygon drawing.
+
+**Body:** `{ "name": "string", "polygon": [{lat, lng}...], "is_active": boolean }`
+**Validation:** name 2-100 chars; polygon 20-40 points recommended, min 3 required, no self-intersection (`turf.kinks()`), auto-close ring for validation only.
+**Success: 201** `{ "city_boundary_id": "uuid" }`
+
+### PATCH /api/admin/city-boundaries/:id
+**Auth:** Required (admin role, `requireRole('admin')` middleware).
+**Purpose:** Edit name, polygon, or active state.
+
+**Body:** any subset of `{ "name": "string", "polygon": [{lat, lng}...], "is_active": boolean }`
+**Success: 200** `{ "city_boundary_id": "uuid", "updated": true }`
+**Side effect:** Invalidate city-boundary cache used by `lib/cityBoundary.ts`.
+
+### DELETE /api/admin/city-boundaries/:id
+**Auth:** Required (admin role, `requireRole('admin')` middleware).
+**Purpose:** Soft delete/deactivate a city boundary.
+
+**Success: 200** `{ "city_boundary_id": "uuid", "is_active": false }`
+**Side effect:** Sets `is_active=false` and invalidates city-boundary cache. Historical ride `fare_breakdown.origin_city` values are not rewritten.
 
 ---
 
@@ -2804,7 +2886,7 @@ Uses `supabase.storage.from('driver-documents').createSignedUrl(...)` to generat
 | `auth:hello` | client → server | `{supabase_jwt, role:'driver'\|'rider'}` | Bind socket |
 | `auth:refresh` | client → server | `{supabase_jwt}` | Every 50m |
 | `auth:ok`/`error` | server → client | `{user_id, role}` | — |
-| `ride:offer` | server → driver | `{ride_id, pickup: {lat,lng,address}, dropoff: {lat,lng,address}, fare_breakdown, driver_fare_bdt, vehicle_type (8-value enum), rider_first_name, rider_rating, distance_km, pickup_distance_km, pickup_eta_minutes, is_scheduled, preferences: [{name, display_label_en, icon}], expires_in_ms: 15000, expires_at: ISO-8601}` | Client drives countdown from `expires_at`. Offer timeout is configurable (default 15s). `pickup_distance_km` and `pickup_eta_minutes` are estimated from driver's current location. `rider_rating` is the rider's average rating. `is_scheduled` is true for scheduled rides. `preferences` lists any rider-selected add-ons. **`driver_fare_bdt` is the amount the driver will earn** (fare_breakdown.total_bdt + preference_surcharge_bdt). The offer card MUST display `driver_fare_bdt`, NOT `fare_breakdown.total_bdt`. `fare_breakdown` contains the base fare components for potential future detailed view. |
+| `ride:offer` | server → driver | `{ride_id, pickup: {lat,lng,address}, dropoff: {lat,lng,address}, fare_breakdown, driver_fare_bdt, vehicle_type (8-value enum), rider_first_name, rider_rating, distance_km, pickup_distance_km, pickup_eta_minutes, is_scheduled, is_intercity, origin_city, preferences: [{name, display_label_en, icon}], expires_in_ms: 15000, expires_at: ISO-8601}` | Client drives countdown from `expires_at`. Offer timeout is configurable (default 15s). `pickup_distance_km` and `pickup_eta_minutes` are estimated from driver's current location. `rider_rating` is the rider's average rating. `is_scheduled` is true for scheduled rides. `preferences` lists any rider-selected add-ons. **`driver_fare_bdt` is the amount the driver will earn** (fare_breakdown.total_bdt + preference_surcharge_bdt). The offer card MUST display `driver_fare_bdt`, NOT `fare_breakdown.total_bdt`. `fare_breakdown` contains the base fare components for potential future detailed view. `is_intercity` and `origin_city` are included for driver information — `is_intercity=true` means the dropoff is outside the origin city polygon and the outside-city per-km rate applies to the outside segment. |
 | `fetch:confirm` | driver → server | `{ride_id}` | On first interaction with offer card |
 | `offer:accept` | driver → server | `{ride_id}` | — |
 | `offer:reject` | driver → server | `{ride_id, reason?}` | — |
