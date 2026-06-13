@@ -9,6 +9,52 @@ services:
     buildCommand: npm install && npx expo export --platform web
     startCommand: node server.js
     autoDeploy: true
+    # ───────────────────────────────────────────────────────────
+    # ENVIRONMENT VARIABLES
+    #
+    # Two categories of env vars are needed:
+    #
+    # 1. BUILD-TIME (EXPO_PUBLIC_*) — these are baked into the client JS
+    #    bundle during `npx expo export`. They MUST be set before the build
+    #    runs. Set them here or in the Render dashboard under Environment.
+    #
+    # 2. RUNTIME (server-side) — these are used by server.js and the API
+    #    routes at request time. Also set in the dashboard.
+    #
+    # Values below use the app.config.js mappings. Replace with real values.
+    # ───────────────────────────────────────────────────────────
     envVars:
       - key: NODE_ENV
         value: production
+      # ── Build-time client vars (baked into web bundle) ──
+      - key: EXPO_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: EXPO_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: EXPO_PUBLIC_SERVER_URL
+        sync: false
+      - key: EXPO_PUBLIC_WEB_SOCKET_SERVER_URL
+        sync: false
+      - key: EXPO_PUBLIC_BARIKOI_API_KEY
+        sync: false
+      - key: EXPO_PUBLIC_SUPPORT_PHONE
+        sync: false
+      # ── Runtime server vars ──
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PORTPOS_APP_KEY
+        sync: false
+      - key: PORTPOS_SECRET_KEY
+        sync: false
+      - key: PORTPOS_BASE_URL
+        sync: false
+      - key: PORTPOS_CALLBACK_URL
+        sync: false
+      - key: BARIKOI_API_KEY
+        sync: false
+      - key: WEBSOCKET_INTERNAL_SECRET
+        sync: false

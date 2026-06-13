@@ -20,7 +20,14 @@ const isServer =
   typeof process !== "undefined" &&
   !!process.versions?.node;
 
-export const supabase: SupabaseClient = isServer
+// Guard against missing env vars: if EXPO_PUBLIC_SUPABASE_URL is not baked
+// into the bundle (e.g., env vars not set during `expo export`), createClient
+// would throw "TypeError: Invalid URL" and crash the entire JS bundle,
+// leaving a blank page.  Instead, create a stub so the app degrades
+// gracefully — the auth gate in _layout.tsx detects the missing client.
+const isConfigured = supabaseUrl.length > 0 && supabaseAnonKey.length > 0;
+
+export const supabase: SupabaseClient = isServer || !isConfigured
   ? ({} as SupabaseClient)
   : createClient(supabaseUrl, supabaseAnonKey, {
       auth: {

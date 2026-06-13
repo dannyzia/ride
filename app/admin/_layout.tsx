@@ -4,12 +4,21 @@ import { Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AntDesign } from '@expo/vector-icons';
+import { logger } from '@/lib/logger';
 
 export default function AdminLayout() {
   const [checking, setChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Guard: if Supabase client is not configured, show access denied
+    // instead of crashing on supabase.auth.onAuthStateChange.
+    if (!supabase?.auth?.onAuthStateChange) {
+      logger.warn('[admin] Supabase client not configured');
+      setChecking(false);
+      return;
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const user = session?.user ?? null;
       if (!user) {
