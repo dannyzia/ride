@@ -14,7 +14,10 @@ export async function GET(request: Request) {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
-    const data = await db.select({ fare_price: sql<string>`COALESCE(CAST(fare_breakdown->>'total_bdt' AS text), '0')` })
+    const data = await db.select({
+      totalBdt: sql<string>`COALESCE(CAST(fare_breakdown->>'total_bdt' AS text), '0')`,
+      commissionBdt: sql<number>`COALESCE(platform_commission_bdt, 0)`,
+    })
       .from(rides)
       .innerJoin(users, eq(rides.driver_id, users.id))
       .where(
@@ -25,7 +28,11 @@ export async function GET(request: Request) {
         )
       );
 
-    const totalEarnings = data.reduce((acc, ride) => acc + Number(ride.fare_price ?? 0), 0);
+    const totalEarnings = data.reduce((acc, ride) => {
+      const gross = Number(ride.totalBdt ?? 0);
+      const commission = ride.commissionBdt ?? 0;
+      return acc + (gross - commission);
+    }, 0);
     const roundedEarnings = Math.round(totalEarnings * 100) / 100;
 
     return Response.json({ totalEarnings: roundedEarnings }, { status: 200 });

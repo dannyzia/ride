@@ -1,7 +1,6 @@
 import { db } from '@/src/db';
 import { cityBoundaries } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { verifySupabaseToken } from '@/lib/auth';
 import { clearCityBoundaryCache } from '@/lib/cityBoundary';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -40,7 +39,11 @@ async function requireAdmin(request: Request) {
 export async function GET(request: Request) {
   try {
     await requireAdmin(request);
-    const cities = await db.select().from(cityBoundaries).orderBy(cityBoundaries.name);
+    const url = new URL(request.url);
+    const includeInactive = url.searchParams.get('include_inactive') === 'true';
+    const cities = includeInactive
+      ? await db.select().from(cityBoundaries).orderBy(cityBoundaries.name)
+      : await db.select().from(cityBoundaries).where(eq(cityBoundaries.is_active, true)).orderBy(cityBoundaries.name);
     return Response.json({ cities });
   } catch (err: any) {
     const status = err.status ?? 500;

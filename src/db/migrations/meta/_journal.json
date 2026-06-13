@@ -64,6 +64,13 @@
       "when": 1780600000000,
       "tag": "0008_sync_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781330070788,
+      "tag": "0009_intercity_geo_fencing",
+      "breakpoints": true
     }
   ]
 }

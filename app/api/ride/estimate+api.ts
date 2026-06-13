@@ -94,6 +94,7 @@ export async function POST(request: Request) {
         floor_length_km:      Number(activePricing.floor_length_km ?? 0),
         floor_min:            activePricing.floor_min ?? 0,
         brta_fare_ceiling_bdt: activePricing.brta_fare_ceiling_bdt,
+        platform_commission_percent: Number(activePricing.platform_commission_percent ?? 0),
       }, insideKm, 0, undefined, outsideKm);
       fare.origin_city = origin_city;
       fare.is_intercity = intercity;
@@ -130,6 +131,7 @@ export async function POST(request: Request) {
         floor_length_km:      Number(p.floor_length_km ?? 0),
         floor_min:            p.floor_min ?? 0,
         brta_fare_ceiling_bdt: p.brta_fare_ceiling_bdt,
+        platform_commission_percent: Number(p.platform_commission_percent ?? 0),
       }, insideKm, 0, undefined, outsideKm);
       fare.origin_city = origin_city;
       fare.is_intercity = intercity;

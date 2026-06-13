@@ -47,7 +47,6 @@ async function splitRouteBarikoi(
 
   if (coordinates.length < 2) throw new Error('Route has too few points');
 
-  const line = turf.lineString(coordinates as number[][]);
   const turfPolygon = turf.polygon([[
     ...originCityPolygon.map(p => [p.lng, p.lat]),
     [originCityPolygon[0].lng, originCityPolygon[0].lat],
@@ -85,22 +84,10 @@ function splitRouteHaversine(
   const dropoffInside = pointInPolygonSimple(dropoff.lat, dropoff.lng, originCityPolygon);
 
   if (dropoffInside) {
-    return { inside_km: Math.round(totalKm * 1.3 * 1000) / 1000, outside_km: 0 };
+    return { inside_km: Math.round(totalKm * 1000) / 1000, outside_km: 0 };
   }
 
-  const cityCentroid = getCentroid(originCityPolygon);
-  const pickupToCentroid = haversineKm(pickup.lat, pickup.lng, cityCentroid.lat, cityCentroid.lng);
-  const centroidToDropoff = haversineKm(cityCentroid.lat, cityCentroid.lng, dropoff.lat, dropoff.lng);
-  const total = pickupToCentroid + centroidToDropoff;
-  const insideRatio = total > 0 ? pickupToCentroid / total : 0.5;
-
-  const insideKm = totalKm * insideRatio * 1.3;
-  const outsideKm = totalKm * (1 - insideRatio) * 1.0;
-
-  return {
-    inside_km: Math.round(insideKm * 1000) / 1000,
-    outside_km: Math.round(outsideKm * 1000) / 1000,
-  };
+  return { inside_km: Math.round(totalKm * 1000) / 1000, outside_km: 0 };
 }
 
 function pointInPolygonSimple(lat: number, lng: number, polygon: { lat: number; lng: number }[]): boolean {
@@ -115,10 +102,4 @@ function pointInPolygonSimple(lat: number, lng: number, polygon: { lat: number; 
     }
   }
   return inside;
-}
-
-function getCentroid(polygon: { lat: number; lng: number }[]): { lat: number; lng: number } {
-  let lat = 0, lng = 0;
-  for (const p of polygon) { lat += p.lat; lng += p.lng; }
-  return { lat: lat / polygon.length, lng: lng / polygon.length };
 }
