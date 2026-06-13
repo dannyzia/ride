@@ -1,9 +1,6 @@
 import { createClient, SessionStorage } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 
-// ws is Node.js-only — only import when running outside React Native (e.g. SSR / EAS build)
-const ws = typeof window === "undefined" ? require("ws") : undefined;
-
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
@@ -18,6 +15,4 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: false,
   },
-  // Fix Node 20 WebSocket error during SSR / expo export --platform web
-  realtime: ws ? { transport: ws } : undefined,
 });
