@@ -15,7 +15,7 @@ if (!isWeb) {
   SplashScreen.preventAutoHideAsync().catch(() => {});
 }
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? "";
 
 export default function RootLayout() {
   const router = useRouter();
