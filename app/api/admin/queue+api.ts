@@ -198,6 +198,19 @@ export async function GET(request: Request) {
     if (status === 403)
       return Response.json({ error: "forbidden" }, { status: 403 });
     logger.error("[admin/queue] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    // Detect schema-mismatch (missing column) and return a specific machine
+    // code so the admin UI can surface a helpful message. Full Postgres
+    // error stays in server logs — never exposed to the client.
+    const errMsg = err instanceof Error ? err.message : "";
+    const isMissingColumn = /column .* does not exist/i.test(errMsg);
+    return Response.json(
+      {
+        error: isMissingColumn ? "schema_mismatch" : "internal_error",
+        message: isMissingColumn
+          ? "Database schema is out of date. Run migrations."
+          : "Failed to load driver queue.",
+      },
+      { status: 500 },
+    );
   }
 }

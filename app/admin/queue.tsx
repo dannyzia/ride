@@ -2,7 +2,7 @@
 // Admin screen for reviewing pending/temporary/rejected drivers with
 // approve / reject / suspend / activate actions and optional vehicle type
 // adjustment on approval.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -152,48 +152,70 @@ export default function QueueScreen() {
   const [vehicleTypeAdjusted, setVehicleTypeAdjusted] =
     useState<VehicleTypeEnum | null>(null);
 
-  const fetchQueue = useCallback(
-    async (status: QueueStatus) => {
-      setLoading(true);
-      const {
-        data,
-        error,
-        status: httpStatus,
-      } = await adminFetch<QueueResponse>(
-        `/api/admin/queue?status=${encodeURIComponent(status)}&limit=50&offset=0`,
-        { method: "GET" },
-      );
-      if (error || !data) {
-        if (httpStatus !== 0) {
-          toast.show(`Failed to load queue: ${error ?? "unknown"}`, "error");
-        }
-        setDrivers([]);
-        setMeta(null);
-      } else {
-        setDrivers(data.drivers);
-        setMeta({
-          total: data.total,
-          overdue_count: data.overdue_count,
-          fast_track_overdue_count: data.fast_track_overdue_count,
-          face_match_threshold: data.face_match_threshold,
-        });
-      }
-      setLoading(false);
-    },
-    [toast],
-  );
+  // Track consecutive failures so we can stop auto-refresh when the API is
+  // returning errors. This prevents an aggressive retry loop.
+  const consecutiveFailuresRef = useRef(0);
+  const MAX_CONSECUTIVE_FAILURES = 3;
 
+  // Keep the latest statusFilter and toast in refs so the fetch callback has
+  // no external dependencies and is referentially stable.
+  const statusFilterRef = useRef(statusFilter);
+  statusFilterRef.current = statusFilter;
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+
+  const fetchQueue = useCallback(async (status?: QueueStatus) => {
+    const target = status ?? statusFilterRef.current;
+    setLoading(true);
+    const {
+      data,
+      error,
+      status: httpStatus,
+    } = await adminFetch<QueueResponse>(
+      `/api/admin/queue?status=${encodeURIComponent(target)}&limit=50&offset=0`,
+      { method: "GET" },
+    );
+    if (error || !data) {
+      consecutiveFailuresRef.current += 1;
+      // Only toast on the first failure of a run — avoid spamming every poll.
+      if (consecutiveFailuresRef.current === 1 && httpStatus !== 0) {
+        const hint =
+          error === "schema_mismatch"
+            ? "Database is out of date — push migrations to fix."
+            : `Failed to load queue: ${error ?? "unknown"}`;
+        toastRef.current.show(hint, "error");
+      }
+      setDrivers([]);
+      setMeta(null);
+    } else {
+      consecutiveFailuresRef.current = 0;
+      setDrivers(data.drivers);
+      setMeta({
+        total: data.total,
+        overdue_count: data.overdue_count,
+        fast_track_overdue_count: data.fast_track_overdue_count,
+        face_match_threshold: data.face_match_threshold,
+      });
+    }
+    setLoading(false);
+  }, []);
+
+  // Fetch on status tab change (resets failure counter).
   useEffect(() => {
+    consecutiveFailuresRef.current = 0;
     fetchQueue(statusFilter);
   }, [statusFilter, fetchQueue]);
 
-  // Auto-refresh every 30s
+  // Auto-refresh every 30s. Stops after consecutive failures to avoid
+  // hammering a broken endpoint. The interval is set up once and always
+  // invokes the latest fetch via closure over the stable callback.
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchQueue(statusFilter);
+      if (consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) return;
+      fetchQueue(statusFilterRef.current);
     }, 30_000);
     return () => clearInterval(interval);
-  }, [statusFilter, fetchQueue]);
+  }, [fetchQueue]);
 
   const openAction = (kind: ActionKind, driver: QueueDriver) => {
     setReason("");

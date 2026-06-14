@@ -2,7 +2,7 @@
 // F15-API-08.
 import { db } from "@/src/db";
 import { vehicleModels } from "@/src/db/schema";
-import { eq, ilike, and, desc, sql, or, asc } from "drizzle-orm";
+import { eq, ilike, and, sql, or, asc } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";

@@ -4,7 +4,15 @@
 //   toast.show("Saved", "success");
 //
 // Or push directly via the module-level emitter (used outside React trees).
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+  useEffect,
+  useMemo,
+} from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { colors } from "@/theme/goRide";
 
@@ -49,14 +57,21 @@ export function AdminToastProvider({ children }: { children: ReactNode }) {
     };
   }, [show]);
 
+  // Memoize so consumers don't get a new context value object on every render.
+  // Without this, any toast.show() triggers provider re-render → new value object →
+  // all consumers re-render → any useEffect with `toast` in deps refires.
+  const value = useMemo<ToastContextValue>(() => ({ show }), [show]);
+
   return (
-    <ToastContext.Provider value={{ show }}>
+    <ToastContext.Provider value={value}>
       {children}
       <View style={styles.container} pointerEvents="box-none">
         {toasts.map((t) => (
           <Pressable
             key={t.id}
-            onPress={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
+            onPress={() =>
+              setToasts((prev) => prev.filter((x) => x.id !== t.id))
+            }
             style={[styles.toast, styles[`toast_${t.type}`]]}
           >
             <Text style={styles.text}>{t.message}</Text>
