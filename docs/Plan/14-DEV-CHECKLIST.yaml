@@ -4399,7 +4399,7 @@ phases:
           - "app/**/*.tsx"
         verification:
           - type: command
-            run: "grep -rn '#[0-9A-Fa-f]\{6\}' components app --include='*.tsx'"
+            run: "grep -rn '#[0-9A-Fa-f]\\{6\\}' components app --include='*.tsx'"
             expect_exit: 1
       - id: P12-03
         task: "Update screen layouts (Auth, Onboarding, Home, Offer, Fare) to GoRide patterns"
@@ -6445,10 +6445,10 @@ phases:
           - "AdminTable: configurable columns (key, header, render?), sortable optional, pagination optional, empty state slot."
           - "AdminModal: overlay with title, children, onClose. Close on ESC and backdrop click."
           - "AdminForm: declarative field renderer (text/number/textarea/checkbox/select/datetime). Returns gathered values."
-          - "AdminToggle: switch component with on/off colors.
+          - "AdminToggle: switch component with on/off colors."
           - "AdminToast: imperative toast context (show(message, type)). Used everywhere for save/delete confirmations."
           - "adminFetch: thin wrapper over fetch that adds Authorization header from auth store, JSON content-type, error normalization. Returns {data, error, status}."
-          - "All components use theme/goRide.ts tokens. No inline colors.
+          - "All components use theme/goRide.ts tokens. No inline colors."
         verification:
           - type: file_exists
             path: "app/(admin)/_layout.tsx"
@@ -6457,7 +6457,7 @@ phases:
           - type: contains
             file: "components/admin/AdminShell.tsx"
             patterns:
-              - "#181A20\|theme"
+              - "#181A20\\|theme"
               - "sidebar"
           - type: command
             run: "npx tsc --noEmit"

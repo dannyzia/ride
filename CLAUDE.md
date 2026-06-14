@@ -206,7 +206,7 @@ users, drivers, vehicles, packages, subscriptions, creditVouchers, callLedger, r
 | 10 | In-App Chat | ✅ Done | Rider-driver messaging |
 | 11 | Commission & Waiting Time | — | Post-MVP decision gate |
 | F7–F14 | Feature bundles (offer sheet, promos, incentives, preferences, SOS, wallets, referrals, vehicle models, face match, vehicle media) | ✅ Done | Underlying tables and APIs shipped |
-| **F15** | **Admin Dashboard Consolidation** | 🚧 **In progress** | Full web-only admin panel: missing endpoints + all UI screens. See `docs/Plan/14-DEV-CHECKLIST.yaml` phase F15. |
+| **F15** | **Admin Dashboard Consolidation** | ✅ **Done** | Full web-only admin panel: 10 API items + 14 UI items built and tsc-clean. Includes `packages.vehicle_type` scoping (F15-API-10). See `docs/Plan/14-DEV-CHECKLIST.yaml` phase F15. |
 
 **Note:** Phase 3 was originally "Firebase Cloud Functions" in planning documents, but was **replaced by Supabase Auth**. The `functions/` directory does not exist. All auth logic is in Expo API routes (`app/api/auth/`) and client screens (`app/(auth)/`).
 
@@ -256,6 +256,7 @@ See AGENTS.md for the complete rules reference. Key rules:
 - **Supabase JWT**: Required on every protected API route via `verifySupabaseToken()` or `requireRole()`
 - **No console.log**: Use `lib/logger.ts` (`logger.info`, `logger.error`)
 - **Vehicle type filter**: Dispatch must filter by vehicle_type BEFORE H3 scoring, using lowercase enum values
+- **Packages vehicle-type scope**: `packages.vehicle_type` (nullable) gates visibility and purchase — NULL = universal, non-null = only matching `drivers.vehicle_type`. Enforced in `GET /api/package/list` (filtered) and `POST /api/package/purchase` (403 `vehicle_type_mismatch`)
 - **Daily cap check**: In dispatch candidate pool, not in heartbeat deduction path
 - **Batch exclusion**: Query `dispatch_offers` for excluded driver_ids before building each batch
 - **All tables**: uuid PKs, created_at/updated_at timestamptz. Append-only tables (call_ledger, dispatch_offers, used_challenges, rate_limits) exempt from updated_at.
