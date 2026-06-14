@@ -247,9 +247,12 @@ Reference table mapping known Bangladesh vehicle Brand/Model/Year combinations t
 | is_trial | boolean | yes | false | Micro-trial package flag |
 | is_active | boolean | yes | true | Admin can deactivate |
 | daily_cap | integer | yes | 200 | Hidden daily limit for unlimited packages. Admin configures per package; 200 is the default for new unlimited packages. |
+| vehicle_type | vehicleTypeEnum | no | NULL | Optional vehicle-type scope. NULL = universal (available to all vehicle types). A non-null value restricts the package to drivers whose `drivers.vehicle_type` matches. Filter applied in `/api/package/list` (WHERE vehicle_type IS NULL OR vehicle_type = driver.vehicle_type) and enforced at `/api/package/purchase` (403 vehicle_type_mismatch). Mirrors the `incentive_definitions.vehicle_type_filter` pattern. |
 | created_at | timestamptz | yes | now() | — |
 | updated_at | timestamptz | yes | now() | — |
 | deleted_at | timestamptz | no | NULL | Soft delete |
+
+**Indexes:** `packages_vehicle_type_idx` on `vehicle_type`.
 
 ### subscriptions
 | Column | Type | Required | Default | Notes |

@@ -679,9 +679,12 @@ phases:
           - "is_trial: boolean NOT NULL DEFAULT false"
           - "is_active: boolean NOT NULL DEFAULT true"
           - "daily_cap: integer NOT NULL DEFAULT 200  -- hidden limit for unlimited packages"
+          - "vehicle_type: vehicleTypeEnum NULL DEFAULT NULL  -- F15-API-10: NULL = universal; non-null = scoped to that vehicle type. Mirrors incentive_definitions.vehicle_type_filter pattern."
           - "created_at: timestamptz NOT NULL DEFAULT now()"
           - "updated_at: timestamptz NOT NULL DEFAULT now()"
           - "deleted_at: timestamptz NULL  -- soft delete"
+        indexes:
+          - "packages_vehicle_type_idx ON (vehicle_type)"
         verification:
           - type: contains
             file: "src/db/schema.ts"
@@ -2124,10 +2127,12 @@ phases:
         implementation_rules:
           - "Method: GET."
           - "Auth: required (any authenticated user)."
-          - "Query: SELECT * FROM packages WHERE is_active = true AND deleted_at IS NULL ORDER BY is_trial DESC, price_bdt ASC."
-          - "Return 200: { packages: Array<{ id, name, call_count, duration_days, price_bdt, is_trial, daily_cap }> }. For finite packages, daily_cap is null. For unlimited packages, daily_cap is the package's daily_cap value (default 200)."
+          - "Lookup the caller's vehicle_type from drivers (join via users.auth_uid). May be null if no driver record yet."
+          - "Query: SELECT { id, name, call_count, duration_days, price_bdt, daily_cap, is_trial, vehicle_type } FROM packages WHERE is_active = true AND deleted_at IS NULL AND (vehicle_type IS NULL OR vehicle_type = $driver_vehicle_type) ORDER BY is_trial DESC, price_bdt ASC. If driver record missing, only universal (vehicle_type IS NULL) packages are returned."
+          - "Return 200: { packages: Array<{ id, name, call_count, duration_days, price_bdt, is_trial, daily_cap, vehicle_type }> }. For finite packages, daily_cap is null. For unlimited packages, daily_cap is the package's daily_cap value (default 200). vehicle_type is null for universal packages or one of the 8 vehicleTypeEnum values."
           - "Trial packages sorted first in the result."
           - "price_bdt is in paisa — do NOT convert here. Let the client display layer convert."
+          - "F15-API-10: vehicle_type filtering is mandatory. A driver must never see packages scoped to other vehicle types."
         verification:
           - type: file_exists
             path: "app/api/package/list+api.ts"
@@ -2154,6 +2159,7 @@ phases:
           - "Zod body: { package_id: uuid, provider: 'portpos' }. Do NOT accept idempotency_key in body."
           - "Header: Idempotency-Key must be present (uuid v4). Reject if missing."
           - "Check driver status: must be 'active' or 'temporary'. Return 403 if not."
+          - "F15-API-10: Vehicle-type enforcement. After loading the package, if pkg.vehicle_type IS NOT NULL AND pkg.vehicle_type != driver.vehicle_type → return 403 { error: 'vehicle_type_mismatch', message: 'This package is only available for <vehicle_type> drivers' }."
           - "Check for existing active subscription: if driver already has status='active' subscription, return 409."
           - "Trial package check: join through subscriptions -> packages. If packages.is_trial=true AND driver has existing trial subscription -> return 409 { error: 'trial_already_used' }."
           - "INSERT payment_events with { driver_id, package_id, idempotency_key, provider, amount_bdt, status='initiated' }."
@@ -2164,7 +2170,7 @@ phases:
         response_codes:
           200: "Payment URL returned — client opens in WebView"
           400: "Invalid body"
-          403: "Driver status not active/temporary"
+          403: "Driver status not active/temporary; OR vehicle_type_mismatch (package scoped to a different vehicle type)"
           409: "Active subscription exists OR trial already used"
           422: "Package not found or inactive"
           502: "PortPos API error"
@@ -6386,6 +6392,40 @@ phases:
         depends_on: []
         priority: high
 
+      - id: F15-API-10
+        task: "Add vehicle_type column to packages table + enforce vehicle-scoped packages in list/purchase endpoints"
+        files_to_modify:
+          - "src/db/schema.ts"
+          - "app/api/admin/packages+api.ts"
+          - "app/api/package/list+api.ts"
+          - "app/api/package/purchase+api.ts"
+        implementation_rules:
+          - "Add column packages.vehicle_type: vehicleTypeEnum('vehicle_type') (nullable, default NULL). Add index packages_vehicle_type_idx ON (vehicle_type)."
+          - "Pattern mirrors incentive_definitions.vehicle_type_filter: NULL = universal package (available to every driver); non-null = scoped to that vehicle type only."
+          - "Extend createSchema and updateSchema in app/api/admin/packages+api.ts to accept vehicle_type: VEHICLE_TYPE_ZOD_ENUM.nullable().optional().default(null)."
+          - "app/api/package/list+api.ts: join drivers -> users to read the caller's vehicle_type, then filter WHERE is_active = true AND deleted_at IS NULL AND (vehicle_type IS NULL OR vehicle_type = driver.vehicle_type). If the caller has no driver record yet, return only universal (vehicle_type IS NULL) packages. SELECT must include vehicle_type."
+          - "app/api/package/purchase+api.ts: after loading the package, if pkg.vehicle_type IS NOT NULL AND pkg.vehicle_type != driver.vehicle_type → return 403 { error: 'vehicle_type_mismatch', message: 'This package is only available for <vehicle_type> drivers' }."
+          - "Generate + push migration. Existing packages default to NULL (universal) — backward compatible."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "vehicle_type"
+          - type: contains
+            file: "app/api/package/list+api.ts"
+            patterns:
+              - "vehicle_type"
+              - "isNull"
+          - type: contains
+            file: "app/api/package/purchase+api.ts"
+            patterns:
+              - "vehicle_type_mismatch"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [P2-05, P5-04, P5-05]
+        priority: high
+
       # ---------------- SHARED UI SCAFFOLDING ----------------
 
       - id: F15-UI-00
@@ -6460,8 +6500,9 @@ phases:
           - "app/(admin)/packages.tsx"
         ui_requirements:
           - "Page heading 'Call Packages'. + Create Package button (top right)."
-          - "Table: Name, Calls, Days, Price (BDT), Trial, Active, Actions (Edit, Toggle active)."
-          - "Create/Edit modal: Name (max 100), Calls (-1 = unlimited), Duration days, Price BDT (displayed in taka, stored in paisa), Is trial checkbox, Daily cap (default 200), Active toggle."
+          - "Table: Name, Calls, Days, Price (BDT), Trial, Daily Cap, Vehicle, Active, Actions (Edit, Toggle active)."
+          - "Create/Edit modal: Name (max 100), Calls (-1 = unlimited), Duration days, Price BDT (displayed in taka, stored in paisa), Is trial checkbox, Daily cap (default 200), Vehicle Type select (options: 'All Types' = NULL universal, plus the 8 vehicleTypeEnum values), Active toggle."
+          - "Vehicle Type column shows 'All' for universal (NULL) packages, otherwise the vehicle type label from lib/vehicleTypes VEHICLE_TYPES.display_en."
           - "Calls: GET /api/admin/packages, POST /api/admin/package, PATCH /api/admin/package/:id."
           - "Deactivate confirmation dialog. Toast on save."
         verification:
@@ -6471,10 +6512,11 @@ phases:
             file: "app/(admin)/packages.tsx"
             patterns:
               - "/api/admin/packages"
+              - "vehicle_type"
           - type: command
             run: "npx tsc --noEmit"
             expect_exit: 0
-        depends_on: [F15-UI-00]
+        depends_on: [F15-UI-00, F15-API-10]
         priority: critical
 
       - id: F15-UI-03
@@ -6696,7 +6738,7 @@ phases:
           - type: command
             run: "npx eslint . --max-warnings=0"
             expect_exit: 0
-        depends_on: [F15-API-01, F15-API-02, F15-API-03, F15-API-04, F15-API-05, F15-API-06, F15-API-07, F15-API-08, F15-API-09, F15-UI-00, F15-UI-01, F15-UI-02, F15-UI-03, F15-UI-04, F15-UI-05, F15-UI-06, F15-UI-07, F15-UI-08, F15-UI-09, F15-UI-10, F15-UI-11, F15-UI-12, F15-UI-13]
+        depends_on: [F15-API-01, F15-API-02, F15-API-03, F15-API-04, F15-API-05, F15-API-06, F15-API-07, F15-API-08, F15-API-09, F15-API-10, F15-UI-00, F15-UI-01, F15-UI-02, F15-UI-03, F15-UI-04, F15-UI-05, F15-UI-06, F15-UI-07, F15-UI-08, F15-UI-09, F15-UI-10, F15-UI-11, F15-UI-12, F15-UI-13]
         priority: critical
 
 failure_conditions:
@@ -6739,6 +6781,7 @@ ai_tracking:
     - F15-API-07  # point-offers+api.ts, point-offer/[id]+api.ts
     - F15-API-08  # vehicle-models+api.ts, vehicle-model/[id]+api.ts
     - F15-API-09  # usage_interval column on promoCodes + promos+api.ts
+    - F15-API-10  # packages.vehicle_type column + list/purchase vehicle-type filtering/enforcement
     # UI layer — shared scaffolding + 13 screens (configuration.tsx superseded by platform-config.tsx).
     - F15-UI-00   # components/admin/{AdminShell,AdminTable,AdminModal,AdminForm,AdminToggle,AdminToast}.tsx, lib/adminFetch.ts, app/admin/_layout.tsx wrap in AdminToastProvider
     - F15-UI-01   # app/admin/queue.tsx
@@ -6756,23 +6799,26 @@ ai_tracking:
     - F15-UI-13   # app/admin/monitoring.tsx
     - F15-UI-14   # app/admin/recovery.tsx
   blocked_items: []
-  last_updated: "2026-06-14"
+  last_updated: "2026-06-15"
   notes: |
-    F15 build complete. All 9 API items + 14 UI items built and tsc-clean
-    (only pre-existing lib/supabaseServer.ts WebSocket type error remains).
+    F15 build complete. All 10 API items + 14 UI items built and tsc-clean.
     ESLint clean across app/admin/, components/admin/, lib/adminFetch.ts.
     Console.log sweep clean. Clerk/Stripe/Firebase sweep clean.
     Notable side-effects:
       - Added GET handlers to incentives+api.ts and preferences+api.ts
         (the screens depend on these list endpoints).
-      - configuration.tsx and verification.tsx are now superseded by
-        platform-config.tsx and queue.tsx respectively; they still compile
-        and may be removed in a future cleanup pass.
+      - configuration.tsx and verification.tsx superseded and removed
+        (replaced by platform-config.tsx and queue.tsx respectively).
       - app/admin/_layout.tsx no longer hard-codes the Stack.Screen list —
         Expo Router auto-discovers new admin routes.
+      - F15-API-10 (added 2026-06-15): packages.vehicle_type nullable column
+        + packages_vehicle_type_idx. Driver list endpoint filters by driver's
+        vehicle_type; purchase endpoint returns 403 vehicle_type_mismatch.
+        Migration add_vehicle_type_to_packages applied to production Supabase
+        (swzgkhwjvikyfaqnbrix). All 8 existing packages defaulted to NULL
+        (universal) — backward compatible.
     Outstanding (not blocking):
       - Live end-to-end test against the deployed Render environment.
-      - Remove legacy configuration.tsx and verification.tsx once confirmed unused.
 
 validation_commands:
   type_check: "npx tsc --noEmit"

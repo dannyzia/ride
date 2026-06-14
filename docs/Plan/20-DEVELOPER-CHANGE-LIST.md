@@ -286,10 +286,13 @@ export const packages = pgTable('packages', {
   is_trial:      boolean('is_trial').notNull().default(false),
   is_active:     boolean('is_active').notNull().default(true),
   daily_cap:     integer('daily_cap').notNull().default(200),
+  vehicle_type:  vehicleTypeEnum('vehicle_type'),                 // NULL = universal; non-null = scoped to that vehicle type
   created_at:    timestamptz('created_at').notNull().defaultNow(),
   updated_at:    timestamptz('updated_at').notNull().defaultNow(),
   deleted_at:    timestamptz('deleted_at'),
-});
+}, (t) => [
+  index('packages_vehicle_type_idx').on(t.vehicle_type),
+]);
 
 // ── subscriptions ────────────────────────────────────────────────
 export const subscriptions = pgTable('subscriptions', {
@@ -705,8 +708,9 @@ seed().catch(console.error);
 
 ```javascript
 // scripts/seed-packages.js
-// All package attributes (call_count, duration_days, price_bdt, daily_cap) are
-// admin-configurable at runtime via admin panel. These are production defaults.
+// All package attributes (call_count, duration_days, price_bdt, daily_cap, vehicle_type)
+// are admin-configurable at runtime via admin panel. These are production defaults.
+// vehicle_type omitted (NULL) → universal packages available to every driver.
 const packages = [
   { name:'Free Trial',   call_count:5,   duration_days:7,  price_bdt:0,     is_trial:true,  daily_cap:5   },
   { name:'Starter 50',  call_count:50,  duration_days:30, price_bdt:30000, is_trial:false, daily_cap:50  },

@@ -289,15 +289,18 @@ Server calls `supabase.auth.getUser(jwt)` to verify the token and extract user c
 ### GET /api/package/list
 **Auth:** Required (driver). Trials listed first. Inactive excluded.
 
+**Vehicle-type filtering:** A package is visible to the calling driver if `packages.vehicle_type IS NULL` (universal) OR `packages.vehicle_type` matches the driver's `drivers.vehicle_type`. If the caller has no driver record yet (e.g. still onboarding), only universal packages are returned.
+
 **Response: 200**
 ```json
 {
   "packages": [
-    { "id": "uuid", "name": "Starter 50", "call_count": 50, "duration_days": 30, "price_bdt": 50000, "is_trial": false, "daily_cap": null }
+    { "id": "uuid", "name": "Starter 50", "call_count": 50, "duration_days": 30, "price_bdt": 50000, "is_trial": false, "daily_cap": null, "vehicle_type": null }
   ]
 }
 ```
 `daily_cap` is null for finite packages; for unlimited packages it reflects the `packages.daily_cap` admin-configured value.
+`vehicle_type` is null for universal packages; otherwise one of the 8 `vehicleTypeEnum` values.
 
 > **Note:** `daily_cap` is `null` for finite packages (the DB value is ignored for non-unlimited packages). Only meaningful when `call_count = -1`.
 
@@ -318,7 +321,7 @@ Server calls `supabase.auth.getUser(jwt)` to verify the token and extract user c
 3. Return PortPos hosted checkout URL to the client.
 4. The client opens a WebView with the PortPos checkout page — the user picks their payment method (bKash, Nagad, Rocket, or card) directly on PortPos's page.
 
-**Errors:** 400 (missing header), 404 (package not found/inactive), 409 (trial_already_used), 422 (driver status not eligible)
+**Errors:** 400 (missing header), 403 (driver status not eligible; OR `vehicle_type_mismatch` when package is vehicle-scoped and driver's vehicle type does not match), 404 (package not found/inactive), 409 (trial_already_used OR active subscription already exists), 422 (driver status not eligible)
 
 ---
 
@@ -2238,13 +2241,15 @@ Partial update: merges provided fields into existing JSONB.
 ---
 
 ### POST /api/admin/package
-**Body:** `{ "name": "string", "call_count": integer (-1 or positive), "duration_days": integer, "price_bdt": integer (paisa), "is_trial": boolean, "daily_cap": integer|null }`
+**Body:** `{ "name": "string", "call_count": integer (-1 or positive), "duration_days": integer, "price_bdt": integer (paisa), "is_trial": boolean, "daily_cap": integer|null, "vehicle_type": vehicleTypeEnum|null }`
 **Success: 201** `{ "package_id": "uuid", "name": "string" }`
 
 > **Note:** If `call_count > 0` (finite package), `daily_cap` is stored but ignored during dispatch. Recommended: pass `null` for finite packages to make intent explicit. Server should store `null` (not the unlimited `daily_cap` value) when `call_count > 0`.
+>
+> **Note:** `vehicle_type` defaults to `null` (universal). When non-null, the package is only purchasable by drivers whose `drivers.vehicle_type` matches; `/api/package/purchase` returns `403 vehicle_type_mismatch` otherwise.
 
 ### PATCH /api/admin/package/:id
-**Body (all optional):** `{ "name", "call_count", "duration_days", "price_bdt", "is_active", "daily_cap" }`
+**Body (all optional):** `{ "name", "call_count", "duration_days", "price_bdt", "is_active", "daily_cap", "vehicle_type" }`
 **Success: 200** `{ "package_id": "uuid", "updated": true }`
 
 ---
