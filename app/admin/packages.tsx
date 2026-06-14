@@ -17,6 +17,7 @@ import { AdminToggle } from "@/components/admin/AdminToggle";
 import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
+import { VEHICLE_TYPES, type VehicleTypeEnum } from "@/lib/vehicleTypes";
 
 interface Package {
   id: string;
@@ -27,6 +28,7 @@ interface Package {
   is_trial: boolean;
   daily_cap: number;
   is_active: boolean;
+  vehicle_type: VehicleTypeEnum | null;
   created_at: string;
   updated_at: string;
 }
@@ -49,7 +51,20 @@ const EMPTY_FORM: Record<string, unknown> = {
   daily_cap: 200,
   is_trial: false,
   is_active: true,
+  vehicle_type: "", // "" = all vehicle types (NULL in DB)
 };
+
+// Options for the vehicle-type select field.
+// "" represents NULL (universal package).
+const VEHICLE_TYPE_OPTIONS = [
+  { label: "All Types", value: "" },
+  ...VEHICLE_TYPES.map((v) => ({ label: v.display_en, value: v.key })),
+];
+
+function vehicleLabel(vt: VehicleTypeEnum | null | undefined): string {
+  if (!vt) return "All";
+  return VEHICLE_TYPES.find((v) => v.key === vt)?.display_en ?? vt;
+}
 
 export default function PackagesScreen() {
   const toast = useAdminToast();
@@ -103,6 +118,7 @@ export default function PackagesScreen() {
       daily_cap: pkg.daily_cap,
       is_trial: pkg.is_trial,
       is_active: pkg.is_active,
+      vehicle_type: pkg.vehicle_type ?? "",
     });
     setModalVisible(true);
   };
@@ -148,6 +164,7 @@ export default function PackagesScreen() {
       daily_cap: Math.floor(daily_cap),
       is_trial: Boolean(form.is_trial),
       is_active: Boolean(form.is_active),
+      vehicle_type: form.vehicle_type || null, // "" → null (universal)
     };
 
     setSubmitting(true);
@@ -261,6 +278,13 @@ export default function PackagesScreen() {
     },
     { name: "is_trial", label: "Trial package", type: "boolean" },
     { name: "is_active", label: "Active", type: "boolean" },
+    {
+      name: "vehicle_type",
+      label: "Vehicle Type",
+      type: "select",
+      options: VEHICLE_TYPE_OPTIONS,
+      helpText: "All Types = available to every vehicle type.",
+    },
   ];
 
   const columns: AdminColumn<Package>[] = [
@@ -292,6 +316,14 @@ export default function PackagesScreen() {
       ),
     },
     { key: "daily_cap", header: "Daily Cap", width: 100 },
+    {
+      key: "vehicle_type",
+      header: "Vehicle",
+      width: 120,
+      render: (p) => (
+        <Text style={styles.cellText}>{vehicleLabel(p.vehicle_type)}</Text>
+      ),
+    },
     {
       key: "is_active",
       header: "Active",

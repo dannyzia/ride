@@ -47,7 +47,11 @@ export async function POST(request: Request) {
       return Response.json({ error: "user_not_found" }, { status: 404 });
 
     const [driver] = await db
-      .select({ id: drivers.id, status: drivers.status })
+      .select({
+        id: drivers.id,
+        status: drivers.status,
+        vehicle_type: drivers.vehicle_type,
+      })
       .from(drivers)
       .where(eq(drivers.user_id, user.id))
       .limit(1);
@@ -102,6 +106,18 @@ export async function POST(request: Request) {
           message: "Package not found or inactive",
         },
         { status: 422 },
+      );
+    }
+
+    // Enforce vehicle-type restriction: if the package is scoped to a
+    // specific vehicle type, the purchasing driver must match.
+    if (pkg.vehicle_type !== null && pkg.vehicle_type !== driver.vehicle_type) {
+      return Response.json(
+        {
+          error: "vehicle_type_mismatch",
+          message: `This package is only available for ${pkg.vehicle_type} drivers`,
+        },
+        { status: 403 },
       );
     }
 

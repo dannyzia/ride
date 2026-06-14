@@ -344,19 +344,24 @@ export const vehicles = pgTable(
   ],
 );
 
-export const packages = pgTable("packages", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
-  call_count: integer("call_count").notNull(),
-  duration_days: integer("duration_days").notNull(),
-  price_bdt: integer("price_bdt").notNull(),
-  is_trial: boolean("is_trial").notNull().default(false),
-  is_active: boolean("is_active").notNull().default(true),
-  daily_cap: integer("daily_cap").notNull().default(200),
-  created_at: timestamptz("created_at").notNull().defaultNow(),
-  updated_at: timestamptz("updated_at").notNull().defaultNow(),
-  deleted_at: timestamptz("deleted_at"),
-});
+export const packages = pgTable(
+  "packages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(),
+    call_count: integer("call_count").notNull(),
+    duration_days: integer("duration_days").notNull(),
+    price_bdt: integer("price_bdt").notNull(),
+    is_trial: boolean("is_trial").notNull().default(false),
+    is_active: boolean("is_active").notNull().default(true),
+    daily_cap: integer("daily_cap").notNull().default(200),
+    vehicle_type: vehicleTypeEnum("vehicle_type"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+    deleted_at: timestamptz("deleted_at"),
+  },
+  (t) => [index("packages_vehicle_type_idx").on(t.vehicle_type)],
+);
 
 export const promoCodes = pgTable(
   "promo_codes",

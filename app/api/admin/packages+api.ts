@@ -5,6 +5,7 @@ import { eq, desc } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
@@ -14,6 +15,7 @@ const createSchema = z.object({
   is_trial: z.boolean().optional().default(false),
   daily_cap: z.number().int().positive().optional().default(200),
   is_active: z.boolean().optional().default(true),
+  vehicle_type: VEHICLE_TYPE_ZOD_ENUM.nullable().optional().default(null),
 });
 
 const updateSchema = createSchema.partial().extend({
