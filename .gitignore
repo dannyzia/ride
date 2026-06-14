@@ -7,6 +7,7 @@ node_modules/
 .expo/
 dist/
 web-build/
+.expo/web/cache/
 expo-env.d.ts
 
 # Native
@@ -49,6 +50,7 @@ yarn-error.*
 .claude/
 .kilo/
 .serena/
+.code-review-graph/
 .mcp.json
 
 # Vercel
@@ -97,6 +99,7 @@ financials/
 scripts/start-metro.cmd
 
 App Design/
+
 
 # Legacy config
 app-example
