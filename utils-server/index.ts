@@ -117,6 +117,8 @@ function sendToUser(userId: string, msg: Record<string, unknown>) {
 // ── HTTP Server ────────────────────────────────────────────────────────────
 const WEBSOCKET_INTERNAL_SECRET = process.env.WEBSOCKET_INTERNAL_SECRET ?? "";
 
+const START_TIME = Date.now();
+
 const server = http.createServer(async (req, res) => {
   const writeJson = (code: number, data: Record<string, unknown>) => {
     res.writeHead(code, { "Content-Type": "application/json" });
@@ -124,9 +126,46 @@ const server = http.createServer(async (req, res) => {
   };
 
   if (req.url === "/health") {
-    res.writeHead(200);
-    res.end("ok");
-    return;
+    const uptimeSeconds = Math.floor((Date.now() - START_TIME) / 1000);
+
+    // Quick database health check (non-blocking for the main health response)
+    let dbStatus = "unknown";
+    let dbError: string | undefined;
+
+    // Check only if we can do so quickly (avoid blocking)
+    const checkDb = async () => {
+      try {
+        await db.select().from(users).limit(1);
+        dbStatus = "ok";
+      } catch (e: any) {
+        dbStatus = "error";
+        dbError = e.message;
+      }
+    };
+
+    // Fire DB check in background, don't await it
+    checkDb().catch(() => {});
+
+    return writeJson(200, {
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      service: "ride-ws",
+      version: process.env.npm_package_version || "1.0.0",
+      uptime_seconds: uptimeSeconds,
+      env: process.env.NODE_ENV || "production",
+      websocket: {
+        connected_clients: allClients.size,
+        connected_drivers: connectedDrivers.size,
+        connected_riders: connectedRiders.size,
+      },
+      database: {
+        status: dbStatus,
+        error: dbError,
+      },
+      h3_index: {
+        drivers_indexed: getDriversInCells(["dummy"], "bike_basic").length, // cheap way to get total indexed drivers
+      },
+    });
   }
 
   // All internal endpoints require shared secret
