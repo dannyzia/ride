@@ -1,6 +1,10 @@
-// F15-UI-02 Call Packages Management
-// Admin CRUD for driver subscription packages. Prices stored as integer paisa;
-// the form works in taka and converts ×100 on save, ÷100 on load.
+// F15-UI-09 Point Offers Management
+// Admin CRUD for loyalty point redemption offers. Drivers accumulate points
+// and spend them here. reward_type is one of: package_grant | wallet_credit.
+// reward_value is a string that holds either a package_id UUID (for
+// package_grant) or an integer paisa amount (for wallet_credit).
+//
+// Schema: pointOffers (src/db/schema.ts). points_required is a positive int.
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,65 +22,69 @@ import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
-interface Package {
+type RewardType = "package_grant" | "wallet_credit";
+
+interface PointOffer {
   id: string;
-  name: string;
-  call_count: number;
-  duration_days: number;
-  price_bdt: number; // integer paisa
-  is_trial: boolean;
-  daily_cap: number;
+  title: string;
+  points_required: number;
+  reward_type: RewardType;
+  reward_value: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-interface PackagesResponse {
-  packages: Package[];
+interface OffersResponse {
+  offers: PointOffer[];
 }
 
-interface PackageResponse {
-  package: Package;
+interface OfferResponse {
+  offer: PointOffer;
 }
 
 type Mode = "create" | "edit";
 
+const REWARD_TYPE_OPTIONS: { label: string; value: RewardType }[] = [
+  { label: "Package Grant", value: "package_grant" },
+  { label: "Wallet Credit", value: "wallet_credit" },
+];
+
 const EMPTY_FORM: Record<string, unknown> = {
-  name: "",
-  call_count: 100,
-  duration_days: 30,
-  price_bdt_taka: 100, // taka (×100 → paisa on save)
-  daily_cap: 200,
-  is_trial: false,
+  title: "",
+  points_required: 100,
+  reward_type: "package_grant",
+  reward_value: "",
   is_active: true,
 };
 
-export default function PackagesScreen() {
+export default function PointOffersScreen() {
   const toast = useAdminToast();
-  const [packages, setPackages] = useState<Package[]>([]);
+  const [offers, setOffers] = useState<PointOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [mode, setMode] = useState<Mode>("create");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, unknown>>({ ...EMPTY_FORM });
-  const [confirmDeactivate, setConfirmDeactivate] = useState<Package | null>(
-    null,
-  );
+  const [confirmDeactivate, setConfirmDeactivate] =
+    useState<PointOffer | null>(null);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
-    const { data, error, status } = await adminFetch<PackagesResponse>(
-      "/api/admin/packages",
+    // include_inactive=true so admins see the full list (inactive offers are
+    // hidden from drivers but visible to admins).
+    const { data, error, status } = await adminFetch<OffersResponse>(
+      "/api/admin/point-offers?include_inactive=true",
       { method: "GET" },
     );
     if (error || !data) {
       if (status !== 0) {
-        toast.show(`Failed to load packages: ${error ?? "unknown"}`, "error");
+        toast.show(`Failed to load offers: ${error ?? "unknown"}`, "error");
       }
-      setPackages([]);
+      setOffers([]);
     } else {
-      setPackages(data.packages);
+      setOffers(data.offers);
     }
     setLoading(false);
   }, [toast]);
@@ -92,17 +100,15 @@ export default function PackagesScreen() {
     setModalVisible(true);
   };
 
-  const openEdit = (pkg: Package) => {
+  const openEdit = (o: PointOffer) => {
     setMode("edit");
-    setEditingId(pkg.id);
+    setEditingId(o.id);
     setForm({
-      name: pkg.name,
-      call_count: pkg.call_count,
-      duration_days: pkg.duration_days,
-      price_bdt_taka: pkg.price_bdt / 100, // paisa → taka
-      daily_cap: pkg.daily_cap,
-      is_trial: pkg.is_trial,
-      is_active: pkg.is_active,
+      title: o.title,
+      points_required: o.points_required,
+      reward_type: o.reward_type,
+      reward_value: o.reward_value,
+      is_active: o.is_active,
     });
     setModalVisible(true);
   };
@@ -112,69 +118,81 @@ export default function PackagesScreen() {
     setModalVisible(false);
   };
 
-  const handleSave = async () => {
-    const name = String(form.name ?? "").trim();
-    if (!name) {
-      toast.show("Name is required", "error");
-      return;
+  const buildPayload = () => {
+    const title = String(form.title ?? "").trim();
+    if (!title) {
+      toast.show("Title is required", "error");
+      return null;
     }
-    const call_count = Number(form.call_count);
-    const duration_days = Number(form.duration_days);
-    const price_bdt_taka = Number(form.price_bdt_taka);
-    const daily_cap = Number(form.daily_cap);
-
-    if (!Number.isFinite(call_count) || call_count <= 0) {
-      toast.show("Calls must be a positive integer", "error");
-      return;
+    const pointsRequired = Number(form.points_required);
+    if (
+      !Number.isFinite(pointsRequired) ||
+      pointsRequired < 1 ||
+      !Number.isInteger(pointsRequired)
+    ) {
+      toast.show("Points required must be a positive integer", "error");
+      return null;
     }
-    if (!Number.isFinite(duration_days) || duration_days <= 0) {
-      toast.show("Duration must be a positive integer", "error");
-      return;
+    const rewardType = form.reward_type as RewardType;
+    if (rewardType !== "package_grant" && rewardType !== "wallet_credit") {
+      toast.show("Reward type must be selected", "error");
+      return null;
     }
-    if (!Number.isFinite(price_bdt_taka) || price_bdt_taka < 0) {
-      toast.show("Price must be ≥ 0", "error");
-      return;
+    const rewardValue = String(form.reward_value ?? "").trim();
+    if (!rewardValue) {
+      toast.show("Reward value is required", "error");
+      return null;
     }
-    if (!Number.isFinite(daily_cap) || daily_cap <= 0) {
-      toast.show("Daily cap must be a positive integer", "error");
-      return;
+    if (rewardType === "wallet_credit") {
+      // Wallet credit value is integer paisa.
+      const paisa = Number(rewardValue);
+      if (
+        !Number.isFinite(paisa) ||
+        paisa < 1 ||
+        !Number.isInteger(paisa)
+      ) {
+        toast.show(
+          "Wallet credit must be a positive integer paisa amount",
+          "error",
+        );
+        return null;
+      }
     }
-
-    const payload = {
-      name,
-      call_count: Math.floor(call_count),
-      duration_days: Math.floor(duration_days),
-      price_bdt: Math.round(price_bdt_taka * 100), // taka → paisa
-      daily_cap: Math.floor(daily_cap),
-      is_trial: Boolean(form.is_trial),
+    return {
+      title,
+      points_required: pointsRequired,
+      reward_type: rewardType,
+      reward_value: rewardValue,
       is_active: Boolean(form.is_active),
     };
+  };
+
+  const handleSave = async () => {
+    const payload = buildPayload();
+    if (!payload) return;
 
     setSubmitting(true);
     try {
       if (mode === "create") {
-        const { data, error } = await adminFetch<PackageResponse>(
-          "/api/admin/packages",
+        const { data, error } = await adminFetch<OfferResponse>(
+          "/api/admin/point-offers",
           { method: "POST", body: JSON.stringify(payload) },
         );
         if (error || !data) {
           toast.show(`Create failed: ${error ?? "unknown"}`, "error");
           return;
         }
-        toast.show("Package created", "success");
+        toast.show("Offer created", "success");
       } else if (editingId) {
-        const { data, error } = await adminFetch<PackageResponse>(
-          "/api/admin/packages",
-          {
-            method: "PUT",
-            body: JSON.stringify({ id: editingId, ...payload }),
-          },
+        const { data, error } = await adminFetch<OfferResponse>(
+          `/api/admin/point-offer/${editingId}`,
+          { method: "PATCH", body: JSON.stringify(payload) },
         );
         if (error || !data) {
           toast.show(`Update failed: ${error ?? "unknown"}`, "error");
           return;
         }
-        toast.show("Package updated", "success");
+        toast.show("Offer updated", "success");
       }
       setModalVisible(false);
       await fetchList();
@@ -183,47 +201,47 @@ export default function PackagesScreen() {
     }
   };
 
-  const handleToggleActive = async (pkg: Package) => {
-    const next = !pkg.is_active;
-    const { error } = await adminFetch<PackageResponse>("/api/admin/packages", {
-      method: "PUT",
-      body: JSON.stringify({ id: pkg.id, is_active: next }),
-    });
+  const handleToggleActive = async (o: PointOffer) => {
+    const next = !o.is_active;
+    const { error } = await adminFetch<OfferResponse>(
+      `/api/admin/point-offer/${o.id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ is_active: next }),
+      },
+    );
     if (error) {
       toast.show(`Toggle failed: ${error}`, "error");
       return;
     }
-    toast.show(next ? "Package activated" : "Package deactivated", "success");
+    toast.show(next ? "Offer activated" : "Offer deactivated", "success");
     await fetchList();
   };
 
-  const openDeactivate = (pkg: Package) => {
-    if (!pkg.is_active) {
-      toast.show("Package is already inactive", "info");
+  const openDeactivate = (o: PointOffer) => {
+    if (!o.is_active) {
+      toast.show("Offer is already inactive", "info");
       return;
     }
-    setConfirmDeactivate(pkg);
+    setConfirmDeactivate(o);
   };
 
   const confirmDeactivateAction = async () => {
     if (!confirmDeactivate) return;
     setSubmitting(true);
     try {
-      const { error } = await adminFetch<PackageResponse>(
-        "/api/admin/packages",
+      const { error } = await adminFetch<OfferResponse>(
+        `/api/admin/point-offer/${confirmDeactivate.id}`,
         {
-          method: "PUT",
-          body: JSON.stringify({
-            id: confirmDeactivate.id,
-            is_active: false,
-          }),
+          method: "PATCH",
+          body: JSON.stringify({ is_active: false }),
         },
       );
       if (error) {
         toast.show(`Deactivate failed: ${error}`, "error");
         return;
       }
-      toast.show("Package deactivated", "success");
+      toast.show("Offer deactivated", "success");
       setConfirmDeactivate(null);
       await fetchList();
     } finally {
@@ -233,85 +251,126 @@ export default function PackagesScreen() {
 
   const fields: AdminField[] = [
     {
-      name: "name",
-      label: "Name",
+      name: "title",
+      label: "Title",
       type: "text",
       required: true,
-      placeholder: "e.g. Starter 100",
+      placeholder: "e.g. Free Starter 100 Package",
     },
-    { name: "call_count", label: "Calls", type: "number", required: true },
     {
-      name: "duration_days",
-      label: "Duration (days)",
+      name: "points_required",
+      label: "Points Required",
       type: "number",
       required: true,
     },
     {
-      name: "price_bdt_taka",
-      label: "Price (৳ taka)",
-      type: "number",
+      name: "reward_type",
+      label: "Reward Type",
+      type: "select",
       required: true,
-      helpText: "Whole taka. Multiplied by 100 to store as paisa.",
+      options: REWARD_TYPE_OPTIONS,
+      helpText:
+        "package_grant = give a call package (reward_value = package_id). " +
+        "wallet_credit = credit driver wallet (reward_value = paisa amount).",
     },
     {
-      name: "daily_cap",
-      label: "Daily Cap (calls/day)",
-      type: "number",
+      name: "reward_value",
+      label: "Reward Value",
+      type: "text",
       required: true,
+      placeholder:
+        form.reward_type === "wallet_credit"
+          ? "paisa, e.g. 5000 (= ৳50)"
+          : "package_id UUID",
     },
-    { name: "is_trial", label: "Trial package", type: "boolean" },
     { name: "is_active", label: "Active", type: "boolean" },
   ];
 
-  const columns: AdminColumn<Package>[] = [
+  const columns: AdminColumn<PointOffer>[] = [
     {
-      key: "name",
-      header: "Name",
+      key: "title",
+      header: "Title",
       sortable: true,
-      render: (p) => <Text style={styles.cellPrimary}>{p.name}</Text>,
+      render: (o) => <Text style={styles.cellPrimary}>{o.title}</Text>,
     },
-    { key: "call_count", header: "Calls", sortable: true, width: 90 },
-    { key: "duration_days", header: "Days", sortable: true, width: 80 },
     {
-      key: "price_bdt",
-      header: "Price",
+      key: "points_required",
+      header: "Points",
       sortable: true,
       width: 100,
-      render: (p) => (
-        <Text style={styles.cellText}>৳{(p.price_bdt / 100).toFixed(0)}</Text>
+      render: (o) => (
+        <Text style={styles.cellText}>{o.points_required} pts</Text>
       ),
     },
     {
-      key: "is_trial",
-      header: "Trial",
-      width: 80,
-      render: (p) => (
-        <Text style={[styles.cellText, p.is_trial && { color: colors.amber }]}>
-          {p.is_trial ? "Yes" : "No"}
-        </Text>
-      ),
+      key: "reward_type",
+      header: "Reward Type",
+      width: 150,
+      render: (o) => {
+        const isWallet = o.reward_type === "wallet_credit";
+        return (
+          <View
+            style={[
+              styles.badge,
+              isWallet ? styles.badgeWallet : styles.badgePackage,
+            ]}
+          >
+            <Text style={styles.badgeText}>
+              {isWallet ? "Wallet Credit" : "Package Grant"}
+            </Text>
+          </View>
+        );
+      },
     },
-    { key: "daily_cap", header: "Daily Cap", width: 100 },
+    {
+      key: "reward_value",
+      header: "Reward Value",
+      width: 200,
+      render: (o) => {
+        if (o.reward_type === "wallet_credit") {
+          const paisa = Number(o.reward_value);
+          const taka = Number.isFinite(paisa)
+            ? (paisa / 100).toFixed(0)
+            : o.reward_value;
+          return <Text style={styles.cellText}>৳{taka}</Text>;
+        }
+        // package_id UUID — truncate for display.
+        const v = o.reward_value;
+        const short = v.length > 13 ? `${v.slice(0, 8)}…` : v;
+        return <Text style={styles.cellText}>{short}</Text>;
+      },
+    },
     {
       key: "is_active",
       header: "Active",
       width: 100,
-      render: (p) => (
+      render: (o) => (
         <AdminToggle
-          value={p.is_active}
-          onValueChange={() => handleToggleActive(p)}
+          value={o.is_active}
+          onValueChange={() => handleToggleActive(o)}
         />
+      ),
+    },
+    {
+      key: "created_at",
+      header: "Created",
+      sortable: true,
+      width: 180,
+      render: (o) => (
+        <Text style={styles.cellText}>
+          {new Date(o.created_at).toLocaleString()}
+        </Text>
       ),
     },
     {
       key: "actions",
       header: "Actions",
       width: 220,
-      render: (p) => (
+      render: (o) => (
         <View style={styles.actionsRow}>
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
-            onPress={() => openEdit(p)}
+            onPress={() => openEdit(o)}
           >
             <Text style={styles.miniBtnText}>Edit</Text>
           </Pressable>
@@ -320,11 +379,11 @@ export default function PackagesScreen() {
               styles.miniBtn,
               {
                 backgroundColor: colors.danger,
-                opacity: p.is_active ? 1 : 0.4,
+                opacity: o.is_active ? 1 : 0.4,
               },
             ]}
-            onPress={() => openDeactivate(p)}
-            disabled={!p.is_active}
+            onPress={() => openDeactivate(o)}
+            disabled={!o.is_active}
           >
             <Text style={styles.miniBtnText}>Deactivate</Text>
           </Pressable>
@@ -335,31 +394,31 @@ export default function PackagesScreen() {
 
   return (
     <AdminShell
-      title="Call Packages"
-      subtitle="Subscription tiers drivers can buy"
+      title="Point Offers"
+      subtitle="Loyalty rewards drivers redeem with points"
       actions={
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable style={styles.ghostBtn} onPress={fetchList}>
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
           <Pressable style={styles.primaryBtn} onPress={openCreate}>
-            <Text style={styles.primaryBtnText}>+ New Package</Text>
+            <Text style={styles.primaryBtnText}>+ New Offer</Text>
           </Pressable>
         </View>
       }
     >
       <AdminTable
         columns={columns}
-        rows={packages}
-        rowKey={(p) => p.id}
+        rows={offers}
+        rowKey={(o) => o.id}
         loading={loading}
-        emptyMessage="No packages yet. Create one to get started."
+        emptyMessage="No offers yet. Create one to get started."
         pagination={null}
       />
 
       <AdminModal
         visible={modalVisible}
-        title={mode === "create" ? "New Package" : "Edit Package"}
+        title={mode === "create" ? "New Offer" : "Edit Offer"}
         onClose={closeModal}
         footer={
           <View style={{ flexDirection: "row", gap: 10 }}>
@@ -391,7 +450,7 @@ export default function PackagesScreen() {
 
       <AdminModal
         visible={!!confirmDeactivate}
-        title="Deactivate package"
+        title="Deactivate offer"
         onClose={() => !submitting && setConfirmDeactivate(null)}
         width={460}
         footer={
@@ -418,7 +477,7 @@ export default function PackagesScreen() {
         }
       >
         <Text style={styles.confirmText}>
-          Deactivate this package? Riders can no longer purchase it.
+          Deactivate this offer? Drivers will no longer be able to redeem it.
         </Text>
       </AdminModal>
     </AdminShell>
@@ -435,6 +494,23 @@ const styles = StyleSheet.create({
     color: colors.textPrimaryDark,
     fontFamily: "Jakarta-Regular",
     fontSize: 13,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    alignSelf: "flex-start",
+  },
+  badgePackage: {
+    backgroundColor: "rgba(100, 181, 246, 0.18)",
+  },
+  badgeWallet: {
+    backgroundColor: "rgba(12, 194, 95, 0.18)",
+  },
+  badgeText: {
+    color: colors.adminSubtle,
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 11,
   },
   actionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   miniBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },

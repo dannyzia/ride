@@ -30,6 +30,34 @@ const patchSchema = createSchema.partial().extend({
   is_active: z.boolean().optional(),
 });
 
+export async function GET(req: Request) {
+  try {
+    await requireRole("admin")(req);
+
+    const url = new URL(req.url);
+    const includeInactive = url.searchParams.get("include_inactive") === "true";
+
+    const rows = await db
+      .select()
+      .from(incentiveDefinitions)
+      .where(
+        includeInactive
+          ? undefined
+          : eq(incentiveDefinitions.deleted_at, null as any),
+      )
+      .orderBy(incentiveDefinitions.created_at);
+
+    return Response.json({ incentives: rows });
+  } catch (err: any) {
+    if (err.status === 401)
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 403)
+      return Response.json({ error: "forbidden" }, { status: 403 });
+    logger.error("[admin/incentives] list error", err);
+    return Response.json({ error: "internal_error" }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   const { dbUser } = await requireRole("admin")(req);
 

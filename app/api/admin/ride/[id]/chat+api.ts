@@ -1,25 +1,46 @@
-import { db } from '../../../../../src/db';
-import { chatMessages, rides, users, drivers } from '../../../../../src/db/schema';
-import { eq, asc } from 'drizzle-orm';
-import { verifySupabaseToken } from '@/lib/auth';
-import { logger } from '../../../../../lib/logger';
+// GET /api/admin/ride/[id]/chat
+// F15-API-04. Full chat history for a ride (admin dispute resolution view).
+// Joins chat_messages with users so admin sees sender_name + sender_role without
+// additional client lookups. Also returns rider/driver context for display.
+import { db } from "@/src/db";
+import { chatMessages, users, rides, drivers } from "@/src/db/schema";
+import { eq, asc } from "drizzle-orm";
+import { requireRole } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+interface Params {
+  params: { id: string };
+}
+
+export async function GET(request: Request, { params }: Params) {
   try {
-    const user = await verifySupabaseToken(req);
+    await requireRole("admin")(request);
+    const { id: rideId } = params;
 
-    const [admin] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!admin) return Response.json({ error: 'user_not_found' }, { status: 404 });
-    if (admin.role !== 'admin') return Response.json({ error: 'forbidden' }, { status: 403 });
+    const [ride] = await db
+      .select()
+      .from(rides)
+      .where(eq(rides.id, rideId))
+      .limit(1);
+    if (!ride)
+      return Response.json({ error: "ride_not_found" }, { status: 404 });
 
-    const [ride] = await db.select().from(rides).where(eq(rides.id, params.id)).limit(1);
-    if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
+    const [rider] = ride.user_id
+      ? await db
+          .select({ id: users.id, name: users.name, phone: users.phone })
+          .from(users)
+          .where(eq(users.id, ride.user_id))
+          .limit(1)
+      : [null];
 
-    const [rider] = await db.select({ id: users.id, name: users.name, phone: users.phone }).from(users).where(eq(users.id, ride.user_id)).limit(1);
-
-    let driverUser = null;
+    let driverUser: {
+      id: string;
+      name: string | null;
+      phone: string | null;
+    } | null = null;
     if (ride.driver_id) {
-      const [result] = await db.select({ id: users.id, name: users.name, phone: users.phone })
+      const [result] = await db
+        .select({ id: users.id, name: users.name, phone: users.phone })
         .from(users)
         .innerJoin(drivers, eq(drivers.user_id, users.id))
         .where(eq(drivers.id, ride.driver_id))
@@ -27,35 +48,36 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       driverUser = result ?? null;
     }
 
-    const messages = await db.select({
-      id: chatMessages.id,
-      sender_id: chatMessages.sender_id,
-      content: chatMessages.content,
-      created_at: chatMessages.created_at,
-    }).from(chatMessages)
-      .where(eq(chatMessages.ride_id, params.id))
-      .orderBy(asc(chatMessages.created_at)); // chronologically for export
-
-    // Enrich messages with sender info
-    const enriched = messages.map((m) => ({
-      ...m,
-      sender_name: m.sender_id === rider?.id ? (rider?.name ?? 'Rider') : (driverUser?.name ?? 'Driver'),
-      sender_role: m.sender_id === rider?.id ? 'rider' : 'driver',
-    }));
+    const messages = await db
+      .select({
+        id: chatMessages.id,
+        sender_id: chatMessages.sender_id,
+        sender_name: users.name,
+        sender_role: users.role,
+        content: chatMessages.content,
+        created_at: chatMessages.created_at,
+      })
+      .from(chatMessages)
+      .innerJoin(users, eq(chatMessages.sender_id, users.id))
+      .where(eq(chatMessages.ride_id, rideId))
+      .orderBy(asc(chatMessages.created_at));
 
     return Response.json({
-      ride_id: params.id,
+      ride_id: rideId,
       ride_status: ride.status,
       ride_created_at: ride.created_at,
       rider: rider ? { name: rider.name, phone: rider.phone } : null,
       driver: driverUser,
-      messages: enriched,
-      message_count: enriched.length,
+      messages,
+      message_count: messages.length,
     });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
-    logger.error('[admin/ride/chat] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+  } catch (err: unknown) {
+    const status = (err as { status?: number }).status;
+    if (status === 401)
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (status === 403)
+      return Response.json({ error: "forbidden" }, { status: 403 });
+    logger.error("[admin/ride/chat] error", err);
+    return Response.json({ error: "internal_error" }, { status: 500 });
   }
 }

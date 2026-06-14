@@ -1,6 +1,10 @@
-// F15-UI-02 Call Packages Management
-// Admin CRUD for driver subscription packages. Prices stored as integer paisa;
-// the form works in taka and converts ×100 on save, ÷100 on load.
+// F15-UI-08 Referral Campaigns Management
+// Admin CRUD for driver referral reward programs. Only one campaign may be
+// active at a time — the server enforces this; activating one deactivates the
+// previous active campaign.
+//
+// Schema: referralCampaigns (src/db/schema.ts). Percent fields are integers
+// 1–100. max_uses_per_campaign is nullable (null = unlimited, shown as "∞").
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,65 +22,65 @@ import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
-interface Package {
+interface ReferralCampaign {
   id: string;
   name: string;
-  call_count: number;
-  duration_days: number;
-  price_bdt: number; // integer paisa
-  is_trial: boolean;
-  daily_cap: number;
+  referrer_reward_percent: number;
+  referee_reward_percent: number;
+  max_uses_per_referrer: number;
+  max_uses_per_campaign: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-interface PackagesResponse {
-  packages: Package[];
+interface CampaignsResponse {
+  campaigns: ReferralCampaign[];
 }
 
-interface PackageResponse {
-  package: Package;
+interface CampaignResponse {
+  campaign: ReferralCampaign;
 }
 
 type Mode = "create" | "edit";
 
 const EMPTY_FORM: Record<string, unknown> = {
   name: "",
-  call_count: 100,
-  duration_days: 30,
-  price_bdt_taka: 100, // taka (×100 → paisa on save)
-  daily_cap: 200,
-  is_trial: false,
+  referrer_reward_percent: 10,
+  referee_reward_percent: 10,
+  max_uses_per_referrer: 1,
+  max_uses_per_campaign: "", // empty → null = unlimited
   is_active: true,
 };
 
-export default function PackagesScreen() {
+export default function ReferralCampaignsScreen() {
   const toast = useAdminToast();
-  const [packages, setPackages] = useState<Package[]>([]);
+  const [campaigns, setCampaigns] = useState<ReferralCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [mode, setMode] = useState<Mode>("create");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, unknown>>({ ...EMPTY_FORM });
-  const [confirmDeactivate, setConfirmDeactivate] = useState<Package | null>(
-    null,
-  );
+  const [confirmDeactivate, setConfirmDeactivate] =
+    useState<ReferralCampaign | null>(null);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
-    const { data, error, status } = await adminFetch<PackagesResponse>(
-      "/api/admin/packages",
+    const { data, error, status } = await adminFetch<CampaignsResponse>(
+      "/api/admin/referral-campaigns",
       { method: "GET" },
     );
     if (error || !data) {
       if (status !== 0) {
-        toast.show(`Failed to load packages: ${error ?? "unknown"}`, "error");
+        toast.show(
+          `Failed to load campaigns: ${error ?? "unknown"}`,
+          "error",
+        );
       }
-      setPackages([]);
+      setCampaigns([]);
     } else {
-      setPackages(data.packages);
+      setCampaigns(data.campaigns);
     }
     setLoading(false);
   }, [toast]);
@@ -92,17 +96,17 @@ export default function PackagesScreen() {
     setModalVisible(true);
   };
 
-  const openEdit = (pkg: Package) => {
+  const openEdit = (c: ReferralCampaign) => {
     setMode("edit");
-    setEditingId(pkg.id);
+    setEditingId(c.id);
     setForm({
-      name: pkg.name,
-      call_count: pkg.call_count,
-      duration_days: pkg.duration_days,
-      price_bdt_taka: pkg.price_bdt / 100, // paisa → taka
-      daily_cap: pkg.daily_cap,
-      is_trial: pkg.is_trial,
-      is_active: pkg.is_active,
+      name: c.name,
+      referrer_reward_percent: c.referrer_reward_percent,
+      referee_reward_percent: c.referee_reward_percent,
+      max_uses_per_referrer: c.max_uses_per_referrer,
+      max_uses_per_campaign:
+        c.max_uses_per_campaign == null ? "" : c.max_uses_per_campaign,
+      is_active: c.is_active,
     });
     setModalVisible(true);
   };
@@ -112,69 +116,108 @@ export default function PackagesScreen() {
     setModalVisible(false);
   };
 
-  const handleSave = async () => {
+  const buildPayload = () => {
     const name = String(form.name ?? "").trim();
     if (!name) {
       toast.show("Name is required", "error");
-      return;
+      return null;
     }
-    const call_count = Number(form.call_count);
-    const duration_days = Number(form.duration_days);
-    const price_bdt_taka = Number(form.price_bdt_taka);
-    const daily_cap = Number(form.daily_cap);
+    const referrerPct = Number(form.referrer_reward_percent);
+    const refereePct = Number(form.referee_reward_percent);
+    const maxPerReferrer = Number(form.max_uses_per_referrer);
+    const maxPerCampaignRaw = form.max_uses_per_campaign;
+    const maxPerCampaignNum =
+      maxPerCampaignRaw === "" || maxPerCampaignRaw == null
+        ? null
+        : Number(maxPerCampaignRaw);
 
-    if (!Number.isFinite(call_count) || call_count <= 0) {
-      toast.show("Calls must be a positive integer", "error");
-      return;
+    if (
+      !Number.isFinite(referrerPct) ||
+      referrerPct < 1 ||
+      referrerPct > 100 ||
+      !Number.isInteger(referrerPct)
+    ) {
+      toast.show("Referrer % must be an integer 1–100", "error");
+      return null;
     }
-    if (!Number.isFinite(duration_days) || duration_days <= 0) {
-      toast.show("Duration must be a positive integer", "error");
-      return;
+    if (
+      !Number.isFinite(refereePct) ||
+      refereePct < 1 ||
+      refereePct > 100 ||
+      !Number.isInteger(refereePct)
+    ) {
+      toast.show("Referee % must be an integer 1–100", "error");
+      return null;
     }
-    if (!Number.isFinite(price_bdt_taka) || price_bdt_taka < 0) {
-      toast.show("Price must be ≥ 0", "error");
-      return;
+    if (
+      !Number.isFinite(maxPerReferrer) ||
+      maxPerReferrer < 1 ||
+      !Number.isInteger(maxPerReferrer)
+    ) {
+      toast.show("Max/referrer must be a positive integer", "error");
+      return null;
     }
-    if (!Number.isFinite(daily_cap) || daily_cap <= 0) {
-      toast.show("Daily cap must be a positive integer", "error");
-      return;
+    if (
+      maxPerCampaignNum !== null &&
+      (!Number.isFinite(maxPerCampaignNum) ||
+        maxPerCampaignNum < 1 ||
+        !Number.isInteger(maxPerCampaignNum))
+    ) {
+      toast.show("Max total must be a positive integer or blank", "error");
+      return null;
     }
 
-    const payload = {
+    return {
       name,
-      call_count: Math.floor(call_count),
-      duration_days: Math.floor(duration_days),
-      price_bdt: Math.round(price_bdt_taka * 100), // taka → paisa
-      daily_cap: Math.floor(daily_cap),
-      is_trial: Boolean(form.is_trial),
+      referrer_reward_percent: referrerPct,
+      referee_reward_percent: refereePct,
+      max_uses_per_referrer: maxPerReferrer,
+      max_uses_per_campaign: maxPerCampaignNum,
       is_active: Boolean(form.is_active),
     };
+  };
+
+  const handleSave = async () => {
+    const payload = buildPayload();
+    if (!payload) return;
+
+    // Warn the admin that activating will swap out any current active campaign.
+    // Server enforces single-active rule regardless; this is informational.
+    const willActivate = payload.is_active;
+    if (willActivate) {
+      const otherActive = campaigns.find(
+        (c) => c.is_active && c.id !== editingId,
+      );
+      if (otherActive) {
+        toast.show(
+          "Activating will deactivate any other currently-active campaign",
+          "warning",
+        );
+      }
+    }
 
     setSubmitting(true);
     try {
       if (mode === "create") {
-        const { data, error } = await adminFetch<PackageResponse>(
-          "/api/admin/packages",
+        const { data, error } = await adminFetch<CampaignResponse>(
+          "/api/admin/referral-campaigns",
           { method: "POST", body: JSON.stringify(payload) },
         );
         if (error || !data) {
           toast.show(`Create failed: ${error ?? "unknown"}`, "error");
           return;
         }
-        toast.show("Package created", "success");
+        toast.show("Campaign created", "success");
       } else if (editingId) {
-        const { data, error } = await adminFetch<PackageResponse>(
-          "/api/admin/packages",
-          {
-            method: "PUT",
-            body: JSON.stringify({ id: editingId, ...payload }),
-          },
+        const { data, error } = await adminFetch<CampaignResponse>(
+          `/api/admin/referral-campaign/${editingId}`,
+          { method: "PATCH", body: JSON.stringify(payload) },
         );
         if (error || !data) {
           toast.show(`Update failed: ${error ?? "unknown"}`, "error");
           return;
         }
-        toast.show("Package updated", "success");
+        toast.show("Campaign updated", "success");
       }
       setModalVisible(false);
       await fetchList();
@@ -183,47 +226,59 @@ export default function PackagesScreen() {
     }
   };
 
-  const handleToggleActive = async (pkg: Package) => {
-    const next = !pkg.is_active;
-    const { error } = await adminFetch<PackageResponse>("/api/admin/packages", {
-      method: "PUT",
-      body: JSON.stringify({ id: pkg.id, is_active: next }),
-    });
+  const handleToggleActive = async (c: ReferralCampaign) => {
+    const next = !c.is_active;
+    if (next) {
+      const otherActive = campaigns.find((x) => x.is_active && x.id !== c.id);
+      if (otherActive) {
+        toast.show(
+          "Activating will deactivate any other currently-active campaign",
+          "warning",
+        );
+      }
+    }
+    const { error } = await adminFetch<CampaignResponse>(
+      `/api/admin/referral-campaign/${c.id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ is_active: next }),
+      },
+    );
     if (error) {
       toast.show(`Toggle failed: ${error}`, "error");
       return;
     }
-    toast.show(next ? "Package activated" : "Package deactivated", "success");
+    toast.show(
+      next ? "Campaign activated" : "Campaign deactivated",
+      "success",
+    );
     await fetchList();
   };
 
-  const openDeactivate = (pkg: Package) => {
-    if (!pkg.is_active) {
-      toast.show("Package is already inactive", "info");
+  const openDeactivate = (c: ReferralCampaign) => {
+    if (!c.is_active) {
+      toast.show("Campaign is already inactive", "info");
       return;
     }
-    setConfirmDeactivate(pkg);
+    setConfirmDeactivate(c);
   };
 
   const confirmDeactivateAction = async () => {
     if (!confirmDeactivate) return;
     setSubmitting(true);
     try {
-      const { error } = await adminFetch<PackageResponse>(
-        "/api/admin/packages",
+      const { error } = await adminFetch<CampaignResponse>(
+        `/api/admin/referral-campaign/${confirmDeactivate.id}`,
         {
-          method: "PUT",
-          body: JSON.stringify({
-            id: confirmDeactivate.id,
-            is_active: false,
-          }),
+          method: "PATCH",
+          body: JSON.stringify({ is_active: false }),
         },
       );
       if (error) {
         toast.show(`Deactivate failed: ${error}`, "error");
         return;
       }
-      toast.show("Package deactivated", "success");
+      toast.show("Campaign deactivated", "success");
       setConfirmDeactivate(null);
       await fetchList();
     } finally {
@@ -237,81 +292,116 @@ export default function PackagesScreen() {
       label: "Name",
       type: "text",
       required: true,
-      placeholder: "e.g. Starter 100",
+      placeholder: "e.g. Summer Driver Referral",
     },
-    { name: "call_count", label: "Calls", type: "number", required: true },
     {
-      name: "duration_days",
-      label: "Duration (days)",
+      name: "referrer_reward_percent",
+      label: "Referrer Reward (%)",
+      type: "number",
+      required: true,
+      helpText: "Integer 1–100. Discount applied to referrer's next rides.",
+    },
+    {
+      name: "referee_reward_percent",
+      label: "Referee Reward (%)",
+      type: "number",
+      required: true,
+      helpText: "Integer 1–100. Discount applied to new driver's first rides.",
+    },
+    {
+      name: "max_uses_per_referrer",
+      label: "Max Uses / Referrer",
       type: "number",
       required: true,
     },
     {
-      name: "price_bdt_taka",
-      label: "Price (৳ taka)",
+      name: "max_uses_per_campaign",
+      label: "Max Uses Total (blank = ∞)",
       type: "number",
-      required: true,
-      helpText: "Whole taka. Multiplied by 100 to store as paisa.",
+      helpText: "Leave blank for unlimited campaign-wide redemptions.",
     },
     {
-      name: "daily_cap",
-      label: "Daily Cap (calls/day)",
-      type: "number",
-      required: true,
+      name: "is_active",
+      label: "Active",
+      type: "boolean",
+      helpText:
+        "Only one campaign can be active. Activating deactivates any other.",
     },
-    { name: "is_trial", label: "Trial package", type: "boolean" },
-    { name: "is_active", label: "Active", type: "boolean" },
   ];
 
-  const columns: AdminColumn<Package>[] = [
+  const columns: AdminColumn<ReferralCampaign>[] = [
     {
       key: "name",
       header: "Name",
       sortable: true,
-      render: (p) => <Text style={styles.cellPrimary}>{p.name}</Text>,
+      render: (c) => <Text style={styles.cellPrimary}>{c.name}</Text>,
     },
-    { key: "call_count", header: "Calls", sortable: true, width: 90 },
-    { key: "duration_days", header: "Days", sortable: true, width: 80 },
     {
-      key: "price_bdt",
-      header: "Price",
+      key: "referrer_reward_percent",
+      header: "Referrer %",
       sortable: true,
-      width: 100,
-      render: (p) => (
-        <Text style={styles.cellText}>৳{(p.price_bdt / 100).toFixed(0)}</Text>
+      width: 110,
+      render: (c) => (
+        <Text style={styles.cellText}>{c.referrer_reward_percent}%</Text>
       ),
     },
     {
-      key: "is_trial",
-      header: "Trial",
-      width: 80,
-      render: (p) => (
-        <Text style={[styles.cellText, p.is_trial && { color: colors.amber }]}>
-          {p.is_trial ? "Yes" : "No"}
+      key: "referee_reward_percent",
+      header: "Referee %",
+      sortable: true,
+      width: 110,
+      render: (c) => (
+        <Text style={styles.cellText}>{c.referee_reward_percent}%</Text>
+      ),
+    },
+    {
+      key: "max_uses_per_referrer",
+      header: "Max/Referrer",
+      sortable: true,
+      width: 120,
+    },
+    {
+      key: "max_uses_per_campaign",
+      header: "Max Total",
+      sortable: true,
+      width: 110,
+      render: (c) => (
+        <Text style={styles.cellText}>
+          {c.max_uses_per_campaign == null ? "∞" : c.max_uses_per_campaign}
         </Text>
       ),
     },
-    { key: "daily_cap", header: "Daily Cap", width: 100 },
     {
       key: "is_active",
       header: "Active",
       width: 100,
-      render: (p) => (
+      render: (c) => (
         <AdminToggle
-          value={p.is_active}
-          onValueChange={() => handleToggleActive(p)}
+          value={c.is_active}
+          onValueChange={() => handleToggleActive(c)}
         />
+      ),
+    },
+    {
+      key: "created_at",
+      header: "Created",
+      sortable: true,
+      width: 180,
+      render: (c) => (
+        <Text style={styles.cellText}>
+          {new Date(c.created_at).toLocaleString()}
+        </Text>
       ),
     },
     {
       key: "actions",
       header: "Actions",
       width: 220,
-      render: (p) => (
+      render: (c) => (
         <View style={styles.actionsRow}>
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
-            onPress={() => openEdit(p)}
+            onPress={() => openEdit(c)}
           >
             <Text style={styles.miniBtnText}>Edit</Text>
           </Pressable>
@@ -320,11 +410,11 @@ export default function PackagesScreen() {
               styles.miniBtn,
               {
                 backgroundColor: colors.danger,
-                opacity: p.is_active ? 1 : 0.4,
+                opacity: c.is_active ? 1 : 0.4,
               },
             ]}
-            onPress={() => openDeactivate(p)}
-            disabled={!p.is_active}
+            onPress={() => openDeactivate(c)}
+            disabled={!c.is_active}
           >
             <Text style={styles.miniBtnText}>Deactivate</Text>
           </Pressable>
@@ -335,31 +425,31 @@ export default function PackagesScreen() {
 
   return (
     <AdminShell
-      title="Call Packages"
-      subtitle="Subscription tiers drivers can buy"
+      title="Referral Campaigns"
+      subtitle="Driver referral reward programs"
       actions={
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable style={styles.ghostBtn} onPress={fetchList}>
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
           <Pressable style={styles.primaryBtn} onPress={openCreate}>
-            <Text style={styles.primaryBtnText}>+ New Package</Text>
+            <Text style={styles.primaryBtnText}>+ New Campaign</Text>
           </Pressable>
         </View>
       }
     >
       <AdminTable
         columns={columns}
-        rows={packages}
-        rowKey={(p) => p.id}
+        rows={campaigns}
+        rowKey={(c) => c.id}
         loading={loading}
-        emptyMessage="No packages yet. Create one to get started."
+        emptyMessage="No campaigns yet. Create one to get started."
         pagination={null}
       />
 
       <AdminModal
         visible={modalVisible}
-        title={mode === "create" ? "New Package" : "Edit Package"}
+        title={mode === "create" ? "New Campaign" : "Edit Campaign"}
         onClose={closeModal}
         footer={
           <View style={{ flexDirection: "row", gap: 10 }}>
@@ -391,7 +481,7 @@ export default function PackagesScreen() {
 
       <AdminModal
         visible={!!confirmDeactivate}
-        title="Deactivate package"
+        title="Deactivate campaign"
         onClose={() => !submitting && setConfirmDeactivate(null)}
         width={460}
         footer={
@@ -418,7 +508,8 @@ export default function PackagesScreen() {
         }
       >
         <Text style={styles.confirmText}>
-          Deactivate this package? Riders can no longer purchase it.
+          Deactivate this campaign? New referrals will not be tracked against it
+          until another campaign is activated.
         </Text>
       </AdminModal>
     </AdminShell>

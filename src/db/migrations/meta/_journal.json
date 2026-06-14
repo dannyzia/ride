@@ -71,6 +71,13 @@
       "when": 1781330070788,
       "tag": "0009_intercity_geo_fencing",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781450117066,
+      "tag": "0010_outgoing_outlaw_kid",
+      "breakpoints": true
     }
   ]
 }

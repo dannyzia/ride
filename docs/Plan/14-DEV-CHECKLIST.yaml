@@ -8,10 +8,10 @@
 # - Treat failure_conditions as hard blockers — if any grep/check fires, stop and fix before continuing.
 # - Update ai_tracking.completed_items and ai_tracking.current_phase as you work.
 
-version: "1.0"
+version: "1.1"
 project: Ride
 base_codebase: Ride
-total_phases: 13
+total_phases: 14
 critical_path:
   - phase: 1
     name: Foundation — GlideX Cleanup
@@ -87,8 +87,12 @@ critical_path:
     reason: "Independent safety/identity feature for onboarding."
   - phase: F14
     name: "Vehicle Photo & Video Guidelines"
+    must_complete_before: [F15]
+    reason: "Enhanced vehicle documentation. Sample media URLs are managed by the F15 admin sample-media screen."
+  - phase: F15
+    name: "Admin Dashboard Consolidation"
     must_complete_before: []
-    reason: "Enhanced vehicle documentation. Independent of other features."
+    reason: "Unified web-only admin panel that consolidates all admin APIs and screens into a single deployable dashboard. Depends on F4 (promos), F5 (incentives), F6 (preferences), F9 (wallets), F10 (referrals/points), F12 (vehicle models), F13 (face match), F14 (sample media) for underlying tables and APIs. Builds the missing endpoints and all UI screens."
 
 # ============================================================
 # PHASE 1: Foundation — GlideX Cleanup
@@ -6065,6 +6069,7 @@ phases:
   # ==========================================================================
   # FEATURE 14: Vehicle Photo & Video Guidelines
   # ==========================================================================
+  # (F14 phase block preserved above — see lines above)
   - id: F14
     name: "Vehicle Photo & Video Guidelines"
     blocking: false
@@ -6152,6 +6157,548 @@ phases:
         depends_on: [F14-01, F14-03]
         priority: high
 
+  # ==========================================================================
+  # FEATURE 15: Admin Dashboard Consolidation
+  # Builds the full web-only admin panel: missing API endpoints + all UI screens.
+  # Consolidates existing admin bits (P9-*, F4-07/10, F5-07/08, F6-09/11,
+  # F10-04, F12-06, F14-04) into a single coherent dashboard.
+  # ==========================================================================
+  - id: F15
+    name: "Admin Dashboard Consolidation"
+    blocking: false
+    description: >
+      Builds the complete web-only admin dashboard that an operator can use to
+      manage every configurable entity on the platform without touching code or
+      the database directly. Composed of two streams: (1) the missing admin API
+      endpoints, and (2) the React Native Web admin screens under app/(admin)/.
+      All routes require requireRole('admin'). All monetary values in integer
+      paisa. Vehicle type enum is lowercase snake_case (8 values).
+    items:
+      # ---------------- API LAYER ----------------
+
+      - id: F15-API-01
+        task: "Create full admin driver approval queue endpoint"
+        files_to_create:
+          - "app/api/admin/queue+api.ts"
+        implementation_rules:
+          - "GET /api/admin/queue. Auth: requireRole('admin')."
+          - "Return pending + temporary drivers joined to users, vehicles, and documents."
+          - "Per driver: driver_id, user_id, name, phone, vehicle_type, status, submitted_at, provisional_expires_at, is_legacy_operator, vehicle_registration_date, vehicle_age_years, has_driver_photo, face_match_score, face_match_status, face_match_warning (true if score < system_config.face_match_min_score), brta_certificate_url, documents (array of {doc_type, status, storage_url, face_match_score, face_match_status})."
+          - "Compute sla_hours = EXTRACT(EPOCH FROM (now() - submitted_at)) / 3600."
+          - "sla_breach = true if (is_legacy_operator AND sla_hours > 12) OR (NOT is_legacy_operator AND sla_hours > 24)."
+          - "Top-level: { drivers, total, overdue_count, fast_track_overdue_count }."
+          - "Filter by query param status ('pending' | 'temporary' | 'rejected' | 'all'). Default 'pending'."
+          - "Use logger, not console.log. Use Drizzle query builder with relations()."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/queue+api.ts"
+          - type: contains
+            file: "app/api/admin/queue+api.ts"
+            patterns:
+              - "requireRole"
+              - "face_match"
+              - "sla_breach"
+              - "provisional_expires_at"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: critical
+
+      - id: F15-API-02
+        task: "Create admin driver lifecycle endpoints (approve, reject, suspend, activate, upgrade, close-account, type-change-approve)"
+        files_to_create:
+          - "app/api/admin/driver/approve+api.ts"
+          - "app/api/admin/driver/reject+api.ts"
+          - "app/api/admin/driver/suspend+api.ts"
+          - "app/api/admin/driver/activate+api.ts"
+          - "app/api/admin/driver/upgrade+api.ts"
+          - "app/api/admin/driver/close-account+api.ts"
+          - "app/api/admin/driver/type-change-approve+api.ts"
+        implementation_rules:
+          - "All POST. All requireRole('admin'). All Zod-validated."
+          - "approve: body {driver_id, new_status?: 'active'|'temporary', vehicle_type_adjusted?, reason?}. If new_status omitted: active if all docs approved else temporary. If temporary, set provisional_expires_at = now()+30d. If vehicle_type_adjusted set, update drivers.vehicle_type + vehicles.vehicle_type + record in vehicle_type_changes. Mark all pending documents status='approved', reviewed_by=admin.id."
+          - "reject: body {driver_id, reason: string(10-500)}. Set status='rejected'. Update pending docs status='rejected', rejection_reason."
+          - "suspend: body {driver_id, reason: string(10-500)}. Set status='suspended'."
+          - "activate: body {driver_id}. Promote temporary -> active. Clear provisional_expires_at and stage2_due_at."
+          - "upgrade: body {driver_id, new_vehicle_type, reason: string(10-500)}. Validate new tier > current tier (tier map from lib/vehicleTypes.ts). Record in vehicle_type_changes, update drivers.vehicle_type and vehicles.vehicle_type immediately. Return {old_vehicle_type, new_vehicle_type}."
+          - "close-account: body {driver_id, reason}. Set status='rejected'. UPDATE documents SET purge_at = now()+30d WHERE driver_id AND purge_at IS NULL. Log the closure reason."
+          - "type-change-approve: body {change_id, action: 'approve'|'reject', reason?}. Fetch vehicle_type_changes row. If approve: apply the type change to drivers + vehicles, set status='approved', effective_at=now(). If reject: set status='rejected'."
+          - "All multi-table writes inside db.transaction. Use logger."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/driver/approve+api.ts"
+          - type: file_exists
+            path: "app/api/admin/driver/close-account+api.ts"
+          - type: contains
+            file: "app/api/admin/driver/approve+api.ts"
+            patterns:
+              - "requireRole"
+              - "provisional_expires_at"
+              - "vehicle_type_changes"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: critical
+
+      - id: F15-API-03
+        task: "Create admin system-config endpoints (GET/PATCH/POST) and dispatch-toggle"
+        files_to_create:
+          - "app/api/admin/system-config+api.ts"
+          - "app/api/admin/dispatch-toggle+api.ts"
+        implementation_rules:
+          - "system-config GET: return all system_config key-value pairs as {config: [{key, value, updated_at}]}."
+          - "system-config PATCH: body {updates: [{key, value}]}. Validate against ALLOWED_KEYS set. Unknown key -> 400."
+          - "Allowed keys: dispatch_paused, min_app_version, latest_version, apk_download_url, brta_fare_ceiling_bdt, max_free_wait_seconds, stale_arrived_timeout_minutes, sos_police_number, sos_ride_number, geofence_arrival_radius_meters, geofence_arrival_dwell_seconds, face_match_min_score, sos_contacts, sample_vehicle_photo_front, sample_vehicle_photo_left, sample_vehicle_photo_right, sample_vehicle_photo_rear, sample_vehicle_photo_dashboard, sample_vehicle_photo_seats, sample_vehicle_video."
+          - "Boolean keys (dispatch_paused) accept 'true'/'false' string. Numeric keys validated as numeric."
+          - "dispatch-toggle: POST {paused: boolean}. Delegates to system-config PATCH for key 'dispatch_paused'. Returns {dispatch_paused: bool}."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/system-config+api.ts"
+          - type: file_exists
+            path: "app/api/admin/dispatch-toggle+api.ts"
+          - type: contains
+            file: "app/api/admin/system-config+api.ts"
+            patterns:
+              - "requireRole"
+              - "ALLOWED_KEYS"
+              - "system_config"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: critical
+
+      - id: F15-API-04
+        task: "Create admin monitoring endpoints: dispatch-log, driver-economics, ride chat"
+        files_to_create:
+          - "app/api/admin/dispatch-log/[ride_id]+api.ts"
+          - "app/api/admin/driver-economics+api.ts"
+          - "app/api/admin/ride/[id]/chat+api.ts"
+        implementation_rules:
+          - "dispatch-log GET: param ride_id. Return {ride_id, offers: [{driver_id, driver_name, batch_index, sent_at, fetch_confirmed_at, responded_at, outcome, filtered_reason, call_ledger_event: {event_type, delta, created_at}|null}], total_offers, accepted_by: driver_id|null}. Join dispatch_offers -> drivers -> users. LEFT JOIN call_ledger on (call_ledger.ride_id, call_ledger.driver_id) where event_type='deduction'."
+          - "driver-economics GET: return active drivers with economics. For each driver: completed_rides_count (lifetime), cost_per_ride_bdt = round(active_subscription_total_cost / NULLIF(completed_rides_in_subscription_window, 0)) or null, calls_remaining from latest active subscription, subscription_expires_at. Latest subscription via subscriptions WHERE driver_id ORDER BY purchased_at DESC LIMIT 1."
+          - "ride chat GET: param ride_id. Return {messages: [{id, sender_id, sender_name, sender_role, content, created_at}]} from chat_messages JOIN users."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/dispatch-log/[ride_id]+api.ts"
+          - type: file_exists
+            path: "app/api/admin/driver-economics+api.ts"
+          - type: file_exists
+            path: "app/api/admin/ride/[id]/chat+api.ts"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F15-API-05
+        task: "Create admin payment recovery and document presigned-url endpoints"
+        files_to_create:
+          - "app/api/admin/payment-event/[id]/recover+api.ts"
+          - "app/api/admin/document/[id]/presigned-url+api.ts"
+        implementation_rules:
+          - "payment-event recover POST: param payment_event id. Find payment_event with status='paid' AND subscription_id IS NULL. Call activateSubscription(driver_id, package_id, payment_event_id) inside db.transaction. Idempotent: if already activated, return current subscription. 404 if event not found, 409 if event already has subscription_id."
+          - "document presigned-url GET: param document id. Use supabase storage .from(bucket).createSignedUrl(path, 60) to issue a 60-second signed URL. Return {url, expires_at}. If storage_url is already a public URL, return as-is."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/payment-event/[id]/recover+api.ts"
+          - type: file_exists
+            path: "app/api/admin/document/[id]/presigned-url+api.ts"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F15-API-06
+        task: "Create admin referral campaigns CRUD endpoints"
+        files_to_create:
+          - "app/api/admin/referral-campaigns+api.ts"
+          - "app/api/admin/referral-campaign/[id]+api.ts"
+        implementation_rules:
+          - "referral-campaigns (collection): GET list all campaigns (most recent first). POST create with Zod {name, referrer_reward_percent: 1-100, referee_reward_percent: 1-100, max_uses_per_referrer: int>0, max_uses_per_campaign: int>0|null, is_active?: bool}. On is_active=true: first set all other campaigns is_active=false."
+          - "referral-campaign/[id] PATCH: update any subset of fields including is_active. Enforce single-active rule on is_active=true."
+          - "GET /api/admin/referral-campaign/:id: return single campaign."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/referral-campaigns+api.ts"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F15-API-07
+        task: "Create admin point offers CRUD endpoints"
+        files_to_create:
+          - "app/api/admin/point-offers+api.ts"
+          - "app/api/admin/point-offer/[id]+api.ts"
+        implementation_rules:
+          - "point-offers (collection): GET list all (most recent first). POST create {title, points_required: int>0, reward_type: 'package_grant'|'wallet_credit', reward_value: string, is_active?: bool}."
+          - "point-offer/[id] GET: return single offer. PATCH: update any subset."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/point-offers+api.ts"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F15-API-08
+        task: "Create admin vehicle models CRUD endpoints"
+        files_to_create:
+          - "app/api/admin/vehicle-models+api.ts"
+          - "app/api/admin/vehicle-model/[id]+api.ts"
+        implementation_rules:
+          - "vehicle-models (collection): GET list with optional filters brand, vehicle_type, is_active, plus limit/offset pagination (default 50, max 200). Returns {models: [...], total, has_more}."
+          - "POST create: {brand, model, year_start?, year_end?, default_vehicle_type, typical_cc_min?, typical_cc_max?, has_ac?, passenger_seats?, is_active?}."
+          - "vehicle-model/[id] PATCH: update any subset including is_active toggle."
+        verification:
+          - type: file_exists
+            path: "app/api/admin/vehicle-models+api.ts"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      - id: F15-API-09
+        task: "Add usage_interval field to promo codes schema and admin endpoints"
+        files_to_modify:
+          - "src/db/schema.ts"
+          - "app/api/admin/promos+api.ts"
+        implementation_rules:
+          - "Add column promo_codes.usage_interval integer NULL. NULL = no interval."
+          - "Extend createSchema and patchSchema in promos+api.ts to accept usage_interval (int positive | null)."
+          - "Update GET /api/admin/promos to include usage_interval and times_used (COUNT promo_redemptions)."
+          - "Generate + push migration."
+        verification:
+          - type: contains
+            file: "src/db/schema.ts"
+            patterns:
+              - "usage_interval"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: high
+
+      # ---------------- SHARED UI SCAFFOLDING ----------------
+
+      - id: F15-UI-00
+        task: "Build admin layout shell with dark sidebar and reusable UI primitives"
+        files_to_create:
+          - "app/(admin)/_layout.tsx"
+          - "components/admin/AdminShell.tsx"
+          - "components/admin/AdminTable.tsx"
+          - "components/admin/AdminModal.tsx"
+          - "components/admin/AdminForm.tsx"
+          - "components/admin/AdminToggle.tsx"
+          - "components/admin/AdminToast.tsx"
+          - "lib/adminFetch.ts"
+        implementation_rules:
+          - "_layout.tsx: web-only. On native, redirect to '/'. On web, gate on admin role (call GET /api/auth/me or equivalent; if role != 'admin' show login screen)."
+          - "AdminShell: dark sidebar (#181A20 / #1F222A surfaces, #0CC25F active accent), main content area with topbar (page title + actions slot). Sidebar nav: Queue, Packages, Zones & Pricing, City Boundaries, Incentives, Promos, Preferences, Referral Campaigns, Point Offers, Vehicle Models, Sample Media, Platform Config, System Config, Monitoring."
+          - "AdminTable: configurable columns (key, header, render?), sortable optional, pagination optional, empty state slot."
+          - "AdminModal: overlay with title, children, onClose. Close on ESC and backdrop click."
+          - "AdminForm: declarative field renderer (text/number/textarea/checkbox/select/datetime). Returns gathered values."
+          - "AdminToggle: switch component with on/off colors.
+          - "AdminToast: imperative toast context (show(message, type)). Used everywhere for save/delete confirmations."
+          - "adminFetch: thin wrapper over fetch that adds Authorization header from auth store, JSON content-type, error normalization. Returns {data, error, status}."
+          - "All components use theme/goRide.ts tokens. No inline colors.
+        verification:
+          - type: file_exists
+            path: "app/(admin)/_layout.tsx"
+          - type: file_exists
+            path: "components/admin/AdminShell.tsx"
+          - type: contains
+            file: "components/admin/AdminShell.tsx"
+            patterns:
+              - "#181A20\|theme"
+              - "sidebar"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: []
+        priority: critical
+
+      # ---------------- SCREENS ----------------
+
+      - id: F15-UI-01
+        task: "Build Driver Approval Queue screen (Screen 10)"
+        files_to_create:
+          - "app/(admin)/queue.tsx"
+        ui_requirements:
+          - "Page heading 'Driver Approval Queue'. Subtext: '{N} pending · {M} overdue (>24h)'."
+          - "Filter tabs: All | Pending | Temporary | Rejected."
+          - "Table: Name, Phone, Vehicle Type, Vehicle Age, Submitted, Status, Days pending, Action."
+          - "Vehicle Age column shows registration date + computed age; warning icon if < 1 year."
+          - "SLA breach rows highlighted (standard=red, fast-track=orange)."
+          - "Row click opens detail drawer with: driver info, vehicle reg date + age, BRTA warning banner if < 1yr, document thumbnails (each opens image viewer), face match score badge, action buttons: Approve (green), Reject (red, opens reason modal), Downgrade (orange, opens vehicle type + reason modal), Suspend, Activate (for temporary)."
+          - "Calls: GET /api/admin/queue, POST /api/admin/driver/{approve,reject,suspend,activate,downgrade}."
+          - "Refresh after each action. Toast on success."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/queue.tsx"
+          - type: contains
+            file: "app/(admin)/queue.tsx"
+            patterns:
+              - "/api/admin/queue"
+              - "/api/admin/driver/approve"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00, F15-API-01, F15-API-02]
+        priority: critical
+
+      - id: F15-UI-02
+        task: "Build Call Packages Management screen (Screen 11)"
+        files_to_create:
+          - "app/(admin)/packages.tsx"
+        ui_requirements:
+          - "Page heading 'Call Packages'. + Create Package button (top right)."
+          - "Table: Name, Calls, Days, Price (BDT), Trial, Active, Actions (Edit, Toggle active)."
+          - "Create/Edit modal: Name (max 100), Calls (-1 = unlimited), Duration days, Price BDT (displayed in taka, stored in paisa), Is trial checkbox, Daily cap (default 200), Active toggle."
+          - "Calls: GET /api/admin/packages, POST /api/admin/package, PATCH /api/admin/package/:id."
+          - "Deactivate confirmation dialog. Toast on save."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/packages.tsx"
+          - type: contains
+            file: "app/(admin)/packages.tsx"
+            patterns:
+              - "/api/admin/packages"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00]
+        priority: critical
+
+      - id: F15-UI-03
+        task: "Build Zones & Pricing Setup screen (Screen 12)"
+        files_to_create:
+          - "app/(admin)/zones.tsx"
+        ui_requirements:
+          - "Page heading 'Operational Zone'."
+          - "Zone selector: dropdown of existing zones. Shows active badge."
+          - "Polygon editor: textarea that accepts JSON array of {lat,lng}. Validation: min 3 points, no self-intersection. Live map preview using react-native-maps (web) if available, else JSON-only."
+          - "Zone name input + Set as Active toggle + Save button (POST /api/admin/zone or PUT)."
+          - "Pricing section below: one row per vehicle type (8 rows). Columns: Base, Per km, Intercity per km, Per min, Floor length km, Floor min, Commission %, BRTA ceiling. Each row editable inline. Save per row -> POST /api/admin/pricing or PATCH /api/admin/pricing."
+          - "Calls: GET /api/admin/zones, POST /api/admin/zone, POST /api/admin/pricing, PATCH /api/admin/pricing."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/zones.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00]
+        priority: critical
+
+      - id: F15-UI-04
+        task: "Build City Boundaries Management screen (Screen 12 extension)"
+        files_to_create:
+          - "app/(admin)/city-boundaries.tsx"
+        ui_requirements:
+          - "Page heading 'City Boundaries'."
+          - "Table: Name, Polygon points count, Active, Updated at, Actions (Edit, Delete soft-delete)."
+          - "Create/Edit modal: name input, polygon JSON textarea (lat/lng pairs, 20-40 points recommended), active toggle."
+          - "Calls: GET/POST /api/admin/city-boundaries, PATCH/DELETE /api/admin/city-boundaries/:id."
+          - "Confirmation on delete. Toast on save."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/city-boundaries.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00]
+        priority: high
+
+      - id: F15-UI-05
+        task: "Build Driver Incentives Management screen (Screen 21)"
+        files_to_create:
+          - "app/(admin)/incentives.tsx"
+        ui_requirements:
+          - "Page heading 'Driver Incentives'. + Create Incentive button."
+          - "Filter tabs: All | Active | Ended | Scheduled."
+          - "Table: Name, Metric, Target, Reward calls, Participants, Completed, Active, Period, Actions."
+          - "Create/Edit modal: Name, Description, Target metric dropdown (completed_rides, online_hours, acceptance_rate, consecutive_accepts), Target value, Reward calls, Vehicle type filter (optional), Starts at, Ends at, Active toggle."
+          - "Calls: GET/POST /api/admin/incentives, GET/PATCH /api/admin/incentive/:id."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/incentives.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00]
+        priority: high
+
+      - id: F15-UI-06
+        task: "Build Promo Codes Management screen (Screen 20)"
+        files_to_create:
+          - "app/(admin)/promos.tsx"
+        ui_requirements:
+          - "Page heading 'Promo Codes'. + Create Promo button."
+          - "Filter bar: status (All/Active/Expired/Inactive) + search by code or title."
+          - "Table: Code, Title, Discount, Max uses, Times used, Active, Valid from, Expires, Actions."
+          - "Create/Edit modal: Code (uppercase alphanumeric + hyphens), Title, Description, Discount type (percent|flat), Discount value, Max discount (paisa, for percent), Max uses, Max uses per rider (default 1), Usage interval (valid only on every Nth completed ride, blank = none), Min spend (paisa), Valid from, Expires at, Active toggle."
+          - "Calls: GET/POST /api/admin/promos, GET/PATCH /api/admin/promo/:id."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/promos.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00, F15-API-09]
+        priority: high
+
+      - id: F15-UI-07
+        task: "Build Rider Preferences Management screen (Screen 22)"
+        files_to_create:
+          - "app/(admin)/preferences.tsx"
+        ui_requirements:
+          - "Page heading 'Ride Preferences'. + Create Preference button."
+          - "Table: Name, English Label, Bengali Label, Surcharge (BDT), Affects Matching, Drivers Opted In, Active, Actions."
+          - "Create/Edit modal: Machine name (lowercase, underscores, unique), English label, Bengali label, Icon name, Surcharge (paisa), Affects matching checkbox, Active toggle."
+          - "Calls: GET/POST /api/admin/preferences, PATCH /api/admin/preference/:id."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/preferences.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00]
+        priority: high
+
+      - id: F15-UI-08
+        task: "Build Referral Campaigns Management screen (Screen 22b)"
+        files_to_create:
+          - "app/(admin)/referral-campaigns.tsx"
+        ui_requirements:
+          - "Page heading 'Referral Campaigns'. + Create Campaign button."
+          - "Table: Name, Referrer %, Referee %, Max/Referrer, Max total, Active, Actions."
+          - "Create/Edit modal: Name, Referrer reward % (1-100), Referee reward % (1-100), Max uses per referrer, Max uses per campaign (blank=unlimited), Active toggle."
+          - "Warn when activating a campaign if another is currently active."
+          - "Calls: GET/POST /api/admin/referral-campaigns, GET/PATCH /api/admin/referral-campaign/:id."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/referral-campaigns.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00, F15-API-06]
+        priority: high
+
+      - id: F15-UI-09
+        task: "Build Point Offers Management screen (Screen 22c)"
+        files_to_create:
+          - "app/(admin)/point-offers.tsx"
+        ui_requirements:
+          - "Page heading 'Point Offers'. + Create Offer button."
+          - "Table: Title, Points Required, Reward Type, Reward Value, Active, Actions."
+          - "Create/Edit modal: Title, Points required, Reward type (package_grant | wallet_credit), Reward value (package UUID or BDT paisa amount), Active toggle."
+          - "Calls: GET/POST /api/admin/point-offers, GET/PATCH /api/admin/point-offer/:id."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/point-offers.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00, F15-API-07]
+        priority: high
+
+      - id: F15-UI-10
+        task: "Build Vehicle Model Reference screen (Screen 22d)"
+        files_to_create:
+          - "app/(admin)/vehicle-models.tsx"
+        ui_requirements:
+          - "Page heading 'Vehicle Models' with description text."
+          - "Search bar + Vehicle type filter + Active filter + Add Model button."
+          - "Table: Brand, Model, Year Range, Vehicle Type, AC, Seats, CC Range, Active, Actions. Cursor-based pagination."
+          - "Add/Edit modal: Brand, Model, Year start, Year end, Default vehicle type (8 values), Typical CC min/max, Has AC (nullable), Passenger seats, Active toggle."
+          - "Calls: GET/POST /api/admin/vehicle-models, PATCH /api/admin/vehicle-model/:id."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/vehicle-models.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00, F15-API-08]
+        priority: high
+
+      - id: F15-UI-11
+        task: "Build Sample Media Configuration screen (Screen 22e)"
+        files_to_create:
+          - "app/(admin)/sample-media.tsx"
+        ui_requirements:
+          - "Page heading 'Onboarding Sample Media'."
+          - "2x4 grid of media cards (Front, Left, Right, Rear, Dashboard, Seats, Video)."
+          - "Each card: current thumbnail (tappable to view full size), label, URL text input, Upload new button (file picker -> Supabase Storage upload -> set URL), Remove button (clears URL)."
+          - "Save All button at bottom: PATCH /api/admin/config with all 7 sample_vehicle_* keys."
+          - "Live preview after URL set."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/sample-media.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00, F15-API-03]
+        priority: high
+
+      - id: F15-UI-12
+        task: "Build Platform Configuration screen (global settings)"
+        files_to_create:
+          - "app/(admin)/platform-config.tsx"
+        ui_requirements:
+          - "Page heading 'Platform Config'."
+          - "Two sections: platform_config (pricing policy knobs) and system_config (operational toggles)."
+          - "platform_config fields: driver_min_ratio (0.50-1.00 default 0.70), driver_max_ratio (1.00-3.00 default 1.50), brta_max_base_bdt, brta_max_per_km_bdt, brta_max_wait_per_2min_bdt. Save -> PATCH /api/admin/config."
+          - "system_config fields: dispatch_paused (toggle, prominent red banner when true), min_app_version, latest_version, apk_download_url, brta_fare_ceiling_bdt, max_free_wait_seconds, stale_arrived_timeout_minutes, sos_police_number, sos_ride_number, geofence_arrival_radius_meters, geofence_arrival_dwell_seconds, face_match_min_score. Save -> PATCH /api/admin/system-config."
+          - "Dispatch pause has dedicated button (POST /api/admin/dispatch-toggle)."
+          - "Money fields displayed in taka but persisted as paisa."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/platform-config.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00, F15-API-03]
+        priority: critical
+
+      - id: F15-UI-13
+        task: "Build Dispute Monitoring screen (dispatch log, chat history, driver economics)"
+        files_to_create:
+          - "app/(admin)/monitoring.tsx"
+        ui_requirements:
+          - "Page heading 'Monitoring & Disputes'."
+          - "Three tabs: Dispatch Log | Ride Chat | Driver Economics."
+          - "Dispatch Log tab: input for ride_id. On submit, fetch GET /api/admin/dispatch-log/:ride_id. Render timeline of offers (driver_name, batch_index, sent_at, fetch_confirmed_at, responded_at, outcome, filtered_reason, call_ledger_event). Show total_offers and accepted_by summary."
+          - "Ride Chat tab: input for ride_id. On submit, fetch GET /api/admin/ride/:id/chat. Render scrollable message list with sender_name, sender_role, content, created_at."
+          - "Driver Economics tab: fetch GET /api/admin/driver-economics. Table: Driver, Vehicle Type, Subscription Cost (BDT), Completed Rides, Cost/Ride (BDT), Calls Remaining, Subscription Expires At. Highlight negative earners (cost_per_ride_bdt > subscription_cost_bdt with no recent rides)."
+          - "All read-only."
+        verification:
+          - type: file_exists
+            path: "app/(admin)/monitoring.tsx"
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+        depends_on: [F15-UI-00, F15-API-04, F15-API-05]
+        priority: high
+
+      - id: F15-VERIFY-01
+        task: "Verification: full typecheck + lint"
+        verification:
+          - type: command
+            run: "npx tsc --noEmit"
+            expect_exit: 0
+          - type: command
+            run: "npx eslint . --max-warnings=0"
+            expect_exit: 0
+        depends_on: [F15-API-01, F15-API-02, F15-API-03, F15-API-04, F15-API-05, F15-API-06, F15-API-07, F15-API-08, F15-API-09, F15-UI-00, F15-UI-01, F15-UI-02, F15-UI-03, F15-UI-04, F15-UI-05, F15-UI-06, F15-UI-07, F15-UI-08, F15-UI-09, F15-UI-10, F15-UI-11, F15-UI-12, F15-UI-13]
+        priority: critical
+
 failure_conditions:
   - condition: "Clerk imports found in source"
     check: "grep -rn '@clerk/' . --include='*.ts' --include='*.tsx' --exclude-dir=node_modules"
@@ -6180,11 +6727,52 @@ failure_conditions:
 
 ai_tracking:
   session_start: null
-  current_phase: 1
-  completed_items: []
+  current_phase: F15
+  completed_items:
+    # API layer — all 9 F15-API-* items verified present and type-clean.
+    - F15-API-01  # app/api/admin/queue+api.ts
+    - F15-API-02  # 7 driver lifecycle files under app/api/admin/driver/
+    - F15-API-03  # system-config+api.ts, dispatch-toggle+api.ts
+    - F15-API-04  # dispatch-log/[ride_id]+api.ts, driver-economics+api.ts, ride/[id]/chat+api.ts
+    - F15-API-05  # payment-event/[id]/recover+api.ts, document/[id]/presigned-url+api.ts
+    - F15-API-06  # referral-campaigns+api.ts, referral-campaign/[id]+api.ts
+    - F15-API-07  # point-offers+api.ts, point-offer/[id]+api.ts
+    - F15-API-08  # vehicle-models+api.ts, vehicle-model/[id]+api.ts
+    - F15-API-09  # usage_interval column on promoCodes + promos+api.ts
+    # UI layer — shared scaffolding + 13 screens (configuration.tsx superseded by platform-config.tsx).
+    - F15-UI-00   # components/admin/{AdminShell,AdminTable,AdminModal,AdminForm,AdminToggle,AdminToast}.tsx, lib/adminFetch.ts, app/admin/_layout.tsx wrap in AdminToastProvider
+    - F15-UI-01   # app/admin/queue.tsx
+    - F15-UI-02   # app/admin/packages.tsx (rebuilt)
+    - F15-UI-03   # app/admin/zones.tsx (rebuilt), app/admin/pricing.tsx
+    - F15-UI-04   # app/admin/city-boundaries.tsx (rebuilt)
+    - F15-UI-05   # app/admin/incentives.tsx
+    - F15-UI-06   # app/admin/promos.tsx
+    - F15-UI-07   # app/admin/preferences.tsx
+    - F15-UI-08   # app/admin/referral-campaigns.tsx
+    - F15-UI-09   # app/admin/point-offers.tsx
+    - F15-UI-10   # app/admin/vehicle-models.tsx
+    - F15-UI-11   # app/admin/sample-media.tsx
+    - F15-UI-12   # app/admin/platform-config.tsx
+    - F15-UI-13   # app/admin/monitoring.tsx
+    - F15-UI-14   # app/admin/recovery.tsx
   blocked_items: []
-  last_updated: null
-  notes: ""
+  last_updated: "2026-06-14"
+  notes: |
+    F15 build complete. All 9 API items + 14 UI items built and tsc-clean
+    (only pre-existing lib/supabaseServer.ts WebSocket type error remains).
+    ESLint clean across app/admin/, components/admin/, lib/adminFetch.ts.
+    Console.log sweep clean. Clerk/Stripe/Firebase sweep clean.
+    Notable side-effects:
+      - Added GET handlers to incentives+api.ts and preferences+api.ts
+        (the screens depend on these list endpoints).
+      - configuration.tsx and verification.tsx are now superseded by
+        platform-config.tsx and queue.tsx respectively; they still compile
+        and may be removed in a future cleanup pass.
+      - app/admin/_layout.tsx no longer hard-codes the Stack.Screen list —
+        Expo Router auto-discovers new admin routes.
+    Outstanding (not blocking):
+      - Live end-to-end test against the deployed Render environment.
+      - Remove legacy configuration.tsx and verification.tsx once confirmed unused.
 
 validation_commands:
   type_check: "npx tsc --noEmit"

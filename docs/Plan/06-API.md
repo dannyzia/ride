@@ -26,6 +26,13 @@ Every Zod schema, response shape, and enum reference in this file uses the new l
 # API Contract: Ride
 > Delta from GlideX. Base URL: `EXPO_PUBLIC_SERVER_URL` (env var). Version: 1.
 
+> **Phase F15 (Admin Dashboard Consolidation)** supersedes and expands the admin routes documented below.
+> See `docs/Plan/14-DEV-CHECKLIST.yaml` phase F15 for the authoritative list of admin endpoints and screens.
+> F15 adds: full driver queue with face-match data, driver lifecycle (approve/reject/suspend/activate/upgrade/
+close-account/type-change-approve), system-config endpoints, dispatch-log, driver-economics, ride chat,
+dispatch-toggle, payment-event recovery, document presigned URLs, referral campaigns CRUD, point offers CRUD,
+vehicle models CRUD, and usage_interval on promo codes.
+
 ---
 
 ## Global vehicle_type enum

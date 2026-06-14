@@ -371,6 +371,7 @@ export const promoCodes = pgTable(
     max_uses_per_rider: integer("max_uses_per_rider").notNull().default(1),
     max_discount_bdt: integer("max_discount_bdt"),
     min_spend_bdt: integer("min_spend_bdt"),
+    usage_interval: integer("usage_interval"), // F15-API-09: valid only on every Nth completed ride; NULL = no interval
     valid_from: timestamptz("valid_from").notNull(),
     expires_at: timestamptz("expires_at").notNull(),
     is_active: boolean("is_active").notNull().default(true),

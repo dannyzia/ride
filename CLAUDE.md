@@ -202,9 +202,11 @@ users, drivers, vehicles, packages, subscriptions, creditVouchers, callLedger, r
 | 6 | Dispatch Engine | ✅ Done | WebSocket, H3, heartbeat, scheduler |
 | 7 | Driver Flows | ✅ Done | Onboarding, home, offers, ledger |
 | 8 | Rider Flows | ✅ Done | Request, pricing, tracking, cancel |
-| 9 | Admin Panel | ✅ Done | Approval queue, packages, zones |
+| 9 | Admin Panel (basic) | ✅ Done | Approval queue, packages, zones (subset) |
 | 10 | In-App Chat | ✅ Done | Rider-driver messaging |
 | 11 | Commission & Waiting Time | — | Post-MVP decision gate |
+| F7–F14 | Feature bundles (offer sheet, promos, incentives, preferences, SOS, wallets, referrals, vehicle models, face match, vehicle media) | ✅ Done | Underlying tables and APIs shipped |
+| **F15** | **Admin Dashboard Consolidation** | 🚧 **In progress** | Full web-only admin panel: missing endpoints + all UI screens. See `docs/Plan/14-DEV-CHECKLIST.yaml` phase F15. |
 
 **Note:** Phase 3 was originally "Firebase Cloud Functions" in planning documents, but was **replaced by Supabase Auth**. The `functions/` directory does not exist. All auth logic is in Expo API routes (`app/api/auth/`) and client screens (`app/(auth)/`).
 

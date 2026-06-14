@@ -1,12 +1,14 @@
-// F15-UI-04 City Boundaries
-// CRUD for intercity geo-fencing polygons. Polygon stored as JSON array of
-// {lat, lng} points.
+// F15-UI-07 Ride Preferences Management
+// Admin CRUD for optional rider add-ons (e.g. "Quiet ride", "Extra stop",
+// "Pet friendly"). Each preference carries an optional surcharge (paisa in DB,
+// edited in taka on this screen) and a flag indicating whether it influences
+// dispatch matching.
 //
-// API contract notes (differs from zones!):
-//  - GET supports ?include_inactive=true to list soft-deleted rows too.
-//  - POST returns { city_boundary_id } (not the full row). We refetch after.
-//  - Update is PATCH with ?id=<uuid> (not PUT, not body.id).
-//  - DELETE soft-deletes via is_active:false (not a hard delete).
+// Schema: preferences (src/db/schema.ts L939). charge_bdt is integer paisa.
+// API:    app/api/admin/preferences+api.ts (POST/PATCH/DELETE). GET is targeted
+// at the natural REST path; if absent, the list shows empty with a toast.
+// Note: the API's DELETE handler currently soft-deactivates (sets is_active=
+// false) rather than hard-deleting, which matches this screen's "Delete" UX.
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,109 +26,68 @@ import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
-interface LatLng {
-  lat: number;
-  lng: number;
-}
-
-interface CityBoundary {
+interface Preference {
   id: string;
   name: string;
-  polygon: LatLng[];
+  display_label_en: string;
+  display_label_bn: string;
+  icon: string | null;
+  charge_bdt: number;
+  affects_matching: boolean;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-interface CitiesResponse {
-  cities: CityBoundary[];
+interface PreferencesResponse {
+  preferences?: Preference[];
 }
 
-interface CreateResponse {
-  city_boundary_id: string;
-}
-
-interface PatchResponse {
-  city_boundary_id: string;
-  updated?: true;
-  is_active?: boolean;
+interface PreferenceResponse {
+  preference?: Preference;
+  preference_id?: string;
 }
 
 type Mode = "create" | "edit";
 
 const EMPTY_FORM: Record<string, unknown> = {
   name: "",
+  display_label_en: "",
+  display_label_bn: "",
+  icon: "",
+  // Edited in taka; ×100 to paisa on save.
+  surcharge_taka: 0,
+  affects_matching: false,
   is_active: true,
-  polygon_json:
-    '[{"lat":23.8,"lng":90.4},{"lat":23.9,"lng":90.4},{"lat":23.9,"lng":90.5},{"lat":23.8,"lng":90.5}]',
 };
 
-function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleString();
-}
-
-function parsePolygon(
-  raw: string,
-  toast: ReturnType<typeof useAdminToast>,
-): LatLng[] | null {
-  let arr: unknown;
-  try {
-    arr = JSON.parse(raw);
-  } catch {
-    toast.show("Polygon is not valid JSON", "error");
-    return null;
-  }
-  if (!Array.isArray(arr) || arr.length < 3) {
-    toast.show(
-      "Polygon must be an array of at least 3 {lat,lng} points",
-      "error",
-    );
-    return null;
-  }
-  for (const p of arr) {
-    if (
-      typeof p !== "object" ||
-      p === null ||
-      typeof (p as LatLng).lat !== "number" ||
-      typeof (p as LatLng).lng !== "number"
-    ) {
-      toast.show(
-        "Each polygon point must be {lat:number, lng:number}",
-        "error",
-      );
-      return null;
-    }
-  }
-  return arr as LatLng[];
-}
-
-export default function CityBoundariesScreen() {
+export default function PreferencesScreen() {
   const toast = useAdminToast();
-  const [cities, setCities] = useState<CityBoundary[]>([]);
+  const [preferences, setPreferences] = useState<Preference[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [mode, setMode] = useState<Mode>("create");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, unknown>>({ ...EMPTY_FORM });
-  const [confirmDelete, setConfirmDelete] = useState<CityBoundary | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Preference | null>(null);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
-    const { data, error, status } = await adminFetch<CitiesResponse>(
-      "/api/admin/city-boundaries?include_inactive=true",
+    const { data, error, status } = await adminFetch<PreferencesResponse>(
+      "/api/admin/preferences",
       { method: "GET" },
     );
     if (error || !data) {
       if (status !== 0) {
-        toast.show(`Failed to load cities: ${error ?? "unknown"}`, "error");
+        toast.show(
+          `Failed to load preferences: ${error ?? "unknown"}`,
+          "error",
+        );
       }
-      setCities([]);
+      setPreferences([]);
     } else {
-      setCities(data.cities);
+      setPreferences(data.preferences ?? []);
     }
     setLoading(false);
   }, [toast]);
@@ -142,13 +103,17 @@ export default function CityBoundariesScreen() {
     setModalVisible(true);
   };
 
-  const openEdit = (city: CityBoundary) => {
+  const openEdit = (p: Preference) => {
     setMode("edit");
-    setEditingId(city.id);
+    setEditingId(p.id);
     setForm({
-      name: city.name,
-      is_active: city.is_active,
-      polygon_json: JSON.stringify(city.polygon, null, 2),
+      name: p.name,
+      display_label_en: p.display_label_en,
+      display_label_bn: p.display_label_bn,
+      icon: p.icon ?? "",
+      surcharge_taka: p.charge_bdt / 100,
+      affects_matching: p.affects_matching,
+      is_active: p.is_active,
     });
     setModalVisible(true);
   };
@@ -158,43 +123,78 @@ export default function CityBoundariesScreen() {
     setModalVisible(false);
   };
 
-  const handleSave = async () => {
+  const buildPayload = () => {
     const name = String(form.name ?? "").trim();
-    if (name.length < 2) {
-      toast.show("Name must be at least 2 characters", "error");
-      return;
+    if (!name) {
+      toast.show("Key is required", "error");
+      return null;
     }
-    const polygon = parsePolygon(String(form.polygon_json ?? ""), toast);
-    if (!polygon) return;
-
-    const payload = {
+    // Convention: keys are lowercase snake_case machine names.
+    if (!/^[a-z0-9_]+$/.test(name)) {
+      toast.show(
+        "Key must be lowercase letters, digits, and underscores only",
+        "error",
+      );
+      return null;
+    }
+    const labelEn = String(form.display_label_en ?? "").trim();
+    if (!labelEn) {
+      toast.show("English label is required", "error");
+      return null;
+    }
+    const labelBn = String(form.display_label_bn ?? "").trim();
+    if (!labelBn) {
+      toast.show("Bengali label is required", "error");
+      return null;
+    }
+    const surchargeTaka = Number(form.surcharge_taka);
+    if (!Number.isFinite(surchargeTaka) || surchargeTaka < 0) {
+      toast.show("Surcharge must be a non-negative number", "error");
+      return null;
+    }
+    const surchargePaisa = Math.round(surchargeTaka * 100);
+    if (!Number.isInteger(surchargePaisa) || surchargePaisa < 0) {
+      toast.show("Surcharge must resolve to a whole paisa amount", "error");
+      return null;
+    }
+    const icon = String(form.icon ?? "").trim() || null;
+    return {
       name,
+      display_label_en: labelEn,
+      display_label_bn: labelBn,
+      icon,
+      charge_bdt: surchargePaisa,
+      affects_matching: Boolean(form.affects_matching),
       is_active: Boolean(form.is_active),
-      polygon,
     };
+  };
+
+  const handleSave = async () => {
+    const payload = buildPayload();
+    if (!payload) return;
 
     setSubmitting(true);
     try {
       if (mode === "create") {
-        const { data, error } = await adminFetch<CreateResponse>(
-          "/api/admin/city-boundaries",
+        const { data, error } = await adminFetch<PreferenceResponse>(
+          "/api/admin/preferences",
           { method: "POST", body: JSON.stringify(payload) },
         );
         if (error || !data) {
           toast.show(`Create failed: ${error ?? "unknown"}`, "error");
           return;
         }
-        toast.show("City boundary created", "success");
+        toast.show("Preference created", "success");
       } else if (editingId) {
-        const { data, error } = await adminFetch<PatchResponse>(
-          `/api/admin/city-boundaries?id=${encodeURIComponent(editingId)}`,
+        const { data, error } = await adminFetch<PreferenceResponse>(
+          `/api/admin/preferences?id=${encodeURIComponent(editingId)}`,
           { method: "PATCH", body: JSON.stringify(payload) },
         );
         if (error || !data) {
           toast.show(`Update failed: ${error ?? "unknown"}`, "error");
           return;
         }
-        toast.show("City boundary updated", "success");
+        toast.show("Preference updated", "success");
       }
       setModalVisible(false);
       await fetchList();
@@ -203,10 +203,10 @@ export default function CityBoundariesScreen() {
     }
   };
 
-  const handleToggleActive = async (city: CityBoundary) => {
-    const next = !city.is_active;
-    const { error } = await adminFetch<PatchResponse>(
-      `/api/admin/city-boundaries?id=${encodeURIComponent(city.id)}`,
+  const handleToggleActive = async (p: Preference) => {
+    const next = !p.is_active;
+    const { error } = await adminFetch<PreferenceResponse>(
+      `/api/admin/preferences?id=${encodeURIComponent(p.id)}`,
       {
         method: "PATCH",
         body: JSON.stringify({ is_active: next }),
@@ -216,23 +216,30 @@ export default function CityBoundariesScreen() {
       toast.show(`Toggle failed: ${error}`, "error");
       return;
     }
-    toast.show(next ? "City activated" : "City deactivated", "success");
+    toast.show(
+      next ? "Preference activated" : "Preference deactivated",
+      "success",
+    );
     await fetchList();
+  };
+
+  const openDelete = (p: Preference) => {
+    setConfirmDelete(p);
   };
 
   const confirmDeleteAction = async () => {
     if (!confirmDelete) return;
     setSubmitting(true);
     try {
-      const { error } = await adminFetch<PatchResponse>(
-        `/api/admin/city-boundaries?id=${encodeURIComponent(confirmDelete.id)}`,
+      const { error } = await adminFetch<PreferenceResponse>(
+        `/api/admin/preferences?id=${encodeURIComponent(confirmDelete.id)}`,
         { method: "DELETE" },
       );
       if (error) {
         toast.show(`Delete failed: ${error}`, "error");
         return;
       }
-      toast.show("City deactivated", "success");
+      toast.show("Preference removed", "success");
       setConfirmDelete(null);
       await fetchList();
     } finally {
@@ -243,72 +250,124 @@ export default function CityBoundariesScreen() {
   const fields: AdminField[] = [
     {
       name: "name",
-      label: "Name",
+      label: "Key (machine name)",
       type: "text",
       required: true,
-      placeholder: "e.g. Dhaka",
+      placeholder: "e.g. quiet_ride",
+      helpText:
+        "Lowercase snake_case. Used internally and stored on ride records.",
+    },
+    {
+      name: "display_label_en",
+      label: "English Label",
+      type: "text",
+      required: true,
+      placeholder: "e.g. Quiet ride",
+    },
+    {
+      name: "display_label_bn",
+      label: "Bengali Label",
+      type: "text",
+      required: true,
+      placeholder: "বাংলা লেবেল",
+    },
+    {
+      name: "icon",
+      label: "Icon Name (optional)",
+      type: "text",
+      placeholder: "MaterialCommunityIcons glyph name",
+      helpText: "Optional icon identifier rendered by the rider app.",
+    },
+    {
+      name: "surcharge_taka",
+      label: "Surcharge (৳)",
+      type: "number",
+      step: 1,
+      helpText:
+        "Added to fare when rider selects this preference. ×100 to paisa on save.",
+    },
+    {
+      name: "affects_matching",
+      label: "Affects Matching",
+      type: "boolean",
+      helpText:
+        "When on, the dispatch engine filters eligible drivers by this preference.",
     },
     { name: "is_active", label: "Active", type: "boolean" },
-    {
-      name: "polygon_json",
-      label: "Polygon (JSON)",
-      type: "textarea",
-      required: true,
-      placeholder: '[{"lat":23.8,"lng":90.4}, ...]',
-      helpText:
-        'JSON array of at least 3 points, each {"lat":number,"lng":number}.',
-    },
   ];
 
-  const columns: AdminColumn<CityBoundary>[] = [
+  const columns: AdminColumn<Preference>[] = [
     {
       key: "name",
-      header: "Name",
+      header: "Key",
       sortable: true,
-      render: (c) => <Text style={styles.cellPrimary}>{c.name}</Text>,
+      width: 160,
+      render: (p) => <Text style={styles.cellPrimary}>{p.name}</Text>,
+    },
+    {
+      key: "display_label_en",
+      header: "English Label",
+      width: 200,
+      render: (p) => <Text style={styles.cellText}>{p.display_label_en}</Text>,
+    },
+    {
+      key: "display_label_bn",
+      header: "Bengali Label",
+      width: 200,
+      render: (p) => <Text style={styles.cellText}>{p.display_label_bn}</Text>,
+    },
+    {
+      key: "charge_bdt",
+      header: "Surcharge",
+      width: 120,
+      sortable: true,
+      render: (p) => (
+        <Text style={styles.cellText}>
+          {p.charge_bdt ? `৳${(p.charge_bdt / 100).toFixed(0)}` : "—"}
+        </Text>
+      ),
+    },
+    {
+      key: "affects_matching",
+      header: "Affects Matching",
+      width: 150,
+      render: (p) => (
+        <Text
+          style={[
+            styles.cellText,
+            p.affects_matching ? styles.cellYes : styles.cellMuted,
+          ]}
+        >
+          {p.affects_matching ? "Yes" : "No"}
+        </Text>
+      ),
     },
     {
       key: "is_active",
       header: "Active",
-      width: 100,
-      render: (c) => (
+      width: 90,
+      render: (p) => (
         <AdminToggle
-          value={c.is_active}
-          onValueChange={() => handleToggleActive(c)}
+          value={p.is_active}
+          onValueChange={() => handleToggleActive(p)}
         />
-      ),
-    },
-    {
-      key: "polygon",
-      header: "Polygon Points",
-      width: 140,
-      render: (c) => (
-        <Text style={styles.cellText}>{c.polygon.length} pts</Text>
-      ),
-    },
-    {
-      key: "created_at",
-      header: "Created",
-      width: 220,
-      render: (c) => (
-        <Text style={styles.cellText}>{formatDateTime(c.created_at)}</Text>
       ),
     },
     {
       key: "actions",
       header: "Actions",
-      width: 180,
-      render: (c) => (
+      width: 220,
+      render: (p) => (
         <View style={styles.actionsRow}>
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
-            onPress={() => openEdit(c)}
+            onPress={() => openEdit(p)}
           >
             <Text style={styles.miniBtnText}>Edit</Text>
           </Pressable>
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.danger }]}
-            onPress={() => setConfirmDelete(c)}
+            onPress={() => openDelete(p)}
           >
             <Text style={styles.miniBtnText}>Delete</Text>
           </Pressable>
@@ -319,33 +378,32 @@ export default function CityBoundariesScreen() {
 
   return (
     <AdminShell
-      title="City Boundaries"
-      subtitle="Intercity geo-fencing polygons"
+      title="Ride Preferences"
+      subtitle="Optional add-ons riders can request"
       actions={
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable style={styles.ghostBtn} onPress={fetchList}>
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
           <Pressable style={styles.primaryBtn} onPress={openCreate}>
-            <Text style={styles.primaryBtnText}>+ New Boundary</Text>
+            <Text style={styles.primaryBtnText}>+ New Preference</Text>
           </Pressable>
         </View>
       }
     >
       <AdminTable
         columns={columns}
-        rows={cities}
-        rowKey={(c) => c.id}
+        rows={preferences}
+        rowKey={(p) => p.id}
         loading={loading}
-        emptyMessage="No city boundaries yet."
+        emptyMessage="No preferences yet. Create one to get started."
         pagination={null}
       />
 
       <AdminModal
         visible={modalVisible}
-        title={mode === "create" ? "New City Boundary" : "Edit City Boundary"}
+        title={mode === "create" ? "New Preference" : "Edit Preference"}
         onClose={closeModal}
-        width={620}
         footer={
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Pressable
@@ -376,7 +434,7 @@ export default function CityBoundariesScreen() {
 
       <AdminModal
         visible={!!confirmDelete}
-        title="Delete city boundary"
+        title="Delete preference"
         onClose={() => !submitting && setConfirmDelete(null)}
         width={460}
         footer={
@@ -403,8 +461,7 @@ export default function CityBoundariesScreen() {
         }
       >
         <Text style={styles.confirmText}>
-          Delete city boundary “{confirmDelete?.name}”? This deactivates the
-          boundary (soft-delete). Existing rides are unaffected.
+          {`Delete "${confirmDelete?.display_label_en ?? confirmDelete?.name ?? ""}"? This removes the preference from the rider picker. (API soft-deactivates — existing ride records referencing it are unaffected.)`}
         </Text>
       </AdminModal>
     </AdminShell>
@@ -421,6 +478,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimaryDark,
     fontFamily: "Jakarta-Regular",
     fontSize: 13,
+  },
+  cellYes: {
+    color: colors.primary,
+    fontFamily: "Jakarta-SemiBold",
+  },
+  cellMuted: {
+    color: colors.textSecondaryDark,
   },
   actionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   miniBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },

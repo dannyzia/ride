@@ -1,10 +1,17 @@
 import { colors } from "@/theme/goRide";
-import { View, Text, ActivityIndicator, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 import { Stack, router, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { AntDesign } from "@expo/vector-icons";
 import { logger } from "@/lib/logger";
+import { AdminToastProvider } from "@/components/admin/AdminToast";
 
 const STACK_OPTS = {
   headerShown: false,
@@ -62,8 +69,8 @@ export default function AdminLayout() {
         setIsAdmin(false);
         setAuthError(
           `Signed in as ${email}, but your database role is "${profile.role}".\n\n` +
-          `Run this SQL in the Supabase SQL Editor:\n\n` +
-          `UPDATE users SET role = 'admin' WHERE auth_uid = '${uid}';`,
+            `Run this SQL in the Supabase SQL Editor:\n\n` +
+            `UPDATE users SET role = 'admin' WHERE auth_uid = '${uid}';`,
         );
         setChecking(false);
         return;
@@ -87,7 +94,7 @@ export default function AdminLayout() {
             setIsAdmin(false);
             setAuthError(
               `Signed in as ${email}, but role is "${data.role}".\n\n` +
-              `Run this SQL in Supabase:\n\nUPDATE users SET role = 'admin' WHERE auth_uid = '${uid}';`,
+                `Run this SQL in Supabase:\n\nUPDATE users SET role = 'admin' WHERE auth_uid = '${uid}';`,
             );
             setChecking(false);
             return;
@@ -96,9 +103,9 @@ export default function AdminLayout() {
           setIsAdmin(false);
           setAuthError(
             `Signed in as ${email}, but you don't exist in the users table yet.\n\n` +
-            `Run this SQL in the Supabase SQL Editor:\n\n` +
-            `INSERT INTO users (auth_uid, phone, name, role)\n` +
-            `VALUES ('${uid}', '0000000000', 'Admin', 'admin');`,
+              `Run this SQL in the Supabase SQL Editor:\n\n` +
+              `INSERT INTO users (auth_uid, phone, name, role)\n` +
+              `VALUES ('${uid}', '0000000000', 'Admin', 'admin');`,
           );
           setChecking(false);
           return;
@@ -112,18 +119,18 @@ export default function AdminLayout() {
       if (profileError) {
         setAuthError(
           `Signed in as ${email} (auth UID: ${uid}).\n\n` +
-          `The database query was blocked (likely RLS policy) and the server API is not reachable.\n\n` +
-          `To fix, run this SQL in the Supabase SQL Editor:\n\n` +
-          `INSERT INTO users (auth_uid, phone, name, role)\n` +
-          `VALUES ('${uid}', '0000000000', 'Admin', 'admin');\n\n` +
-          `And make sure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in Render.`,
+            `The database query was blocked (likely RLS policy) and the server API is not reachable.\n\n` +
+            `To fix, run this SQL in the Supabase SQL Editor:\n\n` +
+            `INSERT INTO users (auth_uid, phone, name, role)\n` +
+            `VALUES ('${uid}', '0000000000', 'Admin', 'admin');\n\n` +
+            `And make sure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in Render.`,
         );
       } else {
         setAuthError(
           `Signed in as ${email}, but no matching row was found in the users table.\n\n` +
-          `Run this SQL in the Supabase SQL Editor:\n\n` +
-          `INSERT INTO users (auth_uid, phone, name, role)\n` +
-          `VALUES ('${uid}', '0000000000', 'Admin', 'admin');`,
+            `Run this SQL in the Supabase SQL Editor:\n\n` +
+            `INSERT INTO users (auth_uid, phone, name, role)\n` +
+            `VALUES ('${uid}', '0000000000', 'Admin', 'admin');`,
         );
       }
       setChecking(false);
@@ -172,10 +179,15 @@ export default function AdminLayout() {
   // ---- Authenticated but not admin — show detailed error ----
   if (!isAdmin) {
     return (
-      <ScrollView style={styles.errorScroll} contentContainerStyle={styles.center}>
+      <ScrollView
+        style={styles.errorScroll}
+        contentContainerStyle={styles.center}
+      >
         <AntDesign name="lock" size={48} color={colors.danger} />
         <Text style={styles.deniedTitle}>Access Denied</Text>
-        <Text style={styles.errorText}>{authError || "Admin privileges required."}</Text>
+        <Text style={styles.errorText}>
+          {authError || "Admin privileges required."}
+        </Text>
         <Text
           onPress={() => {
             supabase.auth.signOut();
@@ -190,15 +202,14 @@ export default function AdminLayout() {
   }
 
   // ---- Admin authenticated: render full panel ----
+  // Stack auto-discovers any new admin/*.tsx route. We just supply shared opts.
   return (
-    <Stack screenOptions={STACK_OPTS}>
-      <Stack.Screen name="index" options={{ title: "Admin" }} />
-      <Stack.Screen name="verification" options={{ title: "Verification" }} />
-      <Stack.Screen name="packages" options={{ title: "Packages" }} />
-      <Stack.Screen name="zones" options={{ title: "Zones" }} />
-      <Stack.Screen name="city-boundaries" options={{ title: "City Boundaries" }} />
-      <Stack.Screen name="configuration" options={{ title: "Configuration" }} />
-    </Stack>
+    <AdminToastProvider>
+      <Stack screenOptions={STACK_OPTS}>
+        <Stack.Screen name="index" options={{ title: "Admin" }} />
+        <Stack.Screen name="login" options={{ title: "Admin Login" }} />
+      </Stack>
+    </AdminToastProvider>
   );
 }
 

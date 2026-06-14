@@ -36,7 +36,7 @@ All core features are **fully implemented**:
 - **Payments**: PortPos unified gateway (not bKash/Nagad directly). `lib/portpos.ts` active. `lib/bkash.ts` and `lib/nagad.ts` are inert stubs (throw errors).
 - **Dispatch**: WebSocket server in `utils-server/` with H3 indexing, heartbeat-gated call deduction, batch broadcasting.
 - **Database**: 22 tables in `src/db/schema.ts` with all enums (vehicleTypeEnum with 8 lowercase values, rideStatusEnum, etc.).
-- **Admin panel**: `app/(admin)/` with web-only routes for verification, packages, zones, configuration.
+- **Admin panel**: `app/(admin)/` with web-only routes for verification, packages, zones, configuration. **Phase F15 (in progress)** is consolidating all admin entities (driver queue, lifecycle, incentives, promos, preferences, referral campaigns, point offers, vehicle models, sample media, platform config, monitoring) into one coherent dashboard. See `docs/Plan/14-DEV-CHECKLIST.yaml` phase F15.
 - **Chat**: In-app messaging with `store/useChatStore.ts` and `app/api/chat/`.
 - **Driver flows**: Onboarding, home, offers, ledger. 6 Zustand stores in `store/`.
 

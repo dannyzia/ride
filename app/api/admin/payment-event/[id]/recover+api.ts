@@ -1,0 +1,64 @@
+// POST /api/admin/payment-event/[id]/recover
+// F15-API-05. Manually activate subscription for stuck paid payment.
+import { db } from '@/src/db';
+import { paymentEvents } from '@/src/db/schema';
+import { eq } from 'drizzle-orm';
+import { requireRole } from '@/lib/auth';
+import { activateSubscription } from '@/lib/activateSubscription';
+import { logger } from '@/lib/logger';
+
+interface Params {
+  params: { id: string };
+}
+
+export async function POST(request: Request, { params }: Params) {
+  try {
+    const { supabaseUser: admin } = await requireRole('admin')(request);
+    const { id } = params;
+
+    const [event] = await db
+      .select()
+      .from(paymentEvents)
+      .where(eq(paymentEvents.id, id))
+      .limit(1);
+    if (!event) return Response.json({ error: 'payment_event_not_found' }, { status: 404 });
+
+    if (event.status !== 'paid') {
+      return Response.json(
+        {
+          error: 'invalid_status',
+          message: `Payment status is ${event.status}, expected 'paid'`,
+        },
+        { status: 422 },
+      );
+    }
+
+    if (event.subscription_id) {
+      return Response.json({
+        payment_event_id: id,
+        subscription_id: event.subscription_id,
+        already_activated: true,
+      });
+    }
+
+    const { subscriptionId } = await activateSubscription(id);
+
+    logger.info('[admin/payment-event/recover] recovered', {
+      paymentEventId: id,
+      subscriptionId,
+      adminId: admin.id,
+    });
+
+    return Response.json({
+      payment_event_id: id,
+      subscription_id: subscriptionId,
+      recovered: true,
+    });
+  } catch (err: unknown) {
+    const status = (err as { status?: number }).status;
+    if (status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    logger.error('[admin/payment-event/recover] error', err);
+    return Response.json({ error: 'internal_error' }, { status: 500 });
+  }
+}
