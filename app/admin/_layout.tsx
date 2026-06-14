@@ -1,5 +1,5 @@
 import { colors } from "@/theme/goRide";
-import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, ActivityIndicator, StyleSheet, ScrollView } from "react-native";
 import { Stack, router, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -16,6 +16,7 @@ export default function AdminLayout() {
   const [checking, setChecking] = useState(true);
   const [hasSession, setHasSession] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [authError, setAuthError] = useState("");
 
   const segs = segments as readonly string[];
   const isLoginRoute = segs.length > 1 && segs[1] === "login";
@@ -37,6 +38,39 @@ export default function AdminLayout() {
         setChecking(false);
         return;
       }
+
+      setHasSession(true);
+      setAuthError("");
+      const uid = session.user.id;
+      const email = session.user.email ?? "unknown";
+
+      // ── Method 1: Client-side query (uses anon key baked into bundle) ──
+      const { data: profile, error: profileError } = await supabase
+        .from("users")
+        .select("role")
+        .eq("auth_uid", uid)
+        .maybeSingle();
+
+      if (profile?.role === "admin") {
+        setIsAdmin(true);
+        setChecking(false);
+        return;
+      }
+
+      if (profile && profile.role !== "admin") {
+        // User exists but role is wrong
+        setIsAdmin(false);
+        setAuthError(
+          `Signed in as ${email}, but your database role is "${profile.role}".\n\n` +
+          `Run this SQL in the Supabase SQL Editor:\n\n` +
+          `UPDATE users SET role = 'admin' WHERE auth_uid = '${uid}';`,
+        );
+        setChecking(false);
+        return;
+      }
+
+      // No profile returned — either RLS blocked it or user doesn't exist.
+      // ── Method 2: Server-side API fallback ──
       try {
         const res = await fetch("/api/auth/verify-token", {
           method: "POST",
@@ -44,18 +78,55 @@ export default function AdminLayout() {
         });
         if (res.ok) {
           const data = await res.json();
-          setHasSession(true);
-          setIsAdmin(data.role === "admin");
-        } else {
-          setHasSession(true);
+          if (data.exists && data.role === "admin") {
+            setIsAdmin(true);
+            setChecking(false);
+            return;
+          }
+          if (data.exists) {
+            setIsAdmin(false);
+            setAuthError(
+              `Signed in as ${email}, but role is "${data.role}".\n\n` +
+              `Run this SQL in Supabase:\n\nUPDATE users SET role = 'admin' WHERE auth_uid = '${uid}';`,
+            );
+            setChecking(false);
+            return;
+          }
+          // data.exists === false → user not in DB
           setIsAdmin(false);
+          setAuthError(
+            `Signed in as ${email}, but you don't exist in the users table yet.\n\n` +
+            `Run this SQL in the Supabase SQL Editor:\n\n` +
+            `INSERT INTO users (auth_uid, phone, name, role)\n` +
+            `VALUES ('${uid}', '0000000000', 'Admin', 'admin');`,
+          );
+          setChecking(false);
+          return;
         }
       } catch {
-        setHasSession(true);
-        setIsAdmin(false);
-      } finally {
-        setChecking(false);
+        // Server API also failed — fall through to error
       }
+
+      // ── Both methods failed ──
+      setIsAdmin(false);
+      if (profileError) {
+        setAuthError(
+          `Signed in as ${email} (auth UID: ${uid}).\n\n` +
+          `The database query was blocked (likely RLS policy) and the server API is not reachable.\n\n` +
+          `To fix, run this SQL in the Supabase SQL Editor:\n\n` +
+          `INSERT INTO users (auth_uid, phone, name, role)\n` +
+          `VALUES ('${uid}', '0000000000', 'Admin', 'admin');\n\n` +
+          `And make sure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in Render.`,
+        );
+      } else {
+        setAuthError(
+          `Signed in as ${email}, but no matching row was found in the users table.\n\n` +
+          `Run this SQL in the Supabase SQL Editor:\n\n` +
+          `INSERT INTO users (auth_uid, phone, name, role)\n` +
+          `VALUES ('${uid}', '0000000000', 'Admin', 'admin');`,
+        );
+      }
+      setChecking(false);
     });
 
     return () => subscription.unsubscribe();
@@ -63,11 +134,9 @@ export default function AdminLayout() {
 
   // ---- Navigation side-effects ----
   useEffect(() => {
-    // Unauthenticated users on admin routes → go to admin login (NOT rider phone-entry)
     if (!checking && !hasSession && !isLoginRoute) {
       router.replace("/admin/login");
     }
-    // Already authenticated admin stuck on login page → go to dashboard
     if (!checking && hasSession && isAdmin && isLoginRoute) {
       router.replace("/admin");
     }
@@ -100,15 +169,13 @@ export default function AdminLayout() {
     );
   }
 
-  // ---- Authenticated but not admin ----
+  // ---- Authenticated but not admin — show detailed error ----
   if (!isAdmin) {
     return (
-      <View style={styles.center}>
+      <ScrollView style={styles.errorScroll} contentContainerStyle={styles.center}>
         <AntDesign name="lock" size={48} color={colors.danger} />
         <Text style={styles.deniedTitle}>Access Denied</Text>
-        <Text style={styles.deniedSubtitle}>
-          Admin privileges required. Your account role is not &quot;admin&quot;.
-        </Text>
+        <Text style={styles.errorText}>{authError || "Admin privileges required."}</Text>
         <Text
           onPress={() => {
             supabase.auth.signOut();
@@ -118,7 +185,7 @@ export default function AdminLayout() {
         >
           Sign out and try a different account
         </Text>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -137,11 +204,16 @@ export default function AdminLayout() {
 
 const styles = StyleSheet.create({
   center: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.darkSurface,
     paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  errorScroll: {
+    flex: 1,
+    backgroundColor: colors.darkSurface,
   },
   deniedTitle: {
     color: colors.textPrimaryDark,
@@ -150,17 +222,18 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontFamily: "Jakarta-Bold",
   },
-  deniedSubtitle: {
+  errorText: {
     color: colors.textSecondaryDark,
     textAlign: "center",
-    marginTop: 8,
-    fontSize: 14,
+    marginTop: 12,
+    fontSize: 13,
+    lineHeight: 20,
     fontFamily: "Jakarta-Regular",
   },
   signOutLink: {
     color: colors.adminAccent,
     fontSize: 14,
-    marginTop: 20,
+    marginTop: 24,
     textDecorationLine: "underline",
     fontFamily: "Jakarta-SemiBold",
   },
