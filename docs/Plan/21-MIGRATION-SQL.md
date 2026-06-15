@@ -710,3 +710,53 @@ After running all migrations on **staging**, verify:
 15. `SELECT key FROM system_config WHERE key='intercity_min_distance_km';` → 0 rows
 
 After verifying on staging, apply to production during a low-traffic window.
+
+---
+
+## M-12: Sync admin tables to current schema (2026-06-15)
+
+**Status:** Applied to production (swzgkhwjvikyfaqnbrix) on 2026-06-15.
+
+**Background:** The production DB had the old GlideX-era schema for 7 admin
+tables (preferences, promo_codes, incentive_definitions, referral_campaigns,
+vehicle_models, point_offers + 5 dependent tables). The deployed code expected
+the restructured schema from `src/db/schema.ts`. This caused 8 admin list
+endpoints to return HTTP 500 with `column does not exist` errors.
+
+**Data impact:** All 11 affected tables had 0 rows (verified before migration).
+Only `pricing` had data (8 rows) — that table was NOT dropped, just received
+a new `intercity_per_km_bdt` column with default 0.
+
+**Migration applied (idempotent):**
+
+```sql
+-- Add missing column to pricing (preserves 8 existing rows)
+ALTER TABLE pricing ADD COLUMN IF NOT EXISTS intercity_per_km_bdt integer NOT NULL DEFAULT 0;
+
+-- Drop dependent tables (CASCADE), then parent tables, then recreate all.
+-- Dropped: promo_redemptions, driver_incentives, referrals, ride_preferences,
+--          driver_preferences, promo_codes, incentive_definitions,
+--          referral_campaigns, vehicle_models, point_offers, preferences
+-- Recreated all from schema.ts definitions with correct indexes.
+```
+
+**Verification queries:**
+
+```sql
+-- All 7 columns that were missing now exist:
+SELECT table_name, column_name FROM information_schema.columns
+WHERE table_schema='public' AND (
+  (table_name='pricing' AND column_name='intercity_per_km_bdt')
+  OR (table_name='incentive_definitions' AND column_name='name')
+  OR (table_name='promo_codes' AND column_name='deleted_at')
+  OR (table_name='preferences' AND column_name='name')
+  OR (table_name='referral_campaigns' AND column_name='referrer_reward_percent')
+  OR (table_name='point_offers' AND column_name='points_required')
+  OR (table_name='vehicle_models' AND column_name='brand')
+);
+-- Expected: 7 rows
+
+-- Pricing rows preserved:
+SELECT COUNT(*) FROM pricing;
+-- Expected: 8
+```
