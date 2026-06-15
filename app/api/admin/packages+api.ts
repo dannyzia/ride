@@ -1,7 +1,7 @@
 // Auth: verifySupabaseToken via requireRole
 import { db } from "@/src/db";
 import { packages } from "@/src/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, isNull } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const all = await db
       .select()
       .from(packages)
-      .where(eq(packages.deleted_at, null as any))
+      .where(isNull(packages.deleted_at))
       .orderBy(desc(packages.created_at));
     return Response.json({ packages: all });
   } catch (err: any) {

@@ -4,7 +4,7 @@ import {
   drivers,
   driverIncentives,
 } from "@/src/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, isNull } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
@@ -42,9 +42,7 @@ export async function GET(req: Request) {
       .select()
       .from(incentiveDefinitions)
       .where(
-        includeInactive
-          ? undefined
-          : eq(incentiveDefinitions.deleted_at, null as any),
+        includeInactive ? undefined : isNull(incentiveDefinitions.deleted_at),
       )
       .orderBy(incentiveDefinitions.created_at);
 
