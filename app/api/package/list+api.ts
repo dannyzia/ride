@@ -24,15 +24,22 @@ export async function GET(request: Request) {
 
     const driverVehicleType = driver?.vehicle_type ?? null;
 
-    const whereClause = driverVehicleType
-      ? and(
-          eq(packages.is_active, true),
-          or(
-            isNull(packages.vehicle_type),
-            eq(packages.vehicle_type, driverVehicleType),
-          ),
-        )
-      : and(eq(packages.is_active, true), isNull(packages.vehicle_type));
+    // Always exclude soft-deleted packages in addition to active/vehicle filters.
+    // Defensive: even though admin DELETE currently also sets is_active=false,
+    // a future code path that sets deleted_at without clearing is_active must
+    // not leak retired packages to drivers.
+    const whereClause = and(
+      isNull(packages.deleted_at),
+      driverVehicleType
+        ? and(
+            eq(packages.is_active, true),
+            or(
+              isNull(packages.vehicle_type),
+              eq(packages.vehicle_type, driverVehicleType),
+            ),
+          )
+        : and(eq(packages.is_active, true), isNull(packages.vehicle_type)),
+    );
 
     const pkgList = await db
       .select({
