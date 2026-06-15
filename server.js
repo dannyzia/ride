@@ -15,7 +15,8 @@ const distFolder = path.join(projectRoot, "dist", "server");
 const clientFolder = path.join(projectRoot, "dist", "client");
 
 // Force IPv4 DNS resolution — Render blocks IPv6 outbound.
-const nodeOptions = (process.env.NODE_OPTIONS || "") + " --dns-result-order=ipv4first";
+const nodeOptions =
+  (process.env.NODE_OPTIONS || "") + " --dns-result-order=ipv4first";
 process.env.NODE_OPTIONS = nodeOptions;
 
 // ─────────────────────────────────────────────────────────────
@@ -114,14 +115,31 @@ const server = http.createServer(async (req, res) => {
     console.log(`Route request: ${req.method} ${req.url}`);
 
     // Construct full URL from request
-    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const protocol = req.headers["x-forwarded-proto"] || "http";
     const host = req.headers.host || `localhost:${port}`;
     const fullUrl = `${protocol}://${host}${req.url}`;
+
+    // Read the request body stream for non-GET/HEAD methods.
+    // Without this, POST/PUT/DELETE-with-body requests arrive at the
+    // API route handler with an empty body, causing `await request.json()`
+    // to throw "SyntaxError: Unexpected end of JSON input".
+    let bodyBuffer;
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      const chunks = [];
+      for await (const chunk of req) {
+        chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+      }
+      bodyBuffer = Buffer.concat(chunks);
+    }
 
     // Create Web Request object
     const webRequest = new Request(fullUrl, {
       method: req.method,
       headers: new Headers(req.headers),
+      body: bodyBuffer && bodyBuffer.length > 0 ? bodyBuffer : undefined,
+      // `duplex: "half"` is required by the Web Request spec when a body
+      // is provided. Some runtimes throw without it.
+      duplex: "half",
     });
 
     const response = await handler(webRequest);
@@ -154,14 +172,14 @@ const server = http.createServer(async (req, res) => {
     if (body.includes("__EXPO_ROUTER_HYDRATE__")) {
       body = body.replace(
         /<script type="module">globalThis\.__EXPO_ROUTER_HYDRATE__=true;<\/script>/,
-        ""
+        "",
       );
       // Clear the Suspense boundary content inside #root.
       // Greedy [\s\S]* with lookahead for <script ensures we match
       // the outermost </div> (the #root closing tag), not a nested one.
       body = body.replace(
         /<div id="root">[\s\S]*<\/div>(?=\s*<script)/,
-        '<div id="root"></div>'
+        '<div id="root"></div>',
       );
     }
 
