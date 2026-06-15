@@ -4,6 +4,7 @@ import { drivers, documents, users } from '@/src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 
 const reviewSchema = z.object({
@@ -17,13 +18,10 @@ export async function POST(request: Request) {
   try {
     const { supabaseUser: admin } = await requireRole('admin')(request);
 
-    const body = await request.json();
-    const parsed = reviewSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json({ error: 'validation_error', message: parsed.error.flatten() }, { status: 400 });
-    }
+    const result = await parseJsonBody(request, reviewSchema);
+    if (!result.ok) return result.response;
 
-    const { driver_id, action, rejection_reason, document_ids } = parsed.data;
+    const { driver_id, action, rejection_reason, document_ids } = result.data;
 
     const [driver] = await db.select()
       .from(drivers)

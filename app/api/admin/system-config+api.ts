@@ -5,6 +5,7 @@ import { systemConfig } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 
 const ALLOWED_KEYS = new Set([
@@ -87,18 +88,12 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const { supabaseUser: admin } = await requireRole('admin')(request);
-    const body = await request.json();
-    const parsed = patchSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: 'validation_error', message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    const result = await parseJsonBody(request, patchSchema);
+    if (!result.ok) return result.response;
 
     // Validate all keys first
     const errors: string[] = [];
-    for (const { key, value } of parsed.data.updates) {
+    for (const { key, value } of result.data.updates) {
       const err = validateValue(key, value);
       if (err) errors.push(err);
     }
@@ -110,7 +105,7 @@ export async function PATCH(request: Request) {
     }
 
     // Upsert each key
-    for (const { key, value } of parsed.data.updates) {
+    for (const { key, value } of result.data.updates) {
       const [existing] = await db
         .select()
         .from(systemConfig)
@@ -127,7 +122,7 @@ export async function PATCH(request: Request) {
     }
 
     logger.info('[admin/system-config] updated', {
-      keys: parsed.data.updates.map((u) => u.key),
+      keys: result.data.updates.map((u) => u.key),
       adminId: admin.id,
     });
 

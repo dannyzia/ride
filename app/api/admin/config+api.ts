@@ -3,6 +3,12 @@ import { db } from '../../../src/db';
 import { platformConfig } from '../../../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireRole } from '../../../lib/auth';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/parseBody';
+
+const patchSchema = z.object({
+  updates: z.array(z.object({ key: z.string().min(1), value: z.string() })).min(1),
+});
 
 const ALLOWED_KEYS = new Set([
   'driver_min_ratio',
@@ -22,10 +28,9 @@ export async function GET(req: Request) {
 export async function PATCH(req: Request) {
   await requireRole('admin')(req);
 
-  const body = await req.json() as { updates: { key: string; value: string }[] };
-  if (!Array.isArray(body.updates) || body.updates.length === 0) {
-    return Response.json({ error: 'updates must be a non-empty array' }, { status: 400 });
-  }
+  const result = await parseJsonBody(req, patchSchema);
+  if (!result.ok) return result.response;
+  const body = result.data;
 
   const errors: string[] = [];
   for (const { key, value } of body.updates) {

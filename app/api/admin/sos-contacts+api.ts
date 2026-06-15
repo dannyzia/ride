@@ -3,6 +3,7 @@ import { systemConfig } from '../../../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireRole } from '../../../lib/auth';
 import { logger } from '../../../lib/logger';
+import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 
 const sosContactSchema = z.object({
@@ -11,6 +12,8 @@ const sosContactSchema = z.object({
 });
 
 const sosContactsArraySchema = z.array(sosContactSchema).min(1).max(10);
+
+const patchSchema = z.object({ contacts: sosContactsArraySchema });
 
 export async function GET(req: Request) {
   await requireRole('admin')(req);
@@ -29,17 +32,14 @@ export async function GET(req: Request) {
 export async function PATCH(req: Request) {
   await requireRole('admin')(req);
 
-  const body = await req.json();
-  const parsed = sosContactsArraySchema.safeParse(body.contacts);
-  if (!parsed.success) {
-    return Response.json({ error: 'validation_error', message: parsed.error.format() }, { status: 400 });
-  }
+  const result = await parseJsonBody(req, patchSchema);
+  if (!result.ok) return result.response;
 
   await db.update(systemConfig)
-    .set({ value: JSON.stringify(parsed.data), updated_at: new Date() })
+    .set({ value: JSON.stringify(result.data.contacts), updated_at: new Date() })
     .where(eq(systemConfig.key, 'sos_contacts'));
 
-  logger.info('[admin/sos-contacts] updated', { count: parsed.data.length });
+  logger.info('[admin/sos-contacts] updated', { count: result.data.contacts.length });
 
-  return Response.json({ contacts: parsed.data });
+  return Response.json({ contacts: result.data.contacts });
 }

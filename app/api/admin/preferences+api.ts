@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { parseJsonBody } from "@/lib/parseBody";
 
 const createSchema = z.object({
   name: z.string().min(1).max(50),
@@ -45,16 +46,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   await requireRole("admin")(req);
 
-  const body = await req.json();
-  const parsed = createSchema.safeParse(body);
-  if (!parsed.success) {
-    return Response.json(
-      { error: "validation_error", message: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
+  const result = await parseJsonBody(req, createSchema);
+  if (!result.ok) return result.response;
 
-  const data = parsed.data;
+  const data = result.data;
 
   try {
     const [pref] = await db
@@ -93,16 +88,10 @@ export async function PATCH(req: Request) {
   const prefId = url.searchParams.get("id");
   if (!prefId) return Response.json({ error: "missing_id" }, { status: 400 });
 
-  const body = await req.json();
-  const parsed = patchSchema.safeParse(body);
-  if (!parsed.success) {
-    return Response.json(
-      { error: "validation_error", message: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
+  const result = await parseJsonBody(req, patchSchema);
+  if (!result.ok) return result.response;
 
-  const data = parsed.data;
+  const data = result.data;
   const updates: Record<string, unknown> = { updated_at: new Date() };
   if (data.name !== undefined) updates.name = data.name;
   if (data.display_label_en !== undefined)

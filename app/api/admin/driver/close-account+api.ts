@@ -5,6 +5,7 @@ import { drivers, documents } from '@/src/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 
 const PURGE_DELAY_DAYS = 30;
@@ -18,15 +19,9 @@ export async function POST(request: Request) {
   try {
     const { supabaseUser: admin } = await requireRole('admin')(request);
 
-    const body = await request.json();
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: 'validation_error', message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
-    const { driver_id, reason } = parsed.data;
+    const result = await parseJsonBody(request, schema);
+    if (!result.ok) return result.response;
+    const { driver_id, reason } = result.data;
 
     const [driver] = await db.select().from(drivers).where(eq(drivers.id, driver_id)).limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });

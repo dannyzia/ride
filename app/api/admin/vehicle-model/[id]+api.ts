@@ -7,6 +7,7 @@ import { requireRole } from '@/lib/auth';
 import { VEHICLE_TYPE_ZOD_ENUM } from '@/lib/vehicleTypes';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { parseJsonBody } from '@/lib/parseBody';
 
 const patchSchema = z.object({
   brand: z.string().min(1).max(100).optional(),
@@ -37,8 +38,10 @@ export async function GET(request: Request, { params }: Params) {
     return Response.json({ model: row });
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
-    if (status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (status === 401)
+      return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (status === 403)
+      return Response.json({ error: 'forbidden' }, { status: 403 });
     logger.error('[admin/vehicle-model/:id] GET error', err);
     return Response.json({ error: 'internal_error' }, { status: 500 });
   }
@@ -47,17 +50,11 @@ export async function GET(request: Request, { params }: Params) {
 export async function PATCH(request: Request, { params }: Params) {
   try {
     const { supabaseUser: admin } = await requireRole('admin')(request);
-    const body = await request.json();
-    const parsed = patchSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: 'validation_error', message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    const result = await parseJsonBody(request, patchSchema);
+    if (!result.ok) return result.response;
 
     const updates: Record<string, unknown> = { updated_at: new Date() };
-    for (const [k, v] of Object.entries(parsed.data)) {
+    for (const [k, v] of Object.entries(result.data)) {
       if (v !== undefined) updates[k] = v;
     }
 
@@ -76,8 +73,10 @@ export async function PATCH(request: Request, { params }: Params) {
     return Response.json({ model: updated });
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
-    if (status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (status === 401)
+      return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (status === 403)
+      return Response.json({ error: 'forbidden' }, { status: 403 });
     logger.error('[admin/vehicle-model/:id] PATCH error', err);
     return Response.json({ error: 'internal_error' }, { status: 500 });
   }

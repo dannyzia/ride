@@ -4,6 +4,7 @@ import { drivers, vehicles, vehicleTypeChanges } from '../../../../src/db/schema
 import { eq } from 'drizzle-orm';
 import { requireRole } from '../../../../lib/auth';
 import { logger } from '../../../../lib/logger';
+import { parseJsonBody } from '../../../../lib/parseBody';
 import { z } from 'zod';
 import { VEHICLE_TYPE_VALUES } from '../../../../lib/vehicleTypes';
 
@@ -28,11 +29,10 @@ export async function POST(request: Request) {
   try {
     const { supabaseUser: admin } = await requireRole('admin')(request);
 
-    const body = await request.json();
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) return Response.json({ error: 'invalid_body' }, { status: 400 });
+    const result = await parseJsonBody(request, schema);
+    if (!result.ok) return result.response;
 
-    const { driverId, new_vehicle_type, reason } = parsed.data;
+    const { driverId, new_vehicle_type, reason } = result.data;
 
     const [driver] = await db.select().from(drivers).where(eq(drivers.id, driverId)).limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });

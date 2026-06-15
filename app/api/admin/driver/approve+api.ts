@@ -11,6 +11,7 @@ import { eq, and } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { VEHICLE_TYPE_ZOD_ENUM } from '@/lib/vehicleTypes';
 import { logger } from '@/lib/logger';
+import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -26,15 +27,9 @@ export async function POST(request: Request) {
   try {
     const { supabaseUser: admin, dbUser } = await requireRole('admin')(request);
 
-    const body = await request.json();
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: 'validation_error', message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
-    const { driver_id, new_status, vehicle_type_adjusted, reason } = parsed.data;
+    const result = await parseJsonBody(request, schema);
+    if (!result.ok) return result.response;
+    const { driver_id, new_status, vehicle_type_adjusted, reason } = result.data;
 
     const [driver] = await db.select().from(drivers).where(eq(drivers.id, driver_id)).limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });

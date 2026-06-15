@@ -6,6 +6,7 @@ import { eq, desc } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { parseJsonBody } from '@/lib/parseBody';
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
@@ -26,8 +27,10 @@ export async function GET(request: Request) {
     return Response.json({ campaigns: rows });
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
-    if (status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (status === 401)
+      return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (status === 403)
+      return Response.json({ error: 'forbidden' }, { status: 403 });
     logger.error('[admin/referral-campaigns] GET error', err);
     return Response.json({ error: 'internal_error' }, { status: 500 });
   }
@@ -36,17 +39,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { supabaseUser: admin } = await requireRole('admin')(request);
-    const body = await request.json();
-    const parsed = createSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: 'validation_error', message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    const result = await parseJsonBody(request, createSchema);
+    if (!result.ok) return result.response;
 
     const [created] = await db.transaction(async (tx) => {
-      if (parsed.data.is_active) {
+      if (result.data.is_active) {
         // Deactivate all others
         await tx
           .update(referralCampaigns)
@@ -56,12 +53,12 @@ export async function POST(request: Request) {
       const [row] = await tx
         .insert(referralCampaigns)
         .values({
-          name: parsed.data.name,
-          referrer_reward_percent: parsed.data.referrer_reward_percent,
-          referee_reward_percent: parsed.data.referee_reward_percent,
-          max_uses_per_referrer: parsed.data.max_uses_per_referrer,
-          max_uses_per_campaign: parsed.data.max_uses_per_campaign ?? null,
-          is_active: parsed.data.is_active,
+          name: result.data.name,
+          referrer_reward_percent: result.data.referrer_reward_percent,
+          referee_reward_percent: result.data.referee_reward_percent,
+          max_uses_per_referrer: result.data.max_uses_per_referrer,
+          max_uses_per_campaign: result.data.max_uses_per_campaign ?? null,
+          is_active: result.data.is_active,
         })
         .returning();
       return [row];
@@ -76,8 +73,10 @@ export async function POST(request: Request) {
     return Response.json({ campaign: created }, { status: 201 });
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
-    if (status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (status === 401)
+      return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (status === 403)
+      return Response.json({ error: 'forbidden' }, { status: 403 });
     logger.error('[admin/referral-campaigns] POST error', err);
     return Response.json({ error: 'internal_error' }, { status: 500 });
   }

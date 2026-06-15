@@ -4,6 +4,7 @@ import { documents } from '../../../../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireRole } from '../../../../lib/auth';
 import { logger } from '../../../../lib/logger';
+import { parseJsonBody } from '../../../../lib/parseBody';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -15,11 +16,10 @@ export async function POST(request: Request) {
   try {
     const { supabaseUser: admin } = await requireRole('admin')(request);
 
-    const body = await request.json();
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) return Response.json({ error: 'invalid_body' }, { status: 400 });
+    const result = await parseJsonBody(request, schema);
+    if (!result.ok) return result.response;
 
-    const { documentId, reason } = parsed.data;
+    const { documentId, reason } = result.data;
 
     const [doc] = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
     if (!doc) return Response.json({ error: 'document_not_found' }, { status: 404 });

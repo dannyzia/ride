@@ -4,6 +4,7 @@ import { pricing } from "@/src/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { parseJsonBody } from "@/lib/parseBody";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -44,16 +45,10 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     await requireRole("admin")(request);
-    const body = await request.json();
-    const parsed = updateSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: "validation_error", message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    const result = await parseJsonBody(request, updateSchema);
+    if (!result.ok) return result.response;
 
-    const { id, ...updatesRaw } = parsed.data;
+    const { id, ...updatesRaw } = result.data;
     const updates: Record<string, unknown> = { updated_at: new Date() };
     for (const [key, val] of Object.entries(updatesRaw)) {
       if (val === undefined) continue;

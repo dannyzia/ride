@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { VEHICLE_TYPE_VALUES } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { safeRequestJson } from "@/lib/parseBody";
 
 const zoneSchema = z.object({
   name: z.string().min(1).max(100),
@@ -56,7 +57,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await requireRole("admin")(request);
-    const body = await request.json();
+    const bodyResult = await safeRequestJson(request);
+    if (!bodyResult.ok) return bodyResult.response;
+    const body = bodyResult.data as Record<string, unknown>;
 
     // Zone creation
     if (body.polygon) {
@@ -112,7 +115,9 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     await requireRole("admin")(request);
-    const body = await request.json();
+    const bodyResult = await safeRequestJson(request);
+    if (!bodyResult.ok) return bodyResult.response;
+    const body = bodyResult.data as Record<string, unknown>;
 
     if (body.id && body.polygon) {
       const parsed = zoneSchema

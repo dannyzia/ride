@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
+import { parseJsonBody } from "@/lib/parseBody";
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
@@ -44,16 +45,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await requireRole("admin")(request);
-    const body = await request.json();
-    const parsed = createSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: "validation_error", message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    const result = await parseJsonBody(request, createSchema);
+    if (!result.ok) return result.response;
 
-    const [pkg] = await db.insert(packages).values(parsed.data).returning();
+    const [pkg] = await db.insert(packages).values(result.data).returning();
     return Response.json({ package: pkg }, { status: 201 });
   } catch (err: any) {
     if (err.status === 401)
@@ -68,16 +63,10 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     await requireRole("admin")(request);
-    const body = await request.json();
-    const parsed = updateSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: "validation_error", message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    const result = await parseJsonBody(request, updateSchema);
+    if (!result.ok) return result.response;
 
-    const { id, ...updates } = parsed.data;
+    const { id, ...updates } = result.data;
     const [pkg] = await db
       .update(packages)
       .set({ ...updates, updated_at: new Date() })

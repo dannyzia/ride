@@ -6,6 +6,7 @@ import { eq, desc } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { parseJsonBody } from '@/lib/parseBody';
 
 const createSchema = z.object({
   title: z.string().min(1).max(100),
@@ -21,7 +22,10 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const includeInactive = url.searchParams.get('include_inactive') === 'true';
     const rows = includeInactive
-      ? await db.select().from(pointOffers).orderBy(desc(pointOffers.created_at))
+      ? await db
+          .select()
+          .from(pointOffers)
+          .orderBy(desc(pointOffers.created_at))
       : await db
           .select()
           .from(pointOffers)
@@ -30,8 +34,10 @@ export async function GET(request: Request) {
     return Response.json({ offers: rows });
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
-    if (status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (status === 401)
+      return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (status === 403)
+      return Response.json({ error: 'forbidden' }, { status: 403 });
     logger.error('[admin/point-offers] GET error', err);
     return Response.json({ error: 'internal_error' }, { status: 500 });
   }
@@ -40,16 +46,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { supabaseUser: admin } = await requireRole('admin')(request);
-    const body = await request.json();
-    const parsed = createSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: 'validation_error', message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    const result = await parseJsonBody(request, createSchema);
+    if (!result.ok) return result.response;
 
-    const [created] = await db.insert(pointOffers).values(parsed.data).returning();
+    const [created] = await db
+      .insert(pointOffers)
+      .values(result.data)
+      .returning();
 
     logger.info('[admin/point-offers] created', {
       offerId: created.id,
@@ -60,8 +63,10 @@ export async function POST(request: Request) {
     return Response.json({ offer: created }, { status: 201 });
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
-    if (status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (status === 401)
+      return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (status === 403)
+      return Response.json({ error: 'forbidden' }, { status: 403 });
     logger.error('[admin/point-offers] POST error', err);
     return Response.json({ error: 'internal_error' }, { status: 500 });
   }

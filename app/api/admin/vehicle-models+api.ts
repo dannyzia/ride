@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { parseJsonBody } from "@/lib/parseBody";
 
 const createSchema = z.object({
   brand: z.string().min(1).max(100),
@@ -91,19 +92,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { supabaseUser: admin } = await requireRole("admin")(request);
-    const body = await request.json();
-    const parsed = createSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: "validation_error", message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    const result = await parseJsonBody(request, createSchema);
+    if (!result.ok) return result.response;
 
     // Filter out null values for nullable-but-notNull-with-default columns
     // (Drizzle's insert typing for `passenger_seats` requires number | undefined.)
     const insertPayload: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(parsed.data)) {
+    for (const [k, v] of Object.entries(result.data)) {
       if (v === null) continue; // let DB default apply
       insertPayload[k] = v;
     }

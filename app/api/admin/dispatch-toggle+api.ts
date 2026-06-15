@@ -5,6 +5,7 @@ import { systemConfig } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -54,23 +55,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { supabaseUser: admin } = await requireRole('admin')(request);
-    const body = await request.json();
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: 'validation_error', message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    const result = await parseJsonBody(request, schema);
+    if (!result.ok) return result.response;
 
-    await setDispatchPaused(parsed.data.paused);
+    await setDispatchPaused(result.data.paused);
 
     logger.info('[admin/dispatch-toggle] toggled', {
-      paused: parsed.data.paused,
+      paused: result.data.paused,
       adminId: admin.id,
     });
 
-    return Response.json({ dispatch_paused: parsed.data.paused });
+    return Response.json({ dispatch_paused: result.data.paused });
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
     if (status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
