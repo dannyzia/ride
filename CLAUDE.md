@@ -134,7 +134,9 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 - `app/(main)/(customer)/` — Rider screens (keep folder name `(customer)`, rider is a display label)
 - `app/(main)/(rider)/` — Driver screens
 - `app/(admin)/` — Web-only admin panel (dashboard, verification, packages, zones, configuration)
-- `app/api/` — Expo API routes (file-based backend endpoints)
+- `app/api/` — Expo API routes (file-based backend, `[public]` prefix = no JWT required)
+
+> **Expo API route params**: Dynamic segment params are passed **directly** as the second argument (`{ id }`), not wrapped in `{ params: { id } }` like Next.js. See Critical Coding Rules below.
 
 ### Auth System (Supabase — Implemented)
 - **Client**: `lib/supabase.ts` — client-side Supabase client (`EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY`)
@@ -249,6 +251,11 @@ See AGENTS.md for the complete rules reference. Key rules:
 - **No Firebase**: Supabase replaced all Firebase auth. Any Firebase reference is a bug.
 - **Timestamps**: Always UTC `timestamptz`, convert to Asia/Dhaka only at display
 - **Zod validation**: Every API route validates input before DB/service calls
+- **Body parsing**: Use `parseJsonBody(request, schema)` from `lib/parseBody.ts` for POST/PUT/PATCH bodies. Never call `await request.json()` directly.
+- **Expo route params**: Expo passes dynamic segment params directly as the 2nd arg: `GET(request, { id }: { id: string })`. NEVER use the Next.js `{ params }: { params: { id } }` convention — `params` will be undefined and destructuring crashes (caused BUG-1, BUG-2; fixed in `9fdfd0c0`).
+- **UUID validation**: All URL path params used in DB queries must be validated with `z.string().uuid()` before the query. Invalid UUIDs return `400 invalid_uuid`.
+- **Drizzle NULL checks**: Use `isNull(col)` / `isNotNull(col)`. NEVER `eq(col, null)` — it compiles to `col = NULL` which is always false in SQL. Caused BUG-3 (fixed in `fe5c5860`).
+- **server.js body buffering**: The production server entry point (`server.js`) must buffer the request body stream for non-GET/HEAD methods before constructing the Web `Request`. Without this, POST/PUT/PATCH bodies arrive empty (fixed in `88f7a68d`).
 - **Error format**: Always `{ error: 'machine_code', message: '...' }` with appropriate status
 - **H3**: Import `h3-js` only via `lib/h3.ts` and `utils-server/h3Index.ts`
 - **platform_config**: Never cache — read from DB at request time

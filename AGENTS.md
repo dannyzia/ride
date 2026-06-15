@@ -145,7 +145,32 @@ Always UTC `timestamptz`. Convert to `Asia/Dhaka` only at display. Use `lib/time
 
 ### Validation & Errors
 - Zod at every API route boundary before any DB/service call. Use `parsed.data` after `safeParse`, never raw request body.
+- POST/PUT/PATCH bodies: use `parseJsonBody(request, schema)` from `lib/parseBody.ts` — it handles body reading + Zod validation and returns a `{ ok, response }` discriminated union. Never call `await request.json()` directly.
+- URL path params (dynamic segments): validate with `z.string().uuid()` before any DB query. Invalid UUIDs return `400 invalid_uuid`.
 - Error format: `{ error: 'machine_code', message: 'Human description' }`. Never expose stack traces or Drizzle internals.
+
+### Expo API Routes (NOT Next.js)
+Expo's `@expo/server` adapter passes dynamic route params **directly** as the second argument — flat, NOT wrapped in `{ params }`. This differs from Next.js.
+
+**Correct (Expo):**
+```ts
+// file: app/api/admin/ride/[id]/chat+api.ts
+export async function GET(request: Request, { id }: { id: string }) {
+  // id is available directly
+}
+```
+
+**WRONG (Next.js convention — crashes in Expo):**
+```ts
+// ❌ params will be undefined, destructuring throws TypeError
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const { id } = params; // 💥 TypeError: Cannot destructure property 'id' of undefined
+}
+```
+
+This caused BUG-1 and BUG-2 in the admin panel — the handlers crashed before UUID validation could run. All 7 dynamic-segment admin routes were fixed in commit `9fdfd0c0`.
+
+**Server entry point** (`server.js`): must buffer the request body stream for non-GET/HEAD methods before constructing the Web `Request`. Without this, POST/PUT/PATCH bodies arrive empty and `request.json()` throws `SyntaxError: Unexpected end of JSON input`.
 
 ### Logging
 No `console.log`. Use `lib/logger.ts` (`logger.info`, `logger.error`, etc.).
@@ -154,6 +179,7 @@ No `console.log`. Use `lib/logger.ts` (`logger.info`, `logger.error`, etc.).
 - Transactions required for all writes touching `call_ledger`, `subscriptions`, or `payment_events`.
 - Use `typeof schema.$inferSelect` / `typeof schema.$inferInsert` — never manually redeclare DB row types.
 - Driver `min_per_km_bdt` validation: use `validateDriverMinKm()` from `lib/validateMinPerKm.ts` — never inline.
+- **NULL checks**: use `isNull(col)` / `isNotNull(col)`. NEVER `eq(col, null)` — it compiles to `col = NULL` which is always false in SQL (NULL is not equality-comparable). This caused the critical BUG-3 (packages GET returned `[]` despite rows existing).
 
 ### Dispatch Logic
 - Daily cap check belongs in dispatch candidate pool construction (`dispatch.ts`), NOT in heartbeat deduction path.
