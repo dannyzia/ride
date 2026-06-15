@@ -1,26 +1,31 @@
 // GET /api/admin/document/[id]/presigned-url
 // F15-API-05. Generate a short-lived signed URL for viewing a document.
+import { z } from "zod";
 import { db } from "@/src/db";
 import { documents } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 
-interface Params {
-  params: { id: string };
-}
-
 const SIXTY_SECONDS = 60;
+const idSchema = z.string().uuid();
 
-export async function GET(request: Request, { params }: Params) {
+export async function GET(request: Request, { id }: { id: string }) {
   try {
     await requireRole("admin")(request);
-    const { id } = params;
+
+    const parsedId = idSchema.safeParse(id);
+    if (!parsedId.success) {
+      return Response.json(
+        { error: "invalid_uuid", message: "id must be a valid UUID" },
+        { status: 400 },
+      );
+    }
 
     const [doc] = await db
       .select()
       .from(documents)
-      .where(eq(documents.id, id))
+      .where(eq(documents.id, parsedId.data))
       .limit(1);
     if (!doc)
       return Response.json({ error: "document_not_found" }, { status: 404 });

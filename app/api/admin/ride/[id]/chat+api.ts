@@ -5,22 +5,30 @@
 import { db } from "@/src/db";
 import { chatMessages, users, rides, drivers } from "@/src/db/schema";
 import { eq, asc } from "drizzle-orm";
+import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 
-interface Params {
-  params: { id: string };
-}
+const idSchema = z.string().uuid();
 
-export async function GET(request: Request, { params }: Params) {
+export async function GET(request: Request, { id }: { id: string }) {
   try {
     await requireRole("admin")(request);
-    const { id: rideId } = params;
+    const rideId = id;
+
+    const parsedId = idSchema.safeParse(rideId);
+    if (!parsedId.success) {
+      return Response.json(
+        { error: "invalid_uuid", message: "id must be a valid UUID" },
+        { status: 400 },
+      );
+    }
+    const validatedRideId = parsedId.data;
 
     const [ride] = await db
       .select()
       .from(rides)
-      .where(eq(rides.id, rideId))
+      .where(eq(rides.id, validatedRideId))
       .limit(1);
     if (!ride)
       return Response.json({ error: "ride_not_found" }, { status: 404 });
@@ -59,11 +67,11 @@ export async function GET(request: Request, { params }: Params) {
       })
       .from(chatMessages)
       .innerJoin(users, eq(chatMessages.sender_id, users.id))
-      .where(eq(chatMessages.ride_id, rideId))
+      .where(eq(chatMessages.ride_id, validatedRideId))
       .orderBy(asc(chatMessages.created_at));
 
     return Response.json({
-      ride_id: rideId,
+      ride_id: validatedRideId,
       ride_status: ride.status,
       ride_created_at: ride.created_at,
       rider: rider ? { name: rider.name, phone: rider.phone } : null,

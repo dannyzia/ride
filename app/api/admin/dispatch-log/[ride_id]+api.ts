@@ -7,16 +7,11 @@ import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
-interface Params {
-  params: { ride_id: string };
-}
-
 const rideIdSchema = z.string().uuid();
 
-export async function GET(request: Request, { params }: Params) {
+export async function GET(request: Request, { ride_id }: { ride_id: string }) {
   try {
     await requireRole("admin")(request);
-    const { ride_id } = params;
 
     const parsedId = rideIdSchema.safeParse(ride_id);
     if (!parsedId.success) {

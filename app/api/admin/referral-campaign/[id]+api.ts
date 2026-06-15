@@ -1,12 +1,12 @@
 // GET / PATCH /api/admin/referral-campaign/:id — single-resource endpoint
 // F15-API-06.
-import { db } from '@/src/db';
-import { referralCampaigns } from '@/src/db/schema';
-import { eq } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
-import { logger } from '@/lib/logger';
-import { z } from 'zod';
-import { parseJsonBody } from '@/lib/parseBody';
+import { db } from "@/src/db";
+import { referralCampaigns } from "@/src/db/schema";
+import { eq } from "drizzle-orm";
+import { requireRole } from "@/lib/auth";
+import { logger } from "@/lib/logger";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/parseBody";
 
 const patchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -17,44 +17,56 @@ const patchSchema = z.object({
   is_active: z.boolean().optional(),
 });
 
-interface Params {
-  params: { id: string };
-}
+const idSchema = z.string().uuid();
 
-export async function GET(request: Request, { params }: Params) {
+export async function GET(request: Request, { id }: { id: string }) {
   try {
-    await requireRole('admin')(request);
+    await requireRole("admin")(request);
+    const parsedId = idSchema.safeParse(id);
+    if (!parsedId.success) {
+      return Response.json(
+        { error: "invalid_uuid", message: "id must be a valid UUID" },
+        { status: 400 },
+      );
+    }
     const [row] = await db
       .select()
       .from(referralCampaigns)
-      .where(eq(referralCampaigns.id, params.id))
+      .where(eq(referralCampaigns.id, parsedId.data))
       .limit(1);
-    if (!row) return Response.json({ error: 'not_found' }, { status: 404 });
+    if (!row) return Response.json({ error: "not_found" }, { status: 404 });
     return Response.json({ campaign: row });
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
     if (status === 401)
-      return Response.json({ error: 'unauthorized' }, { status: 401 });
+      return Response.json({ error: "unauthorized" }, { status: 401 });
     if (status === 403)
-      return Response.json({ error: 'forbidden' }, { status: 403 });
-    logger.error('[admin/referral-campaign/:id] GET error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+      return Response.json({ error: "forbidden" }, { status: 403 });
+    logger.error("[admin/referral-campaign/:id] GET error", err);
+    return Response.json({ error: "internal_error" }, { status: 500 });
   }
 }
 
-export async function PATCH(request: Request, { params }: Params) {
+export async function PATCH(request: Request, { id }: { id: string }) {
   try {
-    const { supabaseUser: admin } = await requireRole('admin')(request);
+    const { supabaseUser: admin } = await requireRole("admin")(request);
+    const parsedId = idSchema.safeParse(id);
+    if (!parsedId.success) {
+      return Response.json(
+        { error: "invalid_uuid", message: "id must be a valid UUID" },
+        { status: 400 },
+      );
+    }
     const result = await parseJsonBody(request, patchSchema);
     if (!result.ok) return result.response;
 
     const [existing] = await db
       .select()
       .from(referralCampaigns)
-      .where(eq(referralCampaigns.id, params.id))
+      .where(eq(referralCampaigns.id, parsedId.data))
       .limit(1);
     if (!existing)
-      return Response.json({ error: 'not_found' }, { status: 404 });
+      return Response.json({ error: "not_found" }, { status: 404 });
 
     await db.transaction(async (tx) => {
       if (result.data.is_active === true && !existing.is_active) {
@@ -71,17 +83,17 @@ export async function PATCH(request: Request, { params }: Params) {
       await tx
         .update(referralCampaigns)
         .set(updates)
-        .where(eq(referralCampaigns.id, params.id));
+        .where(eq(referralCampaigns.id, parsedId.data));
     });
 
     const [updated] = await db
       .select()
       .from(referralCampaigns)
-      .where(eq(referralCampaigns.id, params.id))
+      .where(eq(referralCampaigns.id, parsedId.data))
       .limit(1);
 
-    logger.info('[admin/referral-campaign/:id] updated', {
-      campaignId: params.id,
+    logger.info("[admin/referral-campaign/:id] updated", {
+      campaignId: parsedId.data,
       adminId: admin.id,
     });
 
@@ -89,10 +101,10 @@ export async function PATCH(request: Request, { params }: Params) {
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
     if (status === 401)
-      return Response.json({ error: 'unauthorized' }, { status: 401 });
+      return Response.json({ error: "unauthorized" }, { status: 401 });
     if (status === 403)
-      return Response.json({ error: 'forbidden' }, { status: 403 });
-    logger.error('[admin/referral-campaign/:id] PATCH error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+      return Response.json({ error: "forbidden" }, { status: 403 });
+    logger.error("[admin/referral-campaign/:id] PATCH error", err);
+    return Response.json({ error: "internal_error" }, { status: 500 });
   }
 }

@@ -8,16 +8,11 @@ import { activateSubscription } from "@/lib/activateSubscription";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
-interface Params {
-  params: { id: string };
-}
-
 const idSchema = z.string().uuid();
 
-export async function POST(request: Request, { params }: Params) {
+export async function POST(request: Request, { id }: { id: string }) {
   try {
     const { supabaseUser: admin } = await requireRole("admin")(request);
-    const { id } = params;
 
     const parsedId = idSchema.safeParse(id);
     if (!parsedId.success) {

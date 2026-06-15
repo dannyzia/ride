@@ -16,17 +16,22 @@ const patchSchema = z.object({
   is_active: z.boolean().optional(),
 });
 
-interface Params {
-  params: { id: string };
-}
+const idSchema = z.string().uuid();
 
-export async function GET(request: Request, { params }: Params) {
+export async function GET(request: Request, { id }: { id: string }) {
   try {
     await requireRole('admin')(request);
+    const parsedId = idSchema.safeParse(id);
+    if (!parsedId.success) {
+      return Response.json(
+        { error: 'invalid_uuid', message: 'id must be a valid UUID' },
+        { status: 400 },
+      );
+    }
     const [row] = await db
       .select()
       .from(pointOffers)
-      .where(eq(pointOffers.id, params.id))
+      .where(eq(pointOffers.id, parsedId.data))
       .limit(1);
     if (!row) return Response.json({ error: 'not_found' }, { status: 404 });
     return Response.json({ offer: row });
@@ -41,9 +46,16 @@ export async function GET(request: Request, { params }: Params) {
   }
 }
 
-export async function PATCH(request: Request, { params }: Params) {
+export async function PATCH(request: Request, { id }: { id: string }) {
   try {
     const { supabaseUser: admin } = await requireRole('admin')(request);
+    const parsedId = idSchema.safeParse(id);
+    if (!parsedId.success) {
+      return Response.json(
+        { error: 'invalid_uuid', message: 'id must be a valid UUID' },
+        { status: 400 },
+      );
+    }
     const result = await parseJsonBody(request, patchSchema);
     if (!result.ok) return result.response;
 
@@ -55,12 +67,12 @@ export async function PATCH(request: Request, { params }: Params) {
     const [updated] = await db
       .update(pointOffers)
       .set(updates)
-      .where(eq(pointOffers.id, params.id))
+      .where(eq(pointOffers.id, parsedId.data))
       .returning();
     if (!updated) return Response.json({ error: 'not_found' }, { status: 404 });
 
     logger.info('[admin/point-offer/:id] updated', {
-      offerId: params.id,
+      offerId: parsedId.data,
       adminId: admin.id,
     });
 
