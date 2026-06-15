@@ -8,5 +8,11 @@
     },
   },
   "include": ["**/*.ts", "**/*.tsx", "nativewind-env.d.ts"],
-  "exclude": ["functions", "node_modules", "utils-server", "_reference"],
+  "exclude": [
+    "functions",
+    "node_modules",
+    "utils-server",
+    "_reference",
+    "admin-test-results",
+  ],
 }

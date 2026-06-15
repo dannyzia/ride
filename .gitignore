@@ -108,3 +108,7 @@ app-example
 
 # Code graph output
 graphify-out/
+
+# Playwright test artifacts
+admin-test-results/
+admin-test-results.zip

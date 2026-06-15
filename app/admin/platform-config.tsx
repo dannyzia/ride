@@ -256,8 +256,15 @@ export default function PlatformConfigScreen() {
       const opEditsMap: Record<string, string> = {};
       for (const f of OP_FIELDS) {
         if (available.has(f.key)) {
-          const scale = f.type === "moneyTaka" ? 100 : 1;
-          opEditsMap[f.key] = parseDisplayNumber(opMap[f.key], scale);
+          // Text fields (e.g. min_app_version = "1.0.0") must pass through
+          // untouched — parseDisplayNumber would coerce them via Number()
+          // and return "" for non-numeric strings like semver.
+          if (f.type === "text") {
+            opEditsMap[f.key] = opMap[f.key];
+          } else {
+            const scale = f.type === "moneyTaka" ? 100 : 1;
+            opEditsMap[f.key] = parseDisplayNumber(opMap[f.key], scale);
+          }
         }
       }
       setOpEdits(opEditsMap);
@@ -498,8 +505,12 @@ export default function PlatformConfigScreen() {
     const editsMap: Record<string, string> = {};
     for (const f of OP_FIELDS) {
       if (available.has(f.key)) {
-        const scale = f.type === "moneyTaka" ? 100 : 1;
-        editsMap[f.key] = parseDisplayNumber(opMap[f.key], scale);
+        if (f.type === "text") {
+          editsMap[f.key] = opMap[f.key];
+        } else {
+          const scale = f.type === "moneyTaka" ? 100 : 1;
+          editsMap[f.key] = parseDisplayNumber(opMap[f.key], scale);
+        }
       }
     }
     setOpEdits(editsMap);
