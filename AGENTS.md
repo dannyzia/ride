@@ -94,6 +94,24 @@ grep -r "console\.log" app/ lib/ utils-server/ src/       # must return nothing
 grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return nothing
 ```
 
+## ⛔ HARD CONSTRAINT: Expo Managed Workflow (Non-Negotiable)
+
+The Ride project MUST remain on **Expo Managed workflow with Development Builds**. This is non-negotiable and applies to all future development, build configurations, and architectural decisions.
+
+### What this means
+- **NO bare workflow migration** — Do not eject to Expo bare workflow or React Native CLI. The project is intentionally designed to leverage Expo's managed services (OTA updates, EAS Build, EAS Submit).
+- **NO react-native.config.js** — Do not add native module configurations that require bare workflow.
+- **Development Builds ONLY** — When native code changes are needed, use Expo Development Builds (not Expo Go). Development builds allow custom native code while staying in the managed workflow.
+- **EAS Build for production** — All production builds (Android APK/AAB, iOS IPA) must go through EAS Build. Do not use local builds for production releases.
+- **EAS Submit for stores** - App Store and Play Store uploads must go through EAS Submit.
+- **Keep app.json clean** — The `app.json` / `app.config.js` is the source of truth for Expo configuration. Do not duplicate settings in `eas.json` unless they're build-profile-specific.
+
+### Why this matters
+- OTA updates require managed workflow — `expo-updates` is incompatible with bare workflow.
+- Simplifies CI/CD — No Xcode/Android Studio setup required for most team members.
+- Consistent build environment — EAS Build provides reproducible builds across the team.
+- Faster iteration — OTA updates allow instant bugfixes without new app store submissions.
+
 ## Architecture Map
 
 - `app/(auth)/` — Auth screens (phone-entry → otp-verify → register)
