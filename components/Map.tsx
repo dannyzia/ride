@@ -13,7 +13,6 @@ import MapLibreGL from "@/utils/maplibreLoader";
 // GoRide marker icons
 const MARKER_USER = require("@/assets/icons/marker-goride-Marker Navigation.png");
 const MARKER_DESTINATION = require("@/assets/icons/marker-goride-Marker Navigation-1.png");
-const _MARKER_DRIVER = require("@/assets/icons/marker-goride-Marker Navigation-2.png");
 
 let MapViewLib: any = MapLibreGL.MapView ?? MapLibreGL.default ?? null;
 let PointAnnotation: any = MapLibreGL.PointAnnotation ?? null;
@@ -27,9 +26,6 @@ type _PlainDriver = Omit<
   | "setFullName"
   | "setRole"
 >;
-
-const WEBSOCKET_API_URL = Constants.expoConfig?.extra
-  ?.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL as string | undefined;
 
 const Map = () => {
   const _router = useRouter();
@@ -54,7 +50,7 @@ const Map = () => {
 
   const _role = user?.publicMetadata?.role;
 
-  const { setWebSocket, ws: _ws } = useWSStore();
+  const { ws: _ws } = useWSStore();
 
   const path = usePathname();
 
@@ -135,26 +131,8 @@ const Map = () => {
     }
   }, [destinationLatitude, destinationLongitude]);
 
-  // WebSocket connection setup
-  useEffect(() => {
-    if (!WEBSOCKET_API_URL) return;
-    const socket = new WebSocket(WEBSOCKET_API_URL);
-    setWebSocket(socket);
-
-    socket.onopen = () => {};
-    socket.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        handleWSMessage(msg);
-      } catch {}
-    };
-    socket.onerror = () => {};
-    socket.onclose = () => {};
-
-    return () => {
-      socket.close();
-    };
-  }, []);
+  // WebSocket is managed by the parent screen (home/index.tsx).
+  // Map is a display-only component — no WS setup here.
 
   const handleWSMessage = (msg: any) => {
     switch (msg.type) {

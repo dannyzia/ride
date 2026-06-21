@@ -5,7 +5,7 @@ import { Platform } from "react-native";
 // ── Barikoi client initialiser (client-side) ───────────────
 
 const BARIKOI_API_KEY =
-  (Constants.expoConfig?.extra?.BARIKOI_API_KEY as string) ?? "";
+  (Constants.expoConfig?.extra?.EXPO_PUBLIC_BARIKOI_API_KEY as string) ?? "";
 
 export function createBarikoiClient(): void {
   if (!BARIKOI_API_KEY) {
