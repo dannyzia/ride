@@ -1,0 +1,6 @@
+{
+  "name": "react-native-worklets",
+  "version": "0.7.3-shim",
+  "main": "plugin/index.js",
+  "description": "Shim for react-native-worklets/plugin that delegates to react-native-reanimated/plugin (reanimated 3.x bundles worklets natively)"
+}

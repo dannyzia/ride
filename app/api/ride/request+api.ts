@@ -16,7 +16,7 @@ import { getRouteDistance } from "@/lib/barikoi";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
-import { getStagedPromo, clearStagedPromo } from "../promo/_cache";
+import { getStagedPromo, clearStagedPromo } from "@/lib/promoCache";
 
 const requestSchema = z.object({
   pickup_lat: z.number().min(-90).max(90),

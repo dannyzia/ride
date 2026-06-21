@@ -5,7 +5,7 @@ import { verifySupabaseToken } from "@/lib/auth";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
-import { stagePromo } from "./_cache";
+import { stagePromo } from "@/lib/promoCache";
 
 const redeemSchema = z.object({
   code: z.string().min(1).max(30),
