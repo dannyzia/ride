@@ -1,7 +1,4 @@
-import Constants from "expo-constants";
-
-const BARIKOI_API_KEY =
-  (Constants.expoConfig?.extra?.EXPO_PUBLIC_BARIKOI_API_KEY as string) ?? "";
+const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
 
 // Dark map style JSON for MapLibre (Barikoi vector tile style)
 export const DARK_MAP_STYLE =

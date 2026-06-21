@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { icons, images } from "@/constants/data";
 import RideCard from "@/components/RideCard";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import * as Location from "expo-location";
 import {
   useCustomer,
@@ -23,7 +23,6 @@ import {
   useWSStore,
 } from "@/store";
 import Map from "@/components/Map";
-import Constants from "expo-constants";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { logger } from "@/lib/logger";
@@ -40,8 +39,8 @@ if (Platform.OS !== "web") {
   }
 }
 
-const API_URL = Constants.expoConfig?.extra?.serverUrl;
-const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
+const API_URL = process.env.EXPO_PUBLIC_SERVER_URL;
+const WEBSOCKET_API_URL = process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL;
 
 const HomePage = () => {
   const {
@@ -163,14 +162,14 @@ const HomePage = () => {
     return () => subscription.remove();
   }, [user, hasPermissions]);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     try {
       await supabase.auth.signOut();
       router.replace("/(auth)/phone-entry");
     } catch (err) {
       logger.error("Sign out failed:", err);
     }
-  };
+  }, []);
 
   //getting all rides from api
   useEffect(() => {
@@ -240,7 +239,7 @@ const HomePage = () => {
             )}
           </View>
         )}
-        ListHeaderComponent={() => (
+        ListHeaderComponent={
           <>
             <View className="flex flex-row items-center justify-between my-5">
               <Text className="text-xl text-goTextPrimaryLight capitalize font-urbanist-bold">
@@ -291,7 +290,7 @@ const HomePage = () => {
               Recent Rides
             </Text>
           </>
-        )}
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
