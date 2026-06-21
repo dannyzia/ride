@@ -7,7 +7,11 @@ import { colors, spacing } from "@/theme/goRide";
 import { Driver } from "@/types/type";
 import Constants from "expo-constants";
 import { useSession } from "@/lib/session";
-import { useBarikoiMapStyle, createBarikoiClient } from "@/utils/mapUtils";
+import {
+  useBarikoiMapStyle,
+  createBarikoiClient,
+  DEFAULT_COORDINATES,
+} from "@/utils/mapUtils";
 import MapLibreGL from "@/utils/maplibreLoader";
 
 // GoRide marker icons
@@ -166,17 +170,21 @@ const Map = () => {
     Keyboard.dismiss();
   };
 
+  // Use user location if available, fall back to Dhaka city center
+  const displayLat = userLatitude ?? DEFAULT_COORDINATES.latitude;
+  const displayLng = userLongitude ?? DEFAULT_COORDINATES.longitude;
+
   return (
     <View style={{ flex: 1 }}>
-      {MapViewLib && userLatitude && userLongitude ? (
+      {MapViewLib ? (
         <MapViewLib
           style={{ width: "100%", height: "100%", borderRadius: 16 }}
           styleURL={mapStyleURL}
-          centerCoordinate={[userLongitude, userLatitude]}
-          zoomLevel={14}
+          centerCoordinate={[displayLng, displayLat]}
+          zoomLevel={userLatitude && userLongitude ? 14 : 11}
           onPress={handleMapInteraction}
         >
-          {/* User location marker — GoRide Navigation marker */}
+          {/* User location marker */}
           {userLatitude && userLongitude && (
             <PointAnnotation
               id="user-location"
@@ -189,7 +197,7 @@ const Map = () => {
               />
             </PointAnnotation>
           )}
-          {/* Destination marker — GoRide Navigation-1 */}
+          {/* Destination marker */}
           {destinationLatitude && destinationLongitude && (
             <PointAnnotation
               id="destination"
