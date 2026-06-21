@@ -1,11 +1,9 @@
 import { setConfig } from "barikoiapis";
-import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 // ── Barikoi client initialiser (client-side) ───────────────
 
-const BARIKOI_API_KEY =
-  (Constants.expoConfig?.extra?.EXPO_PUBLIC_BARIKOI_API_KEY as string) ?? "";
+const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
 
 export function createBarikoiClient(): void {
   if (!BARIKOI_API_KEY) {
