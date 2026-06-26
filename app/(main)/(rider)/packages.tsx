@@ -1,10 +1,19 @@
-import { colors } from '@/theme/goRide';
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { AntDesign } from '@expo/vector-icons';
-import PaymentWebView from '@/components/PaymentWebView';
+import { colors } from "@/theme/goRide";
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+  Modal,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { AntDesign } from "@expo/vector-icons";
+import PaymentWebView from "@/components/PaymentWebView";
 
 interface CallPackage {
   id: string;
@@ -26,7 +35,9 @@ export default function PackagesScreen() {
   // Payment confirmation state
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [confirmingElapsed, setConfirmingElapsed] = useState(0);
-  const confirmingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const confirmingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
 
   // Payment flow state
   const [paymentURL, setPaymentURL] = useState<string | null>(null);
@@ -34,7 +45,9 @@ export default function PackagesScreen() {
 
   const fetchPackages = useCallback(async () => {
     try {
-      const res = await fetch('/api/package/list');
+      const res = await fetch(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/api/package/list`,
+      );
       if (res.ok) {
         const data = await res.json();
         setPackages(data.packages ?? []);
@@ -47,7 +60,9 @@ export default function PackagesScreen() {
     }
   }, []);
 
-  useEffect(() => { fetchPackages(); }, [fetchPackages]);
+  useEffect(() => {
+    fetchPackages();
+  }, [fetchPackages]);
 
   /** Initiate a purchase via PortPos (supports bKash, Nagad, Rocket, cards) */
   const handleBuy = async (pkg: CallPackage) => {
@@ -55,26 +70,31 @@ export default function PackagesScreen() {
     setPendingPkgId(pkg.id);
     try {
       const idempotencyKey = crypto.randomUUID();
-      const res = await fetch('/api/package/purchase', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': idempotencyKey,
+      const res = await fetch(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/api/package/purchase`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": idempotencyKey,
+          },
+          body: JSON.stringify({ package_id: pkg.id, provider: "portpos" }),
         },
-        body: JSON.stringify({ package_id: pkg.id, provider: 'portpos' }),
-      });
+      );
       if (res.ok) {
         const data = await res.json();
         setPaymentURL(data.payment_url);
         setPaymentID(data.payment_event_id);
       } else {
-        const err = await res.json().catch(() => ({ message: 'Purchase failed' }));
-        Alert.alert('Error', err.message || 'Could not initiate purchase');
+        const err = await res
+          .json()
+          .catch(() => ({ message: "Purchase failed" }));
+        Alert.alert("Error", err.message || "Could not initiate purchase");
         setPurchasing(false);
         setPendingPkgId(null);
       }
     } catch {
-      Alert.alert('Error', 'Network error — could not initiate purchase');
+      Alert.alert("Error", "Network error — could not initiate purchase");
       setPurchasing(false);
       setPendingPkgId(null);
     }
@@ -96,27 +116,26 @@ export default function PackagesScreen() {
       if (elapsed >= MAX_DURATION_MS) {
         stopPolling();
         Alert.alert(
-          'Payment Not Confirmed',
-          'If you were charged, please contact support with your package details.',
-          [{ text: 'OK', onPress: () => {} }]
+          "Payment Not Confirmed",
+          "If you were charged, please contact support with your package details.",
+          [{ text: "OK", onPress: () => {} }],
         );
         return;
       }
 
-      fetch('/api/package/active')
-        .then(res => res.json())
-        .then(data => {
+      fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/package/active`)
+        .then((res) => res.json())
+        .then((data) => {
           if (data.subscription && data.subscription.id) {
             stopPolling();
-            Alert.alert(
-              'Success',
-              'Package purchased successfully!',
-              [
-                { text: 'OK', onPress: () => {
-                  router.replace('/(main)/(rider)');
-                }},
-              ]
-            );
+            Alert.alert("Success", "Package purchased successfully!", [
+              {
+                text: "OK",
+                onPress: () => {
+                  router.replace("/(main)/(rider)");
+                },
+              },
+            ]);
           }
         })
         .catch(() => {
@@ -143,7 +162,7 @@ export default function PackagesScreen() {
   const handlePaymentError = (error: string) => {
     setPaymentURL(null);
     setPaymentID(null);
-    Alert.alert('Payment Failed', error);
+    Alert.alert("Payment Failed", error);
     setPurchasing(false);
     setPendingPkgId(null);
   };
@@ -160,7 +179,9 @@ export default function PackagesScreen() {
   const renderPackage = ({ item }: { item: CallPackage }) => (
     <View className="bg-cardBgColor rounded-2xl p-5 mb-3">
       <View className="flex-row items-center justify-between mb-2">
-        <Text className="text-primaryTextColor font-semibold text-base">{item.name}</Text>
+        <Text className="text-primaryTextColor font-semibold text-base">
+          {item.name}
+        </Text>
         {item.is_trial && (
           <View className="bg-accentColor/20 rounded-full px-2 py-0.5">
             <Text className="text-accentColor text-xs">Trial</Text>
@@ -170,18 +191,26 @@ export default function PackagesScreen() {
 
       <View className="flex-row flex-wrap gap-2 mb-3">
         <View className="bg-hoverBgColor rounded-full px-3 py-1">
-          <Text className="text-secondaryTextColor text-xs">{item.call_count} calls</Text>
+          <Text className="text-secondaryTextColor text-xs">
+            {item.call_count} calls
+          </Text>
         </View>
         <View className="bg-hoverBgColor rounded-full px-3 py-1">
-          <Text className="text-secondaryTextColor text-xs">{item.duration_days} days</Text>
+          <Text className="text-secondaryTextColor text-xs">
+            {item.duration_days} days
+          </Text>
         </View>
         <View className="bg-hoverBgColor rounded-full px-3 py-1">
-          <Text className="text-secondaryTextColor text-xs">Cap: {item.daily_cap}/day</Text>
+          <Text className="text-secondaryTextColor text-xs">
+            Cap: {item.daily_cap}/day
+          </Text>
         </View>
       </View>
 
       <View className="flex-row items-center justify-between mt-1">
-        <Text className="text-primaryTextColor text-xl font-bold">৳{(item.price_bdt / 100).toFixed(0)}</Text>
+        <Text className="text-primaryTextColor text-xl font-bold">
+          ৳{(item.price_bdt / 100).toFixed(0)}
+        </Text>
         <TouchableOpacity
           onPress={() => handleBuy(item)}
           disabled={purchasing && pendingPkgId === item.id}
@@ -203,7 +232,9 @@ export default function PackagesScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <AntDesign name="arrowleft" size={24} color={colors.adminSubtle} />
         </TouchableOpacity>
-        <Text className="text-primaryTextColor text-lg font-bold">Call Packages</Text>
+        <Text className="text-primaryTextColor text-lg font-bold">
+          Call Packages
+        </Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -221,13 +252,16 @@ export default function PackagesScreen() {
       ) : (
         <FlatList
           data={packages}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           renderItem={renderPackage}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => { setRefreshing(true); fetchPackages(); }}
+              onRefresh={() => {
+                setRefreshing(true);
+                fetchPackages();
+              }}
               tintColor={colors.adminAccent}
             />
           }
@@ -250,7 +284,9 @@ export default function PackagesScreen() {
           <View className="flex-1 bg-black/50 items-center justify-center">
             <View className="bg-cardBgColor rounded-2xl p-6 mx-8 items-center">
               <ActivityIndicator size="large" color={colors.adminAccent} />
-              <Text className="text-primaryTextColor text-lg font-semibold mt-4">Confirming Payment...</Text>
+              <Text className="text-primaryTextColor text-lg font-semibold mt-4">
+                Confirming Payment...
+              </Text>
               <Text className="text-secondaryTextColor text-sm mt-2">
                 {confirmingElapsed}s / 120s
               </Text>

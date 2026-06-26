@@ -32,8 +32,8 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 // import LottieView from 'lottie-react-native';
 
-const WEBSOCKET_API_URL = Constants.expoConfig?.extra?.webSocketServerUrl;
-const API_URL = Constants.expoConfig?.extra?.serverUrl;
+const WEBSOCKET_API_URL = process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "";
+const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 
 let LottieView: any = () => null;
 

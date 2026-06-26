@@ -1,7 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { spacing, radii, colors } from '@/theme/goRide';
-import { logger } from '@/lib/logger';
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
+import { spacing, radii, colors } from "@/theme/goRide";
+import { logger } from "@/lib/logger";
 
 export interface Preference {
   id: string;
@@ -19,29 +25,37 @@ interface PreferenceChipsProps {
   disabled?: boolean;
 }
 
-export default function PreferenceChips({ selectedIds, onChange, disabled = false }: PreferenceChipsProps) {
+export default function PreferenceChips({
+  selectedIds,
+  onChange,
+  disabled = false,
+}: PreferenceChipsProps) {
   const [preferences, setPreferences] = useState<Preference[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchPreferences = useCallback(async () => {
     try {
-      const res = await fetch('/api/reference/preferences');
+      const res = await fetch(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/api/reference/preferences`,
+      );
       if (res.ok) {
         const data = await res.json();
         setPreferences(data.preferences ?? []);
       }
     } catch (err) {
-      logger.error('[PreferenceChips] fetch error', err);
+      logger.error("[PreferenceChips] fetch error", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchPreferences(); }, [fetchPreferences]);
+  useEffect(() => {
+    fetchPreferences();
+  }, [fetchPreferences]);
 
   if (loading) {
     return (
-      <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
+      <View style={{ paddingVertical: spacing.md, alignItems: "center" }}>
         <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
@@ -52,7 +66,7 @@ export default function PreferenceChips({ selectedIds, onChange, disabled = fals
   const toggle = (id: string) => {
     if (disabled) return;
     if (selectedIds.includes(id)) {
-      onChange(selectedIds.filter(sid => sid !== id));
+      onChange(selectedIds.filter((sid) => sid !== id));
     } else {
       onChange([...selectedIds, id]);
     }
@@ -60,10 +74,15 @@ export default function PreferenceChips({ selectedIds, onChange, disabled = fals
 
   return (
     <View style={{ marginBottom: spacing.md }}>
-      <Text style={{
-        fontFamily: 'Urbanist', fontWeight: '600', fontSize: 13,
-        color: colors.textSecondaryDark, marginBottom: spacing.sm,
-      }}>
+      <Text
+        style={{
+          fontFamily: "Urbanist",
+          fontWeight: "600",
+          fontSize: 13,
+          color: colors.textSecondaryDark,
+          marginBottom: spacing.sm,
+        }}
+      >
         Ride Preferences
       </Text>
       <ScrollView
@@ -71,7 +90,7 @@ export default function PreferenceChips({ selectedIds, onChange, disabled = fals
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: spacing.sm }}
       >
-        {preferences.map(pref => {
+        {preferences.map((pref) => {
           const isSelected = selectedIds.includes(pref.id);
           return (
             <TouchableOpacity
@@ -80,38 +99,60 @@ export default function PreferenceChips({ selectedIds, onChange, disabled = fals
               disabled={disabled}
               activeOpacity={0.7}
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
+                flexDirection: "row",
+                alignItems: "center",
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.pill,
                 borderWidth: 1,
                 borderColor: isSelected ? colors.primary : colors.borderDark,
-                backgroundColor: isSelected ? colors.primary + '20' : colors.surfaceElevatedDark,
+                backgroundColor: isSelected
+                  ? colors.primary + "20"
+                  : colors.surfaceElevatedDark,
                 opacity: disabled ? 0.5 : 1,
               }}
             >
-              <Text style={{
-                fontFamily: 'Inter',
-                fontSize: 12,
-                fontWeight: '500',
-                color: isSelected ? colors.primary : colors.textSecondaryDark,
-              }}>
+              <Text
+                style={{
+                  fontFamily: "Inter",
+                  fontSize: 12,
+                  fontWeight: "500",
+                  color: isSelected ? colors.primary : colors.textSecondaryDark,
+                }}
+              >
                 {pref.display_label_en}
               </Text>
               {pref.charge_bdt > 0 && (
-                <Text style={{
-                  fontFamily: 'Inter', fontSize: 10, color: colors.textDisabledDark, marginLeft: 4,
-                }}>
+                <Text
+                  style={{
+                    fontFamily: "Inter",
+                    fontSize: 10,
+                    color: colors.textDisabledDark,
+                    marginLeft: 4,
+                  }}
+                >
                   +৳{(pref.charge_bdt / 100).toFixed(0)}
                 </Text>
               )}
               {pref.affects_matching && (
-                <View style={{
-                  marginLeft: 4, paddingHorizontal: 4, paddingVertical: 1,
-                  borderRadius: 4, backgroundColor: colors.info + '20',
-                }}>
-                  <Text style={{ fontFamily: 'Inter', fontSize: 9, color: colors.info }}>filter</Text>
+                <View
+                  style={{
+                    marginLeft: 4,
+                    paddingHorizontal: 4,
+                    paddingVertical: 1,
+                    borderRadius: 4,
+                    backgroundColor: colors.info + "20",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: "Inter",
+                      fontSize: 9,
+                      color: colors.info,
+                    }}
+                  >
+                    filter
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>

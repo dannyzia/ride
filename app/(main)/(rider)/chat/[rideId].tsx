@@ -1,8 +1,8 @@
-import { colors } from '@/theme/goRide';
-import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, Text, Linking } from 'react-native';
-import { useLocalSearchParams, Stack } from 'expo-router';
-import ChatScreen from '@/components/ChatScreen';
+import { colors } from "@/theme/goRide";
+import React, { useEffect, useState } from "react";
+import { View, ActivityIndicator, Text, Linking } from "react-native";
+import { useLocalSearchParams, Stack } from "expo-router";
+import ChatScreen from "@/components/ChatScreen";
 
 interface RideContext {
   current_user_id: string;
@@ -18,17 +18,27 @@ export default function DriverChatRoute() {
 
   useEffect(() => {
     if (!rideId) return;
-    fetch(`/api/ride/${rideId}/details`)
+    fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${rideId}/details`)
       .then(async (res) => {
-        if (!res.ok) { setError('Failed to load chat'); return; }
+        if (!res.ok) {
+          setError("Failed to load chat");
+          return;
+        }
         setCtx(await res.json());
       })
-      .catch(() => setError('Network error'));
+      .catch(() => setError("Network error"));
   }, [rideId]);
 
   if (error) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgLight }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.bgLight,
+        }}
+      >
         <Text style={{ color: colors.danger, fontSize: 15 }}>{error}</Text>
       </View>
     );
@@ -36,7 +46,14 @@ export default function DriverChatRoute() {
 
   if (!ctx) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgLight }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.bgLight,
+        }}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -44,14 +61,20 @@ export default function DriverChatRoute() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: false, title: `Chat with ${ctx.other_user_name}` }} />
+      <Stack.Screen
+        options={{
+          headerShown: false,
+          title: `Chat with ${ctx.other_user_name}`,
+        }}
+      />
       <ChatScreen
         rideId={rideId!}
         currentUserId={ctx.current_user_id}
         otherUserName={ctx.other_user_name}
         rideActive={ctx.ride_active}
         onCallPress={() => {
-          if (ctx.other_user_phone) Linking.openURL(`tel:${ctx.other_user_phone}`);
+          if (ctx.other_user_phone)
+            Linking.openURL(`tel:${ctx.other_user_phone}`);
         }}
       />
     </>

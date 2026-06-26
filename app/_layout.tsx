@@ -1,3 +1,4 @@
+import "../global.css";
 import { useEffect, useState } from "react";
 import { Platform, View, ActivityIndicator } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
@@ -5,7 +6,6 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import SplashAnimation from "@/components/SplashAnimation";
 import { supabase } from "@/lib/supabase";
-import Constants from "expo-constants";
 import { logger } from "@/lib/logger";
 
 const isWeb = Platform.OS === "web";
@@ -15,7 +15,7 @@ if (!isWeb) {
   SplashScreen.preventAutoHideAsync().catch(() => {});
 }
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? "";
+const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 
 export default function RootLayout() {
   const router = useRouter();
@@ -109,7 +109,14 @@ export default function RootLayout() {
   // instead while auth initializes.
   if (isWeb && (initializing || !fontsLoaded)) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#181A20" }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#181A20",
+        }}
+      >
         <ActivityIndicator size="large" color="#0CC25F" />
       </View>
     );

@@ -8,13 +8,11 @@ import CustomButton from "@/components/CustomButton";
 import { useEffect, useState } from "react";
 import { useRiderStore } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
-import Constants from "expo-constants";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? "";
-const BARIKOI_API_KEY =
-  Constants.expoConfig?.extra?.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
+const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
+const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
 
 const ConfirmRidePage = () => {
   const router = useRouter();

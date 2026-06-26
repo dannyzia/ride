@@ -3,7 +3,6 @@ import { View, Text, ActivityIndicator, Alert, Dimensions } from "react-native";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import Constants from "expo-constants";
 import MapLibreGL from "@/utils/maplibreLoader";
 import { supabase } from "@/lib/supabase";
 import { useRiderStore } from "@/store/useRiderStore";
@@ -11,10 +10,10 @@ import { useWSStore } from "@/store";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import CustomButton from "@/components/CustomButton";
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? "";
+const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 const MAP_STYLE =
   "https://map.barikoi.com/styles/osm-liberty/style.json?key=" +
-  (Constants.expoConfig?.extra?.EXPO_PUBLIC_BARIKOI_API_KEY ?? "");
+  (process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "");
 const { height } = Dimensions.get("window");
 
 export default function FinalPage() {

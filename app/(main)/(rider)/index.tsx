@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Location from "expo-location";
-import Constants from "expo-constants";
 import { supabase } from "@/lib/supabase";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useRideOfferStore, useWSStore } from "@/store";
@@ -14,7 +13,7 @@ import RideOfferSheet from "@/components/RideOfferSheet";
 import { colors } from "@/theme/goRide";
 
 const WS_URL =
-  Constants.expoConfig?.extra?.webSocketServerUrl ?? "ws://localhost:3001";
+  process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "ws://localhost:3001";
 
 export default function DriverHome() {
   const {
@@ -180,7 +179,7 @@ export default function DriverHome() {
       const token = session?.access_token;
       if (!token) return;
       const res = await fetch(
-        `${Constants.expoConfig?.extra?.serverUrl ?? ""}/api/driver/me`,
+        `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/api/driver/me`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (res.ok) {
@@ -189,7 +188,7 @@ export default function DriverHome() {
 
         // Load active subscription
         const subRes = await fetch(
-          `${Constants.expoConfig?.extra?.serverUrl ?? ""}/api/package/active`,
+          `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/api/package/active`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
         if (subRes.ok) {
@@ -213,7 +212,7 @@ export default function DriverHome() {
 
       const newState = !isOnline;
       const res = await fetch(
-        `${Constants.expoConfig?.extra?.serverUrl ?? ""}/api/driver/status`,
+        `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/api/driver/status`,
         {
           method: "POST",
           headers: {

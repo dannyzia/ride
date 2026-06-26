@@ -6,17 +6,27 @@ import { logger } from '@/lib/logger';
 import { colors } from '@/theme/goRide';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function RegisterScreen() {
-  const { phone: phoneParam, role: roleParam } = useLocalSearchParams<{ phone?: string; role?: string }>();
-  const [name, setName] = useState('');
+/**
+ * Strip +880 prefix from an E.164 param so the input field only shows
+ * the local 10-digit portion (the "+880" is displayed as a label).
+ */
+function stripCountryCode(phone: string): string {
+  if (phone.startsWith('+880')) return phone.slice(4);
+  if (phone.startsWith('880')) return phone.slice(3);
+  return phone.replace(/^0+/, '');
+}
+
+export default function LoginScreen() {
+  const { phone: phoneParam } = useLocalSearchParams<{ phone?: string }>();
+  const [phone, setPhone] = useState(stripCountryCode(phoneParam ?? ''));
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleRegister = async () => {
-    if (name.length < 2) {
-      setError('Name must be at least 2 characters');
+  const handleLogin = async () => {
+    const fullPhone = `+880${phone.replace(/^0+/, '')}`;
+    if (fullPhone.length < 13) {
+      setError('Enter a valid phone number');
       return;
     }
 
@@ -25,52 +35,27 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: phoneParam ?? '',
-          name,
-          role: (roleParam ?? 'rider') as 'rider' | 'driver',
-          password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || data.error || 'Registration failed');
-        logger.error('[auth] register failed', data);
-        setLoading(false);
-        return;
-      }
-
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        phone: phoneParam ?? '',
+        phone: fullPhone,
         password,
       });
 
       if (signInError) {
-        setError('Registration successful but login failed. Please login manually.');
+        setError(signInError.message);
         logger.error('[auth] signInWithPassword failed', signInError);
-        router.replace(`/(auth)/login?phone=${encodeURIComponent(phoneParam ?? '')}`);
         return;
       }
 
       // Auth gate (onAuthStateChange in _layout.tsx) handles role-based
       // redirect — do NOT navigate manually here.
     } catch (e: any) {
-      setError('Registration failed. Please try again.');
-      logger.error('[auth] register error', e);
+      setError('Login failed. Please try again.');
+      logger.error('[auth] login error', e);
+    } finally {
       setLoading(false);
     }
   };
@@ -81,41 +66,37 @@ export default function RegisterScreen() {
       <View className="flex-1 px-6 justify-center">
 
         <Text className="text-[28px] font-[Urbanist] font-bold text-goTextPrimaryDark mb-1">
-          Complete Registration
+          Welcome Back
         </Text>
         <Text className="text-[14px] font-[Urbanist] text-goTextSecondaryDark mb-6">
-          Enter your details to create your account
+          Enter your phone number and password to login
         </Text>
 
+        {/* Phone Input */}
         <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
+          <Text className="text-[15px] font-[Urbanist] text-goTextSecondaryDark mr-2">
+            +880
+          </Text>
           <TextInput
             className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
-            placeholder="Full Name"
+            placeholder="1XXXXXXXXX"
             placeholderTextColor={colors.textDisabledDark}
-            value={name}
-            onChangeText={setName}
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
+            maxLength={10}
           />
         </View>
 
+        {/* Password Input */}
         <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
           <TextInput
             className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
-            placeholder="Password (min 6 characters)"
+            placeholder="Password"
             placeholderTextColor={colors.textDisabledDark}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
-          />
-        </View>
-
-        <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
-          <TextInput
-            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
-            placeholder="Confirm Password"
-            placeholderTextColor={colors.textDisabledDark}
-            secureTextEntry
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
           />
         </View>
 
@@ -126,18 +107,24 @@ export default function RegisterScreen() {
         ) : null}
 
         <TouchableOpacity
-          className={`py-4 rounded-lg items-center justify-center 
+          className={`py-4 rounded-lg items-center justify-center mb-4
                        ${loading ? 'bg-goBorderDark' : 'bg-goPrimary'}`}
-          onPress={handleRegister}
+          onPress={handleLogin}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
             <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">
-              Register
+              Login
             </Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} className="items-center">
+          <Text className="text-[14px] font-[Urbanist] text-goPrimary">
+            Forgot Password?
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
