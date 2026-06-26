@@ -126,8 +126,13 @@ export async function POST(request: Request) {
       haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
 
     // City detection and intercity route splitting
-    const { origin_city, origin_city_polygon } = await detectOriginCity({ lat: pickup_lat, lng: pickup_lng });
-    const intercity = origin_city_polygon ? isIntercity({ lat: dropoff_lat, lng: dropoff_lng }, origin_city_polygon) : false;
+    const { origin_city, origin_city_polygon } = await detectOriginCity({
+      lat: pickup_lat,
+      lng: pickup_lng,
+    });
+    const intercity = origin_city_polygon
+      ? isIntercity({ lat: dropoff_lat, lng: dropoff_lng }, origin_city_polygon)
+      : false;
 
     let insideKm = 0;
     let outsideKm = 0;
@@ -169,7 +174,9 @@ export async function POST(request: Request) {
         floor_length_km: Number(activePricing.floor_length_km ?? 0),
         floor_min: activePricing.floor_min ?? 0,
         brta_fare_ceiling_bdt: activePricing.brta_fare_ceiling_bdt,
-        platform_commission_percent: Number(activePricing.platform_commission_percent ?? 0),
+        platform_commission_percent: Number(
+          activePricing.platform_commission_percent ?? 0,
+        ),
       },
       insideKm,
       0,
@@ -290,7 +297,7 @@ export async function POST(request: Request) {
         distance_km: String(fareBreakdown.distance_km),
         scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
         promo_code_id: promoCodeId,
-        promo_discount_bdt: promoDiscountBdt > 0 ? promoDiscountBdt : null,
+        promo_discount_bdt: promoDiscountBdt > 0 ? promoDiscountBdt : 0,
         driver_fare_bdt: driverFareBdt,
         rider_payable_bdt: riderPayableBdt,
         platform_subsidy_bdt:

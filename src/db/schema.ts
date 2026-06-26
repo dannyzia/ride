@@ -567,7 +567,7 @@ export const rides = pgTable(
     cancelled_by: varchar("cancelled_by", { length: 10 }),
     scheduled_dispatched_at: timestamptz("scheduled_dispatched_at"),
     promo_code_id: uuid("promo_code_id").references(() => promoCodes.id),
-    promo_discount_bdt: integer("promo_discount_bdt"),
+    promo_discount_bdt: integer("promo_discount_bdt").notNull().default(0),
     driver_fare_bdt: integer("driver_fare_bdt"),
     rider_payable_bdt: integer("rider_payable_bdt"),
     platform_subsidy_bdt: integer("platform_subsidy_bdt"),
