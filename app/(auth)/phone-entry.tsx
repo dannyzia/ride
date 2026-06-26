@@ -20,7 +20,7 @@ export default function PhoneEntryScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSendCode = async () => {
+  const handleLogin = async () => {
     const fullPhone = `+880${phone.replace(/^0+/, "")}`;
     if (fullPhone.length < 13) {
       setError("Enter a valid phone number");
@@ -44,20 +44,59 @@ export default function PhoneEntryScreen() {
 
       if (!checkResponse.ok) {
         setError(checkData.message || "Failed to check phone number");
-        logger.error("[auth] check-user failed", checkData);
         return;
       }
 
       if (checkData.exists) {
         router.push(`/(auth)/login?phone=${encodeURIComponent(fullPhone)}`);
       } else {
+        setError("No account found with this phone number");
+      }
+    } catch (e: any) {
+      setError("Network error. Please try again.");
+      logger.error("[auth] login check error", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    const fullPhone = `+880${phone.replace(/^0+/, "")}`;
+    if (fullPhone.length < 13) {
+      setError("Enter a valid phone number");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const checkResponse = await fetch(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/api/auth/check-user`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: fullPhone }),
+        },
+      );
+
+      const checkData = await checkResponse.json();
+
+      if (!checkResponse.ok) {
+        setError(checkData.message || "Failed to check phone number");
+        return;
+      }
+
+      if (checkData.exists) {
+        setError("An account with this phone already exists. Please login.");
+      } else {
         router.push(
           `/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}`,
         );
       }
     } catch (e: any) {
-      setError("Failed to send code. Please try again.");
-      logger.error("[auth] send code error", e);
+      setError("Network error. Please try again.");
+      logger.error("[auth] register check error", e);
     } finally {
       setLoading(false);
     }
@@ -137,20 +176,35 @@ export default function PhoneEntryScreen() {
           </Text>
         ) : null}
 
-        <TouchableOpacity
-          className={`py-4 rounded-lg items-center justify-center
-                       ${loading ? "bg-goBorderDark" : "bg-goPrimary"}`}
-          onPress={handleSendCode}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator size={20} color={colors.white} />
-          ) : (
-            <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">
-              Send Code
-            </Text>
-          )}
-        </TouchableOpacity>
+        <View className="flex-row gap-x-3">
+          <TouchableOpacity
+            className={`flex-1 py-4 rounded-lg items-center justify-center
+                         ${loading ? "bg-goBorderDark" : "bg-goPrimary"}`}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size={20} color={colors.white} />
+            ) : (
+              <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">
+                Login
+              </Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            className={`flex-1 py-4 rounded-lg items-center justify-center
+                         ${loading ? "bg-goBorderDark" : "bg-goSurfaceElevatedDark"}`}
+            onPress={handleRegister}
+            disabled={loading}
+            style={{ borderWidth: 1, borderColor: colors.borderDark }}
+          >
+            {loading ? null : (
+              <Text className="text-[16px] font-[Urbanist] font-bold text-goTextSecondaryDark">
+                Register
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
