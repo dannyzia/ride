@@ -31,10 +31,12 @@ const FindRidePage = () => {
       : "Enter or choose location";
 
   const useCurrentLocation = () => {
+    const lat = userLatitude ?? 23.8103;
+    const lng = userLongitude ?? 90.4125;
     setUserLocation({
-      latitude: userLatitude ?? 23.8103,
-      longitude: userLongitude ?? 90.4125,
-      address: userAddress || "Current Location",
+      latitude: lat,
+      longitude: lng,
+      address: userAddress || `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
     });
   };
 
@@ -42,21 +44,15 @@ const FindRidePage = () => {
     <RideLayout title="Ride" disabled={false}>
       <View className="">
         <Text className="text-lg font-JakartaSemiBold mb-3">From</Text>
-        {userLatitude && (
-          <TouchableOpacity
-            onPress={useCurrentLocation}
-            className="flex-row items-center mb-2 px-3 py-2 rounded-lg bg-goAccent/10"
-          >
-            <MaterialIcons
-              name="my-location"
-              size={16}
-              color={colors.primary}
-            />
-            <Text className="ml-2 text-sm font-inter text-goPrimary">
-              Use Current Location
-            </Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          onPress={useCurrentLocation}
+          className="flex-row items-center mb-2 px-3 py-2 rounded-lg bg-goAccent/10"
+        >
+          <MaterialIcons name="my-location" size={16} color={colors.primary} />
+          <Text className="ml-2 text-sm font-inter text-goPrimary">
+            {userLatitude ? "Use Current Location" : "Use Dhaka Center"}
+          </Text>
+        </TouchableOpacity>
         <BarikoiAutocomplete
           icon={icons.target}
           initialLocation={fromLabel}
@@ -82,7 +78,7 @@ const FindRidePage = () => {
         title="Find now"
         onPress={() => router.push("/(main)/book-ride" as never)}
         className="mt-5 w-full"
-        disabled={userAddress?.length! > 0 ? false : true}
+        disabled={!userLatitude && !userLongitude ? false : false}
       />
     </RideLayout>
   );

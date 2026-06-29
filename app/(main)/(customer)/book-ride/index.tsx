@@ -20,6 +20,7 @@ import PreferenceChips from "@/components/PreferenceChips";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { icons } from "@/constants/data";
+import { getCachedEstimates, setCachedEstimates } from "@/store/useRiderStore";
 
 const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 
@@ -75,8 +76,28 @@ const BookRidePage = () => {
   }, []);
 
   const fetchEstimates = async () => {
-    setEstimating(true);
     setError(null);
+
+    // Show cached estimates immediately for instant load
+    if (
+      userLatitude &&
+      userLongitude &&
+      destinationLatitude &&
+      destinationLongitude
+    ) {
+      const cached = getCachedEstimates(
+        userLatitude,
+        userLongitude,
+        destinationLatitude,
+        destinationLongitude,
+      );
+      if (cached) {
+        setEstimates(cached);
+        return; // Background refresh not needed — data is still valid
+      }
+    }
+
+    setEstimating(true);
     try {
       const {
         data: { session },
@@ -102,6 +123,20 @@ const BookRidePage = () => {
       const data = await response.json();
       if (data.estimates) {
         setEstimates(data.estimates);
+        if (
+          userLatitude &&
+          userLongitude &&
+          destinationLatitude &&
+          destinationLongitude
+        ) {
+          setCachedEstimates(
+            userLatitude,
+            userLongitude,
+            destinationLatitude,
+            destinationLongitude,
+            data.estimates,
+          );
+        }
       } else if (data.error) {
         setError(data.message || data.error);
       }

@@ -1,7 +1,14 @@
-import { create } from 'zustand';
-import Constants from 'expo-constants';
+import { create } from "zustand";
 
-export type VehicleType = 'bike_basic' | 'bike_standard' | 'bike_plus' | 'cng' | 'car_economy' | 'car_comfort' | 'car_premium' | 'car_xl';
+export type VehicleType =
+  | "bike_basic"
+  | "bike_standard"
+  | "bike_plus"
+  | "cng"
+  | "car_economy"
+  | "car_comfort"
+  | "car_premium"
+  | "car_xl";
 
 export interface FareEstimate {
   vehicle_type: VehicleType;
@@ -54,7 +61,15 @@ interface RiderState {
   dropoffLng: number | null;
   activeRide: ActiveRide | null;
   searchingRideId: string | null;
-  rideStatus: 'idle' | 'finding' | 'matched' | 'arriving' | 'in_progress' | 'completed' | 'cancelled' | 'expired';
+  rideStatus:
+    | "idle"
+    | "finding"
+    | "matched"
+    | "arriving"
+    | "in_progress"
+    | "completed"
+    | "cancelled"
+    | "expired";
   scheduledAt: string | null;
   promoCode: string | null;
   promoDiscountBdt: number;
@@ -67,7 +82,7 @@ interface RiderState {
   clearRoute: () => void;
   setActiveRide: (ride: ActiveRide | null) => void;
   setSearchingRideId: (id: string | null) => void;
-  setRideStatus: (status: RiderState['rideStatus']) => void;
+  setRideStatus: (status: RiderState["rideStatus"]) => void;
   setScheduledAt: (iso: string | null) => void;
   setPromoCode: (code: string | null) => void;
   setPromoDiscount: (bdt: number) => void;
@@ -76,21 +91,66 @@ interface RiderState {
   fetchActiveRide: (token: string) => Promise<void>;
 }
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL ?? '';
+const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
+
+// ── In-memory estimate cache (5-min TTL) ────────────────────────────────
+let estimateCache: {
+  key: string;
+  estimates: FareEstimate[];
+  expiry: number;
+} | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+function cacheKey(
+  pickupLat: number,
+  pickupLng: number,
+  dropoffLat: number,
+  dropoffLng: number,
+): string {
+  return `${pickupLat.toFixed(4)}${pickupLng.toFixed(4)}->${dropoffLat.toFixed(4)}${dropoffLng.toFixed(4)}`;
+}
+
+export function getCachedEstimates(
+  pickupLat: number,
+  pickupLng: number,
+  dropoffLat: number,
+  dropoffLng: number,
+): FareEstimate[] | null {
+  if (!estimateCache || Date.now() > estimateCache.expiry) {
+    estimateCache = null;
+    return null;
+  }
+  const k = cacheKey(pickupLat, pickupLng, dropoffLat, dropoffLng);
+  return estimateCache.key === k ? estimateCache.estimates : null;
+}
+
+export function setCachedEstimates(
+  pickupLat: number,
+  pickupLng: number,
+  dropoffLat: number,
+  dropoffLng: number,
+  estimates: FareEstimate[],
+): void {
+  estimateCache = {
+    key: cacheKey(pickupLat, pickupLng, dropoffLat, dropoffLng),
+    estimates,
+    expiry: Date.now() + CACHE_TTL_MS,
+  };
+}
 
 export const useRiderStore = create<RiderState>((set, get) => ({
   selectedVehicleType: null,
   estimates: [],
   estimating: false,
-  pickupAddress: '',
-  dropoffAddress: '',
+  pickupAddress: "",
+  dropoffAddress: "",
   pickupLat: null,
   pickupLng: null,
   dropoffLat: null,
   dropoffLng: null,
   activeRide: null,
   searchingRideId: null,
-  rideStatus: 'idle',
+  rideStatus: "idle",
   scheduledAt: null,
   promoCode: null,
   promoDiscountBdt: 0,
@@ -99,22 +159,25 @@ export const useRiderStore = create<RiderState>((set, get) => ({
   setSelectedVehicleType: (vt) => set({ selectedVehicleType: vt }),
   setEstimates: (estimates) => set({ estimates }),
   setEstimating: (v) => set({ estimating: v }),
-  setPickup: (addr, lat, lng) => set({ pickupAddress: addr, pickupLat: lat, pickupLng: lng }),
-  setDropoff: (addr, lat, lng) => set({ dropoffAddress: addr, dropoffLat: lat, dropoffLng: lng }),
-  clearRoute: () => set({
-    selectedVehicleType: null,
-    estimates: [],
-    pickupAddress: '',
-    dropoffAddress: '',
-    pickupLat: null,
-    pickupLng: null,
-    dropoffLat: null,
-    dropoffLng: null,
-    scheduledAt: null,
-    promoCode: null,
-    promoDiscountBdt: 0,
-    selectedPrefIds: [],
-  }),
+  setPickup: (addr, lat, lng) =>
+    set({ pickupAddress: addr, pickupLat: lat, pickupLng: lng }),
+  setDropoff: (addr, lat, lng) =>
+    set({ dropoffAddress: addr, dropoffLat: lat, dropoffLng: lng }),
+  clearRoute: () =>
+    set({
+      selectedVehicleType: null,
+      estimates: [],
+      pickupAddress: "",
+      dropoffAddress: "",
+      pickupLat: null,
+      pickupLng: null,
+      dropoffLat: null,
+      dropoffLng: null,
+      scheduledAt: null,
+      promoCode: null,
+      promoDiscountBdt: 0,
+      selectedPrefIds: [],
+    }),
   setActiveRide: (ride) => set({ activeRide: ride }),
   setSearchingRideId: (id) => set({ searchingRideId: id }),
   setRideStatus: (status) => set({ rideStatus: status }),
@@ -124,7 +187,8 @@ export const useRiderStore = create<RiderState>((set, get) => ({
   setSelectedPrefIds: (ids) => set({ selectedPrefIds: ids }),
   updateDriverLocation: (lat, lng) => {
     const ride = get().activeRide;
-    if (ride) set({ activeRide: { ...ride, driver_lat: lat, driver_lng: lng } });
+    if (ride)
+      set({ activeRide: { ...ride, driver_lat: lat, driver_lng: lng } });
   },
 
   fetchActiveRide: async (token: string) => {
@@ -132,37 +196,40 @@ export const useRiderStore = create<RiderState>((set, get) => ({
       const res = await fetch(`${API_URL}/api/rider/ride/active`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) { set({ activeRide: null, rideStatus: 'idle' }); return; }
+      if (!res.ok) {
+        set({ activeRide: null, rideStatus: "idle" });
+        return;
+      }
       const data = await res.json();
       if (data.ride) {
         set({ activeRide: data.ride, rideStatus: mapStatus(data.ride.status) });
       } else {
-        set({ activeRide: null, rideStatus: 'idle' });
+        set({ activeRide: null, rideStatus: "idle" });
       }
     } catch {
-      set({ activeRide: null, rideStatus: 'idle' });
+      set({ activeRide: null, rideStatus: "idle" });
     }
   },
 }));
 
-function mapStatus(dbStatus: string): RiderState['rideStatus'] {
+function mapStatus(dbStatus: string): RiderState["rideStatus"] {
   switch (dbStatus) {
-    case 'pending':
-    case 'dispatching':
-      return 'finding';
-    case 'matched':
-    case 'driver_arriving':
-      return 'arriving';
-    case 'in_progress':
-      return 'in_progress';
-    case 'completed':
-      return 'completed';
-    case 'cancelled':
-      return 'cancelled';
-    case 'expired':
-    case 'no_drivers':
-      return 'expired';
+    case "pending":
+    case "dispatching":
+      return "finding";
+    case "matched":
+    case "driver_arriving":
+      return "arriving";
+    case "in_progress":
+      return "in_progress";
+    case "completed":
+      return "completed";
+    case "cancelled":
+      return "cancelled";
+    case "expired":
+    case "no_drivers":
+      return "expired";
     default:
-      return 'idle';
+      return "idle";
   }
 }

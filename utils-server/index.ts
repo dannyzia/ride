@@ -819,7 +819,7 @@ async function handleDisconnect(client: WSClient) {
   }
   if (client.driverId) {
     connectedDrivers.delete(client.driverId);
-    removeDriver(client.driverId);
+    // Don't remove from H3 index on disconnect — periodic refresh handles cleanup
   }
   logger.info("[ws] connection closed", {
     userId: client.userId,
