@@ -11,6 +11,8 @@ import CustomButton from "@/components/CustomButton";
 import SOSButton from "@/components/SOSButton";
 import RideOfferSheet from "@/components/RideOfferSheet";
 import { colors } from "@/theme/goRide";
+import MapLibreGL from "@/utils/maplibreLoader";
+import { useBarikoiMapStyle, DEFAULT_COORDINATES } from "@/utils/mapUtils";
 
 const WS_URL =
   process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "ws://localhost:3001";
@@ -273,9 +275,35 @@ export default function DriverHome() {
         </View>
       </View>
 
-      {/* Map placeholder */}
-      <View className="flex-1 bg-goGray100 mx-4 rounded-2xl items-center justify-center">
-        <Text className="text-goTextSecondaryLight font-inter">Map View</Text>
+      {/* Live Map */}
+      <View className="flex-1 mx-4 rounded-2xl overflow-hidden">
+        {MapLibreGL && MapLibreGL.MapView ? (
+          <MapLibreGL.MapView
+            style={{ flex: 1 }}
+            styleURL={useBarikoiMapStyle(false)}
+            centerCoordinate={
+              location
+                ? [location.lng, location.lat]
+                : [DEFAULT_COORDINATES.longitude, DEFAULT_COORDINATES.latitude]
+            }
+            zoomLevel={15}
+          >
+            {location && MapLibreGL.PointAnnotation && (
+              <MapLibreGL.PointAnnotation
+                id="driver-location"
+                coordinate={[location.lng, location.lat]}
+              >
+                <View className="w-4 h-4 rounded-full bg-goAccent" />
+              </MapLibreGL.PointAnnotation>
+            )}
+          </MapLibreGL.MapView>
+        ) : (
+          <View className="flex-1 bg-goGray100 items-center justify-center rounded-2xl">
+            <Text className="text-goTextSecondaryLight font-inter">
+              Map View
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Wallet Card */}

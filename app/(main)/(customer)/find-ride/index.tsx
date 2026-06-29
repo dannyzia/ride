@@ -1,63 +1,91 @@
-import { colors } from '@/theme/goRide';
-import { View, Text } from 'react-native'
-import React from 'react'
-import RideLayout from '@/components/RideLayout';
-import BarikoiAutocomplete from '@/components/BarikoiAutocomplete';
-import { icons } from '@/constants/data';
-import CustomButton from '@/components/CustomButton';
-import { useRouter } from 'expo-router';
-import { useCustomer } from '@/store';
-
+import { colors } from "@/theme/goRide";
+import { View, Text, TouchableOpacity } from "react-native";
+import React, { useEffect } from "react";
+import RideLayout from "@/components/RideLayout";
+import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
+import { icons } from "@/constants/data";
+import CustomButton from "@/components/CustomButton";
+import { useRouter } from "expo-router";
+import { useCustomer } from "@/store";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const FindRidePage = () => {
+  const {
+    userAddress,
+    userLatitude,
+    userLongitude,
+    destinationAddress,
+    setUserLocation,
+    setDestinationLocation,
+  } = useCustomer();
 
-    const {
-        userAddress,
-        destinationAddress,
-        setUserLocation,
-        setDestinationLocation
-    } = useCustomer();
+  const router = useRouter();
 
+  // Show Current Location button if GPS is available
+  const fromLabel = userAddress
+    ? userAddress.length > 49
+      ? userAddress.slice(0, 49) + "..."
+      : userAddress
+    : userLatitude
+      ? `${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}`
+      : "Enter or choose location";
 
-    const router = useRouter();
+  const useCurrentLocation = () => {
+    setUserLocation({
+      latitude: userLatitude ?? 23.8103,
+      longitude: userLongitude ?? 90.4125,
+      address: userAddress || "Current Location",
+    });
+  };
 
-    return (
-        <RideLayout title='Ride' disabled={false}>
-            <View className=''>
-                <Text className='text-lg font-JakartaSemiBold mb-3'>From</Text>
-                <BarikoiAutocomplete
-                    icon={icons.target}
-                    initialLocation={
-                        (userAddress && userAddress.length > 49)
-                            ? userAddress.slice(0, 49) + '...'
-                            : userAddress || 'Enter Address'
-                    }
-                    textInputBackgroundColor={colors.gray100}
-                    handlePress={(location) => setUserLocation(location)}
-                />
-            </View>
-
-            <View className=''>
-                <Text className='text-lg font-JakartaSemiBold mb-3'>To</Text>
-                <BarikoiAutocomplete
-                    icon={icons.map}
-                    initialLocation={
-                        (destinationAddress && destinationAddress.length > 49)
-                            ? destinationAddress.slice(0, 49) + '...'
-                            : destinationAddress || 'Enter Destination'
-                    }
-                    textInputBackgroundColor='transparent'
-                    handlePress={(location) => setDestinationLocation(location)}
-                />
-            </View>
-            <CustomButton
-                title='Find now'
-                onPress={() => router.push('/(main)/book-ride' as never)}
-                className='mt-5 w-full'
-                disabled={userAddress?.length!>0?false:true}
+  return (
+    <RideLayout title="Ride" disabled={false}>
+      <View className="">
+        <Text className="text-lg font-JakartaSemiBold mb-3">From</Text>
+        {userLatitude && (
+          <TouchableOpacity
+            onPress={useCurrentLocation}
+            className="flex-row items-center mb-2 px-3 py-2 rounded-lg bg-goAccent/10"
+          >
+            <MaterialIcons
+              name="my-location"
+              size={16}
+              color={colors.primary}
             />
-        </RideLayout>
-    )
-}
+            <Text className="ml-2 text-sm font-inter text-goPrimary">
+              Use Current Location
+            </Text>
+          </TouchableOpacity>
+        )}
+        <BarikoiAutocomplete
+          icon={icons.target}
+          initialLocation={fromLabel}
+          textInputBackgroundColor={colors.gray100}
+          handlePress={(location) => setUserLocation(location)}
+        />
+      </View>
 
-export default FindRidePage
+      <View className="">
+        <Text className="text-lg font-JakartaSemiBold mb-3">To</Text>
+        <BarikoiAutocomplete
+          icon={icons.map}
+          initialLocation={
+            destinationAddress && destinationAddress.length > 49
+              ? destinationAddress.slice(0, 49) + "..."
+              : destinationAddress || "Enter Destination"
+          }
+          textInputBackgroundColor="transparent"
+          handlePress={(location) => setDestinationLocation(location)}
+        />
+      </View>
+      <CustomButton
+        title="Find now"
+        onPress={() => router.push("/(main)/book-ride" as never)}
+        className="mt-5 w-full"
+        disabled={userAddress?.length! > 0 ? false : true}
+      />
+    </RideLayout>
+  );
+};
+
+export default FindRidePage;

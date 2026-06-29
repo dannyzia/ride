@@ -181,7 +181,7 @@ const Map = () => {
           style={{ width: "100%", height: "100%", borderRadius: 16 }}
           styleURL={mapStyleURL}
           centerCoordinate={[displayLng, displayLat]}
-          zoomLevel={userLatitude && userLongitude ? 14 : 11}
+          zoomLevel={userLatitude && userLongitude ? 15 : 13}
           onPress={handleMapInteraction}
         >
           {/* User location marker */}
