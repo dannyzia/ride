@@ -130,11 +130,7 @@ export default function DriverHome() {
 
   // ── Heartbeat (every 10s when online) ────────────────────────────
   useEffect(() => {
-    if (
-      !isOnline ||
-      !wsRef.current ||
-      wsRef.current.readyState !== WebSocket.OPEN
-    ) {
+    if (!isOnline) {
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
@@ -143,15 +139,21 @@ export default function DriverHome() {
     }
 
     const sendHeartbeat = async () => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
       try {
+        const perm = await Location.requestForegroundPermissionsAsync();
+        if (!perm.granted) {
+          console.warn("[driver] foreground location permission not granted");
+          return;
+        }
         const loc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
         const lat = loc.coords.latitude;
         const lng = loc.coords.longitude;
         setLocation({ lat, lng });
-
-        wsRef.current?.send(
+        ws.send(
           JSON.stringify({
             type: "heartbeat",
             lat,
@@ -159,8 +161,11 @@ export default function DriverHome() {
             ts: new Date().toISOString(),
           }),
         );
-      } catch {
-        // Location permission may be denied
+      } catch (e) {
+        console.warn(
+          "[driver] heartbeat error:",
+          e instanceof Error ? e.message : e,
+        );
       }
     };
 
@@ -170,7 +175,7 @@ export default function DriverHome() {
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     };
-  }, [isOnline]);
+  }, [isOnline, wsConnected]);
 
   // ── Load driver profile ──────────────────────────────────────────
   const loadDriverProfile = useCallback(async () => {
