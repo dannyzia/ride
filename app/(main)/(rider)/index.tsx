@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import * as Location from "expo-location";
 import { supabase } from "@/lib/supabase";
 import { useDriverStore } from "@/store/useDriverStore";
+import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useRideOfferStore, useWSStore } from "@/store";
 import CustomButton from "@/components/CustomButton";
 import SOSButton from "@/components/SOSButton";
@@ -28,7 +29,8 @@ export default function DriverHome() {
     setIsOnline,
     setWsConnected,
   } = useDriverStore();
-  const { addRideOffer, removeRideOffer } = useRideOfferStore();
+  const { addRideOffer, removeRideOffer, setActiveRideId } = useRideOfferStore();
+  const { setActiveOffer } = useDriverFlowStore();
 
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
@@ -74,6 +76,7 @@ export default function DriverHome() {
           } else if (type === "auth:error") {
             console.warn("[ws] auth error:", msg.message);
           } else if (type === "ride:offer") {
+            // Keep ride details for the in-progress phase (find-customer / finish-ride)
             addRideOffer({
               id: msg.ride_id,
               pickup: msg.pickup,
@@ -85,9 +88,30 @@ export default function DriverHome() {
               expires_at: msg.expires_at,
               status: "pending",
             } as any);
+            // Show the offer popup — RideOfferSheet reads useDriverFlowStore.activeOffer
+            setActiveOffer({
+              ride_id: msg.ride_id,
+              pickup: msg.pickup,
+              dropoff: msg.dropoff,
+              fare_breakdown: msg.fare_breakdown,
+              vehicle_type: msg.vehicle_type,
+              rider_first_name: msg.rider_first_name,
+              rider_rating: msg.rider_rating,
+              distance_km: msg.distance_km,
+              pickup_distance_km: msg.pickup_distance_km,
+              pickup_eta_minutes: msg.pickup_eta_minutes,
+              is_scheduled: msg.is_scheduled,
+              preference_ids: msg.preference_ids,
+              expires_in_ms: msg.expires_in_ms,
+              expires_at: msg.expires_at,
+            });
           } else if (type === "offer:lost" || type === "offer:expired") {
             removeRideOffer(msg.ride_id);
+            setActiveOffer(null);
           } else if (type === "offer:accepted") {
+            // Seed activeRideId so find-customer can load ride details
+            setActiveRideId(msg.ride_id);
+            setActiveOffer(null);
             router.replace("/(main)/(rider)/find-customer");
           } else if (type === "subscription:expired") {
             setActiveSubscription(null);
