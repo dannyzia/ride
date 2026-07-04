@@ -3,8 +3,12 @@ import * as turf from '@turf/turf';
 import { logger } from './logger';
 import { haversineKm } from './fareCalc';
 
-const BARIKOI_DIRECTIONS_URL = 'https://barikoi.xyz/v1/api/directions/v1/driving';
-const BARIKOI_TIMEOUT_MS = 5000;
+// Barikoi v2 route endpoint (same one lib/barikoi.ts uses for distance).
+// NOTE: the previous v1 directions URL (https://barikoi.xyz/v1/api/directions/v1/driving)
+// returns HTTP 404 — that path does not exist, which forced the Haversine fallback
+// and made the intercity inside/outside split inaccurate.
+const BARIKOI_ROUTE_URL = 'https://barikoi.xyz/v2/api/route';
+const BARIKOI_TIMEOUT_MS = 8000;
 
 export interface RouteSplitResult {
   inside_km: number;
@@ -32,13 +36,13 @@ async function splitRouteBarikoi(
   const apiKey = process.env.BARIKOI_API_KEY;
   if (!apiKey) throw new Error('BARIKOI_API_KEY not set');
 
-  const url = `${BARIKOI_DIRECTIONS_URL}?api_key=${apiKey}&geometries=polyline&overview=full` +
-    `&coordinates=${pickup.lng},${pickup.lat};${dropoff.lng},${dropoff.lat}`;
+  const url = `${BARIKOI_ROUTE_URL}/${pickup.lng},${pickup.lat};${dropoff.lng},${dropoff.lat}?api_key=${apiKey}&geometries=polyline`;
 
   const res = await fetch(url, { signal: AbortSignal.timeout(BARIKOI_TIMEOUT_MS) });
   if (!res.ok) throw new Error(`Barikoi returned ${res.status}`);
 
   const data = await res.json();
+  if (data?.code !== 'Ok') throw new Error(`Barikoi code ${data?.code ?? 'unknown'}`);
   const encodedPolyline = data?.routes?.[0]?.geometry;
   if (!encodedPolyline) throw new Error('No route geometry in response');
 
