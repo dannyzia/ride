@@ -9,6 +9,7 @@ import {
   updateDriver,
   removeDriver,
   getDriversInCells,
+  getIndexedDriverCount,
 } from "./h3Index";
 import { startCompensationWorker } from "./compensationWorker";
 import { startScheduler } from "./scheduler";
@@ -163,7 +164,7 @@ const server = http.createServer(async (req, res) => {
         error: dbError,
       },
       h3_index: {
-        drivers_indexed: getDriversInCells(["dummy"], "bike_basic").length, // cheap way to get total indexed drivers
+        drivers_indexed: getIndexedDriverCount(),
       },
     });
   }

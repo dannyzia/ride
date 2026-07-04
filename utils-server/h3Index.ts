@@ -75,3 +75,10 @@ export function startH3IndexRefresh(): void {
 }
 
 export function getLastRefreshAge(): number { return Date.now() - lastRefresh; }
+
+/**
+ * Total number of drivers currently held in the in-memory index
+ * (reverseIndex maps driverId -> {cell, vehicleType}). Use this for
+ * health/metrics reporting instead of querying a synthetic cell.
+ */
+export function getIndexedDriverCount(): number { return reverseIndex.size; }
