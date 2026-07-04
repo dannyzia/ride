@@ -17,6 +17,7 @@ import {
   scoreAndBatchDrivers,
   isDispatchPaused,
   updateDriverAcceptanceRate,
+  DISPATCH_RING_K,
 } from "./dispatch";
 import { recordCallDeduction } from "./heartbeat";
 import { db } from "../src/db";
@@ -996,7 +997,7 @@ async function handleNoDrivers(
     const cells = getH3Ring(
       parseFloat(ride.origin_latitude?.toString() ?? "0"),
       parseFloat(ride.origin_longitude?.toString() ?? "0"),
-      1,
+      DISPATCH_RING_K,
     );
     const alternatives: {
       vehicle_type: string;

@@ -12,6 +12,15 @@ const W_RATING      = 0.30;
 const W_ACCEPTANCE  = 0.20;
 const W_AVAILABILITY= 0.10;
 
+// H3 ring radius for the dispatch candidate search. At resolution 9 (~174m
+// cells) each grid step is ~0.32km, so k=16 ≈ 5km — which matches the scoring
+// threshold (distScore = 1 - distKm/5 in scoreAndBatchDrivers). The previous
+// k=2 (~400m) was far too small: it caused rides to expire with ZERO offers
+// whenever the nearest driver was more than a few hundred metres away (the
+// Banani pickup to the indexed driver at ~1.9km = grid distance 6 was never
+// reached). Tunable via DISPATCH_H3_RING_K without a code change.
+export const DISPATCH_RING_K = parseInt(process.env.DISPATCH_H3_RING_K ?? '16');
+
 export interface ScoredDriver {
   driverId: string;
   score: number;
@@ -31,7 +40,7 @@ export async function scoreAndBatchDrivers(
   batchSize = 5,
   preferenceIds: string[] = [],
 ): Promise<ScoredDriver[]> {
-  const cells = getH3Ring(originLat, originLng, 2);
+  const cells = getH3Ring(originLat, originLng, DISPATCH_RING_K);
   const candidateIds = getDriversInCells(cells, vehicleType);
   if (!candidateIds.length) return [];
 
