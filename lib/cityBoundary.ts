@@ -2,11 +2,12 @@ import { db } from '../src/db';
 import { cityBoundaries } from '../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from './logger';
+import { normalizePolygon, pointInPolygon, type LatLng } from './polygon';
 
 interface CityBoundary {
   id: string;
   name: string;
-  polygon: { lat: number; lng: number }[];
+  polygon: LatLng[];
 }
 
 let cache: CityBoundary[] | null = null;
@@ -20,32 +21,22 @@ async function loadActiveCities(): Promise<CityBoundary[]> {
     .from(cityBoundaries)
     .where(eq(cityBoundaries.is_active, true));
 
-  cache = rows.map(r => ({
-    id: r.id,
-    name: r.name,
-    polygon: r.polygon as unknown as { lat: number; lng: number }[],
-  }));
+  // Normalize each polygon (GeoJSON or {lat,lng}[]) into a flat {lat,lng}[] ring.
+  // Drop any city whose polygon can't be resolved to >= 3 points.
+  cache = rows
+    .map(r => ({
+      id: r.id,
+      name: r.name,
+      polygon: normalizePolygon(r.polygon),
+    }))
+    .filter(c => c.polygon.length >= 3);
   cacheExpiry = Date.now() + CACHE_TTL_MS;
   return cache;
 }
 
-function pointInPolygon(lat: number, lng: number, polygon: { lat: number; lng: number }[]): boolean {
-  if (!polygon || polygon.length < 3) return false;
-  let inside = false;
-  const n = polygon.length;
-  for (let i = 0, j = n - 1; i < n; j = i++) {
-    const xi = polygon[i].lng, yi = polygon[i].lat;
-    const xj = polygon[j].lng, yj = polygon[j].lat;
-    if ((yi > lat) !== (yj > lat) && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
-      inside = !inside;
-    }
-  }
-  return inside;
-}
-
 export interface CityDetectionResult {
   origin_city: string | null;
-  origin_city_polygon: { lat: number; lng: number }[] | null;
+  origin_city_polygon: LatLng[] | null;
 }
 
 export async function detectOriginCity(
@@ -64,7 +55,7 @@ export async function detectOriginCity(
 
 export function isIntercity(
   dropoff: { lat: number; lng: number },
-  originCityPolygon: { lat: number; lng: number }[],
+  originCityPolygon: LatLng[],
 ): boolean {
   return !pointInPolygon(dropoff.lat, dropoff.lng, originCityPolygon);
 }

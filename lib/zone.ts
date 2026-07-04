@@ -2,11 +2,12 @@ import { db } from '../src/db';
 import { zones } from '../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from './logger';
+import { normalizePolygon, pointInPolygon, type LatLng } from './polygon';
 
-interface Zone {
+export interface Zone {
   id: string;
   name: string;
-  polygon: { lat: number; lng: number }[];
+  polygon: LatLng[];
   is_active: boolean;
 }
 
@@ -32,26 +33,20 @@ export async function getActiveZone(): Promise<Zone | null> {
   cachedZone = {
     id: row.id,
     name: row.name,
-    polygon: row.polygon as unknown as { lat: number; lng: number }[],
+    // The polygon column is jsonb and may be stored as GeoJSON
+    // ({type:"Polygon",coordinates:[[[lng,lat]]]}) or as {lat,lng}[].
+    // normalizePolygon() collapses both into a flat {lat,lng}[] ring.
+    // Without this, a GeoJSON polygon slipped through `as {lat,lng}[]`
+    // and isInsideZone returned false for EVERY point.
+    polygon: normalizePolygon(row.polygon),
     is_active: row.is_active,
   };
   cacheExpiry = Date.now() + CACHE_TTL_MS;
   return cachedZone;
 }
 
-export function isInsideZone(lat: number, lng: number, polygon: { lat: number; lng: number }[]): boolean {
-  if (!polygon || polygon.length < 3) return false;
-
-  let inside = false;
-  const n = polygon.length;
-  for (let i = 0, j = n - 1; i < n; j = i++) {
-    const xi = polygon[i].lng, yi = polygon[i].lat;
-    const xj = polygon[j].lng, yj = polygon[j].lat;
-    if ((yi > lat) !== (yj > lat) && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
-      inside = !inside;
-    }
-  }
-  return inside;
+export function isInsideZone(lat: number, lng: number, polygon: LatLng[]): boolean {
+  return pointInPolygon(lat, lng, polygon);
 }
 
 export async function validatePickupZone(lat: number, lng: number): Promise<{ valid: boolean; zone?: Zone }> {
