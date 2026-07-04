@@ -156,7 +156,7 @@ const FinishRide = () => {
   }, [user]);
 
   const rideDetails = giveRideDetails(activeRideId!);
-  const customerPhone = rideDetails?.customerDetails.number || "";
+  const customerPhone = rideDetails?.customerDetails?.number || "";
   const rideDuration = rideDetails?.duration || "0 mins";
   const rideFare = rideDetails?.fare || "0";
   const rideDistance = rideDetails?.distance || "0 km";

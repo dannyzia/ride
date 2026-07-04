@@ -76,16 +76,37 @@ export default function DriverHome() {
           } else if (type === "auth:error") {
             console.warn("[ws] auth error:", msg.message);
           } else if (type === "ride:offer") {
-            // Keep ride details for the in-progress phase (find-customer / finish-ride)
+            // Keep ride details for the in-progress phase (find-customer / finish-ride).
+            // find-customer/finish-ride read the legacy nested RideOfferDetails shape
+            // (pickupDetails.pickupAddress, dropoffDetails.dropoffAddress, customerDetails.number,
+            // customer_id), so map the flat server payload into that shape here.
+            const pickupAddr = msg.pickup?.address ?? "";
+            const dropoffAddr = msg.dropoff?.address ?? "";
             addRideOffer({
               id: msg.ride_id,
-              pickup: msg.pickup,
-              dropoff: msg.dropoff,
-              fare_breakdown: msg.fare_breakdown,
-              vehicle_type: msg.vehicle_type,
-              rider_first_name: msg.rider_first_name,
-              distance_km: msg.distance_km,
-              expires_at: msg.expires_at,
+              fare: msg.fare_breakdown?.total_bdt != null ? String(msg.fare_breakdown.total_bdt) : "",
+              duration: "",
+              distance: msg.distance_km != null ? String(msg.distance_km) : "",
+              pickupDetails: {
+                pickup: pickupAddr,
+                pickupAddress: pickupAddr,
+                pickupDistance: msg.pickup_distance_km ?? 0,
+                pickupLongitude: msg.pickup?.lng ?? 0,
+                pickupLatitude: msg.pickup?.lat ?? 0,
+              },
+              dropoffDetails: {
+                dropoff: dropoffAddr,
+                dropoffAddress: dropoffAddr,
+                dropoffLatitude: msg.dropoff?.lat ?? 0,
+                dropoffLongitude: msg.dropoff?.lng ?? 0,
+              },
+              customerDetails: {
+                full_name: msg.rider_first_name ?? "",
+                email: "",
+                number: msg.rider_phone ?? "",
+              },
+              rider_id: msg.rider_id ?? "",
+              customer_id: msg.rider_id ?? "",
               status: "pending",
             } as any);
             // Show the offer popup — RideOfferSheet reads useDriverFlowStore.activeOffer

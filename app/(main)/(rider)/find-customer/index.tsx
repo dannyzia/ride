@@ -172,11 +172,11 @@ const ReachCustomer = () => {
   };
 
   const rideDetails = giveRideDetails(activeRideId!);
-  const customerPhone = rideDetails?.customerDetails.number || "";
+  const customerPhone = rideDetails?.customerDetails?.number || "";
   const pickupAddress =
-    rideDetails?.pickupDetails.pickupAddress || "Pickup location";
+    rideDetails?.pickupDetails?.pickupAddress || "Pickup location";
   const destinationAddress =
-    rideDetails?.dropoffDetails.dropoffAddress || "Destination not set";
+    rideDetails?.dropoffDetails?.dropoffAddress || "Destination not set";
 
   const callCustomer = () => {
     if (customerPhone) {
