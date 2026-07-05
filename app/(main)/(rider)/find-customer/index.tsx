@@ -107,14 +107,11 @@ const ReachCustomer = () => {
               if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(
                   JSON.stringify({
-                    type: "riderLocationUpdate",
-                    role: "rider",
-                    driverId: user?.id,
-                    location: {
-                      latitude: location.coords.latitude,
-                      longitude: location.coords.longitude,
-                      address: address[0]?.formattedAddress,
-                    },
+                    type: "location",
+                    action: "update",
+                    ride_id: activeRideId,
+                    lat: location.coords.latitude,
+                    lng: location.coords.longitude,
                   }),
                 );
               }
@@ -156,15 +153,14 @@ const ReachCustomer = () => {
   }, [user]);
 
   const handleSlideComplete = () => {
-    const details = giveRideDetails(activeRideId!);
-    if (ws && ws.readyState === WebSocket.OPEN && details !== undefined) {
+    // Tell the server the driver reached the pickup -> ride becomes driver_arrived,
+    // the rider is notified, and we move on to the Ride-Pin screen.
+    if (ws && ws.readyState === WebSocket.OPEN && activeRideId) {
       ws.send(
         JSON.stringify({
-          type: "reached",
-          role: "rider",
-          id: activeRideId,
-          driver_id: user?.id,
-          customer_id: details.customer_id,
+          type: "ride",
+          action: "arrived",
+          ride_id: activeRideId,
         }),
       );
     }

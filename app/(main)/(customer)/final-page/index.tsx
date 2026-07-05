@@ -1,5 +1,5 @@
 import { colors } from "@/theme/goRide";
-import { View, Text, ActivityIndicator, Alert, Dimensions } from "react-native";
+import { View, Text, ActivityIndicator, Dimensions } from "react-native";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -22,6 +22,7 @@ export default function FinalPage() {
     searchingRideId,
     rideStatus,
     setActiveRide,
+    patchActiveRide,
     setRideStatus,
     setSearchingRideId,
     clearRoute,
@@ -36,6 +37,7 @@ export default function FinalPage() {
   const [driverLat, setDriverLat] = useState<number | null>(null);
   const [driverLng, setDriverLng] = useState<number | null>(null);
   const [driverEta, setDriverEta] = useState<number | null>(null);
+  const [ridePin, setRidePin] = useState<string | null>(null);
   const wsSubscribedRef = useRef(false);
 
   const vehicleDef = activeRide?.vehicle_type
@@ -71,7 +73,10 @@ export default function FinalPage() {
           case "ride:status": {
             if (msg.status) {
               setRideStatus(mapStatus(msg.status));
-              if (msg.ride) setActiveRide(msg.ride);
+              // Merge driver info into the existing activeRide (keeps origin/fare)
+              if (msg.ride) patchActiveRide(msg.ride);
+              // Ride-start PIN: shown to the rider so they can read it to the driver
+              if (msg.pin) setRidePin(msg.pin);
             }
             break;
           }
@@ -126,9 +131,16 @@ export default function FinalPage() {
       if (res.ok) {
         setRideStatus("cancelled");
         setSearchingRideId(null);
+      } else {
+        // Even if cancel fails (ride already gone), go home
+        setRideStatus("cancelled");
+        setSearchingRideId(null);
       }
+      router.replace("/(main)/(customer)/(tabs)/home");
     } catch {
-      Alert.alert("Error", "Failed to cancel ride");
+      setRideStatus("cancelled");
+      setSearchingRideId(null);
+      router.replace("/(main)/(customer)/(tabs)/home");
     } finally {
       setCancelling(false);
     }
@@ -270,6 +282,18 @@ export default function FinalPage() {
           </View>
         </View>
       </View>
+
+      {/* Ride Pin — read this aloud to your driver when they arrive */}
+      {ridePin ? (
+        <View className="mt-4 p-4 bg-goAccent/10 rounded-2xl border border-goAccent/30 items-center">
+          <Text className="text-sm font-inter text-goTextPrimaryLight">
+            Tell your driver your Ride Pin
+          </Text>
+          <Text className="text-4xl font-urbanist-bold text-goAccent tracking-[0.4em] mt-1">
+            {ridePin}
+          </Text>
+        </View>
+      ) : null}
 
       {/* Trip info */}
       <View className="mt-4 p-4 bg-white rounded-2xl border border-goBorderLight">

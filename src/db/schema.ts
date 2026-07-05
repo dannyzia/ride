@@ -557,6 +557,10 @@ export const rides = pgTable(
     platform_commission_bdt: integer("platform_commission_bdt"),
     scheduled_at: timestamptz("scheduled_at"),
     matched_at: timestamptz("matched_at"),
+    // 4-digit ride-start PIN. Generated when a driver accepts (ride -> matched).
+    // Shown to the rider (to read aloud) and verified against the driver's entry
+    // before the ride transitions to in_progress.
+    start_pin: varchar("start_pin", { length: 8 }),
     arrived_at: timestamptz("arrived_at"),
     eta_minutes: smallint("eta_minutes"),
     started_at: timestamptz("started_at"),

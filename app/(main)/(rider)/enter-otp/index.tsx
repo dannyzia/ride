@@ -5,94 +5,66 @@ import CustomButton from "@/components/CustomButton";
 import { useRideOfferStore, useWSStore } from "@/store";
 import { router } from "expo-router";
 import { OtpInput } from "react-native-otp-entry";
-import { logger } from "@/lib/logger";
-
-const WEBSOCKET_API_URL = process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "";
 
 const EnterOtp = () => {
-  const [riderOTP, setRiderOTP] = useState("");
-  const [customerOTP, setCustomerOTP] = useState("");
-  const { ws, setWebSocket } = useWSStore();
-  const {
-    activeRideId,
-    giveRideDetails,
-    changeStatus,
-    removeRideOffer: _removeRideOffer,
-  } = useRideOfferStore();
+  const [pinInput, setPinInput] = useState("");
   const [error, setError] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const { ws } = useWSStore();
+  const { activeRideId } = useRideOfferStore();
 
-  logger.info(customerOTP);
-  logger.info(customerOTP);
-
+  // The server is the source of truth for the Ride Pin (rides.start_pin).
+  // We send what the driver typed and react to the server's verdict — the
+  // driver app never holds the correct PIN itself.
   useEffect(() => {
-    let socket: WebSocket;
-
-    // Either create a new one or use existing one
-    if (!ws) {
-      const newWs = new WebSocket(WEBSOCKET_API_URL);
-
-      newWs.onopen = () => {
-        logger.info("WebSocket connected");
-      };
-
-      newWs.onerror = (err) => {
-        logger.info("WebSocket error:", err);
-      };
-
-      setWebSocket(newWs);
-      socket = newWs;
-    } else {
-      socket = ws;
-    }
-
-    // Attach onmessage regardless
-    socket.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      logger.info("message received");
-      logger.info(message.otp);
-      logger.info(message.otp);
-      if (message.type === "OTP") {
-        if (activeRideId === message.id) {
-          setCustomerOTP(message.otp);
+    if (!ws) return;
+    const onMessage = (ev: MessageEvent) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (!activeRideId || msg.ride_id !== activeRideId) return;
+        if (msg.type === "ride:started") {
+          setVerifying(false);
+          router.replace("/(main)/(rider)/finish-ride");
+        } else if (msg.type === "ride:start_failed") {
+          setVerifying(false);
+          setError("Incorrect Ride Pin. Ask your rider and try again.");
+          setPinInput("");
         }
+      } catch {
+        // ignore non-JSON messages
       }
     };
-  }, [ws]);
-
-  logger.info("WebSocket instance in EnterOtp", ws);
+    ws.addEventListener("message", onMessage);
+    return () => ws.removeEventListener("message", onMessage);
+  }, [ws, activeRideId]);
 
   const handleVerify = () => {
-    if (customerOTP && riderOTP && customerOTP === riderOTP && activeRideId) {
-      const rideDetails = giveRideDetails(activeRideId);
-      logger.info("ride details from enter otp page");
-      logger.info(activeRideId);
-      logger.info(rideDetails);
-      if (rideDetails) {
-        changeStatus(rideDetails?.id, "Start");
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(
-            JSON.stringify({
-              type: "journeyBegins",
-              role: "rider",
-              id: rideDetails?.id,
-              customer_id: rideDetails?.customer_id,
-            }),
-          );
-        }
-      } else {
-        logger.info("ride details not found on page enter OTP");
-      }
-      router.replace("/(main)/(rider)/finish-ride");
-    } else {
-      setError("Please enter a valid OTP.");
+    if (verifying) return;
+    setError("");
+    if (pinInput.length !== 4 || !activeRideId) {
+      setError("Please enter the 4-digit Ride Pin.");
+      return;
     }
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      setError("Not connected to server. Please try again.");
+      return;
+    }
+    setVerifying(true);
+    ws.send(
+      JSON.stringify({
+        type: "ride",
+        action: "start",
+        ride_id: activeRideId,
+        pin: pinInput,
+      }),
+    );
   };
 
   return (
     <View className="flex-1 justify-center items-center px-6 bg-white">
-      <Text className="text-2xl font-bold text-black mb-4">Enter OTP</Text>
+      <Text className="text-2xl font-bold text-black mb-4">Ride Pin</Text>
       <Text className="text-gray-600 text-center mb-8">
-        Please enter the OTP provided by the customer to start the ride.
+        Enter the 4-digit Ride Pin your rider gave you to start the ride.
       </Text>
 
       {/* <TextInput
@@ -105,7 +77,7 @@ const EnterOtp = () => {
             /> */}
       <OtpInput
         numberOfDigits={4}
-        onTextChange={setRiderOTP}
+        onTextChange={setPinInput}
         focusColor="black"
         placeholder="*"
         type="numeric"
@@ -158,7 +130,7 @@ const EnterOtp = () => {
       )}
 
       <CustomButton
-        title="Verify OTP"
+        title={verifying ? "Starting..." : "Start Ride"}
         onPress={handleVerify}
         bgVariant="primary"
         textVariant="primary"

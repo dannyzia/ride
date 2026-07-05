@@ -673,12 +673,16 @@ wss.on("connection", (ws: WebSocket) => {
             .where(eq(drivers.id, client.driverId))
             .limit(1);
 
+          // Generate a 4-digit ride-start PIN (rider reads aloud, driver enters it)
+          const startPin = String(Math.floor(1000 + Math.random() * 9000));
+
           await db
             .update(rides)
             .set({
               driver_id: client.driverId,
               status: "matched",
               matched_at: new Date(),
+              start_pin: startPin,
             })
             .where(eq(rides.id, rideId));
 
@@ -709,17 +713,25 @@ wss.on("connection", (ws: WebSocket) => {
             .where(eq(rides.id, rideId))
             .limit(1);
           if (ride) {
+            // Tell the rider a driver was found, with the PIN (to read aloud)
+            // and the driver info. final-page listens for "ride:status".
             sendToRider(ride.user_id, {
-              type: "ride:matched",
+              type: "ride:status",
               ride_id: rideId,
-              driver: {
-                name: driverRow?.name ?? "",
-                vehicle_type: driverRow?.vehicle_type ?? "",
+              status: "matched",
+              pin: startPin,
+              ride: {
+                driver: {
+                  name: driverRow?.name ?? "",
+                  vehicle_type: driverRow?.vehicle_type ?? "",
+                },
               },
-              eta_minutes: 5,
             });
           }
 
+          // Confirm acceptance to the driver. The PIN is NOT sent here — the
+          // driver must get it verbally from the rider; the server verifies the
+          // driver's entry against rides.start_pin on "ride:start".
           send(ws, { type: "offer:accepted", ride_id: rideId });
 
           // Background acceptance rate update
@@ -770,6 +782,77 @@ wss.on("connection", (ws: WebSocket) => {
           client.subscribedRideId = msg.ride_id as string;
         } else if (action === "unsubscribe" && client.role === "rider") {
           client.subscribedRideId = undefined;
+        } else if (
+          action === "arrived" &&
+          client.role === "driver" &&
+          client.driverId
+        ) {
+          // Driver reached the pickup -> mark driver_arrived, notify rider
+          const rideId = msg.ride_id as string;
+          if (!rideId) {
+            send(ws, { type: "error", message: "missing_ride_id" });
+            break;
+          }
+          await db
+            .update(rides)
+            .set({ status: "driver_arrived", arrived_at: new Date() })
+            .where(eq(rides.id, rideId));
+          const [arrivedRide] = await db
+            .select({ user_id: rides.user_id })
+            .from(rides)
+            .where(eq(rides.id, rideId))
+            .limit(1);
+          if (arrivedRide) {
+            sendToRider(arrivedRide.user_id, {
+              type: "ride:status",
+              ride_id: rideId,
+              status: "driver_arrived",
+            });
+          }
+          send(ws, { type: "ride:arrived", ride_id: rideId });
+        } else if (
+          action === "start" &&
+          client.role === "driver" &&
+          client.driverId
+        ) {
+          // Driver entered the ride-start PIN -> verify, then start the ride
+          const rideId = msg.ride_id as string;
+          const pin = (msg.pin as string)?.trim();
+          if (!rideId) {
+            send(ws, { type: "error", message: "missing_ride_id" });
+            break;
+          }
+          const [startRide] = await db
+            .select({
+              start_pin: rides.start_pin,
+              status: rides.status,
+              user_id: rides.user_id,
+            })
+            .from(rides)
+            .where(eq(rides.id, rideId))
+            .limit(1);
+          if (!startRide) {
+            send(ws, { type: "error", message: "ride_not_found" });
+            break;
+          }
+          if (!startRide.start_pin || startRide.start_pin !== pin) {
+            send(ws, {
+              type: "ride:start_failed",
+              ride_id: rideId,
+              error: "invalid_pin",
+            });
+            break;
+          }
+          await db
+            .update(rides)
+            .set({ status: "in_progress", started_at: new Date() })
+            .where(eq(rides.id, rideId));
+          sendToRider(startRide.user_id, {
+            type: "ride:status",
+            ride_id: rideId,
+            status: "in_progress",
+          });
+          send(ws, { type: "ride:started", ride_id: rideId });
         }
         break;
       }

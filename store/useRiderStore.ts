@@ -81,6 +81,7 @@ interface RiderState {
   setDropoff: (addr: string, lat: number, lng: number) => void;
   clearRoute: () => void;
   setActiveRide: (ride: ActiveRide | null) => void;
+  patchActiveRide: (patch: Partial<ActiveRide>) => void;
   setSearchingRideId: (id: string | null) => void;
   setRideStatus: (status: RiderState["rideStatus"]) => void;
   setScheduledAt: (iso: string | null) => void;
@@ -179,6 +180,12 @@ export const useRiderStore = create<RiderState>((set, get) => ({
       selectedPrefIds: [],
     }),
   setActiveRide: (ride) => set({ activeRide: ride }),
+  patchActiveRide: (patch) =>
+    set((s) => ({
+      activeRide: s.activeRide
+        ? ({ ...s.activeRide, ...patch } as ActiveRide)
+        : ({ ...patch } as ActiveRide),
+    })),
   setSearchingRideId: (id) => set({ searchingRideId: id }),
   setRideStatus: (status) => set({ rideStatus: status }),
   setScheduledAt: (iso) => set({ scheduledAt: iso }),
