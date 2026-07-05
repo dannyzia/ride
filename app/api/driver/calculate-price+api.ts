@@ -1,6 +1,6 @@
 // Auth: verifySupabaseToken via Bearer token
 import { db } from "@/src/db";
-import { rides, users } from "@/src/db/schema";
+import { rides, users, drivers } from "@/src/db/schema";
 import { eq, and, gte, lt, sql } from "drizzle-orm";
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -14,15 +14,19 @@ export async function GET(request: Request) {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
+    // rides.driver_id references drivers.id (the driver row PK), NOT users.id.
+    // Join through drivers -> users, and only count completed rides.
     const data = await db.select({
       totalBdt: sql<string>`COALESCE(CAST(fare_breakdown->>'total_bdt' AS text), '0')`,
       commissionBdt: sql<number>`COALESCE(platform_commission_bdt, 0)`,
     })
       .from(rides)
-      .innerJoin(users, eq(rides.driver_id, users.id))
+      .innerJoin(drivers, eq(rides.driver_id, drivers.id))
+      .innerJoin(users, eq(drivers.user_id, users.id))
       .where(
         and(
           eq(users.auth_uid, supabaseUid),
+          eq(rides.status, "completed"),
           gte(rides.created_at, startOfDay),
           lt(rides.created_at, endOfDay)
         )

@@ -27,6 +27,7 @@ const ConfirmRidePage = () => {
   const {
     selectedVehicleType,
     estimates,
+    setActiveRide,
     setSearchingRideId,
     setRideStatus,
     scheduledAt,
@@ -133,6 +134,25 @@ const ConfirmRidePage = () => {
       });
       const data = await response.json();
       if (data.ride_id) {
+        // Seed activeRide with the ride details + fare so the tracking screen
+        // (final-page) can render the fare, pickup/dropoff, etc. immediately —
+        // previously activeRide was never set, so the rider saw no fare and a
+        // blank ride card.
+        setActiveRide({
+          id: data.ride_id,
+          status: "pending",
+          driver_id: null,
+          origin_address: userAddress || "",
+          destination_address: destinationAddress || "",
+          origin_latitude: userLatitude ?? 0,
+          origin_longitude: userLongitude ?? 0,
+          destination_latitude: destinationLatitude ?? 0,
+          destination_longitude: destinationLongitude ?? 0,
+          vehicle_type: selectedVehicleType ?? "bike_basic",
+          fare_breakdown: data.fare_breakdown ?? {},
+          distance_km: data.fare_breakdown?.distance_km ?? 0,
+          created_at: new Date().toISOString(),
+        });
         setSearchingRideId(data.ride_id);
         setRideStatus("finding");
         router.replace("/(main)/(customer)/final-page");
