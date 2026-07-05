@@ -52,8 +52,7 @@ const EnterOtp = () => {
     setVerifying(true);
     ws.send(
       JSON.stringify({
-        type: "ride",
-        action: "start",
+        type: "ride:start",
         ride_id: activeRideId,
         pin: pinInput,
       }),

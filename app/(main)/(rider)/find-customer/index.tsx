@@ -158,8 +158,7 @@ const ReachCustomer = () => {
     if (ws && ws.readyState === WebSocket.OPEN && activeRideId) {
       ws.send(
         JSON.stringify({
-          type: "ride",
-          action: "arrived",
+          type: "ride:arrived",
           ride_id: activeRideId,
         }),
       );
