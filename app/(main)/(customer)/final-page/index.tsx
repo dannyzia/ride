@@ -185,6 +185,20 @@ export default function FinalPage() {
 
   const renderMatched = () => (
     <View className="flex-1 px-4 pt-4">
+      {/* Ride-in-progress banner — distinct state once the trip actually starts */}
+      {rideStatus === "in_progress" && (
+        <View className="bg-goAccent/15 border border-goAccent/40 rounded-2xl px-4 py-3 mb-3 flex-row items-center">
+          <Text className="text-base mr-2">🚗</Text>
+          <View className="flex-1">
+            <Text className="text-sm font-urbanist-bold text-goAccent">
+              Ride in progress
+            </Text>
+            <Text className="text-xs font-inter text-gray-500">
+              On the way to your destination
+            </Text>
+          </View>
+        </View>
+      )}
       {/* Map with driver location pin */}
       <View
         className="w-full rounded-2xl overflow-hidden border border-goBorderLight mb-4"
@@ -249,9 +263,11 @@ export default function FinalPage() {
       {/* Driver info card */}
       <View className="p-4 bg-white rounded-2xl border border-goBorderLight">
         <Text className="text-lg font-urbanist-bold text-goTextPrimaryLight">
-          {driverEta != null
-            ? `Arriving in ${Math.round(driverEta)} min`
-            : "Driver Found!"}
+          {rideStatus === "in_progress"
+            ? "On the way"
+            : driverEta != null
+              ? `Arriving in ${Math.round(driverEta)} min`
+              : "Driver Found!"}
         </Text>
         <View className="flex-row items-center mt-3">
           <View className="w-14 h-14 rounded-full bg-goAccent/10 items-center justify-center">
