@@ -72,15 +72,24 @@ const HomePage = () => {
     if (!ws && user) {
       newWs = new WebSocket(WEBSOCKET_API_URL);
 
-      newWs.onopen = () => {
-        newWs.send(
-          JSON.stringify({
-            type: "register",
-            id: user.uid,
-            role: "customer",
-          }),
-        );
-
+      newWs.onopen = async () => {
+        // Authenticate with the server using the same protocol as the driver
+        // (auth:hello + Supabase token). The old "register" message was not
+        // handled by the server, so the rider was never added to
+        // connectedRiders and never received ride:status / location:driver.
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          newWs.send(
+            JSON.stringify({
+              type: "auth:hello",
+              access_token: token,
+              role: "rider",
+            }),
+          );
+        }
         logger.info("WebSocket connected");
       };
 
