@@ -214,13 +214,21 @@ export default function FinalPage() {
           rotateEnabled={false}
           {...({} as any)}
         >
-          {driverLat != null && driverLng != null && (
-            <MapLibreGL.Camera
-              centerCoordinate={[driverLng, driverLat]}
-              zoomLevel={15}
-              animationDuration={500}
-            />
-          )}
+          <MapLibreGL.Camera
+            centerCoordinate={
+              driverLat != null && driverLng != null
+                ? [driverLng, driverLat]
+                : activeRide?.origin_latitude != null &&
+                    activeRide?.origin_longitude != null
+                  ? [
+                      parseFloat(activeRide.origin_longitude.toString()),
+                      parseFloat(activeRide.origin_latitude.toString()),
+                    ]
+                  : [90.4125, 23.8103] // Dhaka fallback so the map never opens on null island / Africa
+            }
+            zoomLevel={15}
+            animationDuration={500}
+          />
           {/* Driver pin */}
           {driverLat != null && driverLng != null && (
             <MapLibreGL.PointAnnotation

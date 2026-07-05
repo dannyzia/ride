@@ -107,8 +107,7 @@ const ReachCustomer = () => {
               if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(
                   JSON.stringify({
-                    type: "location",
-                    action: "update",
+                    type: "location:update",
                     ride_id: activeRideId,
                     lat: location.coords.latitude,
                     lng: location.coords.longitude,
