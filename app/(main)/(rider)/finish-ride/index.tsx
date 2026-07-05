@@ -51,20 +51,11 @@ const FinishRide = () => {
     } else {
       socket = ws;
     }
-
-    socket.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      if (message.type === "reachedVerified") {
-        if (activeRideId) {
-          setVerifyReached(false);
-          setVerifyReachedStage("waiting");
-          setShowModal(true);
-        }
-      }
-      if (message.type === "customerDidNotVerify") {
-        setVerifyReachedStage("alert");
-      }
-    };
+    // NOTE: do NOT assign socket.onmessage here. Assigning ws.onmessage
+    // overwrites the driver Home's ride:offer handler, so after finishing one
+    // ride the driver stopped receiving offer popups entirely. The messages
+    // this previously handled (reachedVerified / customerDidNotVerify) were
+    // legacy types from the old drop-off flow and are no longer sent.
   }, [ws]);
 
   const calculateDistance = (
