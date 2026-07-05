@@ -67,42 +67,61 @@ const HomePage = () => {
 
   //setting the ws server
   useEffect(() => {
-    let newWs: WebSocket;
+    if (!user) return;
 
-    if (!ws && user) {
-      newWs = new WebSocket(WEBSOCKET_API_URL);
+    // Reuse an already-open socket (e.g. returning to Home) — no duplicates.
+    const existing = useWSStore.getState().ws;
+    if (existing && existing.readyState === WebSocket.OPEN) return;
 
-      newWs.onopen = async () => {
-        // Authenticate with the server using the same protocol as the driver
-        // (auth:hello + Supabase token). The old "register" message was not
-        // handled by the server, so the rider was never added to
-        // connectedRiders and never received ride:status / location:driver.
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (token) {
-          newWs.send(
-            JSON.stringify({
-              type: "auth:hello",
-              access_token: token,
-              role: "rider",
-            }),
-          );
-        }
+    let ws: WebSocket;
+    let reconnectAttempts = 0;
+
+    const connect = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      ws = new WebSocket(WEBSOCKET_API_URL);
+
+      ws.onopen = () => {
+        reconnectAttempts = 0;
+        setWebSocket(ws);
+        // Authenticate (auth:hello) so the server registers this rider and
+        // can push ride:status / location:driver.
+        ws.send(
+          JSON.stringify({
+            type: "auth:hello",
+            access_token: token,
+            role: "rider",
+          }),
+        );
         logger.info("WebSocket connected");
       };
 
-      newWs.onerror = () => {
+      ws.onerror = () => {
         logger.warn("An error occurred while connecting to the server.");
       };
 
-      newWs.onclose = () => {
+      ws.onclose = () => {
         logger.info("WebSocket closed");
+        // Reconnect with exponential backoff so a transient close doesn't
+        // strand the rider mid-ride.
+        const delay =
+          Math.min(1000 * Math.pow(2, reconnectAttempts), 30_000) +
+          Math.random() * 1000;
+        reconnectAttempts++;
+        setTimeout(connect, delay);
       };
+    };
 
-      setWebSocket(newWs);
-    }
+    connect();
+
+    return () => {
+      // Intentionally do NOT close the socket — it must persist across
+      // navigation (Home -> final-page) so the rider keeps receiving updates.
+    };
   }, [user]);
 
   const onRefresh = async () => {
