@@ -161,22 +161,21 @@ const FinishRide = () => {
   const rideFare = rideDetails?.fare || "0";
   const rideDistance = rideDetails?.distance || "0 km";
   const pickupAddress =
-    rideDetails?.pickupDetails.pickupAddress || "Pickup location";
+    rideDetails?.pickupDetails?.pickupAddress || "Pickup location";
   const destinationAddress =
-    rideDetails?.dropoffDetails.dropoffAddress || "Destination not set";
+    rideDetails?.dropoffDetails?.dropoffAddress || "Destination not set";
 
   const handleSlideComplete = () => {
+    // Tell the server the ride is done -> ride becomes completed, the rider is
+    // notified ("Ride Complete"), and we return home. (The old "journeyEnds"
+    // message was not handled by the server, so the driver waited forever.)
     if (activeRideId && ws && ws.readyState === WebSocket.OPEN) {
       ws.send(
-        JSON.stringify({
-          type: "journeyEnds",
-          role: "rider",
-          customer_id: rideDetails?.customer_id,
-          id: rideDetails?.id,
-        }),
+        JSON.stringify({ type: "ride:complete", ride_id: activeRideId }),
       );
     }
-    setVerifyReached(true);
+    if (activeRideId) removeRideOffer(activeRideId);
+    router.replace("/(main)/(rider)/home");
   };
 
   const handleCallCustomer = () => {

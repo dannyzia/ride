@@ -853,6 +853,35 @@ wss.on("connection", (ws: WebSocket) => {
             status: "in_progress",
           });
           send(ws, { type: "ride:started", ride_id: rideId });
+        } else if (
+          action === "complete" &&
+          client.role === "driver" &&
+          client.driverId
+        ) {
+          // Driver reached the dropoff -> mark the ride completed and notify
+          // the rider so their screen shows "Ride Complete".
+          const rideId = msg.ride_id as string;
+          if (!rideId) {
+            send(ws, { type: "error", message: "missing_ride_id" });
+            break;
+          }
+          await db
+            .update(rides)
+            .set({ status: "completed", completed_at: new Date() })
+            .where(eq(rides.id, rideId));
+          const [cmpRide] = await db
+            .select({ user_id: rides.user_id })
+            .from(rides)
+            .where(eq(rides.id, rideId))
+            .limit(1);
+          if (cmpRide) {
+            sendToRider(cmpRide.user_id, {
+              type: "ride:status",
+              ride_id: rideId,
+              status: "completed",
+            });
+          }
+          send(ws, { type: "ride:completed", ride_id: rideId });
         }
         break;
       }
