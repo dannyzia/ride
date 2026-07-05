@@ -43,6 +43,14 @@ export default function DriverHome() {
     let ws: WebSocket;
     let reconnectAttempts = 0;
 
+    // Reuse an existing open socket if present (e.g. returning Home after a
+    // ride) so we never spin up a duplicate connection.
+    const existing = useWSStore.getState().ws;
+    if (existing && existing.readyState === WebSocket.OPEN) {
+      wsRef.current = existing;
+      return;
+    }
+
     async function connect() {
       const {
         data: { session },
@@ -169,7 +177,11 @@ export default function DriverHome() {
 
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      wsRef.current?.close();
+      // Intentionally do NOT close the WebSocket here. The driver socket must
+      // persist across navigation (Home -> find-customer -> enter-otp ->
+      // finish-ride) so every screen shares one authenticated connection.
+      // Closing it on unmount left downstream screens with a dead socket, so
+      // ride:arrived / ride:start were silently dropped.
     };
   }, []);
 
