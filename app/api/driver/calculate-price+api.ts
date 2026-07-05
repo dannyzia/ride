@@ -37,9 +37,10 @@ export async function GET(request: Request) {
       const commission = ride.commissionBdt ?? 0;
       return acc + (gross - commission);
     }, 0);
-    const roundedEarnings = Math.round(totalEarnings * 100) / 100;
+    // total_bdt is integer paisa; convert to taka for display.
+    const earningsTaka = Math.round(totalEarnings) / 100;
 
-    return Response.json({ totalEarnings: roundedEarnings }, { status: 200 });
+    return Response.json({ totalEarnings: earningsTaka }, { status: 200 });
   } catch (error) {
     logger.error('[driver/calculate-price] error', error);
     return Response.json({ error: 'internal_error' }, { status: 500 });
