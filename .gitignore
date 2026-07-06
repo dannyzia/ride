@@ -112,3 +112,19 @@ graphify-out/
 # Playwright test artifacts
 admin-test-results/
 admin-test-results.zip
+
+# ── Local manual/QA test artifacts (NOT app code) ────────────────────────────
+# Throwaway DB/API probe + simulation scripts used during manual testing
+/check-*.js
+/simulate-full-flow.js
+/trigger-ride.js
+/manual-accept-offer.js
+/setup-zone.js
+/_*.cjs
+/_*.js
+# Local emulator/server helper batch scripts (machine-specific paths)
+/*.bat
+/*.cmd
+# Test screenshots / captures
+/*.png
+/driver-screen.png
