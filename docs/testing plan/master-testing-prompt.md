@@ -45,6 +45,7 @@ Expect `"status":"ok"`. If utils-server is down or returns `CONNECT_TIMEOUT`, **
 - **Route**: Pickup **Banani (Dhaka)** → Dropoff **Savar Cantonment Zoo Road** (intercity, ~30 km).
 - **Vehicle**: **Bike Plus** (the test driver is `bike_plus`).
 - **Expected fare**: ≈ **৳523**, with the outside-Dhaka portion charged at **2× the per-km rate**.
+- **OTP (dev bypass ON)**: this environment has `DEV_OTP_BYPASS=true`, so any phone's code is the fixed **`123456`** (configurable via `DEV_OTP`). Use `123456` on the OTP screen — **no SMS needed**.
 
 ---
 

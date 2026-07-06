@@ -53,7 +53,7 @@ Walk one complete ride from request to completion across a **Rider** and a **Dri
 
 ### 1.5 Known caveats (do not file as bugs unless they regress)
 - **Map rendering on emulator**: the emulator uses software GL (SwiftShader). MapLibre may render slowly or briefly blank. If the map is blank but the rest of the flow works, note it but continue. Reliable map rendering requires a **physical device**.
-- **OTP login**: OTP is sent via dpRelay SMS. The tester must read the OTP from the target phone's SMS inbox (or use the project's dev OTP bypass if configured). If a session is already active (app not killed), login can be skipped.
+- **OTP login**: by default OTP is sent via dpRelay SMS. **In this dev environment `DEV_OTP_BYPASS=true` is enabled** — any phone's OTP is the fixed code **`123456`** (configurable via `DEV_OTP`). No SMS needed. If a session is already active (app not killed), login can be skipped.
 - **WebSocket session architecture**: the WS is currently owned by the Home screen (not a session provider). The fixes in this build keep it persistent across screens; do not navigate the driver away from the Home→ride screens out of order.
 
 ---

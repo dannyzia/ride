@@ -3,6 +3,7 @@ import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
 import { verifyOtp as verifyDpRelayOtp } from "@/lib/dprelay";
 import { markVerified } from "@/lib/verifiedPhones";
+import { isDevOtpBypassEnabled, consumeDevSession } from "@/lib/devOtpBypass";
 import { logger } from "@/lib/logger";
 
 const verifyOtpSchema = z
@@ -17,6 +18,25 @@ export async function POST(request: Request) {
   if (!result.ok) return result.response;
 
   const { sessionId, otp } = result.data;
+
+  // DEV-ONLY bypass: accept the fixed dev code, mark the phone verified.
+  if (isDevOtpBypassEnabled()) {
+    const phone = consumeDevSession(sessionId, otp);
+    if (!phone) {
+      return Response.json(
+        { error: "invalid_otp", message: "Dev OTP invalid or expired" },
+        { status: 400 },
+      );
+    }
+    const normalizedPhone = phone.startsWith("+")
+      ? phone
+      : "+" + phone.replace(/^\D+/, "");
+    markVerified(normalizedPhone);
+    return Response.json(
+      { verified: true, phoneNumber: normalizedPhone, dev: true },
+      { status: 200 },
+    );
+  }
 
   try {
     const dpResult = await verifyDpRelayOtp(sessionId, otp);

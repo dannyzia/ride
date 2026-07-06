@@ -2,6 +2,11 @@
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
 import { sendOtp } from "@/lib/dprelay";
+import {
+  isDevOtpBypassEnabled,
+  createDevSession,
+  devOtpCode,
+} from "@/lib/devOtpBypass";
 import { logger } from "@/lib/logger";
 
 const sendOtpSchema = z
@@ -15,6 +20,15 @@ export async function POST(request: Request) {
   if (!result.ok) return result.response;
 
   const { phone } = result.data;
+
+  // DEV-ONLY bypass: skip the SMS round-trip and return a fixed dev session.
+  if (isDevOtpBypassEnabled()) {
+    const session = createDevSession(phone);
+    return Response.json(
+      { ...session, dev: true, devOtp: devOtpCode() },
+      { status: 200 },
+    );
+  }
 
   try {
     const dpResult = await sendOtp(phone);
