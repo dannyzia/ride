@@ -16,6 +16,7 @@ import { icons } from "@/constants/data";
 import { useCustomer } from "@/store";
 import { router } from "expo-router";
 import { getBarikoiAutocompleteUrl } from "@/lib/useBarikoiMapStyle";
+import { logger } from "@/lib/logger";
 
 const AutocompletePage = () => {
   const [query, setQuery] = useState("");
@@ -51,7 +52,7 @@ const AutocompletePage = () => {
         const places = data.places || data.data || [];
         setSuggestions(places);
       } catch (error) {
-        console.error("Error fetching autocomplete:", error);
+        logger.error("Error fetching autocomplete:", error);
       } finally {
         setLoading(false);
       }

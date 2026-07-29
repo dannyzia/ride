@@ -172,6 +172,7 @@ export async function POST(request: Request) {
         provider: "portpos",
         amount_bdt: pkg.price_bdt,
         status: "initiated",
+        purpose: "driver_package",
       })
       .onConflictDoNothing()
       .returning();

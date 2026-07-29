@@ -50,6 +50,7 @@ export const rideStatusEnum = pgEnum("ride_status", [
   "cancelled",
   "expired",
   "no_drivers",
+  "scheduled",
 ]);
 export const subscriptionStatusEnum = pgEnum("subscription_status", [
   "active",
@@ -210,6 +211,7 @@ export const users = pgTable(
     number: varchar("number", { length: 20 }),
     name: varchar("name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }),
+    city: varchar("city", { length: 100 }),
     role: userRoleEnum("role").notNull().default("rider"),
     profile_image_url: varchar("profile_image_url", { length: 500 }),
     device_id: varchar("device_id", { length: 255 }),
@@ -217,6 +219,11 @@ export const users = pgTable(
     rating: numeric("rating", { precision: 3, scale: 2 }),
     rating_count: integer("rating_count").notNull().default(0),
     rating_sum: integer("rating_sum").notNull().default(0),
+    account_status: varchar("account_status", { length: 20 }).default("active"),
+    fraud_score: integer("fraud_score").default(0),
+    total_rides: integer("total_rides").default(0),
+    total_spent_bdt: integer("total_spent_bdt").default(0),
+    last_ride_at: timestamptz("last_ride_at"),
     sos_contact: varchar("sos_contact", { length: 20 }),
     rider_wallet_balance_bdt: integer("rider_wallet_balance_bdt")
       .notNull()
@@ -225,6 +232,7 @@ export const users = pgTable(
     security_settings: jsonb("security_settings"),
     linked_accounts: jsonb("linked_accounts"),
     data_controls: jsonb("data_controls"),
+    deleted_at: timestamptz("deleted_at"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -276,11 +284,20 @@ export const drivers = pgTable(
     }),
     last_location_at: timestamptz("last_location_at"),
     h3_cell_res9: varchar("h3_cell_res9", { length: 20 }),
+    zone_id: uuid("zone_id"),
+    consent_accepted: boolean("consent_accepted").default(false),
+    consent_version: varchar("consent_version", { length: 20 }),
+    consent_accepted_at: timestamptz("consent_accepted_at"),
     stage2_due_at: timestamptz("stage2_due_at"),
     brta_certificate_url: text("brta_certificate_url"),
     driver_wallet_balance_bdt: integer("driver_wallet_balance_bdt")
       .notNull()
       .default(0),
+    on_break: boolean("on_break").notNull().default(false),
+    break_started_at: timestamptz("break_started_at"),
+    auto_accept_enabled: boolean("auto_accept_enabled").notNull().default(false),
+    auto_accept_radius_meters: integer("auto_accept_radius_meters").notNull().default(500),
+    gender: varchar("gender", { length: 10 }),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -380,6 +397,9 @@ export const promoCodes = pgTable(
     valid_from: timestamptz("valid_from").notNull(),
     expires_at: timestamptz("expires_at").notNull(),
     is_active: boolean("is_active").notNull().default(true),
+    target_role: varchar("target_role", { length: 20 }).notNull().default("rider"),
+    metric: varchar("metric", { length: 30 }),
+    target_value: integer("target_value"),
     created_by: uuid("created_by").references(() => users.id),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
@@ -553,9 +573,23 @@ export const rides = pgTable(
     vehicle_type: vehicleTypeEnum("vehicle_type").notNull(),
     status: rideStatusEnum("status").notNull().default("pending"),
     fare_breakdown: jsonb("fare_breakdown").notNull(),
+    surge_multiplier: numeric("surge_multiplier", { precision: 4, scale: 2 }),
+    surge_zone_id: uuid("surge_zone_id"),
+    wait_start_at: timestamptz("wait_start_at"),
+    wait_end_at: timestamptz("wait_end_at"),
+    wait_fee_bdt: integer("wait_fee_bdt").notNull().default(0),
+    secondary_rider_name: varchar("secondary_rider_name", { length: 255 }),
+    secondary_rider_phone: varchar("secondary_rider_phone", { length: 20 }),
+    is_booked_for_someone_else: boolean("is_booked_for_someone_else").default(false),
+    reminder_sent: boolean("reminder_sent").default(false),
+    cancellation_fee_bdt: integer("cancellation_fee_bdt"),
+    upfront_tip_bdt: integer("upfront_tip_bdt").default(0),
+    female_driver_preference: boolean("female_driver_preference").default(false),
     distance_km: numeric("distance_km", { precision: 7, scale: 3 }).notNull(),
     platform_commission_bdt: integer("platform_commission_bdt"),
     scheduled_at: timestamptz("scheduled_at"),
+    dispatch_window_start: timestamptz("dispatch_window_start"),
+    dispatch_window_end: timestamptz("dispatch_window_end"),
     matched_at: timestamptz("matched_at"),
     // 4-digit ride-start PIN. Generated when a driver accepts (ride -> matched).
     // Shown to the rider (to read aloud) and verified against the driver's entry
@@ -574,6 +608,7 @@ export const rides = pgTable(
     promo_discount_bdt: integer("promo_discount_bdt").notNull().default(0),
     driver_fare_bdt: integer("driver_fare_bdt"),
     rider_payable_bdt: integer("rider_payable_bdt"),
+    tip_bdt: integer("tip_bdt").default(0),
     platform_subsidy_bdt: integer("platform_subsidy_bdt"),
     preference_surcharge_bdt: integer("preference_surcharge_bdt")
       .notNull()
@@ -589,7 +624,7 @@ export const rides = pgTable(
     index("rides_scheduled_dispatch_idx")
       .on(t.scheduled_at)
       .where(
-        sql`status = 'pending' AND scheduled_at IS NOT NULL AND scheduled_dispatched_at IS NULL`,
+        sql`status = 'scheduled' AND scheduled_dispatched_at IS NULL`,
       ),
     index("rides_promo_code_idx")
       .on(t.promo_code_id)
@@ -597,6 +632,21 @@ export const rides = pgTable(
     index("rides_vehicle_type_idx").on(t.vehicle_type),
   ],
 );
+
+export const cancellationPolicies = pgTable("cancellation_policies", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  canceller_role: varchar("canceller_role", { length: 20 }).notNull(),
+  ride_status: varchar("ride_status", { length: 30 }).notNull(),
+  time_threshold_seconds: integer("time_threshold_seconds").notNull(),
+  fee_type: varchar("fee_type", { length: 10 }).notNull(),
+  fee_amount_bdt: integer("fee_amount_bdt").notNull(),
+  max_fee_bdt: integer("max_fee_bdt").notNull(),
+  is_active: boolean("is_active").notNull().default(true),
+  priority: integer("priority").notNull().default(0),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+});
 
 export const dispatchOffers = pgTable(
   "dispatch_offers",
@@ -665,6 +715,7 @@ export const paymentEvents = pgTable(
   "payment_events",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    user_id: uuid("user_id").references(() => users.id),
     driver_id: uuid("driver_id").references(() => drivers.id),
     package_id: uuid("package_id").references(() => packages.id),
     idempotency_key: varchar("idempotency_key", { length: 64 })
@@ -678,6 +729,8 @@ export const paymentEvents = pgTable(
     confirmed_at: timestamptz("confirmed_at"),
     subscription_id: uuid("subscription_id").references(() => subscriptions.id),
     ride_id: uuid("ride_id").references(() => rides.id),
+    purpose: varchar("purpose", { length: 20 }).default("ride"),
+    pass_id: uuid("pass_id").references(() => riderPasses.id),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -699,6 +752,10 @@ export const documents = pgTable(
     vehicle_id: uuid("vehicle_id"),
     doc_type: documentTypeEnum("doc_type").notNull(),
     storage_url: text("storage_url").notNull(),
+    expiry_date: timestamptz("expiry_date"),
+    alert_sent_30d: boolean("alert_sent_30d").default(false),
+    alert_sent_7d: boolean("alert_sent_7d").default(false),
+    alert_sent_1d: boolean("alert_sent_1d").default(false),
     status: documentStatusEnum("status").notNull().default("pending"),
     reviewed_by: uuid("reviewed_by").references(() => users.id),
     reviewed_at: timestamptz("reviewed_at"),
@@ -747,6 +804,24 @@ export const zones = pgTable(
   ],
 );
 
+export const surgeCurrent = pgTable("surge_current", {
+  zone_id: uuid("zone_id").primaryKey().references(() => zones.id),
+  multiplier: numeric("multiplier", { precision: 4, scale: 2 }).notNull().default("1.0"),
+  demand_count: integer("demand_count").notNull().default(0),
+  supply_count: integer("supply_count").notNull().default(0),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+});
+
+export const surgeHistory = pgTable("surge_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  zone_id: uuid("zone_id").notNull().references(() => zones.id),
+  multiplier: numeric("multiplier", { precision: 4, scale: 2 }).notNull(),
+  demand_count: integer("demand_count").notNull(),
+  supply_count: integer("supply_count").notNull(),
+  triggered_at: timestamptz("triggered_at").notNull().defaultNow(),
+  ended_at: timestamptz("ended_at"),
+});
+
 export const cityBoundaries = pgTable(
   "city_boundaries",
   {
@@ -785,6 +860,8 @@ export const pricing = pgTable(
       scale: 2,
     }),
     is_active: boolean("is_active").notNull().default(true),
+    free_wait_minutes: integer("free_wait_minutes").notNull().default(3),
+    wait_fee_per_minute_bdt: integer("wait_fee_per_minute_bdt").notNull().default(200),
     brta_fare_ceiling_bdt: integer("brta_fare_ceiling_bdt"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
@@ -881,6 +958,9 @@ export const sosAlerts = pgTable(
     longitude: numeric("longitude", { precision: 10, scale: 7 }).notNull(),
     message: text("message"),
     contacts_notified: jsonb("contacts_notified").notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("open"),
+    acknowledged_by: uuid("acknowledged_by").references(() => users.id),
+    acknowledged_at: timestamptz("acknowledged_at"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -1217,9 +1297,396 @@ export const pointOffers = pgTable(
     points_required: integer("points_required").notNull(),
     reward_type: pointRewardTypeEnum("reward_type").notNull(),
     reward_value: varchar("reward_value", { length: 100 }).notNull(),
+    reward_value_bdt: integer("reward_value_bdt"),
     is_active: boolean("is_active").notNull().default(true),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
   (t) => [index("po_is_active_idx").on(t.is_active)],
 );
+
+// ── Tier 2 tables ───────────────────────────────────────────────────────
+
+export const faqs = pgTable(
+  "faqs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    role: userRoleEnum("role").notNull(),
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    category: varchar("category", { length: 50 }),
+    sort_order: integer("sort_order").default(0),
+    is_active: boolean("is_active").default(true),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("faqs_role_active_idx").on(t.role, t.is_active),
+  ],
+);
+
+export const supportTickets = pgTable(
+  "support_tickets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    assigned_to: uuid("assigned_to").references(() => users.id),
+    ride_id: uuid("ride_id").references(() => rides.id),
+    category: varchar("category", { length: 50 }).notNull(),
+    subject: varchar("subject", { length: 200 }),
+    description: text("description").notNull(),
+    status: varchar("status", { length: 20 }).default("open"),
+    priority: varchar("priority", { length: 10 }).default("normal"),
+    sla_deadline: timestamptz("sla_deadline"),
+    internal_notes: text("internal_notes"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("support_tickets_user_idx").on(t.user_id),
+    index("support_tickets_status_idx").on(t.status),
+  ],
+);
+
+export const ticketReplies = pgTable(
+  "ticket_replies",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ticket_id: uuid("ticket_id")
+      .notNull()
+      .references(() => supportTickets.id),
+    author_id: uuid("author_id")
+      .notNull()
+      .references(() => users.id),
+    is_internal: boolean("is_internal").default(false),
+    message: text("message").notNull(),
+    attachments: jsonb("attachments"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("ticket_replies_ticket_idx").on(t.ticket_id),
+  ],
+);
+
+export const userEmergencyContacts = pgTable(
+  "user_emergency_contacts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    name: varchar("name", { length: 100 }).notNull(),
+    phone: varchar("phone", { length: 20 }).notNull(),
+    relationship: varchar("relationship", { length: 50 }),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("emergency_contacts_user_idx").on(t.user_id),
+  ],
+);
+
+export const driverSchedule = pgTable(
+  "driver_schedule",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    driver_id: uuid("driver_id")
+      .notNull()
+      .references(() => drivers.id),
+    day_of_week: integer("day_of_week").notNull(),
+    start_time: varchar("start_time", { length: 5 }).notNull(),
+    end_time: varchar("end_time", { length: 5 }).notNull(),
+    is_active: boolean("is_active").default(true),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("driver_schedule_driver_idx").on(t.driver_id),
+  ],
+);
+
+export const driverPayoutMethods = pgTable(
+  "driver_payout_methods",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    driver_id: uuid("driver_id")
+      .notNull()
+      .references(() => drivers.id),
+    method_type: varchar("method_type", { length: 20 }).notNull(),
+    account_number: varchar("account_number", { length: 50 }).notNull(),
+    account_name: varchar("account_name", { length: 100 }),
+    bank_name: varchar("bank_name", { length: 100 }),
+    branch_name: varchar("branch_name", { length: 100 }),
+    is_default: boolean("is_default").default(false),
+    is_active: boolean("is_active").default(true),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("dpm_driver_idx").on(t.driver_id),
+  ],
+);
+
+// ── Push Notifications ─────────────────────────────────────────────────
+
+export const userDevices = pgTable(
+  "user_devices",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    push_token: varchar("push_token", { length: 255 }).notNull(),
+    platform: varchar("platform", { length: 20 }).notNull(),
+    device_id: varchar("device_id", { length: 255 }).notNull(),
+    last_active_at: timestamptz("last_active_at").notNull().defaultNow(),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("user_devices_user_id_device_id_key").on(t.user_id, t.device_id),
+    index("user_devices_user_idx").on(t.user_id),
+  ],
+);
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    type: varchar("type", { length: 50 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    body: text("body"),
+    data: jsonb("data"),
+    sent_at: timestamptz("sent_at").notNull().defaultNow(),
+    delivered_at: timestamptz("delivered_at"),
+    failed_reason: varchar("failed_reason", { length: 255 }),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("notifications_user_idx").on(t.user_id),
+    index("notifications_sent_idx").on(t.sent_at),
+  ],
+);
+
+// ── Phase 2: Revenue Features ──────────────────────────────────────────
+
+// P4-006: Driver Commute Preferences
+export const driverCommutePreferences = pgTable("driver_commute_preferences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  driver_id: uuid("driver_id").references(() => drivers.id, { onDelete: "cascade" }).notNull(),
+  destination_lat: numeric("destination_lat", { precision: 10, scale: 8 }).notNull(),
+  destination_lng: numeric("destination_lng", { precision: 11, scale: 8 }).notNull(),
+  destination_address: text("destination_address").notNull(),
+  max_deviation_meters: integer("max_deviation_meters").notNull().default(2000),
+  active: boolean("active").notNull().default(true),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+});
+
+// P4-009: Rider Passes
+export const riderPasses = pgTable("rider_passes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  price_bdt: integer("price_bdt").notNull(),
+  discount_percent: integer("discount_percent").notNull().default(10),
+  max_rides: integer("max_rides"),
+  validity_days: integer("validity_days").notNull(),
+  is_active: boolean("is_active").notNull().default(true),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+});
+
+// P4-009: Rider Subscriptions (active pass per rider)
+export const riderSubscriptions = pgTable("rider_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  rider_id: uuid("rider_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  pass_id: uuid("pass_id").references(() => riderPasses.id).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  rides_used: integer("rides_used").notNull().default(0),
+  valid_until: timestamptz("valid_until").notNull(),
+  purchased_at: timestamptz("purchased_at").notNull().defaultNow(),
+  payment_event_id: uuid("payment_event_id").references(() => paymentEvents.id),
+});
+
+// P4-011: Ride Extra Charges (toll/parking)
+export const rideExtraCharges = pgTable("ride_extra_charges", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ride_id: uuid("ride_id").references(() => rides.id).notNull(),
+  type: varchar("type", { length: 20 }).notNull(),
+  amount_bdt: integer("amount_bdt").notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  submitted_by_driver: boolean("submitted_by_driver").notNull().default(true),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  resolved_at: timestamptz("resolved_at"),
+});
+
+// ── Tax & Accounting Engine (P4 Phase 3) ──────────────────────────────────
+
+export const taxRates = pgTable("tax_rates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  code: text("code", { enum: ['vat_commission', 'vat_subscription', 'source_tax_payout', 'source_tax_instant_pay'] }).notNull().unique(),
+  rate_percent: numeric("rate_percent", { precision: 5, scale: 2 }).notNull(),
+  applies_to: text("applies_to", { enum: ['commission', 'subscription', 'driver_payout', 'driver_instant_pay'] }).notNull(),
+  is_active: boolean("is_active").notNull().default(true),
+  description: text("description"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+});
+
+export const taxLedgers = pgTable("tax_ledgers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tax_rate_id: uuid("tax_rate_id").references(() => taxRates.id).notNull(),
+  reference_type: text("reference_type", { enum: ['ride_commission', 'subscription_sale', 'driver_payout', 'driver_instant_pay'] }).notNull(),
+  reference_id: uuid("reference_id").notNull(),
+  base_amount_bdt: integer("base_amount_bdt").notNull(),
+  tax_amount_bdt: integer("tax_amount_bdt").notNull(),
+  net_amount_bdt: integer("net_amount_bdt").notNull(),
+  driver_id: uuid("driver_id").references(() => drivers.id),
+  rider_id: uuid("rider_id").references(() => users.id),
+  tax_date: timestamptz("tax_date").notNull(),
+  is_reported: boolean("is_reported").notNull().default(false),
+  reported_at: timestamptz("reported_at"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+export const dailyTaxSummaries = pgTable("daily_tax_summaries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  summary_date: date("summary_date").notNull(),
+  tax_rate_id: uuid("tax_rate_id").references(() => taxRates.id).notNull(),
+  tax_code: text("tax_code").notNull(),
+  transaction_count: integer("transaction_count").notNull().default(0),
+  total_base_amount_bdt: integer("total_base_amount_bdt").notNull().default(0),
+  total_tax_amount_bdt: integer("total_tax_amount_bdt").notNull().default(0),
+  total_net_amount_bdt: integer("total_net_amount_bdt").notNull().default(0),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("dts_summary_code_idx").on(t.summary_date, t.tax_code),
+]);
+
+export const accountingAccounts = pgTable("accounting_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  type: text("type", { enum: ['asset', 'liability', 'equity', 'income', 'expense'] }).notNull(),
+  sub_type: text("sub_type"),
+  parent_id: uuid("parent_id").references((): any => accountingAccounts.id),
+  is_active: boolean("is_active").notNull().default(true),
+  description: text("description"),
+  opening_balance_bdt: integer("opening_balance_bdt").notNull().default(0),
+  current_balance_bdt: integer("current_balance_bdt").notNull().default(0),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+export const accountingEntries = pgTable("accounting_entries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  entry_number: text("entry_number").notNull().unique(),
+  reference_type: text("reference_type", {
+    enum: ['ride', 'subscription', 'driver_payout', 'wallet_topup', 'rider_pass', 'tax', 'cancellation_fee', 'tip', 'adjustment'],
+  }).notNull(),
+  reference_id: uuid("reference_id"),
+  entry_date: timestamptz("entry_date").notNull(),
+  description: text("description").notNull(),
+  notes: text("notes"),
+  is_reversed: boolean("is_reversed").notNull().default(false),
+  reversed_by_id: uuid("reversed_by_id").references((): any => accountingEntries.id),
+  created_by: uuid("created_by").references(() => users.id),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+export const accountingEntryLines = pgTable("accounting_entry_lines", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  entry_id: uuid("entry_id").references(() => accountingEntries.id, { onDelete: "cascade" }).notNull(),
+  account_id: uuid("account_id").references(() => accountingAccounts.id).notNull(),
+  debit_bdt: integer("debit_bdt").notNull().default(0),
+  credit_bdt: integer("credit_bdt").notNull().default(0),
+  description: text("description"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// ── Multi-Stop + Upfront Tip ────────────────────────────────────────────
+
+export const rideStops = pgTable("ride_stops", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ride_id: uuid("ride_id").references(() => rides.id, { onDelete: "cascade" }).notNull(),
+  stop_order: integer("stop_order").notNull(),
+  lat: numeric("lat", { precision: 10, scale: 8 }).notNull(),
+  lng: numeric("lng", { precision: 11, scale: 8 }).notNull(),
+  address: text("address").notNull(),
+  status: text("status", { enum: ['pending', 'arrived', 'completed', 'skipped'] }).notNull().default('pending'),
+  wait_start_at: timestamptz("wait_start_at"),
+  wait_end_at: timestamptz("wait_end_at"),
+  wait_fee_bdt: integer("wait_fee_bdt").default(0),
+  completed_at: timestamptz("completed_at"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// ── Trust & Quality System ──────────────────────────────────────────────
+
+export const lostItems = pgTable("lost_items", {
+
+  id: uuid("id").primaryKey().defaultRandom(),
+  ride_id: uuid("ride_id").references(() => rides.id, { onDelete: "cascade" }).notNull(),
+  rider_id: uuid("rider_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  driver_id: uuid("driver_id").references(() => drivers.id, { onDelete: "cascade" }).notNull(),
+  item_description: text("item_description").notNull(),
+  status: text("status", { enum: ['reported', 'driver_confirmed', 'photo_provided', 'arranged_return', 'resolved', 'unresolved'] }).notNull().default('reported'),
+  driver_response: text("driver_response"),
+  driver_photo_url: text("driver_photo_url"),
+  return_method: text("return_method", { enum: ['driver_returns', 'rider_pickup', 'drop_at_hub', 'undeliverable'] }),
+  return_fee_bdt: integer("return_fee_bdt").default(0),
+  admin_mediation: boolean("admin_mediation").default(false),
+  reported_at: timestamptz("reported_at").notNull().defaultNow(),
+  resolved_at: timestamptz("resolved_at"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+});
+
+
+export const fareDisputes = pgTable("fare_disputes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ride_id: uuid("ride_id").references(() => rides.id, { onDelete: "cascade" }).notNull(),
+  rider_id: uuid("rider_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  driver_id: uuid("driver_id").references(() => drivers.id, { onDelete: "cascade" }).notNull(),
+  claimed_fare_bdt: integer("claimed_fare_bdt").notNull(),
+  charged_fare_bdt: integer("charged_fare_bdt").notNull(),
+  dispute_reason: text("dispute_reason", { enum: ['route_longer', 'wrong_vehicle', 'wait_fee_unfair', 'surge_unexplained', 'other'] }).notNull(),
+  rider_note: text("rider_note"),
+  actual_distance_meters: integer("actual_distance_meters"),
+  estimated_distance_meters: integer("estimated_distance_meters"),
+  route_deviation_percent: numeric("route_deviation_percent", { precision: 5, scale: 2 }),
+  auto_refund_bdt: integer("auto_refund_bdt").default(0),
+  admin_adjustment_bdt: integer("admin_adjustment_bdt").default(0),
+  final_resolution: text("final_resolution", { enum: ['auto_approved', 'auto_rejected', 'admin_approved', 'admin_rejected', 'pending'] }),
+  status: text("status", { enum: ['open', 'under_review', 'resolved', 'escalated'] }).notNull().default('open'),
+  resolved_by: uuid("resolved_by").references(() => users.id),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  resolved_at: timestamptz("resolved_at"),
+});
+
+export const driverBlocklists = pgTable("driver_blocklists", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  rider_id: uuid("rider_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  driver_id: uuid("driver_id").references(() => drivers.id, { onDelete: "cascade" }).notNull(),
+  reason: text("reason", { enum: ['rude_behavior', 'unsafe_driving', 'overcharged', 'harassment', 'no_show', 'other'] }),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+export const ridePhotos = pgTable("ride_photos", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ride_id: uuid("ride_id").references(() => rides.id, { onDelete: "cascade" }).notNull(),
+  photo_type: text("photo_type", { enum: ['pickup', 'dropoff', 'delivery', 'lost_item', 'dispute_evidence'] }).notNull(),
+  taken_by: text("taken_by", { enum: ['driver', 'rider'] }).notNull(),
+  storage_url: text("storage_url").notNull(),
+  lat: numeric("lat", { precision: 10, scale: 8 }),
+  lng: numeric("lng", { precision: 11, scale: 8 }),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});

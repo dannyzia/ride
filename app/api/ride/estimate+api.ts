@@ -1,15 +1,32 @@
 import { db } from '@/src/db';
-import { pricing, preferences } from '@/src/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { users, pricing, preferences, systemConfig, zones, surgeCurrent, riderSubscriptions, riderPasses } from '@/src/db/schema';
+import { eq, and, inArray, gt } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
 import { calculateFare, haversineKm } from '@/lib/fareCalc';
+import { applySurge } from '@/lib/surge';
 import { detectOriginCity, isIntercity } from '@/lib/cityBoundary';
 import { splitRoute } from '@/lib/routeSplit';
 import { getRouteDistance } from '@/lib/barikoi';
 import { VEHICLE_TYPE_VALUES, VEHICLE_TYPES } from '@/lib/vehicleTypes';
+import { loadSpeedTableFromConfig, type EtaSpeedTable, timeBucket, etaSpeedKmh, computeEtaMinutes } from '@/lib/eta';
+import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+
+let etaTableCache: EtaSpeedTable | null = null;
+let etaTableExpiry = 0;
+
+async function getEtaTable(): Promise<EtaSpeedTable> {
+  if (etaTableCache && Date.now() < etaTableExpiry) return etaTableCache;
+  etaTableCache = await loadSpeedTableFromConfig(async (key) => {
+    const [row] = await db.select({ value: systemConfig.value })
+      .from(systemConfig).where(eq(systemConfig.key, key)).limit(1);
+    return row?.value ?? null;
+  });
+  etaTableExpiry = Date.now() + 5 * 60 * 1000;
+  return etaTableCache;
+}
 
 const estimateSchema = z.object({
   pickup_lat:     z.number().min(-90).max(90),
@@ -19,18 +36,18 @@ const estimateSchema = z.object({
   vehicle_type:   z.enum(VEHICLE_TYPE_VALUES).optional(),
   preference_ids: z.array(z.string().uuid()).max(10).optional(),
   promo_code:     z.string().min(1).max(30).optional(),
+  upfront_tip_bdt: z.number().int().min(0).optional(),
+  stops: z.array(z.object({ lat: z.number(), lng: z.number(), address: z.string() })).max(2).optional(),
 });
 
 export async function POST(request: Request) {
   try {
-    const _user = await verifySupabaseToken(request);
-    const body = await request.json();
-    const parsed = estimateSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json({ error: 'validation_error', message: parsed.error.flatten() }, { status: 400 });
-    }
-
-    const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, vehicle_type, preference_ids } = parsed.data;
+    const supabaseUser = await verifySupabaseToken(request);
+    const [rider] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
+    if (!rider) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    const parsed = await parseJsonBody(request, estimateSchema);
+    if (!parsed.ok) return parsed.response;
+    const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, vehicle_type, preference_ids, upfront_tip_bdt, stops } = parsed.data;
 
     // Zone check
     const zoneCheck = await validatePickupZone(pickup_lat, pickup_lng);
@@ -41,7 +58,21 @@ export async function POST(request: Request) {
 
     // Route-based distance with Haversine fallback
     const route = await getRouteDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng).catch(() => null);
-    const totalDistanceKm = route?.distanceKm ?? haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+    let totalDistanceKm = route?.distanceKm ?? haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+
+    // ── Multi-leg distance when stops are provided ──────────────────────
+    if (stops && stops.length > 0) {
+      const waypoints = [
+        { lat: pickup_lat, lng: pickup_lng },
+        ...stops,
+        { lat: dropoff_lat, lng: dropoff_lng },
+      ];
+      let multiLegKm = 0;
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        multiLegKm += haversineKm(waypoints[i].lat, waypoints[i].lng, waypoints[i + 1].lat, waypoints[i + 1].lng);
+      }
+      totalDistanceKm = multiLegKm;
+    }
 
     // City detection and intercity route splitting
     const { origin_city, origin_city_polygon } = await detectOriginCity({ lat: pickup_lat, lng: pickup_lng });
@@ -97,8 +128,44 @@ export async function POST(request: Request) {
         platform_commission_percent: Number(activePricing.platform_commission_percent ?? 0),
       }, insideKm, 0, undefined, outsideKm, origin_city, intercity);
 
+      // ── Multi-leg distance — override routeKm when stops are set ──────
+      // ── Rider Pass discount — apply BEFORE surge ───────────────────
+      const [activePassSub] = await db.select().from(riderSubscriptions)
+        .where(and(eq(riderSubscriptions.rider_id, rider.id), eq(riderSubscriptions.status, 'active'), gt(riderSubscriptions.valid_until, new Date())))
+        .limit(1);
+      if (activePassSub) {
+        const [riderPass] = await db.select().from(riderPasses).where(eq(riderPasses.id, activePassSub.pass_id)).limit(1);
+        if (riderPass && (!riderPass.max_rides || activePassSub.rides_used < riderPass.max_rides)) {
+          const discountPaisa = Math.round(fare.total_bdt * riderPass.discount_percent / 100);
+          fare.total_bdt -= discountPaisa;
+          fare.pass_discount_bdt = discountPaisa;
+          fare.pass_name = riderPass.name;
+          const cp = Number(activePricing.platform_commission_percent ?? 0);
+          if (cp > 0) { fare.platform_commission_bdt = Math.floor(fare.total_bdt * cp / 100); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
+        }
+      }
+
+      // ── Surge pricing lookup ───────────────────────────────────────
+      const [sz] = await db.select({ id: zones.id }).from(zones).where(eq(zones.is_active, true)).limit(1);
+      let surgeMul = 1.0;
+      if (sz) {
+        const [sr] = await db.select().from(surgeCurrent).where(eq(surgeCurrent.zone_id, sz.id)).limit(1);
+        if (sr && Date.now() - new Date(sr.updated_at).getTime() < 300_000) surgeMul = Number(sr.multiplier);
+      }
+      if (surgeMul > 1.0) {
+        const surge = applySurge(Number(fare.total_bdt), surgeMul);
+        fare.total_bdt = surge.totalWithSurge;
+        fare.surge_multiplier = surge.multiplier;
+        fare.surge_fee_bdt = surge.surgeFeeBdt;
+        const cp = Number(activePricing.platform_commission_percent ?? 0);
+        if (cp > 0) { fare.platform_commission_bdt = Math.floor(fare.total_bdt * cp / 100); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
+      }
+
       const vtDef = VEHICLE_TYPES.find(v => v.key === vehicle_type);
       const driverFare = fare.total_bdt + preferenceSurchargeBdt;
+      const etaTable = await getEtaTable();
+      const etaBucket = timeBucket(new Date());
+      const etaMin = computeEtaMinutes(totalDistanceKm, etaSpeedKmh(vehicle_type, etaBucket, etaTable));
       return Response.json({
         estimates: [{
           vehicle_type,
@@ -113,7 +180,7 @@ export async function POST(request: Request) {
           preference_surcharge_bdt: preferenceSurchargeBdt,
           driver_fare_bdt: driverFare,
           rider_payable_bdt: driverFare,
-          eta_minutes: Math.max(2, Math.ceil(totalDistanceKm / 0.5)),
+          eta_minutes: etaMin,
         }],
         distance_km: totalDistanceKm,
         preferences_applied: preference_ids ?? [],
@@ -123,6 +190,31 @@ export async function POST(request: Request) {
     // Return all vehicle types
     const pricings = await db.select().from(pricing)
       .where(and(eq(pricing.zone_id, zoneId), eq(pricing.is_active, true)));
+
+    const etaTable = await getEtaTable();
+    const etaBucket = timeBucket(new Date());
+
+    // ── Surge lookup (shared across all vehicle types) ──────────────
+    let surgeMul2 = 1.0;
+    const [sz2] = await db.select({ id: zones.id }).from(zones).where(eq(zones.is_active, true)).limit(1);
+    if (sz2) {
+      const [sr2] = await db.select().from(surgeCurrent).where(eq(surgeCurrent.zone_id, sz2.id)).limit(1);
+      if (sr2 && Date.now() - new Date(sr2.updated_at).getTime() < 300_000) surgeMul2 = Number(sr2.multiplier);
+    }
+
+    // ── Rider Pass discount for multi-vehicle (apply per fare, before surge) ──
+    const [activePassSub2] = await db.select().from(riderSubscriptions)
+      .where(and(eq(riderSubscriptions.rider_id, rider.id), eq(riderSubscriptions.status, 'active'), gt(riderSubscriptions.valid_until, new Date())))
+      .limit(1);
+    let passDiscountPercent = 0;
+    let passName2: string | null = null;
+    if (activePassSub2) {
+      const [riderPass2] = await db.select().from(riderPasses).where(eq(riderPasses.id, activePassSub2.pass_id)).limit(1);
+      if (riderPass2 && (!riderPass2.max_rides || activePassSub2.rides_used < riderPass2.max_rides)) {
+        passDiscountPercent = riderPass2.discount_percent;
+        passName2 = riderPass2.name;
+      }
+    }
 
     const estimates = pricings.map(p => {
       const fare = calculateFare({
@@ -136,8 +228,27 @@ export async function POST(request: Request) {
         platform_commission_percent: Number(p.platform_commission_percent ?? 0),
       }, insideKm, 0, undefined, outsideKm, origin_city, intercity);
 
+      if (passDiscountPercent > 0) {
+        const disc = Math.round(fare.total_bdt * passDiscountPercent / 100);
+        fare.total_bdt -= disc;
+        fare.pass_discount_bdt = disc;
+        fare.pass_name = passName2 ?? undefined;
+        const cp = Number(p.platform_commission_percent ?? 0);
+        if (cp > 0) { fare.platform_commission_bdt = Math.floor(fare.total_bdt * cp / 100); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
+      }
+
+      if (surgeMul2 > 1.0) {
+        const surge = applySurge(Number(fare.total_bdt), surgeMul2);
+        fare.total_bdt = surge.totalWithSurge;
+        fare.surge_multiplier = surge.multiplier;
+        fare.surge_fee_bdt = surge.surgeFeeBdt;
+        const cp = Number(p.platform_commission_percent ?? 0);
+        if (cp > 0) { fare.platform_commission_bdt = Math.floor(fare.total_bdt * cp / 100); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
+      }
+
       const vtDef = VEHICLE_TYPES.find(v => v.key === p.vehicle_type);
       const driverFare = fare.total_bdt + preferenceSurchargeBdt;
+      const etaMin = computeEtaMinutes(totalDistanceKm, etaSpeedKmh(p.vehicle_type, etaBucket, etaTable));
       return {
         vehicle_type:  p.vehicle_type,
         display_en:    vtDef?.display_en ?? p.vehicle_type,
@@ -151,7 +262,7 @@ export async function POST(request: Request) {
         preference_surcharge_bdt: preferenceSurchargeBdt,
         driver_fare_bdt: driverFare,
         rider_payable_bdt: driverFare,
-        eta_minutes:   Math.max(2, Math.ceil(totalDistanceKm / 0.5)),
+        eta_minutes:   etaMin,
       };
     });
 

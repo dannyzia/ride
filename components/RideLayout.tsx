@@ -1,6 +1,6 @@
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { View, Text, TouchableOpacity, Image } from 'react-native'
-import React, { useCallback, useRef } from 'react'
+import React, { useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'expo-router'
 import { icons } from '@/constants/data'
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
@@ -27,6 +27,13 @@ const RideLayout = ({ title, children, snapPoints, disabled }: {
             bottomSheetRef.current?.snapToIndex(0);
         }, [])
     );
+
+    const springConfig = useMemo(() => ({
+        damping: 20, mass: 0.8, stiffness: 180,
+        overshootClamping: false,
+        restDisplacementThreshold: 0.01,
+        restSpeedThreshold: 0.01,
+    }), []);
 
     return (
         <GestureHandlerRootView>
@@ -70,8 +77,7 @@ const RideLayout = ({ title, children, snapPoints, disabled }: {
                             <Text style={{
                                 fontSize: 18,
                                 color: colors.textPrimaryDark,
-                                fontFamily: 'Urbanist',
-                                fontWeight: '600',
+                                fontFamily: 'Jakarta-SemiBold',
                                 marginLeft: spacing.md,
                             }}>
                                 {title || 'Go back'}
@@ -87,6 +93,7 @@ const RideLayout = ({ title, children, snapPoints, disabled }: {
                     snapPoints={snapPoints ?? ['40%', '70%']}
                     index={0}
                     enablePanDownToClose={false}
+                    animationConfigs={springConfig}
                     backgroundStyle={{ backgroundColor: colors.surfaceElevatedDark, borderTopLeftRadius: radii['3xl'], borderTopRightRadius: radii['3xl'] }}
                     handleIndicatorStyle={{ backgroundColor: colors.borderDark }}
                 >

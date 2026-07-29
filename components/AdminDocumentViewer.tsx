@@ -47,7 +47,7 @@ export default function AdminDocumentViewer({ documentId }: AdminDocumentViewerP
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 bg-gray-100 rounded-xl">
-        <p className="text-gray-500 font-inter">Loading document...</p>
+        <p className="text-gray-500 font-Jakarta">Loading document...</p>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export default function AdminDocumentViewer({ documentId }: AdminDocumentViewerP
   if (error || !url) {
     return (
       <div className="flex items-center justify-center h-64 bg-red-50 rounded-xl border border-red-200">
-        <p className="text-red-600 font-inter text-sm">{error ?? 'Document unavailable'}</p>
+        <p className="text-red-600 font-Jakarta text-sm">{error ?? 'Document unavailable'}</p>
       </div>
     );
   }
@@ -74,7 +74,7 @@ export default function AdminDocumentViewer({ documentId }: AdminDocumentViewerP
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block p-4 text-center text-goBlue font-inter underline"
+          className="block p-4 text-center text-goBlue font-Jakarta underline"
         >
           Open Document
         </a>

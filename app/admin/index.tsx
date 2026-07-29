@@ -1,45 +1,51 @@
-// Admin dashboard landing page. Uses the shared shell.
-// The sidebar already enumerates all sections, so the body is just a welcome
-// banner plus quick stats tiles we can wire up later.
-import { View, Text, StyleSheet } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, ActivityIndicator } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
-export default function AdminDashboard() {
+interface DashboardStats {
+  active_drivers: number;
+  pending_approvals: number;
+  today_rides: number;
+  today_commission_bdt: number;
+  pending_documents: number;
+}
+
+function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <AdminShell title="Dashboard" subtitle="Operational overview">
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Welcome</Text>
-        <Text style={styles.cardText}>
-          Use the sidebar to navigate. Operations covers the driver approval
-          queue, monitoring, and recovery. Catalogs holds packages, zones,
-          pricing, and city boundaries. Programs covers incentives, promos,
-          preferences, referrals, points, and vehicle models. Config holds
-          platform settings and sample media.
-        </Text>
-      </View>
-    </AdminShell>
+    <View style={{ backgroundColor: colors.darkSecondary, borderRadius: 12, padding: 16, minWidth: 140, borderWidth: 1, borderColor: "#2A2D35" }}>
+      <Text style={{ color: colors.textSecondaryDark, fontFamily: "Jakarta-Regular", fontSize: 12 }}>{label}</Text>
+      <Text style={{ color, fontFamily: "Jakarta-Bold", fontSize: 28, marginTop: 4 }}>{value}</Text>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.darkSecondary,
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#2A2D35",
-  },
-  cardTitle: {
-    color: colors.textPrimaryDark,
-    fontFamily: "Jakarta-Bold",
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  cardText: {
-    color: colors.textSecondaryDark,
-    fontFamily: "Jakarta-Regular",
-    fontSize: 13,
-    lineHeight: 20,
-  },
-});
+export default function AdminDashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const res = await adminFetch<DashboardStats>("/api/admin/dashboard");
+      if (res.data) setStats(res.data);
+      setLoading(false);
+    })();
+  }, []);
+
+  return (
+    <AdminShell title="Dashboard" subtitle="Operational overview">
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.adminAccent} style={{ marginTop: 40 }} />
+      ) : (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+          <StatCard label="Active Drivers" value={String(stats?.active_drivers ?? 0)} color={colors.primary} />
+          <StatCard label="Pending Approvals" value={String(stats?.pending_approvals ?? 0)} color={colors.amber} />
+          <StatCard label="Today's Rides" value={String(stats?.today_rides ?? 0)} color={colors.adminAccent} />
+          <StatCard label="Today Commission" value={`৳${((stats?.today_commission_bdt ?? 0) / 100).toFixed(0)}`} color={colors.primary} />
+          <StatCard label="Pending Documents" value={String(stats?.pending_documents ?? 0)} color={stats && stats.pending_documents > 0 ? colors.danger : colors.textSecondaryDark} />
+        </View>
+      )}
+    </AdminShell>
+  );
+}

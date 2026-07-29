@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { WebSocketServer, WebSocket } from "ws";
 import http from "http";
+import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { validateUtilsServerEnv } from "../lib/env";
 import {
@@ -20,6 +21,7 @@ import {
   DISPATCH_RING_K,
 } from "./dispatch";
 import { recordCallDeduction } from "./heartbeat";
+import { estimateEtaMinutes } from "./eta";
 import { db } from "../src/db";
 import {
   users,
@@ -29,8 +31,12 @@ import {
   driverOnlineSessions,
   subscriptions,
   pricing,
+  userDevices,
+  notifications as notifTable,
+  zones,
+  rideStops,
 } from "../src/db/schema";
-import { eq, and, isNull, sql } from "drizzle-orm";
+import { eq, and, inArray, isNull, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { getH3Cell, getH3Ring } from "../lib/h3";
 import { calculateFare, haversineKm } from "../lib/fareCalc";
@@ -431,13 +437,25 @@ wss.on("connection", (ws: WebSocket) => {
 
             if (role === "driver") {
               const [driver] = await db
-                .select({ id: drivers.id })
+                .select({ id: drivers.id, h3_cell_res9: drivers.h3_cell_res9, vehicle_type: drivers.vehicle_type })
                 .from(drivers)
                 .where(eq(drivers.user_id, user.id))
                 .limit(1);
               if (driver) {
                 client.driverId = driver.id;
                 connectedDrivers.set(driver.id, client);
+
+                // Re-online driver on WS reconnect. Handles the case where
+                // handleDriverDisconnect set is_online=false during a previous
+                // ride-flow disconnect (backgrounding, navigation). Immediately
+                // adds to the H3 index so dispatch finds the driver without
+                // waiting for the next periodic refresh (up to 30s away).
+                await db.update(drivers)
+                  .set({ is_online: true, updated_at: new Date() })
+                  .where(eq(drivers.id, driver.id));
+                if (driver.h3_cell_res9) {
+                  updateDriver(driver.id, driver.h3_cell_res9, driver.vehicle_type);
+                }
               }
             } else {
               connectedRiders.set(user.id, client);
@@ -505,6 +523,13 @@ wss.on("connection", (ws: WebSocket) => {
         if (now - lastPersist < 30_000) break;
         setLastPersist(client.driverId, now);
 
+        // Backfill zone_id — only one active zone at a time
+        const [activeZone] = await db
+          .select({ id: zones.id })
+          .from(zones)
+          .where(eq(zones.is_active, true))
+          .limit(1);
+
         await db
           .update(drivers)
           .set({
@@ -512,6 +537,7 @@ wss.on("connection", (ws: WebSocket) => {
             last_location_lng: String(lng),
             last_location_at: new Date(),
             h3_cell_res9: cell,
+            zone_id: activeZone?.id ?? null,
           })
           .where(eq(drivers.id, client.driverId));
         break;
@@ -535,6 +561,7 @@ wss.on("connection", (ws: WebSocket) => {
                   lat: msg.lat,
                   lng: msg.lng,
                   ts: msg.ts,
+                  eta_minutes: msg.eta_minutes ?? null,
                 });
               }
             }
@@ -576,18 +603,22 @@ wss.on("connection", (ws: WebSocket) => {
             }
           }, OFFER_LOCK_TTL_MS);
 
-          // Record fetch confirmation timestamp
-          await db
+          // M4: Verify offer exists and is in delivered state
+          const [offer] = await db
             .update(dispatchOffers)
-            .set({
-              fetch_confirmed_at: new Date(),
-            })
+            .set({ outcome: "accepted" })
             .where(
               and(
                 eq(dispatchOffers.ride_id, rideId),
                 eq(dispatchOffers.driver_id, client.driverId),
+                eq(dispatchOffers.outcome, "delivered"),
               ),
-            );
+            )
+            .returning({ id: dispatchOffers.id });
+          if (!offer) {
+            send(ws, { type: "fetch:error", ride_id: rideId, reason: "offer_expired" });
+            return;
+          }
 
           // Open deduction window — find active subscription
           const [sub] = await db
@@ -607,31 +638,21 @@ wss.on("connection", (ws: WebSocket) => {
           };
 
           if (sub) {
-            recordCallDeduction({
+            const result = await recordCallDeduction({
               driverId: client.driverId,
               subscriptionId: sub.id,
               rideId,
               confirmedAt: new Date(),
-            })
-              .then(() =>
-                send(ws, { type: "fetch:confirmed", ride_id: rideId }),
-              )
-              .catch((e) => {
-                logger.error("[ws] fetch:confirm deduction error", {
-                  rideId,
-                  driverId: client.driverId,
-                  error: e.message,
-                });
-                send(ws, {
-                  type: "fetch:error",
-                  ride_id: rideId,
-                  error: "deduction_failed",
-                });
-              })
-              .finally(releaseLock);
+            });
+            releaseLock();
+            if (!result.deducted) {
+              send(ws, { type: "fetch:error", ride_id: rideId, reason: "deduction_failed" });
+              return;
+            }
+            send(ws, { type: "fetch:confirmed", ride_id: rideId });
           } else {
             releaseLock();
-            send(ws, { type: "fetch:confirmed", ride_id: rideId });
+            send(ws, { type: "fetch:error", ride_id: rideId, reason: "no_subscription" });
           }
         }
         break;
@@ -649,6 +670,40 @@ wss.on("connection", (ws: WebSocket) => {
             return;
           }
 
+          // Update ride to matched + immediately to driver_arriving
+          const [driverRow] = await db
+            .select({
+              name: users.name,
+              phone: users.phone,
+              rating: drivers.rating,
+              vehicle_type: drivers.vehicle_type,
+              last_location_lat: drivers.last_location_lat,
+              last_location_lng: drivers.last_location_lng,
+            })
+            .from(drivers)
+            .innerJoin(users, eq(users.id, drivers.user_id))
+            .where(eq(drivers.id, client.driverId))
+            .limit(1);
+
+          // Generate a 4-digit ride-start PIN (rider reads aloud, driver enters it)
+          const startPin = String(crypto.randomInt(1000, 10000));
+
+          const [updatedRide] = await db
+            .update(rides)
+            .set({
+              driver_id: client.driverId,
+              status: "matched",
+              matched_at: new Date(),
+              start_pin: startPin,
+            })
+            .where(and(eq(rides.id, rideId), eq(rides.status, "dispatching")))
+            .returning({ id: rides.id });
+          if (!updatedRide) {
+            send(ws, { type: "offer:rejected", ride_id: rideId, reason: "already_assigned" });
+            return;
+          }
+
+          // Mark this driver's offer as accepted (only after ride is successfully matched)
           await db
             .update(dispatchOffers)
             .set({
@@ -661,30 +716,6 @@ wss.on("connection", (ws: WebSocket) => {
                 eq(dispatchOffers.driver_id, client.driverId),
               ),
             );
-
-          // Update ride to matched + immediately to driver_arriving
-          const [driverRow] = await db
-            .select({
-              name: users.name,
-              vehicle_type: drivers.vehicle_type,
-            })
-            .from(drivers)
-            .innerJoin(users, eq(users.id, drivers.user_id))
-            .where(eq(drivers.id, client.driverId))
-            .limit(1);
-
-          // Generate a 4-digit ride-start PIN (rider reads aloud, driver enters it)
-          const startPin = String(Math.floor(1000 + Math.random() * 9000));
-
-          await db
-            .update(rides)
-            .set({
-              driver_id: client.driverId,
-              status: "matched",
-              matched_at: new Date(),
-              start_pin: startPin,
-            })
-            .where(eq(rides.id, rideId));
 
           // Notify other drivers that offer is lost
           const offeredDrivers = await db
@@ -708,11 +739,24 @@ wss.on("connection", (ws: WebSocket) => {
 
           // Notify rider
           const [ride] = await db
-            .select({ user_id: rides.user_id })
+            .select({
+              user_id: rides.user_id,
+              origin_latitude: rides.origin_latitude,
+              origin_longitude: rides.origin_longitude,
+            })
             .from(rides)
             .where(eq(rides.id, rideId))
             .limit(1);
           if (ride) {
+            if (driverRow?.last_location_lat != null) {
+              const dLat = Number(driverRow.last_location_lat);
+              const dLng = Number(driverRow.last_location_lng);
+              const pLat = parseFloat(ride.origin_latitude?.toString() ?? "0");
+              const pLng = parseFloat(ride.origin_longitude?.toString() ?? "0");
+              const dist = haversineKm(dLat, dLng, pLat, pLng);
+              const etaMin = await estimateEtaMinutes(dist, driverRow.vehicle_type);
+              await db.update(rides).set({ eta_minutes: etaMin }).where(eq(rides.id, rideId));
+            }
             // Tell the rider a driver was found, with the PIN (to read aloud)
             // and the driver info. final-page listens for "ride:status".
             sendToRider(ride.user_id, {
@@ -723,10 +767,19 @@ wss.on("connection", (ws: WebSocket) => {
               ride: {
                 driver: {
                   name: driverRow?.name ?? "",
+                  phone: driverRow?.phone ?? "",
+                  rating: driverRow?.rating != null ? parseFloat(driverRow.rating) : null,
                   vehicle_type: driverRow?.vehicle_type ?? "",
                 },
               },
             });
+
+            // Push notification to rider (in case app is backgrounded)
+            sendPushToUser(ride.user_id, {
+              title: "Driver Found",
+              body: `${driverRow?.name ?? "Your driver"} is on the way!`,
+              data: { ride_id: rideId, type: "ride:matched" },
+            }).catch(() => {});
           }
 
           // Confirm acceptance to the driver. The PIN is NOT sent here — the
@@ -793,22 +846,28 @@ wss.on("connection", (ws: WebSocket) => {
             send(ws, { type: "error", message: "missing_ride_id" });
             break;
           }
-          await db
+
+          const [ride] = await db.select({ driver_id: rides.driver_id, status: rides.status })
+            .from(rides).where(eq(rides.id, rideId)).limit(1);
+          if (!ride || ride.driver_id !== client.driverId) {
+            send(ws, { type: "error", message: "not_your_ride" });
+            break;
+          }
+
+          const [updatedRide] = await db
             .update(rides)
             .set({ status: "driver_arrived", arrived_at: new Date() })
-            .where(eq(rides.id, rideId));
-          const [arrivedRide] = await db
-            .select({ user_id: rides.user_id })
-            .from(rides)
-            .where(eq(rides.id, rideId))
-            .limit(1);
-          if (arrivedRide) {
-            sendToRider(arrivedRide.user_id, {
-              type: "ride:status",
-              ride_id: rideId,
-              status: "driver_arrived",
-            });
+            .where(and(eq(rides.id, rideId), inArray(rides.status, ['matched', 'driver_arriving'])))
+            .returning({ id: rides.id, user_id: rides.user_id });
+          if (!updatedRide) {
+            send(ws, { type: "error", message: "invalid_state_transition" });
+            break;
           }
+          sendToRider(updatedRide.user_id, {
+            type: "ride:status",
+            ride_id: rideId,
+            status: "driver_arrived",
+          });
           send(ws, { type: "ride:arrived", ride_id: rideId });
         } else if (
           action === "start" &&
@@ -827,12 +886,17 @@ wss.on("connection", (ws: WebSocket) => {
               start_pin: rides.start_pin,
               status: rides.status,
               user_id: rides.user_id,
+              driver_id: rides.driver_id,
             })
             .from(rides)
             .where(eq(rides.id, rideId))
             .limit(1);
           if (!startRide) {
             send(ws, { type: "error", message: "ride_not_found" });
+            break;
+          }
+          if (startRide.driver_id !== client.driverId) {
+            send(ws, { type: "error", message: "not_your_ride" });
             break;
           }
           if (!startRide.start_pin || startRide.start_pin !== pin) {
@@ -843,10 +907,15 @@ wss.on("connection", (ws: WebSocket) => {
             });
             break;
           }
-          await db
+          const [updatedRide] = await db
             .update(rides)
             .set({ status: "in_progress", started_at: new Date() })
-            .where(eq(rides.id, rideId));
+            .where(and(eq(rides.id, rideId), inArray(rides.status, ['matched', 'driver_arriving', 'driver_arrived'])))
+            .returning({ id: rides.id });
+          if (!updatedRide) {
+            send(ws, { type: "error", message: "invalid_state_transition" });
+            break;
+          }
           sendToRider(startRide.user_id, {
             type: "ride:status",
             ride_id: rideId,
@@ -865,22 +934,28 @@ wss.on("connection", (ws: WebSocket) => {
             send(ws, { type: "error", message: "missing_ride_id" });
             break;
           }
-          await db
+
+          const [ride] = await db.select({ driver_id: rides.driver_id, status: rides.status })
+            .from(rides).where(eq(rides.id, rideId)).limit(1);
+          if (!ride || ride.driver_id !== client.driverId) {
+            send(ws, { type: "error", message: "not_your_ride" });
+            break;
+          }
+
+          const [updatedRide] = await db
             .update(rides)
             .set({ status: "completed", completed_at: new Date() })
-            .where(eq(rides.id, rideId));
-          const [cmpRide] = await db
-            .select({ user_id: rides.user_id })
-            .from(rides)
-            .where(eq(rides.id, rideId))
-            .limit(1);
-          if (cmpRide) {
-            sendToRider(cmpRide.user_id, {
-              type: "ride:status",
-              ride_id: rideId,
-              status: "completed",
-            });
+            .where(and(eq(rides.id, rideId), eq(rides.status, 'in_progress')))
+            .returning({ id: rides.id, user_id: rides.user_id });
+          if (!updatedRide) {
+            send(ws, { type: "error", message: "invalid_state_transition" });
+            break;
           }
+          sendToRider(updatedRide.user_id, {
+            type: "ride:status",
+            ride_id: rideId,
+            status: "completed",
+          });
           send(ws, { type: "ride:completed", ride_id: rideId });
         }
         break;
@@ -930,6 +1005,16 @@ async function handleDisconnect(client: WSClient) {
   }
   if (client.role === "rider" && client.userId) {
     connectedRiders.delete(client.userId);
+    // Cancel orphaned dispatching rides on rider disconnect
+    await db
+      .update(rides)
+      .set({ status: "cancelled", cancelled_by: "system" })
+      .where(
+        and(
+          eq(rides.user_id, client.userId),
+          eq(rides.status, "dispatching"),
+        ),
+      );
   }
   if (client.driverId) {
     connectedDrivers.delete(client.driverId);
@@ -955,25 +1040,77 @@ async function handleDriverDisconnect(driverId: string) {
         isNull(driverOnlineSessions.went_offline_at),
       ),
     );
+
+  // M1: Mark driver offline to prevent ghost entries in candidate pool
+  await db
+    .update(drivers)
+    .set({ is_online: false, updated_at: new Date() })
+    .where(eq(drivers.id, driverId));
+}
+
+// ── Push Notification Helper (Expo Push API — no SDK needed) ───────────────
+const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
+
+async function sendPushToUser(
+  userId: string,
+  notification: { title: string; body: string; data?: Record<string, string> },
+): Promise<void> {
+  try {
+    const devices = await db
+      .select({ push_token: userDevices.push_token })
+      .from(userDevices)
+      .where(eq(userDevices.user_id, userId));
+
+    if (devices.length === 0) return;
+
+    const results = await Promise.allSettled(
+      devices.map((d) =>
+        fetch(EXPO_PUSH_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: d.push_token,
+            title: notification.title,
+            body: notification.body,
+            data: notification.data ?? {},
+            sound: "default",
+            priority: "high",
+          }),
+        }),
+      ),
+    );
+
+    const failed = results.filter((r) => r.status === "rejected").length;
+
+    await db.insert(notifTable).values({
+      user_id: userId,
+      type: notification.data?.type ?? "push",
+      title: notification.title,
+      body: notification.body,
+      data: (notification.data ?? {}) as any,
+      sent_at: new Date(),
+      failed_reason: failed > 0 ? `${failed}/${devices.length} failed` : null,
+    });
+  } catch (e: any) {
+    logger.error("[push] sendPushToUser failed", { userId, error: e.message });
+  }
 }
 
 // ── Pickup Distance / ETA Helpers ──────────────────────────────────────────
 
-/** Average speed in km/h for ETA estimation in Dhaka city. */
-const DHAKA_AVG_SPEED_KMH = 20;
-
-function computePickupMetrics(
+async function computePickupMetrics(
   driverLat: number | null,
   driverLng: number | null,
   pickupLat: number,
   pickupLng: number,
-): { distanceKm: number; etaMinutes: number } {
+  vehicleType: string,
+): Promise<{ distanceKm: number; etaMinutes: number }> {
   if (driverLat == null || driverLng == null) {
     return { distanceKm: 0, etaMinutes: 0 };
   }
   const dist = haversineKm(driverLat, driverLng, pickupLat, pickupLng);
-  const eta = Math.round((dist / DHAKA_AVG_SPEED_KMH) * 60);
-  return { distanceKm: dist, etaMinutes: Math.max(1, eta) };
+  const eta = await estimateEtaMinutes(dist, vehicleType);
+  return { distanceKm: dist, etaMinutes: eta };
 }
 
 // ── Dispatch Pipeline ──────────────────────────────────────────────────────
@@ -1004,15 +1141,39 @@ async function dispatchRidePipeline(
     if (batch > 1) await new Promise((r) => setTimeout(r, BATCH_INTERVAL_MS));
 
     const ridePrefIds = (ride.preference_ids as string[]) ?? [];
-    const scored = await scoreAndBatchDrivers(
+    const destLat = parseFloat(ride.destination_latitude ?? '0');
+    const destLng = parseFloat(ride.destination_longitude ?? '0');
+    let scored = await scoreAndBatchDrivers(
       ride.id,
       pickupLat,
       pickupLng,
+      destLat,
+      destLng,
       ride.vehicle_type,
       ride.zone_id,
       BATCH_SIZE,
       ridePrefIds,
     );
+
+    // ── Retry logic for batch 1: if zero candidates, wait and retry once ──
+    // Handles the race where the driver's first heartbeat location update
+    // hasn't reached the in-memory H3 index yet (e.g., driver just toggled
+    // online and the heartbeat interval hasn't fired yet).
+    if (batch === 1 && scored.length === 0) {
+      logger.debug('[dispatch] zero candidates on first batch, retrying after 1.5s delay', { ride_id: ride.id });
+      await new Promise((r) => setTimeout(r, 1500));
+      scored = await scoreAndBatchDrivers(
+        ride.id,
+        pickupLat,
+        pickupLng,
+        destLat,
+        destLng,
+        ride.vehicle_type,
+        ride.zone_id,
+        BATCH_SIZE,
+        ridePrefIds,
+      );
+    }
 
     if (scored.length === 0) {
       await handleNoDrivers(ride, allowDowngrade);
@@ -1053,11 +1214,12 @@ async function dispatchRidePipeline(
         loc?.last_location_lat != null ? Number(loc.last_location_lat) : null;
       const dLng =
         loc?.last_location_lng != null ? Number(loc.last_location_lng) : null;
-      const { distanceKm: pDist, etaMinutes: pEta } = computePickupMetrics(
+      const { distanceKm: pDist, etaMinutes: pEta } = await computePickupMetrics(
         dLat,
         dLng,
         pickupLat,
         pickupLng,
+        ride.vehicle_type,
       );
 
       sendToDriver(s.driverId, {
@@ -1082,6 +1244,10 @@ async function dispatchRidePipeline(
         pickup_eta_minutes: pEta,
         is_scheduled: isScheduled,
         preference_ids: ridePrefIds,
+        secondary_rider_name: ride.secondary_rider_name,
+        secondary_rider_phone: ride.secondary_rider_phone,
+        upfront_tip_bdt: ride.upfront_tip_bdt ?? 0,
+        has_stops: (await db.select({ count: sql<number>`count(*)` }).from(rideStops).where(eq(rideStops.ride_id, ride.id)))[0]?.count > 0,
         expires_in_ms: 15000,
         expires_at: new Date(Date.now() + 15000).toISOString(),
       });

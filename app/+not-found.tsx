@@ -1,7 +1,6 @@
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, Platform } from "react-native";
 import { colors, spacing } from "@/theme/goRide";
 import { router } from "expo-router";
-import { Platform } from "react-native";
 
 const isWeb = Platform.OS === "web";
 

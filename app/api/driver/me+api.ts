@@ -5,15 +5,31 @@ import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
+import { VEHICLE_TYPE_VALUES } from '@/lib/vehicleTypes';
+
 const patchSchema = z.object({
   min_per_km_bdt: z.number().int().nonnegative().optional(),
+  name: z.string().min(1).max(200).optional(),
+  phone: z.string().min(1).max(20).optional(),
+  profile_image_url: z.string().url().optional(),
+  email: z.string().email().optional(),
+  city: z.string().min(1).max(100).optional(),
+  vehicle_type: z.enum(VEHICLE_TYPE_VALUES).optional(),
+  auto_accept_enabled: z.boolean().optional(),
+  auto_accept_radius_meters: z.number().int().min(100).max(5000).optional(),
 });
 
 export async function GET(request: Request) {
   try {
     const supabaseUser = await verifySupabaseToken(request);
 
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
+    const [user] = await db.select({
+      id: users.id,
+      name: users.name,
+      phone: users.phone,
+      email: users.email,
+      profile_image_url: users.profile_image_url,
+    }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
     const [driver] = await db.select().from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
@@ -27,6 +43,10 @@ export async function GET(request: Request) {
     return Response.json({
       driver: {
         ...driver,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        profile_image_url: user.profile_image_url,
         calls_remaining: activeSub?.calls_remaining ?? 0,
         subscription: activeSub ?? null,
       },
@@ -92,10 +112,30 @@ export async function PATCH(request: Request) {
       updates.min_per_km_bdt = val === 0 ? null : val;
     }
 
+    if (parsed.data.vehicle_type !== undefined) {
+      await db.update(drivers)
+        .set({ vehicle_type: parsed.data.vehicle_type as any, updated_at: new Date() })
+        .where(eq(drivers.id, driver.id));
+    }
+
+    if (parsed.data.auto_accept_enabled !== undefined) updates.auto_accept_enabled = parsed.data.auto_accept_enabled;
+    if (parsed.data.auto_accept_radius_meters !== undefined) updates.auto_accept_radius_meters = parsed.data.auto_accept_radius_meters;
+
     if (Object.keys(updates).length > 0) {
       await db.update(drivers)
         .set({ ...updates, updated_at: new Date() })
         .where(eq(drivers.id, driver.id));
+    }
+
+    const userUpdates: Record<string, any> = {};
+    if (parsed.data.name !== undefined) userUpdates.name = parsed.data.name;
+    if (parsed.data.phone !== undefined) userUpdates.phone = parsed.data.phone;
+    if (parsed.data.profile_image_url !== undefined) userUpdates.profile_image_url = parsed.data.profile_image_url;
+    if (parsed.data.email !== undefined) userUpdates.email = parsed.data.email;
+    if (parsed.data.city !== undefined) userUpdates.city = parsed.data.city;
+    if (Object.keys(userUpdates).length > 0) {
+      userUpdates.updated_at = new Date();
+      await db.update(users).set(userUpdates).where(eq(users.id, user.id));
     }
 
     // Re-fetch to return updated state

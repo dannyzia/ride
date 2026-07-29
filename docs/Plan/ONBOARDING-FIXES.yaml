@@ -1,0 +1,253 @@
+# =============================================================================
+# ONBOARDING-FIXES.yaml v1.0 — DRIVER ONBOARDING ROOT CAUSE FIXES
+# =============================================================================
+# INSTRUCTIONS FOR THE CODING AGENT:
+#
+#   You are fixing React Native screens in an Expo Router app. Follow every
+#   rule below exactly. Read the global_rules section ONCE and remember all.
+#
+#   For each task:
+#   - Read the ENTIRE task block before writing any code.
+#   - If action: create — use the code_template AS-IS (it is compilable JS).
+#   - If action: audit_and_fix — only apply the find/replace pairs listed in
+#     "fixes". Do NOT recreate the file.
+#   - Run the verification steps for each task before marking done.
+#   - After ALL tasks: run "npx tsc --noEmit" from the project root.
+# =============================================================================
+version: "1.0"
+project: Ride
+role: driver
+priority_class: P2
+total_tasks: 3
+
+# =============================================================================
+# GLOBAL RULES — MEMORIZE THESE
+# =============================================================================
+global_rules:
+
+  framework:
+    - "Expo Router (file-based routing). NO react-navigation imports."
+    - "NOT Next.js."
+    - "app/(main)/(rider)/ for driver screens (legacy folder name, DO NOT rename)"
+    - "components/ for shared components (flat folder, no subfolder)"
+    - "theme/goRide.ts for design tokens (import colors, fonts, spacing)"
+
+  state:
+    - "Zustand only."
+    - "useDriverFlowStore from @/store/useDriverFlowStore (SEPARATE FILE, direct import, NOT barrel) — has {driver, setDriver}"
+    - "useDriverStore from @/store/useDriverStore (SEPARATE FILE) — has {driver, isOnline, activeSubscription, wsConnected}"
+
+  styling:
+    font_heading: "font-JakartaBold"
+    font_body:    "font-Jakarta"
+    font_semibold:"font-JakartaSemiBold"
+    bg_light:     "bg-goBgLight"
+    bg_dark:      "dark:bg-goBgDark"
+    surface_light:"bg-goSurfaceLight"
+    surface_dark: "dark:bg-goSurfaceElevatedDark"
+    border_light: "border-goBorderLight"
+    border_dark:  "dark:border-goBorderDark"
+    text_primary_l: "text-goTextPrimaryLight"
+    text_primary_d: "dark:text-goTextPrimaryDark"
+    text_secondary_l: "text-goTextSecondaryLight"
+    text_secondary_d: "dark:text-goTextSecondaryDark"
+    primary:      "text-goPrimary"
+    primary_bg:   "bg-goPrimary"
+    danger_text:  "text-goDanger"
+    danger_bg:    "bg-goDanger"
+    white_text:   "text-goWhite"
+    accent_light: "bg-goAccentLight"
+    error_color:  "text-goDanger"
+
+    banned:
+      - "bg-bgColor — does not exist in tailwind.config.js. Use bg-goBgLight dark:bg-goBgDark."
+      - "text-primaryTextColor — use text-goTextPrimaryLight dark:text-goTextPrimaryDark"
+      - "text-errorColor — use text-goDanger"
+      - "bg-errorColor — use bg-goDanger"
+      - "StyleSheet.create({...}) — use NativeWind className only"
+      - "font-[Urbanist] — use font-JakartaBold/font-Jakarta instead"
+      - "Inline hex colors in className (e.g. bg-[#FAFAFA]) — use theme tokens"
+
+    mandatory_dark_example:
+      correct: "className='text-goTextPrimaryLight dark:text-goTextPrimaryDark'"
+      wrong:   "className='text-goTextPrimaryLight'  ← missing dark:"
+
+  imports:
+    safe_area:       "import { SafeAreaView } from 'react-native-safe-area-context'"
+    router:          "import { router } from 'expo-router'"
+    stack:           "import { Stack } from 'expo-router'"
+    supabase:        "import { supabase } from '@/lib/supabase'"
+    logger:          "import { logger } from '@/lib/logger'"
+    rn_core:         "import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native'"
+    driver_flow_store: "import { useDriverFlowStore } from '@/store/useDriverFlowStore'"
+    status_guard:    "import DriverStatusGuard from '@/components/auth/DriverStatusGuard'"
+
+  navigation:
+    push:    "router.push('/path')"
+    back:    "router.back()"
+    replace: "router.replace('/path')"
+
+  money: "ALL amounts are INTEGER PAISA. Display: {(amt/100).toFixed(0)}."
+
+  api_pattern: |
+    EVERY API call:
+    1. const [loading, setLoading] = useState(false);
+    2. const [error, setError] = useState('');
+    3. const { data: { session } } = await supabase.auth.getSession();
+    4. const token = session?.access_token;
+    5. if (!token) { setError('Not authenticated'); return; }
+    6. try { setLoading(true); setError('');
+         const res = await fetch(..., { headers: { Authorization: `Bearer ${token}` } });
+         const data = await res.json();
+         if (!res.ok) { setError(data.error || 'Request failed'); return; }
+       } catch (err: any) { setError(err?.message || 'Network error'); } finally { setLoading(false); }
+
+  self_check:
+    - "[ ] Does every color className have a dark: variant?"
+    - "[ ] Are all imports at the top?"
+    - "[ ] Does the code use the correct store import path?"
+    - "[ ] Is DriverStatusGuard correctly wrapped around <Stack />?"
+    - "[ ] For API calls: loading state, error state, try/catch?"
+    - "[ ] Did you run npx tsc --noEmit and it passed?"
+    - "[ ] No console.log — use logger.info/warn/error"
+
+# =============================================================================
+# TASKS
+# =============================================================================
+tasks:
+
+  # ===========================================================================
+  # TASK 1: DRIVER ROOT LAYOUT (create) — wires DriverStatusGuard
+  # ===========================================================================
+  - id: "DRIVER-ONBOARD-001-LAYOUT"
+    route_path: "app/(main)/(rider)/_layout.tsx"
+    action: create
+    note: >
+      CREATE this file. This is the root Stack layout for all driver screens
+      under app/(main)/(rider)/. It wraps the Stack with DriverStatusGuard so
+      that drivers with status other than active/temporary see a status message
+      instead of the content. DriverStatusGuard already has internal loading,
+      pending, suspended, and rejected states. This layout does not duplicate
+      the driver profile loading — the home screen handles that. If the guard
+      loads before the driver profile, it shows its own loading spinner.
+    code_template: |
+      import { Stack } from "expo-router";
+      import DriverStatusGuard from "@/components/auth/DriverStatusGuard";
+
+      export default function DriverRootLayout() {
+        return (
+          <DriverStatusGuard>
+            <Stack screenOptions={{ headerShown: false }} />
+          </DriverStatusGuard>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/_layout.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 2: DRIVER STATUS GUARD (audit_and_fix) — fix styling + add nav buttons
+  # ===========================================================================
+  - id: "DRIVER-ONBOARD-002-STATUSGUARD"
+    route_path: "components/auth/DriverStatusGuard.tsx"
+    action: audit_and_fix
+    note: >
+      AUDIT and fix this existing file.
+      Changes required:
+      1. Replace legacy Tailwind classes (bg-bgColor → bg-goBgLight, text-primaryTextColor → text-goTextPrimaryLight, text-errorColor → text-goDanger, bg-errorColor → bg-goDanger).
+      2. In the 'pending' state, add a TouchableOpacity button "Upload Documents" that navigates to "/(main)/(rider)/onboarding/documents". Without this, pending drivers see a static welcome message with no way to start uploading.
+      3. In the 'suspended' and 'rejected' states, add a "Contact Support" button that navigates to "/(main)/(rider)/contact-support".
+      4. Import 'router' from 'expo-router' at the top.
+      5. Import 'TouchableOpacity' in the react-native import.
+    fixes:
+      - find: "import { View, Text, ActivityIndicator } from 'react-native';"
+        replace: "import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';"
+      - find: "import { useDriverFlowStore } from '@/store/useDriverFlowStore';"
+        replace: |
+          import { router } from 'expo-router';
+          import { useDriverFlowStore } from '@/store/useDriverFlowStore';
+      - find: "className=\"flex-1 items-center justify-center bg-bgColor\""
+        replace: "className=\"flex-1 items-center justify-center bg-goBgLight dark:bg-goBgDark\""
+      - find: "className=\"text-primaryTextColor mt-4 text-base\""
+        replace: "className=\"text-goTextPrimaryLight dark:text-goTextPrimaryDark mt-4 text-[14px] font-Jakarta\""
+      - find: "className=\"flex-1 items-center justify-center bg-bgColor px-6\""
+        replace: "className=\"flex-1 items-center justify-center bg-goBgLight dark:bg-goBgDark px-[24px]\""
+      - find:
+          "return (\n        <View className=\"flex-1 items-center justify-center bg-bgColor px-6\">\n          <Text className=\"text-primaryTextColor text-2xl font-bold mb-4\">Welcome!</Text>\n          <Text className=\"text-primaryTextColor text-center text-base mb-8\">\n            Your account is pending verification. Please upload the required documents to start receiving ride offers.\n          </Text>\n        </View>\n      );"
+        replace: |
+          return (
+            <View className="flex-1 items-center justify-center bg-goBgLight dark:bg-goBgDark px-[24px]">
+              <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-[22px] font-JakartaBold mb-4">Welcome!</Text>
+              <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-center text-[14px] font-Jakarta mb-8">
+                Your account is pending verification. Please upload the required documents to start receiving ride offers.
+              </Text>
+              <TouchableOpacity
+                className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+                onPress={() => router.push("/(main)/(rider)/onboarding/documents")}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Upload Documents</Text>
+              </TouchableOpacity>
+            </View>
+          );
+      - find:
+          "return (\n        <View className=\"flex-1 items-center justify-center bg-bgColor px-6\">\n          <Text className=\"text-errorColor text-2xl font-bold mb-4\">Account Suspended</Text>\n          <Text className=\"text-primaryTextColor text-center text-base\">\n            Your account has been suspended. Please contact support for assistance.\n          </Text>\n        </View>\n      );"
+        replace: |
+          return (
+            <View className="flex-1 items-center justify-center bg-goBgLight dark:bg-goBgDark px-[24px]">
+              <Text className="text-goDanger text-[22px] font-JakartaBold mb-4">Account Suspended</Text>
+              <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-center text-[14px] font-Jakarta mb-8">
+                Your account has been suspended. Please contact support for assistance.
+              </Text>
+              <TouchableOpacity
+                className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+                onPress={() => router.push("/(main)/(rider)/contact-support")}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Contact Support</Text>
+              </TouchableOpacity>
+            </View>
+          );
+      - find:
+          "return (\n        <View className=\"flex-1 items-center justify-center bg-bgColor px-6\">\n          <Text className=\"text-errorColor text-2xl font-bold mb-4\">Documents Rejected</Text>\n          <Text className=\"text-primaryTextColor text-center text-base mb-4\">\n            Your submitted documents were not approved. Please re-submit with correct documents.\n          </Text>\n        </View>\n      );"
+        replace: |
+          return (
+            <View className="flex-1 items-center justify-center bg-goBgLight dark:bg-goBgDark px-[24px]">
+              <Text className="text-goDanger text-[22px] font-JakartaBold mb-4">Documents Rejected</Text>
+              <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-center text-[14px] font-Jakarta mb-4">
+                Your submitted documents were not approved. Please re-submit with correct documents.
+              </Text>
+              <TouchableOpacity
+                className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+                onPress={() => router.push("/(main)/(rider)/onboarding/documents")}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Re-upload Documents</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center mt-3"
+                onPress={() => router.push("/(main)/(rider)/contact-support")}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Contact Support</Text>
+              </TouchableOpacity>
+            </View>
+          );
+    verification:
+      - { type: file_exists, path: "components/auth/DriverStatusGuard.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 3: SUBSCRIPTION CHECKOUT (audit_and_fix) — fix API field name
+  # ===========================================================================
+  - id: "DRIVER-ONBOARD-003-SUBSCRIPTION-CHECKOUT"
+    route_path: "app/(main)/(rider)/subscription-checkout/index.tsx"
+    action: audit_and_fix
+    note: >
+      AUDIT and fix this existing file. The API endpoint POST /api/package/purchase
+      expects body field "provider" with value "portpos" (Zod schema: provider: z.enum(["portpos"])).
+      The current code sends "payment_method" with value selectedMethod (e.g. "bKash"),
+      which the API ignores — the payment_method UI selector is cosmetic only for this
+      app; the actual payment gateway is always PortPos. Only one find/replace needed.
+    fixes:
+      - find: "payment_method: selectedMethod"
+        replace: "provider: \"portpos\""
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/subscription-checkout/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }

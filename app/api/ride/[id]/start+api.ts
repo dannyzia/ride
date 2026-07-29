@@ -4,6 +4,8 @@ import { rides, drivers } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { parseJsonBody } from '@/lib/parseBody';
+import { z } from 'zod';
 
 export async function POST(request: Request) {
   try {
@@ -30,6 +32,13 @@ export async function POST(request: Request) {
         error: 'invalid_status',
         message: `Cannot start ride in status: ${ride.status}`,
       }, { status: 409 });
+    }
+
+    // PIN verification
+    const pinParsed = await parseJsonBody(request, z.object({ pin: z.string() }));
+    if (!pinParsed.ok) return pinParsed.response;
+    if (!ride.start_pin || ride.start_pin !== pinParsed.data.pin) {
+      return Response.json({ error: 'invalid_pin' }, { status: 403 });
     }
 
     const now = new Date();

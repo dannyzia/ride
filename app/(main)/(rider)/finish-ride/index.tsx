@@ -1,4 +1,6 @@
 import { colors, spacing, radii } from "@/theme/goRide";
+import { SuccessCheckmark } from "@/components/SuccessCheckmark";
+import TollParkingModal from "@/components/TollParkingModal";
 import {
   View,
   Text,
@@ -15,11 +17,13 @@ import { useDriver, useRideOfferStore, useWSStore } from "@/store";
 import * as Location from "expo-location";
 import { LocationObject } from "expo-location";
 import { useSession } from "@/lib/session";
+import { supabase } from "@/lib/supabase";
 import ReactNativeModal from "react-native-modal";
 import CustomButton from "@/components/CustomButton";
 import RideLayout from "@/components/RideLayout";
 import { icons } from "@/constants/data";
 
+const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 const WEBSOCKET_API_URL = process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "";
 
 const FinishRide = () => {
@@ -33,25 +37,21 @@ const FinishRide = () => {
   );
   const { ws, setWebSocket } = useWSStore();
   const [showModal, setShowModal] = useState<boolean>(false);
-  const [verifyReached, setVerifyReached] = useState<boolean>(false);
+  const [showTollModal, setShowTollModal] = useState(false);
+  const [verifyReached, _setVerifyReached] = useState<boolean>(false);
   const [verifyReachedStage, setVerifyReachedStage] = useState<
     "waiting" | "alert"
   >("waiting");
   const lastLocationRef = useRef<Location.LocationObject | null>(null);
 
   useEffect(() => {
-    let socket: WebSocket;
-
     if (!ws) {
       const newWs = new WebSocket(WEBSOCKET_API_URL);
       newWs.onopen = () => {};
       newWs.onerror = () => {};
       setWebSocket(newWs);
-      socket = newWs;
-    } else {
-      socket = ws;
     }
-    // NOTE: do NOT assign socket.onmessage here. Assigning ws.onmessage
+    // NOTE: do NOT assign ws.onmessage here. Assigning ws.onmessage
     // overwrites the driver Home's ride:offer handler, so after finishing one
     // ride the driver stopped receiving offer popups entirely. The messages
     // this previously handled (reachedVerified / customerDidNotVerify) were
@@ -102,14 +102,11 @@ const FinishRide = () => {
             if (ws && ws.readyState === WebSocket.OPEN) {
               ws.send(
                 JSON.stringify({
-                  type: "riderLocationUpdate",
-                  role: "rider",
-                  driverId: user?.id,
-                  location: {
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude,
-                    address: address[0]?.formattedAddress,
-                  },
+                  type: "location:update",
+                  role: "driver",
+                  ride_id: activeRideId,
+                  lat: location.coords.latitude,
+                  lng: location.coords.longitude,
                 }),
               );
             }
@@ -156,40 +153,76 @@ const FinishRide = () => {
   const destinationAddress =
     rideDetails?.dropoffDetails?.dropoffAddress || "Destination not set";
 
-  const handleSlideComplete = () => {
-    // Tell the server the ride is done -> ride becomes completed, the rider is
-    // notified ("Ride Complete"), and we return home. (The old "journeyEnds"
-    // message was not handled by the server, so the driver waited forever.)
-    if (activeRideId && ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(
-        JSON.stringify({ type: "ride:complete", ride_id: activeRideId }),
-      );
+  const handleSlideComplete = async () => {
+    // Complete the ride via the HTTP endpoint (NOT the WS message). The HTTP
+    // /api/ride/[id]/complete recalculates the fare from actual ride time +
+    // distance, applies the intercity split and commission, and emits the
+    // proper WS event *with* the fare breakdown to the rider. The old WS
+    // ride:complete path only flipped the status and sent no breakdown —
+    // leaving the rider's receipt and the ledger wrong on every ride.
+    if (!activeRideId) return;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      Alert.alert("Error", "Not authenticated");
+      return;
     }
-    if (activeRideId) removeRideOffer(activeRideId);
-    router.replace("/(main)/(rider)/home");
+
+    try {
+      const res = await fetch(`${API_URL}/api/ride/${activeRideId}/complete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        Alert.alert(
+          "Could not complete ride",
+          data.message || `Server returned ${res.status}`,
+        );
+        return;
+      }
+      removeRideOffer(activeRideId);
+      setShowModal(true);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Network error completing ride");
+    }
   };
 
   const handleCallCustomer = () => {
     if (customerPhone) {
-      Linking.openURL(`tel:+91${customerPhone}`).catch(() =>
+      Linking.openURL(`tel:${customerPhone}`).catch(() =>
         Alert.alert("Error", "Unable to place call."),
       );
     }
   };
 
   const handleCallSupport = () => {
-    Linking.openURL("tel:+916290547258").catch(() =>
+    Linking.openURL("tel:16263").catch(() =>
       Alert.alert("Error", "Unable to place call."),
     );
   };
 
+  const openNav = () => {
+    if (activeRideId) router.push(`/(main)/(rider)/customer-navigation/${activeRideId}`);
+  };
+
+  const openChat = () => {
+    if (activeRideId) router.push(`/(main)/(rider)/chat/${activeRideId}`);
+  };
+
   const handleGoHome = () => {
-    setVerifyReached(false);
+    _setVerifyReached(false);
     setVerifyReachedStage("waiting");
     if (activeRideId) {
       removeRideOffer(rideDetails?.id!);
     }
-    router.replace("/(main)/(rider)/home");
+    router.replace("/(main)/(rider)");
   };
 
   const rowStyle = {
@@ -200,7 +233,7 @@ const FinishRide = () => {
   const labelStyle = {
     fontSize: 13,
     color: colors.textSecondaryDark,
-    fontFamily: "Urbanist",
+    fontFamily: "JakartaBold",
   };
   const valueStyle = {
     fontSize: 13,
@@ -309,26 +342,37 @@ const FinishRide = () => {
                 Call the customer
               </Text>
             </View>
-            <TouchableOpacity
-              onPress={handleCallCustomer}
-              style={{
-                backgroundColor: colors.primary,
-                paddingHorizontal: spacing.lg,
-                paddingVertical: spacing.sm,
-                borderRadius: radii.pill,
-              }}
-            >
-              <Text
+            <View style={{ flexDirection: "row" }}>
+              <TouchableOpacity
+                onPress={handleCallCustomer}
                 style={{
-                  color: colors.white,
-                  fontFamily: "Urbanist",
-                  fontWeight: "700",
-                  fontSize: 14,
+                  backgroundColor: colors.primary,
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.pill,
+                  marginRight: 8,
                 }}
               >
-                Call
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={{
+                    color: colors.white,
+                    fontFamily: "Urbanist",
+                    fontWeight: "700",
+                    fontSize: 14,
+                  }}
+                >
+                  Call
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={openNav}
+                style={{ backgroundColor: colors.gray600, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill, marginRight: 8 }}>
+                <Text style={{ color: colors.white, fontFamily: "Urbanist", fontWeight: "700", fontSize: 14 }}>🗺️ Nav</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={openChat}
+                style={{ backgroundColor: colors.gray600, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill }}>
+                <Text style={{ color: colors.white, fontFamily: "Urbanist", fontWeight: "700", fontSize: 14 }}>💬 Chat</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : null}
 
@@ -351,6 +395,15 @@ const FinishRide = () => {
             bgColor={colors.slideGreen}
             textColor={colors.white}
           />
+          <TouchableOpacity
+            onPress={() => activeRideId && router.push(`/(main)/(rider)/cancellation-reasons?rideId=${activeRideId}`)}
+            className="mt-4 items-center"
+          >
+            <Text className="text-goDanger text-[14px] font-JakartaBold">Cancel Ride</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowTollModal(true)} className="mt-3 py-2 px-4 rounded-full bg-goGray600 dark:bg-goSurfaceElevatedDark items-center">
+            <Text className="text-white font-JakartaBold text-[14px]">🧾 Add Charge</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -368,6 +421,7 @@ const FinishRide = () => {
           }}
         >
           <View style={{ alignItems: "center", marginBottom: spacing.lg }}>
+            <SuccessCheckmark />
             <Text
               style={{
                 fontSize: 20,
@@ -378,7 +432,7 @@ const FinishRide = () => {
                 marginBottom: spacing.xs,
               }}
             >
-              Ride Completed ✅
+              Ride Completed
             </Text>
             <Text
               style={{
@@ -432,8 +486,13 @@ const FinishRide = () => {
           </Text>
 
           <CustomButton
+            title="Rate Rider"
+            className="w-full mb-3"
+            onPress={() => { setShowModal(false); router.push(`/(main)/(rider)/rate-rider?rideId=${activeRideId}`); }}
+          />
+          <CustomButton
             title="Browse Home"
-            className="w-full mt-4"
+            className="w-full"
             onPress={handleGoHome}
           />
         </View>
@@ -535,8 +594,9 @@ const FinishRide = () => {
             </>
           )}
         </View>
-      </ReactNativeModal>
-    </RideLayout>
+    </ReactNativeModal>
+    <TollParkingModal visible={showTollModal} rideId={activeRideId} onClose={() => setShowTollModal(false)} />
+  </RideLayout>
   );
 };
 

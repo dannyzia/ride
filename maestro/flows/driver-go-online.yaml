@@ -1,0 +1,29 @@
+# Device: emulator-5556 (Driver). Assumes driver already logged in
+#   (run: maestro test --device emulator-5556 -e PHONE=1700000001 -e EXPECT="Calls Remaining" maestro/flows/auth-flow.yaml first).
+# Does NOT clearState (keeps the session + any granted location permission).
+# The native location "While using the app" dialog only appears the FIRST time; this flow
+# taps it only if visible so reruns do not fail when permission is already granted.
+
+appId: com.ride.bd
+name: "Driver - Go Online"
+tags:
+  - driver
+---
+- launchApp:
+    appId: com.ride.bd
+- assertVisible: "Go Online"
+- tapOn: "Go Online"
+- runFlow:
+    when:
+      visible: "While using the app"
+    commands:
+      - tapOn: "While using the app"
+- waitForAnimationToEnd:
+    timeout: 4000
+- extendedWaitUntil:
+    visible: "Go Offline"
+    timeout: 10000
+- assertVisible: "Go Offline"
+- assertVisible:
+    text: "Connected"
+    optional: true

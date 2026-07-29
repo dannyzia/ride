@@ -1,0 +1,56 @@
+# ==============================================================================
+# Flow: Driver Purchase Package (Buy a Package → PortPos Payment → Confirm)
+# Device: emulator-5556 (Driver). Uses the primary package purchase path.
+# Run:  maestro test --device emulator-5556 maestro/flows/driver-purchase-package.yaml
+# Preconditions:
+#   - Driver +8801700000001 logged in on emulator-5556 (run auth-flow first).
+#   - Driver has NO active subscription (= "Buy a Package to Start" visible on Home).
+#     If the driver already has a subscription, this flow will fail at Step 1.
+# SEMI-MANUAL: the payment step opens a PortPos hosted-checkout WebView. Maestro
+#   cannot interact with the WebView content. The operator must:
+#   1. Complete the payment in the PortPos sandbox (sandbox auto-approves most cards).
+#   2. The WebView then shows a success page; the operator may need to tap the
+#      "Close" button rendered by PaymentWebView (outside the WebView, on the RN modal).
+#   The flow waits (up to 300s) for "Package purchased successfully!" to appear.
+# ==============================================================================
+appId: com.ride.bd
+name: "Driver - Purchase Package"
+tags:
+  - driver
+  - purchase
+  - package
+---
+- launchApp:
+    appId: com.ride.bd
+# Step 1: Verify the "Buy a Package to Start" button is present (no active subscription).
+# WARNING: If the driver already has an active subscription, "Calls Remaining" is shown
+# instead and this step fails. Use a driver with 0 calls or no subscription.
+- assertVisible: "Buy a Package to Start"
+- tapOn: "Buy a Package to Start"
+# Step 2: Package listing screen.
+- extendedWaitUntil:
+    visible: "Call Packages"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Buy Now"
+    timeout: 10000
+- tapOn: "Buy Now"
+# Step 3: Payment WebView opens.
+# ===== SEMI-MANUAL PAYMENT STEP =====
+# The PortPos hosted-checkout WebView is now displayed inside a Modal.
+# The operator must:
+#   - Complete the payment in the sandbox (fill card details, submit).
+#   - After success, the RN "Close" button becomes available.
+#   - Tap Close (or the WebView auto-dismisses).
+# The flow waits below for the success alert to appear.
+- extendedWaitUntil:
+    visible: "Package purchased successfully!"
+    timeout: 300000
+# Step 4: Dismiss the success alert and confirm the subscription is active.
+- tapOn: "OK"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Calls Remaining"
+    timeout: 15000
+- assertVisible: "Calls Remaining"

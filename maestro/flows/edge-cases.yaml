@@ -1,0 +1,69 @@
+# Device: emulator-5554 (Rider).
+# Run: maestro test maestro/flows/edge-cases.yaml   (only emulator-5554 connected)
+# Preconditions: rider account +8801613249520 is logged in and on Home ("Search destination...").
+# Active case: live-flow cancellation from the "Finding your ride..." screen.
+# EXCLUDED cases (verified absent in code as of 2026-07):
+#   - Wallet Top-Up: screens exist but are NOT reachable from the tab bar (deep-link only).
+#   - Driver Min-Rate slider: components/MinRateSlider.tsx is imported by ZERO screens; no such UI.
+#   - SOS: components/SOSButton.tsx opens the SYSTEM dialer (tel:); no "Send SOS"/"SOS Sent" text; breaks automation.
+#   - Forced Update: gated by system_config min_app_version; system-level, out of scope here.
+appId: com.ride.bd
+name: "Part 5 - Rider Cancellation (other planned cases excluded - see notes)"
+tags:
+  - rider
+  - edge
+  - cancel
+---
+- launchApp:
+    appId: com.ride.bd
+- assertVisible: "Search destination..."
+- tapOn: "Search destination..."
+- extendedWaitUntil:
+    visible: "Where do you want to go?"
+    timeout: 10000
+- tapOn: "Search destination..."
+- inputText: "Savar"
+- extendedWaitUntil:
+    visible: ".*Savar.*"
+    timeout: 15000
+- tapOn:
+    text: ".*Savar.*"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Find now"
+    timeout: 15000
+- tapOn:
+    text: "Use .*"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn: "Find now"
+- extendedWaitUntil:
+    visible: "Choose Vehicle"
+    timeout: 15000
+- swipe:
+    direction: UP
+    duration: 300
+- extendedWaitUntil:
+    visible: "Bike Plus"
+    timeout: 10000
+- tapOn: "Bike Plus"
+- extendedWaitUntil:
+    visible: "Confirm Ride"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn: "Request Ride"
+- extendedWaitUntil:
+    visible: "Finding your ride..."
+    timeout: 20000
+# --- cancel the in-flight request ---
+- assertVisible: "Cancel Request"
+- tapOn: "Cancel Request"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertNotVisible: "Finding your ride..."
+- extendedWaitUntil:
+    visible: "Search destination..."
+    timeout: 15000
+- assertVisible: "Search destination..."

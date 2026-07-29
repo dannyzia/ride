@@ -1,6 +1,6 @@
 import { colors, spacing, radii } from "@/theme/goRide";
-import { View, Text, TouchableOpacity, Linking, Image } from "react-native";
-import React, { useEffect, useRef } from "react";
+import { View, Text, TouchableOpacity, Linking, Image, Alert, ActivityIndicator } from "react-native";
+import React, { useEffect, useRef, useState, Fragment } from "react";
 import { useRouter } from "expo-router";
 import SlideButton from "@/components/SlideButton";
 import { useDriver, useRideOfferStore, useWSStore } from "@/store";
@@ -9,6 +9,7 @@ import * as Location from "expo-location";
 import { LocationObject } from "expo-location";
 import { supabase } from "@/lib/supabase";
 import RideLayout from "@/components/RideLayout";
+import TollParkingModal from "@/components/TollParkingModal";
 import { icons } from "@/constants/data";
 
 const WEBSOCKET_API_URL = process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "";
@@ -27,6 +28,39 @@ const ReachCustomer = () => {
   const { activeRideId, giveRideDetails } = useRideOfferStore();
   const { user } = useSession();
   const lastLocationRef = useRef<Location.LocationObject | null>(null);
+  const [waiting, setWaiting] = useState(false);
+  const [waitSeconds, setWaitSeconds] = useState(0);
+  const [waitLoading, setWaitLoading] = useState(false);
+  const waitIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [showTollModal, setShowTollModal] = useState(false);
+  const [stops, setStops] = useState<any[]>([]);
+  const [currentStopIdx, setCurrentStopIdx] = useState(0);
+
+  const toggleWait = async () => {
+    if (!activeRideId) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return;
+    setWaitLoading(true);
+    try {
+      if (!waiting) {
+        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${activeRideId}/wait-start`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) { Alert.alert("Error", "Could not start waiting timer"); setWaitLoading(false); return; }
+        setWaiting(true);
+        setWaitSeconds(0);
+        waitIntervalRef.current = setInterval(() => setWaitSeconds((s) => s + 1), 1000);
+      } else {
+        if (waitIntervalRef.current) clearInterval(waitIntervalRef.current);
+        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${activeRideId}/wait-end`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        setWaiting(false);
+        Alert.alert("Waiting Time", `${data.total_wait_minutes ?? 0} min total\nFree: ${data.free_minutes ?? 3} min\nFee: ৳${((data.wait_fee_bdt ?? 0) / 100).toFixed(0)}`);
+      }
+    } catch { Alert.alert("Error", "Failed to update waiting timer"); }
+    setWaitLoading(false);
+  };
+
+  useEffect(() => { return () => { if (waitIntervalRef.current) clearInterval(waitIntervalRef.current); }; }, []);
 
   useEffect(() => {
     let _socket: WebSocket | null = null;
@@ -57,6 +91,21 @@ const ReachCustomer = () => {
       _socket = ws;
     }
   }, [ws]);
+
+  // ── Fetch stops on mount ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!activeRideId) return;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${activeRideId}/stops`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setStops(data.stops ?? []);
+      }
+    })();
+  }, [activeRideId]);
 
   const calculateDistance = (
     location1: LocationObject,
@@ -180,8 +229,17 @@ const ReachCustomer = () => {
     }
   };
 
+  const openNavigation = () => {
+    if (activeRideId) router.push(`/(main)/(rider)/customer-navigation/${activeRideId}`);
+  };
+
+  const openChat = () => {
+    if (activeRideId) router.push(`/(main)/(rider)/chat/${activeRideId}`);
+  };
+
   return (
-    <RideLayout disabled={true} title="" snapPoints={["40%", "50%"]}>
+    <Fragment>
+      <RideLayout disabled={true} title="" snapPoints={["40%", "50%"]}>
       <View style={{ justifyContent: "space-between" }}>
         {/* Heading */}
         <View>
@@ -246,6 +304,49 @@ const ReachCustomer = () => {
           </View>
         </View>
 
+        {/* Multi-Stops */}
+        {stops.length > 0 && (
+          <View className="px-6 py-3">
+            <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">
+              📍 Stops ({currentStopIdx + 1}/{stops.length + 1})
+            </Text>
+            {stops.map((stop: any, i: number) => (
+              <View key={stop.id} className="flex-row items-center py-1">
+                <Text className={`text-[13px] font-Jakarta ${
+                  i < currentStopIdx ? 'text-goTextSecondaryLight dark:text-goTextSecondaryDark line-through' :
+                  i === currentStopIdx ? 'text-goPrimary font-JakartaBold' :
+                  'text-goTextSecondaryLight dark:text-goTextSecondaryDark'
+                }`}>
+                  {i + 1}. {stop.address}
+                </Text>
+              </View>
+            ))}
+            <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">Final: {destinationAddress}</Text>
+            {currentStopIdx < stops.length && (
+              <TouchableOpacity
+                onPress={async () => {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  const token = session?.access_token;
+                  if (!token) return;
+                  const stop = stops[currentStopIdx];
+                  const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${activeRideId}/stops`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ stop_id: stop.id }),
+                  });
+                  if (res.ok) {
+                    setCurrentStopIdx(i => i + 1);
+                    Alert.alert('Stop completed', 'Continue to next destination.');
+                  }
+                }}
+                className="bg-goPrimary rounded-full py-3 px-6 items-center mt-3"
+              >
+                <Text className="text-goWhite font-JakartaBold text-[15px]">✓ Complete Stop {currentStopIdx + 1}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {/* Call Customer */}
         {customerPhone ? (
           <View
@@ -282,26 +383,35 @@ const ReachCustomer = () => {
                 Call the customer
               </Text>
             </View>
-            <TouchableOpacity
-              onPress={callCustomer}
-              style={{
-                backgroundColor: colors.primary,
-                paddingHorizontal: spacing.lg,
-                paddingVertical: spacing.sm,
-                borderRadius: radii.pill,
-              }}
-            >
-              <Text
+              <TouchableOpacity
+                onPress={callCustomer}
                 style={{
-                  color: colors.white,
-                  fontFamily: "Urbanist",
-                  fontWeight: "700",
-                  fontSize: 14,
+                  backgroundColor: colors.primary,
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.pill,
+                  marginRight: 8,
                 }}
               >
-                Call
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={{
+                    color: colors.white,
+                    fontFamily: "Urbanist",
+                    fontWeight: "700",
+                    fontSize: 14,
+                  }}
+                >
+                  Call
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={openNavigation}
+                style={{ backgroundColor: colors.gray600, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill, marginRight: 8 }}>
+                <Text style={{ color: colors.white, fontFamily: "Urbanist", fontWeight: "700", fontSize: 14 }}>🗺️ Nav</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={openChat}
+                style={{ backgroundColor: colors.gray600, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill }}>
+                <Text style={{ color: colors.white, fontFamily: "Urbanist", fontWeight: "700", fontSize: 14 }}>💬 Chat</Text>
+              </TouchableOpacity>
           </View>
         ) : null}
 
@@ -324,9 +434,28 @@ const ReachCustomer = () => {
             bgColor={colors.slideGreen}
             textColor={colors.white}
           />
+          <TouchableOpacity onPress={toggleWait} disabled={waitLoading}
+            className={`mt-3 py-3 px-4 rounded-full items-center ${waiting ? "bg-goAmber" : "bg-goGray600 dark:bg-goSurfaceElevatedDark"}`}>
+            {waitLoading ? <ActivityIndicator size={16} color="#FFF" /> : (
+              <Text className="text-white font-JakartaBold text-[14px]">
+                {waiting ? `⏱️ ${Math.floor(waitSeconds / 60)}:${String(waitSeconds % 60).padStart(2, '0')} — Stop` : '⏱️ Start Waiting Timer'}
+              </Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => activeRideId && router.push(`/(main)/(rider)/cancellation-reasons?rideId=${activeRideId}`)}
+            className="mt-4 items-center"
+          >
+            <Text className="text-goDanger text-[14px] font-JakartaBold">Cancel Ride</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowTollModal(true)} className="mt-3 py-2 px-4 rounded-full bg-goGray600 dark:bg-goSurfaceElevatedDark items-center">
+            <Text className="text-white font-JakartaBold text-[14px]">🧾 Add Charge</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </RideLayout>
+      <TollParkingModal visible={showTollModal} rideId={activeRideId} onClose={() => setShowTollModal(false)} />
+    </Fragment>
   );
 };
 

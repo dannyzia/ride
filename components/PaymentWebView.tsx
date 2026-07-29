@@ -103,14 +103,14 @@ export default function PaymentWebView({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
-      <View className="flex-1 bg-bgColor">
+      <View className="flex-1 bg-goBgLight dark:bg-goBgDark">
         {/* Header bar */}
-        <View className="flex-row items-center justify-between px-4 py-3 bg-cardBgColor border-b border-borderColor">
-          <Text className="text-primaryTextColor text-base font-bold">
+        <View className="flex-row items-center justify-between px-4 py-3 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border-b border-goBorderLight dark:border-goBorderDark">
+          <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-base font-bold">
             Payment
           </Text>
           <TouchableOpacity onPress={handleClose} className="px-3 py-1">
-            <Text className="text-danger-500 text-base">Close</Text>
+            <Text className="text-goDanger text-base">Close</Text>
           </TouchableOpacity>
         </View>
 
@@ -133,7 +133,7 @@ export default function PaymentWebView({
           domStorageEnabled
           startInLoadingState
           renderLoading={() => (
-            <View className="absolute inset-0 items-center justify-center bg-bgColor">
+            <View className="absolute inset-0 items-center justify-center bg-goBgLight dark:bg-goBgDark">
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
           )}

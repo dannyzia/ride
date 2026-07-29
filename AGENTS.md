@@ -35,10 +35,10 @@ All core features are **fully implemented**:
 - **Auth**: Supabase phone OTP (not Firebase/HMAC). `app/(auth)/phone-entry`, `otp-verify`, `register`. API routes in `app/api/auth/`. **No Firebase Cloud Functions exist.**
 - **Payments**: PortPos unified gateway (not bKash/Nagad directly). `lib/portpos.ts` active. `lib/bkash.ts` and `lib/nagad.ts` are inert stubs (throw errors).
 - **Dispatch**: WebSocket server in `utils-server/` with H3 indexing, heartbeat-gated call deduction, batch broadcasting.
-- **Database**: 22 tables in `src/db/schema.ts` with all enums (vehicleTypeEnum with 8 lowercase values, rideStatusEnum, etc.).
-- **Admin panel**: `app/(admin)/` with web-only routes for verification, packages, zones, configuration. **Phase F15** consolidated all admin entities (driver queue, lifecycle, incentives, promos, preferences, referral campaigns, point offers, vehicle models, sample media, platform config, monitoring) into one coherent dashboard. All 10 API items + 14 UI items built and tsc-clean. See `docs/Plan/14-DEV-CHECKLIST.yaml` phase F15.
+- **Database**: 49 tables, 26 enums in `src/db/schema.ts` (vehicleTypeEnum with 8 lowercase values, rideStatusEnum, etc.). See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema for the full inventory — do not manually re-list all 49 tables here or elsewhere; reference that doc.
+- **Admin panel**: `app/admin/` with web-only routes for verification, packages, zones, configuration. **Phase F15** consolidated all admin entities (driver queue, lifecycle, incentives, promos, preferences, referral campaigns, point offers, vehicle models, sample media, platform config, monitoring) into one coherent dashboard. All 10 API items + 14 UI items built and tsc-clean. See `docs/Plan/14-DEV-CHECKLIST.yaml` phase F15.
 - **Chat**: In-app messaging with `store/useChatStore.ts` and `app/api/chat/`.
-- **Driver flows**: Onboarding, home, offers, ledger. 6 Zustand stores in `store/`.
+- **Driver flows**: Onboarding, home, offers, ledger. 7 Zustand stores in `store/`.
 
 **Verification:** No Clerk, Stripe, or Firebase references remain in the codebase (checked 2026-06).
 
@@ -60,6 +60,11 @@ This repo has **two independently-typed packages**:
 5. `docs/Plan/06-API.md` — API and WebSocket contracts.
 6. `docs/Plan/05-DATA-MODEL.md` — Database schema deltas.
 7. `docs/Plan/13-CONVENTIONS.md` — Coding conventions and critical rules.
+8. `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` — Canonical backend spec: full schema (49 tables, 26 enums), auth flow, PortPos payment integration, dispatch engine architecture. Treat this as authoritative over any older doc that states a different table count.
+
+**For frontend/backend AI-agent coding sessions:**
+- `App Design/GoRide - Ride-Hailing App UI Kit (Preview)/GoRide-Wireframes.md` — Canonical 182-screen UI spec (Rider + Driver), with a standard-header convention note and per-screen build/modify guidance.
+- `App Design/GoRide - Ride-Hailing App UI Kit (Preview)/implementationPrompt.md` — Three-part coding prompt: PART 0 is a terse BANNED/MANDATORY/TEMPLATE "Strict Agent Mode" for smaller coding agents (e.g. Raptor Mini) that struggle with long prose; PART 1/2 are the full prose Frontend/Backend prompts. All three reference the wireframe file and this AGENTS.md; keep screen-number priority tables and design-token values in sync if `GoRide-Wireframes.md` or `theme/goRide.ts`/`tailwind.config.js` ever change.
 
 **For implementation methodology and what changed from GlideX:**
 - `CLAUDE.md` — Implementation methodology, execution rules, development phases status, auth/dispatch flows, glossary.
@@ -116,12 +121,14 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 
 - `app/(auth)/` — Auth screens (phone-entry → otp-verify → register)
 - `app/(main)/(customer)/` — Rider screens (keep folder name `(customer)`, rider is a display label)
-- `app/(main)/(rider)/` — Driver screens
-- `app/(admin)/` — Web-only admin panel
+- `app/(main)/(rider)/` — Driver screens (folder name `(rider)` is legacy — contains driver flows, do not rename)
+- `app/admin/` — Web-only admin panel (no parentheses — plain segment, not a route group)
 - `app/api/` — Expo API routes (file-based backend, `[public]` prefix = no JWT required)
+- `components/` — Shared UI components, flat (no `src/` prefix, no `components/common/` subfolder); has `components/admin/` and `components/auth/` subfolders only
+- `theme/goRide.ts` — Single-file design token source (colors, typography, spacing, radii, shadows). Dark mode is handled by NativeWind `dark:` variants + `tailwind.config.js` aliases — there is no `ThemeProvider`/theme Context
 - `lib/` — Shared utilities (auth, DB, map, payment, validation)
-- `store/` — Zustand state stores (6 stores: useDriverStore, useRiderStore, useChatStore, useDriverStatusStore, usePackageStore, useCallLedgerStore, useDriverFlowStore)
-- `src/db/schema.ts` — Drizzle schema (22 tables, all enums exported)
+- `store/` — Zustand state stores (7 stores: useDriverStore, useRiderStore, useChatStore, useDriverStatusStore, usePackageStore, useCallLedgerStore, useDriverFlowStore)
+- `src/db/schema.ts` — Drizzle schema (49 tables, 26 enums exported)
 - `utils-server/` — WebSocket dispatch server (separate package)
 - `scripts/` — Seed scripts (system-config, pricing, packages, platform-config, admin)
 
@@ -194,10 +201,13 @@ This caused BUG-1 and BUG-2 in the admin panel — the handlers crashed before U
 No `console.log`. Use `lib/logger.ts` (`logger.info`, `logger.error`, etc.).
 
 ### Drizzle
-- Transactions required for all writes touching `call_ledger`, `subscriptions`, or `payment_events`.
+- **Property names are snake_case throughout** (e.g., `base_amount_bdt`, `tax_rate_id`, `ride_id`). The JS property name in `pgTable()` definitions matches the DB column name. This applies to ALL tables — existing and new. Do NOT use camelCase property names (e.g., `baseAmountBdt`) even though Drizzle supports it. Libs and API routes reference the same snake_case names. This was confirmed during the P4 Tax Engine audit — the REFERENCE.md camelCase recommendation was wrong for this codebase.
+- Transactions required for all writes touching `call_ledger`, `subscriptions`, `payment_events`, `tax_ledgers`, `accounting_entries`, or `accounting_entry_lines`.
 - Use `typeof schema.$inferSelect` / `typeof schema.$inferInsert` — never manually redeclare DB row types.
 - Driver `min_per_km_bdt` validation: use `validateDriverMinKm()` from `lib/validateMinPerKm.ts` — never inline.
 - **NULL checks**: use `isNull(col)` / `isNotNull(col)`. NEVER `eq(col, null)` — it compiles to `col = NULL` which is always false in SQL (NULL is not equality-comparable). This caused the critical BUG-3 (packages GET returned `[]` despite rows existing).
+- **Money columns**: ALL `*_bdt` columns are `integer` (paisa). The ONLY exception is `rate_percent` columns (e.g., `tax_rates.rate_percent`) which are `numeric(5,2)` because they store a percentage (5.00), not money.
+- **Self-referencing FKs**: use the `(): any => tableName.id` pattern to avoid TypeScript circular reference errors (e.g., `accountingAccounts.parentId`).
 
 ### Dispatch Logic
 - Daily cap check belongs in dispatch candidate pool construction (`dispatch.ts`), NOT in heartbeat deduction path.
@@ -209,7 +219,7 @@ No `console.log`. Use `lib/logger.ts` (`logger.info`, `logger.error`, etc.).
 Payment credentials (`PORTPOS_APP_KEY`, `PORTPOS_SECRET_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are server-side only. Never in `EXPO_PUBLIC_*` vars.
 
 ### TypeScript Rules
-- No `any`, no `@ts-ignore`, no `@ts-expect-error` without explanatory comment.
+- No `any`, no `@ts-ignore`, no `@ts-expect-error` without explanatory comment. **Exception**: Drizzle type casts (`as any`) are permitted for enum comparisons and FK-column insert inference gaps — see `docs/Plan/13-CONVENTIONS.md` § Drizzle type casts.
 - `interface` for DB row shapes and API response shapes. `type` for unions.
 - Exhaustive switch statements on enums/unions: `default: assertNever(value)` (import from `@/lib/utils`).
 - WebSocket message types defined in `utils-server/types.ts`.

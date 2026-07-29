@@ -232,6 +232,51 @@ export default function QueueScreen() {
     setVehicleTypeAdjusted(null);
   };
 
+  const [extraActionDriver, setExtraActionDriver] = useState<QueueDriver | null>(null);
+  const [extraActionKind, setExtraActionKind] = useState<string>("");
+  const [extraVehicleType, setExtraVehicleType] = useState<string>("");
+  const [extraReason, setExtraReason] = useState("");
+
+  const openExtraAction = (kind: string, driver: QueueDriver) => {
+    setExtraActionDriver(driver);
+    setExtraActionKind(kind);
+    setExtraVehicleType(driver.vehicle_type ?? "");
+    setExtraReason("");
+  };
+
+  const submitExtraAction = async () => {
+    if (!extraActionDriver || !extraActionKind) return;
+    const trimmed = extraReason.trim();
+    if (trimmed.length < 10) { toast.show("Reason must be at least 10 characters", "warning"); return; }
+    if (extraActionKind === "close_account") {
+      const res = await adminFetch<{ success?: boolean }>("/api/admin/driver/close-account", {
+        method: "POST", body: JSON.stringify({ driver_id: extraActionDriver.driver_id, reason: trimmed }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.data) { toast.show("Account closed", "success"); setExtraActionDriver(null); fetchQueue(); }
+      else { toast.show(res.error ?? "Failed", "error"); }
+      return;
+    }
+    if (extraActionKind === "upgrade") {
+      const res = await adminFetch<{ success?: boolean }>("/api/admin/driver/upgrade", {
+        method: "POST", body: JSON.stringify({ driver_id: extraActionDriver.driver_id, new_vehicle_type: extraVehicleType, reason: trimmed }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.data) { toast.show("Upgraded", "success"); setExtraActionDriver(null); fetchQueue(); }
+      else { toast.show(res.error ?? "Failed", "error"); }
+      return;
+    }
+    if (extraActionKind === "downgrade") {
+      const res = await adminFetch<{ success?: boolean }>("/api/admin/driver/downgrade", {
+        method: "POST", body: JSON.stringify({ driverId: extraActionDriver.driver_id, new_vehicle_type: extraVehicleType, reason: trimmed }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.data) { toast.show("Downgraded", "success"); setExtraActionDriver(null); fetchQueue(); }
+      else { toast.show(res.error ?? "Failed", "error"); }
+      return;
+    }
+  };
+
   const submitAction = async () => {
     if (!pendingAction) return;
     const { kind, driver } = pendingAction;
@@ -462,6 +507,35 @@ export default function QueueScreen() {
               <Text style={styles.miniBtnText}>Activate</Text>
             </Pressable>
           ) : null}
+          {row.status === "active" ? (<>
+            <Pressable
+              style={[styles.miniBtn, { backgroundColor: colors.primary }]}
+              onPress={(e) => {
+                e.stopPropagation();
+                openExtraAction("upgrade", row);
+              }}
+            >
+              <Text style={styles.miniBtnText}>Upgrade</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.miniBtn, { backgroundColor: colors.amber }]}
+              onPress={(e) => {
+                e.stopPropagation();
+                openExtraAction("downgrade", row);
+              }}
+            >
+              <Text style={styles.miniBtnText}>Downgrade</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.miniBtn, { backgroundColor: colors.danger }]}
+              onPress={(e) => {
+                e.stopPropagation();
+                openExtraAction("close_account", row);
+              }}
+            >
+              <Text style={styles.miniBtnText}>Close</Text>
+            </Pressable>
+          </>) : null}
         </View>
       ),
     },
@@ -843,6 +917,45 @@ export default function QueueScreen() {
           </ScrollView>
         ) : null}
       </AdminModal>
+
+      {extraActionDriver && (
+        <AdminModal visible title={extraActionKind === "close_account" ? "Close Account" : extraActionKind === "upgrade" ? "Upgrade Vehicle" : "Downgrade Vehicle"} onClose={() => setExtraActionDriver(null)}>
+          <View style={{ gap: 12 }}>
+            {extraActionKind !== "close_account" ? (
+              <View>
+                <Text style={styles.fieldLabel}>New vehicle type</Text>
+                <View style={styles.vehicleGrid}>
+                  {VEHICLE_OPTIONS.map((o) => (
+                    <Pressable key={o.value} style={[styles.vehicleChip, extraVehicleType === o.value && styles.vehicleChipActive]}
+                      onPress={() => setExtraVehicleType(o.value)}>
+                      <Text style={[styles.vehicleChipText, extraVehicleType === o.value && styles.vehicleChipTextActive]}>{o.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <View>
+                <Row label="Driver" value={extraActionDriver.name ?? "—"} />
+                <Row label="Vehicle" value={extraActionDriver.vehicle_type} />
+                <Text style={{ ...styles.helperText, marginTop: 8 }}>This will mark the driver as rejected and schedule document purge in 30 days.</Text>
+              </View>
+            )}
+            <Text style={styles.fieldLabel}>Reason (min 10 chars)</Text>
+            <View style={styles.reasonInput}>
+              <input type="text" value={extraReason} onChange={(e) => setExtraReason(e.target.value)} maxLength={500}
+                style={{ background: "transparent", color: "white", border: "none", outline: "none", width: "100%", fontFamily: "Jakarta-Regular", fontSize: 13 }} />
+            </View>
+            <View style={{ flexDirection: "row", gap: 8, justifyContent: "flex-end" }}>
+              <Pressable style={[styles.modalBtn, styles.modalBtnGhost]} onPress={() => setExtraActionDriver(null)}>
+                <Text style={styles.modalBtnGhostText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={[styles.modalBtn, { backgroundColor: extraActionKind === "close_account" ? colors.danger : colors.adminAccent }]} onPress={submitExtraAction}>
+                <Text style={styles.modalBtnText}>{extraActionKind === "close_account" ? "Close Account" : extraActionKind === "upgrade" ? "Upgrade" : "Downgrade"}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </AdminModal>
+      )}
     </AdminShell>
   );
 }
@@ -1096,6 +1209,13 @@ const styles = StyleSheet.create({
   vehicleChipTextActive: {
     color: colors.white,
     fontFamily: "Jakarta-SemiBold",
+  },
+  reasonInput: {
+    backgroundColor: "#181A20",
+    borderWidth: 1,
+    borderColor: "#2A2D35",
+    borderRadius: 8,
+    padding: 10,
   },
   modalBtn: {
     paddingHorizontal: 16,

@@ -38,6 +38,8 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
 
+    logger.info('[auth-debug] signIn attempt', { phoneLen: fullPhone.length, passLen: password.length });
+
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         phone: fullPhone,
@@ -65,20 +67,20 @@ export default function LoginScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
       <View className="flex-1 px-6 justify-center">
 
-        <Text className="text-[28px] font-[Urbanist] font-bold text-goTextPrimaryDark mb-1">
+        <Text className="text-[28px] font-JakartaBold font-bold text-goTextPrimaryDark mb-1">
           Welcome Back
         </Text>
-        <Text className="text-[14px] font-[Urbanist] text-goTextSecondaryDark mb-6">
+        <Text className="text-[14px] font-JakartaBold text-goTextSecondaryDark mb-6">
           Enter your phone number and password to login
         </Text>
 
         {/* Phone Input */}
         <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
-          <Text className="text-[15px] font-[Urbanist] text-goTextSecondaryDark mr-2">
+          <Text className="text-[15px] font-JakartaBold text-goTextSecondaryDark mr-2">
             +880
           </Text>
           <TextInput
-            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
             placeholder="1XXXXXXXXX"
             placeholderTextColor={colors.textDisabledDark}
             keyboardType="phone-pad"
@@ -91,17 +93,19 @@ export default function LoginScreen() {
         {/* Password Input */}
         <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
           <TextInput
-            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
             placeholder="Password"
             placeholderTextColor={colors.textDisabledDark}
             secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
             value={password}
             onChangeText={setPassword}
           />
         </View>
 
         {error ? (
-          <Text className="text-[14px] font-[Urbanist] text-goDanger text-center mb-3">
+          <Text className="text-[14px] font-JakartaBold text-goDanger text-center mb-3">
             {error}
           </Text>
         ) : null}
@@ -115,14 +119,14 @@ export default function LoginScreen() {
           {loading ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
-            <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">
+            <Text className="text-[16px] font-JakartaBold font-bold text-goWhite">
               Login
             </Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} className="items-center">
-          <Text className="text-[14px] font-[Urbanist] text-goPrimary">
+          <Text className="text-[14px] font-JakartaBold text-goPrimary">
             Forgot Password?
           </Text>
         </TouchableOpacity>

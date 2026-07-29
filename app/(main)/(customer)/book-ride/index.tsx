@@ -13,14 +13,13 @@ import React, { useEffect, useState } from "react";
 import RideLayout from "@/components/RideLayout";
 import { useRouter } from "expo-router";
 import { useCustomer } from "@/store";
-import { useRiderStore, VehicleType } from "@/store/useRiderStore";
+import { useRiderStore, VehicleType, getCachedEstimates, setCachedEstimates } from "@/store/useRiderStore";
 import CustomButton from "@/components/CustomButton";
 import SchedulePicker from "@/components/SchedulePicker";
 import PreferenceChips from "@/components/PreferenceChips";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { icons } from "@/constants/data";
-import { getCachedEstimates, setCachedEstimates } from "@/store/useRiderStore";
 
 const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 

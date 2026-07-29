@@ -1,0 +1,206 @@
+# =============================================================================
+# GAPS-DRIVER.yaml v1.0 — DRIVER FEATURE GAP FIXES
+# =============================================================================
+# Read DRIVER-P0-TASKS.yaml global_notes for framework/styling/store rules.
+# CRITICAL: app/(main)/(rider)/ is the DRIVER app (legacy folder name).
+# useDriverStore from @/store/useDriverStore (SEPARATE FILE) for home screen.
+# useDriverStore from @/store (BARREL) for find-customer/finish-ride.
+# =============================================================================
+version: "1.0"
+project: Ride
+role: driver
+priority_class: P1
+total_tasks: 15
+
+global_notes:
+  font_rule: "font-JakartaBold (headings), font-Jakarta (body). No font-[Urbanist]."
+  money: "ALL amounts INTEGER PAISA. Display: {(amt/100).toFixed(0)}."
+  dark_rule: "EVERY color className MUST have a dark: variant."
+  stores: >
+    TWO useDriverStore instances: @/store/useDriverStore.ts (SEPARATE FILE) for
+    home screen; @/store (barrel) for find-customer/finish-ride. DO NOT mix.
+  driver_folder: "app/(main)/(rider)/ (legacy name, DO NOT rename)"
+  fetch_pattern: "Prefix with process.env.EXPO_PUBLIC_SERVER_URL. Token from supabase.auth.getSession()."
+  self_check:
+    - "[ ] File exists at route_path"
+    - "[ ] Every color className has dark: variant"
+    - "[ ] Correct store import path used"
+    - "[ ] npx tsc --noEmit passes for edited files"
+
+tasks:
+
+  # ===========================================================================
+  # THEME 1: ONBOARDING
+  # ===========================================================================
+  - id: "DRIVER-GAP-001-STATUSGUARD"
+    route_path: "app/(main)/(rider)/_layout.tsx"
+    action: create
+    note: >
+      SL 15. DriverStatusGuard is defined but NEVER imported. Pending drivers
+      land on Home with no redirect to upload documents. ALREADY PLANNED in
+      ONBOARDING-FIXES.yaml Tasks 1+2. Reference that file — do not duplicate.
+      This task is a cross-reference only.
+    verification: []
+
+  - id: "DRIVER-GAP-002-CONSENT-BACKEND"
+    route_path: "app/(main)/(rider)/onboarding/documents.tsx"
+    action: audit_and_fix
+    note: >
+      SL 9. Owner consent has 4 checkboxes but no API stores consent acceptance.
+      Fix: when the driver taps "Submit Documents", include a consent_accepted:true
+      flag and the consent version in the POST body to /api/driver/documents.
+      The API should store this on the driver record.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "DRIVER-GAP-003-VERIFICATION-WIRING"
+    route_path: "app/(main)/(rider)/verification/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 10 (MISSED). Driver verification screen (car image, profile image, rating,
+      seats) has API support (driver/verify-driver) but is unreachable from normal
+      navigation. Fix: wire it into the onboarding flow — after documents.tsx
+      submits successfully, navigate to verification. OR add a link from
+      vehicle-management or profile.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "DRIVER-GAP-004-SELECT-VEHICLE-API"
+    route_path: "app/(main)/(rider)/select-active-vehicle.tsx"
+    action: audit_and_fix
+    note: >
+      SL 14 (MISSED). Select active vehicle screen exists but has NO API to persist
+      the selection. Fix: when driver taps "Confirm & Go Online", PATCH the selected
+      vehicle_type to /api/driver/me or /api/driver/vehicles (set active). The
+      driver's vehicle_type must be stored in the drivers table.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # THEME 2: HOME / LIVE TRACKING
+  # ===========================================================================
+  - id: "DRIVER-GAP-005-LIVE-LOCATION-TRACKING"
+    route_path: "app/(main)/(rider)/find-customer/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 30. Live location tracking (watchPositionAsync) is Missing. The
+      find-customer and finish-ride screens should continuously update the driver's
+      GPS position and send it via WebSocket location:update. Fix: add
+      expo-location watchPositionAsync on mount, send location:update on each
+      position change, clear on unmount.
+    extra_files:
+      - path: "app/(main)/(rider)/finish-ride/index.tsx"
+        note: "Same fix — add watchPositionAsync + location:update."
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # THEME 3: PACKAGES
+  # ===========================================================================
+  - id: "DRIVER-GAP-006-SUBSCRIPTION-CHECKOUT-BUG"
+    route_path: "app/(main)/(rider)/subscription-checkout/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 46 (MISSED BUG). The checkout sends payment_method: selectedMethod but
+      the API (POST /api/package/purchase) expects provider: "portpos"
+      (Zod schema: provider: z.enum(["portpos"])). Fix: change the body field.
+    fixes:
+      - find: "payment_method: selectedMethod"
+        replace: "provider: \"portpos\""
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "DRIVER-GAP-007-SUBSCRIPTION-CONFIRMATION"
+    route_path: "app/(main)/(rider)/subscription-confirmation/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 47. Subscription confirmation screen is Partial — verify it shows correct
+      package data (calls remaining, expiry) after purchase by polling
+      GET /api/package/active.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "DRIVER-GAP-008-SUBSCRIPTION-RENEWAL"
+    route_path: "app/(main)/(rider)/subscription-renewal/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 49. Renewal prompt is Partial — verify "Renew now" navigates to packages.tsx
+      and the flow works end-to-end. "Remind later" should dismiss and resurface later.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # THEME 4: SETTINGS
+  # ===========================================================================
+  - id: "DRIVER-GAP-009-APPEARANCE"
+    route_path: "app/(main)/(rider)/settings/appearance/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 69. Theme selector (Light/Dark/System) exists but doesn't persist.
+      Fix: use AsyncStorage + NativeWind dark: toggle. Same pattern as rider.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "DRIVER-GAP-010-LANGUAGE"
+    route_path: "app/(main)/(rider)/settings/language/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 70. Language selector exists but doesn't persist. Fix: AsyncStorage.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "DRIVER-GAP-011-RIDER-NO-SHOW"
+    route_path: "app/(main)/(rider)/rider-no-show/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 40. Rider no-show handling is Partial. Verify: the driver can mark a
+      no-show after waiting at pickup (timer), the API records it, and any
+      no-show fee is applied. Check the API endpoint exists and the UI flow works.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # THEME 5: MISC
+  # ===========================================================================
+  - id: "DRIVER-GAP-012-HOTSPOT-MAP"
+    route_path: "app/(main)/(rider)/hotspot-map/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 84. Hotspot map is a "coming soon" placeholder. Either implement a basic
+      heatmap (showing zones with high demand from recent ride requests) or remove
+      the entry point until the feature is ready. Recommend: keep placeholder but
+      ensure it doesn't crash and shows a clean "Coming Soon" message.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "DRIVER-GAP-013-NAVIGATION-REMOVE"
+    route_path: "app/(main)/(rider)/turn-by-turn/index.tsx"
+    action: remove
+    note: >
+      SL 85. Turn-by-turn navigation is an orphaned empty shell. Full navigation
+      is a new feature (Kimi #2, see NEW-FEATURES-P2.yaml). REMOVE this shell —
+      it will be recreated properly when the navigation feature is built.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "DRIVER-GAP-014-SLIDER-CONFIG"
+    route_path: "components/MinRateSlider.tsx"
+    action: audit_and_fix
+    note: >
+      SL 87. MinRateSlider component exists and driver/slider-config API exists,
+      but NO screen imports the component. Fix: wire MinRateSlider into the driver
+      settings (under a "Minimum Rate" row) or the driver home. The slider lets
+      drivers set a minimum per-km rate below which they won't receive offers.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "DRIVER-GAP-015-OWNER-CONSENT-BACKEND"
+    route_path: "app/api/driver/documents+api.ts"
+    action: audit_and_fix
+    note: >
+      SL 9. The documents API should accept and store a consent_accepted boolean
+      and consent_version string when the driver submits documents. Add these
+      fields to the request schema and store on the driver record (or a
+      driver_consents table). This supports DRIVER-GAP-002.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }

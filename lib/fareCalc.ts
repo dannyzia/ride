@@ -34,6 +34,10 @@ export interface FareBreakdown {
   inside_km: number;
   outside_km: number;
   ride_time_min: number;
+  surge_multiplier: number;
+  surge_fee_bdt: number;
+  pass_discount_bdt?: number;
+  pass_name?: string;
 }
 
 /**
@@ -99,7 +103,7 @@ export function calculateFare(
   // Platform commission (percentage of final fare, after floor)
   const commissionPct = pricing.platform_commission_percent ?? 0;
   const platformFee =
-    commissionPct > 0 ? Math.round((totalFare * commissionPct) / 100) : 0;
+    commissionPct > 0 ? Math.floor((totalFare * commissionPct) / 100) : 0;
 
   // Driver net
   const driverNet = totalFare - platformFee;
@@ -154,6 +158,8 @@ export function calculateFare(
     inside_km: insideKm,
     outside_km: outsideKm,
     ride_time_min: rideTimeMin,
+    surge_multiplier: 1.0,
+    surge_fee_bdt: 0,
   };
 }
 

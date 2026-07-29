@@ -1,5 +1,6 @@
 import { colors } from "@/theme/goRide";
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 import {
   View,
   Text,
@@ -105,12 +106,15 @@ export default function DocumentsScreen() {
     if (!allDocumentsUploaded || !allConsentGiven) return;
     setSubmitting(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { Alert.alert("Error", "Not authenticated"); return; }
       const res = await fetch(
         `${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/documents`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ documents }),
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ documents, consent_accepted: allConsentGiven, consent_version: "v1" }),
         },
       );
 

@@ -5,16 +5,22 @@ import {
   pricing,
   promoCodes,
   promoRedemptions,
+  zones,
+  surgeCurrent,
+  rideStops,
 } from "@/src/db/schema";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { validatePickupZone } from "@/lib/zone";
 import { calculateFare, haversineKm } from "@/lib/fareCalc";
+import { applySurge } from "@/lib/surge";
+import { sendSms } from "@/lib/dprelay";
 import { detectOriginCity, isIntercity } from "@/lib/cityBoundary";
 import { splitRoute } from "@/lib/routeSplit";
 import { getRouteDistance } from "@/lib/barikoi";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { parseJsonBody } from "@/lib/parseBody";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { getStagedPromo, clearStagedPromo } from "@/lib/promoCache";
 
@@ -30,6 +36,11 @@ const requestSchema = z.object({
   allow_downgrade: z.boolean().optional().default(false),
   promo_code: z.string().min(1).max(30).optional(),
   preference_ids: z.array(z.string().uuid()).max(10).optional(),
+  secondary_rider_name: z.string().min(1).max(255).optional(),
+  secondary_rider_phone: z.string().min(1).max(20).optional(),
+  upfront_tip_bdt: z.number().int().min(0).optional(),
+  stops: z.array(z.object({ lat: z.number(), lng: z.number(), address: z.string().min(1).max(500) })).max(2).optional(),
+  female_driver_preference: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -47,14 +58,11 @@ export async function POST(request: Request) {
     if (user.role !== "rider")
       return Response.json({ error: "forbidden" }, { status: 403 });
 
-    const body = await request.json();
-    const parsed = requestSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: "validation_error", message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    // M2: Advisory lock prevents concurrent ride creation for the same user
+    await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext('ride_request_' || ${user.id}))`);
+
+    const parsed = await parseJsonBody(request, requestSchema);
+    if (!parsed.ok) return parsed.response;
 
     const {
       pickup_lat,
@@ -68,6 +76,11 @@ export async function POST(request: Request) {
       allow_downgrade,
       promo_code,
       preference_ids,
+      secondary_rider_name,
+      secondary_rider_phone,
+      upfront_tip_bdt,
+      stops,
+      female_driver_preference,
     } = parsed.data;
 
     // Zone check
@@ -186,6 +199,32 @@ export async function POST(request: Request) {
       intercity,
     );
 
+    // ── Surge pricing — look up active zone's multiplier ────────────────
+    const [activeZone] = await db
+      .select({ id: zones.id })
+      .from(zones)
+      .where(eq(zones.is_active, true))
+      .limit(1);
+    let surgeMultiplier = 1.0;
+    if (activeZone) {
+      const [sr] = await db
+        .select()
+        .from(surgeCurrent)
+        .where(eq(surgeCurrent.zone_id, activeZone.id))
+        .limit(1);
+      if (sr && Date.now() - new Date(sr.updated_at).getTime() < 300_000)
+        surgeMultiplier = Number(sr.multiplier);
+    }
+    const surge = applySurge(Number(fareBreakdown.total_bdt), surgeMultiplier);
+    fareBreakdown.total_bdt = surge.totalWithSurge;
+    fareBreakdown.surge_multiplier = surge.multiplier;
+    fareBreakdown.surge_fee_bdt = surge.surgeFeeBdt;
+    const commPct = Number(activePricing.platform_commission_percent ?? 0);
+    if (commPct > 0) {
+      fareBreakdown.platform_commission_bdt = Math.floor(fareBreakdown.total_bdt * commPct / 100);
+      fareBreakdown.driver_net_bdt = fareBreakdown.total_bdt - fareBreakdown.platform_commission_bdt;
+    }
+
     // ── Preference surcharge ───────────────────────────────────────────
     let preferenceSurchargeBdt = 0;
     if (preference_ids && preference_ids.length > 0) {
@@ -214,6 +253,12 @@ export async function POST(request: Request) {
     let riderPayableBdt = fareBreakdown.total_bdt + preferenceSurchargeBdt;
     let platformSubsidyBdt = 0;
 
+    // ── Upfront tip (100% to driver, not subject to commission) ─────────
+    if (upfront_tip_bdt && upfront_tip_bdt > 0) {
+      driverFareBdt += upfront_tip_bdt;
+      riderPayableBdt += upfront_tip_bdt;
+    }
+
     if (promo_code) {
       // Check staged promo first (from POST /api/promo/redeem)
       const staged = getStagedPromo(user.id);
@@ -231,13 +276,15 @@ export async function POST(request: Request) {
           promoRow.is_active &&
           promoRow.expires_at > new Date()
         ) {
-          // Compute discount
-          if (staged.discountType === "percent") {
+          // M9: Check min_spend_bdt eligibility
+          if (staged.minSpendBdt != null && fareBreakdown.total_bdt < staged.minSpendBdt) {
+            promoDiscountBdt = 0;
+          } else if (staged.discountType === "percent") {
             promoDiscountBdt = Math.round(
               (fareBreakdown.total_bdt * staged.discountValue) / 100,
             );
           } else {
-            promoDiscountBdt = staged.discountValue;
+            promoDiscountBdt = Math.round(staged.discountValue);
           }
           // Apply max_discount_bdt cap
           if (
@@ -252,7 +299,7 @@ export async function POST(request: Request) {
           }
 
           promoCodeId = staged.promoCodeId;
-          riderPayableBdt = fareBreakdown.total_bdt - promoDiscountBdt;
+          riderPayableBdt = fareBreakdown.total_bdt + preferenceSurchargeBdt - promoDiscountBdt;
           platformSubsidyBdt = promoDiscountBdt;
 
           // Write promo_redemptions row
@@ -304,8 +351,44 @@ export async function POST(request: Request) {
           platformSubsidyBdt > 0 ? platformSubsidyBdt : null,
         preference_surcharge_bdt: preferenceSurchargeBdt,
         preference_ids: preference_ids ?? [],
+        surge_multiplier: surgeMultiplier.toString(),
+        surge_zone_id: activeZone?.id,
+        secondary_rider_name: secondary_rider_name || null,
+        secondary_rider_phone: secondary_rider_phone || null,
+        is_booked_for_someone_else: !!(secondary_rider_phone || secondary_rider_name),
+        upfront_tip_bdt: upfront_tip_bdt ?? 0,
+        female_driver_preference: female_driver_preference ?? false,
       })
       .returning();
+
+    // ── Insert multi-stops (non-blocking) ─────────────────────────────
+    if (stops && stops.length > 0) {
+      try {
+        await db.insert(rideStops).values(
+          stops.map((stop: { lat: number; lng: number; address: string }, i: number) => ({
+            ride_id: ride.id,
+            stop_order: i + 1,
+            lat: stop.lat.toString(),
+            lng: stop.lng.toString(),
+            address: stop.address,
+          }))
+        );
+      } catch { /* non-blocking */ }
+    }
+
+    // ── SMS to secondary rider (non-blocking) ────────────────────────
+    if (secondary_rider_phone) {
+      try {
+        const trackingUrl = `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/track/${ride.id}`;
+        await sendSms(
+          secondary_rider_phone,
+          `Your ride has been booked on Ride. Track it here: ${trackingUrl}`,
+        );
+        logger.info("[ride/request] SMS sent to secondary rider", { rideId: ride.id });
+      } catch (smsErr) {
+        logger.warn("[ride/request] SMS to secondary rider failed (non-blocking)", smsErr);
+      }
+    }
 
     // Update promo_redemptions with actual ride_id
     if (promoCodeId) {

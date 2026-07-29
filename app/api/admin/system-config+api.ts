@@ -8,7 +8,10 @@ import { logger } from '@/lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 
+const JSON_ARRAY_KEYS = new Set(['surge_thresholds']);
+
 const ALLOWED_KEYS = new Set([
+  'surge_thresholds',
   'dispatch_paused',
   'min_app_version',
   'latest_version',
@@ -67,6 +70,23 @@ function validateValue(key: string, value: string): string | null {
   }
   if (BOOLEAN_KEYS.has(key) && value !== 'true' && value !== 'false') {
     return `${key} must be 'true' or 'false'`;
+  }
+  if (JSON_ARRAY_KEYS.has(key)) {
+    try {
+      const parsed = JSON.parse(value);
+      if (!Array.isArray(parsed)) return `${key} must be a JSON array`;
+      if (parsed.length === 0) return `${key}: must have at least one tier`;
+      for (const item of parsed) {
+        if (typeof item.ratio !== 'number' || item.ratio <= 0) {
+          return `${key}: ratio must be > 0 (got ${item.ratio})`;
+        }
+        if (typeof item.multiplier !== 'number' || item.multiplier < 1.0) {
+          return `${key}: multiplier must be >= 1.0 (got ${item.multiplier})`;
+        }
+      }
+    } catch {
+      return `${key} must be valid JSON`;
+    }
   }
   return null;
 }

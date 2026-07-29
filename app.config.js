@@ -13,7 +13,7 @@ export default {
     userInterfaceStyle: "automatic",
     scheme: "myapp",
     splash: {
-      image: "./assets/logo/logo.png",
+      image: "./assets/splash/Splash_Screen_2.png",
       resizeMode: "contain",
       backgroundColor: "#181A20",
     },
@@ -34,7 +34,7 @@ export default {
       package: "com.ride.bd",
       hermesEnabled: true,
       adaptiveIcon: {
-        foregroundImage: "./assets/images/adaptive-icon.png",
+        foregroundImage: "./assets/logo/logo.png",
         backgroundColor: "#ffffff",
       },
       permissions: [
@@ -44,7 +44,7 @@ export default {
         "WRITE_EXTERNAL_STORAGE",
       ],
     },
-    plugins: [
+plugins: [
       "expo-secure-store",
       [
         "expo-notifications",
@@ -72,6 +72,13 @@ export default {
             "The app accesses your photos to let you share them with your friends.",
           cameraPermission:
             "The app accesses your camera to allow you to take photos.",
+        },
+      ],
+      [
+        "expo-location",
+        {
+          locationAlwaysAndWhenInUsePermission:
+            "Allow Ride to access your location while driving.",
         },
       ],
       "@maplibre/maplibre-react-native",

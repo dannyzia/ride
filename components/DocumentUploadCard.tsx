@@ -57,8 +57,8 @@ export default function DocumentUploadCard({ docType, label, onUploadComplete }:
       className="flex-row items-center justify-between p-4 mb-3 bg-goBgLight rounded-2xl border border-goBorderLight border-dashed"
     >
       <View className="flex-1 mr-3">
-        <Text className="text-sm font-urbanist-bold text-goTextPrimaryLight">{label}</Text>
-        <Text className="text-xs font-inter text-gray-500 mt-0.5">
+        <Text className="text-sm font-JakartaBold text-goTextPrimaryLight">{label}</Text>
+        <Text className="text-xs font-Jakarta text-gray-500 mt-0.5">
           {uploading ? 'Uploading...' : 'Tap to upload document'}
         </Text>
       </View>
@@ -66,7 +66,7 @@ export default function DocumentUploadCard({ docType, label, onUploadComplete }:
         <ActivityIndicator size="small" color={colors.primary} />
       ) : (
         <View className="w-8 h-8 rounded-full bg-goAccent/10 items-center justify-center">
-          <Text className="text-goAccent text-lg font-urbanist-bold">+</Text>
+          <Text className="text-goAccent text-lg font-JakartaBold">+</Text>
         </View>
       )}
     </TouchableOpacity>

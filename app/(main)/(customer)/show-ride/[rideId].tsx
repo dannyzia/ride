@@ -1,84 +1,78 @@
-import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
-import React, { useEffect } from 'react';
+import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useRidesStore } from '@/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { icons } from '@/constants/data';
-
+import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 
 const ShowRide = () => {
-    const { rideId } = useLocalSearchParams();
-    const { setSelectedRide, selectedRide } = useRidesStore();
+    const { rideId } = useLocalSearchParams<{ rideId: string }>();
+    const [ride, setRide] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (typeof rideId === 'string') {
-            setSelectedRide(rideId);
-        }
+        if (typeof rideId !== 'string') return;
+        (async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+                if (!token) return;
+                const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${rideId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (res.ok) setRide((await res.json()).ride);
+            } catch (e) {
+                logger.error('[show-ride] fetch failed', e);
+            } finally {
+                setLoading(false);
+            }
+        })();
     }, [rideId]);
 
-    if (!selectedRide) {
+    if (loading) {
         return (
-            <View className="flex-1 bg-black justify-center items-center">
-                <Text className="text-white text-2xl">Loading...</Text>
+            <View className="flex-1 bg-goBgLight dark:bg-goBgDark justify-center items-center">
+                <ActivityIndicator size="large" color="#0CC25F" />
             </View>
         );
     }
 
-    const {
-        destination_address,
-        origin_address,
-        destination_latitude: _destination_latitude,
-        destination_longitude: _destination_longitude,
-        origin_latitude: _origin_latitude,
-        origin_longitude: _origin_longitude,
-        driver
-    } = selectedRide;
+    if (!ride) {
+        return (
+            <View className="flex-1 bg-goBgLight dark:bg-goBgDark justify-center items-center px-6">
+                <Text className="text-goTextSecondaryLight dark:text-goTextSecondaryDark text-[16px] font-Jakarta text-center">Ride not found</Text>
+                <TouchableOpacity className="mt-6 bg-goPrimary rounded-full px-6 py-3" onPress={() => router.back()}>
+                    <Text className="text-goWhite font-JakartaBold">Go Back</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     return (
-        <SafeAreaView className="flex-1 bg-goNearBlack">
-            <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-goNearBlack">
-                <View className="flex-1 justify-between">
-
-                    {/* Header */}
-                    <View className="p-6 relative">
-                        <Text className="text-white text-4xl font-JakartaBold text-center">Ride Details</Text>
-                        <View className="absolute top-6 left-5 z-10">
-                            <TouchableOpacity onPress={() => router.back()}>
-                                <View className="w-10 h-10 bg-white rounded-full items-center justify-center">
-                                    <Image source={icons.backArrow} className="w-5 h-5 tint-white" />
-                                </View>
+        <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+                <View className="flex-1 justify-between p-6">
+                    <View className="relative mb-6">
+                        <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-[24px] font-JakartaBold text-center">Ride Details</Text>
+                        <View className="absolute top-0 left-0">
+                            <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-full items-center justify-center">
+                                <Image source={icons.backArrow} className="w-5 h-5" />
                             </TouchableOpacity>
                         </View>
                     </View>
 
-                    {/* Driver Info */}
-                    <View className="flex-row items-center justify-center mb-6 p-4 bg-zinc-900 rounded-2xl mx-5 border border-zinc-800">
-                        <Image
-                            source={{ uri: driver.profile_image_url || 'default-image-url' }}
-                            className="w-20 h-20 rounded-full border-2 border-zinc-700 mr-4"
-                        />
-                        <View className="flex-1">
-                            <Text className="text-white text-2xl font-JakartaSemiBold">{driver.full_name}</Text>
-                            <Text className="text-zinc-400 text-base">Rating: {driver.rating} ★</Text>
-                        </View>
+                    <View className="mb-6 px-4 py-4 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-2xl border border-goBorderLight dark:border-goBorderDark">
+                        <Text className="text-goTextSecondaryLight dark:text-goTextSecondaryDark text-[13px] font-Jakarta mb-1">Origin</Text>
+                        <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-[15px] font-Jakarta mb-4">{ride.origin_address ?? "—"}</Text>
+                        <Text className="text-goTextSecondaryLight dark:text-goTextSecondaryDark text-[13px] font-Jakarta mb-1">Destination</Text>
+                        <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-[15px] font-Jakarta">{ride.destination_address ?? "—"}</Text>
                     </View>
 
-                    {/* Map */}
-                    <View className="mb-6 mx-5">
-                        <Text className="text-white text-2xl font-JakartaSemiBold mb-3">Route Map</Text>
-                        <View className="w-full h-56 rounded-xl border border-zinc-800 bg-zinc-900 items-center justify-center">
-                            <Text className="text-zinc-400 text-base">Map: {origin_address} → {destination_address}</Text>
-                        </View>
+                    <View className="mb-6 px-4 py-4 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-2xl border border-goBorderLight dark:border-goBorderDark">
+                        <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-[16px] font-JakartaBold mb-2">Status</Text>
+                        <Text className="text-goPrimary text-[14px] font-JakartaBold">{ride.status ?? "—"}</Text>
                     </View>
-
-                    {/* Ride Info */}
-                    <View className="bg-zinc-900 p-5 mx-5 rounded-2xl border border-zinc-800 mb-8">
-                        <Text className="text-white text-2xl font-JakartaBold mb-4">Ride Information</Text>
-                        <Text className="text-zinc-300 text-base mb-2">Origin: {origin_address}</Text>
-                        <Text className="text-zinc-300 text-base mb-2">Destination: {destination_address}</Text>
-
-                    </View>
-
                 </View>
             </ScrollView>
         </SafeAreaView>

@@ -1,0 +1,50 @@
+{
+  "app": {"name": "Ride"},
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "retry": "Retry",
+    "search": "Search"
+  },
+  "auth": {
+    "phone_entry": "Enter your phone number",
+    "send_otp": "Send OTP",
+    "verify_otp": "Verify OTP",
+    "register": "Create Account",
+    "login": "Log In"
+  },
+  "home": {
+    "search_destination": "Where to?",
+    "recent_rides": "Recent Rides",
+    "go_online": "Go Online",
+    "go_offline": "Go Offline"
+  },
+  "ride": {
+    "request": "Request Ride",
+    "cancel": "Cancel Ride",
+    "share_trip": "Share Trip",
+    "rate_driver": "Rate Driver",
+    "add_tip": "Add Tip",
+    "dispute_fare": "Dispute this fare",
+    "driver_found": "Driver Found",
+    "on_the_way": "On the way",
+    "arrived": "Arrived",
+    "completed": "Completed"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "notifications": "Notifications",
+    "appearance": "Appearance",
+    "language": "Language",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "about": "About"
+  }
+}

@@ -1,10 +1,13 @@
 // Auth: verifySupabaseToken via requireRole
 import { db } from "@/src/db";
-import { rides, pricing, drivers } from "@/src/db/schema";
-import { eq } from "drizzle-orm";
+import { rides, pricing, drivers, driverWalletTransactions, riderSubscriptions, rideExtraCharges } from "@/src/db/schema";
+import { eq, and, sql } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { calculateFare } from "@/lib/fareCalc";
+import { applySurge } from "@/lib/surge";
 import { logger } from "@/lib/logger";
+import { sendNotification } from "@/lib/notify";
+import { recordRideCompletion, recordTip } from '@/lib/accounting';
 
 export async function POST(request: Request) {
   try {
@@ -119,16 +122,107 @@ export async function POST(request: Request) {
       isIntercity,
     );
 
-    await db
-      .update(rides)
-      .set({
-        status: "completed",
-        completed_at: completedAt,
-        platform_commission_bdt: fare.platform_commission_bdt,
-        fare_breakdown: fare as any,
-        updated_at: completedAt,
-      })
-      .where(eq(rides.id, rideId));
+    // ── Surge pricing — use the ride's stored surge_multiplier (snapshotted at request) ──
+    const rideSurgeMul = Number(ride.surge_multiplier ?? 1.0);
+    if (rideSurgeMul > 1.0) {
+      const surge = applySurge(Number(fare.total_bdt), rideSurgeMul);
+      fare.total_bdt = surge.totalWithSurge;
+      fare.surge_multiplier = surge.multiplier;
+      fare.surge_fee_bdt = surge.surgeFeeBdt;
+      const commPct = Number(pricingRow.platform_commission_percent ?? 0);
+      if (commPct > 0) {
+        fare.platform_commission_bdt = Math.floor(fare.total_bdt * commPct / 100);
+        fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
+      }
+    }
+
+    // ── Approved extra charges (toll/parking) ────────────────────────────
+    const extraCharges = await db.select({ amount_bdt: rideExtraCharges.amount_bdt })
+      .from(rideExtraCharges)
+      .where(and(eq(rideExtraCharges.ride_id, rideId), eq(rideExtraCharges.status, 'approved')));
+    const extraChargeTotal = extraCharges.reduce((sum, c) => sum + Number(c.amount_bdt ?? 0), 0);
+    if (extraChargeTotal > 0) {
+      fare.total_bdt += extraChargeTotal;
+      const commPct = Number(pricingRow.platform_commission_percent ?? 0);
+      if (commPct > 0) {
+        fare.platform_commission_bdt = Math.floor(fare.total_bdt * commPct / 100);
+        fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
+      }
+    }
+
+    // ── Waiting time fee ────────────────────────────────────────────────
+    const waitFee = Number(ride.wait_fee_bdt ?? 0);
+    if (waitFee > 0) {
+      fare.total_bdt += waitFee;
+      fare.surge_fee_bdt = (fare.surge_fee_bdt ?? 0) + waitFee;
+      const commPct = Number(pricingRow.platform_commission_percent ?? 0);
+      if (commPct > 0) {
+        fare.platform_commission_bdt = Math.floor(fare.total_bdt * commPct / 100);
+        fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
+      }
+    }
+
+    // ── Upfront tip — 100% driver, no commission applied ────────────────
+    const upfrontTip = Number(ride.upfront_tip_bdt ?? 0);
+    if (upfrontTip > 0) {
+      fare.total_bdt += upfrontTip;
+      fare.driver_net_bdt += upfrontTip;
+    }
+
+    await db.transaction(async (tx) => {
+      const [updatedRide] = await tx
+        .update(rides)
+        .set({
+          status: "completed",
+          completed_at: completedAt,
+          platform_commission_bdt: fare.platform_commission_bdt,
+          fare_breakdown: fare as any,
+          updated_at: completedAt,
+          rider_payable_bdt: fare.total_bdt,
+          driver_fare_bdt: fare.driver_net_bdt + (fare.platform_commission_bdt ?? 0),
+        })
+        .where(and(eq(rides.id, rideId), eq(rides.status, "in_progress")))
+        .returning();
+
+      if (!updatedRide) {
+        throw new Error("TOCTOU: ride not in progress or already completed");
+      }
+
+      await tx.insert(driverWalletTransactions).values({
+        driver_id: driver.id,
+        transaction_type: "adjustment",
+        amount_bdt: fare.driver_net_bdt,
+        balance_after: sql`(SELECT driver_wallet_balance_bdt FROM drivers WHERE id = ${driver.id}) + ${fare.driver_net_bdt}`,
+      });
+
+      await tx
+        .update(drivers)
+        .set({
+          driver_wallet_balance_bdt: sql`${drivers.driver_wallet_balance_bdt} + ${fare.driver_net_bdt}`,
+          updated_at: new Date(),
+        })
+        .where(eq(drivers.id, driver.id));
+    });
+
+    // ── Rider pass usage increment (non-blocking) ──────────────────────
+    try {
+      await db.update(riderSubscriptions)
+        .set({ rides_used: sql`${riderSubscriptions.rides_used} + 1` })
+        .where(and(eq(riderSubscriptions.rider_id, ride.user_id), eq(riderSubscriptions.status, 'active')));
+    } catch { /* non-blocking */ }
+
+    // ── Accounting entries (non-blocking) ──────────────────────────────
+    try {
+      await recordRideCompletion({
+        id: rideId, finalFarePaisa: fare.total_bdt,
+        commissionPct: Number(pricingRow.platform_commission_percent ?? 0),
+        driverId: driver.id, riderId: ride.user_id,
+      });
+    } catch (e) { logger.warn('[accounting] ride completion failed', e); }
+    if (ride.tip_bdt && ride.tip_bdt > 0) {
+      try { await recordTip({ id: rideId, tipPaisa: ride.tip_bdt ?? 0, driverId: driver.id }); }
+      catch (e) { logger.warn('[accounting] tip entry failed', e); }
+    }
 
     logger.info("[ride/complete] ride completed", {
       rideId,
@@ -138,7 +232,10 @@ export async function POST(request: Request) {
       rideTimeMin,
     });
 
-    // Emit WebSocket event to rider
+    // Emit WebSocket event + push notification to rider
+    if (ride.user_id) {
+      sendNotification(ride.user_id, 'ride:completed', 'Ride Complete', 'Thanks for riding with us! Rate your driver.', { ride_id: rideId }).catch(() => {});
+    }
     const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
     const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
     if (internalSecret && ride.user_id) {

@@ -66,8 +66,13 @@ export default function RegisterScreen() {
         return;
       }
 
-      // Auth gate (onAuthStateChange in _layout.tsx) handles role-based
-      // redirect — do NOT navigate manually here.
+      // Drivers go directly to driver home (onboarding handled in-driver).
+      // Riders navigate through location → notifications permission screens.
+      if (roleParam === 'driver') {
+        router.replace('/(main)/(rider)');
+      } else {
+        router.replace('/(auth)/enable-location');
+      }
     } catch (e: any) {
       setError('Registration failed. Please try again.');
       logger.error('[auth] register error', e);
@@ -80,16 +85,16 @@ export default function RegisterScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
       <View className="flex-1 px-6 justify-center">
 
-        <Text className="text-[28px] font-[Urbanist] font-bold text-goTextPrimaryDark mb-1">
+        <Text className="text-[28px] font-JakartaBold font-bold text-goTextPrimaryDark mb-1">
           Complete Registration
         </Text>
-        <Text className="text-[14px] font-[Urbanist] text-goTextSecondaryDark mb-6">
+        <Text className="text-[14px] font-JakartaBold text-goTextSecondaryDark mb-6">
           Enter your details to create your account
         </Text>
 
         <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
           <TextInput
-            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
             placeholder="Full Name"
             placeholderTextColor={colors.textDisabledDark}
             value={name}
@@ -99,7 +104,7 @@ export default function RegisterScreen() {
 
         <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
           <TextInput
-            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
             placeholder="Password (min 6 characters)"
             placeholderTextColor={colors.textDisabledDark}
             secureTextEntry
@@ -110,7 +115,7 @@ export default function RegisterScreen() {
 
         <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
           <TextInput
-            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
             placeholder="Confirm Password"
             placeholderTextColor={colors.textDisabledDark}
             secureTextEntry
@@ -120,7 +125,7 @@ export default function RegisterScreen() {
         </View>
 
         {error ? (
-          <Text className="text-[14px] font-[Urbanist] text-goDanger text-center mb-3">
+          <Text className="text-[14px] font-JakartaBold text-goDanger text-center mb-3">
             {error}
           </Text>
         ) : null}
@@ -134,7 +139,7 @@ export default function RegisterScreen() {
           {loading ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
-            <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">
+            <Text className="text-[16px] font-JakartaBold font-bold text-goWhite">
               Register
             </Text>
           )}

@@ -7,9 +7,9 @@ interface DriverStatusBadgeProps {
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   active:     { bg: 'bg-goGreenVariant', text: 'text-white', label: 'Active' },
   pending:    { bg: 'bg-goAmber', text: 'text-white', label: 'Pending' },
-  suspended:  { bg: 'bg-goRedVariant', text: 'text-white', label: 'Suspended' },
+  suspended:  { bg: 'bg-goDanger', text: 'text-white', label: 'Suspended' },
   inactive:   { bg: 'bg-gray-400',  text: 'text-white', label: 'Inactive' },
-  rejected:   { bg: 'bg-goRedVariant', text: 'text-white', label: 'Rejected' },
+  rejected:   { bg: 'bg-goDanger', text: 'text-white', label: 'Rejected' },
 };
 
 export default function DriverStatusBadge({ status }: DriverStatusBadgeProps) {
@@ -17,7 +17,7 @@ export default function DriverStatusBadge({ status }: DriverStatusBadgeProps) {
 
   return (
     <View className={`px-3 py-1 rounded-full ${style.bg}`}>
-      <Text className={`text-xs font-inter font-semibold ${style.text}`}>{style.label}</Text>
+      <Text className={`text-xs font-Jakarta font-semibold ${style.text}`}>{style.label}</Text>
     </View>
   );
 }

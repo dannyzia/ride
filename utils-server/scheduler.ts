@@ -8,6 +8,12 @@ import {
   documents,
   chatMessages,
   compensationQueue,
+  zones,
+  surgeCurrent,
+  surgeHistory,
+  riderSubscriptions,
+  userDevices,
+  dispatchOffers,
   rateLimits,
   creditVouchers,
   ownerConsents,
@@ -20,37 +26,94 @@ import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte } from "drizzle-orm";
 import { nextBdtMidnightUtc } from "../lib/time";
 import { logger } from "../lib/logger";
 
+const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
+
+async function sendPushFromScheduler(
+  userId: string,
+  notification: { title: string; body: string; data?: Record<string, string> },
+): Promise<void> {
+  try {
+    const devices = await db
+      .select({ push_token: userDevices.push_token })
+      .from(userDevices)
+      .where(eq(userDevices.user_id, userId));
+    await Promise.allSettled(
+      devices.map((d) =>
+        fetch(EXPO_PUSH_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: d.push_token,
+            title: notification.title,
+            body: notification.body,
+            data: notification.data ?? {},
+            sound: "default",
+            priority: "high",
+          }),
+        }),
+      ),
+    );
+  } catch (e: any) {
+    logger.error("[scheduler] push failed", { userId, error: e.message });
+  }
+}
+
 export function startScheduler(): void {
-  // ── (1) Scheduled ride dispatch — every 60s ─────────────────────────
+
+  // ── (1) Scheduled ride dispatch — every 30s ─────────────────────────
   setInterval(async () => {
     try {
       const now = new Date();
-      const cutoff = new Date(now.getTime() + 120_000);
-      const cutoffLo = new Date(now.getTime() + 60_000);
-      const scheduled = await db
+      const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
+      const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
+      const due = await db
         .select()
         .from(rides)
         .where(
           and(
-            eq(rides.status, "pending"),
-            isNotNull(rides.scheduled_at),
+            eq(rides.status, "scheduled"),
+            lte(rides.dispatch_window_start, now),
+            gte(rides.dispatch_window_end, now),
             isNull(rides.scheduled_dispatched_at),
-            lte(rides.scheduled_at, cutoff),
-            sql`${rides.scheduled_at} >= ${cutoffLo.toISOString()}::timestamptz`,
           ),
         );
-      for (const ride of scheduled) {
-        await db
-          .update(rides)
-          .set({ scheduled_dispatched_at: now })
-          .where(eq(rides.id, ride.id));
-        // Trigger dispatch is handled by /internal/dispatch from ride/request+api.ts
-        // Here we just mark as ready for dispatch
+      for (const ride of due) {
+        if (internalSecret) {
+          const dispatchUrl = `http://127.0.0.1:${wsPort}/internal/dispatch`;
+          const ok = await fetch(dispatchUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${internalSecret}`,
+            },
+            signal: AbortSignal.timeout(5_000),
+            body: JSON.stringify({
+              ride_id: ride.id,
+              vehicle_type: ride.vehicle_type,
+              pickup_lat: Number(ride.origin_latitude),
+              pickup_lng: Number(ride.origin_longitude),
+              allow_downgrade: true,
+            }),
+          }).then((r) => r.ok).catch(() => false);
+
+          // Only mark dispatched after a successful trigger so the next job
+          // cycle retries on failure (the ride stays status='scheduled' with
+          // scheduled_dispatched_at IS NULL). The /internal/dispatch handler
+          // transitions the ride to 'dispatching' internally.
+          if (ok) {
+            await db
+              .update(rides)
+              .set({ scheduled_dispatched_at: now })
+              .where(eq(rides.id, ride.id));
+          } else {
+            logger.warn("[scheduler] scheduled dispatch trigger failed, will retry", { ride_id: ride.id });
+          }
+        }
       }
     } catch (e) {
       logger.error("[scheduler] scheduled dispatch error", e);
     }
-  }, 60_000);
+  }, 30_000);
 
   // ── (2) Daily call reset — every 60s (resets at BDT midnight) ───────
   setInterval(async () => {
@@ -335,7 +398,32 @@ export function startScheduler(): void {
     }
   }, 30_000);
 
-  // ── (16) Stale driver_arrived auto-cancel — every 60s ─────────────────
+  // ── (16) Stale dispatching rides — every 30s ──────────────────────────
+  setInterval(async () => {
+    try {
+      const stale = await db
+        .update(rides)
+        .set({ status: "expired" })
+        .where(
+          and(
+            eq(rides.status, "dispatching"),
+            isNull(rides.matched_at),
+            sql`${rides.created_at} < now() - interval '90 seconds'`,
+          ),
+        )
+        .returning({ id: rides.id });
+      if (stale.length > 0) {
+        logger.info("[scheduler] expired stale dispatching rides", {
+          count: stale.length,
+          ids: stale.map((r) => r.id),
+        });
+      }
+    } catch (e) {
+      logger.error("[scheduler] stale dispatching expiry error", e);
+    }
+  }, 30_000);
+
+  // ── (17) Stale driver_arrived auto-cancel — every 60s ─────────────────
   setInterval(async () => {
     try {
       const staleThreshold = new Date(Date.now() - 10 * 60_000);
@@ -364,7 +452,7 @@ export function startScheduler(): void {
     }
   }, 60_000);
 
-  // ── (17) Incentive progress tracking — every 5 min ──────────────────
+  // ── (18) Incentive progress tracking — every 5 min ──────────────────
   setInterval(async () => {
     try {
       const now = new Date();
@@ -587,5 +675,191 @@ export function startScheduler(): void {
     }
   }, 10_000);
 
-  logger.info("[scheduler] started (18 jobs)");
+  // ── (20) Stale delivered dispatch offer expiry — every 10s ─────────
+  setInterval(async () => {
+    try {
+      const result = await db.update(dispatchOffers)
+        .set({ outcome: "expired" })
+        .where(and(
+          eq(dispatchOffers.outcome, "delivered"),
+          sql`${dispatchOffers.sent_at} < now() - interval '30 seconds'`
+        ));
+      if (result.length > 0) {
+        logger.info(`[scheduler] expired ${result.length} stale dispatch offers`);
+      }
+    } catch (e) {
+      logger.error("[scheduler] offer expiry error", e);
+    }
+  }, 10_000);
+
+  // ── (19) Surge Pricing Calculator — every 60s ──────────────────────
+  const prevMultipliers = new Map<string, number>();
+
+  setInterval(async () => {
+    try {
+      // Read thresholds from system_config, seed defaults if missing
+      const [cfg] = await db.select().from(systemConfig)
+        .where(eq(systemConfig.key, "surge_thresholds")).limit(1);
+      const thresholds = cfg
+        ? JSON.parse(cfg.value)
+        : [{ ratio: 3, multiplier: 2.0 }, { ratio: 2, multiplier: 1.5 }, { ratio: 1.2, multiplier: 1.25 }];
+      if (!cfg) {
+        await db.insert(systemConfig).values({
+          key: "surge_thresholds",
+          value: JSON.stringify(thresholds),
+          updated_at: new Date(),
+        }).onConflictDoUpdate({
+          target: systemConfig.key,
+          set: { value: JSON.stringify(thresholds), updated_at: new Date() },
+        });
+      }
+
+      const zns = await db.select({ id: zones.id }).from(zones);
+      for (const zone of zns) {
+        const [demand] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(rides)
+          .where(and(eq(rides.zone_id, zone.id), eq(rides.status, "pending")));
+
+        const [supply] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(drivers)
+          .where(and(eq(drivers.zone_id, zone.id), eq(drivers.is_online, true)));
+
+        const ratio = (demand?.count ?? 0) / Math.max(supply?.count ?? 1, 1);
+        let multiplier = 1.0;
+        for (const t of thresholds.sort((a: any, b: any) => b.ratio - a.ratio)) {
+          if (ratio > t.ratio) { multiplier = t.multiplier; break; }
+        }
+
+        // Write audit row when multiplier changes
+        const prev = prevMultipliers.get(zone.id) ?? 1.0;
+        if (prev !== multiplier) {
+          if (multiplier > 1.0) {
+            await db.insert(surgeHistory).values({
+              zone_id: zone.id,
+              multiplier: multiplier.toString(),
+              demand_count: demand?.count ?? 0,
+              supply_count: supply?.count ?? 0,
+            });
+          } else if (prev > 1.0) {
+            const [openRow] = await db.select({ id: surgeHistory.id }).from(surgeHistory)
+              .where(and(eq(surgeHistory.zone_id, zone.id), isNull(surgeHistory.ended_at)))
+              .orderBy(sql`triggered_at desc`).limit(1);
+            if (openRow) {
+              await db.update(surgeHistory).set({ ended_at: new Date() }).where(eq(surgeHistory.id, openRow.id));
+            }
+          }
+          prevMultipliers.set(zone.id, multiplier);
+        }
+
+        await db.insert(surgeCurrent).values({
+          zone_id: zone.id,
+          multiplier: multiplier.toString(),
+          demand_count: demand?.count ?? 0,
+          supply_count: supply?.count ?? 0,
+          updated_at: new Date(),
+        }).onConflictDoUpdate({
+          target: surgeCurrent.zone_id,
+          set: {
+            multiplier: multiplier.toString(),
+            demand_count: demand?.count ?? 0,
+            supply_count: supply?.count ?? 0,
+            updated_at: new Date(),
+          },
+        });
+      }
+    } catch (e: any) {
+      logger.error("[scheduler] surge pricing error", e);
+    }
+  }, 60_000);
+
+  // ── (20) Document Expiry Alerts — every 6 hours ────────────────────
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      for (const { label, daysBefore, col } of [
+        { label: "30-day", daysBefore: 30, col: "alert_sent_30d" },
+        { label: "7-day", daysBefore: 7, col: "alert_sent_7d" },
+        { label: "1-day", daysBefore: 1, col: "alert_sent_1d" },
+      ]) {
+        const threshold = new Date(now.getTime() + daysBefore * 86400000);
+        const due = await db
+          .select({ id: documents.id, driver_id: documents.driver_id })
+          .from(documents)
+          .where(
+            and(
+              lte(documents.expiry_date, threshold),
+              isNull(documents.deleted_at),
+              eq(documents[col as keyof typeof documents] as any, false),
+            ),
+          );
+        for (const doc of due) {
+          await db.update(documents)
+            .set({ [col]: true })
+            .where(eq(documents.id, doc.id));
+          logger.info("[scheduler] document expiry alert", { driver_id: doc.driver_id, alert: label });
+        }
+      }
+
+      const expiredDocs = await db
+        .select({ driver_id: documents.driver_id })
+        .from(documents)
+        .where(and(lte(documents.expiry_date, now), isNull(documents.deleted_at)));
+      for (const driverId of [...new Set(expiredDocs.map((d) => d.driver_id))]) {
+        await db.update(drivers)
+          .set({ is_online: false, status: "suspended" })
+          .where(eq(drivers.id, driverId));
+      }
+    } catch (e: any) {
+      logger.error("[scheduler] document expiry error", e);
+    }
+  }, 6 * 3600_000);
+
+  // ── (21) Scheduled Ride Reminder Push — every 60s ───────────────────
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const fifteenMin = new Date(now.getTime() + 15 * 60 * 1000);
+      const due = await db
+        .select({ id: rides.id, user_id: rides.user_id })
+        .from(rides)
+        .where(
+            and(
+              eq(rides.status, "scheduled"),
+              eq(rides.reminder_sent, false),
+            lte(rides.scheduled_at, fifteenMin),
+            gte(rides.scheduled_at, now),
+          ),
+        );
+      for (const ride of due) {
+        try {
+          await sendPushFromScheduler(ride.user_id, {
+            title: "Ride Coming Up",
+            body: "Your scheduled ride is in 15 minutes. Please be ready.",
+            data: { ride_id: ride.id, type: "reminder" },
+          });
+          await db.update(rides).set({ reminder_sent: true }).where(eq(rides.id, ride.id));
+        } catch (e) {
+          logger.error("[scheduler] reminder push failed, will retry", { rideId: ride.id, error: e });
+        }
+      }
+    } catch (e: any) {
+      logger.error("[scheduler] reminder push error", e);
+    }
+  }, 60_000);
+
+  // ── (22) Rider Pass Expiry — every 60s ──────────────────────────────
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      await db.update(riderSubscriptions)
+        .set({ status: "expired" })
+        .where(and(eq(riderSubscriptions.status, "active"), lte(riderSubscriptions.valid_until, now)));
+    } catch (e: any) {
+      logger.error("[scheduler] rider pass expiry error", e);
+    }
+  }, 60_000);
+
+  logger.info("[scheduler] started (22 jobs)");
 }

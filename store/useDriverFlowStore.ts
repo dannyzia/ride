@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import { supabase } from '@/lib/supabase';
+
+const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 
 interface Subscription {
   id: string;
@@ -20,6 +23,8 @@ interface DriverRow {
   status: string;
   rating: string;
   is_online: boolean;
+  on_break: boolean;
+  break_started_at: string | null;
   acceptance_rate: string;
   completed_rides_count: number;
   calls_remaining?: number;
@@ -48,6 +53,7 @@ interface RideOffer {
   preference_ids: string[];
   expires_in_ms: number;
   expires_at: string;
+  upfront_tip_bdt: number;
 }
 
 interface DriverFlowState {
@@ -69,7 +75,12 @@ export const useDriverFlowStore = create<DriverFlowState>((set, _get) => ({
 
   fetchDriver: async () => {
     try {
-      const res = await fetch('/api/driver/me');
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/driver/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res.ok) {
         const data = await res.json();
         set({ driver: data.driver });
@@ -81,7 +92,12 @@ export const useDriverFlowStore = create<DriverFlowState>((set, _get) => ({
 
   fetchSubscription: async () => {
     try {
-      const res = await fetch('/api/package/active');
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/package/active`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res.ok) {
         const data = await res.json();
         set({ activeSubscription: data.subscription });
@@ -93,11 +109,20 @@ export const useDriverFlowStore = create<DriverFlowState>((set, _get) => ({
 
   setOnline: (online: boolean) => {
     set({ isOnline: online });
-    fetch('/api/driver/status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_online: online }),
-    }).catch(() => {});
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        await fetch(`${API_URL}/api/driver/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ is_online: online }),
+        });
+      } catch {
+        // Silently fail
+      }
+    })();
   },
 
   setActiveOffer: (offer) => set({ activeOffer: offer }),

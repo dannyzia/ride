@@ -302,6 +302,16 @@ export default function RideOfferSheet() {
         </View>
       </View>
 
+      {/* Upfront tip badge */}
+      {activeOffer.upfront_tip_bdt > 0 ? (
+        <View className="bg-goAccentLight dark:bg-goAccent/10 rounded-lg px-3 py-1.5 mb-2 flex-row items-center">
+          <Text className="text-[14px] font-JakartaBold text-goPrimary dark:text-goPrimary mr-1">💰</Text>
+          <Text className="text-[14px] font-JakartaBold text-goPrimary dark:text-goPrimary">
+            +৳{((activeOffer.upfront_tip_bdt / 100).toFixed(0))} tip
+          </Text>
+        </View>
+      ) : null}
+
       {/* Preference chips */}
       {preferences.length > 0 && (
         <View

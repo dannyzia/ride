@@ -1,7 +1,6 @@
 import { View, Text, Keyboard, Image } from "react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCustomer, useDriver, useDriverStore, useWSStore } from "@/store";
-import { calculateRegion } from "@/lib/calcRegion";
 import { usePathname, useRouter } from "expo-router";
 import { colors, spacing } from "@/theme/goRide";
 import { Driver } from "@/types/type";
@@ -20,6 +19,7 @@ const MARKER_DESTINATION = require("@/assets/icons/marker-goride-Marker Navigati
 
 let MapViewLib: any = MapLibreGL.MapView ?? MapLibreGL.default ?? null;
 let PointAnnotation: any = MapLibreGL.PointAnnotation ?? null;
+let Camera: any = MapLibreGL.Camera ?? null;
 
 type _PlainDriver = Omit<
   Driver,
@@ -33,7 +33,7 @@ type _PlainDriver = Omit<
 
 const Map = () => {
   const _router = useRouter();
-  const [_region, setRegion] = useState<any>(undefined);
+  const cameraRef = useRef<any>(null);
   const mapStyleURL = useBarikoiMapStyle(false); // light theme
 
   const {
@@ -101,39 +101,19 @@ const Map = () => {
   } = useDriverStore();
   const { userAddress: _userAddress } = useCustomer();
 
-  // Setting initial Region
+  // Initialize Barikoi client once on mount.
   useEffect(() => {
     createBarikoiClient();
-    if (userLatitude && userLongitude) {
-      const initialRegion = calculateRegion({
-        userLatitude,
-        userLongitude,
-        destinationLatitude: destinationLatitude || driverDropoffLatitude,
-        destinationLongitude: destinationLongitude || driverDropoffLongitude,
-      });
-      setRegion(initialRegion);
-    }
-  }, [
-    userLatitude,
-    userLongitude,
-    destinationLatitude,
-    destinationLongitude,
-    driverDropoffLatitude,
-    driverDropoffLongitude,
-  ]);
+  }, []);
 
-  // Update Region when destination Changes
+  // Re-center the camera when the user's location arrives asynchronously
+  // (e.g. after expo-location resolves). Without this the map stays at the
+  // initial centerCoordinate (Dhaka default) even after the real GPS fix lands.
   useEffect(() => {
-    if (destinationLatitude && destinationLongitude) {
-      const newRegion = calculateRegion({
-        userLatitude: userLatitude!,
-        userLongitude: userLongitude!,
-        destinationLatitude,
-        destinationLongitude,
-      });
-      setRegion(newRegion);
+    if (userLatitude && userLongitude && cameraRef.current) {
+      cameraRef.current.flyTo([userLongitude, userLatitude], 1200);
     }
-  }, [destinationLatitude, destinationLongitude]);
+  }, [userLatitude, userLongitude]);
 
   // WebSocket is managed by the parent screen (home/index.tsx).
   // Map is a display-only component — no WS setup here.
@@ -184,6 +164,17 @@ const Map = () => {
           zoomLevel={userLatitude && userLongitude ? 15 : 13}
           onPress={handleMapInteraction}
         >
+          {/* Camera flies to the user's real location once expo-location
+              resolves. The MapView's centerCoordinate is only an *initial*
+              value on @maplibre/maplibre-react-native; subsequent moves must
+              go through the Camera child. */}
+          {Camera && (
+            <Camera
+              ref={cameraRef}
+              zoomLevel={15}
+              centerCoordinate={[displayLng, displayLat]}
+            />
+          )}
           {/* User location marker */}
           {userLatitude && userLongitude && (
             <PointAnnotation

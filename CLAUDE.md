@@ -150,9 +150,11 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 ### Route Structure (Expo Router)
 - `app/(auth)/` — Auth screens (phone-entry → otp-verify → register). **Supabase phone OTP**.
 - `app/(main)/(customer)/` — Rider screens (keep folder name `(customer)`, rider is a display label)
-- `app/(main)/(rider)/` — Driver screens
-- `app/(admin)/` — Web-only admin panel (dashboard, verification, packages, zones, configuration)
+- `app/(main)/(rider)/` — Driver screens (folder name `(rider)` is legacy — contains driver flows, do not rename)
+- `app/admin/` — Web-only admin panel (dashboard, verification, packages, zones, configuration) — no parentheses, plain segment not a route group
 - `app/api/` — Expo API routes (file-based backend, `[public]` prefix = no JWT required)
+- `components/` — Shared UI components, flat (no `src/` prefix, no `components/common/` subfolder); has `components/admin/` and `components/auth/` subfolders only
+- `theme/goRide.ts` — Single-file design token source (colors, typography, spacing, radii, shadows). Dark mode via NativeWind `dark:` variants + `tailwind.config.js` aliases — no `ThemeProvider`/theme Context
 
 > **Expo API route params**: Dynamic segment params are passed **directly** as the second argument (`{ id }`), not wrapped in `{ params: { id } }` like Next.js. See Critical Coding Rules below.
 
@@ -165,9 +167,9 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 
 ### Key Libraries (implemented)
 - **UI**: NativeWind (TailwindCSS), Lottie, react-native-paper, GoRide design tokens in `theme/goRide.ts`
-- **State**: Zustand stores in `store/` (6 stores: useDriverStore, useRiderStore, useChatStore, useDriverStatusStore, usePackageStore, useCallLedgerStore, useDriverFlowStore)
+- **State**: Zustand stores in `store/` (7 stores: useDriverStore, useRiderStore, useChatStore, useDriverStatusStore, usePackageStore, useCallLedgerStore, useDriverFlowStore)
 - **Map**: `@maplibre/maplibre-react-native` + Barikoi API (`barikoiapis`) via `utils/mapUtils.ts`
-- **Database**: Supabase PostgreSQL + Drizzle ORM (`src/db/schema.ts`) — 22 tables
+- **Database**: Supabase PostgreSQL + Drizzle ORM (`src/db/schema.ts`) — 49 tables, 26 enums
 - **Auth**: Supabase Auth phone OTP (`lib/auth.ts`, `lib/supabase.ts`, `lib/supabaseServer.ts`)
 - **Storage**: Supabase Storage (`driver-documents` bucket via `lib/imageToURL.ts`)
 - **Payments**: PortPos via WebView (`lib/portpos.ts`, `components/PaymentWebView.tsx`). Old `lib/bkash.ts` and `lib/nagad.ts` kept as inert fallback.
@@ -197,8 +199,8 @@ Rider requests ride → POST /api/ride/request → zone check + fare calc
   → Driver fetch:confirm → heartbeat deduction window (call_ledger write, unique on ride_id+driver_id)
 ```
 
-### Database Schema (22 tables, implemented)
-users, drivers, vehicles, packages, subscriptions, creditVouchers, callLedger, rides, dispatchOffers, ownerConsents, usedChallenges, rateLimits, paymentEvents, documents, zones, pricing, chatMessages, driverOnlineSessions, compensationQueue, systemConfig, platformConfig, vehicleTypeChanges
+### Database Schema (49 tables, 26 enums, implemented)
+See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema or `docs/Plan/05-DATA-MODEL.md` for the full, authoritative table/enum inventory — do not manually re-list all 49 tables here; this avoids the list drifting out of sync (this section previously understated the count as "22 tables" for that reason).
 
 ### Seed Scripts (`scripts/`)
 `seed-system-config.js`, `seed-pricing.js`, `seed-packages.js`, `seed-platform-config.js`, `seed-admin.js`

@@ -1,11 +1,14 @@
-import { Image, Text, View, Alert } from "react-native";
+import { Image, Text, View, TextInput, TouchableOpacity, Alert } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import RideLayout from "@/components/RideLayout";
 import { useCustomer } from "@/store";
 import { icons } from "@/constants/data";
 import { useRouter } from "expo-router";
+import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
+import { UpfrontTipSlider } from "@/components/UpfrontTipSlider";
 import CustomButton from "@/components/CustomButton";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
+import { Modal } from "react-native";
 import { useRiderStore } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
@@ -37,6 +40,13 @@ const ConfirmRidePage = () => {
   const [rideDuration, setRideDuration] = useState<string>("");
   const [rideDistance, setRideDistance] = useState<string>("");
   const [requesting, setRequesting] = useState(false);
+  const [bookForOther, setBookForOther] = useState(false);
+  const [otherName, setOtherName] = useState("");
+  const [otherPhone, setOtherPhone] = useState("");
+  const [upfrontTip, setUpfrontTip] = useState(0);
+  const [stops, setStops] = useState<{ lat: number; lng: number; address: string }[]>([]);
+  const [showStopModal, setShowStopModal] = useState(false);
+  const [preferFemale, setPreferFemale] = useState(false);
 
   const selectedEstimate = estimates.find(
     (e) => e.vehicle_type === selectedVehicleType,
@@ -110,9 +120,15 @@ const ConfirmRidePage = () => {
       return;
     }
 
+    if (bookForOther && (!otherName.trim() || !otherPhone.trim())) {
+      Alert.alert("Validation", "Please enter the passenger's name and phone number");
+      setRequesting(false);
+      return;
+    }
     setRequesting(true);
     try {
-      const response = await fetch(`${API_URL}/api/ride/request`, {
+      const endpoint = scheduledAt ? `${API_URL}/api/ride/schedule` : `${API_URL}/api/ride/request`;
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,6 +146,11 @@ const ConfirmRidePage = () => {
           promo_code: promoCode || undefined,
           preference_ids:
             selectedPrefIds.length > 0 ? selectedPrefIds : undefined,
+          secondary_rider_name: bookForOther ? otherName.trim() : undefined,
+          secondary_rider_phone: bookForOther ? otherPhone.trim() : undefined,
+          upfront_tip_bdt: upfrontTip > 0 ? upfrontTip * 100 : undefined,
+          stops: stops.length > 0 ? stops : undefined,
+          female_driver_preference: preferFemale ? true : undefined,
         }),
       });
       const data = await response.json();
@@ -170,7 +191,8 @@ const ConfirmRidePage = () => {
   };
 
   return (
-    <RideLayout title="Confirm Ride" disabled={false}>
+    <Fragment>
+      <RideLayout title="Confirm Ride" disabled={false}>
       <View className="flex-1">
         {/* Selected vehicle info */}
         {selectedEstimate && vehicleDef && (
@@ -306,6 +328,59 @@ const ConfirmRidePage = () => {
           </View>
         </View>
 
+        {/* Surge notice */}
+        {(selectedEstimate as any)?.fare_breakdown?.surge_multiplier > 1.0 && (
+          <View className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-[10px] px-[16px] py-[12px] mb-4">
+            <Text className="text-[14px] font-JakartaBold text-yellow-700 dark:text-yellow-400">
+              ⚡ High Demand — {(selectedEstimate as any).fare_breakdown.surge_multiplier}× pricing active
+            </Text>
+            <Text className="text-[13px] font-Jakarta text-yellow-600 dark:text-yellow-500">
+              Includes ৳{(((selectedEstimate as any)?.fare_breakdown?.surge_fee_bdt ?? 0) / 100).toFixed(0)} surge fee
+            </Text>
+          </View>
+        )}
+
+        {/* Book for someone else */}
+        <TouchableOpacity
+          onPress={() => setBookForOther(!bookForOther)}
+          className="flex-row items-center mb-3"
+        >
+          <View className={`w-5 h-5 rounded border-2 items-center justify-center mr-2 ${bookForOther ? "bg-goPrimary border-goPrimary" : "border-goBorderLight dark:border-goBorderDark"}`}>
+            {bookForOther && <Text className="text-[12px] text-goWhite">✓</Text>}
+          </View>
+          <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Book for someone else</Text>
+        </TouchableOpacity>
+        {bookForOther && (
+          <View className="mb-4">
+            <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[12px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-3"
+              placeholder="Passenger name" placeholderTextColor="#9CA3AF" value={otherName} onChangeText={setOtherName} />
+            <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[12px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark"
+              placeholder="01XXXXXXXXX" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={otherPhone} onChangeText={setOtherPhone} />
+          </View>
+        )}
+
+        <UpfrontTipSlider value={upfrontTip} onChange={setUpfrontTip} />
+
+        {/* Female driver preference */}
+        <TouchableOpacity onPress={() => setPreferFemale(!preferFemale)} className="flex-row items-center mb-3">
+          <View className={`w-5 h-5 rounded border-2 items-center justify-center mr-2 ${preferFemale ? "bg-goPrimary border-goPrimary" : "border-goBorderLight dark:border-goBorderDark"}`}>
+            {preferFemale && <Text className="text-[12px] text-goWhite">✓</Text>}
+          </View>
+          <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Prefer female driver</Text>
+        </TouchableOpacity>
+
+        {stops.length < 2 && (
+          <TouchableOpacity onPress={() => setShowStopModal(true)} className="flex-row items-center py-3 mb-2">
+            <Text className="text-goPrimary font-Jakarta text-[15px]">➕ Add Stop</Text>
+          </TouchableOpacity>
+        )}
+        {stops.map((stop, i) => (
+          <View key={i} className="flex-row items-center bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-lg px-4 py-3 mb-2">
+            <Text className="flex-1 text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Stop {i + 1}: {stop.address}</Text>
+            <TouchableOpacity onPress={() => setStops(stops.filter((_, j) => j !== i))}><Text className="text-goDanger text-[14px]">✕</Text></TouchableOpacity>
+          </View>
+        ))}
+
         <CustomButton
           title={requesting ? "Requesting..." : "Request Ride"}
           onPress={handleRequestRide}
@@ -314,6 +389,27 @@ const ConfirmRidePage = () => {
         />
       </View>
     </RideLayout>
+      <Modal visible={showStopModal} transparent animationType="slide" onRequestClose={() => setShowStopModal(false)}>
+      <View className="flex-1 bg-goBgLight dark:bg-goBgDark pt-20 px-6">
+        <View className="flex-row items-center mb-4">
+          <TouchableOpacity onPress={() => setShowStopModal(false)}><Text className="text-goPrimary font-Jakarta text-base">Cancel</Text></TouchableOpacity>
+          <Text className="flex-1 text-center text-lg font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Add Stop</Text>
+          <View className="w-12" />
+        </View>
+        <BarikoiAutocomplete
+          icon={undefined}
+          initialLocation=""
+          textInputBackgroundColor="#F8FAFC"
+          handlePress={(location: any) => {
+            if (stops.length < 2) {
+              setStops([...stops, { lat: location.latitude, lng: location.longitude, address: location.address }]);
+              setShowStopModal(false);
+            }
+          }}
+        />
+      </View>
+      </Modal>
+    </Fragment>
   );
 };
 

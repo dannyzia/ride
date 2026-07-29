@@ -21,7 +21,7 @@ interface NavItem {
   route: string;
   label: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  group: "Operations" | "Catalogs" | "Programs" | "Config";
+  group: "Operations" | "Catalogs" | "Programs" | "Config" | "Finance";
 }
 
 const NAV: NavItem[] = [
@@ -71,6 +71,20 @@ const NAV: NavItem[] = [
     group: "Catalogs",
   },
 
+  // Trust & Safety
+  {
+    route: "/admin/lost-items",
+    label: "Lost Items",
+    icon: "magnify-close",
+    group: "Operations",
+  },
+  {
+    route: "/admin/fare-disputes",
+    label: "Fare Disputes",
+    icon: "scale-balance",
+    group: "Operations",
+  },
+
   // Programs
   {
     route: "/admin/incentives",
@@ -111,6 +125,27 @@ const NAV: NavItem[] = [
 
   // Config
   {
+    route: "/admin/ride-passes",
+    label: "Ride Passes",
+    icon: "ticket-account",
+    group: "Catalogs",
+  },
+  {
+    route: "/admin/broadcast",
+    label: "Broadcast",
+    icon: "bullhorn",
+    group: "Operations",
+  },
+
+  // Finance
+  {
+    route: "/admin/tax-dashboard",
+    label: "Tax Dashboard",
+    icon: "file-chart",
+    group: "Finance",
+  },
+
+  {
     route: "/admin/platform-config",
     label: "Platform Config",
     icon: "cog",
@@ -128,6 +163,7 @@ const GROUP_ORDER: NavItem["group"][] = [
   "Operations",
   "Catalogs",
   "Programs",
+  "Finance",
   "Config",
 ];
 

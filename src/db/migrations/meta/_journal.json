@@ -85,6 +85,139 @@
       "when": 1781500000000,
       "tag": "0011_face_match_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1784233407626,
+      "tag": "0012_nifty_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1784263950995,
+      "tag": "0013_large_may_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784890277383,
+      "tag": "0014_little_onslaught",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1784982579751,
+      "tag": "0015_talented_impossible_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1784982902475,
+      "tag": "0016_gray_gorgon",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1784986230476,
+      "tag": "0017_parallel_garia",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785037492572,
+      "tag": "0018_curly_hedge_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785040892471,
+      "tag": "0019_brave_vargas",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785041043268,
+      "tag": "0020_thin_puppet_master",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1785042062943,
+      "tag": "0021_charming_jigsaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1785043452996,
+      "tag": "0022_dashing_daimon_hellstrom",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1785122704329,
+      "tag": "0023_happy_red_wolf",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1785171550935,
+      "tag": "0024_rapid_agent_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1785236273255,
+      "tag": "0025_closed_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1785299301987,
+      "tag": "0026_married_jack_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1785302669418,
+      "tag": "0027_wonderful_roughhouse",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1785303343595,
+      "tag": "0028_oval_doctor_spectrum",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1785348702290,
+      "tag": "0029_yielding_black_panther",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1785348912015,
+      "tag": "0030_lethal_radioactive_man",
+      "breakpoints": true
     }
   ]
 }

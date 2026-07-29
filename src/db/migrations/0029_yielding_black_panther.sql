@@ -1,0 +1,1 @@
+ALTER TABLE "drivers" ADD COLUMN "gender" varchar(10);

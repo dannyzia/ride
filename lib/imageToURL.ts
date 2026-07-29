@@ -1,15 +1,15 @@
 import { supabase } from './supabase';
-import { logger } from "@/lib/logger";
+import { logger } from '@/lib/logger';
 
 export const uploadImage = async (uri: string, fileName: string) => {
   const response = await fetch(uri);
   const blob = await response.blob();
-  logger.info(blob);
 
   const { data, error } = await supabase.storage
     .from('driver-documents')
     .upload(fileName, blob, {
       upsert: true,
+      contentType: blob.type || 'image/jpeg',
     });
 
   if (error) {
@@ -22,7 +22,7 @@ export const uploadImage = async (uri: string, fileName: string) => {
     .getPublicUrl(data.path);
 
   const downloadURL = publicUrlData.publicUrl;
-  logger.info('File available at', downloadURL);
+  logger.info('[storage] file uploaded', { path: data.path, url: downloadURL });
 
   return downloadURL;
 };

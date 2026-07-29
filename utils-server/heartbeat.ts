@@ -1,6 +1,6 @@
 import { db } from "../src/db";
 import { subscriptions, callLedger, packages } from "../src/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
 interface HeartbeatContext {
@@ -64,9 +64,9 @@ export async function recordCallDeduction(
     await tx
       .update(subscriptions)
       .set({
-        calls_remaining: isUnlimited ? -1 : sub.calls_remaining - 1,
-        daily_calls_used: sub.daily_calls_used + 1,
-        total_deductions: sub.total_deductions + 1,
+        calls_remaining: isUnlimited ? -1 : sql`${subscriptions.calls_remaining} - 1`,
+        daily_calls_used: sql`${subscriptions.daily_calls_used} + 1`,
+        total_deductions: sql`${subscriptions.total_deductions} + 1`,
       })
       .where(eq(subscriptions.id, ctx.subscriptionId));
 

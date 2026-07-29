@@ -1,0 +1,242 @@
+# =============================================================================
+# GAPS-RIDER.yaml v1.0 — RIDER FEATURE GAP FIXES
+# =============================================================================
+# Read DRIVER-P0-TASKS.yaml global_notes for framework/styling/store rules.
+# Same rules apply. Rider screens live under app/(main)/(customer)/.
+# Auth screens under app/(auth)/ (shared with driver).
+# =============================================================================
+version: "1.0"
+project: Ride
+role: rider
+priority_class: P1
+total_tasks: 18
+
+global_notes:
+  font_rule: "font-JakartaBold (headings), font-Jakarta (body). No font-[Urbanist]."
+  money: "ALL amounts INTEGER PAISA. Display: {(amt/100).toFixed(0)}."
+  dark_rule: "EVERY color className MUST have a dark: variant."
+  store_rule: "useRiderStore from @/store (barrel). useCustomer from @/store."
+  fetch_pattern: "Prefix with process.env.EXPO_PUBLIC_SERVER_URL. Token from supabase.auth.getSession()."
+  self_check:
+    - "[ ] File exists at route_path"
+    - "[ ] Every color className has dark: variant"
+    - "[ ] API calls: loading + error + try/catch"
+    - "[ ] npx tsc --noEmit passes for edited files"
+
+tasks:
+
+  # ===========================================================================
+  # THEME 1: ORPHANED ONBOARDING SCREENS
+  # ===========================================================================
+  - id: "RIDER-GAP-001-WIRE-PERMISSIONS"
+    route_path: "app/(auth)/register.tsx"
+    action: audit_and_fix
+    note: >
+      SL 7,8. enable-location.tsx and notifications-permission.tsx are orphaned —
+      the auth gate redirects straight to home after register. Fix: after successful
+      registration + signIn, router.replace to /(auth)/enable-location instead of
+      letting _layout.tsx auto-redirect. enable-location already navigates to
+      notifications-permission which navigates to home. This wires the full chain.
+      ONLY for registration path (new users), not login.
+    fixes:
+      - find: "router.replace"  # verify what register.tsx currently does post-signin
+        replace: "router.replace('/(auth)/enable-location')"
+        context: "only in the success path after supabase.auth.signInWithPassword"
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-002-WIRE-SOS"
+    route_path: "app/(main)/(customer)/(tabs)/settings/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 70. emergency-sos/index.tsx is orphaned — no screen navigates to it.
+      Add a "Safety" or "Emergency SOS" row in the rider settings menu that
+      router.push to /(main)/(customer)/emergency-sos.
+    fixes:
+      - find: "Add a settings row item:"
+        replace: "Add: { label: 'Emergency SOS', route: '/(main)/(customer)/emergency-sos' } to the settings items array."
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # THEME 2: LOCATION / BARIKOI
+  # ===========================================================================
+  - id: "RIDER-GAP-003-USE-CURRENT-LOCATION"
+    route_path: "app/(main)/(customer)/find-ride/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 17. "Use Current Location" / "Use Dhaka Center" button — Missing backend.
+      The useCurrentLocation() function should call expo-location to get GPS,
+      then setUserLocation() in the store. If GPS denied, fall back to Dhaka
+      center (23.8103, 90.4125). Verify this works and add error handling.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-004-PREFERENCE-CHIPS"
+    route_path: "app/(main)/(customer)/book-ride/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 21 (MISSED). PreferenceChips component renders but never calls
+      /api/reference/preferences. Fix: fetch preferences on mount, store
+      selected preference_ids, and include them in the ride request body
+      when navigating to confirm-ride.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # THEME 3: RIDE COMPLETION
+  # ===========================================================================
+  - id: "RIDER-GAP-005-CANCEL-REASON-WIRING"
+    route_path: "app/(main)/(customer)/final-page/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 76. The "Cancel Request" button hardcodes reason "rider_cancelled" and
+      returns home immediately. Fix: navigate to cancel-reason screen first
+      (which lets rider pick a reason), then POST cancel with the selected reason.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-006-RATE-5STAR-REMOVE"
+    route_path: "app/(main)/(customer)/rate-driver-5star/index.tsx"
+    action: remove
+    note: >
+      SL 35. rate-driver-5star is orphaned — rate-driver goes straight to
+      ride-completed, never to this screen. REMOVE this file and its directory.
+      It has no API calls and adds confusion.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-007-WALLET-API"
+    route_path: "app/(main)/(customer)/(tabs)/activity/top-up/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 46. Wallet balance uses mock data from useRiderStore. Fix: replace
+      with GET /api/rider/wallet call to fetch real balance + transaction history.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-008-TOPUP-PORTPOS"
+    route_path: "app/(main)/(customer)/(tabs)/settings/top-up-method/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 48,49. Top-up shows bKash/Nagad/Card selectors but the app uses PortPos
+      unified gateway (which combines all). Fix: replace the 3-method selector
+      with a PortPos WebView payment flow (same pattern as driver packages.tsx).
+      The top-up-method screen should open PaymentWebView with POST /api/rider/wallet/topup.
+      On success, navigate to top-up-success. Remove the cosmetic bKash/Nagad/Card UI.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-009-PAYMENT-METHODS-REMOVE"
+    route_path: "app/(main)/(customer)/(tabs)/settings/payment-methods/"
+    action: remove
+    note: >
+      SL 50,51. Saved payment methods (card/bank) screens have NO backend.
+      Since the app uses PortPos (which stores cards server-side), these
+      screens are unnecessary. REMOVE: payment-methods/, payment-methods/add/,
+      payment-methods/add/card/, payment-methods/add/bank/, payment-methods/new-added/,
+      add-payment/. Also remove any navigation references from settings.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # THEME 4: SETTINGS
+  # ===========================================================================
+  - id: "RIDER-GAP-010-APPEARANCE"
+    route_path: "app/(main)/(customer)/(tabs)/settings/app-appearance/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 57. Theme selector (Light/Dark/System) exists but doesn't persist.
+      Fix: use AsyncStorage to save the selection and apply it via NativeWind
+      dark: mode toggle on app load.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-011-LANGUAGE"
+    route_path: "app/(main)/(customer)/(tabs)/settings/app-language/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 58. Language selector (English/Bangla) exists but doesn't persist
+      and no i18n is set up. Fix: at minimum, persist selection in AsyncStorage.
+      Full i18n (translation strings) can be future work — just persist the choice.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-012-LEGAL-PAGES"
+    route_path: "app/(main)/(customer)/(tabs)/settings/terms-of-service/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 68,69. Terms of service and Privacy policy screens exist but are empty/
+      placeholder. Fix: add standard static legal text content (can be placeholder
+      legal text for now — the structure matters more than the content).
+    extra_files:
+      - path: "app/(main)/(customer)/(tabs)/settings/privacy-policy/index.tsx"
+        note: "Same — add static privacy policy text."
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # THEME 5: ACTIVITY / HISTORY
+  # ===========================================================================
+  - id: "RIDER-GAP-013-FILTERED-RIDE-LISTS"
+    route_path: "app/(main)/(customer)/(tabs)/activity-completed/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 41,42,43. Completed/Scheduled/Canceled ride lists are Partial — they
+      may not properly filter by status. Fix: verify each list screen calls
+      the ride list API with the correct status filter (completed/scheduled/cancelled).
+    extra_files:
+      - path: "app/(main)/(customer)/(tabs)/activity-scheduled/index.tsx"
+        note: "Same fix — filter by status='scheduled'."
+      - path: "app/(main)/(customer)/(tabs)/activity-canceled/index.tsx"
+        note: "Same fix — filter by status='cancelled'."
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-014-SHARE-RECEIPT"
+    route_path: "app/(main)/(customer)/(tabs)/activity/share-receipt/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 44. Share receipt uses local store data only. Fix: fetch ride details
+      from GET /api/ride/[id] and use React Native Share API to share a receipt
+      summary (fare, distance, date, driver).
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # THEME 6: REMOVE ORPHANED / FUTURE SHELLS
+  # ===========================================================================
+  - id: "RIDER-GAP-015-REMOVE-CALL-SCREENS"
+    route_path: "app/(main)/(customer)/voice-call/, app/(main)/(customer)/video-call/, app/(main)/(customer)/video-call-expanded/"
+    action: remove
+    note: >
+      SL 71,72. Voice/video call screens are orphaned with NO VoIP backend.
+      These are wireframe shells that will confuse. REMOVE all three directories.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-016-REMOVE-ADD-STOPS"
+    route_path: "app/(main)/(customer)/add-stop/"
+    action: remove
+    note: >
+      SL 75. Add multiple stops is orphaned with NO backend. REMOVE.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-017-REMOVE-SHARE-TRIP"
+    route_path: "app/(main)/(customer)/share-trip/"
+    action: remove
+    note: >
+      SL 45. Share trip live location is orphaned with NO backend. REMOVE.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "RIDER-GAP-018-SCHEDULE-BLOCKED"
+    route_path: "N/A"
+    action: note
+    note: >
+      SL 22,73,74,77. Schedule ride + schedule picker + select vehicle category
+      + alternatives sheet are BLOCKED on the Scheduled Rides Backend (Kimi #8).
+      See NEW-FEATURES-P2.yaml Task 8. Once that backend is built, these screens
+      can be wired. For now, they remain as-is (orphaned shells).
+    verification: []

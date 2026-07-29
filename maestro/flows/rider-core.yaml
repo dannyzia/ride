@@ -1,0 +1,94 @@
+# Device: emulator-5554 (Rider).
+# Run: maestro test maestro/flows/rider-core.yaml   (only emulator-5554 connected)
+# Preconditions: rider account +8801613249520 is logged in and on Home ("Search destination...").
+# COORDINATION: run driver-core.yaml on emulator-5556 at the same time. The driver must
+# Accept the offer, slide Arrival, type the Ride Pin (read from THIS rider screen), Start,
+# and slide Drop-off. The rider flow below mostly WAITS for those driver-driven states.
+appId: com.ride.bd
+name: "Part 4 - Rider Core Loop (request + track + complete + rate)"
+tags:
+  - rider
+  - core
+---
+- launchApp:
+    appId: com.ride.bd
+- assertVisible: "Search destination..."
+- tapOn: "Search destination..."
+- extendedWaitUntil:
+    visible: "Where do you want to go?"
+    timeout: 10000
+- tapOn: "Search destination..."
+- inputText: "Savar"
+- extendedWaitUntil:
+    visible: ".*Savar.*"
+    timeout: 15000
+- tapOn:
+    text: ".*Savar.*"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Find now"
+    timeout: 15000
+- tapOn:
+    text: "Use .*"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn: "Find now"
+- extendedWaitUntil:
+    visible: "Choose Vehicle"
+    timeout: 15000
+- swipe:
+    direction: UP
+    duration: 300
+- extendedWaitUntil:
+    visible: "Bike Plus"
+    timeout: 10000
+- tapOn: "Bike Plus"
+- extendedWaitUntil:
+    visible: "Confirm Ride"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn: "Request Ride"
+- extendedWaitUntil:
+    visible: "Finding your ride..."
+    timeout: 20000
+# ---- driver must Accept the offer on emulator-5556 ----
+- extendedWaitUntil:
+    visible: "Tell your driver your Ride Pin"
+    timeout: 120000                            # matched; PIN card shown
+- assertVisible: "Tell your driver your Ride Pin"
+# ---- driver slides Arrival, then types the PIN shown above, then taps Start ----
+- extendedWaitUntil:
+    visible: "Ride in progress"
+    timeout: 240000                            # in_progress banner
+- assertVisible: "Ride in progress"
+# ---- driver slides Drop-off ----
+- extendedWaitUntil:
+    visible: "Ride Complete!"
+    timeout: 300000
+- assertVisible: "Ride Complete!"
+- assertVisible: "Total Fare"
+# ---- optional rating screen (may or may not appear) ----
+- runFlow:
+    when:
+      visible: "Rate Driver"
+    commands:
+      - tapOn: "Rate Driver"
+      - extendedWaitUntil:
+          visible: "Rate the Driver"
+          timeout: 10000
+      - tapOn:
+          text: "☆"
+          index: 4                            # tap 5th star to set 5 stars (stars are ★/☆ glyphs)
+      - waitForAnimationToEnd:
+          timeout: 1000
+      - tapOn: "Submit Rating"
+      - extendedWaitUntil:
+          visible: "Ride Completed"
+          timeout: 15000
+      - tapOn: "Back to Home"
+- extendedWaitUntil:
+    visible: "Search destination..."
+    timeout: 30000
+- assertVisible: "Search destination..."

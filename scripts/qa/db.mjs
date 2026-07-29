@@ -1,0 +1,11 @@
+import pg from 'pg';
+import fs from 'fs';
+const env = fs.readFileSync('utils-server/.env', 'utf8');
+const m = env.match(/DATABASE_URL=(.+)/);
+const conn = m[1].trim();
+const sql = process.argv[2];
+const client = new pg.Client({ connectionString: conn, ssl: { rejectUnauthorized: false } });
+await client.connect();
+const res = await client.query(sql);
+console.log(JSON.stringify(res.rows, null, 2));
+await client.end();

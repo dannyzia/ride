@@ -1,0 +1,160 @@
+# =============================================================================
+# GAPS-ADMIN.yaml v1.0 — ADMIN FEATURE GAP FIXES
+# =============================================================================
+# Admin panel is web-only under app/admin/ with its own _layout.tsx.
+# Uses adminFetch from lib/adminFetch.ts to call app/api/admin/* routes.
+# All admin screens auto-discovered via Expo Router file-based routing.
+# =============================================================================
+version: "1.0"
+project: Ride
+role: admin
+priority_class: P1
+total_tasks: 8
+
+global_notes:
+  panel_type: "Web-only admin panel. Uses AdminShell sidebar. Email/password auth via Supabase (checks users.role='admin')."
+  fetch_pattern: "import { adminFetch } from '@/lib/adminFetch'. All admin API routes are under app/api/admin/."
+  layout: "app/admin/_layout.tsx auto-discovers all .tsx files in app/admin/ via Stack."
+  self_check:
+    - "[ ] File exists at route_path under app/admin/"
+    - "[ ] Uses adminFetch (not raw fetch) for API calls"
+    - "[ ] npx tsc --noEmit passes for edited files"
+
+tasks:
+
+  # ===========================================================================
+  # TASK 1: DASHBOARD STATS
+  # ===========================================================================
+  - id: "ADMIN-GAP-001-DASHBOARD-STATS"
+    route_path: "app/admin/index.tsx"
+    action: audit_and_fix
+    note: >
+      SL 2. Dashboard is just a welcome banner with no data. Fix: add quick-stat
+      cards showing: active drivers count, pending approvals count, today's rides
+      count, today's estimated revenue. Call existing admin APIs (admin/queue for
+      pending, admin/driver-economics for driver data) or add a new
+      GET /api/admin/dashboard endpoint that aggregates these.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 2: DOCUMENT APPROVAL SCREEN
+  # ===========================================================================
+  - id: "ADMIN-GAP-002-DOCUMENT-APPROVAL"
+    route_path: "app/admin/documents.tsx"
+    action: create
+    note: >
+      SL 8,13. Backend exists (admin/documents/pending, approve, reject,
+      admin/document/[id]/presigned-url) but NO admin screen calls these.
+      Create a document review screen that: lists pending documents (calls
+      GET /api/admin/documents/pending), shows each document image via
+      presigned URL (GET /api/admin/document/[id]/presigned-url), and has
+      Approve/Reject buttons (POST /api/admin/documents/approve, /reject).
+      This gives granular per-document control vs the bulk queue approval.
+    code_template: |
+      // See DRIVER-P0-TASKS.yaml for styling patterns.
+      // Key elements:
+      // 1. Fetch pending docs: const data = await adminFetch('/api/admin/documents/pending')
+      // 2. For each doc, fetch presigned URL: await adminFetch(`/api/admin/document/${doc.id}/presigned-url`)
+      // 3. Show image in an <img> or <Image>
+      // 4. Approve button: await adminFetch('/api/admin/documents/approve', { method: 'POST', body: { document_id: doc.id } })
+      // 5. Reject button: await adminFetch('/api/admin/documents/reject', { method: 'POST', body: { document_id: doc.id, reason } })
+    verification:
+      - { type: file_exists, path: "app/admin/documents.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 3: VEHICLE TYPE CHANGE UI
+  # ===========================================================================
+  - id: "ADMIN-GAP-003-VEHICLE-TYPE-CHANGE"
+    route_path: "app/admin/queue.tsx"
+    action: audit_and_fix
+    note: >
+      SL 9,10,11. Backend exists for driver vehicle type upgrade (admin/driver/upgrade),
+      downgrade (admin/driver/downgrade), and type-change-approval
+      (admin/driver/type-change-approve) — but NO admin screen uses them.
+      Fix: in the driver queue or a new driver detail view, add buttons:
+      - "Upgrade Vehicle Type" → POST admin/driver/upgrade { driver_id, new_vehicle_type }
+      - "Downgrade Vehicle Type" → POST admin/driver/downgrade { driver_id, new_vehicle_type }
+      - "Approve Type Change" → POST admin/driver/type-change-approve { driver_id }
+      These can be in the existing queue.tsx detail expansion or a new
+      app/admin/driver-detail.tsx screen.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 4: DRIVER ACCOUNT CLOSURE
+  # ===========================================================================
+  - id: "ADMIN-GAP-004-DRIVER-CLOSE-ACCOUNT"
+    route_path: "app/admin/queue.tsx"
+    action: audit_and_fix
+    note: >
+      SL 12. Backend exists (admin/driver/close-account) for permanent driver
+      account closure with document purge, but NO admin screen calls it.
+      Fix: add a "Close Account" danger button in the driver detail view
+      (with confirmation modal) that POSTs to admin/driver/close-account.
+      This is distinct from suspend (temporary) — close is permanent deletion.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 5: SOS CONTACTS MANAGEMENT
+  # ===========================================================================
+  - id: "ADMIN-GAP-005-SOS-CONTACTS"
+    route_path: "app/admin/sos-contacts.tsx"
+    action: create
+    note: >
+      SL 32. Backend exists (GET/PATCH /api/admin/sos-contacts) for managing
+      emergency contact numbers stored in system_config under key 'sos_contacts'.
+      NO admin screen calls this API. Create a CRUD screen that:
+      - Lists current SOS contacts (police, ambulance, ride SOS)
+      - Add/edit/delete contact entries (label + phone number)
+      - Saves via PATCH /api/admin/sos-contacts { contacts: [...] }
+      This data is read by the driver SOSButton component.
+    code_template: |
+      // Key elements:
+      // 1. const data = await adminFetch('/api/admin/sos-contacts') — returns { contacts: [{label, number}, ...] }
+      // 2. Edit form: label input + number input per contact
+      // 3. Save: await adminFetch('/api/admin/sos-contacts', { method: 'PATCH', body: { contacts: [...] } })
+    verification:
+      - { type: file_exists, path: "app/admin/sos-contacts.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 6: ADMIN LOGIN HARDENING
+  # ===========================================================================
+  - id: "ADMIN-GAP-006-LOGIN-HARDENING"
+    route_path: "app/admin/login.tsx"
+    action: audit_and_fix
+    note: >
+      SL 1. Admin login uses Supabase signInWithPassword directly (no custom API).
+      This works but: verify it checks users.role='admin' AFTER sign-in and
+      signs out + shows error if the user is not an admin. Also add rate-limiting
+      awareness and proper error messages. Low priority — login functions.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 7: ADMIN RIDER MANAGEMENT (cross-ref NEW-FEATURES)
+  # ===========================================================================
+  - id: "ADMIN-GAP-007-RIDER-MANAGEMENT-XREF"
+    route_path: "N/A"
+    action: note
+    note: >
+      Admin rider management (list/suspend/refund riders) is a NEW feature
+      with no existing backend or frontend. See NEW-FEATURES-P2.yaml Task 4.
+      This task is a cross-reference only — do not build here.
+    verification: []
+
+  # ===========================================================================
+  # TASK 8: ADMIN SUPPORT DASHBOARD (cross-ref NEW-FEATURES)
+  # ===========================================================================
+  - id: "ADMIN-GAP-008-SUPPORT-DASHBOARD-XREF"
+    route_path: "N/A"
+    action: note
+    note: >
+      Admin support ticket management is a NEW feature. The support/ticket
+      submission API exists (riders/drivers can submit) but there's no admin
+      management UI. See NEW-FEATURES-P2.yaml Task 7.
+      This task is a cross-reference only.
+    verification: []

@@ -151,10 +151,10 @@ export default function ForgotPasswordScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
       <View className="flex-1 px-6 justify-center">
 
-        <Text className="text-[28px] font-[Urbanist] font-bold text-goTextPrimaryDark mb-1">
+        <Text className="text-[28px] font-JakartaBold font-bold text-goTextPrimaryDark mb-1">
           {step === 'phone' ? 'Forgot Password' : step === 'otp' ? 'Verify OTP' : 'Reset Password'}
         </Text>
-        <Text className="text-[14px] font-[Urbanist] text-goTextSecondaryDark mb-6">
+        <Text className="text-[14px] font-JakartaBold text-goTextSecondaryDark mb-6">
           {step === 'phone'
             ? 'Enter your phone number to receive OTP'
             : step === 'otp'
@@ -165,11 +165,11 @@ export default function ForgotPasswordScreen() {
         {step === 'phone' && (
           <>
             <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
-              <Text className="text-[15px] font-[Urbanist] text-goTextSecondaryDark mr-2">
+              <Text className="text-[15px] font-JakartaBold text-goTextSecondaryDark mr-2">
                 +880
               </Text>
               <TextInput
-                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
                 placeholder="1XXXXXXXXX"
                 placeholderTextColor={colors.textDisabledDark}
                 keyboardType="phone-pad"
@@ -187,7 +187,7 @@ export default function ForgotPasswordScreen() {
               {loading ? (
                 <ActivityIndicator size={20} color={colors.white} />
               ) : (
-                <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">Send OTP</Text>
+                <Text className="text-[16px] font-JakartaBold font-bold text-goWhite">Send OTP</Text>
               )}
             </TouchableOpacity>
           </>
@@ -197,7 +197,7 @@ export default function ForgotPasswordScreen() {
           <>
             <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
               <TextInput
-                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
                 placeholder="Enter 6-digit OTP"
                 placeholderTextColor={colors.textDisabledDark}
                 keyboardType="number-pad"
@@ -215,12 +215,12 @@ export default function ForgotPasswordScreen() {
               {loading ? (
                 <ActivityIndicator size={20} color={colors.white} />
               ) : (
-                <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">Verify OTP</Text>
+                <Text className="text-[16px] font-JakartaBold font-bold text-goWhite">Verify OTP</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setStep('phone')} className="items-center">
-              <Text className="text-[14px] font-[Urbanist] text-goPrimary">Change Phone Number</Text>
+              <Text className="text-[14px] font-JakartaBold text-goPrimary">Change Phone Number</Text>
             </TouchableOpacity>
           </>
         )}
@@ -229,7 +229,7 @@ export default function ForgotPasswordScreen() {
           <>
             <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
               <TextInput
-                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
                 placeholder="New Password"
                 placeholderTextColor={colors.textDisabledDark}
                 secureTextEntry
@@ -240,7 +240,7 @@ export default function ForgotPasswordScreen() {
 
             <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
               <TextInput
-                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
                 placeholder="Confirm New Password"
                 placeholderTextColor={colors.textDisabledDark}
                 secureTextEntry
@@ -257,14 +257,14 @@ export default function ForgotPasswordScreen() {
               {loading ? (
                 <ActivityIndicator size={20} color={colors.white} />
               ) : (
-                <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">Reset Password</Text>
+                <Text className="text-[16px] font-JakartaBold font-bold text-goWhite">Reset Password</Text>
               )}
             </TouchableOpacity>
           </>
         )}
 
         {error ? (
-          <Text className="text-[14px] font-[Urbanist] text-goDanger text-center mt-3">
+          <Text className="text-[14px] font-JakartaBold text-goDanger text-center mt-3">
             {error}
           </Text>
         ) : null}

@@ -98,16 +98,16 @@ export default function OtpVerifyScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
       <View className="flex-1 px-6 justify-center">
 
-        <Text className="text-[28px] font-[Urbanist] font-bold text-goTextPrimaryDark mb-1">
+        <Text className="text-[28px] font-JakartaBold font-bold text-goTextPrimaryDark mb-1">
           Verify OTP
         </Text>
-        <Text className="text-[14px] font-[Urbanist] text-goTextSecondaryDark mb-6">
+        <Text className="text-[14px] font-JakartaBold text-goTextSecondaryDark mb-6">
           Enter the 6-digit code sent to {phone}
         </Text>
 
         <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
           <TextInput
-            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
             placeholder="Enter 6-digit OTP"
             placeholderTextColor={colors.textDisabledDark}
             keyboardType="number-pad"
@@ -118,7 +118,7 @@ export default function OtpVerifyScreen() {
         </View>
 
         {error ? (
-          <Text className="text-[14px] font-[Urbanist] text-goDanger text-center mb-3">
+          <Text className="text-[14px] font-JakartaBold text-goDanger text-center mb-3">
             {error}
           </Text>
         ) : null}
@@ -132,14 +132,14 @@ export default function OtpVerifyScreen() {
           {isLoading ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
-            <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">
+            <Text className="text-[16px] font-JakartaBold font-bold text-goWhite">
               Verify OTP
             </Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={sendOtp} disabled={isLoading} className="items-center">
-          <Text className="text-[14px] font-[Urbanist] text-goPrimary">
+          <Text className="text-[14px] font-JakartaBold text-goPrimary">
             Resend OTP
           </Text>
         </TouchableOpacity>

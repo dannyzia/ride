@@ -2,6 +2,7 @@ import { db } from "@/src/db";
 import { drivers, users } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { verifySupabaseToken } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     return Response.json({ message: 'Driver verified' }, { status: 200 });
   } catch (err: any) {
     if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    console.error("POST /driver/verify-driver failed", err);
+    logger.error("POST /driver/verify-driver failed", err);
     return Response.json({ error: 'internal_error' }, { status: 500 });
   }
 }

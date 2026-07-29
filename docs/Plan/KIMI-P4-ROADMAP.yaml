@@ -1,0 +1,330 @@
+# =============================================================================
+# KIMI-P4-ROADMAP.yaml — Post-Launch Feature Roadmap + Tax/Accounting Engine
+# =============================================================================
+# v3 — COMPLETE. All code, tasks, details, edge cases captured.
+#
+# CODE REFERENCE: docs/Plan/kimi-code/REFERENCE.md
+#   Contains ALL actual code from Kimi: schema, libs, APIs, triggers, wiring.
+#   Read it alongside this plan. Apply [FIX:] annotations before using.
+#
+# CRITICAL FIXES for ALL Kimi code:
+#   1. Money = integer paisa (NOT decimal) — already fixed in REFERENCE.md
+#   2. requireRole('admin')(request) — curried (already fixed in REFERENCE.md)
+#   3. { id }: { id: string } — flat params (already fixed in REFERENCE.md)
+#   4. className + dark: variants (rewrite Kimi's inline styles)
+#   5. schema.ts → drizzle-kit generate (NOT raw SQL) + post-migration trigger SQL
+# =============================================================================
+version: "3.0"
+project: Ride
+role: all
+priority_class: P4
+total_tasks: 28
+
+global_notes:
+  code_ref: "ALL actual code is in docs/Plan/kimi-code/REFERENCE.md. Read it FIRST."
+  money_rule: "ALL amounts INTEGER PAISA. REFERENCE.md already converts Kimi's decimal to paisa."
+  auth_rule: "requireRole('admin')(request) — curried. REFERENCE.md already fixes this."
+  params_rule: "{ id }: { id: string } — flat. REFERENCE.md already fixes this."
+  styling_rule: "NativeWind className only. Rewrite ALL Kimi UI with className + dark: variants."
+  migration_rule: >
+    Add ALL new tables to src/db/schema.ts in ONE edit, then run drizzle-kit generate ONCE.
+    After drizzle-kit push, run the trigger SQL + seed SQL from REFERENCE.md manually.
+    Then run GRANT statements (TD-31) for PostgREST access.
+  self_check:
+    - "[ ] npx tsc --noEmit passes"
+    - "[ ] npx drizzle-kit generate + push (ONE migration for ALL new tables)"
+    - "[ ] Post-migration: run trigger SQL from REFERENCE.md"
+    - "[ ] Post-migration: run seed SQL (tax rates + chart of accounts) from REFERENCE.md"
+    - "[ ] Post-migration: run GRANT statements from REFERENCE.md"
+    - "[ ] All money columns are integer (paisa)"
+    - "[ ] All API routes use curried requireRole / verifySupabaseToken"
+    - "[ ] All UI uses className with dark: variants"
+
+tasks:
+
+  # ===========================================================================
+  # PHASE 1: QUICK WINS (Low effort, high visibility)
+  # ===========================================================================
+
+  - id: "P4-001-SHARE-TRIP"
+    route_path: "app/(main)/(customer)/final-page/index.tsx"
+    action: audit_and_fix
+    note: >
+      Add "Share Trip" button to rider final-page. Uses RN Share API with
+      /track/{rideId} URL. No backend. See REFERENCE.md for pattern.
+
+  - id: "P4-002-PUSH-REMINDER"
+    route_path: "utils-server/scheduler.ts, schema.ts"
+    action: audit_and_fix
+    note: >
+      Scheduler job (60s): find scheduled rides in 15-min window, send push.
+      Add reminder_sent boolean to rides table. Uses sendPushToUser().
+
+  - id: "P4-003-CANCEL-COUNTDOWN"
+    route_path: "app/(main)/(customer)/final-page/index.tsx"
+    action: audit_and_fix
+    note: >
+      Countdown timer by Cancel button. "Free for 2:00" → "Fee may apply" after grace.
+      Uses ride.created_at + setInterval. Calls cancel-preview for fee amount.
+
+  - id: "P4-004-EARNINGS-GOAL"
+    route_path: "app/(main)/(rider)/(tabs)/index.tsx"
+    action: audit_and_fix
+    note: >
+      Progress bar on DriverHome. Goal in AsyncStorage (default ৳1000 = 100000 paisa).
+      Today's earnings from /api/driver/earnings/breakdown. Pure frontend.
+
+  - id: "P4-005-MASS-NOTIFICATION"
+    route_path: "app/api/admin/broadcast+api.ts, app/admin/broadcast.tsx"
+    action: create
+    note: >
+      Admin broadcast push. POST /api/admin/broadcast {target, message, zone_id?}.
+      Loops user_devices, calls sendPushToUser(). Rate limit 1/5min.
+
+  # ===========================================================================
+  # PHASE 2: REVENUE FEATURES
+  # ===========================================================================
+
+  - id: "P4-006-COMMUTE-MODE"
+    route_path: "schema.ts, api/driver/commute+api.ts, utils-server, driver UI"
+    action: create
+    code_ref: "REFERENCE.md → P4-006 section"
+    note: >
+      Driver commute filter. Schema + API + haversine dispatch filter + UI.
+      Kimi provided FULL code. All in REFERENCE.md.
+      Pieces: driverCommutePreferences table, commute API (POST/GET/DELETE),
+      haversineMeters(), isRideTowardCommute() in dispatch loop,
+      driver UI (toggle + BarikoiAutocomplete + deviation), settings hub wiring.
+      DB TRIGGER: update_commute_updated_at (in REFERENCE.md trigger SQL).
+
+  - id: "P4-007-WAITING-CHARGES"
+    route_path: "schema.ts, api/ride/[id]/wait-start+api.ts, wait-end+api.ts, find-customer, complete+api.ts"
+    action: create
+    code_ref: "REFERENCE.md → P4-007 section"
+    note: >
+      Waiting time charges. Kimi provided FULL code. All in REFERENCE.md.
+      Pieces: pricing columns (free_wait_minutes, wait_fee_per_minute_bdt),
+      rides columns (wait_start_at, wait_end_at, wait_fee_bdt),
+      wait-start API, wait-end API (calculates fee),
+      find-customer timer UI (⏱️ Start/Stop + countdown),
+      complete+api.ts fare calc (add wait_fee_bdt to total),
+      receipt display line.
+      ALSO: notify rider when driver starts waiting timer (WS message or push).
+
+  - id: "P4-008-RIDER-POINTS"
+    route_path: "schema.ts (point_offers cols), api/rider/points+api.ts, redeem+api.ts, UI"
+    action: create
+    code_ref: "REFERENCE.md → P4-008 section"
+    note: >
+      Rider points redemption. Mirror EXISTING /api/driver/points pattern.
+      ADD to point_offers: pointsRequired, rewardType, rewardValueBdt.
+      GET /api/rider/points (balance + history + offers).
+      POST /api/rider/points/redeem (deduct + grant wallet_credit OR package_grant).
+      Rider loyalty UI + settings hub wiring.
+
+  - id: "P4-009-RIDER-PASS-SUBSCRIPTION"
+    route_path: "schema.ts, api/rider/passes+api.ts, estimate+api.ts, PortPos callback, UI, admin"
+    action: create
+    code_ref: "REFERENCE.md → P4-009 section"
+    note: >
+      Rider Ride Pass. Kimi provided FULL code. All in REFERENCE.md.
+      NEW TABLES: riderPasses, riderSubscriptions.
+      API: GET /api/rider/passes (list + active sub), POST (PortPos checkout).
+      ESTIMATE: apply pass discount BEFORE surge. Add pass_discount_bdt to FareBreakdown.
+      PASS LIFECYCLE (3 sub-flows):
+      1. Activation: PortPos callback → create riderSubscriptions row
+         (validUntil = now + validityDays * 86400000).
+      2. Usage: complete+api.ts → increment ridesUsed when rider has active pass.
+      3. Expiry: scheduler job (60s) → status='expired' when validUntil < now.
+      DISCOUNT × SURGE ORDER: base fare → pass discount → surge (discount on base, surge on discounted).
+      UI: pass listing + purchase in rider settings.
+      ADMIN: rider_passes CRUD screen (mirror packages CRUD pattern).
+
+  - id: "P4-010-RIDER-PASS-ADMIN-CRUD"
+    route_path: "app/admin/ride-passes.tsx, app/api/admin/rider-passes+api.ts"
+    action: create
+    note: >
+      Admin screen to create/edit/delete rider pass types.
+      Mirror existing packages CRUD (app/admin/packages.tsx).
+      API: GET/POST/PATCH/DELETE /api/admin/rider-passes with requireRole('admin')(request).
+      Fields: name, description, price_bdt (paisa), discount_percent, max_rides, validity_days, is_active.
+      Add to admin sidebar: "Ride Passes".
+
+  - id: "P4-011-TOLL-PARKING-FEE"
+    route_path: "schema.ts, api/ride/[id]/extra-charge+api.ts, driver UI, rider UI, complete+api.ts"
+    action: create
+    note: >
+      Toll & parking fee input. Kimi described concept (no code).
+      NEW TABLE: ride_extra_charges (id, ride_id, type enum['toll','parking'],
+        amount_bdt INT PAISA, description, status enum['pending','approved','disputed'],
+        submitted_by_driver, created_at, resolved_at).
+      POST /api/ride/[id]/extra-charge — driver submits.
+      PATCH /api/ride/[id]/extra-charge/[chargeId] — rider approves/disputes.
+      Driver UI: modal in find-customer/finish-ride → amount + type input.
+      Rider UI: final-page/receipt → "Toll: ৳X" with Approve/Dispute buttons.
+      complete+api.ts: add APPROVED extra charges to final fare.
+      DISPUTE FLOW: if disputed → create support ticket automatically.
+
+  - id: "P4-012-DRIVER-AUTO-ACCEPT"
+    route_path: "schema.ts (drivers cols), utils-server dispatch, driver settings"
+    action: create
+    note: >
+      Auto-accept for 4.8+ rated drivers. Add to drivers table:
+        auto_accept_enabled boolean default false,
+        auto_accept_radius_meters integer default 500.
+      Dispatch: if driver.auto_accept_enabled AND rating >= 4.8 AND
+        distance <= radius → auto-accept (skip offer sheet, go straight to matched).
+      Driver settings: toggle (only visible if rating >= 4.8).
+
+  - id: "P4-013-DRIVER-PROMO-CODES"
+    route_path: "schema.ts (promo_codes cols), admin UI, driver incentives, scheduler"
+    action: audit_and_fix
+    note: >
+      Driver promo codes. ADD to promo_codes:
+        target_role enum['rider','driver'] default 'rider',
+        metric enum['ride_count','earnings'] (driver promos only),
+        target_value integer (e.g., 10 rides or 200000 paisa).
+      Admin UI: add "Driver Promo" option to existing promos CRUD.
+      Driver UI: show active driver promos in incentives with progress bar.
+      Scheduler job (hourly): check if drivers met metric → grant reward to wallet.
+
+  # ===========================================================================
+  # PHASE 3: TAX & ACCOUNTING ENGINE
+  # ===========================================================================
+
+  - id: "P4-014-TAX-ACCOUNTING-SCHEMA"
+    route_path: "src/db/schema.ts"
+    action: create
+    code_ref: "REFERENCE.md → Tax Schema + Accounting Schema sections"
+    note: >
+      ALL new tables in ONE schema.ts edit:
+      taxRates, taxLedgers, dailyTaxSummaries (tax engine).
+      accountingAccounts, accountingEntries, accountingEntryLines (accounting engine).
+      ALL _bdt columns are INTEGER PAISA (already converted in REFERENCE.md).
+      After drizzle-kit push: run trigger SQL + seed SQL + GRANT statements from REFERENCE.md.
+
+  - id: "P4-015-TAX-LIBRARY"
+    route_path: "lib/tax.ts"
+    action: create
+    code_ref: "REFERENCE.md → lib/tax.ts section (complete code)"
+    note: >
+      calculateTax(code, baseAmountPaisa) → {taxAmountPaisa, netAmountPaisa, ratePercent, taxRateId}.
+      recordTaxLedger(params) → inserts (trigger auto-updates daily summary).
+      getDailyTaxReport(date), getTaxReportRange(start, end).
+      Code is complete in REFERENCE.md — copy verbatim (already paisa-corrected).
+
+  - id: "P4-016-ACCOUNTING-LIBRARY"
+    route_path: "lib/accounting.ts"
+    action: create
+    code_ref: "REFERENCE.md → lib/accounting.ts section (complete code)"
+    note: >
+      Double-entry journal engine. Code is complete in REFERENCE.md.
+      Functions: createJournalEntry (validates Dr=Cr),
+      recordRideCompletion (CORRECTED version — Kimi's only valid one),
+      recordDriverPayout, recordSubscriptionSale.
+      ADDED (not in Kimi's original): recordWalletTopup, recordCancellationFee,
+      recordTip, recordRiderPassPurchase — these complete the accounting coverage.
+      ALL amounts in paisa. Copy verbatim from REFERENCE.md.
+
+  - id: "P4-017-TAX-ADMIN-API"
+    route_path: "app/api/admin/tax/config+api.ts, daily+api.ts, report+api.ts"
+    action: create
+    note: >
+      Admin tax API routes. Kimi provided full code.
+      GET/POST /api/admin/tax/config — list/update rates.
+      GET /api/admin/tax/daily?date= — daily summary.
+      GET /api/admin/tax/report?start=&end=&format=json|csv — range + CSV.
+      POST /api/admin/tax/report — mark as reported.
+      Fix: requireRole('admin')(request) curried.
+
+  - id: "P4-018-TAX-ADMIN-UI"
+    route_path: "app/admin/tax-dashboard.tsx"
+    action: create
+    note: >
+      Admin Tax Dashboard. Kimi provided full UI code.
+      FIX: rewrite ALL inline styles → NativeWind className + dark: variants.
+      Features: daily summary cards, breakdown by tax type, CSV export,
+      mark-as-reported, date range picker.
+      ALSO: add tax rate CONFIG section (edit rate_percent + is_active per rate).
+      Add to admin sidebar: "Tax Dashboard".
+
+  - id: "P4-019-ACCOUNTING-API"
+    route_path: "app/api/accounting/entries+api.ts, balance+api.ts, trial-balance+api.ts, export+api.ts"
+    action: create
+    note: >
+      External accounting API (QuickBooks/Tally integration).
+      Auth: x-accounting-api-key header OR admin JWT.
+      GET /api/accounting/entries — journal entries + filters.
+      GET /api/accounting/balance — balances as-of date.
+      GET /api/accounting/trial-balance — Dr/Cr per account for period.
+      GET /api/accounting/export — CSV export.
+      Add ACCOUNTING_API_KEY to .env.local.
+
+  - id: "P4-020-INTEGRATION-WIRING"
+    route_path: "ride/complete+api.ts, instant-pay+api.ts, callback+api.ts, cancel+api.ts, scheduler.ts"
+    action: audit_and_fix
+    code_ref: "REFERENCE.md → Integration Wiring section (complete code)"
+    note: >
+      Wire tax + accounting into ALL existing flows. Each in try/catch (non-blocking).
+      1. ride/complete → recordRideCompletion + recordTip + increment pass ridesUsed.
+      2. driver/instant-pay → calculateTax + recordTaxLedger + recordDriverPayout.
+      3. payment/callback → recordSubscriptionSale (driver pkg) OR recordRiderPassPurchase (rider pass) OR recordWalletTopup (wallet).
+      4. ride/cancel → recordCancellationFee (if fee > 0).
+      5. scheduler → expire rider passes (status='expired' when validUntil < now).
+      ALL code is in REFERENCE.md Integration Wiring section.
+
+  # ===========================================================================
+  # PHASE 4: SAFETY & FUTURE
+  # ===========================================================================
+
+  - id: "P4-021-VOICE-CALLING"
+    route_path: "Multiple (telephony)"
+    action: create
+    note: >
+      Number masking via proxy. MVP: dpRelay proxy numbers. Full: Twilio/WebRTC.
+      DEFER — orphaned voice-call screens exist. Use tel: fallback for now.
+
+  - id: "P4-022-CRASH-DETECTION"
+    route_path: "Driver background service"
+    action: create
+    note: "expo-sensors accelerometer. Auto-SOS on collision pattern. DEFER."
+
+  - id: "P4-023-FEMALE-DRIVER-PREF"
+    route_path: "schema.ts, dispatch, rider UI"
+    action: create
+    note: "Add gender to drivers. Rider toggle. Dispatch filter. Fallback if none available."
+
+  - id: "P4-024-OFFLINE-MAPS"
+    route_path: "MapLibre config"
+    action: create
+    note: "MapLibre offline packs for Dhaka. DEFER — low priority."
+
+  - id: "P4-025-REFERRAL-VERIFY"
+    route_path: "Both referral screens"
+    action: audit_and_fix
+    note: "Verify rider + driver referral screens read from API (not hardcoded). Already fixed in P1-011 — verify."
+
+  - id: "P4-026-SHARE-TRIP-RIDER"
+    route_path: "app/(main)/(customer)/final-page/index.tsx"
+    action: audit_and_fix
+    note: >
+      DISTINCT from P4-001 (which is the Share button). This adds the rider-facing
+      "Share Live Trip" with family/friends. Uses Share API + /track URL.
+      Merge with P4-001 if same code path.
+
+  - id: "P4-027-RIDER-PASS-DISPLAY-IN-ESTIMATE"
+    route_path: "app/(main)/(customer)/confirm-ride/index.tsx"
+    action: audit_and_fix
+    note: >
+      Show pass discount in the confirm-ride fare summary:
+      "Ride Pass: -৳{pass_discount_bdt/100} ({pass_name})".
+      Only when estimate response includes pass_discount_bdt > 0.
+      FareBreakdown interface needs: pass_discount_bdt?: number, pass_name?: string.
+
+  - id: "P4-028-GRANT-STATEMENTS"
+    route_path: "Post-migration SQL"
+    action: create
+    note: >
+      TD-31: After Oct 30 2026, ALL new tables need explicit GRANT for PostgREST.
+      GRANT statements for all new tables are in REFERENCE.md seed SQL section.
+      Run AFTER drizzle-kit push, BEFORE testing API access.

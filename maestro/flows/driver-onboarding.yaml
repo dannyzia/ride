@@ -1,0 +1,91 @@
+# ==============================================================================
+# Flow: Part 2 - Driver Onboarding (Upload Documents + Owner Consent)
+# Device: emulator-5556 (Driver).
+# Run:  maestro test --device emulator-5556 maestro/flows/driver-onboarding.yaml
+# Preconditions:
+#   - A driver record with status='pending' that lands on the "Upload Documents"
+#     screen (a fresh registration). The canonical active test driver
+#     (+8801700000001) is already approved and will NOT see this screen.
+# SEMI-MANUAL: every "Upload" step opens the Android system Photo Picker (via
+#   expo-image-picker) — the operator must choose an image when the picker
+#   appears. The flow waits (up to 120s) after each upload for the "Done" label
+#   to appear on that row before continuing.
+# NOTE: the multi-step BRTA / walkaround / Brand-Model-Year onboarding described
+#   in older plan docs does NOT exist in the driver app. The real onboarding is
+#   this Upload-Documents + Owner-Consent flow (app/(main)/(rider)/onboarding/documents.tsx).
+# AMBIGUITY: while uploading, multiple "Upload" buttons are visible at once (the
+#   not-yet-uploaded rows). tapOn: "Upload" relies on Maestro tapping the
+#   topmost/first match in reading order, which is the next document
+#   (NID Front -> NID Back -> Driving License -> Vehicle Registration). The
+#   "Done" wait after each tap confirms the correct row uploaded.
+# ==============================================================================
+appId: com.ride.bd
+name: "Part 2 - Driver Onboarding (Upload Documents + Owner Consent)"
+tags:
+  - driver
+  - onboarding
+  - documents
+---
+- launchApp:
+    appId: com.ride.bd
+# Landing screen (pending driver is routed here).
+- extendedWaitUntil:
+    visible: "Upload Documents"
+    timeout: 15000
+- assertVisible: "Upload Documents"
+
+# --- Step 1: upload the 4 required documents (operator picks an image each time) ---
+
+# NID (Front) -> picker opens; operator selects an image
+- tapOn: "Upload"
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 120000
+- swipe:
+    direction: UP
+    duration: 300
+
+# NID (Back)
+- tapOn: "Upload"
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 120000
+- swipe:
+    direction: UP
+    duration: 300
+
+# Driving License
+- tapOn: "Upload"
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 120000
+- swipe:
+    direction: UP
+    duration: 300
+
+# Vehicle Registration
+- tapOn: "Upload"
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 120000
+
+# All four uploaded -> header toggle "Next" switches the screen to "Owner Consent".
+- tapOn: "Next"
+- extendedWaitUntil:
+    visible: "Please review and confirm each statement before submitting."
+    timeout: 10000
+
+# --- Step 2: tick all 4 consent statements (tap each statement text to toggle) ---
+- tapOn: "I confirm that all submitted documents are genuine and belong to me."
+- tapOn: "I agree to the Terms of Service and Privacy Policy."
+- tapOn: "I consent to background verification as required by regulatory authorities."
+- tapOn: "I understand that submitting false documents will result in permanent account rejection."
+
+# --- Submit ---
+- tapOn: "Submit Documents"
+
+# --- Success alert -> home ---
+- extendedWaitUntil:
+    visible: "Documents Submitted"
+    timeout: 20000
+- tapOn: "OK"

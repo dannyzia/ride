@@ -1,0 +1,25 @@
+import { db } from '@/src/db';
+import { users, notifications } from '@/src/db/schema';
+import { eq, desc } from 'drizzle-orm';
+import { verifySupabaseToken } from '@/lib/auth';
+import { logger } from '@/lib/logger';
+
+export async function GET(request: Request) {
+  try {
+    const supabaseUser = await verifySupabaseToken(request);
+    const [appUser] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
+    if (!appUser) return Response.json({ error: 'user_not_found' }, { status: 404 });
+
+    const rows = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.user_id, appUser.id))
+      .orderBy(desc(notifications.sent_at))
+      .limit(50);
+    return Response.json({ notifications: rows });
+  } catch (err: any) {
+    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    logger.error('[rider/notifications] error', err);
+    return Response.json({ error: 'internal_error' }, { status: 500 });
+  }
+}

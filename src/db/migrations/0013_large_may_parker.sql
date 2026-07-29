@@ -1,0 +1,1 @@
+ALTER TABLE "rides" ADD COLUMN "tip_bdt" integer DEFAULT 0;

@@ -1,0 +1,1430 @@
+# =============================================================================
+# DRIVER-P1-TASKS.yaml v4.0 — ZERO-ASSUMPTION AGENT SPEC
+# =============================================================================
+# INSTRUCTIONS FOR THE CODING AGENT:
+#
+#   You are building React Native screens for an Expo Router app. You MUST
+#   follow every rule below exactly. Do NOT guess, do NOT use "typical" RN
+#   patterns unless they match what's written here. If you are unsure about
+#   ANYTHING, read the code_template — it contains the COMPLETE, correct code.
+#
+#   HOW TO USE THIS FILE:
+#   1. Read the global_rules section ONCE and remember all rules.
+#   2. For each task: read the entire task block before writing ANY code.
+#   3. Copy the code_template EXACTLY — it is compilable JavaScript.
+#   4. Run the verification steps for each task before marking it done.
+#   5. After ALL tasks: run "npx tsc --noEmit" from the project root.
+#
+#   IF A TASK SAYS "audit_and_fix": the file ALREADY EXISTS. Only apply the
+#   find/replace pairs listed in the "fixes" section. Do NOT recreate the file.
+#
+#   IF A TASK SAYS "create": use the code_template AS-IS. Copy it, paste it
+#   into the file at route_path. Do not add or remove features.
+# =============================================================================
+version: "4.0"
+project: Ride
+role: driver
+priority_class: P1
+total_tasks: 13
+
+# =============================================================================
+# GLOBAL RULES — MEMORIZE THESE. EVERY TASK MUST FOLLOW ALL OF THEM.
+# =============================================================================
+global_rules:
+
+  # --- FRAMEWORK & STACK ---
+  framework:
+    - "Expo Router (file-based routing). NO react-navigation imports."
+    - "NOT Next.js. Dynamic route params come directly as 2nd arg to handlers."
+    - "app/(main)/(rider)/ for driver screens (legacy folder name, DO NOT rename)"
+    - "app/(auth)/ for auth screens (shared with rider)"
+    - "components/ for shared components (flat folder, no subfolder)"
+    - "theme/goRide.ts for design tokens (import colors, fonts, radii, spacing)"
+
+  # --- STATE MANAGEMENT ---
+  state:
+    - "Zustand only. NO Redux, NO React Context for business state, NO useState for cross-screen data."
+    - "useDriverStore from @/store/useDriverStore is a SEPARATE FILE with {driver, isOnline, activeSubscription, wsConnected}"
+    - "useDriverStore from @/store (BARREL) has {drivers, nearbyDrivers, selectedDriverId} — DIFFERENT shape"
+    - "For driver home/onboarding: import { useDriverStore } from '@/store/useDriverStore'"
+    - "For find-customer/finish-ride: import { useDriverStore } from '@/store'"
+    - "useDriverFlowStore from @/store/useDriverFlowStore (SEPARATE FILE, direct import, NOT barrel)"
+    - "useDriverStatusStore from @/store (barrel re-export)"
+    - "usePackageStore from @/store (barrel)"
+    - "useCallLedgerStore from @/store (barrel)"
+
+  # --- STYLING (NativeWind only. NO StyleSheet.create.) ---
+  styling:
+    font_heading: "font-JakartaBold"        # for screen titles, headings
+    font_body:    "font-Jakarta"             # for body text, labels, secondary
+    font_semibold:"font-JakartaSemiBold"     # for subheadings, card titles
+    bg_light:     "bg-goBgLight"             # light mode background
+    bg_dark:      "dark:bg-goBgDark"         # dark mode background (always pair with bg_light)
+    surface_light:"bg-goSurfaceLight"        # light mode card/input bg
+    surface_dark: "dark:bg-goSurfaceElevatedDark" # dark mode card/input bg
+    border_light: "border-goBorderLight"     # light mode border
+    border_dark:  "dark:border-goBorderDark" # dark mode border
+    text_primary_l: "text-goTextPrimaryLight"
+    text_primary_d: "dark:text-goTextPrimaryDark"
+    text_secondary_l: "text-goTextSecondaryLight"
+    text_secondary_d: "dark:text-goTextSecondaryDark"
+    primary:      "text-goPrimary"           # green brand color for text
+    primary_bg:   "bg-goPrimary"             # green brand for button backgrounds
+    danger_text:  "text-goDanger"            # red for errors/cancel
+    danger_bg:    "bg-goDanger"              # red for destructive buttons
+    white_text:   "text-goWhite"             # white text on colored buttons
+    accent_light: "bg-goAccentLight"         # light green tint for highlight areas
+    blue_bg:      "bg-goBlue"                # blue for CustomButton default
+
+    # BANNED patterns (do NOT use these — they do not exist in tailwind.config.js):
+    banned:
+      - "font-[Urbanist] OR font-urbanist-bold OR font-inter — use font-JakartaBold / font-Jakarta instead"
+      - "bg-[#FAFAFA] OR bg-[#F5F5F5] OR bg-[#EEEEEE] — use bg-goBgLight or bg-goSurfaceLight"
+      - "text-[#616161] OR text-[#1F222A] — use text-goTextSecondaryLight"
+      - "StyleSheet.create({...}) — use NativeWind className only"
+      - "Any inline hex color in className like bg-[#0CC25F] — use bg-goPrimary"
+
+    # MANDATORY: Every color-bearing className MUST have a dark: variant. Examples:
+    mandatory_dark_example:
+      correct: "className='bg-white dark:bg-goBgDark border border-goBorderLight dark:border-goBorderDark'"
+      wrong:   "className='bg-white border border-goBorderLight'  ← missing dark:"
+
+  # --- IMPORTS (exact paths — do not guess or modify) ---
+  imports:
+    safe_area:  "import { SafeAreaView } from 'react-native-safe-area-context'"
+    router:     "import { router } from 'expo-router'"
+    local_params:"import { useLocalSearchParams } from 'expo-router'"
+    supabase:   "import { supabase } from '@/lib/supabase'"
+    logger:     "import { logger } from '@/lib/logger'"
+    colors:     "import { colors } from '@/theme/goRide'"
+    status_bar: "import { StatusBar } from 'react-native'  # NOT expo-status-bar"
+    rn_core:    "import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, ScrollView } from 'react-native'"
+    driver_store_separate: "import { useDriverStore } from '@/store/useDriverStore'  # SEPARATE FILE for home/onboarding"
+    driver_store_barrel:   "import { useDriverStore } from '@/store'  # BARREL for find-customer/finish-ride"
+    driver_flow_store: "import { useDriverFlowStore } from '@/store/useDriverFlowStore'  # SEPARATE FILE"
+
+    # Available components (check components/ folder before creating new ones):
+    components_available:
+      - "CustomButton from @/components/CustomButton  → bgVariant: primary=blue(bg-goBlue), success=green(bg-goPrimary), danger=red, outline=transparent. Uses rounded-full."
+      - "InputField from @/components/InputField"
+      - "RideLayout from @/components/RideLayout  → wraps screen with map+header"
+      - "SlideButton from @/components/SlideButton"
+
+  # --- NAVIGATION ---
+  navigation:
+    push: "router.push('/path') — go forward to a screen"
+    back: "router.back() — go back one screen"
+    replace: "router.replace('/path') — replace current screen (no back stack)"
+    params: "useLocalSearchParams<{ key: string }>() — read URL query params"
+    route_path_format: "app/(main)/(rider)/screen-name/index.tsx"
+
+  # --- HEADER PATTERN ---
+  header_pattern: |
+    EVERY screen with navigation needs this exact header:
+    <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+      <TouchableOpacity onPress={() => router.back()}>
+        <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+      </TouchableOpacity>
+      <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Screen Title</Text>
+      <View className="w-[50px]" />
+    </View>
+
+  # --- MONEY ---
+  money: "ALL amounts are INTEGER PAISA. Display: {(amt/100).toFixed(0)}. Never divide before display. Store price constants in paisa (e.g. 49900 = ৳499)."
+
+  # --- API CALL PATTERN (use for EVERY fetch) ---
+  api_pattern: |
+    EVERY API call MUST follow this exact pattern:
+    1. const [loading, setLoading] = useState(false);
+    2. const [error, setError] = useState('');
+    3. const { data: { session } } = await supabase.auth.getSession();
+    4. const token = session?.access_token;
+    5. if (!token) { setError('Not authenticated'); return; }
+    6. try {
+         setLoading(true); setError('');
+         const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/...`, {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+           body: JSON.stringify({ ... }),
+         });
+         const data = await res.json();
+         if (!res.ok) { setError(data.error || 'Request failed'); return; }
+         // handle success
+       } catch (err: any) {
+         setError(err?.message || 'Network error');
+       } finally {
+         setLoading(false);
+       }
+
+  # --- SELF-CHECK CHECKLIST (run this for every task before marking done) ---
+  self_check:
+    - "[ ] Does the file exist at the exact route_path?"
+    - "[ ] Does every color className have a dark: variant?"
+    - "[ ] Are ALL imports at the top, including useState/useEffect/useRef?"
+    - "[ ] Does the template use font-JakartaBold (heading) and font-Jakarta (body) — NOT font-[Urbanist], NOT font-inter?"
+    - "[ ] For API calls: is there loading state, error state, and try/catch?"
+    - "[ ] Is SafeAreaView imported from react-native-safe-area-context (NOT react-native)?"
+    - "[ ] Are store imports using the CORRECT path (useDriverStore from @/store/useDriverStore for SEPARATE FILE, from @/store for barrel)?"
+    - "[ ] Does the code use existing components (CustomButton, RideLayout, InputField) instead of building new ones?"
+    - "[ ] Are ALL money amounts in INTEGER PAISA with display: {(amt/100).toFixed(0)}?"
+    - "[ ] Does header use router.back() inside TouchableOpacity wrapping <Text> (NOT Text onPress directly)?"
+    - "[ ] Did you run 'npx tsc --noEmit' and it passed?"
+    - "[ ] No console.log anywhere — use logger.info/warn/error from @/lib/logger"
+
+# =============================================================================
+# TASKS
+# =============================================================================
+
+tasks:
+
+  # ===========================================================================
+  # TASK 1: DRIVER PERSONAL PROFILE (create)
+  # ===========================================================================
+  - id: "DRIVER-014-PERSONAL-PROFILE"
+    screen_numbers: [117, 118]
+    wireframe: "## 117. Driver Personal Profile Blank / ## 118. Driver Personal Profile Filled"
+    route_path: "app/(main)/(rider)/personal-profile/index.tsx"
+    action: create
+    note: >
+      CREATE this file. Driver profile edit screen with photo upload, name, and city.
+      Uses expo-image-picker for photo. API: PATCH /api/driver/profile.
+      The code_template is complete — copy it exactly.
+    code_template: |
+      import { useState } from "react";
+      import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      import * as ImagePicker from "expo-image-picker";
+      import { supabase } from "@/lib/supabase";
+      import { logger } from "@/lib/logger";
+
+      export default function DriverPersonalProfile() {
+        const [name, setName] = useState("");
+        const [city, setCity] = useState("");
+        const [photo, setPhoto] = useState<string | null>(null);
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState("");
+
+        const pickImage = async () => {
+          try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets[0]) {
+              setPhoto(result.assets[0].uri);
+            }
+          } catch (err) {
+            logger.error("Image pick failed", err);
+          }
+        };
+
+        const handleSave = async () => {
+          if (!name.trim()) { setError("Name is required"); return; }
+          setLoading(true); setError("");
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) { setError("Not authenticated"); return; }
+            const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/profile`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ name: name.trim(), city: city.trim(), photo_url: photo }),
+            });
+            const data = await res.json();
+            if (!res.ok) { setError(data.error || "Failed to save"); return; }
+            router.push("/(main)/(rider)/onboarding/documents");
+          } catch (err: any) {
+            setError(err?.message || "Network error");
+            logger.error("Driver profile save failed", err);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Complete Driver Profile</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 40 }}>
+              <TouchableOpacity onPress={pickImage} className="items-center mb-6 mt-4">
+                {photo ? (
+                  <Image source={{ uri: photo }} className="w-24 h-24 rounded-full" />
+                ) : (
+                  <View className="w-24 h-24 rounded-full bg-goAccentLight items-center justify-center">
+                    <Text className="text-[14px] font-Jakarta text-goPrimary">Upload Photo</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-2">Name</Text>
+              <TextInput
+                className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4"
+                placeholder="Enter your full name"
+                placeholderTextColor="#9CA3AF"
+                value={name}
+                onChangeText={setName}
+              />
+              <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-2">City</Text>
+              <TextInput
+                className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4"
+                placeholder="Select your operating city"
+                placeholderTextColor="#9CA3AF"
+                value={city}
+                onChangeText={setCity}
+              />
+              {error ? (
+                <Text className="text-[14px] font-Jakarta text-goDanger mb-3">{error}</Text>
+              ) : null}
+              <TouchableOpacity
+                className={`rounded-full py-[16px] items-center ${loading ? "bg-goBorderDark" : "bg-goPrimary"}`}
+                onPress={handleSave}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size={20} color="#FFFFFF" />
+                ) : (
+                  <Text className="text-[18px] font-JakartaBold text-goWhite">Continue</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/personal-profile/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 2: DRIVER SUBSCRIPTION PLANS (create)
+  # ===========================================================================
+  - id: "DRIVER-015-SUBSCRIPTION-PLANS"
+    screen_numbers: [120]
+    wireframe: "## 120. Driver Subscription Plans"
+    route_path: "app/(main)/(rider)/subscription-plans/index.tsx"
+    action: create
+    note: >
+      CREATE this file. Displays hardcoded call packages (Starter 50 calls, Pro 200 calls).
+      ALL prices in INTEGER PAISA. Display divides by 100 at render time.
+      Tapping a plan navigates to subscription-details with plan id as param.
+    code_template: |
+      import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      const PLANS: { id: string; name: string; calls: number; price_bdt: number; validity_days: number }[] = [
+        { id: "starter", name: "Starter 50", calls: 50, price_bdt: 49900, validity_days: 30 },
+        { id: "pro", name: "Pro 200", calls: 200, price_bdt: 149900, validity_days: 30 },
+      ];
+
+      export default function SubscriptionPlans() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Call Packages</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16, gap: 12 }}>
+              {PLANS.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  className="p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]"
+                  onPress={() => router.push(`/(main)/(rider)/subscription-details?planId=${p.id}`)}
+                >
+                  <View className="flex-row justify-between items-center">
+                    <View>
+                      <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{p.name}</Text>
+                      <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{p.calls} calls · {p.validity_days}-day validity</Text>
+                    </View>
+                    <Text className="text-[16px] font-JakartaBold text-goPrimary">৳{(p.price_bdt / 100).toFixed(0)}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/subscription-plans/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 3: SUBSCRIPTION PLAN DETAILS + CHECKOUT (create — 2 files)
+  # ===========================================================================
+  - id: "DRIVER-016-SUBSCRIPTION-DETAILS-CHECKOUT"
+    screen_numbers: [121, 122]
+    wireframe: "## 121. Driver Subscription Plan Details / ## 122. Driver Subscription Checkout"
+    route_path: "app/(main)/(rider)/subscription-details/index.tsx"
+    action: create
+    note: >
+      CREATE BOTH files. subscription-details reads planId from URL params and displays
+      the selected plan details. subscription-checkout shows payment method options.
+      Both are static/semi-static screens with navigation.
+    code_template: |
+      import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router, useLocalSearchParams } from "expo-router";
+
+      const PLANS: Record<string, { id: string; name: string; calls: number; price_bdt: number; validity_days: number }> = {
+        starter: { id: "starter", name: "Starter 50", calls: 50, price_bdt: 49900, validity_days: 30 },
+        pro: { id: "pro", name: "Pro 200", calls: 200, price_bdt: 149900, validity_days: 30 },
+      };
+
+      export default function SubscriptionDetails() {
+        const { planId } = useLocalSearchParams<{ planId: string }>();
+        const plan = PLANS[planId || "starter"] || PLANS.starter;
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Plan Details</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
+              <View className="p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-4">
+                <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{plan.name}</Text>
+                <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">{plan.calls} calls included</Text>
+                <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{plan.validity_days}-day validity from activation</Text>
+                <Text className="text-[22px] font-JakartaBold text-goPrimary mt-2">৳{(plan.price_bdt / 100).toFixed(0)}</Text>
+              </View>
+              <View className="p-[16px] bg-goAccentLight rounded-[12px] mb-4">
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Commission rate varies by plan. Pro plan has lower per-ride commission than Starter.</Text>
+              </View>
+              <TouchableOpacity
+                className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+                onPress={() => router.push(`/(main)/(rider)/subscription-checkout?planId=${plan.id}`)}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Proceed to checkout</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(main)/(rider)/subscription-checkout/index.tsx"
+        code_template: |
+          import { useState } from "react";
+          import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router, useLocalSearchParams } from "expo-router";
+          import { supabase } from "@/lib/supabase";
+          import { logger } from "@/lib/logger";
+
+          const PLANS: Record<string, { id: string; name: string; calls: number; price_bdt: number; validity_days: number }> = {
+            starter: { id: "starter", name: "Starter 50", calls: 50, price_bdt: 49900, validity_days: 30 },
+            pro: { id: "pro", name: "Pro 200", calls: 200, price_bdt: 149900, validity_days: 30 },
+          };
+
+          export default function SubscriptionCheckout() {
+            const { planId } = useLocalSearchParams<{ planId: string }>();
+            const plan = PLANS[planId || "starter"] || PLANS.starter;
+            const [selectedMethod, setSelectedMethod] = useState("bKash");
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState("");
+
+            const handlePay = async () => {
+              setLoading(true); setError("");
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+                if (!token) { setError("Not authenticated"); return; }
+                const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/package/purchase`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ package_id: plan.id, payment_method: selectedMethod }),
+                });
+                const data = await res.json();
+                if (!res.ok) { setError(data.error || "Payment failed"); return; }
+                router.replace("/(main)/(rider)/subscription-confirmation");
+              } catch (err: any) {
+                setError(err?.message || "Network error");
+                logger.error("Checkout failed", err);
+              } finally {
+                setLoading(false);
+              }
+            };
+
+            const methods = ["bKash", "Nagad", "Card"];
+
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.back()}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Checkout</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
+                  <View className="p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-4">
+                    <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{plan.name}</Text>
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">{plan.calls} calls · {plan.validity_days} days</Text>
+                    <Text className="text-[20px] font-JakartaBold text-goPrimary mt-2">৳{(plan.price_bdt / 100).toFixed(0)}</Text>
+                  </View>
+                  <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-2">Payment method</Text>
+                  {methods.map((m) => (
+                    <TouchableOpacity
+                      key={m}
+                      className={`flex-row items-center p-[14px] mb-2 rounded-[12px] border ${
+                        selectedMethod === m
+                          ? "border-goPrimary bg-goAccentLight"
+                          : "border-goBorderLight dark:border-goBorderDark bg-goSurfaceLight dark:bg-goSurfaceElevatedDark"
+                      }`}
+                      onPress={() => setSelectedMethod(m)}
+                    >
+                      <View className={`w-5 h-5 rounded-full border-2 mr-[12px] ${selectedMethod === m ? "border-goPrimary bg-goPrimary" : "border-goBorderLight dark:border-goBorderDark"}`} />
+                      <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{m}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  {error ? (
+                    <Text className="text-[14px] font-Jakarta text-goDanger mb-3 mt-2">{error}</Text>
+                  ) : null}
+                  <TouchableOpacity
+                    className={`rounded-full w-full py-[16px] items-center mt-4 ${loading ? "bg-goBorderDark" : "bg-goPrimary"}`}
+                    onPress={handlePay}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <ActivityIndicator size={20} color="#FFFFFF" />
+                    ) : (
+                      <Text className="text-[18px] font-JakartaBold text-goWhite">Pay with {selectedMethod}</Text>
+                    )}
+                  </TouchableOpacity>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/subscription-details/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(rider)/subscription-checkout/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 4: SUBSCRIPTION CONFIRMATION + RENEWAL + ACTIVE (create — 3 files)
+  # ===========================================================================
+  - id: "DRIVER-017-SUBSCRIPTION-CONFIRM-RENEW-ACTIVE"
+    screen_numbers: [123, 124, 125]
+    wireframe: "## 123. Driver Subscription Confirmation / ## 124. Driver Subscription Renewal Reminder / ## 125. Driver Active Subscription"
+    route_path: "app/(main)/(rider)/subscription-confirmation/index.tsx"
+    action: create
+    code_template: |
+      import { View, Text, TouchableOpacity } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      export default function SubscriptionConfirmation() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+            <View className="w-24 h-24 rounded-full bg-goAccentLight items-center justify-center mb-6">
+              <Text className="text-[48px]">✅</Text>
+            </View>
+            <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Subscription active</Text>
+            <Text className="text-[15px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-8">Your call package has been activated. Start receiving ride requests now.</Text>
+            <TouchableOpacity
+              className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+              onPress={() => router.replace("/(main)/(rider)/")}
+            >
+              <Text className="text-[18px] font-JakartaBold text-goWhite">Go online</Text>
+            </TouchableOpacity>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(main)/(rider)/subscription-renewal/index.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+
+          export default function SubscriptionRenewal() {
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+                <View className="w-24 h-24 rounded-full bg-goAccentLight items-center justify-center mb-6">
+                  <Text className="text-[48px]">🔔</Text>
+                </View>
+                <Text className="text-[22px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Renew soon</Text>
+                <Text className="text-[15px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-3">12 calls left · expires in 2 days</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-8">Renew now to avoid service interruption and loss of online status.</Text>
+                <TouchableOpacity
+                  className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3"
+                  onPress={() => router.push("/(main)/(rider)/subscription-plans")}
+                >
+                  <Text className="text-[18px] font-JakartaBold text-goWhite">Renew now</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center"
+                  onPress={() => router.back()}
+                >
+                  <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Remind later</Text>
+                </TouchableOpacity>
+              </SafeAreaView>
+            );
+          }
+      - path: "app/(main)/(rider)/active-subscription/index.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+
+          export default function ActiveSubscription() {
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.back()}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">My Subscription</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
+                  <View className="p-[16px] bg-goAccentLight border border-goPrimary rounded-[12px] mb-4">
+                    <View className="flex-row justify-between items-center">
+                      <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Pro 200</Text>
+                      <View className="bg-goPrimary rounded-full px-[10px] py-[4px]">
+                        <Text className="text-[12px] font-JakartaBold text-goWhite">Active</Text>
+                      </View>
+                    </View>
+                    <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">Activated: 01/08/2026</Text>
+                    <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Expires: 30/08/2026 · 28 days left</Text>
+                    <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Commission rate: 12%</Text>
+                  </View>
+                  <View className="p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-4">
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Calls remaining</Text>
+                    <Text className="text-[28px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">142</Text>
+                  </View>
+                  <TouchableOpacity
+                    className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3"
+                    onPress={() => router.push("/(main)/(rider)/subscription-plans")}
+                  >
+                    <Text className="text-[18px] font-JakartaBold text-goWhite">Renew early</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center"
+                    onPress={() => router.push("/(main)/(rider)/subscription-plans")}
+                  >
+                    <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Change plan</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+      - path: "app/(main)/(rider)/subscription-confirmation/index.tsx"
+        action: skip  # already created as primary route_path
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/subscription-confirmation/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(rider)/subscription-renewal/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(rider)/active-subscription/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 5: DRIVER HOTSPOT MAP (create)
+  # ===========================================================================
+  - id: "DRIVER-018-HOTSPOT-MAP"
+    screen_numbers: [133]
+    wireframe: "## 133. Driver Hotspot Map"
+    route_path: "app/(main)/(rider)/hotspot-map/index.tsx"
+    action: create
+    note: >
+      CREATE this file. Shows demand heatmap legend and surge callouts.
+      Static display — no live map integration in this task.
+    code_template: |
+      import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      const surgeZones = [
+        { name: "Central Mall", multiplier: "1.5x", color: "bg-goDanger" },
+        { name: "Airport Zone", multiplier: "2.0x", color: "bg-goDanger" },
+        { name: "Banani 11", multiplier: "1.3x", color: "bg-goPrimary" },
+      ];
+
+      export default function HotspotMap() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Hotspot Map</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
+              <View className="items-center justify-center py-[40px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-[12px] border border-goBorderLight dark:border-goBorderDark mb-4">
+                <Text className="text-[64px]">🗺️</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-2">Live demand heatmap</Text>
+              </View>
+              <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-3">Demand Legend</Text>
+              <View className="flex-row gap-3 mb-4">
+                <View className="flex-1 p-[12px] bg-goDanger/10 border border-goDanger/30 rounded-[8px]">
+                  <Text className="text-[13px] font-JakartaBold text-goDanger text-center">High</Text>
+                </View>
+                <View className="flex-1 p-[12px] bg-goPrimary/10 border border-goPrimary/30 rounded-[8px]">
+                  <Text className="text-[13px] font-JakartaBold text-goPrimary text-center">Medium</Text>
+                </View>
+                <View className="flex-1 p-[12px] bg-goBorderLight/30 border border-goBorderLight dark:border-goBorderDark rounded-[8px]">
+                  <Text className="text-[13px] font-JakartaBold text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">Low</Text>
+                </View>
+              </View>
+              <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-3">Active Surge Zones</Text>
+              {surgeZones.map((z) => (
+                <View key={z.name} className="flex-row justify-between items-center p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-2">
+                  <Text className="text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">{z.name}</Text>
+                  <Text className="text-[15px] font-JakartaBold text-goPrimary">{z.multiplier}</Text>
+                </View>
+              ))}
+              <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[16px] items-center mt-4">
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Navigate to Hotspot</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/hotspot-map/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 6: DRIVER PERFORMANCE STATS (create)
+  # ===========================================================================
+  - id: "DRIVER-019-PERFORMANCE-STATS"
+    screen_numbers: [134]
+    wireframe: "## 134. Driver Performance Stats"
+    route_path: "app/(main)/(rider)/performance-stats/index.tsx"
+    action: create
+    code_template: |
+      import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      export default function PerformanceStats() {
+        const stats = [
+          { label: "Acceptance rate", value: "92%", icon: "📈" },
+          { label: "Cancellation rate", value: "3%", icon: "🚫" },
+          { label: "Driver rating", value: "4.8", icon: "⭐" },
+          { label: "Trips this week", value: "42", icon: "🏁" },
+          { label: "Trips this month", value: "168", icon: "📅" },
+          { label: "Online hours", value: "28h", icon: "⏱️" },
+        ];
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Performance</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
+              <View className="flex-row flex-wrap gap-3">
+                {stats.map((s, i) => (
+                  <View key={i} className="w-[47%] p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]">
+                    <Text className="text-[28px]">{s.icon}</Text>
+                    <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mt-1">{s.value}</Text>
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">{s.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/performance-stats/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 7: DRIVER SCHEDULE / AVAILABILITY (create)
+  # ===========================================================================
+  - id: "DRIVER-020-SCHEDULE"
+    screen_numbers: [135]
+    wireframe: "## 135. Driver Schedule / Availability"
+    route_path: "app/(main)/(rider)/schedule/index.tsx"
+    action: create
+    note: >
+      CREATE this file. Allows driver to set weekly availability with toggles.
+      Static UI — time values are pre-filled defaults that can be toggled on/off.
+    code_template: |
+      import { useState } from "react";
+      import { View, Text, TouchableOpacity, ScrollView, Switch } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      const DAYS = [
+        { key: "mon", label: "Monday" },
+        { key: "tue", label: "Tuesday" },
+        { key: "wed", label: "Wednesday" },
+        { key: "thu", label: "Thursday" },
+        { key: "fri", label: "Friday" },
+        { key: "sat", label: "Saturday" },
+        { key: "sun", label: "Sunday" },
+      ];
+
+      export default function Schedule() {
+        const [active, setActive] = useState<Record<string, boolean>>({
+          mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false,
+        });
+
+        const toggle = (key: string) => {
+          setActive((prev) => ({ ...prev, [key]: !prev[key] }));
+        };
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Set Availability</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
+              <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-3">Toggle days you are available to drive</Text>
+              {DAYS.map((d) => (
+                <View key={d.key} className={`flex-row justify-between items-center p-[14px] mb-2 rounded-[12px] border ${active[d.key] ? "bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border-goBorderLight dark:border-goBorderDark" : "bg-goBgLight dark:bg-goBgDark border-goBorderLight dark:border-goBorderDark"}`}>
+                  <View className="flex-1">
+                    <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{d.label}</Text>
+                    {active[d.key] ? (
+                      <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">09:00 – 21:00</Text>
+                    ) : (
+                      <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Off</Text>
+                    )}
+                  </View>
+                  <Switch
+                    value={active[d.key]}
+                    onValueChange={() => toggle(d.key)}
+                    trackColor={{ false: "#D1D5DB", true: "#0CC25F" }}
+                    thumbColor="#FFFFFF"
+                  />
+                </View>
+              ))}
+              <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[16px] items-center mt-4">
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Save Schedule</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/schedule/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 8: DRIVER BREAK / REST MODE (create)
+  # ===========================================================================
+  - id: "DRIVER-021-BREAK-MODE"
+    screen_numbers: [136]
+    wireframe: "## 136. Driver Break / Rest Mode"
+    route_path: "app/(main)/(rider)/break-mode/index.tsx"
+    action: create
+    note: >
+      CREATE this file. Shows break status with timer and controls.
+      Uses useState for break timer — static countdown for demo.
+    code_template: |
+      import { useState, useEffect } from "react";
+      import { View, Text, TouchableOpacity } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      export default function BreakMode() {
+        const [seconds, setSeconds] = useState(300); // 5-minute demo countdown
+
+        useEffect(() => {
+          if (seconds <= 0) return;
+          const interval = setInterval(() => {
+            setSeconds((prev) => Math.max(0, prev - 1));
+          }, 1000);
+          return () => clearInterval(interval);
+        }, [seconds]);
+
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Break Mode</Text>
+              <View className="w-[50px]" />
+            </View>
+            <View className="flex-1 items-center justify-center px-[24px]">
+              <View className="w-24 h-24 rounded-full bg-goAccentLight items-center justify-center mb-6">
+                <Text className="text-[48px]">☕</Text>
+              </View>
+              <Text className="text-[22px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">On a break</Text>
+              <Text className="text-[15px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-2">You won't receive ride requests while on break.</Text>
+              <Text className="text-[32px] font-JakartaBold text-goPrimary mb-8">
+                {String(minutes).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+              </Text>
+              <TouchableOpacity
+                className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3"
+                onPress={() => router.replace("/(main)/(rider)/")}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goWhite">End break early</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center"
+                onPress={() => router.replace("/(main)/(rider)/")}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Go offline</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/break-mode/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 9: DRIVER RIDER NO-SHOW CANCEL (create)
+  # ===========================================================================
+  - id: "DRIVER-022-RIDER-NOSHOW"
+    screen_numbers: [144]
+    wireframe: "## 144. Driver Rider No-Show Cancel"
+    route_path: "app/(main)/(rider)/rider-no-show/index.tsx"
+    action: create
+    note: >
+      CREATE this file. Allows driver to cancel a ride due to rider no-show.
+      Shows wait time and pre-selected reason. Cancel action navigates home.
+    code_template: |
+      import { View, Text, TouchableOpacity } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      export default function RiderNoShow() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Rider No-Show</Text>
+              <View className="w-[50px]" />
+            </View>
+            <View className="flex-1 items-center justify-center px-[24px]">
+              <View className="w-24 h-24 rounded-full bg-goDanger/10 items-center justify-center mb-6">
+                <Text className="text-[48px]">⏰</Text>
+              </View>
+              <Text className="text-[22px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Rider did not appear</Text>
+              <Text className="text-[15px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-2">Waiting time exceeded: 5:00</Text>
+              <Text className="text-[15px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-8">Reason: Rider no-show</Text>
+              <TouchableOpacity
+                className="bg-goDanger rounded-full w-full py-[16px] items-center mb-3"
+                onPress={() => router.replace("/(main)/(rider)/")}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Cancel & charge fee</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center"
+                onPress={() => router.back()}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Wait more</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/rider-no-show/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 10: DRIVER TURN-BY-TURN NAVIGATION (create)
+  # ===========================================================================
+  - id: "DRIVER-023-TURN-BY-TURN"
+    screen_numbers: [147]
+    wireframe: "## 147. Driver Turn-by-Turn Navigation"
+    route_path: "app/(main)/(rider)/turn-by-turn/index.tsx"
+    action: create
+    note: >
+      CREATE this file. Full-screen dark mode navigation display.
+      Shows next turn instruction, distance, and exit button.
+    code_template: |
+      import { View, Text, TouchableOpacity } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { StatusBar } from "react-native";
+      import { router } from "expo-router";
+      import { colors } from "@/theme/goRide";
+
+      export default function TurnByTurn() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgDark">
+            <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
+            <View className="flex-1 items-center justify-center px-[24px]">
+              <Text className="text-[72px]">⬆️</Text>
+              <Text className="text-[32px] font-JakartaBold text-goWhite mt-2">350 m</Text>
+              <Text className="text-[16px] font-Jakarta text-goWhite/70 mt-1 text-center">Turn right onto Gulshan Ave</Text>
+              <View className="bg-goWhite/10 rounded-[12px] px-[24px] py-[12px] mt-6">
+                <Text className="text-[14px] font-Jakarta text-goWhite/70">Next: Continue straight 1.2 km</Text>
+              </View>
+            </View>
+            <View className="p-[24px]">
+              <TouchableOpacity
+                className="bg-goWhite/10 rounded-full w-full py-[16px] items-center"
+                onPress={() => router.back()}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Exit navigation</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/turn-by-turn/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 11: DRIVER TRIP ISSUE REPORT (create)
+  # ===========================================================================
+  - id: "DRIVER-024-TRIP-ISSUE"
+    screen_numbers: [149]
+    wireframe: "## 149. Driver Trip Issue Report"
+    route_path: "app/(main)/(rider)/trip-issue/index.tsx"
+    action: create
+    note: >
+      CREATE this file. Driver can select issue category, write description, and submit.
+      Uses POST /api/trip/report-issue endpoint.
+    code_template: |
+      import { useState } from "react";
+      import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      import { supabase } from "@/lib/supabase";
+      import { logger } from "@/lib/logger";
+      import { useDriverFlowStore } from "@/store/useDriverFlowStore";
+
+      const ISSUE_CATEGORIES = [
+        "Rider misconduct",
+        "Wrong pickup location",
+        "Safety concern",
+        "Payment issue",
+        "Vehicle issue",
+        "Other",
+      ];
+
+      export default function TripIssue() {
+        const [selected, setSelected] = useState("");
+        const [description, setDescription] = useState("");
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState("");
+        const { activeRideId } = useDriverFlowStore();
+
+        const handleSubmit = async () => {
+          if (!selected) { setError("Please select a category"); return; }
+          setLoading(true); setError("");
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) { setError("Not authenticated"); return; }
+            const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/trip/report-issue`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({
+                ride_id: activeRideId,
+                category: selected,
+                description: description.trim() || undefined,
+              }),
+            });
+            const data = await res.json();
+            if (!res.ok) { setError(data.error || "Failed to submit"); return; }
+            router.replace("/(main)/(rider)/");
+          } catch (err: any) {
+            setError(err?.message || "Network error");
+            logger.error("Trip issue report failed", err);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Report Issue</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
+              <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-2">Issue category</Text>
+              {ISSUE_CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  className={`flex-row items-center p-[14px] mb-2 rounded-[12px] border ${
+                    selected === cat
+                      ? "border-goPrimary bg-goAccentLight"
+                      : "border-goBorderLight dark:border-goBorderDark bg-goSurfaceLight dark:bg-goSurfaceElevatedDark"
+                  }`}
+                  onPress={() => setSelected(cat)}
+                >
+                  <View className={`w-5 h-5 rounded-full border-2 mr-[12px] ${selected === cat ? "border-goPrimary bg-goPrimary" : "border-goBorderLight dark:border-goBorderDark"}`} />
+                  <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{cat}</Text>
+                </TouchableOpacity>
+              ))}
+              <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-4 mb-2">Description (optional)</Text>
+              <TextInput
+                className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4"
+                placeholder="Describe what happened..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                value={description}
+                onChangeText={setDescription}
+              />
+              {error ? (
+                <Text className="text-[14px] font-Jakarta text-goDanger mb-3">{error}</Text>
+              ) : null}
+              <TouchableOpacity
+                className={`rounded-full py-[16px] items-center ${loading ? "bg-goBorderDark" : "bg-goPrimary"}`}
+                onPress={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size={20} color="#FFFFFF" />
+                ) : (
+                  <Text className="text-[18px] font-JakartaBold text-goWhite">Submit Report</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/trip-issue/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 12: DRIVER EARNINGS DASHBOARD + DUE + COMMISSION + BREAKDOWN (create — 4 files)
+  # ===========================================================================
+  - id: "DRIVER-025-EARNINGS"
+    screen_numbers: [152, 153, 154, 155, 156]
+    wireframe: "## 152. Driver Earnings Dashboard / ## 153. Driver Due Amounts / ## 154. Driver Commission Statement / ## 155. Driver Commission Payment / ## 156. Driver Earnings Breakdown"
+    route_path: "app/(main)/(rider)/earnings/index.tsx"
+    action: create
+    note: >
+      CREATE ALL 4 files. Earnings dashboard shows weekly total and navigation links to
+      breakdown, commission statement, and due amounts. ALL amounts in INTEGER PAISA.
+      Commission payment screen is merged into the commission statement screen.
+      Each sub-screen has proper back navigation header.
+    code_template: |
+      import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      export default function EarningsDashboard() {
+        const weeklyEarningsBdt = 482000; // integer paisa = ৳4,820
+        const weeklyTrips = 28;
+        const weeklyHours = 18;
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <Text className="text-[20px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Earnings</Text>
+              <Text className="text-[32px] font-JakartaBold text-goPrimary mt-1">৳{(weeklyEarningsBdt / 100).toFixed(0)}</Text>
+              <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">This week · {weeklyTrips} trips · {weeklyHours}h online</Text>
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16, gap: 10 }}>
+              <View className="bg-goAccentLight rounded-[12px] p-[16px] mb-3">
+                <View className="flex-row justify-between">
+                  <View>
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Trip earnings</Text>
+                    <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">৳{(weeklyEarningsBdt / 100).toFixed(0)}</Text>
+                  </View>
+                  <View>
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Tips</Text>
+                    <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">৳0</Text>
+                  </View>
+                  <View>
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Promos</Text>
+                    <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">৳0</Text>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity
+                className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]"
+                onPress={() => router.push("/(main)/(rider)/earnings-breakdown")}
+              >
+                <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">View breakdown</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">Trip-by-trip earnings details</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]"
+                onPress={() => router.push("/(main)/(rider)/commission-statement")}
+              >
+                <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Commission statement</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">Weekly commission breakdown</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]"
+                onPress={() => router.push("/(main)/(rider)/due-amounts")}
+              >
+                <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Due amounts</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">Subscription and commission dues</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(main)/(rider)/earnings-breakdown/index.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+
+          export default function EarningsBreakdown() {
+            const trips = [
+              { id: "#4921", date: "Mon 01 Aug", fare_bdt: 18000, tips_bdt: 0, distance: "3.2 km" },
+              { id: "#4923", date: "Mon 01 Aug", fare_bdt: 24500, tips_bdt: 2000, distance: "5.1 km" },
+              { id: "#4925", date: "Tue 02 Aug", fare_bdt: 12000, tips_bdt: 0, distance: "2.8 km" },
+              { id: "#4927", date: "Tue 02 Aug", fare_bdt: 15500, tips_bdt: 1000, distance: "4.0 km" },
+              { id: "#4929", date: "Wed 03 Aug", fare_bdt: 22000, tips_bdt: 0, distance: "6.2 km" },
+              { id: "#4931", date: "Wed 03 Aug", fare_bdt: 9500, tips_bdt: 0, distance: "1.9 km" },
+              { id: "#4934", date: "Thu 04 Aug", fare_bdt: 28000, tips_bdt: 3000, distance: "7.5 km" },
+              { id: "#4936", date: "Thu 04 Aug", fare_bdt: 16000, tips_bdt: 0, distance: "3.6 km" },
+            ];
+
+            const totalBdt = trips.reduce((sum, t) => sum + t.fare_bdt + t.tips_bdt, 0);
+
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.back()}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Earnings Details</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
+                  <View className="p-[14px] bg-goAccentLight border border-goPrimary rounded-[12px] mb-4">
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Total earnings</Text>
+                    <Text className="text-[24px] font-JakartaBold text-goPrimary">৳{(totalBdt / 100).toFixed(0)}</Text>
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{trips.length} trips · {trips.reduce((s, t) => s + parseFloat(t.distance), 0).toFixed(1)} km</Text>
+                  </View>
+                  {trips.map((t) => (
+                    <View key={t.id} className="flex-row justify-between items-center p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-2">
+                      <View className="flex-1">
+                        <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{t.id}</Text>
+                        <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{t.date} · {t.distance}</Text>
+                        {t.tips_bdt > 0 ? (
+                          <Text className="text-[12px] font-Jakarta text-goPrimary">+৳{(t.tips_bdt / 100).toFixed(0)} tip</Text>
+                        ) : null}
+                      </View>
+                      <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">৳{((t.fare_bdt + t.tips_bdt) / 100).toFixed(0)}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+      - path: "app/(main)/(rider)/commission-statement/index.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+
+          export default function CommissionStatement() {
+            const totalEarningsBdt = 3050000; // integer paisa = ৳30,500
+            const commissionRate = 15; // percent
+            const commissionDueBdt = 457500; // integer paisa = ৳4,575
+
+            const trips = [
+              { id: "#4921", fare_bdt: 180000, commission_bdt: 27000 },
+              { id: "#4923", fare_bdt: 245000, commission_bdt: 36750 },
+              { id: "#4927", fare_bdt: 120000, commission_bdt: 18000 },
+            ];
+
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.back()}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Commission Statement</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
+                  <View className="p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-4">
+                    <View className="flex-row justify-between mb-2">
+                      <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Week</Text>
+                      <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">01 Aug – 06 Aug</Text>
+                    </View>
+                    <View className="flex-row justify-between mb-2">
+                      <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Total earnings</Text>
+                      <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">৳{(totalEarningsBdt / 100).toFixed(0)}</Text>
+                    </View>
+                    <View className="flex-row justify-between mb-2">
+                      <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Commission rate</Text>
+                      <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{commissionRate}%</Text>
+                    </View>
+                    <View className="flex-row justify-between mb-2">
+                      <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Commission due</Text>
+                      <Text className="text-[14px] font-JakartaBold text-goDanger">৳{(commissionDueBdt / 100).toFixed(0)}</Text>
+                    </View>
+                    <View className="flex-row justify-between">
+                      <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Status</Text>
+                      <View className="bg-goDanger/10 rounded-full px-[10px] py-[4px]">
+                        <Text className="text-[12px] font-JakartaBold text-goDanger">Unpaid</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-3">Trip breakdown</Text>
+                  {trips.map((t) => (
+                    <View key={t.id} className="flex-row justify-between items-center p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-2">
+                      <View>
+                        <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{t.id}</Text>
+                        <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Fare: ৳{(t.fare_bdt / 100).toFixed(0)}</Text>
+                      </View>
+                      <Text className="text-[14px] font-JakartaBold text-goDanger">৳{(t.commission_bdt / 100).toFixed(0)}</Text>
+                    </View>
+                  ))}
+                  <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[16px] items-center mt-4">
+                    <Text className="text-[18px] font-JakartaBold text-goWhite">Pay commission</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+      - path: "app/(main)/(rider)/due-amounts/index.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+
+          export default function DueAmounts() {
+            const subscriptionDueBdt = 149900; // integer paisa = ৳1,499
+            const commissionDueBdt = 457500; // integer paisa = ৳4,575
+            const totalOutstandingBdt = subscriptionDueBdt + commissionDueBdt; // ৳6,074
+
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.back()}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Due Amounts</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
+                  <View className="p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-4">
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">SUBSCRIPTION DUE</Text>
+                    <Text className="text-[20px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mt-1">৳{(subscriptionDueBdt / 100).toFixed(0)}</Text>
+                    <View className="flex-row justify-between mt-2">
+                      <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Vehicle: Car</Text>
+                      <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Due: 30/08/2026</Text>
+                    </View>
+                    <View className="flex-row justify-between mt-1">
+                      <View className="bg-goDanger/10 rounded-full px-[10px] py-[4px]">
+                        <Text className="text-[12px] font-JakartaBold text-goDanger">Unpaid</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[14px] items-center mt-3">
+                      <Text className="text-[16px] font-JakartaBold text-goWhite">Pay Subscription</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View className="p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-4">
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">COMMISSION DUE</Text>
+                    <Text className="text-[20px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mt-1">৳{(commissionDueBdt / 100).toFixed(0)}</Text>
+                    <View className="flex-row justify-between mt-2">
+                      <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Week: 01-06 Aug</Text>
+                      <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Due: Sunday</Text>
+                    </View>
+                    <View className="flex-row justify-between mt-1">
+                      <View className="bg-goDanger/10 rounded-full px-[10px] py-[4px]">
+                        <Text className="text-[12px] font-JakartaBold text-goDanger">Unpaid</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[14px] items-center mt-3">
+                      <Text className="text-[16px] font-JakartaBold text-goWhite">Pay Commission</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View className="p-[16px] bg-goAccentLight border border-goPrimary rounded-[12px] mb-4">
+                    <View className="flex-row justify-between items-center">
+                      <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">TOTAL OUTSTANDING</Text>
+                      <Text className="text-[22px] font-JakartaBold text-goDanger">৳{(totalOutstandingBdt / 100).toFixed(0)}</Text>
+                    </View>
+                    <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[14px] items-center mt-3">
+                      <Text className="text-[16px] font-JakartaBold text-goWhite">Pay All Dues</Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/earnings/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(rider)/earnings-breakdown/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(rider)/commission-statement/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(rider)/due-amounts/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 13: DRIVER NOTIFICATIONS PERMISSION (create)
+  # ===========================================================================
+  - id: "DRIVER-048-NOTIFICATIONS-PERMISSION"
+    screen_numbers: [129]
+    wireframe: "## 129. Driver Notifications Permission"
+    route_path: "app/(auth)/driver-notifications-permission.tsx"
+    action: create
+    note: >
+      CREATE this file under app/(auth)/ — this is a shared auth screen for drivers.
+      Two buttons: Allow (navigates to select-active-vehicle) and Not Now (same).
+    code_template: |
+      import { View, Text, TouchableOpacity } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      export default function DriverNotificationsPermission() {
+        const handleAllow = () => {
+          router.replace("/(main)/(rider)/select-active-vehicle");
+        };
+
+        const handleSkip = () => {
+          router.replace("/(main)/(rider)/select-active-vehicle");
+        };
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+            <View className="flex-1 items-center justify-center">
+              <View className="w-24 h-24 rounded-full bg-goAccentLight items-center justify-center mb-8">
+                <Text className="text-[40px]">🔔</Text>
+              </View>
+              <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark text-center mb-3">Allow Notifications</Text>
+              <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">Ride requests, payouts, and promos delivered instantly. You can change this anytime in settings.</Text>
+            </View>
+            <View className="flex-row w-full pb-[40px]">
+              <TouchableOpacity
+                className="flex-1 border border-goBorderLight dark:border-goBorderDark rounded-full py-[16px] items-center mr-2"
+                onPress={handleSkip}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Not Now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 bg-goPrimary rounded-full py-[16px] items-center ml-2"
+                onPress={handleAllow}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Allow</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(auth)/driver-notifications-permission.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }

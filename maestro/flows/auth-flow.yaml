@@ -1,0 +1,52 @@
+# Part 1 - Auth (existing account, password login)
+# PARAMETERIZED: works for rider OR driver depending on --env values.
+#   ${PHONE}  = phone digits WITHOUT +880 prefix
+#   ${EXPECT} = home-screen marker to assert success
+#
+# Rider:  maestro test --device emulator-5554 -e PHONE=1613249520 -e EXPECT="Search destination..." maestro/flows/auth-flow.yaml
+# Driver: maestro test --device emulator-5556 -e PHONE=1700000001 -e EXPECT="Calls Remaining"        maestro/flows/auth-flow.yaml
+#
+# Existing accounts use PASSWORD login (test1234). OTP 123456 is only for new-account registration.
+# Precondition: emulators running; .env.local has DEV_OTP_BYPASS=true (only matters for the commented registration path).
+
+appId: com.ride.bd
+name: "Part 1 - Auth (existing account, password login)"
+tags:
+  - auth
+  - rider
+  - driver
+---
+- clearState: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+- extendedWaitUntil:
+    visible: "Enter your phone number to continue"
+    timeout: 20000
+- tapOn: "1XXXXXXXXX"
+- inputText: "${PHONE}"
+- tapOn: "Login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn: "Password"
+- inputText: "test1234"
+- tapOn: "Login"
+- extendedWaitUntil:
+    visible: "${EXPECT}"
+    timeout: 30000
+- assertVisible: "${EXPECT}"
+
+# --- Registration variant (NEW account only; needs a phone NOT already registered) ---
+# - tapOn: "1XXXXXXXXX"
+# - inputText: "<fresh number, e.g. 1700000099>"
+# - tapOn: "Driver"            # or "Rider" toggle (role only matters for registration)
+# - tapOn: "Register"          # -> otp-verify
+# - extendedWaitUntil: { visible: "Verify OTP", timeout: 15000 }
+# - tapOn: "Enter 6-digit OTP"
+# - inputText: "123456"        # DEV_OTP_BYPASS=true fixed code
+# - tapOn: "Verify OTP"        # -> register
+# - extendedWaitUntil: { visible: "Complete Registration", timeout: 15000 }
+# - tapOn: "Full Name" ; inputText: "Test User"
+# - tapOn: "Password (min 6 characters)" ; inputText: "test1234"
+# - tapOn: "Confirm Password" ; inputText: "test1234"
+# - tapOn: "Register"

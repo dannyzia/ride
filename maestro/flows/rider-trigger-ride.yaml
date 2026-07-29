@@ -1,0 +1,55 @@
+# Device: emulator-5554 (Rider).
+# Run: maestro test maestro/flows/rider-trigger-ride.yaml   (only emulator-5554 connected)
+# Preconditions: rider account +8801613249520 is logged in and on Home ("Search destination...").
+# Request-only helper. For the full rider half incl. completion/rating, use rider-core.yaml.
+appId: com.ride.bd
+name: "Rider - Trigger Ride Request (Savar intercity)"
+tags:
+  - rider
+  - request
+  - core
+---
+- launchApp:
+    appId: com.ride.bd
+- assertVisible: "Search destination..."
+- tapOn: "Search destination..."               # home row -> autocomplete
+- extendedWaitUntil:
+    visible: "Where do you want to go?"
+    timeout: 10000
+- tapOn: "Search destination..."               # autocomplete search input (same placeholder)
+- inputText: "Savar"
+- extendedWaitUntil:
+    visible: ".*Savar.*"
+    timeout: 15000
+- tapOn:
+    text: ".*Savar.*"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Find now"
+    timeout: 15000
+- tapOn:
+    text: "Use .*"                            # "Use Current Location" or "Use Dhaka Center"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn: "Find now"
+- extendedWaitUntil:
+    visible: "Choose Vehicle"
+    timeout: 15000
+- swipe:
+    direction: UP
+    duration: 300                             # reveal vehicle list if needed
+- extendedWaitUntil:
+    visible: "Bike Plus"
+    timeout: 10000
+- tapOn: "Bike Plus"
+- extendedWaitUntil:
+    visible: "Confirm Ride"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn: "Request Ride"
+- extendedWaitUntil:
+    visible: "Finding your ride..."
+    timeout: 20000
+- assertVisible: "Finding your ride..."

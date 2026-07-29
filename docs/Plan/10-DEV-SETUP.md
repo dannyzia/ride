@@ -215,8 +215,7 @@ Required before drivers can purchase subscriptions in the app.
 - [ ] Expo app loads on Android with no red-screen errors
 - [ ] Health check passes: `curl http://localhost:8081/api/ping` → `{"status":"ok"}`
 - [ ] WebSocket server responds: `wscat -c ws://localhost:3001` → connection established
-- [ ] DB migration applied: 22 tables visible in Supabase dashboard (Table Editor) (users, drivers, rides, vehicles, packages, subscriptions, credit_vouchers, call_ledger, dispatch_offers, owner_consents, used_challenges, rate_limits, payment_events, documents, zones, chat_messages, pricing, driver_online_sessions, compensation_queue, system_config, platform_config, vehicle_type_changes)
-  - Note: GlideX may have additional tables (e.g., legacy notification or ratings tables). The 22 listed tables are the Ride-specific ones. Total table count may be higher if GlideX base tables are retained.
+- [ ] DB migration applied: 49 tables, 26 enums visible in Supabase dashboard (Table Editor). See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema or `docs/Plan/05-DATA-MODEL.md` for the full authoritative inventory rather than a manually maintained list here.
 - [ ] Admin user exists: can log in with seed phone number
 
 ---

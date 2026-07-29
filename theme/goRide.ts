@@ -1,62 +1,51 @@
-// GoRide Design Tokens
-// Source: docs/Plan/08-UI-SPEC.md + GoRide CSS
-
 export const colors = {
-  // Primary
-  primary: "#0CC25F",
-  primaryPressed: "#0A9B4C",
-  primaryLight: "#E8FBF0",
+  primary: "#0A9B4C",
+  primaryPressed: "#08843E",
+  primaryLight: "#E6F7EE",
 
-  // Error / Danger
   danger: "#E31D1C",
+  dangerPressed: "#C41A19",
   dangerLight: "#FDE8E8",
 
-  // Info / Auxiliary
   info: "#2E42A5",
   infoLight: "#EAECF6",
 
-  // Background
-  bgLight: "#F7FCFF",
-  bgDark: "#181A20",
+  bgLight: "#F8FAFC",
+  bgDark: "#0F1115",
 
-  // Surface
   surfaceLight: "#FFFFFF",
-  surfaceElevatedDark: "#212121",
-  darkSurface: "#121212",
-  nearBlack: "#0F0F0F",
+  surfaceElevatedDark: "#1C1E23",
+  darkSurface: "#0F1115",
+  nearBlack: "#0A0B0F",
 
-  // Border
-  borderLight: "#DADADA",
-  borderDark: "#35383F",
+  borderLight: "#D1D5DB",
+  borderDark: "#2E3038",
 
-  // Text
-  textPrimaryLight: "#212121",
-  textPrimaryDark: "#FFFFFF",
+  textPrimaryLight: "#1C1E23",
+  textPrimaryDark: "#F0F1F5",
   textSecondaryLight: "#6B7280",
   textSecondaryDark: "#9CA3AF",
   textDisabledLight: "#D1D5DB",
   textDisabledDark: "#555555",
 
-  // Neutral greys (for hex replacements)
   white: "#FFFFFF",
   gray: "#666666",
   grayLight: "#888888",
   grayMedium: "#999999",
+  gray100: "#F3F4F6",
 
-  // Admin / accent
   adminAccent: "#64B5F6",
   adminSubtle: "#E0E0E0",
   adminIconDark: "#3A3A3A",
 
-  // Legacy GlideX colors (referenced until full re-theme)
   blue: "#0286FF",
-  darkSecondary: "#1E1E22",
-  darkSecondaryAlt: "#1F1F22",
-  darkTabBar: "#262628",
+  darkSecondary: "#1A1C22",
+  darkSecondaryAlt: "#1C1E23",
+  darkTabBar: "#22242A",
   redVariant: "#DC2626",
   greenVariant: "#16A34A",
   slideGreen: "#0F9D58",
-  lightGray: "#F0F0F0",
+  lightGray: "#EEF0F3",
   lightGreenText: "#BBF7D0",
   lightRedText: "#FCA5A5",
   yellow: "#EDD228",
@@ -65,18 +54,34 @@ export const colors = {
   black: "#000000",
   checkGreen: "#22C55E",
   amber: "#F59E0B",
-  gray100: "#F5F5F5",
   gray200: "#E5E7EB",
   gray600: "#4B5563",
+
+  accentLight: "#E6F7EE",
+  accentPressed: "#08843E",
+  accent: "#0A9B4C",
+  surfaceElevated: "#1C1E23",
+  borderDefault: "#2E3038",
 } as const;
 
 export const fonts = {
-  // TODO: Add Urbanist + Inter .ttf files to assets/fonts/ and update these
-  // For now Jakarta (PlusJakartaSans) is the active font family
   heading: "Jakarta-Bold",
+  headingSemi: "Jakarta-SemiBold",
+  headingMedium: "Jakarta-Medium",
   body: "Jakarta-Regular",
-  headingFallback: "Jakarta-Bold",
-  bodyFallback: "Jakarta-Regular",
+  bodyMedium: "Jakarta-Medium",
+  bodyBold: "Jakarta-Bold",
+} as const;
+
+export const typography = {
+  "4xl": 36,
+  "3xl": 30,
+  "2xl": 24,
+  xl: 20,
+  lg: 18,
+  base: 16,
+  sm: 14,
+  xs: 12,
 } as const;
 
 export const radii = {
@@ -87,6 +92,7 @@ export const radii = {
   xl: 20,
   "2xl": 24,
   "3xl": 32,
+  "4xl": 34,
   pill: 1000,
 } as const;
 
@@ -102,42 +108,43 @@ export const spacing = {
 } as const;
 
 export const shadows = {
-  card: {
-    shadowColor: "rgba(24, 26, 32, 0.1)",
-    shadowOffset: { width: 0, height: -32 },
-    shadowRadius: 48,
-    elevation: 8,
+  cardLight: {
+    shadowColor: "rgba(0, 0, 0, 0.06)",
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardDark: {
+    shadowColor: "rgba(0, 0, 0, 0.3)",
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  buttonLight: {
+    shadowColor: "#0A9B4C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  buttonDark: {
+    shadowColor: "#0A9B4C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 4,
   },
   bottomSheet: {
-    shadowColor: "rgba(24, 26, 32, 0.15)",
-    shadowOffset: { width: 0, height: -8 },
-    shadowRadius: 24,
-    elevation: 12,
-  },
-} as const;
-
-export const button = {
-  primary: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.pill,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing["2xl"],
-  },
-  primaryText: {
-    color: "#FFFFFF",
-    fontWeight: "700" as const,
-    fontSize: 16,
-  },
-  disabled: {
-    backgroundColor: colors.borderDark,
+    shadowColor: "rgba(0, 0, 0, 0.15)",
+    shadowOffset: { width: 0, height: -4 },
+    shadowRadius: 20,
+    elevation: 10,
   },
 } as const;
 
 export const goRideTheme = {
   colors,
   fonts,
+  typography,
   radii,
   spacing,
   shadows,
-  button,
 };

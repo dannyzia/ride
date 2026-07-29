@@ -74,6 +74,17 @@ interface RiderState {
   promoCode: string | null;
   promoDiscountBdt: number;
   selectedPrefIds: string[];
+  scheduledRides: ScheduledRide[];
+  completedRides: CompletedRide[];
+  paymentMethods: PaymentMethod[];
+  recentReceipts: Receipt[];
+  walletBalance: number | null;
+  transactionHistory: Transaction[];
+  name: string | null;
+  photo: string | null;
+  appliedPromo: { code: string; description: string; discount_bdt: number } | null;
+  pickupCoords: { lat: number; lng: number } | null;
+  dropoffCoords: { lat: number; lng: number } | null;
   setSelectedVehicleType: (vt: VehicleType | null) => void;
   setEstimates: (estimates: FareEstimate[]) => void;
   setEstimating: (v: boolean) => void;
@@ -90,6 +101,60 @@ interface RiderState {
   setSelectedPrefIds: (ids: string[]) => void;
   updateDriverLocation: (lat: number, lng: number) => void;
   fetchActiveRide: (token: string) => Promise<void>;
+  fetchRideHistory: (token: string) => Promise<void>;
+  setRider: (patch: Partial<Pick<RiderState, "name" | "photo">>) => void;
+  setScheduledRides: (rides: ScheduledRide[]) => void;
+  setCompletedRides: (rides: CompletedRide[]) => void;
+  setPaymentMethods: (methods: PaymentMethod[]) => void;
+  applyPromo: (promo: unknown) => void;
+  setRecentReceipts: (receipts: Receipt[]) => void;
+  setWalletBalance: (balance: number | null) => void;
+  setTransactionHistory: (history: Transaction[]) => void;
+  setAppliedPromo: (promo: { code: string; description: string; discount_bdt: number } | null) => void;
+  setPickupCoords: (coords: { lat: number; lng: number } | null) => void;
+  setDropoffCoords: (coords: { lat: number; lng: number } | null) => void;
+}
+
+export interface ScheduledRide {
+  id: string;
+  vehicle_type?: string;
+  date?: string;
+  time?: string;
+  pickup_address?: string;
+  destination_address?: string;
+  fare_bdt?: number;
+}
+
+export interface CompletedRide {
+  id: string;
+  vehicle_type?: string;
+  date?: string;
+  time?: string;
+  pickup_address?: string;
+  destination_address?: string;
+  fare_bdt?: number;
+}
+
+export interface PaymentMethod {
+  type: "card" | "bank";
+  label?: string;
+  last_four?: string;
+  is_default?: boolean;
+}
+
+export interface Receipt {
+  vehicle_type: string;
+  date: string;
+  time: string;
+  pickup_address: string;
+  destination_address: string;
+  fare_bdt: number;
+}
+
+export interface Transaction {
+  type: "credit" | "debit";
+  description: string;
+  amount_bdt: number;
 }
 
 const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
@@ -156,14 +221,25 @@ export const useRiderStore = create<RiderState>((set, get) => ({
   promoCode: null,
   promoDiscountBdt: 0,
   selectedPrefIds: [],
+  scheduledRides: [],
+  completedRides: [],
+  paymentMethods: [],
+  recentReceipts: [],
+  walletBalance: null,
+  transactionHistory: [],
+  name: null,
+  photo: null,
+  appliedPromo: null,
+  pickupCoords: null,
+  dropoffCoords: null,
 
   setSelectedVehicleType: (vt) => set({ selectedVehicleType: vt }),
   setEstimates: (estimates) => set({ estimates }),
   setEstimating: (v) => set({ estimating: v }),
   setPickup: (addr, lat, lng) =>
-    set({ pickupAddress: addr, pickupLat: lat, pickupLng: lng }),
+    set({ pickupAddress: addr, pickupLat: lat, pickupLng: lng, pickupCoords: lat && lng ? { lat, lng } : null }),
   setDropoff: (addr, lat, lng) =>
-    set({ dropoffAddress: addr, dropoffLat: lat, dropoffLng: lng }),
+    set({ dropoffAddress: addr, dropoffLat: lat, dropoffLng: lng, dropoffCoords: lat && lng ? { lat, lng } : null }),
   clearRoute: () =>
     set({
       selectedVehicleType: null,
@@ -178,6 +254,9 @@ export const useRiderStore = create<RiderState>((set, get) => ({
       promoCode: null,
       promoDiscountBdt: 0,
       selectedPrefIds: [],
+      appliedPromo: null,
+      pickupCoords: null,
+      dropoffCoords: null,
     }),
   setActiveRide: (ride) => set({ activeRide: ride }),
   patchActiveRide: (patch) =>
@@ -198,6 +277,20 @@ export const useRiderStore = create<RiderState>((set, get) => ({
       set({ activeRide: { ...ride, driver_lat: lat, driver_lng: lng } });
   },
 
+  setRider: (patch) => set((s) => ({ name: patch.name ?? s.name, photo: patch.photo ?? s.photo })),
+  setScheduledRides: (rides) => set({ scheduledRides: rides }),
+  setCompletedRides: (rides) => set({ completedRides: rides }),
+  setPaymentMethods: (methods) => set({ paymentMethods: methods }),
+  applyPromo: (_promo: unknown) => {
+    // Persisted by the API; no local state required beyond the optimistic UI.
+  },
+  setRecentReceipts: (receipts) => set({ recentReceipts: receipts }),
+  setWalletBalance: (balance) => set({ walletBalance: balance }),
+  setTransactionHistory: (history) => set({ transactionHistory: history }),
+  setAppliedPromo: (promo) => set({ appliedPromo: promo }),
+  setPickupCoords: (coords) => set({ pickupCoords: coords }),
+  setDropoffCoords: (coords) => set({ dropoffCoords: coords }),
+
   fetchActiveRide: async (token: string) => {
     try {
       const res = await fetch(`${API_URL}/api/rider/ride/active`, {
@@ -215,6 +308,38 @@ export const useRiderStore = create<RiderState>((set, get) => ({
       }
     } catch {
       set({ activeRide: null, rideStatus: "idle" });
+    }
+  },
+  fetchRideHistory: async (token: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/ride/get-all`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const { data } = await res.json();
+      const completed = (data ?? [])
+        .filter((r: any) => r.status === "completed")
+        .map((r: any) => ({
+          id: r.ride_id,
+          vehicle_type: r.vehicle_type,
+          date: r.completed_at ?? r.created_at,
+          pickup_address: r.origin_address,
+          destination_address: r.destination_address,
+          fare_bdt: r.fare_breakdown?.total_bdt ?? 0,
+        }));
+      const scheduled = (data ?? [])
+        .filter((r: any) => r.scheduled_at && r.status === "pending")
+        .map((r: any) => ({
+          id: r.ride_id,
+          vehicle_type: r.vehicle_type,
+          date: r.scheduled_at,
+          pickup_address: r.origin_address,
+          destination_address: r.destination_address,
+          fare_bdt: r.fare_breakdown?.total_bdt ?? 0,
+        }));
+      set({ completedRides: completed, scheduledRides: scheduled });
+    } catch {
+      // silently fail — screens show empty state
     }
   },
 }));

@@ -1,0 +1,50 @@
+{
+  "app": {"name": "রাইড"},
+  "common": {
+    "back": "পিছনে",
+    "cancel": "বাতিল",
+    "confirm": "নিশ্চিত করুন",
+    "save": "সংরক্ষণ",
+    "delete": "মুছে ফেলুন",
+    "loading": "লোড হচ্ছে...",
+    "error": "ত্রুটি",
+    "success": "সফল",
+    "retry": "পুনরায় চেষ্টা",
+    "search": "অনুসন্ধান"
+  },
+  "auth": {
+    "phone_entry": "আপনার ফোন নম্বর লিখুন",
+    "send_otp": "OTP পাঠান",
+    "verify_otp": "OTP যাচাই করুন",
+    "register": "অ্যাকাউন্ট তৈরি করুন",
+    "login": "লগ ইন"
+  },
+  "home": {
+    "search_destination": "কোথায় যাবেন?",
+    "recent_rides": "সাম্প্রতিক রাইড",
+    "go_online": "অনলাইন হোন",
+    "go_offline": "অফলাইন হোন"
+  },
+  "ride": {
+    "request": "রাইড অনুরোধ",
+    "cancel": "রাইড বাতিল",
+    "share_trip": "ট্রিপ শেয়ার করুন",
+    "rate_driver": "ড্রাইভার রেট দিন",
+    "add_tip": "টিপ যোগ করুন",
+    "dispute_fare": "এই ভাড়া নিয়ে আপত্তি",
+    "driver_found": "ড্রাইভার পাওয়া গেছে",
+    "on_the_way": "পথে",
+    "arrived": "পৌঁছেছেন",
+    "completed": "সম্পন্ন"
+  },
+  "settings": {
+    "title": "সেটিংস",
+    "profile": "প্রোফাইল",
+    "notifications": "বিজ্ঞপ্তি",
+    "appearance": "চেহারা",
+    "language": "ভাষা",
+    "privacy": "গোপনীয়তা নীতি",
+    "terms": "সেবার শর্তাবলী",
+    "about": "সম্পর্কে"
+  }
+}

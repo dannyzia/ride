@@ -14,8 +14,7 @@
 import { z } from "zod";
 
 export type ParseBodyResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; response: Response };
+  { ok: true; data: T } | { ok: false; response: Response };
 
 /**
  * Reads and validates a JSON request body.
@@ -44,10 +43,15 @@ export async function parseJsonBody<T>(
 
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
+    // Convert Zod flatten output to a readable string
+    const flat = parsed.error.flatten();
+    const fieldMessages = Object.values(flat.fieldErrors).flat();
+    const msg =
+      [...flat.formErrors, ...fieldMessages].join("; ") || "Invalid input";
     return {
       ok: false,
       response: Response.json(
-        { error: "validation_error", message: parsed.error.flatten() },
+        { error: "validation_error", message: msg },
         { status: 400 },
       ),
     };

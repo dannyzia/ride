@@ -1,0 +1,1 @@
+ALTER TABLE "rides" ADD COLUMN "female_driver_preference" boolean DEFAULT false;

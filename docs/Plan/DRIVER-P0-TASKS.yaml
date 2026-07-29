@@ -1,0 +1,514 @@
+# =============================================================================
+# DRIVER-P0-TASKS.yaml v4.0 — ZERO-ASSUMPTION AGENT SPEC
+# =============================================================================
+# READ THE INSTRUCTIONS IN RIDER-P0-TASKS.yaml v4.0 FIRST.
+# The same global_rules apply. Key differences for driver:
+#   - Screens live under app/(main)/(rider)/ (legacy folder name, DO NOT rename)
+#   - Auth screens under app/(auth)/ (shared with rider)
+#   - useDriverStore from @/store/useDriverStore (SEPARATE FILE, direct import, NOT barrel)
+#   - useDriverFlowStore from @/store/useDriverFlowStore (SEPARATE FILE)
+#   - useDriverStatusStore from @/store (barrel)
+#   - Driver home: useDriverStore from SEPARATE FILE. Other screens: from @/store barrel.
+#   - RideOfferSheet reads activeOffer from useDriverFlowStore automatically
+# =============================================================================
+version: "4.0"
+project: Ride
+role: driver
+priority_class: P0
+total_tasks: 13
+
+# =============================================================================
+# DRIVER-SPECIFIC GLOBAL RULES
+# =============================================================================
+global_notes:
+  font_rule: "font-JakartaBold (headings) and font-Jakarta (body). Do NOT use font-[Urbanist] or font-inter."
+  button_rule: "CustomButton default bgVariant='primary' renders BLUE (bg-goBlue). For GREEN use bgVariant='success'. Uses rounded-full."
+  money: "ALL amounts are INTEGER PAISA. Display: {(amt/100).toFixed(0)}."
+  stores: >
+    CRITICAL — TWO SEPARATE useDriverStore instances exist with DIFFERENT shapes:
+    1. @/store/useDriverStore.ts (SEPARATE FILE, default export): has {driver, isOnline, activeSubscription, wsConnected}
+       → USE THIS FOR: driver home screen (app/(main)/(rider)/index.tsx)
+    2. @/store/index.ts (BARREL): has useDriverStore with {drivers, nearbyDrivers, selectedDriverId}
+       → USE THIS FOR: find-customer, finish-ride screens
+    DO NOT mix them. If a template says "import { useDriverStore } from '@/store/useDriverStore'" use THAT.
+    If it says "import { useDriverStore } from '@/store'" use THAT.
+  auth_note: "Driver auth uses SAME shared flow: phone-entry (role=driver) -> otp-verify -> register. No separate driver auth."
+  fetch_pattern: "ALWAYS prefix with process.env.EXPO_PUBLIC_SERVER_URL. Auth token from supabase.auth.getSession()."
+  safearea_dark: "<SafeAreaView className='flex-1 bg-goBgDark'><StatusBar barStyle='light-content' backgroundColor={colors.bgDark} />"
+  safearea_light: "<SafeAreaView className='flex-1 bg-goBgLight'>"
+  driver_folder: "app/(main)/(rider)/ (legacy name, DO NOT rename to /driver/)"
+
+  # MANDATORY dark: variants on every color className:
+  mandatory_dark: "EVERY color className MUST have a dark: variant. Example: className='bg-white dark:bg-goBgDark border border-goBorderLight dark:border-goBorderDark'"
+
+  # SELF-CHECK per task:
+  self_check:
+    - "[ ] File exists at exact route_path"
+    - "[ ] Every color className has dark: variant"
+    - "[ ] All imports present (useState, useEffect, router, stores)"
+    - "[ ] Font: font-JakartaBold / font-Jakarta only (no font-[Urbanist], no font-inter)"
+    - "[ ] API calls: loading state + error state + try/catch"
+    - "[ ] SafeAreaView from react-native-safe-area-context"
+    - "[ ] useDriverStore import matches the note (separate file vs barrel)"
+    - "[ ] npx tsc --noEmit — filter for YOUR files only: npx tsc --noEmit 2>&1 | Select-String 'yourFile.tsx'"
+    - "[ ] If tsc shows errors in files you DID NOT edit → those are pre-existing, report them but do NOT fix"
+
+tasks:
+
+  # ===========================================================================
+  # TASK 1: DRIVER SPLASH (create)
+  # ===========================================================================
+  - id: "DRIVER-001-SPLASH"
+    screen_numbers: [110]
+    wireframe: "## 110. Driver Splash"
+    route_path: "app/(auth)/driver-splash.tsx"
+    action: create
+    code_template: |
+      import { useEffect } from "react";
+      import { View, Text } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      export default function DriverSplash() {
+        useEffect(() => {
+          const timer = setTimeout(() => router.replace("/(auth)/driver-walkthrough-1"), 2500);
+          return () => clearTimeout(timer);
+        }, []);
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center">
+            <Text className="text-[40px] font-JakartaBold text-goPrimary mb-2">Ride Driver</Text>
+            <Text className="text-[18px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Drive and earn with us</Text>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(auth)/driver-splash.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 2: DRIVER WALKTHROUGH (create — 3 files)
+  # ===========================================================================
+  - id: "DRIVER-002-WALKTHROUGH"
+    screen_numbers: [111, 112, 113]
+    wireframe: "## 111-113. Driver Walkthrough 1-3"
+    route_path: "app/(auth)/driver-walkthrough-1.tsx"
+    action: create
+    code_template: |
+      import { View, Text, TouchableOpacity } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      export default function DriverWalkthrough1() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+            <View className="flex-1 items-center justify-center">
+              <Text className="text-[32px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Earn More</Text>
+              <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">Buy call packages and get matched with riders instantly.</Text>
+            </View>
+            <View className="flex-row justify-between w-full pb-[40px]">
+              <TouchableOpacity onPress={() => router.replace("/(auth)/phone-entry")}>
+                <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity className="bg-goPrimary rounded-full px-[24px] py-[12px]" onPress={() => router.push("/(auth)/driver-walkthrough-2")}>
+                <Text className="text-[16px] font-JakartaBold text-goWhite">Next</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(auth)/driver-walkthrough-2.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          export default function DriverWalkthrough2() {
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+                <View className="flex-1 items-center justify-center">
+                  <Text className="text-[32px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Flexible Hours</Text>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">Go online whenever you want. You are your own boss.</Text>
+                </View>
+                <View className="flex-row justify-between w-full pb-[40px]">
+                  <TouchableOpacity onPress={() => router.replace("/(auth)/phone-entry")}><Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Skip</Text></TouchableOpacity>
+                  <TouchableOpacity className="bg-goPrimary rounded-full px-[24px] py-[12px]" onPress={() => router.push("/(auth)/driver-walkthrough-3")}><Text className="text-[16px] font-JakartaBold text-goWhite">Next</Text></TouchableOpacity>
+                </View>
+              </SafeAreaView>
+            );
+          }
+      - path: "app/(auth)/driver-walkthrough-3.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          export default function DriverWalkthrough3() {
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+                <View className="flex-1 items-center justify-center">
+                  <Text className="text-[32px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Safe & Secure</Text>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">Verified riders, transparent fares, SOS support built in.</Text>
+                </View>
+                <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-[40px]" onPress={() => router.replace("/(auth)/driver-welcome")}>
+                  <Text className="text-[18px] font-JakartaBold text-goWhite">Get Started</Text>
+                </TouchableOpacity>
+              </SafeAreaView>
+            );
+          }
+    verification:
+      - { type: file_exists, path: "app/(auth)/driver-walkthrough-1.tsx" }
+      - { type: file_exists, path: "app/(auth)/driver-walkthrough-2.tsx" }
+      - { type: file_exists, path: "app/(auth)/driver-walkthrough-3.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 3: DRIVER WELCOME (create)
+  # ===========================================================================
+  - id: "DRIVER-003-WELCOME"
+    screen_numbers: [114]
+    wireframe: "## 114. Driver Welcome"
+    route_path: "app/(auth)/driver-welcome.tsx"
+    action: create
+    code_template: |
+      import { View, Text, TouchableOpacity } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+
+      export default function DriverWelcome() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+            <View className="flex-1 items-center justify-center">
+              <Text className="text-[40px] font-JakartaBold text-goPrimary mb-2">Ride Driver</Text>
+              <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">Start earning today. Sign up or log in to continue.</Text>
+            </View>
+            <View className="w-full pb-[40px] gap-3">
+              <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[16px] items-center" onPress={() => router.replace("/(auth)/phone-entry")}>
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Driver Sign In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center" onPress={() => router.replace("/(auth)/phone-entry")}>
+                <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Driver Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(auth)/driver-welcome.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 4: DRIVER SIGN UP (audit_and_fix — shared register.tsx)
+  # ===========================================================================
+  - id: "DRIVER-004-SIGNUP"
+    screen_numbers: [115, 116]
+    wireframe: "## 115-116. Driver Sign Up"
+    route_path: "app/(auth)/register.tsx"
+    action: audit_and_fix
+    note: "Same register.tsx as rider. Role='driver' from URL params. Just fix fonts."
+    fixes:
+      - find: "font-[Urbanist]"
+        replace: "font-JakartaBold"
+        replace_all: true
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - { type: anti_pattern, file: "app/(auth)/register.tsx", forbidden: "font-\\[Urbanist\\]" }
+
+  # ===========================================================================
+  # TASK 5: DRIVER DOCUMENTS (audit_and_fix)
+  # ===========================================================================
+  - id: "DRIVER-005-DOCUMENTS"
+    screen_numbers: [119]
+    wireframe: "## 119. Driver Document Upload"
+    route_path: "app/(main)/(rider)/onboarding/documents.tsx"
+    action: audit_and_fix
+    note: "File EXISTS at app/(main)/(rider)/onboarding/documents.tsx. 4 doc uploads + 4 consent items. Uses expo-image-picker, uploadImage."
+    fixes: []
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 6: DRIVER SIGN IN (audit_and_fix — CRITICAL security fix)
+  # ===========================================================================
+  - id: "DRIVER-006-SIGNIN"
+    screen_numbers: [126, 127]
+    wireframe: "## 126-127. Driver Sign In"
+    route_path: "app/(auth)/login.tsx"
+    action: audit_and_fix
+    note: "Same login.tsx as rider. Apply BOTH fixes below. NOTE: login.tsx is shared between rider and driver — if RIDER-009 already applied these fixes, this task will find no matches. That's OK — verify tsc and move on."
+    fixes:
+      - find: "pass: password"
+        replace: ""
+        replace_all: true
+        note: "CRITICAL SECURITY: Remove any remaining plaintext password from log lines. If not found, fix was already applied — skip."
+      - find: "font-[Urbanist]"
+        replace: "font-JakartaBold"
+        replace_all: true
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - { type: anti_pattern, file: "app/(auth)/login.tsx", forbidden: "pass:\\s*password|font-\\[Urbanist\\]" }
+
+  # ===========================================================================
+  # TASK 7: DRIVER ENABLE LOCATION (create)
+  # ===========================================================================
+  - id: "DRIVER-007-LOCATION"
+    screen_numbers: [128]
+    wireframe: "## 128. Driver Enable Location"
+    route_path: "app/(auth)/driver-enable-location.tsx"
+    action: create
+    code_template: |
+      import { View, Text, TouchableOpacity } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      import * as Location from "expo-location";
+
+      export default function DriverEnableLocation() {
+        const allow = async () => {
+          await Location.requestForegroundPermissionsAsync();
+          router.replace("/(main)/(rider)/select-active-vehicle");
+        };
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+            <View className="flex-1 items-center justify-center">
+              <View className="w-24 h-24 rounded-full bg-goAccentLight items-center justify-center mb-8"><Text className="text-[40px]">📍</Text></View>
+              <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark text-center mb-3">Enable Location</Text>
+              <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">Location is required to receive ride requests and navigate.</Text>
+            </View>
+            <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3" onPress={allow}>
+              <Text className="text-[18px] font-JakartaBold text-goWhite">Allow</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.replace("/(main)/(rider)/select-active-vehicle")}>
+              <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Not Now</Text>
+            </TouchableOpacity>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(auth)/driver-enable-location.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 8: SELECT ACTIVE VEHICLE (create)
+  # ===========================================================================
+  - id: "DRIVER-008-VEHICLE-SELECT"
+    screen_numbers: [130]
+    wireframe: "## 130. Driver Select Active Vehicle"
+    route_path: "app/(main)/(rider)/select-active-vehicle.tsx"
+    action: create
+    note: "useDriverStore from @/store/useDriverStore (SEPARATE FILE). Vehicle state MUST go in useDriverStore (affects dispatch eligibility)."
+    code_template: |
+      import { useState } from "react";
+      import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      import { useDriverStore } from "@/store/useDriverStore";
+      import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
+
+      export default function SelectActiveVehicle() {
+        const { driver, setDriver } = useDriverStore();
+        const [selected, setSelected] = useState(driver?.vehicle_type || "");
+
+        const confirm = () => {
+          if (driver) setDriver({ ...driver, vehicle_type: selected as any });
+          router.replace("/(main)/(rider)/");
+        };
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Select Vehicle</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16, gap: 10 }}>
+              {VEHICLE_TYPES.map((v) => (
+                <TouchableOpacity
+                  key={v.key}
+                  className={`flex-row items-center p-[16px] rounded-[10px] border ${
+                    selected === v.key
+                      ? "border-goPrimary bg-goAccentLight"
+                      : "border-goBorderLight dark:border-goBorderDark bg-goSurfaceLight dark:bg-goSurfaceElevatedDark"
+                  }`}
+                  onPress={() => setSelected(v.key)}
+                >
+                  <View className={`w-5 h-5 rounded-full border-2 mr-[12px] ${selected === v.key ? "border-goPrimary bg-goPrimary" : "border-goBorderLight dark:border-goBorderDark"}`} />
+                  <View className="flex-1">
+                    <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{v.display_en}</Text>
+                    <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{v.seats} seats{v.has_ac === true ? " · AC" : v.has_ac === false ? " · No AC" : ""}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity className={`rounded-full py-[16px] items-center mt-4 ${!selected ? "bg-goBorderDark" : "bg-goPrimary"}`} onPress={confirm} disabled={!selected}>
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Confirm & Go Online</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/select-active-vehicle.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 9: DRIVER HOME (audit_and_fix)
+  # ===========================================================================
+  - id: "DRIVER-009-HOME"
+    screen_numbers: [131, 132, 137, 138, 139, 140]
+    wireframe: "## 131-140. Driver Home (offline/online/idle/offer/accept/decline)"
+    route_path: "app/(main)/(rider)/index.tsx"
+    action: audit_and_fix
+    note: "File EXISTS at app/(main)/(rider)/index.tsx. ALREADY implements ALL 6 states. #138-140 handled by <RideOfferSheet /> which reads useDriverFlowStore.activeOffer automatically."
+    fixes:
+      - find: "console.warn"
+        replace: "logger.warn"
+        replace_all: true
+        note: "3 instances on lines 85, 204, 222. Replace ALL."
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - { type: anti_pattern, file: "app/(main)/(rider)/index.tsx", forbidden: "console\\.warn|console\\.log" }
+
+  # ===========================================================================
+  # TASK 10: NAVIGATE TO PICKUP (audit_and_fix)
+  # ===========================================================================
+  - id: "DRIVER-010-NAVIGATE-PICKUP"
+    screen_numbers: [141, 142, 143]
+    wireframe: "## 141-143. Navigate / Arrived / Waiting"
+    route_path: "app/(main)/(rider)/find-customer/index.tsx"
+    action: audit_and_fix
+    note: "File EXISTS at app/(main)/(rider)/find-customer/index.tsx. Uses RideLayout + SlideButton. WS: location:update + ride:arrived."
+    fixes: []
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 11: START TRIP / RIDE PIN (audit_and_fix)
+  # ===========================================================================
+  - id: "DRIVER-011-START-TRIP"
+    screen_numbers: [145]
+    wireframe: "## 145. Driver Start Trip"
+    route_path: "app/(main)/(rider)/enter-otp/index.tsx"
+    action: audit_and_fix
+    note: "File EXISTS at app/(main)/(rider)/enter-otp/index.tsx. 4-digit Ride PIN via OtpInput from react-native-otp-entry. WS: ride:start -> ride:started/start_failed."
+    fixes: []
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 12: ACTIVE TRIP / FINISH RIDE (audit_and_fix — CRITICAL BUGS)
+  # ===========================================================================
+  - id: "DRIVER-012-ACTIVE-TRIP"
+    screen_numbers: [146, 148, 150]
+    wireframe: "## 146-150. Active Trip / Heading / Complete"
+    route_path: "app/(main)/(rider)/finish-ride/index.tsx"
+    action: audit_and_fix
+    note: "File EXISTS at app/(main)/(rider)/finish-ride/index.tsx. Uses RideLayout + SlideButton. Completes via POST /api/ride/{id}/complete. 4 CRITICAL BUGS to fix."
+    fixes:
+      - find: "tel:+91${customerPhone}"
+        replace: "tel:${customerPhone}"
+        note: "BUG: Indian code +91 instead of Bangladesh. Phone already has +880."
+      - find: "tel:+916290547258"
+        replace: "tel:16263"
+        note: "BUG: Indian support number. 16263 is Bangladesh national helpline."
+      - find: "type: \"riderLocationUpdate\""
+        replace: "type: \"location:update\""
+        note: "BUG: violates {domain}:{action} convention. find-customer uses location:update."
+      - find: "role: \"rider\""
+        replace: "role: \"driver\""
+        note: "BUG: driver screen sending role rider."
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - { type: anti_pattern, file: "app/(main)/(rider)/finish-ride/index.tsx", forbidden: "\\+91|riderLocationUpdate|role:\\s*\"rider\"" }
+
+  # ===========================================================================
+  # TASK 13: RATE RIDER (create)
+  # ===========================================================================
+  - id: "DRIVER-013-RATE-RIDER"
+    screen_numbers: [151]
+    wireframe: "## 151. Driver Rate Rider"
+    route_path: "app/(main)/(rider)/rate-rider/index.tsx"
+    action: create
+    code_template: |
+      import { useState } from "react";
+      import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      import { supabase } from "@/lib/supabase";
+      import { logger } from "@/lib/logger";
+      import { useDriverFlowStore } from "@/store/useDriverFlowStore";
+
+      export default function RateRider() {
+        const [rating, setRating] = useState(0);
+        const [feedback, setFeedback] = useState("");
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState("");
+        const { activeRideId } = useDriverFlowStore();
+
+        const handleSubmit = async () => {
+          if (rating === 0) { setError("Please select a rating"); return; }
+          setLoading(true); setError("");
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) { setError("Not authenticated"); return; }
+            const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${activeRideId}/rate-rider`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ rating, feedback: feedback.trim() || undefined }),
+            });
+            const data = await res.json();
+            if (!res.ok) { setError(data.error || "Failed"); return; }
+            router.replace("/(main)/(rider)/");
+          } catch (err: any) {
+            setError(err?.message || "Network error");
+            logger.error("Rate rider failed", err);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Rate Rider</Text>
+              <View className="w-[50px]" />
+            </View>
+            <View className="flex-1 items-center px-[24px] pt-[40px]">
+              <View className="w-20 h-20 rounded-full bg-goAccentLight items-center justify-center mb-3">
+                <Text className="text-[28px] font-JakartaBold text-goPrimary">R</Text>
+              </View>
+              <Text className="text-[20px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-6">Rider</Text>
+              <View className="flex-row gap-2 mb-6">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                    <Text className="text-[36px]">{star <= rating ? "★" : "☆"}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput
+                className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark w-full mb-4"
+                placeholder="Optional feedback"
+                placeholderTextColor="#9CA3AF"
+                multiline
+                value={feedback}
+                onChangeText={setFeedback}
+              />
+              {error ? <Text className="text-[14px] font-Jakarta text-goDanger mb-3">{error}</Text> : null}
+              <TouchableOpacity
+                className={`rounded-full w-full py-[16px] items-center ${loading ? "bg-goBorderDark" : "bg-goPrimary"}`}
+                onPress={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? <ActivityIndicator size={20} color="#FFFFFF" /> : <Text className="text-[18px] font-JakartaBold text-goWhite">Submit Rating</Text>}
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/rate-rider/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }

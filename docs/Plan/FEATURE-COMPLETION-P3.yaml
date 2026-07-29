@@ -1,0 +1,279 @@
+# =============================================================================
+# FEATURE-COMPLETION-P3.yaml — COMPLETE THE 3 PARTIAL KIMI FEATURES
+# =============================================================================
+# These 3 features are FUNCTIONAL but not FULLY featured. Each has the core
+# logic working but is missing admin configurability, UI, or integration.
+# This plan takes each from "partial" to "full."
+# =============================================================================
+version: "1.0"
+project: Ride
+role: all
+priority_class: P3
+total_tasks: 3
+
+global_notes:
+  font_rule: "font-JakartaBold (headings), font-Jakarta (body)."
+  money: "ALL amounts INTEGER PAISA."
+  dark_rule: "EVERY color className MUST have a dark: variant."
+  api_routes: "Expo API routes. Dynamic params as 2nd arg flat (NOT {params})."
+  admin_fetch: "import { adminFetch } from '@/lib/adminFetch'"
+  self_check:
+    - "[ ] npx tsc --noEmit passes"
+    - "[ ] npx drizzle-kit generate + push after schema changes"
+    - "[ ] No console.log — use logger"
+
+tasks:
+
+  # ===========================================================================
+  # P3-001: SURGE PRICING → FULL
+  # What works: scheduler computes multiplier, surge_current DB table,
+  #   estimate + request + complete all apply surge. Pure lib/surge.ts.
+  # What's missing: admin configurability, audit history, rider consent UI.
+  # ===========================================================================
+  - id: "P3-001-SURGE-FULL"
+    route_path: "schema.ts, scheduler.ts, admin platform-config, confirm-ride"
+    action: audit_and_fix
+    priority: P3
+    note: >
+      Take surge from functional to fully featured. 4 changes:
+
+    fixes:
+      - note: >
+          1. src/db/schema.ts — Add surge_history audit table.
+          After the surgeCurrent table definition, add:
+            export const surgeHistory = pgTable("surge_history", {
+              id: uuid("id").defaultRandom().primaryKey(),
+              zone_id: uuid("zone_id").notNull().references(() => zones.id),
+              multiplier: numeric("multiplier", { precision: 4, scale: 2 }).notNull(),
+              demand_count: integer("demand_count").notNull(),
+              supply_count: integer("supply_count").notNull(),
+              triggered_at: timestamptz("triggered_at").notNull().defaultNow(),
+              ended_at: timestamptz("ended_at"),
+            });
+
+      - note: >
+          2. utils-server/scheduler.ts — Move thresholds to system_config + write audit.
+          Currently lines 676-679 hardcode:
+            if (ratio > 3) multiplier = 2.0;
+            else if (ratio > 2) multiplier = 1.5;
+            else if (ratio > 1.2) multiplier = 1.25;
+          FIX: Read thresholds from system_config (key 'surge_thresholds'):
+            const [cfg] = await db.select().from(systemConfig)
+              .where(eq(systemConfig.key, 'surge_thresholds')).limit(1);
+            const thresholds = cfg ? JSON.parse(cfg.value) : [
+              { ratio: 3, multiplier: 2.0 },
+              { ratio: 2, multiplier: 1.5 },
+              { ratio: 1.2, multiplier: 1.25 },
+            ];
+            for (const t of thresholds) {
+              if (ratio > t.ratio) { multiplier = t.multiplier; break; }
+            }
+          ALSO: When multiplier changes (up or down), insert a surgeHistory row.
+          When multiplier drops back to 1.0, set ended_at on the most recent open row.
+          Seed system_config with default thresholds if the key doesn't exist.
+
+      - note: >
+          3. Admin UI — Add surge config to app/admin/platform-config.tsx (or a new
+          app/admin/surge-config.tsx). The admin should be able to:
+          - View current surge multipliers per zone (from surgeCurrent)
+          - Edit the threshold tiers (stored in system_config 'surge_thresholds')
+          - View surge history (from surgeHistory table)
+          Use adminFetch to GET/PATCH system_config.
+          If creating a new screen, add it to the admin sidebar in _layout.tsx.
+
+      - note: >
+          4. Rider consent UI — In app/(main)/(customer)/confirm-ride/index.tsx,
+          when fareBreakdown.surge_multiplier > 1.0, show a visible notice:
+            <View className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200
+              dark:border-yellow-800 rounded-[10px] px-[16px] py-[12px] mb-4">
+              <Text className="text-[14px] font-JakartaBold text-yellow-700 dark:text-yellow-400">
+                ⚡ High Demand — {surgeMultiplier}× pricing active
+              </Text>
+              <Text className="text-[13px] font-Jakarta text-yellow-600 dark:text-yellow-500">
+                Fare includes ৳{(fareBreakdown.surge_fee_bdt / 100).toFixed(0)} surge fee
+              </Text>
+            </View>
+          Place this above the "Request Ride" button, only when surge_multiplier > 1.0.
+
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Admin: change threshold in system_config → verify scheduler picks it up within 60s"
+      - "Rider: request ride during surge → see yellow surge notice on confirm-ride"
+      - "SELECT * FROM surge_history → audit rows with multiplier + demand/supply"
+
+  # ===========================================================================
+  # P3-002: CANCELLATION ENGINE → FULL
+  # What works: lib/cancellation.ts evaluates fees, rides.cancellation_fee_bdt
+  #   column exists, cancel API calls evaluateCancellation.
+  # What's missing: DB-driven policies, admin UI, fee preview, fee collection.
+  # ===========================================================================
+  - id: "P3-002-CANCELLATION-FULL"
+    route_path: "schema.ts, lib/cancellation.ts, admin screen, cancel-reason screens, cancel API"
+    action: audit_and_fix
+    priority: P3
+    note: >
+      Take cancellation from functional to fully featured. 5 changes:
+
+    fixes:
+      - note: >
+          1. src/db/schema.ts — Create cancellation_policies table.
+          Add after the rides table:
+            export const cancellationPolicies = pgTable("cancellation_policies", {
+              id: uuid("id").defaultRandom().primaryKey(),
+              name: varchar("name", { length: 100 }).notNull(),
+              canceller_role: varchar("canceller_role", { length: 20 }).notNull(),
+              ride_status: varchar("ride_status", { length: 30 }).notNull(),
+              time_threshold_seconds: integer("time_threshold_seconds").notNull(),
+              fee_type: varchar("fee_type", { length: 10 }).notNull(),
+              fee_amount_bdt: integer("fee_amount_bdt").notNull(),
+              max_fee_bdt: integer("max_fee_bdt").notNull(),
+              is_active: boolean("is_active").notNull().default(true),
+              priority: integer("priority").notNull().default(0),
+              created_at: timestamptz("created_at").notNull().defaultNow(),
+              updated_at: timestamptz("updated_at").notNull().defaultNow(),
+            });
+
+      - note: >
+          2. Seed default policies. Create a seed script (or add to existing
+          scripts/seed) that inserts:
+            -- Rider cancels after match, within 2 min: free
+            { name: 'Rider Grace', canceller_role: 'rider', ride_status: 'matched',
+              time_threshold_seconds: 120, fee_type: 'flat', fee_amount_bdt: 0, max_fee_bdt: 0 }
+            -- Rider cancels after 2 min: 20 BDT
+            { name: 'Rider Standard', canceller_role: 'rider', ride_status: 'matched',
+              time_threshold_seconds: 120, fee_type: 'flat', fee_amount_bdt: 2000, max_fee_bdt: 5000 }
+            -- Rider cancels during in_progress: 50 BDT
+            { name: 'Rider In-Progress', canceller_role: 'rider', ride_status: 'in_progress',
+              time_threshold_seconds: 0, fee_type: 'flat', fee_amount_bdt: 5000, max_fee_bdt: 5000 }
+            -- Driver cancels: no fee
+            { name: 'Driver No Fee', canceller_role: 'driver', ride_status: 'matched',
+              time_threshold_seconds: 0, fee_type: 'flat', fee_amount_bdt: 0, max_fee_bdt: 0 }
+
+      - note: >
+          3. lib/cancellation.ts — Migrate from hardcoded DEFAULT_POLICIES to DB-driven.
+          Replace the evaluateCancellation function:
+            - Query cancellation_policies WHERE is_active = true AND canceller_role = cancelledBy
+              AND ride_status matches the ride's current status
+            - Sort by priority DESC, time_threshold ASC
+            - Match the first policy where elapsed >= time_threshold_seconds
+            - Return the fee from that policy
+          Keep the function signature the same: evaluateCancellation(rideId, cancelledBy).
+          Add ride_status to the query: also select rides.status and match against
+          cancellation_policies.ride_status.
+
+      - note: >
+          4. Admin UI — Create app/admin/cancellation-policies.tsx.
+          CRUD for cancellation_policies:
+            - List all policies (name, role, status, fee, threshold)
+            - Add/Edit/Delete via adminFetch
+            - Toggle is_active
+          Add to admin sidebar in _layout.tsx.
+          API: GET/POST/PATCH /api/admin/cancellation-policies (create if not exists).
+
+      - note: >
+          5. Fee preview in cancel flow + fee collection.
+          RIDER: In app/(main)/(customer)/cancel-reason/index.tsx, BEFORE the rider
+          confirms cancellation, show the fee:
+            "Call GET /api/ride/[id]/cancel-preview to get the fee, then show:
+             'A ৳{(fee/100).toFixed(0)} cancellation fee will apply.'"
+          Add the preview endpoint: GET /api/ride/[id]/cancel-preview → calls
+          evaluateCancellation → returns { feeBdt, reason }.
+          DRIVER: Same pattern in app/(main)/(rider)/cancellation-reasons/index.tsx.
+          FEE COLLECTION: In the cancel API (POST /api/ride/[id]/cancel), after
+          applyCancellationFee, if feeBdt > 0, deduct from rider wallet:
+            await db.update(users).set({
+              rider_wallet_balance_bdt: sql`rider_wallet_balance_bdt - ${feeBdt}`
+            }).where(eq(users.id, ride.user_id));
+          Record a rider_wallet_transactions row for the deduction.
+
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Admin: create/edit a policy → verify it takes effect on next cancellation"
+      - "Rider: cancel after grace period → see fee preview → confirm → wallet deducted"
+
+  # ===========================================================================
+  # P3-003: BOOK FOR OTHERS → FULL
+  # What works: rides.secondary_rider_name + secondary_rider_phone columns exist.
+  # What's missing: everything else (UI, API, SMS, tracking, driver display).
+  # ===========================================================================
+  - id: "P3-003-BOOK-FOR-OTHERS-FULL"
+    route_path: "confirm-ride, request API, RideOfferSheet, public tracking page"
+    action: audit_and_fix
+    priority: P3
+    note: >
+      Take book-for-others from schema-only to fully featured. 6 changes:
+
+    fixes:
+      - note: >
+          1. Rider UI — app/(main)/(customer)/confirm-ride/index.tsx.
+          Add a toggle + input fields below the fare summary:
+            const [bookForOther, setBookForOther] = useState(false);
+            const [otherName, setOtherName] = useState("");
+            const [otherPhone, setOtherPhone] = useState("");
+          JSX: a TouchableOpacity that toggles bookForOther. When true, show:
+            - TextInput for passenger name (placeholder "Passenger name")
+            - TextInput for passenger phone (placeholder "01XXXXXXXXX", keyboardType="numeric")
+          In the POST body, include:
+            secondary_rider_name: bookForOther ? otherName : undefined,
+            secondary_rider_phone: bookForOther ? otherPhone : undefined,
+
+      - note: >
+          2. API wiring — app/api/ride/request+api.ts.
+          Add to the Zod schema:
+            secondary_rider_name: z.string().optional(),
+            secondary_rider_phone: z.string().optional(),
+          Add to the rides INSERT:
+            secondary_rider_name: secondary_rider_name ?? null,
+            secondary_rider_phone: secondary_rider_phone ?? null,
+          ALSO add to app/api/ride/schedule+api.ts (same fields, same pattern).
+
+      - note: >
+          3. SMS notification — After ride INSERT in request+api.ts, if
+          secondary_rider_phone is present, send an SMS:
+            "Your ride has been booked. Driver {driver_name} will pick you up.
+             Track at: {serverUrl}/track/{ride.id}"
+          Use the existing dpRelay SMS integration (check lib/ for sms/dpRelay helper).
+          If no SMS helper exists, use fetch to dpRelay API directly.
+          Wrap in try/catch — SMS failure should NOT block ride creation.
+
+      - note: >
+          4. Public tracking page — Create app/track/[rideId].tsx.
+          This is a PUBLIC page (no auth required). It should:
+            - Fetch GET /api/ride/[id]/track (create this endpoint — returns ONLY
+              public-safe data: driver name, vehicle type, rating, status, ETA.
+              Do NOT return phone numbers or addresses beyond pickup area).
+            - Show a MapLibre map with driver marker + route
+            - Show ride status (searching → matched → arriving → in_progress → completed)
+            - Auto-refresh every 10s
+          Create app/api/ride/[id]/track+api.ts:
+            - NO auth required (public endpoint — use [public] prefix or skip verifySupabaseToken)
+            - Returns: { status, driver_name, driver_rating, vehicle_type, eta_min }
+            - Does NOT return: phone, exact address, fare
+
+      - note: >
+          5. Driver UI — components/RideOfferSheet.tsx.
+          When ride.secondary_rider_phone is present, show a "Booked for" banner:
+            {ride.secondary_rider_phone && (
+              <View className="bg-blue-50 dark:bg-blue-900/20 rounded-[10px] px-[16px] py-[12px] mb-3">
+                <Text className="text-[14px] font-JakartaBold text-blue-700 dark:text-blue-400">
+                  📋 Booked for: {ride.secondary_rider_name}
+                </Text>
+                <Text className="text-[13px] font-Jakarta text-blue-600 dark:text-blue-500">
+                  Call passenger: {ride.secondary_rider_phone}
+                </Text>
+              </View>
+            )}
+          The driver's call button should call secondary_rider_phone (not the
+          booking rider's phone) when it's present.
+
+      - note: >
+          6. WebSocket payload — In utils-server/dispatch.ts, when building the
+          ride:offer payload, include secondary_rider_name and secondary_rider_phone
+          from the ride record so RideOfferSheet can display them.
+
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Rider: toggle 'Book for someone else' → enter name+phone → request → ride created"
+      - "DB: SELECT secondary_rider_name, secondary_rider_phone FROM rides → populated"
+      - "Driver: offer sheet shows 'Booked for: {name}' banner"
+      - "Public: open /track/{rideId} in browser → see ride status + map (no auth)"

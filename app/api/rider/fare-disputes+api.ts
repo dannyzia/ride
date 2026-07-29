@@ -1,0 +1,71 @@
+import { verifySupabaseToken } from '@/lib/auth';
+import { db } from '@/src/db';
+import { users, fareDisputes, rides } from '@/src/db/schema';
+import { eq, desc, and } from 'drizzle-orm';
+import { parseJsonBody } from '@/lib/parseBody';
+import { autoArbitrateDispute } from '@/lib/fareArbitration';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+const disputeSchema = z.object({
+  ride_id: z.string().uuid(),
+  claimed_fare_bdt: z.number().int().positive(),
+  dispute_reason: z.enum(['route_longer', 'wrong_vehicle', 'wait_fee_unfair', 'surge_unexplained', 'other']),
+  rider_note: z.string().max(1000).optional(),
+});
+
+export async function POST(request: Request) {
+  try {
+    const supabaseUser = await verifySupabaseToken(request);
+    const [rider] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
+    if (!rider) return Response.json({ error: 'user_not_found' }, { status: 404 });
+
+    const parsed = await parseJsonBody(request, disputeSchema);
+    if (!parsed.ok) return parsed.response;
+
+    const [ride] = await db.select().from(rides).where(eq(rides.id, parsed.data.ride_id)).limit(1);
+    if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
+    if (ride.user_id !== rider.id) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (!ride.completed_at || Date.now() - new Date(ride.completed_at).getTime() > 172800000) {
+      return Response.json({ error: 'dispute_window_expired', message: 'Fares can only be disputed within 48 hours' }, { status: 422 });
+    }
+
+    const [dispute] = await db.insert(fareDisputes).values({
+      ride_id: parsed.data.ride_id,
+      rider_id: rider.id,
+      driver_id: ride.driver_id!,
+      claimed_fare_bdt: parsed.data.claimed_fare_bdt,
+      charged_fare_bdt: ride.rider_payable_bdt ?? ride.driver_fare_bdt ?? 0,
+      dispute_reason: parsed.data.dispute_reason,
+      rider_note: parsed.data.rider_note,
+      actual_distance_meters: Math.round(parseFloat(ride.distance_km ?? '0') * 1000),
+      estimated_distance_meters: Math.round(parseFloat(ride.distance_km ?? '0') * 1000 + 1),
+    }).returning();
+
+    const result = await autoArbitrateDispute(dispute.id);
+
+    return Response.json({ dispute_id: dispute.id, resolution: result.resolution, refund_bdt: result.refund_bdt });
+  } catch (err: any) {
+    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    logger.error('[rider/fare-disputes] POST error', err);
+    return Response.json({ error: 'internal_error' }, { status: 500 });
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const supabaseUser = await verifySupabaseToken(request);
+    const [rider] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
+    if (!rider) return Response.json({ error: 'user_not_found' }, { status: 404 });
+
+    const disputes = await db.select().from(fareDisputes)
+      .where(eq(fareDisputes.rider_id, rider.id))
+      .orderBy(desc(fareDisputes.created_at));
+
+    return Response.json({ disputes });
+  } catch (err: any) {
+    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    logger.error('[rider/fare-disputes] GET error', err);
+    return Response.json({ error: 'internal_error' }, { status: 500 });
+  }
+}

@@ -359,6 +359,10 @@ await db.transaction(async (tx) => {
 ## TypeScript rules (Ride additions)
 
 - **No `any`**. No `// @ts-ignore`. No `// @ts-expect-error` without an explanatory comment.
+- **Drizzle type casts** — `as any` IS permitted for two specific patterns:
+  1. **Enum comparisons**: `eq(pricing.vehicle_type, vehicle_type as any)` — Drizzle `pgEnum` columns have opaque nominal types that don't widen from raw `string` values. Required in query conditions.
+  2. **FK column inserts in `.values()`**: Drizzle's inferred insert type occasionally excludes foreign-key columns (a version-specific inference limitation). Casting the entire values object `} as any)` is the accepted workaround.
+  These are NOT `any` in the normal sense — they're type-assertion casts to bridge Drizzle's type inference gaps. All other uses of `any` remain banned.
 - **Drizzle inferred types**: use `typeof schema.$inferSelect` and `typeof schema.$inferInsert` — do not manually redeclare DB row types.
 - **WebSocket message types**: define in `utils-server/types.ts`. Every `ws.send()` call must be typed.
 - **`interface` for DB row shapes and API response shapes**. `type` for unions (e.g. `DriverStatus = 'pending' | 'active' | ...`).

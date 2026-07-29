@@ -1,0 +1,1012 @@
+# =============================================================================
+# FIXES-V3-TASKS.yaml — REMAINING FIXES + NEW FEATURES (Post-Verification)
+# =============================================================================
+# This file covers ALL items that are Partial or Not Started as of the v3
+# deep-dive verification (2026-07-26). See FEATURES.md Sections 6 & 7.
+#
+# Read DRIVER-P0-TASKS.yaml global_notes for framework/styling/store rules.
+# Same rules apply to all tasks below.
+#
+# PRIORITY ORDER:
+#   P0 = Launch blockers (must fix before any testing)
+#   P1 = Bug fixes (broken features with existing code)
+#   P2 = New features (Kimi-K2.6 suggestions not yet started)
+# =============================================================================
+version: "1.0"
+project: Ride
+role: all
+priority_class: mixed
+total_tasks: 29
+
+global_notes:
+  font_rule: "font-JakartaBold (headings), font-Jakarta (body). No font-[Urbanist]."
+  money: "ALL amounts INTEGER PAISA. Display: {(amt/100).toFixed(0)}."
+  dark_rule: "EVERY color className MUST have a dark: variant."
+  stores: >
+    Rider: useRiderStore from @/store (barrel).
+    Driver home: useDriverStore from @/store/useDriverStore (SEPARATE FILE).
+    Driver other: useDriverStore from @/store (barrel).
+  driver_folder: "app/(main)/(rider)/ (legacy name, DO NOT rename)"
+  fetch_pattern: "Prefix with process.env.EXPO_PUBLIC_SERVER_URL. Token from supabase.auth.getSession()."
+  api_routes: "Expo API routes. Dynamic params as 2nd arg flat (NOT {params})."
+  self_check:
+    - "[ ] npx tsc --noEmit passes for ALL edited files"
+    - "[ ] Every color className has dark: variant"
+    - "[ ] No console.log — use logger"
+    - "[ ] Money is always integer paisa"
+
+tasks:
+
+  # ===========================================================================
+  # P0 — CRITICAL: LAUNCH BLOCKERS
+  # ===========================================================================
+
+  - id: "P0-001-SCHEDULED-RIDES-ENDPOINT"
+    route_path: "app/(main)/(customer)/confirm-ride/index.tsx"
+    action: audit_and_fix
+    priority: P0
+    note: >
+      CRITICAL BUG: When scheduling a ride, confirm-ride POSTs to /api/ride/request
+      (line 115) with scheduled_at in the body. But /api/ride/request creates the ride
+      with status='pending' (not 'scheduled'), so the scheduler never dispatches it.
+      The dedicated /api/ride/schedule endpoint EXISTS and works — it creates
+      status='scheduled' with dispatch_window_start/end, and the scheduler picks it up.
+
+      FIX: When scheduledAt is set, POST to /api/ride/schedule instead of /api/ride/request.
+      The request body is the same. The response shape is the same (returns ride_id).
+      VERIFY: Read both app/api/ride/schedule+api.ts and app/api/ride/request+api.ts.
+      Confirm the schedule endpoint's Zod schema accepts ALL the same body fields
+      (pickup_lat, pickup_lng, pickup_address, dropoff_lat, dropoff_lng, dropoff_address,
+      vehicle_type, scheduled_at, promo_code, preference_ids). If any field is missing
+      from the schedule schema, add it.
+    fixes:
+      - find: "const response = await fetch(`${API_URL}/api/ride/request`, {"
+        replace: "const endpoint = scheduledAt ? `${API_URL}/api/ride/schedule` : `${API_URL}/api/ride/request`;\n      const response = await fetch(endpoint, {"
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Manual: schedule a ride → verify rides.status='scheduled' in DB → wait for dispatch window → verify dispatch fires"
+
+  - id: "P0-002-DRIVER-PUSH-TOKEN"
+    route_path: "app/(auth)/driver-notifications-permission.tsx"
+    action: create
+    priority: P0
+    note: >
+      CRITICAL: Drivers have ZERO push notification registration. The screen is a
+      39-line stub that just navigates. The rider version (notifications-permission.tsx)
+      has the exact registerPushToken() function to copy. Replace the entire file with
+      a driver variant that registers the push token then navigates to select-active-vehicle.
+
+      CRITICAL ADDITIONAL ISSUE: driver-notifications-permission.tsx is currently
+      UNREACHABLE during normal driver registration. register.tsx:72 sends drivers
+      directly to /(main)/(rider), bypassing the entire driver-enable-location →
+      driver-notifications-permission chain. Fixing the screen alone does NOT solve
+      the push token problem.
+
+      You MUST ALSO add push token registration to the driver home screen. After P1-001
+      moves DriverHome to (tabs)/index.tsx, add a registerPushToken() call in its
+      useEffect on mount (one-time, idempotent). Copy the registerPushToken function
+      from the code_template below into DriverHome (or import it from a shared lib).
+      Call it once when wsConnected first becomes true, so the token is registered
+      after the driver is authenticated.
+
+      ALTERNATIVELY: Add a useEffect in app/(main)/(rider)/_layout.tsx that registers
+      the push token once after the DriverStatusGuard passes (driver is active/temporary).
+    code_template: |
+      import { View, Text, TouchableOpacity, Platform } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { useState } from "react";
+      import { router } from "expo-router";
+      import * as Notifications from "expo-notifications";
+      import { supabase } from "@/lib/supabase";
+      import { logger } from "@/lib/logger";
+
+      const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
+
+      async function registerPushToken() {
+        try {
+          const { status: existingStatus } = await Notifications.getPermissionsAsync();
+          let finalStatus = existingStatus;
+          if (existingStatus !== "granted") {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+          }
+          if (finalStatus !== "granted") return;
+
+          const tokenData = await Notifications.getExpoPushTokenAsync();
+          const pushToken = tokenData.data;
+          const platform = Platform.OS === "ios" ? "ios" : "android";
+
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.access_token) return;
+
+          await fetch(`${API_URL}/api/user/device`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({ push_token: pushToken, platform, device_id: pushToken }),
+          });
+        } catch (e) {
+          logger.warn("[push] driver token registration failed", e);
+        }
+      }
+
+      export default function DriverNotificationsPermission() {
+        const [busy, setBusy] = useState(false);
+
+        const allow = async () => {
+          setBusy(true);
+          await registerPushToken();
+          router.replace("/(main)/(rider)/select-active-vehicle");
+        };
+
+        const skip = () => router.replace("/(main)/(rider)/select-active-vehicle");
+
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+            <View className="flex-1 items-center justify-center">
+              <View className="w-24 h-24 rounded-full bg-goAccentLight items-center justify-center mb-8">
+                <Text className="text-[40px]">🔔</Text>
+              </View>
+              <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-3 text-center">Allow Notifications</Text>
+              <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">Ride requests, payouts, and promos delivered instantly. You can change this anytime in settings.</Text>
+            </View>
+            <View className="flex-row w-full pb-[40px]">
+              <TouchableOpacity className="flex-1 border border-goBorderLight dark:border-goBorderDark rounded-full py-[16px] items-center mr-2" onPress={skip}>
+                <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Not Now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity className="flex-1 bg-goPrimary rounded-full py-[16px] items-center ml-2" onPress={allow} disabled={busy}>
+                <Text className="text-[18px] font-JakartaBold text-goWhite">{busy ? "Enabling..." : "Allow"}</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Manual: register as new driver → verify user_devices row created in DB"
+
+  - id: "P0-003-RIDER-SETTINGS-HUB-LINK"
+    route_path: "app/(main)/(customer)/(tabs)/profile/index.tsx"
+    action: audit_and_fix
+    priority: P0
+    note: >
+      CRITICAL: settings/index.tsx hub EXISTS (18 sub-screens linked) but the Profile
+      (Account) tab has NO navigation to it. The entire settings subtree is orphaned.
+      FIX: Add a "Settings" row/button in the Profile screen, before the Log Out button,
+      that navigates to /(main)/(customer)/(tabs)/settings.
+      NOTE: Verify `router` is imported at the top of the file
+      (import { router } from "expo-router"). If not, add it.
+    fixes:
+      - find: "        <TouchableOpacity\n          onPress={handleSignOut}\n          className=\"mt-8 bg-goDanger rounded-lg py-4 items-center\"\n        >"
+        replace: "        <TouchableOpacity\n          onPress={() => router.push(\"/(main)/(customer)/(tabs)/settings\")}\n          className=\"mt-6 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-lg py-4 items-center\"\n        >\n          <Text className=\"text-goTextPrimaryLight dark:text-goTextPrimaryDark font-JakartaBold text-[16px]\">Settings</Text>\n        </TouchableOpacity>\n\n        <TouchableOpacity\n          onPress={handleSignOut}\n          className=\"mt-4 bg-goDanger rounded-lg py-4 items-center\"\n        >"
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Manual: Profile tab → Settings → verify all 18 sub-screens reachable"
+
+  # ===========================================================================
+  # P1 — HIGH: BUG FIXES (EXISTING CODE, BROKEN OR INCOMPLETE)
+  # ===========================================================================
+
+  - id: "P1-001-DRIVER-TAB-HOME"
+    route_path: "app/(main)/(rider)/index.tsx AND app/(main)/(rider)/(tabs)/index.tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: The driver tab bar (_layout.tsx:33) references name="index" for the Home tab,
+      but NO (tabs)/index.tsx file exists — the route resolves to nothing.
+      The actual DriverHome content lives at (rider)/index.tsx (at the Stack level,
+      OUTSIDE the tab navigator).
+
+      A <Redirect> from inside (tabs)/index.tsx to /(main)/(rider) would navigate OUT
+      of the tab navigator and the tab bar would disappear. That approach does NOT work.
+
+      CORRECT FIX (two steps):
+      STEP 1: MOVE the entire content of app/(main)/(rider)/index.tsx INTO
+              app/(main)/(rider)/(tabs)/index.tsx (copy all code, same component).
+      STEP 2: REPLACE app/(main)/(rider)/index.tsx with a thin redirect that sends
+              users to the tab navigator:
+    fixes:
+      - file: "app/(main)/(rider)/(tabs)/index.tsx"
+        action: create
+        note: "Copy ALL content from the existing app/(main)/(rider)/index.tsx into this file. Same imports, same component, same logic. The only difference is the file location — it now lives inside the tab navigator so the Home tab renders it."
+      - file: "app/(main)/(rider)/index.tsx"
+        action: replace_content
+        code_template: |
+          // This file redirects to the tab navigator which contains the actual
+          // DriverHome at (tabs)/index.tsx. The Stack layout's initial route
+          // resolves here, then bounces into the tabs.
+          import { Redirect } from "expo-router";
+          export default function DriverRootRedirect() {
+            return <Redirect href="/(main)/(rider)/(tabs)" />;
+          }
+    extra_note: >
+      After this change, verify that:
+      1. The Stack layout (_layout.tsx) still works — the initial route redirects to (tabs).
+      2. In-ride screens (find-customer, enter-otp, finish-ride) still push correctly
+         on top of the Stack (they are NOT inside the tabs).
+      3. RideOfferSheet overlay still renders (it was rendered by the old index.tsx —
+         now it's in (tabs)/index.tsx, which is correct since offers appear on home).
+      4. The WebSocket connection + heartbeat logic still initializes on mount.
+      If any of these break, the RideOfferSheet/WS logic may need to move to the
+      _layout.tsx level instead.
+    verification:
+      - { type: file_exists, path: "app/(main)/(rider)/(tabs)/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Manual: driver app → all 5 tabs render with content (Home, Earning, Activity, Wallet, Profile) → receive a ride offer → accept → find-customer pushes on top → tab bar hides during ride → returns after Browse Home"
+
+  - id: "P1-002-DRIVER-ME-JOIN-USERS"
+    route_path: "app/api/driver/me+api.ts"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: GET selects from drivers table only (line 24). The name column is on the
+      users table (line 21 selects only users.id). So data.driver.name is always
+      undefined, and DriverHome shows the "Driver" fallback.
+      FIX: Join drivers with users to include name, phone, email, etc.
+    fixes:
+      - find: "    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);\n    if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });\n\n    const [driver] = await db.select().from(drivers).where(eq(drivers.user_id, user.id)).limit(1);"
+        replace: "    const [user] = await db.select({\n      id: users.id,\n      name: users.name,\n      phone: users.phone,\n      email: users.email,\n      profile_image_url: users.profile_image_url,\n    }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);\n    if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });\n\n    const [driver] = await db.select().from(drivers).where(eq(drivers.user_id, user.id)).limit(1);"
+      - find: "    return Response.json({\n      driver: {\n        ...driver,\n        calls_remaining: activeSub?.calls_remaining ?? 0,\n        subscription: activeSub ?? null,\n      },\n    });"
+        replace: "    return Response.json({\n      driver: {\n        ...driver,\n        name: user.name,\n        phone: user.phone,\n        email: user.email,\n        profile_image_url: user.profile_image_url,\n        calls_remaining: activeSub?.calls_remaining ?? 0,\n        subscription: activeSub ?? null,\n      },\n    });"
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Manual: driver login → header shows real name, not 'Driver'"
+
+  - id: "P1-003-SHOW-RIDE-FETCH"
+    route_path: "app/(main)/(customer)/show-ride/[rideId].tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: show-ride reads useRidesStore.selectedRide (local store lookup) instead
+      of fetching from API. If the store is empty, the screen hangs on "Loading...".
+      FIX: Fetch ride details from GET /api/ride/[id] on mount, like the sibling
+      screens ride-details-completed/[id] and ride-details-scheduled/[id] do.
+      NOTE: The replacement introduces useState, supabase, and logger.
+      Verify these are imported. If not, add:
+        import { useState, useEffect } from "react";
+        import { supabase } from "@/lib/supabase";
+        import { logger } from "@/lib/logger";
+      Also remove the useRidesStore import if it's no longer used.
+    fixes:
+      - find: "    const { setSelectedRide, selectedRide } = useRidesStore();\n\n    useEffect(() => {\n        if (typeof rideId === 'string') {\n            setSelectedRide(rideId);\n        }\n    }, [rideId]);"
+        replace: "    const [ride, setRide] = useState<any>(null);\n    const [loading, setLoading] = useState(true);\n\n    useEffect(() => {\n        if (typeof rideId !== 'string') return;\n        (async () => {\n            try {\n                const { data: { session } } = await supabase.auth.getSession();\n                const token = session?.access_token;\n                if (!token) return;\n                const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${rideId}`, {\n                    headers: { Authorization: `Bearer ${token}` },\n                });\n                if (res.ok) setRide((await res.json()).ride);\n            } catch (e) {\n                logger.error('[show-ride] fetch failed', e);\n            } finally {\n                setLoading(false);\n            }\n        })();\n    }, [rideId]);"
+        note: "The actual code uses 4-space indentation for the const/useEffect block and a multi-line if-statement with 8-space inner indentation. Match this exactly. Also update the render section to use `ride` and `loading` instead of `selectedRide`."
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P1-004-SUBSCRIPTION-CHECKOUT-WEBVIEW"
+    route_path: "app/(main)/(rider)/subscription-checkout/index.tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: handlePay POSTs to /api/package/purchase, ignores the returned payment_url,
+      and navigates straight to subscription-confirmation (fake success).
+      FIX: Capture data.payment_url, open PaymentWebView, then poll /api/package/active
+      (same pattern as packages.tsx lines 70-101).
+      After successful payment confirmation, navigate to subscription-confirmation.
+    fixes:
+      - find: "      const data = await res.json();\n      if (!res.ok) { setError(data.error || \"Payment failed\"); return; }\n      router.replace(\"/(main)/(rider)/subscription-confirmation\");"
+        replace: "      const data = await res.json();\n      if (!res.ok) { setError(data.error || \"Payment failed\"); return; }\n      if (data.payment_url) {\n        setPaymentUrl(data.payment_url);\n        setPaymentEventId(data.payment_event_id);\n        // PaymentWebView will render; on close, poll /api/package/active\n      } else {\n        router.replace(\"/(main)/(rider)/subscription-confirmation\");\n      }"
+    extra_note: >
+      Also need to add state: const [paymentUrl, setPaymentUrl] = useState('');
+      const [paymentEventId, setPaymentEventId] = useState('');
+      And render <PaymentWebView> when paymentUrl is set, with onClose handler that
+      polls /api/package/active (copy the startPollingActiveSubscription pattern from
+      packages.tsx). Import PaymentWebView from '@/components/PaymentWebView'.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Manual: subscription-checkout → Buy → PortPos WebView opens → pay → confirmation"
+
+  - id: "P1-005-WALLET-TOPUP-WEBVIEW"
+    route_path: "app/(main)/(rider)/wallet-topup/index.tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: POSTs to /api/driver/wallet/topup, shows fake Alert.alert("Success")
+      without any PaymentWebView. The payment_url returned by the API is ignored.
+      FIX: Capture data.payment_url, open PaymentWebView (same as packages.tsx),
+      poll wallet balance after payment closes, then show success.
+    fixes:
+      - find: "      Alert.alert(\"Success\", `৳${taka} added to wallet`, [{ text: \"OK\", onPress: () => router.back() }]);"
+        replace: "      const data = await res.json();\n      if (data.payment_url) {\n        setPaymentUrl(data.payment_url);\n        // PaymentWebView renders; onClose → verify balance → router.back()\n      } else {\n        Alert.alert(\"Success\", `৳${taka} added to wallet`, [{ text: \"OK\", onPress: () => router.back() }]);\n      }"
+    extra_note: >
+      Add state: const [paymentUrl, setPaymentUrl] = useState('');
+      Render <PaymentWebView url={paymentUrl} onClose={...} /> when set.
+      Import PaymentWebView from '@/components/PaymentWebView'.
+      VERIFY the /api/driver/wallet/topup endpoint actually returns payment_url
+      (read the API route — if it doesn't, add PortPos init there too).
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P1-006-IN-RIDE-CHAT-BUTTON"
+    route_path: "app/(main)/(rider)/find-customer/index.tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: No chat button in find-customer. The chat screen (chat/[rideId].tsx)
+      exists with full WS + API support but is unreachable.
+      FIX: Add a chat button (💬 icon TouchableOpacity) next to the existing Call
+      button. On press: router.push(`/(main)/(rider)/chat/${activeRideId}`).
+      You need to:
+      1. Add an openChat function before the existing callCustomer function.
+      2. Add a 💬 TouchableOpacity next to the 📞 Call button in the JSX.
+    fixes:
+      - note: >
+          STEP 1: Add an openChat function before the existing callCustomer function:
+            const openChat = () => {
+              if (activeRideId) router.push(`/(main)/(rider)/chat/${activeRideId}`);
+            };
+          STEP 2: In the render JSX, find the existing Call button (📞 icon TouchableOpacity).
+          Add a 💬 chat TouchableOpacity next to it:
+            <TouchableOpacity onPress={openChat} className="ml-3">
+              <Text className="text-[24px]">💬</Text>
+            </TouchableOpacity>
+          Read the render section of find-customer/index.tsx to find the exact Call button
+          JSX and place the chat button visually next to it.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Manual: during find-customer → chat button → send message → rider receives it"
+
+  - id: "P1-006B-IN-RIDE-CHAT-FINISH-RIDE"
+    route_path: "app/(main)/(rider)/finish-ride/index.tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: Same as P1-006 but for finish-ride. No chat button. The driver needs
+      to communicate with the rider during the trip to dropoff.
+      FIX: Add a chat button in the finish-ride header area, same pattern as P1-006.
+      Add openChat function + 💬 TouchableOpacity next to any existing Call button.
+    fixes:
+      - note: >
+          STEP 1: Add an openChat function (same as P1-006):
+            const openChat = () => {
+              if (activeRideId) router.push(`/(main)/(rider)/chat/${activeRideId}`);
+            };
+          STEP 2: Read the render section of finish-ride/index.tsx. Find any existing
+          Call button or customer info area. Add a 💬 chat TouchableOpacity:
+            <TouchableOpacity onPress={openChat} className="ml-3">
+              <Text className="text-[24px]">💬</Text>
+            </TouchableOpacity>
+          Place it next to the Call button or in the header area.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Manual: during finish-ride → chat button → send message → rider receives it"
+
+  - id: "P1-007-CANCELLATION-REASONS-DRIVER"
+    route_path: "app/(main)/(rider)/find-customer/index.tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: No Cancel button in find-customer or finish-ride. The cancellation-reasons
+      screen exists but is unreachable. Drivers have no way to cancel during a ride.
+      FIX: Add a "Cancel Ride" button (red text or red outline, bottom of the bottom
+      sheet content) in find-customer. On press:
+      router.push(`/(main)/(rider)/cancellation-reasons?rideId=${activeRideId}`).
+    fixes:
+      - note: >
+          Read the render section of find-customer/index.tsx. Find the SlideButton
+          (title="Slide to Confirm Arrival"). Below it, inside the bottom sheet content,
+          add a Cancel Ride button:
+            <TouchableOpacity
+              onPress={() => activeRideId && router.push(`/(main)/(rider)/cancellation-reasons?rideId=${activeRideId}`)}
+              className="mt-4 items-center"
+            >
+              <Text className="text-goDanger text-[14px] font-JakartaBold">Cancel Ride</Text>
+            </TouchableOpacity>
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Manual: during find-customer → Cancel Ride → cancellation-reasons screen → select reason → ride cancelled"
+
+  - id: "P1-007B-CANCELLATION-FINISH-RIDE"
+    route_path: "app/(main)/(rider)/finish-ride/index.tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      Same Cancel button as P1-007 but for finish-ride. Add a "Cancel Ride" button
+      below the drop-off SlideButton.
+    fixes:
+      - note: >
+          Read the render section of finish-ride/index.tsx. Find the SlideButton
+          (title="Slide to Confirm Drop-off"). Below it, add the same Cancel Ride button:
+            <TouchableOpacity
+              onPress={() => activeRideId && router.push(`/(main)/(rider)/cancellation-reasons?rideId=${activeRideId}`)}
+              className="mt-4 items-center"
+            >
+              <Text className="text-goDanger text-[14px] font-JakartaBold">Cancel Ride</Text>
+            </TouchableOpacity>
+    extra_note: >
+      ALSO: verify app/(main)/(rider)/cancellation-reasons/index.tsx EXISTS.
+      If it does NOT exist, create it using the rider cancel-reason pattern:
+      - Read app/(main)/(customer)/cancel-reason/index.tsx as reference.
+      - List of reasons (Waiting too long, Rider not responding, Emergency, etc.)
+      - On select: POST /api/ride/[id]/cancel with { cancel_reason: selectedReason }
+      - Then: router.replace("/(main)/(rider)/(tabs)")
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P1-008-RIDER-ACTIVITY-WIRING"
+    route_path: "app/(main)/(customer)/(tabs)/rides/index.tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: activity-completed, activity-canceled, activity-scheduled, inbox, referral
+      are ALL orphaned — zero inbound navigation. The rides tab shows ride history
+      but doesn't link to these filtered views.
+      FIX: Add a filter row or sub-tabs at the top of the rides screen:
+      [All] [Completed] [Scheduled] [Canceled] [Inbox] [Referral]
+      Each navigates to its respective screen:
+      - All → current view (rides/index.tsx)
+      - Completed → /(tabs)/activity-completed
+      - Scheduled → /(tabs)/activity-scheduled
+      - Canceled → /(tabs)/activity-canceled
+      - Inbox → /(tabs)/inbox
+      - Referral → /(tabs)/referral
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P1-009-BROKEN-NAV-LINKS"
+    route_path: "Multiple files"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: Three navigation targets are referenced but don't exist as files:
+      1. history-detail/index.tsx:108 → router.push("...report-issue?rideId=...") — NO report-issue screen
+      2. top-up-success/index.tsx:24 → router.replace("...activity-topup") — NO activity-topup screen
+      3. select-payment/index.tsx:47,53 → router.push("...payment-methods/add") — NO payment-methods screen
+
+      FIX OPTIONS (choose per item):
+      - report-issue: Create app/(main)/(customer)/report-issue/index.tsx (copy driver
+        report-issue pattern: category select + description → POST /api/support/ticket).
+        OR remove the link from history-detail (replace with contact-support).
+      - activity-topup: Change the link in top-up-success to point to
+        /(tabs)/activity/top-up (which exists but is orphaned/empty). OR remove the
+        "View Transactions" button entirely.
+      - payment-methods/add: select-payment is itself orphaned. Recommend REMOVING
+        the select-payment screen and its navigation (the ride flow doesn't need
+        payment method selection since PortPos handles it).
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Verify no router.push targets a nonexistent file: grep for each path"
+
+  - id: "P1-010-BKASH-NAGAD-REMOVE"
+    route_path: "app/(main)/(customer)/(tabs)/settings/top-up-method/index.tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: Shows bKash/Nagad/Card selectors but the app uses PortPos exclusively.
+      The selectedMethod is never sent in the POST body — it's purely cosmetic.
+      lib/bkash.ts and lib/nagad.ts are inert stubs.
+      FIX: Remove the 3-method selector. Replace with a single "Pay with PortPos"
+      button that POSTs to /api/rider/wallet/topup and opens PaymentWebView
+      (same pattern as driver packages.tsx).
+      VERIFY: Read app/api/rider/wallet/topup+api.ts — confirm it returns payment_url.
+      If it doesn't, add PortPos init (same as /api/package/purchase does).
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P1-011-REFERRAL-RENDER-BUG"
+    route_path: "app/(main)/(customer)/(tabs)/referral/index.tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: Line 67 has `${...}` interpolation inside plain JSX text (no backticks),
+      so it renders the literal string "৳${(rewardBdt / 100).toFixed(0)}" instead
+      of the computed value.
+      FIX: Wrap the text in a template literal or use a JSX expression:
+      Change: <Text>Both get ৳${(rewardBdt / 100).toFixed(0)}...</Text>
+      To: <Text>{`Both get ৳${(rewardBdt / 100).toFixed(0)}...`}</Text>
+      ALSO: Read the total earnings from data.stats.total_reward_bdt (not just referee reward).
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P1-012-OWNER-CONSENTS-API"
+    route_path: "app/api/driver/documents+api.ts"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: owner_consents table exists. drivers.consent_version + consent_accepted_at
+      columns exist. But NO API persists consent. onboarding/documents.tsx collects
+      4 consent checkboxes but POSTs only { documents }. Consent is discarded.
+      FIX: In the documents POST handler, accept consent_accepted (boolean) and
+      consent_version (string) in the request body. When consent_accepted is true,
+      set drivers.consent_accepted_at = now() and drivers.consent_version = consentVersion.
+      ALSO: Update onboarding/documents.tsx handleSubmit to include these fields in the POST body.
+    fixes:
+      - note: >
+          FILE 1: app/api/driver/documents+api.ts
+          Read the file. Find the Zod schema for the POST body. Add two optional fields:
+            consent_accepted: z.boolean().optional(),
+            consent_version: z.string().optional(),
+          Then find where documents are inserted + driver status is updated. After that,
+          add:
+            if (consent_accepted) {
+              await db.update(drivers).set({
+                consent_accepted_at: new Date(),
+                consent_version: consent_version || 'v1',
+              }).where(eq(drivers.id, driverId));
+            }
+          Make sure `drivers` and `eq` are imported (they likely already are).
+
+      - note: >
+          FILE 2: app/(main)/(rider)/onboarding/documents.tsx
+          Read the file. Find the handleSubmit function (line 104). Find the fetch POST
+          body (line 113). Currently it sends: body: JSON.stringify({ documents })
+          Change to include consent fields:
+            body: JSON.stringify({
+              documents,
+              consent_accepted: allConsentGiven,
+              consent_version: 'v1',
+            })
+          where `allConsentGiven` is the existing variable at line 102
+          (consentChecked.every(Boolean)).
+
+          PRE-EXISTING BUG: The fetch at line 112 sends headers WITHOUT an
+          Authorization header (only "Content-Type"). The API requires
+          verifySupabaseToken. You MUST add the auth header or the entire
+          document upload (not just consent) fails with 401:
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            ...
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          Add: import { supabase } from "@/lib/supabase"; if not already imported.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Manual: submit onboarding → verify drivers.consent_accepted_at is set in DB"
+
+  - id: "P1-013-SOS-ALERTS-ACK"
+    route_path: "app/api/admin/sos-alerts/[id]/ack+api.ts"
+    action: create
+    priority: P1
+    note: >
+      GAP: GET /api/admin/sos-alerts + admin/sos-alerts.tsx screen exist (view alerts).
+      But there's NO acknowledge endpoint — admin can see alerts but can't mark them
+      resolved. Create POST /api/admin/sos-alerts/[id]/ack that sets status='acknowledged'
+      and acknowledged_by + acknowledged_at.
+    code_template: |
+      import { db } from '@/src/db';
+      import { sosAlerts } from '@/src/db/schema';
+      import { eq } from 'drizzle-orm';
+      import { requireRole } from '@/lib/auth';
+      import { logger } from '@/lib/logger';
+
+      export async function POST(request: Request, { id }: { id: string }) {
+        try {
+          const { dbUser } = await requireRole('admin')(request);
+
+          const [updated] = await db.update(sosAlerts)
+            .set({
+              status: 'acknowledged',
+              acknowledged_by: dbUser.id,
+              acknowledged_at: new Date(),
+            })
+            .where(eq(sosAlerts.id, id))
+            .returning();
+
+          if (!updated) return Response.json({ error: 'not_found' }, { status: 404 });
+
+          logger.info('[admin] SOS alert acknowledged', { id, by: dbUser.id });
+          return Response.json({ success: true, alert: updated });
+        } catch (err: any) {
+          if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+          logger.error('[admin/sos-alerts/ack] error', err);
+          return Response.json({ error: 'internal_error' }, { status: 500 });
+        }
+      }
+    extra_note: >
+      ALSO: add an "Acknowledge" button to app/admin/sos-alerts.tsx that calls
+      this endpoint.
+
+      SCHEMA CHANGE REQUIRED: The sos_alerts table (src/db/schema.ts:884) currently
+      has columns: id, user_id, role, latitude, longitude, message, contacts_notified,
+      created_at. It is MISSING the columns needed by this ack endpoint:
+        status varchar NOT NULL DEFAULT 'open'
+        acknowledged_by uuid REFERENCES users(id)
+        acknowledged_at timestamptz
+      Add these 3 columns to the sosAlerts pgTable definition in schema.ts, then run:
+        npx drizzle-kit generate
+        npx drizzle-kit push
+    verification:
+      - { type: file_exists, path: "app/api/admin/sos-alerts/[id]/ack+api.ts" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P1-014-DUPLICATE-CALL-LEDGER"
+    route_path: "app/api/call-ledger+api.ts"
+    action: remove
+    priority: P1
+    note: >
+      Duplicate: /api/call-ledger (top-level, 36 lines, simple) and
+      /api/driver/call-ledger (71 lines, with filters + current_balance) both exist.
+      The top-level one is a legacy duplicate. DELETE app/api/call-ledger+api.ts.
+      Keep app/api/driver/call-ledger+api.ts (the enhanced version).
+      VERIFY: grep for "/api/call-ledger" (without /driver/) across app/ to ensure
+      no screen calls the top-level endpoint. If any does, update it to use
+      /api/driver/call-ledger.
+    verification:
+      - "grep -r '/api/call-ledger' app/ — ensure no callers of the top-level route"
+
+  - id: "P1-015-SELECT-VEHICLE-PERSIST"
+    route_path: "app/(main)/(rider)/select-active-vehicle.tsx"
+    action: audit_and_fix
+    priority: P1
+    note: >
+      BUG: select-active-vehicle.tsx only updates the local Zustand store — it
+      NEVER POSTs the selected vehicle_type to the server. After app restart, the
+      selection is lost and the driver may be dispatching with the wrong vehicle type.
+
+      FIX: When the driver taps "Confirm & Go Online", PATCH the selected vehicle_type
+      to the server BEFORE navigating. Use PATCH /api/driver/me with { vehicle_type }.
+      Wait for the response. If it fails, show an error and don't navigate.
+    fixes:
+      - note: >
+          Read app/(main)/(rider)/select-active-vehicle.tsx. The state variable is
+          `selected` (NOT `selectedType`). The confirm handler is `const confirm = () => {}`.
+
+          Make the confirm function async and add a PATCH call BEFORE the existing
+          setDriver + router.replace:
+
+            const confirm = async () => {
+              setSaving(true);
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+                if (!token) { setError("Not authenticated"); return; }
+                const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/me`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ vehicle_type: selected }),
+                });
+                if (!res.ok) {
+                  const err = await res.json().catch(() => ({}));
+                  setError(err.error || "Failed to save vehicle type");
+                  return;
+                }
+                if (driver) setDriver({ ...driver, vehicle_type: selected as any });
+                router.replace("/(main)/(rider)/");
+              } catch (e) {
+                setError("Network error");
+              } finally {
+                setSaving(false);
+              }
+            };
+
+          Add imports: import { supabase } from '@/lib/supabase';
+          Add state: const [saving, setSaving] = useState(false); const [error, setError] = useState("");
+          Disable the Confirm button when saving: disabled={!selected || saving}
+
+          CRITICAL: The PATCH /api/driver/me Zod schema does NOT currently accept
+          vehicle_type. You MUST ALSO add it to the schema in app/api/driver/me+api.ts:
+            In the patchSchema object, add:
+              vehicle_type: z.enum(["bike_basic","bike_standard","bike_plus","cng","car_economy","car_comfort","car_premium","car_xl"]).optional(),
+            And in the PATCH handler, after parsing, if vehicle_type is present:
+              await db.update(drivers).set({ vehicle_type }).where(eq(drivers.id, driverId));
+            Import the vehicle type values from lib/vehicleTypes.ts if a Zod schema exists there.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Manual: select a vehicle type → Confirm → verify drivers.vehicle_type updated in DB → restart app → verify selection persisted"
+
+  - id: "P1-016-REMOVE-ORPHANED-BUGGY-SCREENS"
+    route_path: "Multiple rider screens"
+    action: remove
+    priority: P1
+    note: >
+      Three orphaned rider screens contain active bugs that would produce wrong
+      results if anyone ever wires them into the navigation. They duplicate
+      functionality already handled by book-ride/index.tsx (which works correctly).
+      REMOVE them to prevent confusion and future bugs:
+
+      1. app/(main)/(customer)/select-category/index.tsx
+         BUG: Calls /api/ride/estimate with HARDCODED Dhaka coords (23.8103, 90.4125)
+         instead of real pickup/dropoff. Estimates are always for Dhaka center.
+
+      2. app/(main)/(customer)/select-vehicle/index.tsx
+         BUG: Same hardcoded coord bug. Reached only from orphaned select-category.
+
+      3. app/(main)/(customer)/available-options-expanded/index.tsx
+         BUG: FABRICATES fare breakdown client-side (40/40/15/5 split) instead of
+         from server data. No API supports this split.
+
+      ALSO remove: app/(main)/(customer)/fares-after-promo/index.tsx and
+      app/(main)/(customer)/select-payment/index.tsx — both are reached ONLY from
+      the screens above, so they become orphaned after removal.
+
+      DELETE these 5 files/directories. Also grep for any router.push/replace that
+      targets these routes and remove those navigation calls.
+    screens_to_remove:
+      - "app/(main)/(customer)/select-category/"
+      - "app/(main)/(customer)/select-vehicle/"
+      - "app/(main)/(customer)/available-options-expanded/"
+      - "app/(main)/(customer)/fares-after-promo/"
+      - "app/(main)/(customer)/select-payment/"
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Grep for 'select-category|select-vehicle|available-options|fares-after-promo|select-payment' in app/ — no remaining navigation calls"
+
+  # ===========================================================================
+  # P2 — NEW FEATURES (KIMI-K2.6 SUGGESTIONS NOT STARTED)
+  # ===========================================================================
+
+  - id: "P2-001-DRIVER-NAVIGATION"
+    route_path: "Multiple files"
+    action: create
+    priority: P2
+    note: >
+      KIMI #2. No turn-by-turn navigation exists.
+      SCHEMA: No changes needed (uses existing rides pickup/dropoff coordinates).
+      API: Create POST /api/navigation/route+api.ts — accepts { waypoints: [{lat,lng}] },
+      calls Barikoi Directions API (check EXPO_PUBLIC_BARIKOI_API_KEY), returns
+      route geometry + steps + duration + distance.
+      COMPONENT: Create components/DriverNavigation.tsx — MapLibreGL with route polyline,
+      navigation banner (next instruction + distance), camera follows user.
+      Uses expo-speech for voice announcements.
+      INTEGRATION: Wire into find-customer (navigate to pickup) and finish-ride
+      (navigate to dropoff). Add a "Navigate" button that opens the navigation view.
+      See FEATURES.md (Kimi section) lines 387-496 for detailed spec.
+    verification:
+      - { type: file_exists, path: "app/api/navigation/route+api.ts" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P2-002-SURGE-PRICING"
+    route_path: "Multiple files"
+    action: create
+    priority: P2
+    note: >
+      KIMI #3. No surge pricing exists.
+      SCHEMA: Create surge_history table (zone_id, multiplier, demand_count,
+      supply_count, triggered_at, ended_at). Add surge_multiplier to rides table.
+      CALCULATOR: Add to utils-server/scheduler.ts — every 60s, for each active zone:
+      count pending rides (demand) vs online drivers (supply). ratio = demand/max(supply,1).
+      If ratio > threshold → multiplier (1.25x/1.5x/2.0x). Store in-memory with 5-min TTL.
+      FARE: Modify lib/fareCalc.ts — multiply total by surge_multiplier.
+      Add surge_multiplier + surge_area to fare_breakdown.
+      RIDER UI: Before confirming, show "High demand ×1.5" with consent.
+      See FEATURES.md lines 497-615 for detailed spec.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P2-002B-SURGE-PIPELINE-FIX"
+    route_path: "schema.ts, scheduler.ts, lib/surge.ts, lib/fareCalc.ts, heartbeat, 3 API routes"
+    action: audit_and_fix
+    priority: P2
+    note: >
+      Surge pricing is non-functional end-to-end. 3 root causes:
+
+      B2 TYPE MISMATCH: drivers.zone_id is varchar(20) but zones.id is uuid.
+      The supply query (scheduler.ts:673) compares varchar=uuid → no match → supply always 0.
+      rides.surge_zone_id is varchar(20) → writing a 36-char UUID truncates or fails.
+
+      G2 NOT WIRED: lib/surge.ts applySurge() is never imported by lib/fareCalc.ts.
+      FareBreakdown interface has no surge fields. calculateFare has no zoneId param.
+
+      B3 CROSS-PROCESS (HIDDEN — you didn't catch this one):
+      lib/surge.ts uses an in-process Map (surgeMap) to cache multipliers.
+      The scheduler runs in utils-server (separate Node.js process).
+      The fare calculator runs in the Expo API server (different process).
+      Each process gets its OWN Map instance — they do NOT share memory.
+      The scheduler writes multipliers to its Map; the API server's Map is always empty.
+      Even after fixing B2+G2, surge would still be non-functional without a shared store.
+      FIX: Replace the in-process Map with a surge_current database table both processes share.
+
+    fixes:
+      - note: >
+          CHANGE 1 — src/db/schema.ts: Fix 2 column types + add surge_current table.
+
+          Line 287 — drivers.zone_id: change varchar to uuid:
+            BEFORE: zone_id: varchar("zone_id", { length: 20 }),
+            AFTER:  zone_id: uuid("zone_id"),
+
+          Line 571 — rides.surge_zone_id: change varchar to uuid:
+            BEFORE: surge_zone_id: varchar("surge_zone_id", { length: 20 }),
+            AFTER:  surge_zone_id: uuid("surge_zone_id"),
+
+          Add new table after the zones table definition (~line 776):
+            export const surgeCurrent = pgTable("surge_current", {
+              zone_id: uuid("zone_id").primaryKey().references(() => zones.id),
+              multiplier: numeric("multiplier", { precision: 4, scale: 2 }).notNull().default("1.0"),
+              demand_count: integer("demand_count").notNull().default(0),
+              supply_count: integer("supply_count").notNull().default(0),
+              updated_at: timestamptz("updated_at").notNull().defaultNow(),
+            });
+
+      - note: >
+          CHANGE 2 — utils-server/heartbeat.ts: Backfill drivers.zone_id on location update.
+          The app has a zones_one_active unique index — only ONE zone active at a time.
+          All online drivers belong to that zone.
+          Before the existing driver UPDATE, fetch the active zone:
+            const [activeZone] = await db.select({ id: zones.id }).from(zones)
+              .where(eq(zones.is_active, true)).limit(1);
+          Add to the UPDATE .set() call:
+            zone_id: activeZone?.id ?? null,
+
+      - note: >
+          CHANGE 3 — utils-server/scheduler.ts: Replace lines 680-685.
+
+          REMOVE these 2 lines:
+            await db.update(rides).set({ surge_multiplier: multiplier as any, surge_zone_id: zone.id })
+              .where(eq(rides.zone_id, zone.id));
+            setSurgeMultiplier(zone.id, multiplier);
+
+          REPLACE with a surge_current UPSERT:
+            await db.insert(surgeCurrent).values({
+              zone_id: zone.id,
+              multiplier: multiplier.toString(),
+              demand_count: demand?.count ?? 0,
+              supply_count: supply?.count ?? 0,
+              updated_at: new Date(),
+            }).onConflictDoUpdate({
+              target: surgeCurrent.zone_id,
+              set: {
+                multiplier: multiplier.toString(),
+                demand_count: demand?.count ?? 0,
+                supply_count: supply?.count ?? 0,
+                updated_at: new Date(),
+              },
+            });
+
+          REMOVE line 24: import { setSurgeMultiplier } from "../lib/surge";
+          ADD import for surgeCurrent from the schema (same import path as zones).
+
+      - note: >
+          CHANGE 4 — lib/surge.ts: Rewrite the ENTIRE file as a pure function.
+          Remove the Map, setSurgeMultiplier, and getSurgeMultiplier.
+          The new file is just:
+
+            export function applySurge(totalBdt: number, surgeMultiplier: number) {
+              const surgeFeeBdt = surgeMultiplier > 1.0
+                ? Math.round(totalBdt * (surgeMultiplier - 1.0))
+                : 0;
+              return {
+                multiplier: surgeMultiplier,
+                surgeFeeBdt,
+                totalWithSurge: totalBdt + surgeFeeBdt,
+              };
+            }
+
+          No Map. No imports. No side effects. Pure function.
+          The caller (API route) looks up the multiplier from surge_current table.
+
+      - note: >
+          CHANGE 5 — lib/fareCalc.ts: Add 2 fields to FareBreakdown interface.
+          After line 36 (ride_time_min: number;), add:
+            surge_multiplier: number;
+            surge_fee_bdt: number;
+
+          calculateFare() stays UNCHANGED — no zoneId parameter, stays synchronous.
+          The API route applies surge AFTER calling calculateFare (see Change 6).
+
+      - note: >
+          CHANGE 6 — API routes (estimate, request, complete): Look up surge from
+          surge_current table and apply after calculateFare.
+
+          After `const breakdown = calculateFare(...)`, add:
+            // Look up active zone
+            const [zone] = await db.select({ id: zones.id }).from(zones)
+              .where(eq(zones.is_active, true)).limit(1);
+            // Look up surge multiplier (5-min staleness check)
+            let surgeMultiplier = 1.0;
+            if (zone) {
+              const [sr] = await db.select().from(surgeCurrent)
+                .where(eq(surgeCurrent.zone_id, zone.id)).limit(1);
+              if (sr && Date.now() - new Date(sr.updated_at).getTime() < 300_000)
+                surgeMultiplier = Number(sr.multiplier);
+            }
+            // Apply surge to fare
+            const surge = applySurge(breakdown.total_bdt, surgeMultiplier);
+            breakdown.total_bdt = surge.totalWithSurge;
+            breakdown.surge_multiplier = surge.multiplier;
+            breakdown.surge_fee_bdt = surge.surgeFeeBdt;
+            // Recompute commission on surged total
+            const commissionPct = pricing.platform_commission_percent ?? 0;
+            if (commissionPct > 0) {
+              breakdown.platform_commission_bdt = Math.floor(breakdown.total_bdt * commissionPct / 100);
+              breakdown.driver_net_bdt = breakdown.total_bdt - breakdown.platform_commission_bdt;
+            }
+
+          Add imports: import { applySurge } from "@/lib/surge";
+          Add imports: import { surgeCurrent, zones } from "@/src/db/schema";
+
+          For ride/request: also store surge_multiplier + surge_zone_id on the ride record
+          (snapshot at creation time — the multiplier won't change during the ride).
+          For ride/[id]/complete: use the ride's stored surge_multiplier (no new lookup).
+
+          Files to modify:
+          - app/api/ride/estimate+api.ts
+          - app/api/ride/request+api.ts
+          - app/api/ride/[id]/complete+api.ts
+
+      - note: >
+          CHANGE 7 — Migration. After all schema changes:
+            npx drizzle-kit generate
+            npx drizzle-kit push
+
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "After 60s: SELECT * FROM surge_current → 1 row with multiplier + demand/supply counts"
+      - "SELECT id, zone_id FROM drivers WHERE is_online = true → zone_id is a UUID, not NULL"
+      - "Request a ride → fare_breakdown includes surge_multiplier field (1.0 if no surge)"
+      - "If surge active (multiplier > 1.0): verify total_bdt = base_fare × multiplier"
+
+  - id: "P2-003-ADMIN-RIDER-MGMT"
+    route_path: "app/admin/riders.tsx, app/api/admin/riders+api.ts"
+    action: create
+    priority: P2
+    note: >
+      KIMI #4. No rider management in admin.
+      SCHEMA: Add to users table: account_status (active/suspended/banned),
+      fraud_score int, total_rides int, total_spent bigint, last_ride_at.
+      Create rider_reports table.
+      API: GET /api/admin/riders (list + search + filter by status),
+      POST /api/admin/riders/[id]/suspend, POST /api/admin/riders/[id]/refund.
+      UI: app/admin/riders.tsx — table with Name/Phone/Rides/Spent/Status/Actions.
+      See FEATURES.md lines 623-712 for detailed spec.
+    verification:
+      - { type: file_exists, path: "app/admin/riders.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P2-004-CANCELLATION-ENGINE"
+    route_path: "Multiple files"
+    action: create
+    priority: P2
+    note: >
+      KIMI #5. Cancellation is hardcoded with no fees.
+      SCHEMA: Create cancellation_policies table (name, canceller_role, trigger_event,
+      time_threshold_seconds, fee_type, fee_amount, max_fee, is_active, priority).
+      Seed with default policies. Add cancellation_fee to rides table.
+      LIB: Create lib/cancellation.ts — evaluateCancellation(ride, cancelledBy).
+      API: Modify POST /api/ride/[id]/cancel — call evaluateCancellation, store fee.
+      UI: Show fee preview before confirming ("Cancellation fee: ৳20").
+      See FEATURES.md lines 720-847 for detailed spec.
+    verification:
+      - { type: file_exists, path: "lib/cancellation.ts" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P2-005-BOOK-FOR-OTHERS"
+    route_path: "Multiple files"
+    action: create
+    priority: P2
+    note: >
+      KIMI #6. No secondary rider support.
+      SCHEMA: Add secondary_rider_phone, secondary_rider_name,
+      is_booked_for_someone_else to rides table.
+      API: Modify POST /api/ride/request — accept optional secondary rider fields.
+      If present, send SMS with ride details + tracking link.
+      RIDER UI: Add "Book for someone else" toggle on confirm-ride.
+      DRIVER UI: RideOfferSheet shows "Booked for: {name} ({phone})".
+      TRACKING: Create public app/track/[rideId].tsx — no auth, view-only map.
+      See FEATURES.md lines 861-926 for detailed spec.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P2-006-DOCUMENT-EXPIRY"
+    route_path: "Multiple files"
+    action: create
+    priority: P2
+    note: >
+      KIMI #9. No document expiry tracking.
+      SCHEMA: Add expiry_date, alert_sent_30d, alert_sent_7d, alert_sent_1d
+      to documents table.
+      UPLOAD: Modify POST /api/driver/documents — require expiry_date for NID/license.
+      CRON: Add to utils-server/scheduler.ts — daily check at midnight:
+      30/7/1-day alerts via push notification, auto-suspend on expiry.
+      Depends on P0-002 (driver push token) for alert delivery.
+      See FEATURES.md lines 1080-1167 for detailed spec.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "P2-007-REAL-TIME-OPS"
+    route_path: "app/admin/live-ops.tsx"
+    action: create
+    priority: P2
+    note: >
+      KIMI #10 (partial). monitoring.tsx exists but is snapshot-only.
+      Create app/admin/live-ops.tsx — real-time dashboard using 5s polling
+      (simpler than WebSocket for admin web):
+      - Active rides count by status (dispatching, matched, in_progress)
+      - Online drivers count
+      - Pending ride requests (unmatched, by age)
+      - Current surge multipliers per zone (if P2-002 is built)
+      - Recent completed rides (last 5 min)
+      - Auto-refresh every 5s via setInterval.
+      Reuse existing monitoring APIs (dispatch-log, driver-economics) + add
+      GET /api/admin/live-stats that aggregates counts.
+    verification:
+      - { type: file_exists, path: "app/admin/live-ops.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }

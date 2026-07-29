@@ -126,7 +126,7 @@ const VerificationPage = () => {
       setProfileImageURL({ profile_image_url: profileImage! });
       setStoreRating({ rating });
       setIsVerified(true);
-      router.replace("/(rider)/home");
+      router.replace("/(main)/(rider)/home");
     } catch (error: any) {
       logger.info("error in driver verification page", error);
       Alert.alert("Submission Failed", error.message);

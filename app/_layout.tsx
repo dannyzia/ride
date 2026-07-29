@@ -1,14 +1,38 @@
 import "../global.css";
 import { useEffect, useState } from "react";
-import { Platform, View, ActivityIndicator } from "react-native";
+import { Platform, View, ActivityIndicator, Appearance } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
+import * as Notifications from "expo-notifications";
+import * as Application from "expo-application";
 import SplashAnimation from "@/components/SplashAnimation";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useAppearance } from "@/lib/useAppearance";
+import "@/i18n/i18n";
 
 const isWeb = Platform.OS === "web";
+
+async function registerPushForUser(token: string) {
+  try {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== "granted") return;
+    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const deviceId = Application.getAndroidId?.() ?? tokenData.data;
+    await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/api/user/device`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        push_token: tokenData.data,
+        platform: Platform.OS === "ios" ? "ios" : Platform.OS === "android" ? "android" : "web",
+        device_id: deviceId,
+      }),
+    });
+  } catch {
+    // Non-blocking — push registration is best-effort
+  }
+}
 
 // Only prevent auto-hide on native — on web the splash is handled differently.
 if (!isWeb) {
@@ -65,6 +89,9 @@ export default function RootLayout() {
             // Allow admin routes through — the admin layout has its own
             // auth guard (role === "admin"). Do NOT redirect admin here.
             const isAdminRoute = segments[0] === "admin";
+            // Register push token after successful auth (fire-and-forget)
+            registerPushForUser(session.access_token).catch(() => {});
+
             if (data.exists && inAuthGroup && !isAdminRoute) {
               router.replace(
                 data.role === "driver"
@@ -98,11 +125,51 @@ export default function RootLayout() {
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, [router, segments, API_URL]);
+  }, [router, API_URL]);
 
   useEffect(() => {
     if (fontsLoaded && !isWeb) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
+
+  // ── Theme persistence ───────────────────────────────────────────────
+  const { theme } = useAppearance();
+
+  useEffect(() => {
+    if (theme === "system") {
+      Appearance.setColorScheme(null);
+    } else {
+      Appearance.setColorScheme(theme);
+    }
+  }, [theme]);
+
+  // ── Push notification setup ──────────────────────────────────────────
+  // Hoisted above all early returns (rules-of-hooks requirement) and
+  // registered unconditionally so the notification handler is available
+  // even during splash/skeleton screens.
+  useEffect(() => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as Record<string, string> | undefined;
+      if (data?.ride_id) {
+        if (data?.type === 'ride:offer') {
+          router.push(`/(main)/(rider)`);
+        } else {
+          router.push(`/(main)/(customer)/final-page?ride_id=${data.ride_id}`);
+        }
+      }
+    });
+
+    return () => sub.remove();
+  }, []);
 
   // On web: skip the Reanimated splash animation (it can hang in production
   // web builds and leave a blank screen). Show a simple loading indicator

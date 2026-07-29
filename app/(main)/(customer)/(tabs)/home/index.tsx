@@ -32,7 +32,7 @@ if (Platform.OS !== "web") {
   try {
     LottieView = require("lottie-react-native").default;
   } catch (err) {
-    console.warn("LottieView native import failed:", err);
+    logger.warn("LottieView native import failed:", err);
     LottieView = function LottieViewFallback() {
       return null;
     };
@@ -40,7 +40,7 @@ if (Platform.OS !== "web") {
 }
 
 const API_URL = process.env.EXPO_PUBLIC_SERVER_URL;
-const WEBSOCKET_API_URL = process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL;
+const WEBSOCKET_API_URL = process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "";
 
 const HomePage = () => {
   const {
@@ -54,7 +54,7 @@ const HomePage = () => {
   } = useCustomer();
 
   const { setRides, Rides } = useRidesStore();
-  const { ws, setWebSocket } = useWSStore();
+  const { ws: _ws, setWebSocket } = useWSStore();
 
   const { user } = useSession();
   const { role } = useAppUserStore();
@@ -270,7 +270,7 @@ const HomePage = () => {
         ListHeaderComponent={
           <>
             <View className="flex flex-row items-center justify-between my-5">
-              <Text className="text-xl text-goTextPrimaryLight capitalize font-urbanist-bold">
+              <Text className="text-xl text-goTextPrimaryLight capitalize font-JakartaBold tracking-tight">
                 Welcome{","} {user?.fullName ?? "Rider"}
               </Text>
               <TouchableOpacity
@@ -284,7 +284,7 @@ const HomePage = () => {
             <View>
               <TouchableOpacity
                 onPress={() => router.push("/autocomplete")}
-                className="bg-goSurfaceLight rounded-full px-4 py-3 mb-4 flex-row items-center gap-x-3"
+                className="bg-goSurfaceLight rounded-full shadow-go-sm px-4 py-3 mb-4 flex-row items-center gap-x-3"
               >
                 <Image source={icons.search} className="w-6 h-6" />
                 <Text className="text-goTextSecondaryLight text-base">
@@ -294,10 +294,10 @@ const HomePage = () => {
             </View>
 
             <Text className="mt-5 mb-3">
-              <Text className="text-xl text-goTextPrimaryLight font-urbanist-bold">
+              <Text className="text-xl text-goTextPrimaryLight font-JakartaBold">
                 Your Current Location:
               </Text>{" "}
-              <Text className="text-lg font-inter text-goTextSecondaryLight">
+              <Text className="text-lg font-Jakarta text-goTextSecondaryLight">
                 {address
                   ? address
                   : userAddress
@@ -314,7 +314,7 @@ const HomePage = () => {
             >
               <Map />
             </View>
-            <Text className="text-2xl text-goTextPrimaryLight font-urbanist-bold mt-10 mb-3">
+            <Text className="text-2xl text-goTextPrimaryLight font-JakartaBold tracking-tight mt-10 mb-3">
               Recent Rides
             </Text>
           </>

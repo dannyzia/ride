@@ -22,6 +22,12 @@ export async function GET(request: Request) {
         driver_id: rides.driver_id,
         user_id: rides.user_id,
         created_at: rides.created_at,
+        status: rides.status,
+        scheduled_at: rides.scheduled_at,
+        completed_at: rides.completed_at,
+        vehicle_type: rides.vehicle_type,
+        cancel_reason: rides.cancel_reason,
+        cancelled_by: rides.cancelled_by,
         driver: {
           driver_id: drivers.id,
           full_name: users.name,

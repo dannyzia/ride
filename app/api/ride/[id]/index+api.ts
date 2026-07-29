@@ -12,8 +12,18 @@ export async function GET(request: Request) {
 
     const _user = await verifySupabaseToken(request);
 
+    const [dbUser] = await db.select().from(users).where(eq(users.auth_uid, _user.id)).limit(1);
+    if (!dbUser) return Response.json({ error: 'user_not_found' }, { status: 404 });
+
     const [ride] = await db.select().from(rides).where(eq(rides.id, rideId)).limit(1);
     if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
+
+    if (dbUser.id !== ride.user_id) {
+      const [driver] = await db.select({ id: drivers.id }).from(drivers).where(eq(drivers.user_id, dbUser.id)).limit(1);
+      if (!driver || (ride.driver_id && ride.driver_id !== driver.id)) {
+        return Response.json({ error: 'forbidden' }, { status: 403 });
+      }
+    }
 
     // Get driver info if assigned
     let driverInfo = null;

@@ -1,0 +1,1801 @@
+# =============================================================================
+# RIDER-P2-TASKS.yaml v4.0 — ZERO-ASSUMPTION AGENT SPEC
+# =============================================================================
+# INSTRUCTIONS FOR THE CODING AGENT:
+#
+#   You are building React Native screens for an Expo Router app. You MUST
+#   follow every rule below exactly. Do NOT guess, do NOT use "typical" RN
+#   patterns unless they match what's written here. If you are unsure about
+#   ANYTHING, read the code_template — it contains the COMPLETE, correct code.
+#
+#   HOW TO USE THIS FILE:
+#   1. Read the global_rules section ONCE and remember all rules.
+#   2. For each task: read the entire task block before writing ANY code.
+#   3. Copy the code_template EXACTLY — it is compilable JavaScript.
+#   4. Run the verification steps for each task before marking it done.
+#   5. After ALL tasks: run "npx tsc --noEmit" from the project root.
+#
+#   IF A TASK SAYS "audit_and_fix": the file ALREADY EXISTS. Only apply the
+#   find/replace pairs listed in the "fixes" section. Do NOT recreate the file.
+#
+#   IF A TASK SAYS "create": use the code_template AS-IS. Copy it, paste it
+#   into the file at route_path. Do not add or remove features.
+# =============================================================================
+version: "4.0"
+project: Ride
+role: rider
+priority_class: P2
+total_tasks: 14
+
+# =============================================================================
+# GLOBAL RULES — MEMORIZE THESE. EVERY TASK MUST FOLLOW ALL OF THEM.
+# =============================================================================
+global_rules:
+
+  # --- FRAMEWORK & STACK (verified against package.json) ---
+  framework:
+    - "Expo Router (file-based routing). NO react-navigation imports."
+    - "NOT Next.js. Dynamic route params come directly as 2nd arg to handlers."
+    - "app/(main)/(customer)/ for rider screens"
+    - "app/(auth)/ for auth screens (NO header — _layout.tsx sets headerShown:false)"
+    - "components/ for shared components (flat folder, no subfolder)"
+    - "theme/goRide.ts for design tokens (import colors, fonts, radii, spacing)"
+
+  # --- STATE MANAGEMENT ---
+  state:
+    - "Zustand only. NO Redux, NO React Context for business state, NO useState for cross-screen data."
+    - "useRiderStore from @/store/useRiderStore (direct import, NOT barrel)"
+    - "useCustomer from @/store (barrel re-export)"
+    - "useWSStore from @/store (barrel)"
+    - "useAppUserStore from @/store (barrel)"
+    - "DO NOT import useRiderStore from @/store — it is a SEPARATE file at @/store/useRiderStore"
+    - "useState is ALLOWED for local UI state (form inputs, toggles, loading/error flags)"
+
+  # --- STYLING (NativeWind only. NO StyleSheet.create.) ---
+  styling:
+    font_heading: "font-JakartaBold"
+    font_body:    "font-Jakarta"
+    font_semibold:"font-JakartaSemiBold"
+    bg_light:     "bg-goBgLight"
+    bg_dark:      "dark:bg-goBgDark"
+    surface_light:"bg-goSurfaceLight"
+    surface_dark: "dark:bg-goSurfaceElevatedDark"
+    border_light: "border-goBorderLight"
+    border_dark:  "dark:border-goBorderDark"
+    text_primary_l: "text-goTextPrimaryLight"
+    text_primary_d: "dark:text-goTextPrimaryDark"
+    text_secondary_l: "text-goTextSecondaryLight"
+    text_secondary_d: "dark:text-goTextSecondaryDark"
+    primary:      "text-goPrimary"
+    primary_bg:   "bg-goPrimary"
+    danger_text:  "text-goDanger"
+    danger_bg:    "bg-goDanger"
+    white_text:   "text-goWhite"
+    accent_light: "bg-goAccentLight"
+
+    banned:
+      - "font-[Urbanist] OR font-urbanist-bold OR font-inter — use font-JakartaBold / font-Jakarta instead"
+      - "bg-[#FAFAFA] OR bg-[#F5F5F5] OR bg-[#EEEEEE] — use bg-goBgLight or bg-goSurfaceLight"
+      - "text-[#616161] OR text-[#1F222A] — use text-goTextSecondaryLight"
+      - "StyleSheet.create({...}) — use NativeWind className only"
+      - "Any inline hex color in className like bg-[#0CC25F] — use bg-goPrimary"
+
+    mandatory_dark_example:
+      correct: "className='bg-white dark:bg-goBgDark border border-goBorderLight dark:border-goBorderDark'"
+      wrong:   "className='bg-white border border-goBorderLight'  ← missing dark:"
+
+  # --- IMPORTS (exact paths — do not guess or modify) ---
+  imports:
+    safe_area:  "import { SafeAreaView } from 'react-native-safe-area-context'"
+    router:     "import { router } from 'expo-router'"
+    router_hook:"import { useRouter } from 'expo-router'"
+    local_params:"import { useLocalSearchParams } from 'expo-router'"
+    supabase:   "import { supabase } from '@/lib/supabase'"
+    logger:     "import { logger } from '@/lib/logger'"
+    colors:     "import { colors } from '@/theme/goRide'"
+    status_bar: "import { StatusBar } from 'react-native'"
+    rn_core:    "import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, ScrollView } from 'react-native'"
+
+    rider_store:"import { useRiderStore } from '@/store/useRiderStore'"
+    customer_store: "import { useCustomer } from '@/store'"
+    ws_store:   "import { useWSStore } from '@/store'"
+
+    components_available:
+      - "CustomButton from @/components/CustomButton"
+      - "InputField from @/components/InputField"
+      - "RideLayout from @/components/RideLayout"
+      - "BarikoiAutocomplete from @/components/BarikoiAutocomplete"
+      - "SOSButton from @/components/SOSButton"
+      - "ChatScreen from @/components/ChatScreen"
+      - "SlideButton from @/components/SlideButton"
+
+  # --- NAVIGATION ---
+  navigation:
+    push: "router.push('/path') — go forward to a screen"
+    back: "router.back() — go back one screen"
+    replace: "router.replace('/path') — replace current screen (no back stack)"
+    params: "useLocalSearchParams<{ key: string }>() — read URL query params"
+    route_path_format: "app/(main)/(customer)/screen-name/index.tsx"
+
+  # --- STANDARD HEADER PATTERN ---
+  standard_header: |
+    <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+      <TouchableOpacity onPress={() => router.back()}>
+        <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+      </TouchableOpacity>
+      <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Screen Title</Text>
+      <View className="w-[50px]" />
+    </View>
+
+  # --- API CALL PATTERN ---
+  api_pattern: |
+    EVERY API call MUST follow this exact pattern:
+    1. const [loading, setLoading] = useState(false);
+    2. const [error, setError] = useState('');
+    3. const { data: { session } } = await supabase.auth.getSession();
+    4. const token = session?.access_token;
+    5. if (!token) { setError('Not authenticated'); return; }
+    6. try {
+         setLoading(true); setError('');
+         const res = await fetch(EXPO_PUBLIC_SERVER_URL + '/api/...', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+           body: JSON.stringify({ ... }),
+         });
+         const data = await res.json();
+         if (!res.ok) { setError(data.error || 'Request failed'); return; }
+       } catch (err) {
+         setError(err?.message || 'Network error');
+       } finally {
+         setLoading(false);
+       }
+
+  # --- SELF-CHECK CHECKLIST ---
+  self_check:
+    - "[ ] Does the file exist at the exact route_path?"
+    - "[ ] Does every color className have a dark: variant?"
+    - "[ ] Are ALL imports at the top, including useState/useEffect/useRef?"
+    - "[ ] Does the template use font-JakartaBold (heading) and font-Jakarta (body)?"
+    - "[ ] For API calls: is there loading state, error state, and try/catch?"
+    - "[ ] Is SafeAreaView imported from react-native-safe-area-context?"
+    - "[ ] Are store imports using the CORRECT path?"
+    - "[ ] Does the code use existing components instead of building new ones?"
+    - "[ ] Is contentContainerStyle ONLY on ScrollView (never on View)?"
+    - "[ ] Did you run 'npx tsc --noEmit' and it passed?"
+    - "[ ] No console.log anywhere — use logger from @/lib/logger"
+    - "[ ] No DatePickerIOS — it is iOS-only. Use TextInput for cross-platform."
+
+# =============================================================================
+# TASKS
+# =============================================================================
+
+tasks:
+
+  # ===========================================================================
+  # TASK 1: RIDER-041-ADD-STOP
+  # ===========================================================================
+  - id: "RIDER-041-ADD-STOP"
+    screen_numbers: [24]
+    wireframe: "## 24. Add Stop / Multi-Destination"
+    route_path: "app/(main)/(customer)/add-stop/index.tsx"
+    action: create
+    note: >
+      CREATE this file. FIXED from v3: added missing useState import. Uses ScrollView with contentContainerStyle (correct pattern).
+    code_template: |
+      import { useState } from "react";
+      import { View, Text, TouchableOpacity, ScrollView, TextInput } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      import { useRiderStore } from "@/store/useRiderStore";
+      
+      export default function AddStop() {
+        const [stops, setStops] = useState<string[]>([]);
+        const [newStop, setNewStop] = useState("");
+      
+        const addStop = () => {
+          if (newStop.trim()) {
+            setStops([...stops, newStop.trim()]);
+            setNewStop("");
+          }
+        };
+      
+        const removeStop = (index: number) => {
+          setStops(stops.filter((_, i) => i !== index));
+        };
+      
+        const continueToFares = () => {
+          router.push("/(main)/(customer)/select-category");
+        };
+      
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Add Stop</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+              <View className="mt-4 mb-4">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">
+                  Your Stops
+                </Text>
+                {stops.length > 0 ? (
+                  <>
+                    {stops.map((stop, index) => (
+                      <View key={index} className="mb-2">
+                        <View className="flex-row items-center px-[12px] py-[8px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px]">
+                          <Text className="flex-1 text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">
+                            {stop}
+                          </Text>
+                          <TouchableOpacity className="p-[6px]" onPress={() => removeStop(index)}>
+                            <Text className="text-[16px] text-goTextSecondaryLight dark:text-goTextSecondaryDark">✕</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))}
+                    <View className="mt-2">
+                      <TouchableOpacity
+                        className="w-full bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[8px]"
+                        onPress={addStop}
+                      >
+                        <Text className="text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">+ Add another stop</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : (
+                  <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center py-[16px]">
+                    No stops added yet
+                  </Text>
+                )}
+                <View className="mt-4">
+                  <TextInput
+                    className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark"
+                    placeholder="Enter stop location"
+                    placeholderTextColor="#9CA3AF"
+                    value={newStop}
+                    onChangeText={setNewStop}
+                  />
+                </View>
+              </View>
+              <View className="mt-6">
+                <TouchableOpacity
+                  className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+                  onPress={continueToFares}
+                  disabled={stops.length === 0}
+                >
+                  <Text className="text-[18px] font-JakartaBold text-goWhite">Continue to Fares</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/add-stop/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 2: RIDER-042-CHOOSE-PAYMENT-METHOD
+  # ===========================================================================
+  - id: "RIDER-042-CHOOSE-PAYMENT-METHOD"
+    screen_numbers: [27]
+    wireframe: "## 27. Choose Payment Method"
+    route_path: "app/(main)/(customer)/select-payment/index.tsx"
+    action: create
+    note: >
+      CREATE this file. FIXED from v3: corrected task ID casing (was CHooSE). No local useState needed.
+    code_template: |
+      import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      import { useRiderStore } from "@/store/useRiderStore";
+      
+      export default function SelectPaymentMethod() {
+        const { paymentMethods } = useRiderStore();
+      
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Choose Payment Method</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+              <View className="mt-4 mb-4">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Saved Methods</Text>
+                {paymentMethods && paymentMethods.length > 0 ? (
+                  <>
+                    {paymentMethods.map((method, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        className={'flex-row items-center p-[12px] mb-2 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px]' + (method.is_default ? ' border-goPrimary bg-goAccentLight dark:bg-goAccentLight' : '')}
+                        onPress={() => {}}
+                      >
+                        <View className="w-8 h-8 rounded-full mr-3 items-center justify-center">
+                          <Text className="text-[16px]">{method.type === 'card' ? '💳' : '🏦'}</Text>
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{method.label}</Text>
+                          <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">•••• {method.last_four}</Text>
+                        </View>
+                        {method.is_default && <View className="w-3 h-3 rounded-full bg-goPrimary ml-2" />}
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                ) : (
+                  <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center py-[16px]">No payment methods saved</Text>
+                )}
+                <View className="mt-4">
+                  <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Or add a new method</Text>
+                  <TouchableOpacity
+                    className="w-full bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[10px] mb-2"
+                    onPress={() => router.push("/(main)/(customer)/add-payment-method")}
+                  >
+                    <Text className="text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Add New Card</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="w-full bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[10px] mb-2"
+                    onPress={() => router.push("/(main)/(customer)/add-bank-method")}
+                  >
+                    <Text className="text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Add Bank Account</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View className="mt-6">
+                <TouchableOpacity
+                  className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+                  onPress={() => router.replace("/(main)/(customer)/apply-promos")}
+                >
+                  <Text className="text-[18px] font-JakartaBold text-goWhite">Continue</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/select-payment/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-043-SCHEDULE-RIDE
+  # ===========================================================================
+  - id: "RIDER-043-SCHEDULE-RIDE"
+    screen_numbers: [50]
+    wireframe: "## 50. Schedule a Ride"
+    route_path: "app/(main)/(customer)/schedule-ride/index.tsx"
+    action: create
+    note: >
+      CREATE this file. FIXED from v3: removed DatePickerIOS (iOS-only), added missing useState import, kept TextInput for cross-platform. contentContainerStyle is on ScrollView (correct).
+    code_template: |
+      import { useState } from "react";
+      import { View, Text, TouchableOpacity, ScrollView, TextInput } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      import { useRiderStore } from "@/store/useRiderStore";
+      
+      export default function ScheduleRide() {
+        const [date, setDate] = useState(new Date());
+        const [time, setTime] = useState(new Date());
+      
+        const handleSchedule = () => {
+          router.replace("/(main)/(customer)/ride-scheduled");
+        };
+      
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Schedule Ride</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+              <View className="mt-4 mb-4">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Pickup & Destination</Text>
+                <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-1">From: Current Location</Text>
+                <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">To: Destination Selected Earlier</Text>
+              </View>
+              <View className="mb-4">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Date & Time</Text>
+                <TextInput
+                  className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2"
+                  placeholder="Select date"
+                  placeholderTextColor="#9CA3AF"
+                  value={date.toLocaleDateString()}
+                  editable={false}
+                />
+                <TextInput
+                  className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark"
+                  placeholder="Select time"
+                  placeholderTextColor="#9CA3AF"
+                  value={time.toLocaleTimeString()}
+                  editable={false}
+                />
+              </View>
+              <View className="mb-4">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Vehicle Options</Text>
+                <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-1">GoRide Economy</Text>
+                <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-1">GoRide Comfort</Text>
+                <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">GoRide Premium</Text>
+              </View>
+              <View className="mt-6">
+                <TouchableOpacity
+                  className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+                  onPress={handleSchedule}
+                >
+                  <Text className="text-[18px] font-JakartaBold text-goWhite">Schedule Ride</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/schedule-ride/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-044-SCHEDULE-RIDE-AFTER-PROMO
+  # ===========================================================================
+  - id: "RIDER-044-SCHEDULE-RIDE-AFTER-PROMO"
+    screen_numbers: [51]
+    wireframe: "## 51. Schedule a Ride - Available Options After Promo"
+    route_path: "app/(main)/(customer)/schedule-ride-after-promo/index.tsx"
+    action: create
+    code_template: |
+      import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      
+      export default function ScheduleRideAfterPromo() {
+        const options = [
+          { icon: "🚗", name: "GoRide Economy", fare: "৳800" },
+          { icon: "🚗", name: "GoRide Comfort", fare: "৳1200" },
+          { icon: "🚗", name: "GoRide Premium", fare: "৳2000" },
+        ];
+      
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Schedule Ride</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+              <View className="mt-4 mb-4">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Promo Applied</Text>
+                <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">WELCOME20</Text>
+                <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">20% off scheduled rides</Text>
+              </View>
+              <View className="mb-4">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Fare Options (with discount)</Text>
+                {options.map((option, i) => (
+                  <View key={i} className="flex-row items-center px-[12px] py-[8px] mb-2 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px]">
+                    <View className="w-8 h-8 rounded-full mr-3 items-center justify-center">
+                      <Text className="text-[16px]">{option.icon}</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{option.name}</Text>
+                    </View>
+                    <Text className="text-[12px] font-JakartaBold text-goPrimary">{option.fare}</Text>
+                  </View>
+                ))}
+              </View>
+              <View className="mt-6">
+                <TouchableOpacity
+                  className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+                  onPress={() => router.replace("/(main)/(customer)/schedule-ride-confirm")}
+                >
+                  <Text className="text-[18px] font-JakartaBold text-goWhite">Continue</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/schedule-ride-after-promo/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-045-SCHEDULING-USER-RIDE
+  # ===========================================================================
+  - id: "RIDER-045-SCHEDULING-USER-RIDE"
+    screen_numbers: [52]
+    wireframe: "## 52. Scheduling User Ride"
+    route_path: "app/(main)/(customer)/scheduling-user-ride/index.tsx"
+    action: create
+    code_template: |
+      import { View, Text, ActivityIndicator } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      
+      export default function SchedulingUserRide() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+            <View className="items-center">
+              <View className="w-24 h-24 rounded-full bg-goAccentLight dark:bg-goAccentLight items-center justify-center mb-4">
+                <Text className="text-[40px]">⏳</Text>
+              </View>
+              <ActivityIndicator size="large" color="#0CC25F" className="mb-4" />
+              <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Scheduling your ride...</Text>
+              <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">
+                Please wait while we confirm your scheduled ride.
+              </Text>
+            </View>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/scheduling-user-ride/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-046-RIDE-SCHEDULED
+  # ===========================================================================
+  - id: "RIDER-046-RIDE-SCHEDULED"
+    screen_numbers: [53]
+    wireframe: "## 53. Ride Scheduled"
+    route_path: "app/(main)/(customer)/ride-scheduled/index.tsx"
+    action: create
+    code_template: |
+      import { View, Text, TouchableOpacity } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      
+      export default function RideScheduled() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+            <View className="items-center mb-8">
+              <View className="w-24 h-24 rounded-full bg-goAccentLight dark:bg-goAccentLight items-center justify-center mb-4">
+                <Text className="text-[40px] text-goPrimary">✓</Text>
+              </View>
+              <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Ride Scheduled</Text>
+              <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-6">
+                Your ride has been scheduled successfully.
+              </Text>
+            </View>
+            <View className="w-full gap-3">
+              <TouchableOpacity
+                className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+                onPress={() => router.replace("/(main)/(customer)/(tabs)/activity")}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goWhite">View Schedule</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center"
+                onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Back to Home</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        );
+      }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/ride-scheduled/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-047-FINDING-DRIVER
+  # ===========================================================================
+  - id: "RIDER-047-FINDING-DRIVER"
+    screen_numbers: [57]
+    wireframe: "## 57. Finding a Nearby Driver"
+    route_path: "app/(main)/(customer)/finding-driver/index.tsx"
+    action: create
+    note: >
+      FIXED from v3: added missing TouchableOpacity import.
+    code_template: |
+      import { View, Text, ActivityIndicator, TouchableOpacity } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      
+      export default function FindingDriver() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+            <View className="items-center">
+              <View className="w-24 h-24 rounded-full bg-goAccentLight dark:bg-goAccentLight items-center justify-center mb-4">
+                <Text className="text-[40px]">🔍</Text>
+              </View>
+              <ActivityIndicator size="large" color="#0CC25F" className="mb-4" />
+              <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Finding a nearby driver...</Text>
+              <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-6">
+                This usually takes just a few seconds.
+              </Text>
+              <TouchableOpacity
+                className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-full px-[24px] py-[10px]"
+                onPress={() => router.replace("/(main)/(customer)/no-drivers-available")}
+              >
+                <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Cancel Request</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(main)/(customer)/no-drivers-available/index.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          
+          export default function NoDriversAvailable() {
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+                <View className="items-center mb-8">
+                  <View className="w-24 h-24 rounded-full bg-goDanger/10 dark:bg-goDanger/10 items-center justify-center mb-4">
+                    <Text className="text-[40px]">🚫</Text>
+                  </View>
+                  <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">No Drivers Available</Text>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-6">
+                    There are no drivers available in your area right now. Please try again in a few minutes or schedule a ride for later.
+                  </Text>
+                </View>
+                <View className="w-full gap-3">
+                  <TouchableOpacity
+                    className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+                    onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
+                  >
+                    <Text className="text-[18px] font-JakartaBold text-goWhite">Try Again</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center"
+                    onPress={() => router.push("/(main)/(customer)/schedule-ride")}
+                  >
+                    <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Schedule for Later</Text>
+                  </TouchableOpacity>
+                </View>
+              </SafeAreaView>
+            );
+          }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/finding-driver/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/no-drivers-available/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-048-ACTIVITY-SHARE-RECEIPT
+  # ===========================================================================
+  - id: "RIDER-048-ACTIVITY-SHARE-RECEIPT"
+    screen_numbers: [64,65,66]
+    wireframe: "## 64. Activity - Share Receipt / ## 65. Top Up Details / ## 66. Activity - Top Up"
+    route_path: "app/(main)/(customer)/(tabs)/activity/share-receipt/index.tsx"
+    action: create
+    code_template: |
+      import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      import { useRiderStore } from "@/store/useRiderStore";
+      
+      export default function ActivityShareReceipt() {
+        const { recentReceipts } = useRiderStore();
+      
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/activity")}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Share Receipt</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+              {recentReceipts && recentReceipts.length > 0 ? (
+                recentReceipts.map((receipt, index) => (
+                  <View key={index} className="mb-4 p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px]">
+                    <View className="flex-row items-center mb-2">
+                      <View className="w-10 h-10 rounded-full bg-goAccentLight dark:bg-goAccentLight items-center justify-center mr-3">
+                        <Text className="text-[20px]">🧾</Text>
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
+                          {receipt.vehicle_type ? receipt.vehicle_type.replace(/_/g, " ").replace(/\\b\\w/g, c => c.toUpperCase()) : "Ride"}
+                        </Text>
+                        <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{receipt.date} · {receipt.time}</Text>
+                      </View>
+                    </View>
+                    <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">From: {receipt.pickup_address}</Text>
+                    <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">To: {receipt.destination_address}</Text>
+                    <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Fare: ৳{(receipt.fare_bdt ?? 0) / 100}</Text>
+                    <View className="flex-row gap-3 mt-3">
+                      <TouchableOpacity className="flex-1 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[6px] items-center">
+                        <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Share</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity className="flex-1 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[6px] items-center">
+                        <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Download</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <View className="items-center py-[24px]">
+                  <Text className="text-[20px] font-JakartaBold text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-4">No recent receipts</Text>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">Your recent receipts will appear here</Text>
+                </View>
+              )}
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(main)/(customer)/(tabs)/activity/top-up-details/index.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          
+          export default function TopUpDetails() {
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/activity")}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Top Up Details</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+                  <View className="mt-4 mb-4">
+                    <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Transaction Details</Text>
+                    <View className="p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] gap-2">
+                      <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Date: Today, 10:30 AM</Text>
+                      <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Method: Visa •••• 4242</Text>
+                      <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Amount: ৳500.00</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[10px] items-center"
+                    onPress={() => {}}
+                  >
+                    <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Download Receipt</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+      - path: "app/(main)/(customer)/(tabs)/activity/top-up/index.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          import { useRiderStore } from "@/store/useRiderStore";
+          
+          export default function ActivityTopUp() {
+            const { walletBalance, transactionHistory } = useRiderStore();
+          
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/activity")}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Top Up</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+                  <View className="mt-4 mb-4">
+                    <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Wallet Balance</Text>
+                    <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">৳{((walletBalance ?? 0) / 100).toFixed(0)}</Text>
+                  </View>
+                  <View className="mb-4">
+                    <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Recent Transactions</Text>
+                    {transactionHistory && transactionHistory.length > 0 ? (
+                      transactionHistory.map((tx, index) => (
+                        <View key={index} className="mb-2 flex-row items-center px-[12px] py-[8px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px]">
+                          <View className="w-8 h-8 rounded-full mr-3 items-center justify-center">
+                            <Text className={'text-[16px] ' + (tx.type === 'credit' ? 'text-goPrimary' : 'text-goDanger')}>{tx.type === 'credit' ? '+' : '-'}</Text>
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{tx.description}</Text>
+                          </View>
+                          <Text className={'text-[12px] font-JakartaBold ' + (tx.type === 'credit' ? 'text-goPrimary' : 'text-goDanger')}>৳{((tx.amount ?? 0) / 100).toFixed(0)}</Text>
+                        </View>
+                      ))
+                    ) : (
+                      <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center py-[16px]">No recent transactions</Text>
+                    )}
+                  </View>
+                  <View className="mt-6">
+                    <TouchableOpacity
+                      className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+                      onPress={() => router.push("/(main)/(customer)/(tabs)/settings/top-up")}
+                    >
+                      <Text className="text-[18px] font-JakartaBold text-goWhite">Top Up Wallet</Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/activity/share-receipt/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/activity/top-up-details/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/activity/top-up/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-049-SETTINGS-LINKED-ACCOUNTS
+  # ===========================================================================
+  - id: "RIDER-049-SETTINGS-LINKED-ACCOUNTS"
+    screen_numbers: [91,92,93]
+    wireframe: "## 91. Settings - Linked Accounts / ## 92. Data & Analytics / ## 93. Payment Methods"
+    route_path: "app/(main)/(customer)/(tabs)/settings/linked-accounts/index.tsx"
+    action: create
+    note: >
+      CREATE these files. FIXED from v3: removed extra semicolon after export default function, added missing Switch import to data-analytics, wrapped in ScrollView.
+    code_template: |
+      import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      
+      export default function SettingsLinkedAccounts() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Linked Accounts</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+              <View className="mt-4 mb-4">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Connected Services</Text>
+                <View className="flex-row items-center px-[12px] py-[8px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2">
+                  <View className="w-8 h-8 rounded-full mr-3 items-center justify-center"><Text className="text-[16px]">📱</Text></View>
+                  <View className="flex-1"><Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Google Account</Text></View>
+                  <TouchableOpacity className="p-[6px]"><Text className="text-[16px] text-goTextSecondaryLight dark:text-goTextSecondaryDark">✕</Text></TouchableOpacity>
+                </View>
+                <View className="flex-row items-center px-[12px] py-[8px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2">
+                  <View className="w-8 h-8 rounded-full mr-3 items-center justify-center"><Text className="text-[16px]">🏦</Text></View>
+                  <View className="flex-1"><Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">BKash</Text></View>
+                  <TouchableOpacity className="p-[6px]"><Text className="text-[16px] text-goTextSecondaryLight dark:text-goTextSecondaryDark">✕</Text></TouchableOpacity>
+                </View>
+                <View className="mt-4">
+                  <TouchableOpacity
+                    className="w-full bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[10px]"
+                    onPress={() => router.push("/(main)/(customer)/(tabs)/settings/add-account")}
+                  >
+                    <Text className="text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Add Account</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(main)/(customer)/(tabs)/settings/data-analytics/index.tsx"
+        code_template: |
+          import { useState } from "react";
+          import { View, Text, TouchableOpacity, ScrollView, Switch } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          
+          export default function SettingsDataAnalytics() {
+            const [shareUsageData, setShareUsageData] = useState(true);
+            const [personalizedAds, setPersonalizedAds] = useState(false);
+          
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Data & Analytics</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+                  <View className="mt-4 mb-4">
+                    <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Privacy Settings</Text>
+                    <View className="flex-row items-center justify-between px-[12px] py-[10px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2">
+                      <Text className="flex-1 text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Share usage data</Text>
+                      <Switch value={shareUsageData} onValueChange={setShareUsageData} trackColor={{ false: "#767577", true: "#0CC25F" }} thumbColor={shareUsageData ? "#f5dd4b" : "#f4f3f4"} />
+                    </View>
+                    <View className="flex-row items-center justify-between px-[12px] py-[10px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2">
+                      <Text className="flex-1 text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Personalized ads</Text>
+                      <Switch value={personalizedAds} onValueChange={setPersonalizedAds} trackColor={{ false: "#767577", true: "#0CC25F" }} thumbColor={personalizedAds ? "#f5dd4b" : "#f4f3f4"} />
+                    </View>
+                  </View>
+                  <View className="mt-4">
+                    <TouchableOpacity className="w-full bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[10px] mb-2" onPress={() => router.push("/(main)/(customer)/(tabs)/settings/request-data")}>
+                      <Text className="text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Request My Data</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity className="w-full bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[10px]" onPress={() => router.push("/(main)/(customer)/(tabs)/settings/delete-data")}>
+                      <Text className="text-[14px] font-Jakarta text-goDanger dark:text-goDanger">Delete My Data</Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+      - path: "app/(main)/(customer)/(tabs)/settings/payment-methods/index.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          import { useRiderStore } from "@/store/useRiderStore";
+          
+          export default function SettingsPaymentMethods() {
+            const { paymentMethods } = useRiderStore();
+          
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Payment Methods</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+                  <View className="mt-4 mb-4">
+                    <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Saved Methods</Text>
+                    {paymentMethods && paymentMethods.length > 0 ? (
+                      paymentMethods.map((method, index) => (
+                        <View key={index} className={'flex-row items-center p-[12px] mb-2 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px]' + (method.is_default ? ' border-goPrimary bg-goAccentLight dark:bg-goAccentLight' : '')}>
+                          <View className="w-8 h-8 rounded-full mr-3 items-center justify-center"><Text className="text-[16px]">{method.type === 'card' ? '💳' : '🏦'}</Text></View>
+                          <View className="flex-1">
+                            <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{method.label}</Text>
+                            <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">•••• {method.last_four}</Text>
+                          </View>
+                          {method.is_default && <View className="w-3 h-3 rounded-full bg-goPrimary ml-2" />}
+                          <TouchableOpacity className="p-[6px]"><Text className="text-[16px] text-goTextSecondaryLight dark:text-goTextSecondaryDark">⋯</Text></TouchableOpacity>
+                        </View>
+                      ))
+                    ) : (
+                      <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center py-[16px]">No payment methods saved</Text>
+                    )}
+                    <View className="mt-4">
+                      <TouchableOpacity className="w-full bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[10px]" onPress={() => router.push("/(main)/(customer)/(tabs)/settings/add-payment")}>
+                        <Text className="text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Add Payment Method</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+      - path: "app/(main)/(customer)/(tabs)/settings/add-payment/index.tsx"
+        code_template: |
+          import { useState } from "react";
+          import { View, Text, TouchableOpacity, ScrollView, TextInput } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          
+          export default function AddPaymentMethod() {
+            const [cardNumber, setCardNumber] = useState("");
+            const [expiry, setExpiry] = useState("");
+            const [cvv, setCVV] = useState("");
+            const [name, setName] = useState("");
+          
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.back()}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Add Payment Method</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+                  <View className="mt-4 mb-4">
+                    <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Card Details</Text>
+                    <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-3" placeholder="Cardholder Name" placeholderTextColor="#9CA3AF" value={name} onChangeText={setName} />
+                    <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-3" placeholder="Card Number" placeholderTextColor="#9CA3AF" value={cardNumber} onChangeText={setCardNumber} keyboardType="numeric" maxLength={19} />
+                    <View className="flex-row gap-3">
+                      <TextInput className="flex-1 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark" placeholder="MM/YY" placeholderTextColor="#9CA3AF" value={expiry} onChangeText={setExpiry} keyboardType="numeric" maxLength={5} />
+                      <TextInput className="flex-1 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark" placeholder="CVV" placeholderTextColor="#9CA3AF" value={cvv} onChangeText={setCVV} keyboardType="numeric" maxLength={3} secureTextEntry />
+                    </View>
+                  </View>
+                  <View className="mt-6">
+                    <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[16px] items-center" onPress={() => router.replace("/(main)/(customer)/(tabs)/settings/payment-methods")}>
+                      <Text className="text-[18px] font-JakartaBold text-goWhite">Save Card</Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/linked-accounts/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/data-analytics/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/payment-methods/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/add-payment/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-050-SETTINGS-APP-APPEARANCE
+  # ===========================================================================
+  - id: "RIDER-050-SETTINGS-APP-APPEARANCE"
+    screen_numbers: [99,100,101]
+    wireframe: "## 99. Settings - App Appearance / ## 100. Theme / ## 101. App Language"
+    route_path: "app/(main)/(customer)/(tabs)/settings/app-appearance/index.tsx"
+    action: create
+    note: >
+      CREATE these files. FIXED from v3: removed non-existent useThemeStore import, replaced with local useState, wrapped content in ScrollView (was View with contentContainerStyle).
+    code_template: |
+      import { useState } from "react";
+      import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      
+      type ThemeMode = "light" | "dark" | "system";
+      
+      export default function SettingsAppAppearance() {
+        const [colorMode, setColorMode] = useState<ThemeMode>("light");
+      
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">App Appearance</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+              <View className="mt-4 mb-4">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Theme</Text>
+                <TouchableOpacity
+                  className={'flex-row items-center justify-between p-[12px] mb-2 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border rounded-[8px] ' + (colorMode === 'light' ? 'border-goPrimary bg-goAccentLight dark:bg-goAccentLight' : 'border-goBorderLight dark:border-goBorderDark')}
+                  onPress={() => setColorMode('light')}
+                >
+                  <View className="flex-row items-center">
+                    <View className="w-8 h-8 rounded-full bg-goPrimary mr-3 items-center justify-center"><Text className="text-[16px] text-goWhite">☀️</Text></View>
+                    <View>
+                      <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Light</Text>
+                      <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Always use light mode</Text>
+                    </View>
+                  </View>
+                  {colorMode === 'light' && <View className="w-5 h-5 rounded-full border-2 border-goPrimary items-center justify-center"><Text className="text-[10px] font-JakartaBold text-goPrimary">✓</Text></View>}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className={'flex-row items-center justify-between p-[12px] mb-2 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border rounded-[8px] ' + (colorMode === 'dark' ? 'border-goPrimary bg-goAccentLight dark:bg-goAccentLight' : 'border-goBorderLight dark:border-goBorderDark')}
+                  onPress={() => setColorMode('dark')}
+                >
+                  <View className="flex-row items-center">
+                    <View className="w-8 h-8 rounded-full bg-goBgDark mr-3 items-center justify-center"><Text className="text-[16px]">🌙</Text></View>
+                    <View>
+                      <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Dark</Text>
+                      <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Always use dark mode</Text>
+                    </View>
+                  </View>
+                  {colorMode === 'dark' && <View className="w-5 h-5 rounded-full border-2 border-goPrimary items-center justify-center"><Text className="text-[10px] font-JakartaBold text-goPrimary">✓</Text></View>}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className={'flex-row items-center justify-between p-[12px] mb-2 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border rounded-[8px] ' + (colorMode === 'system' ? 'border-goPrimary bg-goAccentLight dark:bg-goAccentLight' : 'border-goBorderLight dark:border-goBorderDark')}
+                  onPress={() => setColorMode('system')}
+                >
+                  <View className="flex-row items-center">
+                    <View className="w-8 h-8 rounded-full bg-goBlue mr-3 items-center justify-center"><Text className="text-[16px]">📱</Text></View>
+                    <View>
+                      <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">System</Text>
+                      <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Follow device settings</Text>
+                    </View>
+                  </View>
+                  {colorMode === 'system' && <View className="w-5 h-5 rounded-full border-2 border-goPrimary items-center justify-center"><Text className="text-[10px] font-JakartaBold text-goPrimary">✓</Text></View>}
+                </TouchableOpacity>
+              </View>
+              <View className="mt-6">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Language</Text>
+                <TouchableOpacity
+                  className="flex-row items-center justify-between p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px]"
+                  onPress={() => router.push("/(main)/(customer)/(tabs)/settings/app-language")}
+                >
+                  <View className="flex-row items-center">
+                    <View className="w-8 h-8 rounded-full bg-goBlue mr-3 items-center justify-center"><Text className="text-[16px]">🌐</Text></View>
+                    <View>
+                      <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">App Language</Text>
+                      <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">English (Default)</Text>
+                    </View>
+                  </View>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">›</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(main)/(customer)/(tabs)/settings/app-language/index.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          
+          export default function SettingsAppLanguage() {
+            const languages = [
+              { code: "en", name: "English", native: "English" },
+              { code: "bn", name: "Bengali", native: "বাংলা" },
+            ];
+          
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.back()}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">App Language</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+                  {languages.map((lang, index) => (
+                    <TouchableOpacity
+                      key={lang.code}
+                      className="flex-row items-center justify-between p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2"
+                      onPress={() => {}}
+                    >
+                      <View>
+                        <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{lang.name}</Text>
+                        <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{lang.native}</Text>
+                      </View>
+                      {index === 0 && <View className="w-5 h-5 rounded-full border-2 border-goPrimary items-center justify-center"><Text className="text-[10px] font-JakartaBold text-goPrimary">✓</Text></View>}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/app-appearance/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/app-language/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-051-SETTINGS-HELP-SUPPORT
+  # ===========================================================================
+  - id: "RIDER-051-SETTINGS-HELP-SUPPORT"
+    screen_numbers: [102,103,104]
+    wireframe: "## 102. Settings - Help & Support / ## 103. FAQ / ## 104. Contact Support"
+    route_path: "app/(main)/(customer)/(tabs)/settings/help-support/index.tsx"
+    action: create
+    note: >
+      CREATE these files. FIXED from v3: added useState import to contact-support and emergency-contacts sub-templates.
+    code_template: |
+      import { View, Text, TouchableOpacity, ScrollView, Linking } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      
+      export default function SettingsHelpSupport() {
+        const supportPhone = process.env.EXPO_PUBLIC_SUPPORT_PHONE || "+8801XXXXXXXXX";
+      
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Help & Support</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+              <View className="mt-4 mb-4">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Quick Help</Text>
+                <TouchableOpacity className="flex-row items-center p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2" onPress={() => router.push("/(main)/(customer)/(tabs)/settings/faq")}>
+                  <View className="w-8 h-8 rounded-full bg-goBlue mr-3 items-center justify-center"><Text className="text-[16px] text-goWhite">❓</Text></View>
+                  <View className="flex-1"><Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">FAQ</Text><Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Frequently asked questions</Text></View>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">›</Text>
+                </TouchableOpacity>
+                <TouchableOpacity className="flex-row items-center p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2" onPress={() => router.push("/(main)/(customer)/(tabs)/settings/contact-support")}>
+                  <View className="w-8 h-8 rounded-full bg-goPrimary mr-3 items-center justify-center"><Text className="text-[16px] text-goWhite">💬</Text></View>
+                  <View className="flex-1"><Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Contact Support</Text><Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Chat with our support team</Text></View>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">›</Text>
+                </TouchableOpacity>
+                <TouchableOpacity className="flex-row items-center p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2" onPress={() => Linking.openURL('tel:' + supportPhone)}>
+                  <View className="w-8 h-8 rounded-full bg-goAccentLight dark:bg-goAccentLight mr-3 items-center justify-center"><Text className="text-[16px]">📞</Text></View>
+                  <View className="flex-1"><Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Call Support</Text><Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">+880 1XXX-XXXXXX</Text></View>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">›</Text>
+                </TouchableOpacity>
+              </View>
+              <View className="mt-6">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Safety</Text>
+                <TouchableOpacity className="flex-row items-center p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2" onPress={() => router.push("/(main)/(customer)/(tabs)/settings/emergency-contacts")}>
+                  <View className="w-8 h-8 rounded-full bg-goDanger mr-3 items-center justify-center"><Text className="text-[16px] text-goWhite">🚨</Text></View>
+                  <View className="flex-1"><Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Emergency Contacts</Text><Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Manage your emergency contacts</Text></View>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">›</Text>
+                </TouchableOpacity>
+              </View>
+              <View className="mt-6">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Legal</Text>
+                <TouchableOpacity className="flex-row items-center p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2" onPress={() => router.push("/(main)/(customer)/(tabs)/settings/privacy-policy")}>
+                  <View className="w-8 h-8 rounded-full bg-goSecondary mr-3 items-center justify-center"><Text className="text-[16px] text-goWhite">📄</Text></View>
+                  <Text className="flex-1 text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Privacy Policy</Text>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">›</Text>
+                </TouchableOpacity>
+                <TouchableOpacity className="flex-row items-center p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2" onPress={() => router.push("/(main)/(customer)/(tabs)/settings/terms-of-service")}>
+                  <View className="w-8 h-8 rounded-full bg-goSecondary mr-3 items-center justify-center"><Text className="text-[16px] text-goWhite">📋</Text></View>
+                  <Text className="flex-1 text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Terms of Service</Text>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">›</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(main)/(customer)/(tabs)/settings/faq/index.tsx"
+        code_template: |
+          import { View, Text, ScrollView } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          
+          const faqs = [
+            { q: "How do I book a ride?", a: "Enter your pickup and destination, select a vehicle type, and tap 'Find Ride'." },
+            { q: "How do I pay for my ride?", a: "You can pay via wallet balance, card, or mobile banking (bKash/Nagad)." },
+            { q: "Can I schedule a ride in advance?", a: "Yes, use the 'Schedule Ride' option and select your preferred date and time." },
+            { q: "What if no drivers are available?", a: "Try again in a few minutes or schedule for later." },
+            { q: "How do I add a promo code?", a: "Go to 'Apply Promos' before confirming your ride and enter the code." },
+            { q: "How do I contact my driver?", a: "Use the in-app chat or call button once a driver is assigned." },
+            { q: "How do I rate my driver?", a: "After your ride completes, you'll be prompted to rate your driver from 1-5 stars." },
+            { q: "What if I left something in the car?", a: "Contact support immediately with your ride details." },
+          ];
+          
+          export default function SettingsFAQ() {
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <Text className="text-[16px] font-Jakarta text-goPrimary" onPress={() => router.back()}>Back</Text>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">FAQ</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+                  {faqs.map((faq, index) => (
+                    <View key={index} className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] p-[16px] mb-3">
+                      <View className="flex-row justify-between">
+                        <Text className="flex-1 text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark pr-4">{faq.q}</Text>
+                        <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">⌄</Text>
+                      </View>
+                      <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-2">{faq.a}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+      - path: "app/(main)/(customer)/(tabs)/settings/contact-support/index.tsx"
+        code_template: |
+          import { useState } from "react";
+          import { View, Text, TouchableOpacity, ScrollView, TextInput } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          
+          export default function SettingsContactSupport() {
+            const [subject, setSubject] = useState("");
+            const [message, setMessage] = useState("");
+            const [isSubmitting, setIsSubmitting] = useState(false);
+          
+            const handleSubmit = async () => {
+              if (!subject.trim() || !message.trim()) return;
+              setIsSubmitting(true);
+              await new Promise((r) => setTimeout(r, 1000));
+              router.back();
+            };
+          
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.back()}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Contact Support</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+                  <View className="mt-4 mb-6">
+                    <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Subject</Text>
+                    <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark" placeholder="What is this about?" placeholderTextColor="#9CA3AF" value={subject} onChangeText={setSubject} />
+                  </View>
+                  <View className="mb-6">
+                    <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Message</Text>
+                    <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark" placeholder="Describe your issue..." placeholderTextColor="#9CA3AF" value={message} onChangeText={setMessage} multiline numberOfLines={8} textAlignVertical="top" />
+                  </View>
+                  <TouchableOpacity className={'bg-goPrimary rounded-full w-full py-[16px] items-center ' + (isSubmitting || !subject.trim() || !message.trim() ? 'opacity-50' : '')} onPress={handleSubmit} disabled={isSubmitting || !subject.trim() || !message.trim()}>
+                    <Text className="text-[18px] font-JakartaBold text-goWhite">{isSubmitting ? 'Sending...' : 'Send Message'}</Text>
+                  </TouchableOpacity>
+                  <View className="mt-6 items-center">
+                    <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Or call us at +880 1XXX-XXXXXX</Text>
+                  </View>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+      - path: "app/(main)/(customer)/(tabs)/settings/emergency-contacts/index.tsx"
+        code_template: |
+          import { useState } from "react";
+          import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          
+          interface Contact { name: string; phone: string; relationship: string; }
+          
+          export default function SettingsEmergencyContacts() {
+            const [contacts, setContacts] = useState<Contact[]>([{ name: "John Doe", phone: "+8801XXXXXXXXX", relationship: "Brother" }]);
+            const [showAddModal, setShowAddModal] = useState(false);
+            const [newName, setNewName] = useState("");
+            const [newPhone, setNewPhone] = useState("");
+            const [newRelationship, setNewRelationship] = useState("");
+          
+            const addContact = () => {
+              if (newName.trim() && newPhone.trim()) {
+                setContacts([...contacts, { name: newName.trim(), phone: newPhone.trim(), relationship: newRelationship.trim() }]);
+                setShowAddModal(false); setNewName(""); setNewPhone(""); setNewRelationship("");
+              }
+            };
+          
+            const deleteContact = (index: number) => {
+              Alert.alert("Delete Contact", "Are you sure?", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Delete", style: "destructive", onPress: () => setContacts(contacts.filter((_, i) => i !== index)) },
+              ]);
+            };
+          
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.back()}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Emergency Contacts</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 100 }}>
+                  {contacts.length > 0 ? contacts.map((contact, index) => (
+                    <View key={index} className="mb-3 flex-row items-center justify-between p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px]">
+                      <View className="flex-1">
+                        <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{contact.name}</Text>
+                        <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{contact.relationship} · {contact.phone}</Text>
+                      </View>
+                      <TouchableOpacity className="p-[6px]" onPress={() => deleteContact(index)}><Text className="text-[16px]">🗑</Text></TouchableOpacity>
+                    </View>
+                  )) : (
+                    <View className="items-center py-[24px]"><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">No emergency contacts added</Text></View>
+                  )}
+                </ScrollView>
+                <View className="absolute bottom-0 left-0 right-0 px-[24px] pb-[24px]">
+                  <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[16px] items-center" onPress={() => setShowAddModal(true)}>
+                    <Text className="text-[18px] font-JakartaBold text-goWhite">+ Add Emergency Contact</Text>
+                  </TouchableOpacity>
+                </View>
+                {showAddModal && (
+                  <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/50 justify-center items-center p-[24px]">
+                    <View className="bg-goBgLight dark:bg-goBgDark rounded-2xl w-full max-w-[400px] p-[24px]">
+                      <Text className="text-[20px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-6 text-center">Add Emergency Contact</Text>
+                      <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-3" placeholder="Name" placeholderTextColor="#9CA3AF" value={newName} onChangeText={setNewName} />
+                      <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-3" placeholder="Phone Number" placeholderTextColor="#9CA3AF" value={newPhone} onChangeText={setNewPhone} keyboardType="phone-pad" />
+                      <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-6" placeholder="Relationship (optional)" placeholderTextColor="#9CA3AF" value={newRelationship} onChangeText={setNewRelationship} />
+                      <View className="flex-row gap-3">
+                        <TouchableOpacity className="flex-1 border border-goBorderLight dark:border-goBorderDark rounded-full py-[14px] items-center" onPress={() => setShowAddModal(false)}>
+                          <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity className="flex-1 bg-goPrimary rounded-full py-[14px] items-center" onPress={addContact}>
+                          <Text className="text-[16px] font-JakartaBold text-goWhite">Save</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </SafeAreaView>
+            );
+          }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/help-support/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/faq/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/contact-support/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/emergency-contacts/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-052-SETTINGS-LEGAL
+  # ===========================================================================
+  - id: "RIDER-052-SETTINGS-LEGAL"
+    screen_numbers: [105,106]
+    wireframe: "## 105. Settings - Privacy Policy / ## 106. Settings - Terms of Service"
+    route_path: "app/(main)/(customer)/(tabs)/settings/privacy-policy/index.tsx"
+    action: create
+    note: >
+      CREATE these files. Static content screens. No useState needed. All colors have dark: variants.
+    code_template: |
+      import { View, Text, ScrollView } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      
+      export default function SettingsPrivacyPolicy() {
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <Text className="text-[16px] font-Jakarta text-goPrimary" onPress={() => router.back()}>Back</Text>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Privacy Policy</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+              <Text className="text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mt-4 mb-4">Last updated: July 15, 2026</Text>
+              <View className="gap-6">
+                <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">1. Information We Collect</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">We collect information you provide directly to us, such as when you create an account, book a ride, or contact support. This includes your name, phone number, email, payment information, and location data.</Text></View>
+                <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">2. How We Use Your Information</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">We use your information to provide, maintain, and improve our services, process payments, send notifications, and communicate with you about your rides and account.</Text></View>
+                <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">3. Information Sharing</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">We may share your information with drivers to facilitate rides, with payment processors for transactions, and with authorities when required by law. We do not sell your personal data.</Text></View>
+                <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">4. Data Security</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</Text></View>
+                <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">5. Your Rights</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">You have the right to access, correct, or delete your personal data. You can manage your data in Settings → Data & Analytics or contact us at privacy@goride.com.</Text></View>
+                <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">6. Contact Us</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">If you have questions about this Privacy Policy, contact us at privacy@goride.com or through the app's Contact Support feature.</Text></View>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(main)/(customer)/(tabs)/settings/terms-of-service/index.tsx"
+        code_template: |
+          import { View, Text, ScrollView } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          
+          export default function SettingsTermsOfService() {
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <Text className="text-[16px] font-Jakarta text-goPrimary" onPress={() => router.back()}>Back</Text>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Terms of Service</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
+                  <Text className="text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mt-4 mb-4">Last updated: July 15, 2026</Text>
+                  <View className="gap-6">
+                    <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">1. Acceptance of Terms</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">By using GoRide, you agree to these Terms of Service. If you do not agree, please do not use our services.</Text></View>
+                    <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">2. Eligibility</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">You must be at least 18 years old and legally capable of entering into contracts to use our services.</Text></View>
+                    <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">3. User Accounts</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">You are responsible for maintaining the confidentiality of your account and for all activities under your account. Provide accurate information and update it as needed.</Text></View>
+                    <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">4. Ride Services</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">GoRide connects riders with independent driver-partners. We do not employ drivers. Rides are subject to availability and local regulations.</Text></View>
+                    <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">5. Payments</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Fares are calculated based on distance, time, and demand. Payment is processed through our payment partners. All amounts are in BDT.</Text></View>
+                    <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">6. Prohibited Conduct</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">You may not use our services for illegal activities, harass drivers or other users, damage property, or interfere with our platform's operation.</Text></View>
+                    <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">7. Limitation of Liability</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">GoRide is not liable for indirect, incidental, or consequential damages. Our total liability is limited to the amount you paid for the relevant service.</Text></View>
+                    <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">8. Changes to Terms</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">We may modify these terms at any time. Continued use after changes constitutes acceptance.</Text></View>
+                    <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">9. Governing Law</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">These terms are governed by the laws of Bangladesh. Disputes will be resolved in the courts of Dhaka.</Text></View>
+                    <View><Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">10. Contact</Text><Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Questions about these Terms? Contact us at legal@goride.com or through the app.</Text></View>
+                  </View>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/privacy-policy/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/terms-of-service/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-053-SETTINGS-ACCOUNT
+  # ===========================================================================
+  - id: "RIDER-053-SETTINGS-ACCOUNT"
+    screen_numbers: [107,108,109]
+    wireframe: "## 107. Emergency Contact Settings / ## 108. Delete Account Confirmation / ## 109. Logout"
+    route_path: "app/(main)/(customer)/(tabs)/settings/delete-account/index.tsx"
+    action: create
+    note: >
+      CREATE these files. FIXED from v3: added missing useState and TextInput imports to delete-account, wrapped content in ScrollView (was View with contentContainerStyle).
+    code_template: |
+      import { useState } from "react";
+      import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      import { supabase } from "@/lib/supabase";
+      import { logger } from "@/lib/logger";
+      
+      export default function SettingsDeleteAccount() {
+        const [confirmText, setConfirmText] = useState("");
+        const [isDeleting, setIsDeleting] = useState(false);
+        const [error, setError] = useState("");
+      
+        const handleDelete = async () => {
+          if (confirmText !== "DELETE") { setError("Please type DELETE to confirm"); return; }
+          setIsDeleting(true); setError("");
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) { setError("Not authenticated"); setIsDeleting(false); return; }
+            const res = await fetch(process.env.EXPO_PUBLIC_SERVER_URL + "/api/account/delete", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            });
+            if (res.ok) {
+              await supabase.auth.signOut();
+              router.replace("/(auth)/phone-entry");
+            } else {
+              const data = await res.json();
+              setError(data.error || "Failed to delete account");
+            }
+          } catch (err) {
+            logger.error("Delete account failed", err);
+            setError("An error occurred");
+          } finally {
+            setIsDeleting(false);
+          }
+        };
+      
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Delete Account</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 40 }}>
+              <View className="items-center mt-6 mb-6">
+                <View className="w-24 h-24 rounded-full bg-goDanger/10 dark:bg-goDanger/10 items-center justify-center mb-4">
+                  <Text className="text-[40px]">⚠️</Text>
+                </View>
+                <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Delete Your Account</Text>
+                <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-4">
+                  This action is permanent and cannot be undone. All your ride history, payment methods, saved addresses, and promotions will be deleted.
+                </Text>
+              </View>
+              <View className="mb-6 p-[16px] bg-goDanger/10 dark:bg-goDanger/10 border border-goDanger/30 dark:border-goDanger/30 rounded-[12px]">
+                <Text className="text-[14px] font-JakartaBold text-goDanger dark:text-goDanger mb-2">What will be deleted:</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Ride history and receipts</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Saved payment methods</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Saved addresses</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Promo codes and wallet balance</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Referral history</Text>
+              </View>
+              {error ? <Text className="text-[14px] font-Jakarta text-goDanger mb-3 text-center">{error}</Text> : null}
+              <View className="mb-6">
+                <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Type DELETE to confirm</Text>
+                <TextInput
+                  className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark"
+                  placeholder="DELETE"
+                  placeholderTextColor="#9CA3AF"
+                  value={confirmText}
+                  onChangeText={setConfirmText}
+                  autoCapitalize="characters"
+                />
+              </View>
+              <TouchableOpacity
+                className={'bg-goDanger rounded-full w-full py-[16px] items-center ' + (isDeleting || confirmText !== "DELETE" ? "opacity-50" : "")}
+                onPress={handleDelete}
+                disabled={isDeleting || confirmText !== "DELETE"}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goWhite">{isDeleting ? "Deleting..." : "Delete My Account"}</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(main)/(customer)/(tabs)/settings/logout-confirmation/index.tsx"
+        code_template: |
+          import { View, Text, TouchableOpacity } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          import { supabase } from "@/lib/supabase";
+          import { logger } from "@/lib/logger";
+          
+          export default function SettingsLogoutConfirmation() {
+            const handleLogout = async () => {
+              try {
+                await supabase.auth.signOut();
+                router.replace("/(auth)/phone-entry");
+              } catch (err) {
+                logger.error("Logout failed", err);
+              }
+            };
+          
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+                <View className="items-center mb-8">
+                  <View className="w-24 h-24 rounded-full bg-goAccentLight dark:bg-goAccentLight items-center justify-center mb-4">
+                    <Text className="text-[40px]">👋</Text>
+                  </View>
+                  <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Log Out</Text>
+                  <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">
+                    Are you sure you want to log out? You will need to enter your phone number and OTP to sign in again.
+                  </Text>
+                </View>
+                <View className="w-full gap-4">
+                  <TouchableOpacity className="bg-goDanger rounded-full w-full py-[16px] items-center" onPress={handleLogout}>
+                    <Text className="text-[18px] font-JakartaBold text-goWhite">Log Out</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center" onPress={() => router.back()}>
+                    <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </SafeAreaView>
+            );
+          }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/delete-account/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/logout-confirmation/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK: RIDER-054-SETTINGS-DATA-REQUESTS
+  # ===========================================================================
+  - id: "RIDER-054-SETTINGS-DATA-REQUESTS"
+    screen_numbers: [92,93]
+    wireframe: "## 92. Settings - Data & Analytics sub-screens (Request Data, Delete Data)"
+    route_path: "app/(main)/(customer)/(tabs)/settings/request-data/index.tsx"
+    action: create
+    note: >
+      CREATE these files. FIXED from v3: wrapped content in ScrollView (was View with contentContainerStyle), added missing useState/TextInput imports.
+    code_template: |
+      import { useState } from "react";
+      import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
+      import { SafeAreaView } from "react-native-safe-area-context";
+      import { router } from "expo-router";
+      import { supabase } from "@/lib/supabase";
+      import { logger } from "@/lib/logger";
+      
+      export default function SettingsRequestData() {
+        const [isRequesting, setIsRequesting] = useState(false);
+        const [error, setError] = useState("");
+      
+        const handleRequest = async () => {
+          setIsRequesting(true); setError("");
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) { setError("Not authenticated"); setIsRequesting(false); return; }
+            const res = await fetch(process.env.EXPO_PUBLIC_SERVER_URL + "/api/account/request-data", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            });
+            if (res.ok) {
+              Alert.alert("Requested", "Your data export has been requested. You will receive an email when it is ready.");
+              router.back();
+            } else {
+              const data = await res.json();
+              setError(data.error || "Failed to request data");
+            }
+          } catch (err) {
+            logger.error("Request data failed", err);
+            setError("An error occurred");
+          } finally {
+            setIsRequesting(false);
+          }
+        };
+      
+        return (
+          <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+            <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+              </TouchableOpacity>
+              <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Request My Data</Text>
+              <View className="w-[50px]" />
+            </View>
+            <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 40 }}>
+              <View className="items-center mt-6 mb-6">
+                <View className="w-24 h-24 rounded-full bg-goBlue/10 dark:bg-goBlue/10 items-center justify-center mb-4">
+                  <Text className="text-[40px]">📥</Text>
+                </View>
+                <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Request Your Data</Text>
+                <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-4">
+                  Get a copy of all the data we have about you, including ride history, payments, and profile information.
+                </Text>
+              </View>
+              <View className="mb-6 p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]">
+                <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">What you will receive:</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Profile information</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Ride history (pickup, destination, fare, date)</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Payment history</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Saved addresses</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Device and login history</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Promo usage</Text>
+              </View>
+              <View className="mb-4 p-[16px] bg-goBlue/10 dark:bg-goBlue/10 border border-goBlue/30 dark:border-goBlue/30 rounded-[12px]">
+                <Text className="text-[14px] font-JakartaBold text-goBlue dark:text-goBlue mb-2">Processing Time</Text>
+                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">We will prepare your data within 30 days and send a download link to your registered email.</Text>
+              </View>
+              {error ? <Text className="text-[14px] font-Jakarta text-goDanger mb-3 text-center">{error}</Text> : null}
+              <TouchableOpacity
+                className={'bg-goPrimary rounded-full w-full py-[16px] items-center ' + (isRequesting ? "opacity-50" : "")}
+                onPress={handleRequest}
+                disabled={isRequesting}
+              >
+                <Text className="text-[18px] font-JakartaBold text-goWhite">{isRequesting ? "Requesting..." : "Request Data Export"}</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        );
+      }
+    extra_files:
+      - path: "app/(main)/(customer)/(tabs)/settings/delete-data/index.tsx"
+        code_template: |
+          import { useState } from "react";
+          import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from "react-native";
+          import { SafeAreaView } from "react-native-safe-area-context";
+          import { router } from "expo-router";
+          import { supabase } from "@/lib/supabase";
+          import { logger } from "@/lib/logger";
+          
+          export default function SettingsDeleteData() {
+            const [confirmText, setConfirmText] = useState("");
+            const [isDeleting, setIsDeleting] = useState(false);
+            const [error, setError] = useState("");
+          
+            const handleDelete = async () => {
+              if (confirmText !== "DELETE MY DATA") { setError("Please type DELETE MY DATA to confirm"); return; }
+              setIsDeleting(true); setError("");
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+                if (!token) { setError("Not authenticated"); setIsDeleting(false); return; }
+                const res = await fetch(process.env.EXPO_PUBLIC_SERVER_URL + "/api/account/delete-data", {
+                  method: "DELETE",
+                  headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                });
+                if (res.ok) {
+                  Alert.alert("Success", "Your data has been deleted");
+                  router.back();
+                } else {
+                  const data = await res.json();
+                  setError(data.error || "Failed to delete data");
+                }
+              } catch (err) {
+                logger.error("Delete data failed", err);
+                setError("An error occurred");
+              } finally {
+                setIsDeleting(false);
+              }
+            };
+          
+            return (
+              <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+                <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+                  <TouchableOpacity onPress={() => router.back()}>
+                    <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+                  </TouchableOpacity>
+                  <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Delete My Data</Text>
+                  <View className="w-[50px]" />
+                </View>
+                <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 40 }}>
+                  <View className="items-center mt-6 mb-6">
+                    <View className="w-24 h-24 rounded-full bg-goDanger/10 dark:bg-goDanger/10 items-center justify-center mb-4">
+                      <Text className="text-[40px]">🗑️</Text>
+                    </View>
+                    <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Delete Your Data</Text>
+                    <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-4">
+                      Permanently delete all your personal data from our systems. This cannot be undone.
+                    </Text>
+                  </View>
+                  <View className="mb-6 p-[16px] bg-goDanger/10 dark:bg-goDanger/10 border border-goDanger/30 dark:border-goDanger/30 rounded-[12px]">
+                    <Text className="text-[14px] font-JakartaBold text-goDanger dark:text-goDanger mb-2">This will delete:</Text>
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• All ride history and receipts</Text>
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Payment methods and transaction history</Text>
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Saved addresses and preferences</Text>
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Wallet balance and promo codes</Text>
+                    <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">• Device and login history</Text>
+                  </View>
+                  {error ? <Text className="text-[14px] font-Jakarta text-goDanger mb-3 text-center">{error}</Text> : null}
+                  <View className="mb-6">
+                    <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Type DELETE MY DATA to confirm</Text>
+                    <TextInput
+                      className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark"
+                      placeholder="DELETE MY DATA"
+                      placeholderTextColor="#9CA3AF"
+                      value={confirmText}
+                      onChangeText={setConfirmText}
+                      autoCapitalize="characters"
+                    />
+                  </View>
+                  <TouchableOpacity
+                    className={'bg-goDanger rounded-full w-full py-[16px] items-center ' + (isDeleting || confirmText !== "DELETE MY DATA" ? "opacity-50" : "")}
+                    onPress={handleDelete}
+                    disabled={isDeleting || confirmText !== "DELETE MY DATA"}
+                  >
+                    <Text className="text-[18px] font-JakartaBold text-goWhite">{isDeleting ? "Deleting..." : "Delete My Data"}</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }
+    verification:
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/request-data/index.tsx" }
+      - { type: file_exists, path: "app/(main)/(customer)/(tabs)/settings/delete-data/index.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }

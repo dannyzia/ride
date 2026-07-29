@@ -1,0 +1,97 @@
+# ==============================================================================
+# Flow: Part 3 - Driver Core Loop
+# Device: emulator-5556 (Driver). Assumes driver logged in AND online
+#   (run auth-flow then driver-go-online first on 5556).
+# Run:  maestro test --device emulator-5556 maestro/flows/driver-core.yaml
+# Preconditions:
+#   - Driver +8801700000001 already authenticated on emulator-5556.
+#   - Driver is ONLINE ("Connected", subscription active -> "Calls Remaining" visible).
+#   - This flow does NOT clearState, so the online/session state is preserved.
+# COORDINATION: run rider-core.yaml on emulator-5554 concurrently so a ride is
+#   requested and the driver receives a "New Ride Offer".
+# The Ride Pin step is MANUAL: read the 4-digit PIN from the RIDER screen
+#   ("Tell your driver your Ride Pin") and type it on the "Ride Pin" screen
+#   here, then tap Start Ride. The long "Slide to Confirm Drop-off" wait covers
+#   that manual pin entry + the in-trip ride.
+# SLIDE NOTE: find-customer / finish-ride use a PanResponder SlideButton whose
+#   handle starts at the LEFT of an 85%-width bar near the bottom of a 40% sheet.
+#   Taps do NOT trigger it; only a slow horizontal swipe completes the slide.
+# ==============================================================================
+appId: com.ride.bd
+name: "Part 3 - Driver Core Loop"
+tags:
+  - driver
+  - core
+  - e2e
+---
+# Foreground the app; preserves online/session state (no clearState).
+- launchApp:
+    appId: com.ride.bd
+# Sanity checks: confirm we are on the driver home and online.
+# Wait for the WS to (re)confirm Connected instead of asserting immediately,
+# so a slow handshake right after foregrounding does not false-fail the run.
+- extendedWaitUntil:
+    visible: "Connected"
+    timeout: 15000
+- assertVisible: "Calls Remaining"
+# Wait for the rider (emulator-5554) to request so an offer arrives.
+- extendedWaitUntil:
+    visible: "New Ride Offer"
+    timeout: 120000
+- assertVisible: "New Ride Offer"
+# Accept the ride (sends fetch:confirm then offer:accept -> find-customer).
+- tapOn: "Accept"
+- waitForAnimationToEnd:
+    timeout: 5000
+# ===== ARRIVAL SLIDE (find-customer) =====
+- extendedWaitUntil:
+    visible: "Slide to Confirm Arrival"
+    timeout: 30000
+- swipe:
+    start: "10%, 93%"
+    end: "92%, 93%"
+    duration: 2000
+- waitForAnimationToEnd:
+    timeout: 3000
+# ===== CROSS-DEVICE PIN HAND-OFF (MANUAL) =====
+# Operator: read the 4-digit PIN from the RIDER device (rider-core shows
+# "Tell your driver your Ride Pin"), type it into the "Ride Pin" input on THIS
+# device, then tap "Start Ride". The wait below covers that manual step plus
+# the live trip until the drop-off slide appears.
+- extendedWaitUntil:
+    visible: "Ride Pin"
+    timeout: 30000
+# ===== DROP-OFF SLIDE (finish-ride) — waits for manual pin + trip =====
+- extendedWaitUntil:
+    visible: "Slide to Confirm Drop-off"
+    timeout: 180000
+- swipe:
+    start: "10%, 93%"
+    end: "92%, 93%"
+    duration: 2000
+- waitForAnimationToEnd:
+    timeout: 3000
+# Completion modal with fare summary.
+- extendedWaitUntil:
+    visible: "Ride Completed ✅"
+    timeout: 30000
+- assertVisible: "Total Fare"
+- tapOn: "Browse Home"
+- waitForAnimationToEnd:
+    timeout: 3000
+# Back on driver home; calls should have decremented. "Connected" is optional
+# here in case the WS briefly re-handshakes during navigation.
+- assertVisible: "Calls Remaining"
+- assertVisible:
+    text: "Connected"
+    optional: true
+# ==============================================================================
+# OPTIONAL MANUAL CHECK (wrong Ride Pin) — uncomment to exercise the error path.
+# On the "Ride Pin" screen, between the arrival slide and the drop-off slide,
+# type a deliberately wrong 4-digit code and tap Start Ride:
+#   - inputText: "0000"
+#   - tapOn: "Start Ride"
+#   - assertVisible: "Incorrect Ride Pin. Ask your rider and try again."
+# Then clear the field and enter the correct PIN the operator reads from the
+# rider device, tap Start Ride, and continue with the drop-off slide above.
+# ==============================================================================

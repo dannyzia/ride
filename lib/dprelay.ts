@@ -67,3 +67,24 @@ export async function verifyOtp(
 
   return (await response.json()) as DpRelayVerifyOtpResponse;
 }
+
+export async function sendSms(
+  phoneNumber: string,
+  message: string,
+): Promise<void> {
+  const normalized = normalizeBdPhone(phoneNumber);
+  const response = await dpRelayFetch("/sendSms", { phoneNumber: normalized, message });
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error("[dprelay] sendSms failed", response.status, errorText);
+    throw new Error(`dpRelay sendSms failed: ${response.status}`);
+  }
+}
+
+function normalizeBdPhone(phone: string): string {
+  const t = phone.replace(/[\s-]/g, "");
+  if (t.startsWith("+880")) return t;
+  if (t.startsWith("880")) return "+" + t;
+  if (t.startsWith("0")) return "+880" + t.slice(1);
+  return "+880" + t;
+}

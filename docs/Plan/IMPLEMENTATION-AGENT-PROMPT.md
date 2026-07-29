@@ -102,7 +102,7 @@ For each phase you are about to start:
 ```
 
 **Known already-completed work (as of last session):**
-- `src/db/schema.ts` — Fully rewritten with all 25 enums, 41 tables, and indexes per `05-DATA-MODEL.md`
+- `src/db/schema.ts` — Fully rewritten with all 26 enums, 49 tables, and indexes per `05-DATA-MODEL.md`
 - Some planning document updates may reference code that doesn't exist yet — trust the codebase, not the plan's assumptions
 
 ### 2.3 Task-Level Execution
@@ -380,8 +380,8 @@ Unused vars with _ prefix are allowed.
 
 The schema in `src/db/schema.ts` has been updated to match `05-DATA-MODEL.md`. It contains:
 
-- **25 enums** (including vehicle_type, user_role, driver_status, document_type, face_match_status, credit_voucher_source, wallet_driver_transaction_type, wallet_rider_transaction_type, point_transaction_type, point_source_type, point_reward_type, referral_status, vehicle_change_reason, vehicle_change_status, etc.)
-- **41 tables** (users, drivers, vehicles, packages, subscriptions, call_ledger, rides, dispatch_offers, documents, zones, pricing, chat_messages, driver_online_sessions, compensation_queue, system_config, platform_config, sos_alerts, incentive_definitions, driver_incentives, preferences, driver_preferences, ride_preferences, vehicle_type_changes, promo_codes, promo_redemptions, vehicle_models, rider_addresses, referral_campaigns, referral_codes, referrals, driver_wallet_transactions, rider_wallet_transactions, points, point_transactions, point_offers)
+- **26 enums** (including vehicle_type, user_role, driver_status, document_type, face_match_status, credit_voucher_source, wallet_driver_transaction_type, wallet_rider_transaction_type, point_transaction_type, point_source_type, point_reward_type, referral_status, vehicle_change_reason, vehicle_change_status, etc.)
+- **49 tables** (users, drivers, vehicles, packages, subscriptions, call_ledger, rides, dispatch_offers, documents, zones, pricing, chat_messages, driver_online_sessions, compensation_queue, system_config, platform_config, sos_alerts, incentive_definitions, driver_incentives, preferences, driver_preferences, ride_preferences, vehicle_type_changes, promo_codes, promo_redemptions, vehicle_models, rider_addresses, referral_campaigns, referral_codes, referrals, driver_wallet_transactions, rider_wallet_transactions, points, point_transactions, point_offers)
 
 **⚠ Verification rule:** Before implementing any table or column, verify it exists in `docs/Plan/05-DATA-MODEL.md`. If a table or column is not defined there, skip it — it will be added in a later planning update.
 

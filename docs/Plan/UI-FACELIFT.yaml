@@ -1,0 +1,456 @@
+# =============================================================================
+# UI-FACELIFT.yaml — Kimi-K2.6 Design Refresh (v2 — COMPLETE)
+# =============================================================================
+# Philosophy: "richer surfaces, tighter type, softer shadows"
+# Source: Kimi-K2.6 facelift plan v2 (2026-07-27) — complete output with
+# find/replace table + screen examples.
+#
+# Primary green: #0A9B4C (darker, richer than v1's #0AAF6B)
+# Backgrounds: slate-tinted (#F8FAFC light, #0F1115 dark)
+# Shadows: built-in Tailwind + color modifiers (no custom boxShadow needed)
+# Typography: t-shirt sizes with tight tracking on headings
+#
+# CRITICAL: Verify `goBg` (bare) is not used directly in screens.
+# If it is, keep goBg = '#0F1115' (dark) to match original semantics.
+# =============================================================================
+version: "1.0"
+project: Ride
+role: all
+priority_class: P2
+total_tasks: 5
+
+global_notes:
+  principle: "Replace hex values in theme + tailwind config. Class names stay the same. All screens pick up new colors automatically."
+  font_rule: "font-JakartaBold (headings), font-Jakarta (body). Add tracking-tight to large headings."
+  dark_rule: "EVERY color className MUST have a dark: variant."
+  self_check:
+    - "[ ] npx tsc --noEmit passes"
+    - "[ ] App launches — no white screen"
+    - "[ ] Light mode: backgrounds are #F8FAFC (slate-tinted, not pure white)"
+    - "[ ] Dark mode: backgrounds are #0F1115 (not pure black)"
+    - "[ ] Primary buttons are #0AAF6B (deeper emerald) with soft glow shadow"
+    - "[ ] All text is readable in both modes"
+
+tasks:
+
+  - id: "UI-001-THEME-REPLACE"
+    route_path: "theme/goRide.ts"
+    action: create
+    note: >
+      Replace the ENTIRE file with Kimi's updated design tokens.
+      Key changes: primary #0CC25F → #0AAF6B, backgrounds slate-tinted,
+      shadows are colored ambient glows, typography has letter-spacing.
+    code_template: |
+      // GoRide Design Tokens — Premium Facelift 2026
+      export const colors = {
+        primary: "#0AAF6B",
+        primaryPressed: "#088C55",
+        primaryLight: "#E8FBF0",
+        primaryGlow: "rgba(10, 175, 107, 0.30)",
+        danger: "#EF4444",
+        dangerLight: "#FEF2F2",
+        dangerGlow: "rgba(239, 68, 68, 0.25)",
+        info: "#3B82F6",
+        infoLight: "#EFF6FF",
+        infoGlow: "rgba(59, 130, 246, 0.25)",
+        success: "#10B981",
+        successLight: "#ECFDF5",
+        warning: "#F59E0B",
+        warningLight: "#FFFBEB",
+        bgLight: "#F8FAFC",
+        bgDark: "#0F1115",
+        surfaceLight: "#FFFFFF",
+        surfaceElevatedLight: "#FFFFFF",
+        surfaceElevatedDark: "#1A1D23",
+        darkSurface: "#0C0E12",
+        nearBlack: "#080A0D",
+        borderLight: "#E2E8F0",
+        borderDark: "#2A2F3A",
+        textPrimaryLight: "#0F172A",
+        textPrimaryDark: "#F8FAFC",
+        textSecondaryLight: "#64748B",
+        textSecondaryDark: "#94A3B8",
+        textDisabledLight: "#CBD5E1",
+        textDisabledDark: "#475569",
+        textMutedLight: "#94A3B8",
+        textMutedDark: "#64748B",
+        white: "#FFFFFF",
+        gray: "#64748B",
+        grayLight: "#94A3B8",
+        grayMedium: "#CBD5E1",
+        adminAccent: "#60A5FA",
+        adminSubtle: "#E2E8F0",
+        adminIconDark: "#334155",
+        blue: "#3B82F6",
+        darkSecondary: "#16181F",
+        darkSecondaryAlt: "#1A1D23",
+        darkTabBar: "#1E2128",
+        redVariant: "#EF4444",
+        greenVariant: "#10B981",
+        slideGreen: "#0AAF6B",
+        lightGray: "#F1F5F9",
+        lightGreenText: "#A7F3D0",
+        lightRedText: "#FECACA",
+        yellow: "#FBBF24",
+        mediumGray: "#94A3B8",
+        indigo: "#6366F1",
+        black: "#000000",
+        checkGreen: "#22C55E",
+        amber: "#F59E0B",
+        gray100: "#F1F5F9",
+        gray200: "#E2E8F0",
+        gray600: "#475569",
+      } as const;
+
+      export const fonts = {
+        heading: "Jakarta-Bold",
+        body: "Jakarta-Regular",
+        headingFallback: "Jakarta-Bold",
+        bodyFallback: "Jakarta-Regular",
+      } as const;
+
+      export const radii = {
+        none: 0, xs: 6, sm: 8, md: 12, lg: 16, xl: 20,
+        "2xl": 24, "3xl": 32, full: 9999, pill: 1000,
+      } as const;
+
+      export const spacing = {
+        "0": 0, xs: 4, sm: 8, md: 12, lg: 16, xl: 20,
+        "2xl": 24, "3xl": 32, "4xl": 40, "5xl": 48, "6xl": 64,
+      } as const;
+
+      export const shadows = {
+        xs: { shadowColor: "rgba(15, 23, 42, 0.04)", shadowOffset: { width: 0, height: 1 }, shadowRadius: 2, elevation: 1 },
+        sm: { shadowColor: "rgba(15, 23, 42, 0.05)", shadowOffset: { width: 0, height: 2 }, shadowRadius: 4, elevation: 2 },
+        md: { shadowColor: "rgba(15, 23, 42, 0.07)", shadowOffset: { width: 0, height: 4 }, shadowRadius: 12, elevation: 4 },
+        lg: { shadowColor: "rgba(15, 23, 42, 0.09)", shadowOffset: { width: 0, height: 8 }, shadowRadius: 24, elevation: 8 },
+        xl: { shadowColor: "rgba(15, 23, 42, 0.11)", shadowOffset: { width: 0, height: 12 }, shadowRadius: 40, elevation: 12 },
+        "2xl": { shadowColor: "rgba(15, 23, 42, 0.14)", shadowOffset: { width: 0, height: 24 }, shadowRadius: 64, elevation: 16 },
+        glowPrimary: { shadowColor: "rgba(10, 175, 107, 0.35)", shadowOffset: { width: 0, height: 4 }, shadowRadius: 20, elevation: 8 },
+        glowDanger: { shadowColor: "rgba(239, 68, 68, 0.30)", shadowOffset: { width: 0, height: 4 }, shadowRadius: 20, elevation: 8 },
+        darkShadowMd: { shadowColor: "rgba(0, 0, 0, 0.30)", shadowOffset: { width: 0, height: 4 }, shadowRadius: 16, elevation: 6 },
+        darkShadowLg: { shadowColor: "rgba(0, 0, 0, 0.40)", shadowOffset: { width: 0, height: 8 }, shadowRadius: 32, elevation: 10 },
+        card: { shadowColor: "rgba(15, 23, 42, 0.06)", shadowOffset: { width: 0, height: 2 }, shadowRadius: 16, elevation: 3 },
+        cardDark: { shadowColor: "rgba(0, 0, 0, 0.30)", shadowOffset: { width: 0, height: 4 }, shadowRadius: 20, elevation: 5 },
+        bottomSheet: { shadowColor: "rgba(15, 23, 42, 0.10)", shadowOffset: { width: 0, height: -8 }, shadowRadius: 32, elevation: 16 },
+        bottomSheetDark: { shadowColor: "rgba(0, 0, 0, 0.40)", shadowOffset: { width: 0, height: -8 }, shadowRadius: 32, elevation: 16 },
+      } as const;
+
+      export const typography = {
+        display: { fontFamily: fonts.heading, fontSize: 32, lineHeight: 36, letterSpacing: -0.5, fontWeight: "700" as const },
+        h1: { fontFamily: fonts.heading, fontSize: 28, lineHeight: 32, letterSpacing: -0.3, fontWeight: "700" as const },
+        h2: { fontFamily: fonts.heading, fontSize: 22, lineHeight: 28, letterSpacing: -0.2, fontWeight: "700" as const },
+        h3: { fontFamily: fonts.heading, fontSize: 18, lineHeight: 24, letterSpacing: -0.1, fontWeight: "600" as const },
+        body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, letterSpacing: 0, fontWeight: "400" as const },
+        bodySmall: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, letterSpacing: 0, fontWeight: "400" as const },
+        caption: { fontFamily: fonts.body, fontSize: 11, lineHeight: 14, letterSpacing: 0.3, fontWeight: "500" as const },
+        button: { fontFamily: fonts.heading, fontSize: 16, lineHeight: 20, letterSpacing: 0.2, fontWeight: "700" as const },
+      } as const;
+
+      export const goRideTheme = { colors, fonts, radii, spacing, shadows, typography } as const;
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "UI-002-TAILWIND-REPLACE"
+    route_path: "tailwind.config.js"
+    action: create
+    note: >
+      Replace the ENTIRE file with Kimi's updated config.
+      All class name aliases (goPrimary, goBgLight, etc.) stay the SAME.
+      Only the hex values change. This means every existing className
+      in every screen automatically picks up the new colors.
+      Key additions: boxShadow utilities (go-sm, go-md, go-glow-primary),
+      letterSpacing scale, lineHeight scale.
+    code_template: |
+      /** @type {import('tailwindcss').Config} */
+      module.exports = {
+        content: [
+          "./App.{js,jsx,ts,tsx}",
+          "./app/**/*.{js,jsx,ts,tsx}",
+          "./components/**/*.{js,jsx,ts,tsx}",
+          "./global.css"
+        ],
+        presets: [require("nativewind/preset")],
+        theme: {
+          extend: {
+            fontFamily: {
+              Jakarta: ["Jakarta", "sans-serif"],
+              JakartaBold: ["Jakarta-Bold", "sans-serif"],
+              JakartaExtraBold: ["Jakarta-ExtraBold", "sans-serif"],
+              JakartaExtraLight: ["Jakarta-ExtraLight", "sans-serif"],
+              JakartaLight: ["Jakarta-Light", "sans-serif"],
+              JakartaMedium: ["Jakarta-Medium", "sans-serif"],
+              JakartaSemiBold: ["Jakarta-SemiBold", "sans-serif"],
+            },
+            colors: {
+              bgColor: '#0F1115',
+              cardBgColor: '#1A1D23',
+              hoverBgColor: '#232730',
+              borderColor: '#2A2F3A',
+              primaryTextColor: '#F8FAFC',
+              secondaryTextColor: '#94A3B8',
+              placeholderTextColor: '#475569',
+              accentColor: '#3B82F6',
+              goBg: '#0F1115',
+              goBgLight: '#F8FAFC',
+              goSurface: '#1A1D23',
+              goSurfaceLight: '#FFFFFF',
+              goBorder: '#2A2F3A',
+              goBorderLight: '#E2E8F0',
+              goTextPrimary: '#F8FAFC',
+              goTextPrimaryLight: '#0F172A',
+              goTextSecondary: '#94A3B8',
+              goTextSecondaryLight: '#64748B',
+              goAccent: '#0AAF6B',
+              goAccentPressed: '#088C55',
+              goAccentLight: '#E8FBF0',
+              goDanger: '#EF4444',
+              goDangerLight: '#FEF2F2',
+              goBgDark: '#0F1115',
+              goSurfaceElevatedDark: '#1A1D23',
+              goBorderDark: '#2A2F3A',
+              goTextPrimaryDark: '#F8FAFC',
+              goTextSecondaryDark: '#94A3B8',
+              goPrimary: '#0AAF6B',
+              goWhite: '#FFFFFF',
+              goInfo: '#3B82F6',
+              goAdminAccent: '#60A5FA',
+              goAdminSubtle: '#E2E8F0',
+              goAdminIconDark: '#334155',
+              goDarkSurface: '#0C0E12',
+              goNearBlack: '#080A0D',
+              goBlue: '#3B82F6',
+              goDarkSecondary: '#16181F',
+              goDarkSecondaryAlt: '#1A1D23',
+              goDarkTabBar: '#1E2128',
+              goRedVariant: '#EF4444',
+              goGreenVariant: '#10B981',
+              goSlideGreen: '#0AAF6B',
+              goLightGray: '#F1F5F9',
+              goLightGreenText: '#A7F3D0',
+              goLightRedText: '#FECACA',
+              goYellow: '#FBBF24',
+              goMediumGray: '#94A3B8',
+              goIndigo: '#6366F1',
+              goAmber: '#F59E0B',
+              goCheckGreen: '#22C55E',
+              goGray100: '#F1F5F9',
+              goGray200: '#E2E8F0',
+              goGray600: '#475569',
+              goTextDisabledLight: '#CBD5E1',
+              goTextDisabledDark: '#475569',
+              goSuccess: '#10B981',
+              goSuccessLight: '#ECFDF5',
+              goWarning: '#F59E0B',
+              goWarningLight: '#FFFBEB',
+            },
+            boxShadow: {
+              'go-xs': '0 1px 2px 0 rgb(15 23 42 / 0.04)',
+              'go-sm': '0 2px 4px 0 rgb(15 23 42 / 0.05)',
+              'go-md': '0 4px 12px 0 rgb(15 23 42 / 0.07)',
+              'go-lg': '0 8px 24px 0 rgb(15 23 42 / 0.09)',
+              'go-xl': '0 12px 40px 0 rgb(15 23 42 / 0.11)',
+              'go-2xl': '0 24px 64px 0 rgb(15 23 42 / 0.14)',
+              'go-glow-primary': '0 4px 20px 0 rgb(10 175 107 / 0.35)',
+              'go-glow-danger': '0 4px 20px 0 rgb(239 68 68 / 0.30)',
+              'go-dark-md': '0 4px 16px 0 rgb(0 0 0 / 0.30)',
+              'go-dark-lg': '0 8px 32px 0 rgb(0 0 0 / 0.40)',
+            },
+            letterSpacing: {
+              tighter: '-0.05em',
+              tight: '-0.025em',
+              normal: '0',
+              wide: '0.025em',
+              wider: '0.05em',
+            },
+            lineHeight: {
+              tighter: '1.1',
+              tight: '1.25',
+              snug: '1.375',
+              normal: '1.5',
+              relaxed: '1.625',
+            },
+          },
+        },
+        plugins: [],
+      }
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "UI-003-CUSTOMBUTTON-UPDATE"
+    route_path: "components/CustomButton.tsx"
+    action: audit_and_fix
+    note: >
+      Update the button variants to use the new shadow utilities and
+      dark: variants. Key changes:
+      - Primary: shadow-go-glow-primary (green ambient glow)
+      - Danger: shadow-go-glow-danger (red ambient glow)
+      - Secondary: uses goSurface/goSurfaceElevatedDark with border
+      - Outline: border-2 instead of border-1
+      - All: activeOpacity={0.85}, px-8 py-4 (48dp tap target)
+      - Text: font-JakartaBold tracking-wide instead of font-bold
+      - Disabled: opacity-40 instead of opacity-50
+    fixes:
+      - find: "bg-goDarkSecondary shadow-lg shadow-goBlue/40 border border-goBlue/60"
+        replace: "bg-goSurface dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark shadow-go-sm"
+      - find: "bg-goRedVariant shadow-md shadow-red-500/40 border border-red-500/60"
+        replace: "bg-goDanger shadow-go-glow-danger border border-goDanger/20"
+      - find: "bg-goGreenVariant shadow-md shadow-green-500/40 border border-green-500/60"
+        replace: "bg-goGreenVariant shadow-go-glow-primary/30 border border-goGreenVariant/20"
+      - find: "bg-transparent border border-goBlue/50"
+        replace: "bg-transparent border-2 border-goPrimary"
+      - find: "bg-goBlue shadow-xl shadow-goBlue/50"
+        replace: "bg-goPrimary shadow-go-glow-primary"
+      - find: "rounded-full p-4 flex flex-row justify-center items-center shadow-md shadow-neutral-400/70"
+        replace: "rounded-full px-8 py-4 flex flex-row justify-center items-center"
+      - find: "opacity-50"
+        replace: "opacity-40"
+      - find: "text-white text-lg font-bold"
+        replace: "text-white text-base font-JakartaBold tracking-wide"
+      - find: "<TouchableOpacity\n        disabled={disabled}\n        onPress={onPress}"
+        replace: "<TouchableOpacity\n        activeOpacity={0.85}\n        disabled={disabled}\n        onPress={onPress}"
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  - id: "UI-004-GLOBAL-POLISH"
+    route_path: "Multiple files (global find/replace)"
+    action: audit_and_fix
+    note: >
+      Apply Kimi's polish patterns across the codebase. These are small
+      className tweaks that add up to a premium feel.
+
+      GLOBAL FIND/REPLACE PAIRS (apply across all .tsx files):
+
+      1. HEADINGS: Add letter-spacing to large text
+         - text-[22px] font-JakartaBold  →  text-[22px] font-JakartaBold tracking-tight
+         - text-[24px] font-JakartaBold  →  text-[24px] font-JakartaBold tracking-tight
+         - text-[28px] font-JakartaBold  →  text-[28px] font-JakartaBold tracking-tighter
+         Only apply to headings (font-JakartaBold at 22px+). Do NOT add to body text.
+
+      2. CARDS: Add subtle shadow
+         - Find: rounded-[10px] or rounded-[12px] or rounded-[16px] with bg-goSurfaceLight
+           Add: shadow-go-sm after the bg class
+         Example: "bg-goSurfaceLight rounded-[12px]" → "bg-goSurfaceLight rounded-[12px] shadow-go-sm"
+
+      3. CARD PADDING: Slightly more generous
+         - p-[12px] → p-[16px] (only on card containers, not buttons)
+         - p-3 → p-4 (only on card containers)
+
+      4. INPUT FIELDS: Add focus-style border
+         - Find: border border-goBorderLight in TextInput contexts
+         These already work — the new border color (#E2E8F0) is softer.
+         No change needed — the token swap handles it.
+
+      5. BOTTOM SHEETS: Add elevation
+         - Find: rounded-t-[20px] or rounded-t-[24px] or rounded-t-[32px]
+           Add: shadow-go-lg
+         Example: "rounded-t-[24px]" → "rounded-t-[24px] shadow-go-lg"
+
+      DO NOT change:
+      - Screen structure or navigation
+      - Feature logic
+      - Component props or interfaces
+      - Any non-className code
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Visual: app looks richer — deeper green, slate-tinted backgrounds, soft shadows"
+      - "Visual: dark mode is #0F1115 (not pure black) with #1A1D23 elevated surfaces"
+      - "Visual: primary buttons have a subtle green glow"
+
+  # ===========================================================================
+  # TASK 5: MICRO-ANIMATIONS (Kimi-K2.6 Reanimated snippets)
+  # ===========================================================================
+  - id: "UI-005-ANIMATIONS"
+    route_path: "Multiple files (CustomButton, RideLayout, screens with loading)"
+    action: audit_and_fix
+    priority: P2
+    note: >
+      Add 5 micro-interactions using react-native-reanimated (already in project).
+      These enhance the premium feel without changing any functionality.
+
+    animations:
+
+      1_button_press_scale:
+        where: "components/CustomButton.tsx — replace activeOpacity with scale animation"
+        code: |
+          import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+          // Inside the component:
+          const scale = useSharedValue(1);
+          const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+          // Wrap the TouchableOpacity:
+          <Animated.View style={animatedStyle}>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPressIn={() => { scale.value = withSpring(0.96, { stiffness: 400, damping: 15 }); }}
+              onPressOut={() => { scale.value = withSpring(1, { stiffness: 400, damping: 15 }); }}
+              onPress={onPress}
+              className="..."
+            >
+          </Animated.View>
+
+      2_card_entrance:
+        where: "Create components/AnimatedCard.tsx — reusable fade+slide wrapper for cards"
+        code: |
+          import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+          // Usage: <AnimatedCard>{children}</AnimatedCard>
+          const offset = useSharedValue(24);
+          const opacity = useSharedValue(0);
+          const cardStyle = useAnimatedStyle(() => ({
+            transform: [{ translateY: offset.value }],
+            opacity: opacity.value,
+          }));
+          useEffect(() => {
+            offset.value = withSpring(0, { stiffness: 120, damping: 14, mass: 0.8 });
+            opacity.value = withSpring(1, { stiffness: 120, damping: 14 });
+          }, []);
+          // Render: <Animated.View style={cardStyle} className="...">{children}</Animated.View>
+          // Apply to: ride estimate cards in book-ride, wallet cards, earnings cards
+
+      3_success_checkmark:
+        where: "finish-ride completion modal, payment success screens, package purchase success"
+        code: |
+          import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } from 'react-native-reanimated';
+          const checkScale = useSharedValue(0);
+          const checkStyle = useAnimatedStyle(() => ({
+            transform: [{ scale: checkScale.value }, { rotate: `${(1 - checkScale.value) * -15}deg` }],
+          }));
+          useEffect(() => {
+            checkScale.value = withDelay(200, withSpring(1, { stiffness: 260, damping: 12 }));
+          }, []);
+          // Render: <Animated.View style={checkStyle} className="w-20 h-20 rounded-full bg-goAccent/10 items-center justify-center mb-4">
+          //           <Text className="text-4xl text-goAccent">✓</Text>
+          //         </Animated.View>
+
+      4_skeleton_shimmer:
+        where: "Any screen with API loading state (show-ride, activity/top-up, earnings, wallet)"
+        code: |
+          import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from 'react-native-reanimated';
+          const shimmer = useSharedValue(-200);
+          const shimmerStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shimmer.value }] }));
+          useEffect(() => {
+            shimmer.value = withRepeat(withTiming(400, { duration: 1200, easing: Easing.linear }), -1);
+          }, []);
+          // Render: <View className="h-4 bg-goGray200 dark:bg-goBorderDark rounded-lg overflow-hidden">
+          //           <Animated.View style={shimmerStyle} className="w-[200] h-full bg-white/30 dark:bg-white/10 blur-xl" />
+          //         </View>
+          // Create a reusable <Skeleton width={} height={} /> component
+
+      5_bottom_sheet_spring:
+        where: "components/RideLayout.tsx — update the BottomSheet component"
+        code: |
+          const springConfig = useMemo(() => ({
+            damping: 20, mass: 0.8, stiffness: 180,
+            overshootClamping: false,
+            restDisplacementThreshold: 0.01,
+            restSpeedThreshold: 0.01,
+          }), []);
+          // Add to BottomSheet props:
+          // animationConfigs={springConfig}
+
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+      - "Visual: buttons shrink slightly on press then spring back"
+      - "Visual: cards fade+slide in when screen mounts"
+      - "Visual: success screens show animated checkmark pop"
+      - "Visual: loading screens show shimmer instead of blank/spinner"
+      - "Visual: bottom sheets open/close with smooth spring physics"

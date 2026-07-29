@@ -11,14 +11,17 @@ export async function GET(request: Request) {
     const supabaseUid = user.id;
 
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const bdtOffset = 6 * 60 * 60 * 1000;
+    const startOfDay = new Date(Math.floor((now.getTime() + bdtOffset) / (24 * 60 * 60 * 1000)) * (24 * 60 * 60 * 1000) - bdtOffset);
+    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
     // rides.driver_id references drivers.id (the driver row PK), NOT users.id.
     // Join through drivers -> users, and only count completed rides.
     const data = await db.select({
       totalBdt: sql<string>`COALESCE(CAST(fare_breakdown->>'total_bdt' AS text), '0')`,
       commissionBdt: sql<number>`COALESCE(platform_commission_bdt, 0)`,
+      promoDiscountBdt: sql<number>`COALESCE(promo_discount_bdt, 0)`,
+      tipBdt: sql<number>`COALESCE(tip_bdt, 0)`,
     })
       .from(rides)
       .innerJoin(drivers, eq(rides.driver_id, drivers.id))
@@ -35,12 +38,21 @@ export async function GET(request: Request) {
     const totalEarnings = data.reduce((acc, ride) => {
       const gross = Number(ride.totalBdt ?? 0);
       const commission = ride.commissionBdt ?? 0;
-      return acc + (gross - commission);
+      return acc + (gross - commission) + (ride.tipBdt ?? 0);
     }, 0);
-    // total_bdt is integer paisa; convert to taka for display.
     const earningsTaka = Math.round(totalEarnings) / 100;
 
-    return Response.json({ totalEarnings: earningsTaka }, { status: 200 });
+    const tipsBdt = data.reduce((acc, ride) => acc + (ride.tipBdt ?? 0), 0);
+    const promosBdt = data.reduce((acc, ride) => acc + (ride.promoDiscountBdt ?? 0), 0);
+    const tripCount = data.length;
+
+    return Response.json({
+      totalEarnings: earningsTaka,
+      total_earnings_bdt: Math.round(totalEarnings),
+      tips_bdt: tipsBdt,
+      promos_bdt: promosBdt,
+      trip_count: tripCount,
+    }, { status: 200 });
   } catch (error) {
     logger.error('[driver/calculate-price] error', error);
     return Response.json({ error: 'internal_error' }, { status: 500 });

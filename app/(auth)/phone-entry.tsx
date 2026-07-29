@@ -43,14 +43,20 @@ export default function PhoneEntryScreen() {
       const checkData = await checkResponse.json();
 
       if (!checkResponse.ok) {
-        setError(checkData.message || "Failed to check phone number");
+        const msg =
+          typeof checkData.message === "string"
+            ? checkData.message
+            : checkData.error || "Failed to check phone number";
+        setError(msg);
         return;
       }
 
       if (checkData.exists) {
         router.push(`/(auth)/login?phone=${encodeURIComponent(fullPhone)}`);
       } else {
-        setError("No account found with this phone number");
+        setError(
+          "No account found with this phone number. Tap Register to create one.",
+        );
       }
     } catch (e: any) {
       setError("Network error. Please try again.");
@@ -83,7 +89,11 @@ export default function PhoneEntryScreen() {
       const checkData = await checkResponse.json();
 
       if (!checkResponse.ok) {
-        setError(checkData.message || "Failed to check phone number");
+        const msg =
+          typeof checkData.message === "string"
+            ? checkData.message
+            : checkData.error || "Failed to check phone number";
+        setError(msg);
         return;
       }
 
@@ -113,28 +123,28 @@ export default function PhoneEntryScreen() {
             className="w-24 h-24 rounded-xl"
             resizeMode="contain"
           />
-          <Text className="text-[28px] font-[Urbanist] font-bold text-goTextPrimaryDark mb-3 leading-[1.2] tracking-[-0.5px]">
+          <Text className="text-[28px] font-JakartaBold font-bold text-goTextPrimaryDark mb-3 leading-[1.2] tracking-[-0.5px]">
             Ride
           </Text>
-          <Text className="text-[15px] font-[Urbanist] text-goTextSecondaryDark mb-1">
+          <Text className="text-[15px] font-JakartaBold text-goTextSecondaryDark mb-1">
             Your ride, your way
           </Text>
         </View>
 
-        <Text className="text-[22px] font-[Urbanist] font-bold text-goTextPrimaryDark mb-1">
+        <Text className="text-[22px] font-JakartaBold font-bold text-goTextPrimaryDark mb-1">
           Get Started
         </Text>
-        <Text className="text-[14px] font-[Urbanist] text-goTextSecondaryDark mb-6">
+        <Text className="text-[14px] font-JakartaBold text-goTextSecondaryDark mb-6">
           Enter your phone number to continue
         </Text>
 
         {/* Phone Input */}
         <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
-          <Text className="text-[15px] font-[Urbanist] text-goTextSecondaryDark mr-2">
+          <Text className="text-[15px] font-JakartaBold text-goTextSecondaryDark mr-2">
             +880
           </Text>
           <TextInput
-            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-[Urbanist]"
+            className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
             placeholder="1XXXXXXXXX"
             placeholderTextColor={colors.textDisabledDark}
             keyboardType="phone-pad"
@@ -152,7 +162,7 @@ export default function PhoneEntryScreen() {
             onPress={() => setRole("rider")}
           >
             <Text
-              className={`text-[14px] font-[Urbanist] font-bold ${role === "rider" ? "text-goWhite" : "text-goTextSecondaryDark"}`}
+              className={`text-[14px] font-JakartaBold font-bold ${role === "rider" ? "text-goWhite" : "text-goTextSecondaryDark"}`}
             >
               Rider
             </Text>
@@ -163,7 +173,7 @@ export default function PhoneEntryScreen() {
             onPress={() => setRole("driver")}
           >
             <Text
-              className={`text-[14px] font-[Urbanist] font-bold ${role === "driver" ? "text-goWhite" : "text-goTextSecondaryDark"}`}
+              className={`text-[14px] font-JakartaBold font-bold ${role === "driver" ? "text-goWhite" : "text-goTextSecondaryDark"}`}
             >
               Driver
             </Text>
@@ -171,7 +181,7 @@ export default function PhoneEntryScreen() {
         </View>
 
         {error ? (
-          <Text className="text-[14px] font-[Urbanist] text-goDanger text-center mb-3">
+          <Text className="text-[14px] font-JakartaBold text-goDanger text-center mb-3">
             {error}
           </Text>
         ) : null}
@@ -186,7 +196,7 @@ export default function PhoneEntryScreen() {
             {loading ? (
               <ActivityIndicator size={20} color={colors.white} />
             ) : (
-              <Text className="text-[16px] font-[Urbanist] font-bold text-goWhite">
+              <Text className="text-[16px] font-JakartaBold font-bold text-goWhite">
                 Login
               </Text>
             )}
@@ -199,7 +209,7 @@ export default function PhoneEntryScreen() {
             style={{ borderWidth: 1, borderColor: colors.borderDark }}
           >
             {loading ? null : (
-              <Text className="text-[16px] font-[Urbanist] font-bold text-goTextSecondaryDark">
+              <Text className="text-[16px] font-JakartaBold font-bold text-goTextSecondaryDark">
                 Register
               </Text>
             )}

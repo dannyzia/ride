@@ -1,0 +1,339 @@
+# =============================================================================
+# NEW-FEATURES-P2.yaml v1.0 — NEW FEATURE BUILD PLAN (Kimi-K2.6 Suggestions)
+# =============================================================================
+# These are NEW features not present in the codebase. Detailed implementation
+# specs are in docs/FeatureList/FEATURES.md (lines 253+).
+# Priority order is based on Kimi-K2.6's assessment + codebase readiness.
+# =============================================================================
+# ARCHITECTURE CONTEXT:
+#   - Backend: Supabase (PostgreSQL), Expo API routes (app/api/), WebSocket (utils-server/)
+#   - Payments: PortPos unified gateway (NOT bKash/Nagad directly)
+#   - NO Firebase/FCM. Use Expo Push Notifications (expo-notifications).
+#   - Expo Managed workflow (no bare workflow).
+#   - Maps: MapLibre GL + Barikoi API (geocoding, places, directions).
+# =============================================================================
+version: "1.0"
+project: Ride
+role: all
+priority_class: P2
+total_tasks: 10
+
+global_notes:
+  supabase: "PostgreSQL via Drizzle ORM (src/db/schema.ts). Migrations via npx drizzle-kit generate + push."
+  api_routes: "Expo API routes at app/api/. Dynamic params as 2nd arg (NOT wrapped in {params})."
+  websocket: "utils-server/ is the WebSocket dispatch server. Separate package, separate tsconfig."
+  payments: "PortPos unified gateway. lib/portpos.ts. Callback at app/api/payment/portpos/callback+api.ts."
+  no_firebase: "NO Firebase/FCM. Use expo-notifications for push."
+  money: "ALL amounts INTEGER PAISA. Display: {(amt/100).toFixed(0)}."
+  schema_additions: "New columns/tables need: (1) add to src/db/schema.ts, (2) npx drizzle-kit generate, (3) npx drizzle-kit push, (4) GRANT statements for PostgREST (TD-31 after Oct 30 2026)."
+  self_check:
+    - "[ ] Schema changes in src/db/schema.ts"
+    - "[ ] Migration generated: npx drizzle-kit generate"
+    - "[ ] npx tsc --noEmit passes"
+    - "[ ] No console.log — use logger from @/lib/logger"
+
+tasks:
+
+  # ===========================================================================
+  # TASK 1: PUSH NOTIFICATION SERVICE (Kimi #1 — Launch Blocker)
+  # ===========================================================================
+  - id: "NEW-001-PUSH-NOTIFICATIONS"
+    route_path: "Multiple files"
+    action: create
+    note: >
+      PRIORITY: LAUNCH BLOCKER. Drivers won't get ride offers when the app is
+      backgrounded. The app uses WebSocket for in-app notifications only.
+
+      SCHEMA: Create user_devices table (id, user_id FK, push_token, platform,
+      device_id UNIQUE, last_active_at, created_at). Create notifications table
+      for logging (id, user_id, type, title, body, data jsonb, sent_at,
+      delivered_at, failed_reason, created_at).
+
+      APP SIDE:
+      1. Register push token on login: call Notifications.getExpoPushTokenAsync(),
+         upsert to /api/user/device with { push_token, platform, device_id }.
+      2. Background handler in app/_layout.tsx: Notifications.setNotificationHandler
+         + addNotificationResponseReceivedListener for deep-linking
+         (ride:offer → open ride offer screen, ride:completed → open rate screen).
+      3. Wire the orphaned notifications-permission.tsx screens to actually
+         request permission + register token.
+
+      SERVER SIDE:
+      1. Create POST /api/user/device+api.ts — registers/upserts push token.
+      2. Create notification dispatcher in utils-server/ — when sending a WS
+         message to a user who is NOT connected (offline), send a push instead.
+         Use Expo Push Service (POST to expo.hosts).
+      3. Critical notification types: ride:offer (driver), driver_arrived (rider),
+         ride:completed (rider), package:expiring (driver), payment:failed (both).
+
+      RULE: If recipient is online (WS connected) → WS only. If offline → push.
+      For ride:offer → always push (time-critical) even if WS connected, as backup.
+
+      NOTE: expo-notifications plugin is ALREADY in app.config.js. The code just
+      needs to be written. Do NOT use Firebase — use Expo Push Service.
+    verification:
+      - { type: file_exists, path: "app/api/user/device+api.ts" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 2: SCHEDULED RIDES BACKEND (Kimi #8 — High Value, Partial Ready)
+  # ===========================================================================
+  - id: "NEW-002-SCHEDULED-RIDES"
+    route_path: "Multiple files"
+    action: create
+    note: >
+      PRIORITY: HIGH. Frontend screens ALREADY EXIST (schedule-ride/,
+      scheduling-user-ride/, ride-scheduled/, schedule-ride-after-promo/) — they're
+      orphaned because there's no backend. The rides table ALREADY has
+      is_scheduled and scheduled_at columns. This UNBLOCKS rider SL 22,73,74.
+
+      SCHEMA: Add dispatch_window_start, dispatch_window_end to rides table
+      (15 min before/after scheduled_at). Add 'scheduled' to rideStatusEnum.
+
+      API: Create POST /api/ride/schedule+api.ts — validates scheduled_at is
+      30min to 7 days in future, creates ride with status='scheduled',
+      sets dispatch window.
+
+      DISPATCH CRON: Add to utils-server/scheduler.ts — every 60s, query rides
+      WHERE status='scheduled' AND dispatch_window_start <= now() AND
+      dispatch_window_end >= now(). For each, set status='dispatching' and run
+      the normal dispatch pipeline (dispatchRidePipeline).
+
+      APP SIDE: Wire schedule-ride screens to POST /api/ride/schedule instead
+      of POST /api/ride/request. The booking flow: find-ride → book-ride →
+      schedule picker → POST schedule → ride-scheduled confirmation.
+
+      This is the highest-value new feature because the frontend is 90% built.
+    verification:
+      - { type: file_exists, path: "app/api/ride/schedule+api.ts" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 3: ADMIN SUPPORT TICKET DASHBOARD (Kimi #7 — API Exists)
+  # ===========================================================================
+  - id: "NEW-003-ADMIN-SUPPORT"
+    route_path: "app/admin/support.tsx"
+    action: create
+    note: >
+      PRIORITY: HIGH. The support/ticket API already exists (riders/drivers
+      submit tickets). The admin panel needs a management dashboard.
+
+      SCHEMA: Add columns to support_tickets (or create it if not exists):
+      assigned_to, priority (low/medium/high/urgent), sla_deadline, category,
+      internal_notes, status (open/in_progress/resolved/closed). Create
+      ticket_replies table (id, ticket_id, author_id, is_internal, message,
+      attachments jsonb, created_at).
+
+      API: Create GET /api/admin/tickets (list with filters), POST /api/admin/tickets/[id]/assign,
+      POST /api/admin/tickets/[id]/reply.
+
+      ADMIN UI: app/admin/support.tsx — ticket queue table (status, priority,
+      SLA badge, assignee), ticket detail view (message thread with internal/
+      external toggle, user profile sidebar, quick actions).
+
+      See FEATURES.md lines 927-997 for detailed spec.
+    verification:
+      - { type: file_exists, path: "app/admin/support.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 4: ADMIN RIDER MANAGEMENT (Kimi #4)
+  # ===========================================================================
+  - id: "NEW-004-ADMIN-RIDERS"
+    route_path: "app/admin/riders.tsx"
+    action: create
+    note: >
+      Admin panel has full driver management but ZERO rider management.
+
+      SCHEMA: Add to users table: account_status (active/suspended/banned),
+      fraud_score int, total_rides int, total_spent bigint, last_ride_at.
+      Create rider_reports table (reporter_id, reported_rider_id, ride_id,
+      category, description, status, admin_notes).
+
+      API: GET /api/admin/riders (list with search/filter by status),
+      POST /api/admin/riders/[id]/suspend, POST /api/admin/riders/[id]/refund
+      (wallet credit).
+
+      UI: app/admin/riders.tsx — table with Name/Phone/Rides/Spent/Status/Actions.
+      Filters: All/Active/Suspended/Banned. Actions: View details, Suspend,
+      Refund, View ride history.
+
+      See FEATURES.md lines 623-712 for detailed spec.
+    verification:
+      - { type: file_exists, path: "app/admin/riders.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 5: CANCELLATION POLICY ENGINE (Kimi #5)
+  # ===========================================================================
+  - id: "NEW-005-CANCELLATION-ENGINE"
+    route_path: "Multiple files"
+    action: create
+    note: >
+      Current cancellation is hardcoded (reason "rider_cancelled", no fee).
+
+      SCHEMA: Create cancellation_policies table (name, canceller_role,
+      trigger_event, time_threshold_seconds, fee_type, fee_amount, max_fee,
+      is_active, priority). Seed with default policies (see FEATURES.md lines
+      738-745). Add cancellation_fee, cancellation_reason, cancelled_by to
+      rides table.
+
+      LIB: Create lib/cancellation.ts — evaluateCancellation(ride, cancelledBy)
+      that matches the ride context against active policies and returns
+      { policy_id, fee, reason }.
+
+      API: Modify POST /api/ride/[id]/cancel — call evaluateCancellation,
+      store fee on ride, deduct from rider wallet or add to driver dues.
+
+      UI: Add fee preview before confirming cancellation ("Cancellation fee:
+      ৳20. This will be deducted from your wallet.").
+
+      See FEATURES.md lines 720-847 for detailed spec.
+    verification:
+      - { type: file_exists, path: "lib/cancellation.ts" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 6: DRIVER NAVIGATION (Kimi #2)
+  # ===========================================================================
+  - id: "NEW-006-DRIVER-NAVIGATION"
+    route_path: "Multiple files"
+    action: create
+    note: >
+      Drivers currently use a static map with no turn instructions.
+
+      BACKEND: Create POST /api/navigation/route — accepts waypoints, calls
+      Barikoi Directions API (or self-hosted OSRM) for route geometry + steps.
+      Enrich steps with street names via Barikoi reverse geocode.
+
+      APP SIDE: Create components/DriverNavigation.tsx — MapLibreGL map with
+      route polyline, navigation banner (next instruction + distance),
+      camera follows user location. Use expo-speech for voice announcements.
+
+      REROUTING: Create hooks/useRerouting.ts — if driver deviates >50m from
+      route, recalculate.
+
+      INTEGRATION: Wire into find-customer (navigate to pickup) and finish-ride
+      (navigate to dropoff).
+
+      NOTE: Barikoi has a directions API that can replace OSRM — check
+      EXPO_PUBLIC_BARIKOI_API_KEY is set. If Barikoi doesn't support directions,
+      use OSRM backend.
+
+      See FEATURES.md lines 387-496 for detailed spec.
+    verification:
+      - { type: file_exists, path: "app/api/navigation/route+api.ts" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 7: SURGE PRICING ENGINE (Kimi #3)
+  # ===========================================================================
+  - id: "NEW-007-SURGE-PRICING"
+    route_path: "Multiple files"
+    action: create
+    note: >
+      Pricing is currently static per zone. Surge adds dynamic multipliers.
+
+      SCHEMA: Create surge_history table (zone_id, multiplier, demand_count,
+      supply_count, triggered_at, ended_at). Add surge_multiplier to rides table.
+
+      CALCULATOR: Add to utils-server/scheduler.ts — every 60s, for each active
+      zone: count pending ride requests (demand) vs online drivers (supply) in
+      that zone. ratio = demand / max(supply, 1). If ratio > threshold → set
+      multiplier (1.25x, 1.5x, 2.0x). Store in-memory with 5-min TTL.
+
+      FARE INTEGRATION: Modify lib/fareCalc.ts — multiply total fare by
+      surge_multiplier. Add surge_multiplier and surge_area to fare_breakdown.
+
+      RIDER UI: Before confirming ride, show surge notice ("High demand ×1.5")
+      with consent checkbox.
+
+      See FEATURES.md lines 497-615 for detailed spec.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 8: BOOK FOR SOMEONE ELSE (Kimi #6)
+  # ===========================================================================
+  - id: "NEW-008-BOOK-FOR-OTHERS"
+    route_path: "Multiple files"
+    action: create
+    note: >
+      SCHEMA: Add secondary_rider_phone, secondary_rider_name,
+      is_booked_for_someone_else to rides table.
+
+      API: Modify POST /api/ride/request — accept optional secondary_rider_phone
+      and secondary_rider_name. If present, send SMS to the secondary rider with
+      ride details + tracking link.
+
+      RIDER UI: Add "Book for someone else" toggle on the confirm-ride screen.
+      When enabled, show name + phone inputs. The primary rider pays; the
+      secondary rider is the pickup passenger.
+
+      DRIVER UI: In RideOfferSheet, show "Booked for: {name} ({phone})" when
+      is_booked_for_someone_else is true. Call button calls secondary_rider_phone.
+
+      TRACKING: Create a public tracking page app/track/[rideId].tsx — no auth
+      required, shows driver location on map, view-only.
+
+      See FEATURES.md lines 861-926 for detailed spec.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 9: DOCUMENT EXPIRY ALERTS (Kimi #9)
+  # ===========================================================================
+  - id: "NEW-009-DOCUMENT-EXPIRY"
+    route_path: "Multiple files"
+    action: create
+    note: >
+      SCHEMA: Add to driver_documents table: expiry_date date, alert_sent_30d
+      boolean, alert_sent_7d boolean, alert_sent_1d boolean.
+
+      UPLOAD: Modify POST /api/driver/documents — require expiry_date for NID
+      and driving license. Validate expiry is in the future.
+
+      CRON: Add to utils-server/scheduler.ts — daily check at midnight:
+      30-day alert → push notification "Document expiring in 30 days"
+      7-day alert → push notification
+      1-day alert → push notification
+      Expired → auto-suspend driver (status='suspended') + push notification
+
+      NOTE: Depends on Task 1 (Push Notifications) for the alert delivery.
+      Can use in-app notifications as fallback if push isn't ready.
+
+      See FEATURES.md lines 1080-1154 for detailed spec.
+    verification:
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }
+
+  # ===========================================================================
+  # TASK 10: REAL-TIME OPS DASHBOARD (Kimi #10)
+  # ===========================================================================
+  - id: "NEW-010-LIVE-OPS-DASHBOARD"
+    route_path: "app/admin/live-ops.tsx"
+    action: create
+    note: >
+      Admin has monitoring screens (dispatch log, ride chat, economics) but
+      they're request-response, not real-time.
+
+      DASHBOARD: Create app/admin/live-ops.tsx that connects to utils-server
+      via WebSocket (read-only admin subscription) and shows:
+      - Active rides count (by status: dispatching, matched, in_progress)
+      - Online drivers count + map heatmap
+      - Pending ride requests (unmatched, by age)
+      - Current surge multipliers per zone
+      - Recent completed rides (last 5 min)
+      - Recent cancellations
+
+      BACKEND: Add an admin WebSocket subscription type in utils-server that
+      pushes a periodic ops summary (every 5s) to connected admin clients.
+      Alternatively, poll GET /api/admin/dashboard every 5s (simpler, less real-time).
+
+      NOTE: This builds on existing monitoring APIs. The key addition is the
+      real-time polling/push and the unified dashboard view.
+
+      See FEATURES.md for the monitoring screens that already exist
+      (admin/dispatch-log, admin/ride/[id]/chat, admin/driver-economics).
+    verification:
+      - { type: file_exists, path: "app/admin/live-ops.tsx" }
+      - { type: command, run: "npx tsc --noEmit", expect: 0 }

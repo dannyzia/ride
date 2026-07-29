@@ -1,11 +1,12 @@
 import { colors } from "@/theme/goRide";
-import { View, Text, ActivityIndicator, Dimensions } from "react-native";
+import { View, Text, ActivityIndicator, Dimensions, Share } from "react-native";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import MapLibreGL from "@/utils/maplibreLoader";
 import { supabase } from "@/lib/supabase";
 import { useRiderStore } from "@/store/useRiderStore";
+import ExtraChargeApproval from "@/components/ExtraChargeApproval";
 import { useWSStore } from "@/store";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import CustomButton from "@/components/CustomButton";
@@ -31,7 +32,11 @@ export default function FinalPage() {
   const ws = useWSStore((s) => s.ws);
 
   const [cancelling, setCancelling] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(() =>
+    activeRide?.created_at
+      ? Math.floor((Date.now() - new Date(activeRide.created_at).getTime()) / 1000)
+      : 0,
+  );
 
   // Driver tracking state (WebSocket-based)
   const [driverLat, setDriverLat] = useState<number | null>(null);
@@ -80,6 +85,12 @@ export default function FinalPage() {
             }
             break;
           }
+          case "ride:expired":
+          case "ride:alternatives": {
+            setRideStatus("expired");
+            setSearchingRideId(null);
+            break;
+          }
           case "location:driver": {
             if (msg.lat != null) setDriverLat(msg.lat);
             if (msg.lng != null) setDriverLng(msg.lng);
@@ -99,51 +110,25 @@ export default function FinalPage() {
 
     return () => {
       ws.removeEventListener("message", onMessage);
-      ws.send(JSON.stringify({ type: "ride:unsubscribe", ride_id: rideId }));
+      if (ws.readyState === WebSocket.OPEN) {
+        try { ws.send(JSON.stringify({ type: "ride:unsubscribe", ride_id: rideId })); } catch {}
+      }
       wsSubscribedRef.current = false;
       clearInterval(elapsedInt);
     };
   }, [searchingRideId, activeRide?.id, rideStatus, ws]);
 
-  const handleCancel = useCallback(async () => {
-    if (!searchingRideId && !activeRide?.id) return;
+  const handleShare = useCallback(async () => {
     const rideId = searchingRideId || activeRide?.id;
     if (!rideId) return;
+    const trackUrl = `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/track/${rideId}`;
+    await Share.share({ message: `Track my ride: ${trackUrl}` }).catch(() => {});
+  }, [searchingRideId, activeRide?.id]);
 
-    setCancelling(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) return;
-      const res = await fetch(`${API_URL}/api/ride/${rideId}/cancel`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          cancelled_by: "rider",
-          reason: "rider_cancelled",
-        }),
-      });
-      if (res.ok) {
-        setRideStatus("cancelled");
-        setSearchingRideId(null);
-      } else {
-        // Even if cancel fails (ride already gone), go home
-        setRideStatus("cancelled");
-        setSearchingRideId(null);
-      }
-      router.replace("/(main)/(customer)/(tabs)/home");
-    } catch {
-      setRideStatus("cancelled");
-      setSearchingRideId(null);
-      router.replace("/(main)/(customer)/(tabs)/home");
-    } finally {
-      setCancelling(false);
-    }
+  const handleCancel = useCallback(() => {
+    const rideId = searchingRideId || activeRide?.id;
+    if (!rideId) return;
+    router.push(`/(main)/(customer)/cancel-reason?rideId=${rideId}`);
   }, [searchingRideId, activeRide?.id]);
 
   const handleGoHome = () => {
@@ -157,25 +142,40 @@ export default function FinalPage() {
   const renderFinding = () => (
     <View className="flex-1 items-center justify-center px-6">
       <ActivityIndicator size="large" color={colors.primary} />
-      <Text className="text-xl font-urbanist-bold text-goTextPrimaryLight mt-6">
+      <Text className="text-xl font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mt-6">
         Finding your ride...
       </Text>
-      <Text className="text-sm font-inter text-gray-500 mt-2 text-center">
+      <Text className="text-sm font-Jakarta text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-2 text-center">
         Searching for nearby drivers
       </Text>
-      <View className="mt-8 p-4 bg-white rounded-2xl w-full border border-goBorderLight">
-        <Text className="text-sm font-inter text-gray-500">Searching for</Text>
-        <Text className="text-lg font-urbanist-bold text-goTextPrimaryLight mt-1">
+      <View className="mt-8 p-4 bg-white dark:bg-goSurfaceElevatedDark rounded-2xl shadow-go-sm w-full border border-goBorderLight dark:border-goBorderDark">
+        <Text className="text-sm font-Jakarta text-gray-500 dark:text-gray-400 dark:text-gray-500">Searching for</Text>
+        <Text className="text-lg font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mt-1">
           {vehicleDef?.display_en ?? activeRide?.vehicle_type ?? "Vehicle"}
         </Text>
-        <Text className="text-sm font-inter text-gray-400 mt-1">
+        <Text className="text-sm font-Jakarta text-gray-400 dark:text-gray-500 mt-1">
           Elapsed: {Math.floor(elapsed / 60)}:
           {(elapsed % 60).toString().padStart(2, "0")}
         </Text>
       </View>
-      <CustomButton
-        title={cancelling ? "Cancelling..." : "Cancel Request"}
-        onPress={handleCancel}
+        {/* Cancel countdown / fee preview */}
+        <View className="flex-row items-center justify-center mb-3">
+          <Text className="text-[13px] font-Jakarta text-goAmber">
+            {elapsed < 120
+              ? `Free for ${Math.floor((120 - elapsed) / 60)}:${String((120 - elapsed) % 60).padStart(2, '0')}`
+              : 'Fee may apply'}
+          </Text>
+        </View>
+
+        <CustomButton
+          title="Share Trip"
+          onPress={handleShare}
+          bgVariant="secondary"
+          className="mb-3"
+        />
+        <CustomButton
+          title={cancelling ? "Cancelling..." : "Cancel Request"}
+          onPress={handleCancel}
         bgVariant="danger"
         disabled={cancelling}
         className="w-full mt-6"
@@ -190,10 +190,10 @@ export default function FinalPage() {
         <View className="bg-goAccent/15 border border-goAccent/40 rounded-2xl px-4 py-3 mb-3 flex-row items-center">
           <Text className="text-base mr-2">🚗</Text>
           <View className="flex-1">
-            <Text className="text-sm font-urbanist-bold text-goAccent">
+            <Text className="text-sm font-JakartaBold text-goAccent">
               Ride in progress
             </Text>
-            <Text className="text-xs font-inter text-gray-500">
+            <Text className="text-xs font-Jakarta text-gray-500 dark:text-gray-400 dark:text-gray-500">
               On the way to your destination
             </Text>
           </View>
@@ -201,7 +201,7 @@ export default function FinalPage() {
       )}
       {/* Map with driver location pin */}
       <View
-        className="w-full rounded-2xl overflow-hidden border border-goBorderLight mb-4"
+        className="w-full rounded-2xl overflow-hidden border border-goBorderLight dark:border-goBorderDark mb-4"
         style={{ height: height * 0.35 }}
       >
         <MapLibreGL.MapView
@@ -260,8 +260,8 @@ export default function FinalPage() {
         </MapLibreGL.MapView>
         {/* ETA overlay */}
         {driverEta != null && (
-          <View className="absolute top-3 left-3 bg-white/90 rounded-full px-3 py-1.5 shadow-sm">
-            <Text className="text-sm font-urbanist-bold text-goTextPrimaryLight">
+          <View className="absolute top-3 left-3 bg-white dark:bg-goSurfaceElevatedDark dark:bg-goSurfaceElevatedDark/90 rounded-full px-3 py-1.5 shadow-sm">
+            <Text className="text-sm font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
               ETA: {Math.round(driverEta)} min
             </Text>
           </View>
@@ -269,8 +269,8 @@ export default function FinalPage() {
       </View>
 
       {/* Driver info card */}
-      <View className="p-4 bg-white rounded-2xl border border-goBorderLight">
-        <Text className="text-lg font-urbanist-bold text-goTextPrimaryLight">
+      <View className="p-4 bg-white dark:bg-goSurfaceElevatedDark rounded-2xl shadow-go-sm border border-goBorderLight dark:border-goBorderDark">
+        <Text className="text-lg font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
           {rideStatus === "in_progress"
             ? "On the way"
             : driverEta != null
@@ -279,15 +279,15 @@ export default function FinalPage() {
         </Text>
         <View className="flex-row items-center mt-3">
           <View className="w-14 h-14 rounded-full bg-goAccent/10 items-center justify-center">
-            <Text className="text-2xl text-goAccent font-urbanist-bold">
+            <Text className="text-2xl text-goAccent font-JakartaBold">
               {activeRide?.driver?.name?.charAt(0) ?? "D"}
             </Text>
           </View>
           <View className="ml-3 flex-1">
-            <Text className="text-base font-urbanist-bold text-goTextPrimaryLight">
+            <Text className="text-base font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
               {activeRide?.driver?.name ?? "Driver"}
             </Text>
-            <Text className="text-sm font-inter text-gray-500">
+            <Text className="text-sm font-Jakarta text-gray-500 dark:text-gray-400 dark:text-gray-500">
               {activeRide?.driver?.vehicle_type
                 ? (VEHICLE_TYPES.find(
                     (v) => v.key === (activeRide.driver!.vehicle_type as any),
@@ -296,37 +296,39 @@ export default function FinalPage() {
             </Text>
           </View>
           <View className="items-end">
-            <Text className="text-lg font-urbanist-bold text-goAccent">
+            <Text className="text-lg font-JakartaBold text-goAccent">
               ৳
               {activeRide?.fare_breakdown?.total_bdt
                 ? (Number(activeRide.fare_breakdown.total_bdt) / 100).toFixed(0)
                 : "—"}
             </Text>
-            <Text className="text-xs font-inter text-gray-400">Est. Fare</Text>
+            <Text className="text-xs font-Jakarta text-gray-400 dark:text-gray-500">Est. Fare</Text>
           </View>
         </View>
       </View>
 
+      <ExtraChargeApproval rideId={activeRide?.id ?? null} />
+
       {/* Ride Pin — read this aloud to your driver when they arrive */}
       {ridePin ? (
         <View className="mt-4 p-4 bg-goAccent/10 rounded-2xl border border-goAccent/30 items-center">
-          <Text className="text-sm font-inter text-goTextPrimaryLight">
+          <Text className="text-sm font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">
             Tell your driver your Ride Pin
           </Text>
-          <Text className="text-4xl font-urbanist-bold text-goAccent tracking-[0.4em] mt-1">
+          <Text className="text-4xl font-JakartaBold tracking-tight text-goAccent tracking-[0.4em] mt-1">
             {ridePin}
           </Text>
         </View>
       ) : null}
 
       {/* Trip info */}
-      <View className="mt-4 p-4 bg-white rounded-2xl border border-goBorderLight">
+      <View className="mt-4 p-4 bg-white dark:bg-goSurfaceElevatedDark rounded-2xl shadow-go-sm border border-goBorderLight dark:border-goBorderDark">
         <View className="flex-row items-center">
           <View className="w-8 h-8 rounded-full bg-goAccent/10 items-center justify-center">
             <Text className="text-goAccent text-xs">●</Text>
           </View>
           <Text
-            className="ml-3 text-sm font-inter text-goTextPrimaryLight flex-1"
+            className="ml-3 text-sm font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark flex-1"
             numberOfLines={1}
           >
             {activeRide?.origin_address ?? "Pickup"}
@@ -338,7 +340,7 @@ export default function FinalPage() {
             <Text className="text-goDanger text-xs">■</Text>
           </View>
           <Text
-            className="ml-3 text-sm font-inter text-goTextPrimaryLight flex-1"
+            className="ml-3 text-sm font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark flex-1"
             numberOfLines={1}
           >
             {activeRide?.destination_address ?? "Dropoff"}
@@ -353,13 +355,13 @@ export default function FinalPage() {
       <View className="w-20 h-20 rounded-full bg-goAccent/10 items-center justify-center mb-4">
         <Text className="text-4xl text-goAccent">✓</Text>
       </View>
-      <Text className="text-2xl font-urbanist-bold text-goTextPrimaryLight">
+      <Text className="text-2xl font-JakartaBold tracking-tight text-goTextPrimaryLight dark:text-goTextPrimaryDark">
         Ride Complete!
       </Text>
-      <View className="mt-6 p-4 bg-white rounded-2xl w-full border border-goBorderLight">
+      <View className="mt-6 p-4 bg-white dark:bg-goSurfaceElevatedDark rounded-2xl shadow-go-sm w-full border border-goBorderLight dark:border-goBorderDark">
         <View className="flex-row justify-between">
-          <Text className="text-sm font-inter text-gray-500">Total Fare</Text>
-          <Text className="text-lg font-urbanist-bold text-goAccent">
+          <Text className="text-sm font-Jakarta text-gray-500 dark:text-gray-400 dark:text-gray-500">Total Fare</Text>
+          <Text className="text-lg font-JakartaBold text-goAccent">
             ৳
             {activeRide?.fare_breakdown?.total_bdt
               ? (Number(activeRide.fare_breakdown.total_bdt) / 100).toFixed(0)
@@ -368,8 +370,15 @@ export default function FinalPage() {
         </View>
       </View>
       <CustomButton
-        title="Back to Home"
-        onPress={handleGoHome}
+        title="Rate Driver"
+        onPress={() => {
+          const rideId = activeRide?.id;
+          if (rideId) {
+            router.replace(`/(main)/(customer)/rate-driver`);
+          } else {
+            handleGoHome();
+          }
+        }}
         className="w-full mt-6"
       />
     </View>
@@ -378,10 +387,10 @@ export default function FinalPage() {
   const renderError = () => (
     <View className="flex-1 items-center justify-center px-6">
       <Text className="text-4xl mb-4">😔</Text>
-      <Text className="text-xl font-urbanist-bold text-goTextPrimaryLight text-center">
+      <Text className="text-xl font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark text-center">
         No drivers available
       </Text>
-      <Text className="text-sm font-inter text-gray-500 mt-2 text-center">
+      <Text className="text-sm font-Jakarta text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-2 text-center">
         Please try again later
       </Text>
       <CustomButton
@@ -415,7 +424,7 @@ export default function FinalPage() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight">
+    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
       <View className="flex-1">{renderState()}</View>
     </SafeAreaView>
   );
@@ -437,6 +446,7 @@ function mapStatus(
       return "finding";
     case "matched":
     case "driver_arriving":
+    case "driver_arrived":
       return "arriving";
     case "in_progress":
       return "in_progress";
