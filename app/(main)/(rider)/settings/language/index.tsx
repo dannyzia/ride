@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 interface LanguageOption {
   code: string;
@@ -15,7 +16,13 @@ const langs: LanguageOption[] = [
 ];
 
 export default function DriverSettingsLanguage() {
-  const [selected, setSelected] = useState("en");
+  const { i18n } = useTranslation();
+  const [selected, setSelected] = useState(i18n.language || "en");
+
+  const selectLang = (code: string) => {
+    setSelected(code);
+    i18n.changeLanguage(code);
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
@@ -35,7 +42,7 @@ export default function DriverSettingsLanguage() {
                 ? "border-goPrimary bg-goAccentLight"
                 : "border-goBorderLight dark:border-goBorderDark bg-goSurfaceLight dark:bg-goSurfaceElevatedDark"
             }`}
-            onPress={() => setSelected(l.code)}
+            onPress={() => selectLang(l.code)}
           >
             <View
               className={`w-5 h-5 rounded-full border-2 mr-[12px] ${

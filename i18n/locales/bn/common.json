@@ -1,5 +1,7 @@
 {
-  "app": {"name": "রাইড"},
+  "app": {
+    "name": "রাইড"
+  },
   "common": {
     "back": "পিছনে",
     "cancel": "বাতিল",
@@ -17,13 +19,19 @@
     "send_otp": "OTP পাঠান",
     "verify_otp": "OTP যাচাই করুন",
     "register": "অ্যাকাউন্ট তৈরি করুন",
-    "login": "লগ ইন"
+    "login": "লগ ইন",
+    "get_started": "শুরু করুন",
+    "tagline": "আপনার রাইড, আপনার পথে"
   },
   "home": {
     "search_destination": "কোথায় যাবেন?",
     "recent_rides": "সাম্প্রতিক রাইড",
     "go_online": "অনলাইন হোন",
-    "go_offline": "অফলাইন হোন"
+    "go_offline": "অফলাইন হোন",
+    "welcome": "স্বাগতম",
+    "search": "গন্তব্য অনুসন্ধান করুন...",
+    "calls_remaining": "অবশিষ্ট কল",
+    "connected": "সংযুক্ত"
   },
   "ride": {
     "request": "রাইড অনুরোধ",
@@ -35,7 +43,45 @@
     "driver_found": "ড্রাইভার পাওয়া গেছে",
     "on_the_way": "পথে",
     "arrived": "পৌঁছেছেন",
-    "completed": "সম্পন্ন"
+    "completed": "সম্পন্ন",
+    "ride_completed": "রাইড সম্পন্ন",
+    "total_fare": "মোট ভাড়া",
+    "back_to_home": "হোমে ফিরে যান",
+    "cancel_ride": "রাইড বাতিল",
+    "free_cancellation": "মুক্ত বাতিল: {minutes}:{seconds}",
+    "cancellation_fee": "বাতিল ফি: ৳{fee}",
+    "no_fee_within_grace": "ক্ষমা সময়ের মধ্যে কোনো ফি নেই",
+    "fee_will_be_deducted": "ফি আপনার ওয়ালেট থেকে কাটা হবে",
+    "no_fee_applies": "কোনো ফি প্রযোজ্য নয়",
+    "select_reason": "একটি কারণ নির্বাচন করুন",
+    "waiting_too_long": "অনেকক্ষণ অপেক্ষা করছেন",
+    "found_another_ride": "অন্য রাইড পেয়েছেন",
+    "driver_asked_to_cancel": "ড্রাইভার বাতিল করতে বলেছেন",
+    "changed_my_mind": "মত পরিবর্তন করেছেন",
+    "other": "অন্য",
+    "optional_note": "ঐচ্ছিক নোট",
+    "confirm_cancel": "বাতিল নিশ্চিত করুন",
+    "report_an_issue": "ইস্যু রিপোর্ট করুন",
+    "category": "ক্যাটাগরি",
+    "describe_issue": "ইস্যু বর্ণনা করুন",
+    "tell_us_what_happened": "আমাদের বলুন কী হয়েছে",
+    "submit": "সাবমিট করুন",
+    "select_category": "অনুগ্রহ করে একটি ক্যাটাগরি নির্বাচন করুন",
+    "describe_the_issue": "অনুগ্রহ করে ইস্যু বর্ণনা করুন"
+  },
+  "home": {
+    "search_destination": "কোথায় যাবেন?",
+    "recent_rides": "সাম্প্রতিক রাইড",
+    "go_online": "অনলাইন হোন",
+    "go_offline": "অফলাইন হোন",
+    "welcome": "স্বাগতম",
+    "search": "গন্তব্য অনুসন্ধান করুন...",
+    "calls_remaining": "অবশিষ্ট কল",
+    "connected": "সংযুক্ত",
+    "welcome_name": "স্বাগতম, {name}",
+    "your_current_location": "আপনার বর্তমান অবস্থান:",
+    "no_recent_rides": "সাম্প্রতিক রাইড নেই",
+    "fetching": "লোড হচ্ছে..."
   },
   "settings": {
     "title": "সেটিংস",

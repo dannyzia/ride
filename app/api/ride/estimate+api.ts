@@ -36,7 +36,7 @@ const estimateSchema = z.object({
   vehicle_type:   z.enum(VEHICLE_TYPE_VALUES).optional(),
   preference_ids: z.array(z.string().uuid()).max(10).optional(),
   promo_code:     z.string().min(1).max(30).optional(),
-  upfront_tip_bdt: z.number().int().min(0).optional(),
+  upfront_tip_bdt: z.number().int().min(0).max(20000).optional(),
   stops: z.array(z.object({ lat: z.number(), lng: z.number(), address: z.string() })).max(2).optional(),
 });
 

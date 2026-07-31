@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Location from "expo-location";
 import { supabase } from "@/lib/supabase";
+import { useTranslation } from "react-i18next";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useRideOfferStore, useWSStore } from "@/store";

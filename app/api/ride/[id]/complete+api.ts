@@ -1,6 +1,6 @@
 // Auth: verifySupabaseToken via requireRole
 import { db } from "@/src/db";
-import { rides, pricing, drivers, driverWalletTransactions, riderSubscriptions, rideExtraCharges } from "@/src/db/schema";
+import { rides, pricing, drivers, driverWalletTransactions, riderSubscriptions, rideExtraCharges, riderWalletTransactions, users } from "@/src/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { calculateFare } from "@/lib/fareCalc";
@@ -8,6 +8,7 @@ import { applySurge } from "@/lib/surge";
 import { logger } from "@/lib/logger";
 import { sendNotification } from "@/lib/notify";
 import { recordRideCompletion, recordTip } from '@/lib/accounting';
+import { evaluateStreaks } from '@/lib/gamification';
 
 export async function POST(request: Request) {
   try {
@@ -162,14 +163,30 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── Upfront tip — 100% driver, no commission applied ────────────────
-    const upfrontTip = Number(ride.upfront_tip_bdt ?? 0);
-    if (upfrontTip > 0) {
-      fare.total_bdt += upfrontTip;
-      fare.driver_net_bdt += upfrontTip;
-    }
-
     await db.transaction(async (tx) => {
+      const upfrontTip = Number(ride.upfront_tip_bdt ?? 0);
+      let tipApplied = false;
+      if (upfrontTip > 0) {
+        const [rider] = await tx.select({ wallet: users.rider_wallet_balance_bdt })
+          .from(users).where(eq(users.id, ride.user_id)).limit(1);
+        if (rider.wallet < upfrontTip) {
+          logger.warn('[complete] rider insufficient balance for upfront tip', { rideId, tip: upfrontTip, balance: rider.wallet });
+        } else {
+          await tx.update(users).set({
+            rider_wallet_balance_bdt: sql`${users.rider_wallet_balance_bdt} - ${upfrontTip}`
+          }).where(eq(users.id, ride.user_id));
+          await tx.insert(riderWalletTransactions).values({
+            rider_id: ride.user_id,
+            amount_bdt: -upfrontTip,
+            transaction_type: 'upfront_tip',
+            reference_id: ride.id,
+            balance_after: sql`(SELECT rider_wallet_balance_bdt FROM users WHERE id = ${ride.user_id})`,
+          });
+          fare.driver_net_bdt += upfrontTip;
+          tipApplied = true;
+        }
+      }
+
       const [updatedRide] = await tx
         .update(rides)
         .set({
@@ -178,7 +195,7 @@ export async function POST(request: Request) {
           platform_commission_bdt: fare.platform_commission_bdt,
           fare_breakdown: fare as any,
           updated_at: completedAt,
-          rider_payable_bdt: fare.total_bdt,
+          rider_payable_bdt: fare.total_bdt + (tipApplied ? upfrontTip : 0),
           driver_fare_bdt: fare.driver_net_bdt + (fare.platform_commission_bdt ?? 0),
         })
         .where(and(eq(rides.id, rideId), eq(rides.status, "in_progress")))
@@ -223,6 +240,11 @@ export async function POST(request: Request) {
       try { await recordTip({ id: rideId, tipPaisa: ride.tip_bdt ?? 0, driverId: driver.id }); }
       catch (e) { logger.warn('[accounting] tip entry failed', e); }
     }
+
+    // ── Gamification: evaluate driver streaks (non-blocking) ──
+    try {
+      await evaluateStreaks(driver.id);
+    } catch (e) { logger.warn('[gamification] evaluateStreaks failed', e); }
 
     logger.info("[ride/complete] ride completed", {
       rideId,

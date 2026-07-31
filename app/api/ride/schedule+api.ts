@@ -1,5 +1,5 @@
 import { db } from '@/src/db';
-import { users, rides, pricing } from '@/src/db/schema';
+import { users, rides, pricing, rideStops } from '@/src/db/schema';
 import { eq, and, sql, gte } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
@@ -26,6 +26,8 @@ const scheduleSchema = z.object({
   preference_ids: z.array(z.string().uuid()).max(10).optional(),
   secondary_rider_name: z.string().min(1).max(255).optional(),
   secondary_rider_phone: z.string().min(1).max(20).optional(),
+  upfront_tip_bdt: z.number().int().min(0).max(20000).optional(),
+  stops: z.array(z.object({ lat: z.number(), lng: z.number(), address: z.string().min(1).max(500) })).max(2).optional(),
 });
 
 export async function POST(request: Request) {
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
     const parsed = await parseJsonBody(request, scheduleSchema);
     if (!parsed.ok) return parsed.response;
 
-    const { pickup_lat, pickup_lng, pickup_address, dropoff_lat, dropoff_lng, dropoff_address, vehicle_type, scheduled_at, preference_ids, secondary_rider_name, secondary_rider_phone } = parsed.data;
+    const { pickup_lat, pickup_lng, pickup_address, dropoff_lat, dropoff_lng, dropoff_address, vehicle_type, scheduled_at, preference_ids, secondary_rider_name, secondary_rider_phone, upfront_tip_bdt, stops } = parsed.data;
 
     const scheduledDate = new Date(scheduled_at);
     const now = new Date();
@@ -88,7 +90,21 @@ export async function POST(request: Request) {
     const dispatchWindowEnd = new Date(scheduledDate.getTime() + 15 * 60 * 1000);
 
     const route = await getRouteDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng).catch(() => null);
-    const totalDistanceKm = route?.distanceKm ?? haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+    let totalDistanceKm = route?.distanceKm ?? haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+
+    // ── Multi-leg distance when stops are provided ──────────────────────
+    if (stops && stops.length > 0) {
+      const waypoints = [
+        { lat: pickup_lat, lng: pickup_lng },
+        ...stops,
+        { lat: dropoff_lat, lng: dropoff_lng },
+      ];
+      let multiLegKm = 0;
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        multiLegKm += haversineKm(waypoints[i].lat, waypoints[i].lng, waypoints[i + 1].lat, waypoints[i + 1].lng);
+      }
+      totalDistanceKm = multiLegKm;
+    }
 
     const { origin_city, origin_city_polygon } = await detectOriginCity({ lat: pickup_lat, lng: pickup_lng });
     const intercity = origin_city_polygon ? isIntercity({ lat: dropoff_lat, lng: dropoff_lng }, origin_city_polygon) : false;
@@ -124,48 +140,82 @@ export async function POST(request: Request) {
       preferenceSurchargeBdt = prefRows.reduce((s, p) => s + p.charge_bdt, 0);
     }
 
-    const [ride] = await db.insert(rides).values({
-      user_id: user.id,
-      driver_id: null,
-      zone_id: zoneId,
-      pricing_id: activePricing.id,
-      origin_address: pickup_address,
-      destination_address: dropoff_address,
-      origin_latitude: String(pickup_lat),
-      origin_longitude: String(pickup_lng),
-      destination_latitude: String(dropoff_lat),
-      destination_longitude: String(dropoff_lng),
-      vehicle_type: vehicle_type as any,
-      status: 'scheduled',
-      fare_breakdown: fareBreakdown as any,
-      distance_km: String(fareBreakdown.distance_km),
-      scheduled_at: scheduledDate,
-      dispatch_window_start: dispatchWindowStart,
-      dispatch_window_end: dispatchWindowEnd,
-      driver_fare_bdt: fareBreakdown.total_bdt + preferenceSurchargeBdt,
-      rider_payable_bdt: fareBreakdown.total_bdt + preferenceSurchargeBdt,
-      preference_surcharge_bdt: preferenceSurchargeBdt,
-      preference_ids: preference_ids ?? [],
-      secondary_rider_name: secondary_rider_name || null,
-      secondary_rider_phone: secondary_rider_phone || null,
-      is_booked_for_someone_else: !!(secondary_rider_phone || secondary_rider_name),
-    }).returning();
+    let driverFareBdt = fareBreakdown.total_bdt + preferenceSurchargeBdt;
+    let riderPayableBdt = fareBreakdown.total_bdt + preferenceSurchargeBdt;
+
+    // ── Upfront tip (100% to driver, not subject to commission) ─
+    if (upfront_tip_bdt && upfront_tip_bdt > 0) {
+      driverFareBdt += upfront_tip_bdt;
+      riderPayableBdt += upfront_tip_bdt;
+    }
+
+    let rideId = "";
+    await db.transaction(async (tx) => {
+      const [ride] = await tx.insert(rides).values({
+        user_id: user.id,
+        driver_id: null,
+        zone_id: zoneId,
+        pricing_id: activePricing.id,
+        origin_address: pickup_address,
+        destination_address: dropoff_address,
+        origin_latitude: String(pickup_lat),
+        origin_longitude: String(pickup_lng),
+        destination_latitude: String(dropoff_lat),
+        destination_longitude: String(dropoff_lng),
+        vehicle_type: vehicle_type as any,
+        status: 'scheduled',
+        fare_breakdown: fareBreakdown as any,
+        distance_km: String(fareBreakdown.distance_km),
+        scheduled_at: scheduledDate,
+        dispatch_window_start: dispatchWindowStart,
+        dispatch_window_end: dispatchWindowEnd,
+        driver_fare_bdt: driverFareBdt,
+        rider_payable_bdt: riderPayableBdt,
+        preference_surcharge_bdt: preferenceSurchargeBdt,
+        preference_ids: preference_ids ?? [],
+        secondary_rider_name: secondary_rider_name || null,
+        secondary_rider_phone: secondary_rider_phone || null,
+        is_booked_for_someone_else: !!(secondary_rider_phone || secondary_rider_name),
+        upfront_tip_bdt: upfront_tip_bdt ?? 0,
+       }).returning();
+
+      if (!ride) {
+        throw new Error('ride_insert_failed');
+      }
+      rideId = ride.id;
+
+      if (!ride) {
+        throw new Error('ride_insert_failed');
+      }
+
+      if (stops && stops.length > 0) {
+        await tx.insert(rideStops).values(
+          stops.map((stop: { lat: number; lng: number; address: string }, i: number) => ({
+            ride_id: ride.id,
+            stop_order: i + 1,
+            lat: stop.lat.toString(),
+            lng: stop.lng.toString(),
+            address: stop.address,
+          }))
+        );
+      }
+    });
 
     // ── SMS to secondary rider (non-blocking) ────────────────────────
-    if (secondary_rider_phone && ride) {
+    if (secondary_rider_phone) {
       try {
-        const trackingUrl = `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/track/${ride.id}`;
+        const trackingUrl = `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/track/${rideId}`;
         await sendSms(
           secondary_rider_phone,
           `Your ride has been booked on Ride. Track it here: ${trackingUrl}`,
         );
-        logger.info("[ride/schedule] SMS sent to secondary rider", { rideId: ride.id });
+        logger.info("[ride/schedule] SMS sent to secondary rider", { rideId: rideId });
       } catch (smsErr) {
         logger.warn("[ride/schedule] SMS to secondary rider failed (non-blocking)", smsErr);
       }
     }
 
-    return Response.json({ ride_id: ride?.id, fare_breakdown: fareBreakdown, status: 'scheduled' });
+    return Response.json({ ride_id: rideId, fare_breakdown: fareBreakdown, status: 'scheduled' });
   } catch (err: any) {
     if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
     logger.error('[ride/schedule] error', err);

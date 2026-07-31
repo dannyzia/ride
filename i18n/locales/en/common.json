@@ -1,5 +1,7 @@
 {
-  "app": {"name": "Ride"},
+  "app": {
+    "name": "Ride"
+  },
   "common": {
     "back": "Back",
     "cancel": "Cancel",
@@ -17,13 +19,19 @@
     "send_otp": "Send OTP",
     "verify_otp": "Verify OTP",
     "register": "Create Account",
-    "login": "Log In"
+    "login": "Log In",
+    "get_started": "Get Started",
+    "tagline": "Your ride, your way"
   },
   "home": {
     "search_destination": "Where to?",
     "recent_rides": "Recent Rides",
     "go_online": "Go Online",
-    "go_offline": "Go Offline"
+    "go_offline": "Go Offline",
+    "welcome": "Welcome back",
+    "search": "Search destination...",
+    "calls_remaining": "Calls Remaining",
+    "connected": "Connected"
   },
   "ride": {
     "request": "Request Ride",
@@ -35,7 +43,45 @@
     "driver_found": "Driver Found",
     "on_the_way": "On the way",
     "arrived": "Arrived",
-    "completed": "Completed"
+    "completed": "Completed",
+    "ride_completed": "Ride Completed",
+    "total_fare": "Total Fare",
+    "back_to_home": "Back to Home",
+    "cancel_ride": "Cancel Ride",
+    "free_cancellation": "Free cancellation for {minutes}:{seconds}",
+    "cancellation_fee": "Cancellation fee: ৳{fee}",
+    "no_fee_within_grace": "No fee within grace period",
+    "fee_will_be_deducted": "Fee will be deducted from your wallet",
+    "no_fee_applies": "No fee applies",
+    "select_reason": "Select a reason",
+    "waiting_too_long": "Waiting too long",
+    "found_another_ride": "Found another ride",
+    "driver_asked_to_cancel": "Driver asked to cancel",
+    "changed_my_mind": "Changed my mind",
+    "other": "Other",
+    "optional_note": "Optional note",
+    "confirm_cancel": "Confirm Cancel",
+    "report_an_issue": "Report an Issue",
+    "category": "Category",
+    "describe_issue": "Describe the issue",
+    "tell_us_what_happened": "Tell us what happened",
+    "submit": "Submit",
+    "select_category": "Please select a category",
+    "describe_the_issue": "Please describe the issue"
+  },
+  "home": {
+    "search_destination": "Where to?",
+    "recent_rides": "Recent Rides",
+    "go_online": "Go Online",
+    "go_offline": "Go Offline",
+    "welcome": "Welcome back",
+    "search": "Search destination...",
+    "calls_remaining": "Calls Remaining",
+    "connected": "Connected",
+    "welcome_name": "Welcome, {name}",
+    "your_current_location": "Your Current Location:",
+    "no_recent_rides": "No recent rides found",
+    "fetching": "Fetching..."
   },
   "settings": {
     "title": "Settings",

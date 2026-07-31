@@ -21,9 +21,12 @@ import {
   incentiveDefinitions,
   driverIncentives,
   systemConfig,
+  promoCodes,
+  driverWalletTransactions,
+  weatherConditions,
 } from "../src/db/schema";
 import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte } from "drizzle-orm";
-import { nextBdtMidnightUtc } from "../lib/time";
+import { detectStationaryAnomaly } from "../lib/safety";
 import { logger } from "../lib/logger";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
@@ -861,5 +864,75 @@ export function startScheduler(): void {
     }
   }, 60_000);
 
-  logger.info("[scheduler] started (22 jobs)");
+  // ── (23) Driver Promo Rewards — every 10 min ──────────────────────────
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const activePromos = await db.select().from(promoCodes)
+        .where(and(eq(promoCodes.target_role, 'driver'), eq(promoCodes.is_active, true), gte(promoCodes.expires_at, now)));
+
+      const metricConfig: Record<string, { table: any; countCol: any }> = {
+        rides_completed: { table: rides, countCol: rides.driver_fare_bdt },
+        earnings_bdt:    { table: driverWalletTransactions, countCol: driverWalletTransactions.amount_bdt },
+        trips_duration:  { table: rides, countCol: rides.distance_km },
+      };
+
+      const allDrivers = await db.select({ id: drivers.id }).from(drivers).where(eq(drivers.status, 'active'));
+      const driverWalletUpdate = db.update(drivers);
+
+      for (const promo of activePromos) {
+        if (!promo.metric || !promo.target_value) continue;
+        const cfg = metricConfig[promo.metric];
+        if (!cfg) continue;
+
+        for (const driver of allDrivers) {
+          const [row] = await db.select({ val: sql<number>`COALESCE(SUM(${cfg.countCol}), 0)` }).from(cfg.table)
+            .where(and(eq(cfg.table.driver_id, driver.id), gte(cfg.table.created_at, new Date(Date.now() - 86400000 * (promo.validity_days ?? 7)))));
+          const currentVal = Number(row?.val ?? 0);
+          if (currentVal >= promo.target_value) {
+            const rewardBdt = promo.metric === 'rides_completed' ? 1000 : 500;
+            await db.update(drivers)
+              .set({ driver_wallet_balance_bdt: sql`${drivers.driver_wallet_balance_bdt} + ${rewardBdt}` })
+              .where(eq(drivers.id, driver.id));
+            logger.info('[scheduler] driver promo reward granted', { driverId: driver.id, promo: promo.code, reward: rewardBdt });
+          }
+        }
+      }
+    } catch (e: any) {
+      logger.error("[scheduler] driver promo reward error", e);
+    }
+  }, 600_000);
+
+  // ── (24) Safety: Stationary Anomaly Check — every 5 min ────────────
+  setInterval(async () => {
+    try {
+      await detectStationaryAnomaly();
+    } catch (e: any) {
+      logger.error("[scheduler] stationary anomaly error", e);
+    }
+  }, 300_000);
+
+  // ── (25) Weather Surge Override — every 15 min ──────────────────────
+  setInterval(async () => {
+    try {
+      const zonesList = await db.select({ id: zones.id }).from(zones);
+      for (const zone of zonesList) {
+        const [weather] = await db.select().from(weatherConditions)
+          .where(eq(weatherConditions.zone_id, zone.id)).orderBy(sql`fetched_at desc`).limit(1);
+        if (weather && weather.is_severe && weather.surge_multiplier_override) {
+          await db.insert(surgeCurrent).values({
+            zone_id: zone.id, multiplier: weather.surge_multiplier_override.toString(),
+            demand_count: 0, supply_count: 0, updated_at: new Date(),
+          }).onConflictDoUpdate({
+            target: surgeCurrent.zone_id,
+            set: { multiplier: weather.surge_multiplier_override.toString(), updated_at: new Date() },
+          });
+        }
+      }
+    } catch (e: any) {
+      logger.error("[scheduler] weather surge override error", e);
+    }
+  }, 900_000);
+
+  logger.info("[scheduler] started (25 jobs)");
 }

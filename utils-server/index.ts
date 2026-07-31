@@ -41,6 +41,7 @@ import { logger } from "../lib/logger";
 import { getH3Cell, getH3Ring } from "../lib/h3";
 import { calculateFare, haversineKm } from "../lib/fareCalc";
 import { VEHICLE_TYPE_VALUES } from "../lib/vehicleTypes";
+import { detectRouteDeviation } from "../lib/safety";
 
 validateUtilsServerEnv();
 
@@ -565,6 +566,26 @@ wss.on("connection", (ws: WebSocket) => {
                 });
               }
             }
+            // Detect route deviation (non-blocking)
+            try {
+              const [ride] = await db
+                .select({
+                  destination_latitude: rides.destination_latitude,
+                  destination_longitude: rides.destination_longitude,
+                })
+                .from(rides)
+                .where(eq(rides.id, rideId))
+                .limit(1);
+              if (ride?.destination_latitude != null && ride?.destination_longitude != null) {
+                await detectRouteDeviation(
+                  rideId,
+                  msg.lat as number,
+                  msg.lng as number,
+                  Number(ride.destination_latitude),
+                  Number(ride.destination_longitude),
+                );
+              }
+            } catch { /* non-blocking */ }
           }
         }
         break;
@@ -1207,6 +1228,13 @@ async function dispatchRidePipeline(
       .where(sql`${drivers.id} IN ${scoredDriverIds}`);
     const locMap = new Map(driverLocRows.map((d) => [d.id, d]));
 
+    // Fetch stop addresses once per ride (avoid N+1 in driver loop)
+    const stopRows = await db
+      .select({ address: rideStops.address, stop_order: rideStops.stop_order })
+      .from(rideStops)
+      .where(eq(rideStops.ride_id, ride.id));
+    const stopList = stopRows.map((s) => ({ address: s.address, stop_order: s.stop_order }));
+
     // Broadcast individualized offers (each driver gets their own pickup distance/ETA)
     for (const s of scored) {
       const loc = locMap.get(s.driverId);
@@ -1247,7 +1275,7 @@ async function dispatchRidePipeline(
         secondary_rider_name: ride.secondary_rider_name,
         secondary_rider_phone: ride.secondary_rider_phone,
         upfront_tip_bdt: ride.upfront_tip_bdt ?? 0,
-        has_stops: (await db.select({ count: sql<number>`count(*)` }).from(rideStops).where(eq(rideStops.ride_id, ride.id)))[0]?.count > 0,
+        stops: stopList,
         expires_in_ms: 15000,
         expires_at: new Date(Date.now() + 15000).toISOString(),
       });

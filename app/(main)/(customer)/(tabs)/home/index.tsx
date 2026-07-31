@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { colors } from "@/theme/goRide";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -43,6 +44,7 @@ const API_URL = process.env.EXPO_PUBLIC_SERVER_URL;
 const WEBSOCKET_API_URL = process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "";
 
 const HomePage = () => {
+  const { t } = useTranslation();
   const {
     setUserLocation: setCustomerLocation,
     setId: setCustomerId,
@@ -252,7 +254,7 @@ const HomePage = () => {
                   resizeMode="contain"
                 />
                 <Text className="text-sm text-goTextPrimaryLight">
-                  No recent rides found
+                  {t('home.no_recent_rides')}
                 </Text>
               </>
             ) : (
@@ -271,8 +273,8 @@ const HomePage = () => {
           <>
             <View className="flex flex-row items-center justify-between my-5">
               <Text className="text-xl text-goTextPrimaryLight capitalize font-JakartaBold tracking-tight">
-                Welcome{","} {user?.fullName ?? "Rider"}
-              </Text>
+            {t('home.welcome_name', { name: user?.fullName ?? 'Rider' })}
+          </Text>
               <TouchableOpacity
                 onPress={handleSignOut}
                 className="flex justify-center items-center w-10 h-10 rounded-full bg-goSurfaceLight"
@@ -288,14 +290,14 @@ const HomePage = () => {
               >
                 <Image source={icons.search} className="w-6 h-6" />
                 <Text className="text-goTextSecondaryLight text-base">
-                  Search destination...
+                  {t('home.search')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <Text className="mt-5 mb-3">
               <Text className="text-xl text-goTextPrimaryLight font-JakartaBold">
-                Your Current Location:
+                {t('home.your_current_location')}
               </Text>{" "}
               <Text className="text-lg font-Jakarta text-goTextSecondaryLight">
                 {address
@@ -304,7 +306,7 @@ const HomePage = () => {
                     ? userAddress
                     : userLatitude
                       ? userLatitude
-                      : "Fetching.."}
+                      : t('home.fetching')}
               </Text>
             </Text>
 
@@ -315,7 +317,7 @@ const HomePage = () => {
               <Map />
             </View>
             <Text className="text-2xl text-goTextPrimaryLight font-JakartaBold tracking-tight mt-10 mb-3">
-              Recent Rides
+              {t('home.recent_rides')}
             </Text>
           </>
         }

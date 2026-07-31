@@ -171,6 +171,7 @@ export const walletRiderTxnTypeEnum = pgEnum("wallet_rider_transaction_type", [
   "referral_reward",
   "ride_discount",
   "adjustment",
+  "upfront_tip",
 ]);
 export const pointTransactionTypeEnum = pgEnum("point_transaction_type", [
   "earned",
@@ -1688,5 +1689,139 @@ export const ridePhotos = pgTable("ride_photos", {
   storage_url: text("storage_url").notNull(),
   lat: numeric("lat", { precision: 10, scale: 8 }),
   lng: numeric("lng", { precision: 11, scale: 8 }),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// ── P5 Growth Features ──────────────────────────────────────────────────
+
+// Gamification: Driver Tiers
+export const driverTiers = pgTable("driver_tiers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(), rank: integer("rank").notNull(),
+  min_rides: integer("min_rides").notNull().default(0),
+  min_rating: numeric("min_rating", { precision: 3, scale: 2 }).notNull().default('4.0'),
+  commission_discount_percent: integer("commission_discount_percent").notNull().default(0),
+  priority_boost: numeric("priority_boost", { precision: 3, scale: 2 }).notNull().default('1.0'),
+  is_active: boolean("is_active").notNull().default(true),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// Gamification: Driver Streaks
+export const driverStreaks = pgTable("driver_streaks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  driver_id: uuid("driver_id").references(() => drivers.id, { onDelete: "cascade" }).notNull(),
+  streak_type: text("streak_type", { enum: ['daily_rides', 'weekly_hours', 'perfect_rating'] }).notNull(),
+  current_count: integer("current_count").notNull().default(0),
+  best_count: integer("best_count").notNull().default(0),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// Gamification: Driver Achievements
+export const driverAchievements = pgTable("driver_achievements", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  driver_id: uuid("driver_id").references(() => drivers.id, { onDelete: "cascade" }).notNull(),
+  achievement_key: text("achievement_key").notNull(),
+  title: text("title").notNull(), description: text("description"),
+  reward_bdt: integer("reward_bdt").default(0),
+  unlocked_at: timestamptz("unlocked_at").notNull().defaultNow(),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// Gamification: Mystery Bonuses
+export const driverMysteryBonuses = pgTable("driver_mystery_bonuses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  driver_id: uuid("driver_id").references(() => drivers.id, { onDelete: "cascade" }).notNull(),
+  target_metric: text("target_metric").notNull(),
+  target_value: integer("target_value").notNull(),
+  reward_bdt: integer("reward_bdt").notNull(),
+  progress: integer("progress").notNull().default(0),
+  status: text("status", { enum: ['active', 'completed', 'expired'] }).notNull().default('active'),
+  expires_at: timestamptz("expires_at"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// Gamification: Leaderboard Entries
+export const driverLeaderboardEntries = pgTable("driver_leaderboard_entries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  driver_id: uuid("driver_id").references(() => drivers.id, { onDelete: "cascade" }).notNull(),
+  period: text("period", { enum: ['daily', 'weekly', 'monthly'] }).notNull(),
+  zone_id: uuid("zone_id").references(() => zones.id),
+  metric: text("metric", { enum: ['earnings', 'rides', 'rating'] }).notNull(),
+  score: integer("score").notNull().default(0),
+  rank: integer("rank"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// Safety: Ride Audio Recordings
+export const rideAudioRecordings = pgTable("ride_audio_recordings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ride_id: uuid("ride_id").references(() => rides.id, { onDelete: "cascade" }).notNull(),
+  driver_id: uuid("driver_id").references(() => drivers.id).notNull(),
+  storage_url: text("storage_url"),
+  status: text("status", { enum: ['recording', 'completed', 'deleted'] }).notNull().default('recording'),
+  duration_seconds: integer("duration_seconds"),
+  started_at: timestamptz("started_at").notNull().defaultNow(),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// Safety: Safety Anomalies
+export const safetyAnomalies = pgTable("safety_anomalies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ride_id: uuid("ride_id").references(() => rides.id, { onDelete: "cascade" }),
+  driver_id: uuid("driver_id").references(() => drivers.id),
+  anomaly_type: text("anomaly_type", { enum: ['route_deviation', 'stationary_long', 'night_ride_no_check', 'sos_triggered', 'harsh_braking', 'speeding'] }).notNull(),
+  severity: text("severity", { enum: ['low', 'medium', 'high', 'critical'] }).notNull(),
+  description: text("description"),
+  metadata: jsonb("metadata"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// AI Demand: Forecasts
+export const demandForecasts = pgTable("demand_forecasts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  zone_id: uuid("zone_id").references(() => zones.id).notNull(),
+  forecast_hour: timestamptz("forecast_hour").notNull(),
+  predicted_demand: integer("predicted_demand").notNull(),
+  predicted_supply: integer("predicted_supply").notNull(),
+  confidence_score: numeric("confidence_score", { precision: 4, scale: 2 }),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// AI Demand: Driver Repositioning Nudges
+export const driverRepositioningNudges = pgTable("driver_repositioning_nudges", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  driver_id: uuid("driver_id").references(() => drivers.id, { onDelete: "cascade" }).notNull(),
+  zone_id: uuid("zone_id").references(() => zones.id).notNull(),
+  message: text("message").notNull(),
+  demand_probability: integer("demand_probability").notNull(),
+  status: text("status", { enum: ['sent', 'viewed', 'accepted', 'dismissed'] }).notNull().default('sent'),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// Weather: Conditions
+export const weatherConditions = pgTable("weather_conditions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  zone_id: uuid("zone_id").references(() => zones.id).notNull(),
+  condition: text("condition").notNull(),
+  temperature_celsius: numeric("temperature_celsius", { precision: 4, scale: 1 }),
+  is_severe: boolean("is_severe").notNull().default(false),
+  surge_multiplier_override: numeric("surge_multiplier_override", { precision: 3, scale: 2 }),
+  fetched_at: timestamptz("fetched_at").notNull().defaultNow(),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+// Weather: Event Calendar
+export const eventCalendar = pgTable("event_calendar", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  description: text("description"),
+  venue: text("venue"),
+  latitude: numeric("latitude", { precision: 10, scale: 8 }),
+  longitude: numeric("longitude", { precision: 11, scale: 8 }),
+  event_start: timestamptz("event_start").notNull(),
+  event_end: timestamptz("event_end").notNull(),
+  demand_multiplier: numeric("demand_multiplier", { precision: 3, scale: 2 }).notNull().default('1.5'),
+  is_active: boolean("is_active").notNull().default(true),
   created_at: timestamptz("created_at").notNull().defaultNow(),
 });

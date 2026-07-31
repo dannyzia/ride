@@ -218,6 +218,13 @@
       "when": 1785348912015,
       "tag": "0030_lethal_radioactive_man",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1785374803400,
+      "tag": "0031_lush_black_panther",
+      "breakpoints": true
     }
   ]
 }

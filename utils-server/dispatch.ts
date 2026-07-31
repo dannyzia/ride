@@ -6,6 +6,7 @@ import { getDriversInCells } from './h3Index';
 import { checkDriverEligibility } from '../lib/vehicleTypes';
 import { haversineKm } from '../lib/fareCalc';
 import { logger } from '../lib/logger';
+import { recordCallDeduction } from './heartbeat';
 
 // ── Scoring weights ────────────────────────────────────────────────────────
 // Defaults used when system_config key 'dispatch_scoring_weights' is absent.
@@ -120,6 +121,7 @@ export async function scoreAndBatchDrivers(
     gender:               drivers.gender,
     auto_accept_enabled:  drivers.auto_accept_enabled,
     auto_accept_radius_meters: drivers.auto_accept_radius_meters,
+    subscription_id:      subscriptions.id,
     calls_remaining:      subscriptions.calls_remaining,
     daily_calls_used:     subscriptions.daily_calls_used,
     daily_cap:            packages.daily_cap,
@@ -203,6 +205,16 @@ export async function scoreAndBatchDrivers(
 
   // ── Score each candidate ──────────────────────────────────────────────
   const scored: ScoredDriver[] = [];
+
+  // ── Female preference global check — done once before loop ────────────
+  const [rideOwner] = await db.select({ user_id: rides.user_id, female_driver_preference: rides.female_driver_preference })
+    .from(rides).where(eq(rides.id, rideId)).limit(1);
+  let femalePref = rideOwner?.female_driver_preference ?? false;
+  if (femalePref) {
+    const femaleCount = driverRows.filter(d => d.gender === 'female').length;
+    if (femaleCount === 0) femalePref = false; // No female drivers — fall back to all
+  }
+
   for (const d of driverRows) {
     if (alreadyOffered.has(d.id)) continue;
     if (preferenceEligibleIds != null && !preferenceEligibleIds.has(d.id)) continue;
@@ -213,26 +225,22 @@ export async function scoreAndBatchDrivers(
       }).onConflictDoNothing();
       continue;
     }
-    // ── Blocklist filter — skip if rider has blocked this driver ──
-    let rideOwnerId: string | null = null;
-    let femalePref = false;
+    // ── Blocklist filter ──
     try {
-      const [rr] = await db.select({ user_id: rides.user_id, female_driver_preference: rides.female_driver_preference })
-        .from(rides).where(eq(rides.id, rideId)).limit(1);
-      if (rr) {
-        rideOwnerId = rr.user_id;
-        femalePref = rr.female_driver_preference ?? false;
+      if (rideOwner) {
         const [blocked] = await db.select().from(driverBlocklists)
-          .where(and(eq(driverBlocklists.rider_id, rr.user_id), eq(driverBlocklists.driver_id, d.id)))
+          .where(and(eq(driverBlocklists.rider_id, rideOwner.user_id), eq(driverBlocklists.driver_id, d.id)))
           .limit(1);
         if (blocked) continue;
       }
     } catch { /* fail-open */ }
 
-    // ── Female driver preference — use all-female pool, fall back to all if none ──
-    if (femalePref && d.gender !== 'female') {
-      continue;
-    }
+    // ── Female driver preference — skip male drivers if femalePref is active ──
+    if (femalePref && d.gender !== 'female') continue;
+
+    // ── Balance checks (required before auto-accept) ─────────────────────
+    if (d.calls_remaining === null || d.calls_remaining === 0) continue;
+    if (d.daily_calls_used != null && d.daily_calls_used >= (d.daily_cap ?? Infinity)) continue;
 
     // ── Auto-accept — driver auto-accepts close rides without offer sheet ──
     if (d.auto_accept_enabled && Number(d.rating ?? 0) >= 4.8) {
@@ -241,27 +249,33 @@ export async function scoreAndBatchDrivers(
       if (dlLat !== 0 && dlLng !== 0) {
         const dist = haversineMeters(originLat, originLng, dlLat, dlLng);
         if (dist <= (d.auto_accept_radius_meters ?? 500)) {
-          // Direct match — skip offer, immediately accept
-          await db.insert(dispatchOffers).values({
-            ride_id: rideId, driver_id: d.id, batch_index: 0, sent_at: new Date(),
-            outcome: 'auto_accepted',
+          // Call deduction via heartbeat (ownership: call_ledger deduction rows
+          // are ONLY written by heartbeat.ts, never by dispatch.ts directly).
+          if (!d.subscription_id) continue;
+          const deduction = await recordCallDeduction({
+            driverId: d.id,
+            subscriptionId: d.subscription_id,
+            rideId,
+            confirmedAt: new Date(),
+          });
+          if (!deduction.deducted) continue;
+          await db.insert(driverOnlineSessions).values({
+            driver_id: d.id,
+            subscription_id: d.subscription_id,
+            went_online_at: new Date(),
           });
           await db.update(rides).set({
             driver_id: d.id, status: 'matched', matched_at: new Date(),
           }).where(eq(rides.id, rideId));
-          // Deduct a call
-          await db.execute(sql`UPDATE subscriptions SET calls_remaining = calls_remaining - 1 WHERE driver_id = ${d.id} AND status = 'active'`);
-          await db.insert(driverOnlineSessions).values({
-            driver_id: d.id, event: 'ride_accepted', event_at: new Date(),
+          await db.insert(dispatchOffers).values({
+            ride_id: rideId, driver_id: d.id, batch_index: 0, sent_at: new Date(),
+            outcome: 'accepted',
           });
           logger.info('[dispatch] auto-accepted', { rideId, driverId: d.id });
-          continue; // Ride already matched, skip further processing
+          return scored; // Ride already matched — stop processing
         }
       }
     }
-
-    if (d.calls_remaining === null || d.calls_remaining === 0) continue;
-    if (d.daily_calls_used >= (d.daily_cap ?? Infinity)) continue;
 
     const { eligible } = checkDriverEligibility(vehicleType as any, {
       completed_rides_count: d.completed_rides_count,

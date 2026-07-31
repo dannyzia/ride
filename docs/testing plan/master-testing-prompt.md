@@ -84,7 +84,7 @@ Run these before starting. If any fails, **stop and report** rather than startin
 
 ## 5. Operating rules (follow strictly)
 
-1. **Follow the phases in order**: A (login) → B (driver online) → C (rider request) → D (driver accept) → E (rider sees match + PIN) → F (arrive + Pin→Start) → G (drop-off) → H (verify). Each phase is in §7.
+1. **Follow the phases in order**: A (login) → B (driver online) → C (rider request) → D (driver accept) → E (rider sees match + PIN) → F (arrive + Pin→Start) → G (drop-off) → H (verify) → **I (tax/accounting probes)**. Each phase is in §7.
 2. **Two-device coordination**: Rider actions on `emulator-5554`, Driver actions on `emulator-5556`. Switch device explicitly before each step.
 3. **The Ride Pin hand-off (critical)**: when the rider screen shows **"Tell your driver your Ride Pin"** + a 4-digit code, **read those 4 digits from the rider screenshot**, switch to the driver, and **type exactly those digits** into the "Ride Pin" input, then tap **Start Ride**. The pin is random per ride — never guess. (It equals `rides.start_pin` in the DB if you want to confirm what you read.)
 4. **Arrival & Drop-off are DRAGS, not taps**: "Slide to Confirm Arrival" and "Slide to Confirm Drop-off" are drag handles. Long-press the handle at the **left** of the bar and drag all the way to the **right**. A plain tap will **not** fire them.
@@ -110,9 +110,9 @@ Run these before starting. If any fails, **stop and report** rather than startin
 
 ---
 
-## 7. Phases (execute A → H)
+## 7. Phases (execute A → I)
 
-> Convention: **[R]** = Rider device (5554), **[D]** = Driver device (5556).
+> Convention: **[R]** = Rider device (5554), **[D]** = Driver device (5556), **[DB]** = Supabase SQL Editor probe.
 
 ### Phase A — Login (both devices)
 - Password login per §3 on each device; skip if already on Home.
@@ -152,6 +152,54 @@ Run these before starting. If any fails, **stop and report** rather than startin
 - **[R]** **"Ride Complete!"** with **"Total Fare"** > 0. If **"Rate Driver"** appears, tap it, set 5 stars, **"Submit Rating"**.
 - **[D]** Home **"Calls Remaining"** decremented; earnings reflect the fare.
 
+### Phase I — Tax & Accounting DB verification  [DB]
+> **Run these probes immediately after Phase H. All four must PASS before the run is declared PASS.**
+> Phase I is NOT optional. A ride completion that passes A–H but fails I means the accounting engine has a silent regression.
+
+**I1. Tax ledger populated** — at least one tax entry was created for this ride:
+```sql
+SELECT tl.reference_type, tr.code, tr.rate_percent,
+       tl.base_amount_bdt, tl.tax_amount_bdt, tl.net_amount_bdt
+FROM tax_ledgers tl
+JOIN tax_rates tr ON tr.id = tl.tax_rate_id
+WHERE tl.reference_id = '<ride_id>';
+```
+→ **At least 1 row.** If `rate_percent > 0`, then `tax_amount_bdt > 0`.
+→ FAIL if empty (recordRideCompletion did not call recordTaxLedger, or the wiring was removed).
+
+**I2. Accounting entry balanced (CRITICAL)** — the double-entry invariant for this ride:
+```sql
+SELECT ae.entry_number,
+       SUM(ael.debit_bdt)                          AS total_dr,
+       SUM(ael.credit_bdt)                         AS total_cr,
+       SUM(ael.debit_bdt) - SUM(ael.credit_bdt)   AS imbalance
+FROM accounting_entries ae
+JOIN accounting_entry_lines ael ON ael.entry_id = ae.id
+WHERE ae.reference_id = '<ride_id>'
+GROUP BY ae.id, ae.entry_number;
+```
+→ `imbalance` **MUST BE EXACTLY 0**.
+→ **CRITICAL FAIL** if non-zero — stop the run immediately. A non-zero imbalance means a recording function has a bug in its line construction (the same class of defect as bug #1). Do not attempt further testing until the bug is identified and fixed.
+
+**I3. Daily summary trigger fired** — the DB trigger auto-aggregated the ledger entry:
+```sql
+SELECT summary_date, tax_code, transaction_count,
+       total_base_amount_bdt, total_tax_amount_bdt
+FROM daily_tax_summaries
+WHERE summary_date = CURRENT_DATE
+ORDER BY tax_code;
+```
+→ **At least 1 row.** The trigger fires on INSERT into `tax_ledgers` and upserts the daily aggregate.
+→ FAIL if empty (trigger was dropped or not created; re-run the trigger SQL from REFERENCE.md).
+
+**I4. Global imbalance probe** — the hardest invariant in the system:
+```sql
+SELECT SUM(debit_bdt) - SUM(credit_bdt) AS global_imbalance
+FROM accounting_entry_lines;
+```
+→ **MUST BE EXACTLY 0.**
+→ This accumulates across ALL entries ever recorded. If it was 0 before this run and is now non-zero, the entry created in this run is the culprit. Bisect using I2 on each `accounting_entries.id` ordered by `created_at DESC`.
+
 ---
 
 ## 8. Verification matrix (these are the real pass criteria)
@@ -166,6 +214,10 @@ Run these before starting. If any fails, **stop and report** rather than startin
 | Start | `status='in_progress'`, `started_at` set | after F2 |
 | Completion | `status='completed'`, `completed_at` set | after G |
 | Fare | `fare_breakdown->>'total_bdt'` | > 0; `is_intercity=true`; outside charge = 2× per-km |
+| Tax ledger populated (I1) | `SELECT count(*) FROM tax_ledgers WHERE reference_id='<ride_id>'` | ≥ 1 row |
+| Accounting entry balanced (I2) | `imbalance` column from the per-entry query | exactly 0 |
+| Daily summary trigger fired (I3) | `SELECT count(*) FROM daily_tax_summaries WHERE summary_date=CURRENT_DATE` | ≥ 1 row |
+| Global imbalance (I4) | `SELECT SUM(debit_bdt)-SUM(credit_bdt) FROM accounting_entry_lines` | exactly 0 |
 
 utils-server log must contain, in order: `auth:hello success { role: 'driver' }`, then `auth:hello success { role: 'rider' }`, and **no** `CONNECT_TIMEOUT` / `unknown_type` lines.
 
@@ -181,9 +233,14 @@ utils-server log must contain, in order: `auth:hello success { role: 'driver' }`
 | Start stuck on "Starting…" | server didn't get `ride:start`; check utils-server log. |
 | "already have an active ride" | stranded ride — run cleanup SQL in §11, then retry. |
 | Map blank | emulator software-GL caveat — **do not** file as a code bug; note it and continue. |
+| **I1 empty (no tax_ledger row)** | Check `tax_ledgers` table exists (migration ran). Check utils-server log for `[accounting] ride completion entry failed` warning. If present, the accounting wiring threw — check `accounting_entries` table exists and accounts are seeded. |
+| **I2 imbalance ≠ 0 (CRITICAL)** | Identify the broken entry: run I2 on each `accounting_entries.id` from newest to oldest until you find the non-zero one. The `reference_type` column identifies which recording function built those lines. File as a CRITICAL BUG. |
+| **I3 empty (no daily summary)** | The `upsert_daily_tax_summary` trigger was not created or was dropped. Re-run the trigger SQL from `docs/Plan/kimi-code/REFERENCE.md`. |
+| **I4 global imbalance ≠ 0** | The accounting system has accumulated imbalance from a previous run. Run I2 on the most recent 5 entries to find the culprit. |
 
 ### When to STOP
 - Any phase FAILS, you've retried once (after an operator reload), and it still fails → **stop**, capture a screenshot, and report.
+- Phase I2 shows imbalance ≠ 0 → **stop immediately and report as CRITICAL FAIL**. Do not run further tests.
 - utils-server unreachable / `CONNECT_TIMEOUT` → stop and report (operator must restart it).
 
 ---
@@ -192,13 +249,20 @@ utils-server log must contain, in order: `auth:hello success { role: 'driver' }`
 - **Map rendering**: emulator uses software GL (SwiftShader); MapLibre may render slowly or blank. Verify map-dependent behaviour on a physical device before filing.
 - **Login**: existing accounts use password login; OTP (`123456`) is only for new registration in this dev environment.
 - **WebSocket session**: currently owned by the Home screen (persistent across ride screens in this build). Keep the driver on the Home → ride-screen order.
+- **Tax ledger warning is non-blocking**: if the accounting wiring throws inside the `try/catch`, the ride still completes (HTTP 200) but I1 will fail. The warning appears in utils-server log as `[accounting] ride completion entry failed`.
 
 ---
 
 ## 11. Cleanup (between runs)
 ```sql
-update rides set status='cancelled', cancel_reason='test_cleanup'
-where status in ('pending','dispatching','matched','driver_arriving','driver_arrived','in_progress');
+-- Cancel stranded rides
+UPDATE rides SET status='cancelled', cancel_reason='test_cleanup'
+WHERE status IN ('pending','dispatching','matched','driver_arriving','driver_arrived','in_progress');
+
+-- Verify global imbalance is 0 before starting a new run (should always be 0)
+SELECT SUM(debit_bdt) - SUM(credit_bdt) AS global_imbalance
+FROM accounting_entry_lines;
+-- If non-zero before the run, a previous run had a bug. Investigate before proceeding.
 ```
 Reset the driver's calls if needed via the admin/packages tooling.
 
@@ -232,12 +296,19 @@ PHASES
   F Arrive + Pin→Start           : PASS/FAIL  — arrived_at? Y/N  in_progress? Y/N
   G Drop-off complete            : PASS/FAIL  — completed_at? Y/N
   H Fare + earnings              : PASS/FAIL  — fare ৳___  earnings ৳___
+  I Tax & Accounting probes      : PASS/FAIL  — see ACCOUNTING section below
 
 CROSS-CUTS
   Ride Pin hand-off (rider→driver): PASS/FAIL
   Intercity 2× applied            : PASS/FAIL  — outside_charge vs per_km
   Map rendered                    : FULL/PARTIAL/BLANK
   Call deduction correct          : PASS/FAIL
+
+ACCOUNTING (Phase I — all must be 0 or ≥ 1 as noted)
+  I1 tax_ledger row count         : __ (must be ≥ 1)
+  I2 per-entry imbalance          : __ (must be exactly 0)
+  I3 daily_tax_summaries rows     : __ (must be ≥ 1)
+  I4 global_imbalance             : __ (must be exactly 0)
 
 VERIFICATION
   dispatch_offers.outcome         :
@@ -248,7 +319,8 @@ VERIFICATION
 FAILURES (one block each)
   phase / symptom / what you tried / screenshot ref / hypothesis :
 
-OVERALL: PASS / FAIL  (PASS only if A–H and all cross-cuts are PASS)
+OVERALL: PASS / FAIL
+  (PASS requires A–H all PASS AND I1 ≥ 1 AND I2 = 0 AND I3 ≥ 1 AND I4 = 0)
 ```
 
 Attach **screenshots** for any FAIL and for the final "Ride Complete" screen on both devices.
@@ -258,7 +330,7 @@ Attach **screenshots** for any FAIL and for the final "Ride Complete" screen on 
 ## 13. Start
 
 1. Run the §2 health check and §4 pre-conditions.
-2. Execute phases A→H, verifying each via §8.
+2. Execute phases A→I, verifying each via §8.
 3. Fill the §12 report and return it.
 
 Begin now.

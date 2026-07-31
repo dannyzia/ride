@@ -9,7 +9,7 @@ import { UpfrontTipSlider } from "@/components/UpfrontTipSlider";
 import CustomButton from "@/components/CustomButton";
 import { useEffect, useState, Fragment } from "react";
 import { Modal } from "react-native";
-import { useRiderStore } from "@/store/useRiderStore";
+import { useRiderStore, FareEstimate } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
@@ -47,10 +47,12 @@ const ConfirmRidePage = () => {
   const [stops, setStops] = useState<{ lat: number; lng: number; address: string }[]>([]);
   const [showStopModal, setShowStopModal] = useState(false);
   const [preferFemale, setPreferFemale] = useState(false);
+  const [refreshedEstimate, setRefreshedEstimate] = useState<FareEstimate | null>(null);
 
   const selectedEstimate = estimates.find(
     (e) => e.vehicle_type === selectedVehicleType,
   );
+  const displayEstimate = refreshedEstimate ?? selectedEstimate;
   const vehicleDef = selectedVehicleType
     ? VEHICLE_TYPES.find((v) => v.key === selectedVehicleType)
     : null;
@@ -86,11 +88,11 @@ const ConfirmRidePage = () => {
         setRideDistance(distance);
       } catch {
         setRideDuration(
-          selectedEstimate ? `${selectedEstimate.eta_minutes} min` : "N/A",
+          displayEstimate ? `${displayEstimate.eta_minutes} min` : "N/A",
         );
         setRideDistance(
-          selectedEstimate
-            ? `${selectedEstimate.distance_km.toFixed(1)} km`
+          displayEstimate
+            ? `${displayEstimate.distance_km.toFixed(1)} km`
             : "N/A",
         );
       }
@@ -98,6 +100,52 @@ const ConfirmRidePage = () => {
 
     fetchRoute();
   }, []);
+
+  useEffect(() => {
+    if (!selectedVehicleType || !userLatitude || !userLongitude || !destinationLatitude || !destinationLongitude) return;
+
+    let cancelled = false;
+    const fetchEstimate = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+
+        const body: Record<string, unknown> = {
+          pickup_lat: userLatitude,
+          pickup_lng: userLongitude,
+          dropoff_lat: destinationLatitude,
+          dropoff_lng: destinationLongitude,
+          vehicle_type: selectedVehicleType,
+          preference_ids: selectedPrefIds.length > 0 ? selectedPrefIds : undefined,
+          upfront_tip_bdt: upfrontTip > 0 ? upfrontTip * 100 : undefined,
+          stops: stops.length > 0 ? stops : undefined,
+        };
+        if (promoCode) body.promo_code = promoCode;
+
+        const res = await fetch(`${API_URL}/api/ride/estimate`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!cancelled && data.estimates && data.estimates.length > 0) {
+          const est = data.estimates.find((e: { vehicle_type: string }) => e.vehicle_type === selectedVehicleType) ?? data.estimates[0];
+          setRefreshedEstimate({ ...est, distance_km: data.distance_km } as FareEstimate);
+        }
+      } catch {
+        // keep existing estimate on error
+      }
+    };
+
+    fetchEstimate();
+    return () => { cancelled = true; };
+  }, [stops, upfrontTip, selectedVehicleType, userLatitude, userLongitude, destinationLatitude, destinationLongitude, selectedPrefIds, promoCode]);
 
   const handleRequestRide = async () => {
     if (
@@ -195,7 +243,7 @@ const ConfirmRidePage = () => {
       <RideLayout title="Confirm Ride" disabled={false}>
       <View className="flex-1">
         {/* Selected vehicle info */}
-        {selectedEstimate && vehicleDef && (
+        {displayEstimate && vehicleDef && (
           <View className="flex-row items-center p-4 mb-5 rounded-2xl bg-cardBgColor">
             <View className="w-16 h-16 rounded-full bg-bgColor items-center justify-center">
               <Image
@@ -209,15 +257,15 @@ const ConfirmRidePage = () => {
                 {vehicleDef.display_en}
               </Text>
               <Text className="text-secondaryTextColor text-sm">
-                {selectedEstimate.seats} seats
+                {displayEstimate.seats} seats
               </Text>
             </View>
             <View className="items-end">
               <Text className="text-primaryTextColor text-lg font-JakartaBold">
-                ৳{(selectedEstimate.total_bdt / 100).toFixed(0)}
+                ৳{(displayEstimate.total_bdt / 100).toFixed(0)}
               </Text>
               <Text className="text-secondaryTextColor text-xs">
-                {selectedEstimate.eta_minutes} min
+                {displayEstimate.eta_minutes} min
               </Text>
             </View>
           </View>
@@ -287,13 +335,24 @@ const ConfirmRidePage = () => {
               </Text>
             </View>
           )}
+          <View className="flex-row justify-between py-2 border-b border-borderColor">
+            <Text className="text-secondaryTextColor">Base fare</Text>
+            <Text className="text-primaryTextColor font-JakartaSemiBold">
+              ৳{displayEstimate ? (displayEstimate.total_bdt / 100).toFixed(0) : "—"}
+            </Text>
+          </View>
+          {upfrontTip > 0 && (
+            <View className="flex-row justify-between py-2 border-b border-borderColor">
+              <Text className="text-secondaryTextColor">Tip</Text>
+              <Text className="text-primaryTextColor font-JakartaSemiBold">
+                ৳{upfrontTip.toFixed(0)}
+              </Text>
+            </View>
+          )}
           <View className="flex-row justify-between py-2">
-            <Text className="text-secondaryTextColor">Fare</Text>
+            <Text className="text-goAccent text-lg font-JakartaBold">Total</Text>
             <Text className="text-goAccent text-lg font-JakartaBold">
-              ৳
-              {selectedEstimate
-                ? (selectedEstimate.total_bdt / 100).toFixed(0)
-                : "—"}
+              ৳{displayEstimate ? ((displayEstimate.total_bdt / 100) + upfrontTip).toFixed(0) : "—"}
             </Text>
           </View>
         </View>
@@ -329,13 +388,13 @@ const ConfirmRidePage = () => {
         </View>
 
         {/* Surge notice */}
-        {(selectedEstimate as any)?.fare_breakdown?.surge_multiplier > 1.0 && (
+        {(displayEstimate as any)?.fare_breakdown?.surge_multiplier > 1.0 && (
           <View className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-[10px] px-[16px] py-[12px] mb-4">
             <Text className="text-[14px] font-JakartaBold text-yellow-700 dark:text-yellow-400">
-              ⚡ High Demand — {(selectedEstimate as any).fare_breakdown.surge_multiplier}× pricing active
+              ⚡ High Demand — {(displayEstimate as any).fare_breakdown.surge_multiplier}× pricing active
             </Text>
             <Text className="text-[13px] font-Jakarta text-yellow-600 dark:text-yellow-500">
-              Includes ৳{(((selectedEstimate as any)?.fare_breakdown?.surge_fee_bdt ?? 0) / 100).toFixed(0)} surge fee
+              Includes ৳{(((displayEstimate as any)?.fare_breakdown?.surge_fee_bdt ?? 0) / 100).toFixed(0)} surge fee
             </Text>
           </View>
         )}
