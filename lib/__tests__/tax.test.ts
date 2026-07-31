@@ -77,13 +77,6 @@ const SRC_PAYOUT = {
   is_active: true,
 };
 
-const SRC_INSTANT = {
-  id: 'uuid-source-tax-instant',
-  code: 'source_tax_instant_pay',
-  rate_percent: '0.00',
-  is_active: true,
-};
-
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 /**
@@ -185,34 +178,6 @@ describe('calculateTax — source_tax_payout (5%, subtractive)', () => {
   });
 });
 
-// ── source_tax_instant_pay — 0%, subtractive (MVP rate) ──────────────────────
-
-describe('calculateTax — source_tax_instant_pay (0% MVP rate)', () => {
-  test('0% → taxAmountPaisa is zero', async () => {
-    mockSelectReturning([SRC_INSTANT]);
-    const result = await calculateTax('source_tax_instant_pay', 10_000);
-    expect(result.taxAmountPaisa).toBe(0);
-  });
-
-  test('0% → netAmountPaisa equals baseAmountPaisa (no withholding)', async () => {
-    mockSelectReturning([SRC_INSTANT]);
-    const result = await calculateTax('source_tax_instant_pay', 10_000);
-    expect(result.netAmountPaisa).toBe(10_000);
-  });
-
-  test('0% rate → taxRateId is NON-NULL (rate row exists at 0%, callers still record audit trail)', async () => {
-    // Key: the rate row exists in the DB with rate_percent=0.00 and is_active=true.
-    // taxRateId must be returned so callers can create a tax_ledger row for the audit trail
-    // (base_amount populated, tax_amount=0). If taxRateId were null, the ledger row
-    // would be skipped and the audit trail would be incomplete.
-    mockSelectReturning([SRC_INSTANT]);
-    const result = await calculateTax('source_tax_instant_pay', 10_000);
-    expect(result.taxRateId).toBe('uuid-source-tax-instant');
-    expect(result.taxRateId).not.toBeNull();
-    expect(result.taxRateId).not.toBe('');
-  });
-});
-
 // ── Missing / inactive rate — bug #2 regression guard ────────────────────────
 
 describe('calculateTax — missing or inactive rate → taxRateId MUST be null', () => {
@@ -249,7 +214,7 @@ describe('calculateTax — missing or inactive rate → taxRateId MUST be null',
   });
 
   test('null taxRateId passes the caller guard if(tax.taxRateId) without crash', () => {
-    // Simulate caller logic from complete+api.ts and instant-pay+api.ts:
+    // Simulate caller logic from complete+api.ts:
     //   const tax = await calculateTax(...);
     //   if (tax.taxRateId) { await recordTaxLedger({ taxRateId: tax.taxRateId, ... }); }
     const tax = { taxRateId: null as string | null, taxAmountPaisa: 0, netAmountPaisa: 1_000 };

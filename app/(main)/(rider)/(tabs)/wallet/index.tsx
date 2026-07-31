@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
 export default function WalletScreen() {
   const [balancePaisa, setBalancePaisa] = useState(0);
-  const [pendingPaisa, setPendingPaisa] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -24,7 +22,6 @@ export default function WalletScreen() {
       if (!res.ok) { setError("Failed to load wallet"); return; }
       const data = await res.json();
       setBalancePaisa(data.balance_bdt ?? 0);
-      setPendingPaisa(0);
     } catch (err: any) {
       setError(err?.message || "Network error");
       logger.error("Wallet fetch failed", err);
@@ -47,21 +44,17 @@ export default function WalletScreen() {
           <>
             <Text className="text-[32px] font-JakartaBold tracking-tight text-goPrimary mt-1">৳{(balancePaisa / 100).toFixed(0)}</Text>
             <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
-              Available balance{pendingPaisa > 0 ? ` · ৳${(pendingPaisa / 100).toFixed(0)} pending` : ""}
+              Total earnings tracker
             </Text>
           </>
         )}
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16, gap: 12 }}>
-        <TouchableOpacity className="bg-goPrimary rounded-full w-full py-[16px] items-center" onPress={() => router.push("/(main)/(rider)/wallet-topup")}>
-          <Text className="text-[18px] font-JakartaBold text-goWhite">Top Up</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center" onPress={() => router.push("/(main)/(rider)/payout-methods")}>
-          <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Withdraw</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center" onPress={() => router.push("/(main)/(rider)/payout-history")}>
-          <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Payout History</Text>
-        </TouchableOpacity>
+        <View className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] p-[14px]">
+          <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+            Total earnings are credited here at ride completion and from gamification rewards. No withdrawals are available yet.
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

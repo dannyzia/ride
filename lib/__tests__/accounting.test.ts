@@ -50,12 +50,16 @@ jest.mock('@/src/db/schema', () => ({
   riderSubscriptions:   { __table: 'rider_subscriptions' },
 }));
 
-jest.mock('@/src/db', () => ({
-  db: {
+jest.mock('@/src/db', () => {
+  const dbMock = {
     select: jest.fn(),
     insert: jest.fn(),
-  },
-}));
+    transaction: jest.fn(),
+  };
+  // db.transaction(cb) → cb(db) so the same mock methods work inside the tx
+  (dbMock.transaction as jest.Mock).mockImplementation(async (cb: Function) => cb(dbMock));
+  return { db: dbMock };
+});
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 

@@ -35,26 +35,28 @@ export async function createJournalEntry(params: {
   if (Math.abs(totalDebit - totalCredit) > 0.001)
     throw new Error(`Journal unbalanced: Dr ${totalDebit} ≠ Cr ${totalCredit}`);
 
-  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const [last] = await db.select({ count: sql<number>`count(*)` })
-    .from(accountingEntries).where(sql`entry_number LIKE ${`JV-${today}-%`}`);
-  const entryNumber = `JV-${today}-${((last?.count || 0) + 1).toString().padStart(4, '0')}`;
+  return db.transaction(async (tx) => {
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const [last] = await tx.select({ count: sql<number>`count(*)` })
+      .from(accountingEntries).where(sql`entry_number LIKE ${`JV-${today}-%`}`);
+    const entryNumber = `JV-${today}-${((last?.count || 0) + 1).toString().padStart(4, '0')}`;
 
-  const [entry] = await db.insert(accountingEntries).values({
-    entry_number: entryNumber, reference_type: params.referenceType as any, reference_id: params.referenceId,
-    entry_date: params.entryDate, description: params.description, notes: params.notes,
-    created_by: params.createdBy,
-  }).returning();
+    const [entry] = await tx.insert(accountingEntries).values({
+      entry_number: entryNumber, reference_type: params.referenceType as any, reference_id: params.referenceId,
+      entry_date: params.entryDate, description: params.description, notes: params.notes,
+      created_by: params.createdBy,
+    }).returning();
 
-  for (const line of params.lines) {
-    const accountId = await getAccountId(line.accountCode);
-    await db.insert(accountingEntryLines).values({
-      entry_id: entry.id, account_id: accountId,
-      debit_bdt: line.debit || 0, credit_bdt: line.credit || 0,
-      description: line.description || params.description,
-    });
-  }
-  return entry;
+    for (const line of params.lines) {
+      const accountId = await getAccountId(line.accountCode);
+      await tx.insert(accountingEntryLines).values({
+        entry_id: entry.id, account_id: accountId,
+        debit_bdt: line.debit || 0, credit_bdt: line.credit || 0,
+        description: line.description || params.description,
+      });
+    }
+    return entry;
+  });
 }
 
 export async function recordRideCompletion(ride: {
@@ -62,7 +64,7 @@ export async function recordRideCompletion(ride: {
   driverId: string; riderId: string;
 }) {
   const fare = ride.finalFarePaisa;
-  const commission = Math.round(fare * ride.commissionPct / 100);
+  const commission = Math.floor(fare * ride.commissionPct / 100);
   const driverShare = fare - commission;
 
   const vat = await calculateTax('vat_commission', commission);

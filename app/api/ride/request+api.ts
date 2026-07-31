@@ -8,8 +8,10 @@ import {
   zones,
   surgeCurrent,
   rideStops,
+  riderSubscriptions,
+  riderPasses,
 } from "@/src/db/schema";
-import { eq, and, sql, gte } from "drizzle-orm";
+import { eq, and, sql, gte, gt } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { validatePickupZone } from "@/lib/zone";
 import { calculateFare, haversineKm } from "@/lib/fareCalc";
@@ -212,6 +214,39 @@ export async function POST(request: Request) {
       origin_city,
       intercity,
     );
+
+    // ── Rider Pass discount — apply BEFORE surge ───────────────────
+    const [activePassSub] = await db
+      .select()
+      .from(riderSubscriptions)
+      .where(
+        and(
+          eq(riderSubscriptions.rider_id, user.id),
+          eq(riderSubscriptions.status, 'active'),
+          gt(riderSubscriptions.valid_until, new Date()),
+        ),
+      )
+      .limit(1);
+    if (activePassSub) {
+      const [riderPass] = await db
+        .select()
+        .from(riderPasses)
+        .where(eq(riderPasses.id, activePassSub.pass_id))
+        .limit(1);
+      if (riderPass && (!riderPass.max_rides || activePassSub.rides_used < riderPass.max_rides)) {
+        const discountPaisa = Math.round(
+          fareBreakdown.total_bdt * riderPass.discount_percent / 100,
+        );
+        fareBreakdown.total_bdt -= discountPaisa;
+        fareBreakdown.pass_discount_bdt = discountPaisa;
+        fareBreakdown.pass_name = riderPass.name;
+        const cp = Number(activePricing.platform_commission_percent ?? 0);
+        if (cp > 0) {
+          fareBreakdown.platform_commission_bdt = Math.floor(fareBreakdown.total_bdt * cp / 100);
+          fareBreakdown.driver_net_bdt = fareBreakdown.total_bdt - fareBreakdown.platform_commission_bdt;
+        }
+      }
+    }
 
     // ── Surge pricing — look up active zone's multiplier ────────────────
     const [activeZone] = await db

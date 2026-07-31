@@ -81,6 +81,14 @@ export async function POST(request: Request) {
       0,
       Math.ceil((completedAt.getTime() - timerStart.getTime()) / 60_000),
     );
+
+    // P1-3: Subtract chargeable wait minutes from ride time to avoid double-billing.
+    // wait_fee_bdt is added separately below; those minutes must not also be in the per-minute charge.
+    const waitFeePaisa = Number(ride.wait_fee_bdt ?? 0);
+    const waitFeePerMin = Number(pricingRow.wait_fee_per_minute_bdt ?? 0);
+    const chargeableWaitMin = waitFeePerMin > 0 ? Math.floor(waitFeePaisa / waitFeePerMin) : 0;
+    const effectiveRideTimeMin = Math.max(0, rideTimeMin - chargeableWaitMin);
+
     const distanceKm = parseFloat(ride.distance_km?.toString() ?? "0");
 
     // Preserve intercity split from the original fare_breakdown.
@@ -116,7 +124,7 @@ export async function POST(request: Request) {
         ),
       },
       insideKm,
-      rideTimeMin,
+      effectiveRideTimeMin,
       undefined,
       outsideKm,
       originCity,
@@ -137,20 +145,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── Approved extra charges (toll/parking) ────────────────────────────
-    const extraCharges = await db.select({ amount_bdt: rideExtraCharges.amount_bdt })
-      .from(rideExtraCharges)
-      .where(and(eq(rideExtraCharges.ride_id, rideId), eq(rideExtraCharges.status, 'approved')));
-    const extraChargeTotal = extraCharges.reduce((sum, c) => sum + Number(c.amount_bdt ?? 0), 0);
-    if (extraChargeTotal > 0) {
-      fare.total_bdt += extraChargeTotal;
-      const commPct = Number(pricingRow.platform_commission_percent ?? 0);
-      if (commPct > 0) {
-        fare.platform_commission_bdt = Math.floor(fare.total_bdt * commPct / 100);
-        fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
-      }
-    }
-
     // ── Waiting time fee ────────────────────────────────────────────────
     const waitFee = Number(ride.wait_fee_bdt ?? 0);
     if (waitFee > 0) {
@@ -162,6 +156,35 @@ export async function POST(request: Request) {
         fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
       }
     }
+
+    // ── P1-2: Re-apply stored rider pass discount (from fare_breakdown at request) ──
+    const storedBreakdown = ride.fare_breakdown as Record<string, unknown> | null;
+    const storedPassDiscount = Number(storedBreakdown?.pass_discount_bdt ?? 0);
+    if (storedPassDiscount > 0) {
+      fare.total_bdt -= storedPassDiscount;
+      fare.pass_discount_bdt = storedPassDiscount;
+      fare.pass_name = (storedBreakdown?.pass_name as string) ?? undefined;
+      const commPct = Number(pricingRow.platform_commission_percent ?? 0);
+      if (commPct > 0) {
+        fare.platform_commission_bdt = Math.floor(fare.total_bdt * commPct / 100);
+        fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
+      }
+    }
+
+    // ── P1-4: Approved extra charges (toll/parking) — NOT commissionable ──
+    // Placed after commission recalc so extra charges don't inflate commission base.
+    const extraCharges = await db.select({ amount_bdt: rideExtraCharges.amount_bdt })
+      .from(rideExtraCharges)
+      .where(and(eq(rideExtraCharges.ride_id, rideId), eq(rideExtraCharges.status, 'approved')));
+    const extraChargeTotal = extraCharges.reduce((sum, c) => sum + Number(c.amount_bdt ?? 0), 0);
+    if (extraChargeTotal > 0) {
+      fare.total_bdt += extraChargeTotal;
+      fare.driver_net_bdt = fare.total_bdt - (fare.platform_commission_bdt ?? 0);
+    }
+
+    // ── P1-2: Re-apply stored preference surcharge and promo discount ──
+    const storedPrefSurcharge = Number(ride.preference_surcharge_bdt ?? 0);
+    const storedPromoDiscount = Number(ride.promo_discount_bdt ?? 0);
 
     await db.transaction(async (tx) => {
       const upfrontTip = Number(ride.upfront_tip_bdt ?? 0);
@@ -195,8 +218,8 @@ export async function POST(request: Request) {
           platform_commission_bdt: fare.platform_commission_bdt,
           fare_breakdown: fare as any,
           updated_at: completedAt,
-          rider_payable_bdt: fare.total_bdt + (tipApplied ? upfrontTip : 0),
-          driver_fare_bdt: fare.driver_net_bdt + (fare.platform_commission_bdt ?? 0),
+          rider_payable_bdt: fare.total_bdt + storedPrefSurcharge - storedPromoDiscount + (tipApplied ? upfrontTip : 0),
+          driver_fare_bdt: fare.driver_net_bdt + storedPrefSurcharge + (fare.platform_commission_bdt ?? 0),
         })
         .where(and(eq(rides.id, rideId), eq(rides.status, "in_progress")))
         .returning();
@@ -251,7 +274,7 @@ export async function POST(request: Request) {
       driverId: driver.id,
       totalBdt: fare.total_bdt,
       driverNetBdt: fare.driver_net_bdt,
-      rideTimeMin,
+      rideTimeMin: effectiveRideTimeMin,
     });
 
     // Emit WebSocket event + push notification to rider

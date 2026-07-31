@@ -27,81 +27,135 @@ async function processPortposPayment(
     return "failed";
   }
 
-  const [evt] = await db
-    .select()
-    .from(paymentEvents)
-    .where(eq(paymentEvents.provider_txn_id, invoiceId))
-    .limit(1);
+  let txPhase: 'not_found' | 'done' | 'continue' = 'not_found';
+  let txEvt: typeof paymentEvents.$inferSelect | undefined;
+  let txNext: 'success' | 'failed' | undefined;
 
-  if (!evt) {
+  await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(paymentEvents)
+      .where(eq(paymentEvents.provider_txn_id, invoiceId))
+      .for("update")
+      .limit(1);
+
+    if (!row) {
+      txPhase = 'not_found';
+      txEvt = undefined;
+      txNext = undefined;
+      return;
+    }
+
+    if (row.status === 'paid') {
+      txPhase = 'done';
+      txEvt = row;
+      txNext = 'success';
+      return;
+    }
+
+    if (row.subscription_id) {
+      txPhase = 'done';
+      txEvt = row;
+      txNext = 'success';
+      return;
+    }
+
+    const invoiceAmountTaka = parseFloat(inv.order.amount);
+    const eventAmountTaka = row.amount_bdt / 100;
+    if (Math.abs(invoiceAmountTaka - eventAmountTaka) > 0.01) {
+      logger.error("[portpos/callback] amount mismatch", {
+        invoiceAmount: inv.order.amount,
+        expectedAmount: eventAmountTaka,
+      });
+      await tx
+        .update(paymentEvents)
+        .set({ status: 'failed' })
+        .where(eq(paymentEvents.id, row.id));
+      txPhase = 'done';
+      txEvt = row;
+      txNext = 'failed';
+      return;
+    }
+
+    await tx
+      .update(paymentEvents)
+      .set({ status: 'callback_pending' })
+      .where(eq(paymentEvents.id, row.id));
+
+    if (row.ride_id) {
+      await tx
+        .update(paymentEvents)
+        .set({ status: 'paid', confirmed_at: new Date() })
+        .where(eq(paymentEvents.id, row.id));
+      logger.info("[portpos/callback] ride payment completed", {
+        paymentEventId: row.id,
+        rideId: row.ride_id,
+      });
+      txPhase = 'done';
+      txEvt = row;
+      txNext = 'success';
+      return;
+    }
+
+    txPhase = 'continue';
+    txEvt = row;
+    txNext = undefined;
+  });
+
+  if (txPhase === 'not_found') {
     logger.error("[portpos/callback] payment_event not found", { invoiceId });
-    return "failed";
+    return 'failed';
   }
 
-  if (evt.status === "paid") {
-    logger.info("[portpos/callback] already processed", {
-      paymentEventId: evt.id,
-      status: evt.status,
-    });
-    return "success";
+  if (txPhase === 'done') {
+    const evt = txEvt!;
+    if (txNext === 'success') {
+      if (evt.status === 'paid') {
+        logger.info("[portpos/callback] already processed", {
+          paymentEventId: evt.id,
+          status: evt.status,
+        });
+      } else if (evt.subscription_id) {
+        logger.info("[portpos/callback] already activated", {
+          paymentEventId: evt.id,
+          subscriptionId: evt.subscription_id,
+        });
+      } else if (evt.ride_id) {
+        logger.info("[portpos/callback] ride payment completed", {
+          paymentEventId: evt.id,
+          rideId: evt.ride_id,
+        });
+      }
+    }
+    return txNext!;
   }
 
-  if (evt.subscription_id) {
-    logger.info("[portpos/callback] already activated", {
-      paymentEventId: evt.id,
-      subscriptionId: evt.subscription_id,
-    });
-    return "success";
-  }
-
-  // Verify amount matches (anti-tamper)
-  const invoiceAmountTaka = parseFloat(inv.order.amount);
-  const eventAmountTaka = evt.amount_bdt / 100;
-  if (Math.abs(invoiceAmountTaka - eventAmountTaka) > 0.01) {
-    logger.error("[portpos/callback] amount mismatch", {
-      invoiceAmount: inv.order.amount,
-      expectedAmount: eventAmountTaka,
-    });
-    await db
-      .update(paymentEvents)
-      .set({ status: "failed" })
-      .where(eq(paymentEvents.id, evt.id));
-    return "failed";
-  }
-
-  await db
-    .update(paymentEvents)
-    .set({ status: "callback_pending" })
-    .where(eq(paymentEvents.id, evt.id));
-
-  if (evt.ride_id) {
-    await db
-      .update(paymentEvents)
-      .set({ status: "paid", confirmed_at: new Date() })
-      .where(eq(paymentEvents.id, evt.id));
-    logger.info("[portpos/callback] ride payment completed", {
-      paymentEventId: evt.id,
-      rideId: evt.ride_id,
-    });
-    return "success";
-  }
+  const evt = txEvt!;
 
   // Rider Pass activation — use purpose + pass_id (no price guessing)
   if (evt.purpose === 'rider_pass' && evt.pass_id) {
     const [pass] = await db.select().from(riderPasses).where(eq(riderPasses.id, evt.pass_id)).limit(1);
     if (pass) {
       try {
-        const [newSub] = await db.insert(riderSubscriptions).values({
-          rider_id: evt.user_id!,
-          pass_id: pass.id,
-          status: 'active',
-          valid_until: new Date(Date.now() + pass.validity_days * 86400000),
-          payment_event_id: evt.id,
-        }).returning();
-        await db.update(paymentEvents).set({ status: "paid", confirmed_at: new Date() }).where(eq(paymentEvents.id, evt.id));
-        logger.info('[portpos/callback] rider pass activated', { paymentEventId: evt.id, passId: pass.id });
-        try { await recordRiderPassPurchase({ subscriptionId: newSub.id, amountPaisa: evt.amount_bdt, riderId: evt.user_id!, paymentEventId: evt.id }); }
-        catch (e) { logger.warn('[accounting] rider pass entry failed', e); }
+        await db.transaction(async (tx) => {
+          const [locked] = await tx.select().from(paymentEvents)
+            .where(eq(paymentEvents.id, evt.id)).for('update').limit(1);
+          if (locked.status === 'paid') {
+            logger.info('[portpos/callback] rider pass already credited (concurrent)', { paymentEventId: evt.id });
+            return;
+          }
+          const [newSub] = await tx.insert(riderSubscriptions).values({
+            rider_id: evt.user_id!,
+            pass_id: pass.id,
+            status: 'active',
+            valid_until: new Date(Date.now() + pass.validity_days * 86400000),
+            payment_event_id: evt.id,
+          }).returning();
+          await tx.update(paymentEvents).set({ status: "paid", confirmed_at: new Date() }).where(eq(paymentEvents.id, evt.id));
+          logger.info('[portpos/callback] rider pass activated', { paymentEventId: evt.id, passId: pass.id });
+          try { await recordRiderPassPurchase({ subscriptionId: newSub.id, amountPaisa: evt.amount_bdt, riderId: evt.user_id!, paymentEventId: evt.id }); }
+          catch (e) { logger.warn('[accounting] rider pass entry failed', e); }
+        });
         return "success";
       } catch (passErr: any) {
         logger.error('[portpos/callback] rider pass activation failed', { paymentEventId: evt.id, error: passErr.message });
@@ -114,6 +168,12 @@ async function processPortposPayment(
   if ((evt.purpose === 'wallet_topup' || (!evt.purpose && evt.user_id && !evt.subscription_id && !evt.ride_id && !evt.driver_id)) && !evt.pass_id) {
     try {
       await db.transaction(async (tx) => {
+        const [locked] = await tx.select().from(paymentEvents)
+          .where(eq(paymentEvents.id, evt.id)).for('update').limit(1);
+        if (locked.status === 'paid') {
+          logger.info('[portpos/callback] wallet topup already credited (concurrent)', { paymentEventId: evt.id });
+          return;
+        }
         if (evt.driver_id) {
           const [d] = await tx.select({ balance: drivers.driver_wallet_balance_bdt })
             .from(drivers).where(eq(drivers.id, evt.driver_id!)).limit(1)

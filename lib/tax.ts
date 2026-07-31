@@ -3,7 +3,7 @@ import { taxRates, taxLedgers, dailyTaxSummaries } from '@/src/db/schema';
 import { eq, and, between } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 
-export type TaxCode = 'vat_commission' | 'vat_subscription' | 'source_tax_payout' | 'source_tax_instant_pay';
+export type TaxCode = 'vat_commission' | 'vat_subscription' | 'source_tax_payout';
 
 export interface TaxCalculation {
   baseAmountPaisa: number;
@@ -28,7 +28,7 @@ export async function calculateTax(code: TaxCode, baseAmountPaisa: number): Prom
 
 export async function recordTaxLedger(params: {
   taxRateId: string;
-  referenceType: 'ride_commission' | 'subscription_sale' | 'driver_payout' | 'driver_instant_pay';
+  referenceType: 'ride_commission' | 'subscription_sale' | 'driver_payout';
   referenceId: string;
   baseAmountPaisa: number;
   taxAmountPaisa: number;

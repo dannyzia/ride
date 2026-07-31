@@ -79,9 +79,15 @@ export async function PATCH(request: Request, { id }: { id: string }) {
     const parsed = await parseJsonBody(request, approveSchema);
     if (!parsed.ok) return parsed.response;
 
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
+    if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
+
     const [charge] = await db.select().from(rideExtraCharges).where(eq(rideExtraCharges.id, parsed.data.charge_id)).limit(1);
     if (!charge || charge.ride_id !== id) return Response.json({ error: 'not_found' }, { status: 404 });
     if (charge.status !== 'pending') return Response.json({ error: 'already_resolved' }, { status: 409 });
+
+    const [ride] = await db.select({ user_id: rides.user_id }).from(rides).where(eq(rides.id, id)).limit(1);
+    if (!ride || ride.user_id !== user.id) return Response.json({ error: 'forbidden' }, { status: 403 });
 
     const newStatus = parsed.data.action === 'approve' ? 'approved' : 'disputed';
     await db.update(rideExtraCharges).set({ status: newStatus, resolved_at: new Date() }).where(eq(rideExtraCharges.id, parsed.data.charge_id));
