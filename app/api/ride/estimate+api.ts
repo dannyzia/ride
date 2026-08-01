@@ -1,10 +1,11 @@
 import { db } from '@/src/db';
-import { users, pricing, preferences, systemConfig, zones, surgeCurrent, riderSubscriptions, riderPasses } from '@/src/db/schema';
-import { eq, and, inArray, gt } from 'drizzle-orm';
+import { users, pricing, preferences, systemConfig, zones, surgeCurrent } from '@/src/db/schema';
+import { eq, and, inArray } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
 import { calculateFare, haversineKm } from '@/lib/fareCalc';
 import { applySurge } from '@/lib/surge';
+import { getAvailableDiscounts } from '@/lib/discountEngine';
 import { detectOriginCity, isIntercity } from '@/lib/cityBoundary';
 import { splitRoute } from '@/lib/routeSplit';
 import { getRouteDistance } from '@/lib/barikoi';
@@ -35,7 +36,6 @@ const estimateSchema = z.object({
   dropoff_lng:    z.number().min(-180).max(180),
   vehicle_type:   z.enum(VEHICLE_TYPE_VALUES).optional(),
   preference_ids: z.array(z.string().uuid()).max(10).optional(),
-  promo_code:     z.string().min(1).max(30).optional(),
   upfront_tip_bdt: z.number().int().min(0).max(20000).optional(),
   stops: z.array(z.object({ lat: z.number(), lng: z.number(), address: z.string() })).max(2).optional(),
 });
@@ -43,7 +43,7 @@ const estimateSchema = z.object({
 export async function POST(request: Request) {
   try {
     const supabaseUser = await verifySupabaseToken(request);
-    const [rider] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
+    const [rider] = await db.select({ id: users.id, total_rides: users.total_rides }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!rider) return Response.json({ error: 'user_not_found' }, { status: 404 });
     const parsed = await parseJsonBody(request, estimateSchema);
     if (!parsed.ok) return parsed.response;
@@ -129,22 +129,6 @@ export async function POST(request: Request) {
       }, insideKm, 0, undefined, outsideKm, origin_city, intercity);
 
       // ── Multi-leg distance — override routeKm when stops are set ──────
-      // ── Rider Pass discount — apply BEFORE surge ───────────────────
-      const [activePassSub] = await db.select().from(riderSubscriptions)
-        .where(and(eq(riderSubscriptions.rider_id, rider.id), eq(riderSubscriptions.status, 'active'), gt(riderSubscriptions.valid_until, new Date())))
-        .limit(1);
-      if (activePassSub) {
-        const [riderPass] = await db.select().from(riderPasses).where(eq(riderPasses.id, activePassSub.pass_id)).limit(1);
-        if (riderPass && (!riderPass.max_rides || activePassSub.rides_used < riderPass.max_rides)) {
-          const discountPaisa = Math.round(fare.total_bdt * riderPass.discount_percent / 100);
-          fare.total_bdt -= discountPaisa;
-          fare.pass_discount_bdt = discountPaisa;
-          fare.pass_name = riderPass.name;
-          const cp = Number(activePricing.platform_commission_percent ?? 0);
-          if (cp > 0) { fare.platform_commission_bdt = Math.floor(fare.total_bdt * cp / 100); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
-        }
-      }
-
       // ── Surge pricing lookup ───────────────────────────────────────
       const [sz] = await db.select({ id: zones.id }).from(zones).where(eq(zones.is_active, true)).limit(1);
       let surgeMul = 1.0;
@@ -159,7 +143,15 @@ export async function POST(request: Request) {
         fare.surge_fee_bdt = surge.surgeFeeBdt;
         const cp = Number(activePricing.platform_commission_percent ?? 0);
         if (cp > 0) { fare.platform_commission_bdt = Math.floor(fare.total_bdt * cp / 100); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
-      }
+       }
+
+      // ── Available discounts (calculated AFTER surge on the surged total) ──
+      const availableDiscounts = await getAvailableDiscounts({
+        riderId: rider.id,
+        totalRides: rider.total_rides ?? 0,
+        surgedTotalBdt: fare.total_bdt,
+        zoneId,
+      });
 
       const vtDef = VEHICLE_TYPES.find(v => v.key === vehicle_type);
       const driverFare = fare.total_bdt + preferenceSurchargeBdt;
@@ -181,7 +173,8 @@ export async function POST(request: Request) {
           driver_fare_bdt: driverFare,
           rider_payable_bdt: driverFare,
           eta_minutes: etaMin,
-        }],
+         available_discounts: availableDiscounts,
+         }],
         distance_km: totalDistanceKm,
         preferences_applied: preference_ids ?? [],
       });
@@ -202,21 +195,9 @@ export async function POST(request: Request) {
       if (sr2 && Date.now() - new Date(sr2.updated_at).getTime() < 300_000) surgeMul2 = Number(sr2.multiplier);
     }
 
-    // ── Rider Pass discount for multi-vehicle (apply per fare, before surge) ──
-    const [activePassSub2] = await db.select().from(riderSubscriptions)
-      .where(and(eq(riderSubscriptions.rider_id, rider.id), eq(riderSubscriptions.status, 'active'), gt(riderSubscriptions.valid_until, new Date())))
-      .limit(1);
-    let passDiscountPercent = 0;
-    let passName2: string | null = null;
-    if (activePassSub2) {
-      const [riderPass2] = await db.select().from(riderPasses).where(eq(riderPasses.id, activePassSub2.pass_id)).limit(1);
-      if (riderPass2 && (!riderPass2.max_rides || activePassSub2.rides_used < riderPass2.max_rides)) {
-        passDiscountPercent = riderPass2.discount_percent;
-        passName2 = riderPass2.name;
-      }
-    }
+    // ── Rider pass discount for multi-vehicle (now handled by discount engine AFTER surge) ──
 
-    const estimates = pricings.map(p => {
+    const estimates = await Promise.all(pricings.map(async (p) => {
       const fare = calculateFare({
         base_fare_bdt:        p.base_fare_bdt,
         per_km_bdt:           p.per_km_bdt,
@@ -228,15 +209,6 @@ export async function POST(request: Request) {
         platform_commission_percent: Number(p.platform_commission_percent ?? 0),
       }, insideKm, 0, undefined, outsideKm, origin_city, intercity);
 
-      if (passDiscountPercent > 0) {
-        const disc = Math.round(fare.total_bdt * passDiscountPercent / 100);
-        fare.total_bdt -= disc;
-        fare.pass_discount_bdt = disc;
-        fare.pass_name = passName2 ?? undefined;
-        const cp = Number(p.platform_commission_percent ?? 0);
-        if (cp > 0) { fare.platform_commission_bdt = Math.floor(fare.total_bdt * cp / 100); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
-      }
-
       if (surgeMul2 > 1.0) {
         const surge = applySurge(Number(fare.total_bdt), surgeMul2);
         fare.total_bdt = surge.totalWithSurge;
@@ -245,6 +217,13 @@ export async function POST(request: Request) {
         const cp = Number(p.platform_commission_percent ?? 0);
         if (cp > 0) { fare.platform_commission_bdt = Math.floor(fare.total_bdt * cp / 100); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
       }
+
+      const availableDiscounts = await getAvailableDiscounts({
+        riderId: rider.id,
+        totalRides: rider.total_rides ?? 0,
+        surgedTotalBdt: fare.total_bdt,
+        zoneId,
+      });
 
       const vtDef = VEHICLE_TYPES.find(v => v.key === p.vehicle_type);
       const driverFare = fare.total_bdt + preferenceSurchargeBdt;
@@ -263,8 +242,9 @@ export async function POST(request: Request) {
         driver_fare_bdt: driverFare,
         rider_payable_bdt: driverFare,
         eta_minutes:   etaMin,
+        available_discounts: availableDiscounts,
       };
-    });
+    }));
 
     estimates.sort((a, b) => a.fare_breakdown.total_bdt - b.fare_breakdown.total_bdt);
 

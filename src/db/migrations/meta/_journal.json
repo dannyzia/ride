@@ -225,6 +225,13 @@
       "when": 1785374803400,
       "tag": "0031_lush_black_panther",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1785531722097,
+      "tag": "0032_handy_bromley",
+      "breakpoints": true
     }
   ]
 }

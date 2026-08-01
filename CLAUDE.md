@@ -329,3 +329,59 @@ See `theme/goRide.ts` for full tokens. Key tokens:
 - Error/danger: `#E31D1C`, Info/auxiliary: `#2E42A5`
 - Background light: `#F7FCFF`, dark: `#181A20`
 - Font heading: Urbanist, body: Inter
+
+## MCP Tool Selection Policy (Strict Priority Order)
+
+Follow this EXACT order. Do NOT skip to a lower-priority tool if a higher-priority one can achieve the goal.
+
+---
+
+### 1. Sequential Thinking (ALWAYS FIRST)
+- **Trigger**: Any task with 3+ steps, architectural decisions, refactoring, or uncertainty.
+- **Action**: Break the problem into a step-by-step plan before touching any other tool.
+- **Rule**: NEVER execute code changes without first logging a plan here for complex tasks.
+
+---
+
+### 2. Context7 (External Knowledge)
+- **Trigger**: Any question about third-party libraries, frameworks, or packages.
+- **Action**: Fetch the latest API docs BEFORE writing code that uses that library.
+- **Rule**: If Context7 has the docs, do NOT use Fetch or Search as a fallback.
+
+---
+
+### 3. Memory (Context Persistence)
+- **Trigger**: Storing decisions, architecture choices, bug fixes, or patterns for future sessions.
+- **Action**: Call `write_memory` after completing a significant task.
+- **Rule**: Check `read_memory` at the start of a session if the user says "remember" or mentions a previous decision.
+
+---
+
+### 4. Serena (Semantic Code Operations) — PRIMARY for code
+- **Trigger**: ANY operation on existing project code (reading, finding, editing, refactoring).
+- **Preferred Tools**: `find_symbol`, `find_referencing_symbols`, `replace_symbol_body`, `insert_after_symbol`.
+- **Rule**: NEVER use Filesystem or Git to read or edit existing code files if Serena can handle it.
+
+---
+
+### 5. Playwright (UI & Browser)
+- **Trigger**: Visual testing, UI verification, E2E tests, or any task requiring a live browser.
+- **Rule**: Only use AFTER the code is written and the dev server is running.
+
+---
+
+### 6. Git (Local Version Control)
+- **Trigger**: Committing changes, checking status, viewing diffs, creating branches.
+- **Rule**: Use Git for local VCS operations. Use GitHub MCP (if added later) for PRs/Issues.
+
+---
+
+### 7. Fetch (Web Scraping / Fallback Docs)
+- **Trigger**: ONLY when Context7 does NOT have the documentation you need.
+- **Rule**: Ask the user for permission before scraping large pages.
+
+---
+
+### 8. Filesystem (Raw File I/O) — LAST RESORT
+- **Trigger**: ONLY for non-code files (README, .env, package.json, .yaml, .toml) OR creating entirely new files from scratch.
+- **RULE**: NEVER use Filesystem to modify existing code files (.py, .js, .ts, .java, .go, .rs, .cpp, etc.). That is Serena's job.

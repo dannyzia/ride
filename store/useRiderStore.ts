@@ -10,6 +10,15 @@ export type VehicleType =
   | "car_premium"
   | "car_xl";
 
+export type DiscountType = "intro" | "promo" | "pass" | "wallet" | "none";
+
+export interface DiscountOption {
+  type: "intro" | "promo" | "pass" | "wallet";
+  percent?: number;
+  amount_bdt: number;
+  description: string;
+}
+
 export interface FareEstimate {
   vehicle_type: VehicleType;
   display_en: string;
@@ -20,6 +29,7 @@ export interface FareEstimate {
   total_bdt: number;
   distance_km: number;
   eta_minutes: number;
+  available_discounts?: DiscountOption[];
 }
 
 export interface ActiveRide {
@@ -85,6 +95,7 @@ interface RiderState {
   appliedPromo: { code: string; description: string; discount_bdt: number } | null;
   pickupCoords: { lat: number; lng: number } | null;
   dropoffCoords: { lat: number; lng: number } | null;
+  selectedDiscount: { type: DiscountType; amount_bdt: number } | null;
   setSelectedVehicleType: (vt: VehicleType | null) => void;
   setEstimates: (estimates: FareEstimate[]) => void;
   setEstimating: (v: boolean) => void;
@@ -113,6 +124,7 @@ interface RiderState {
   setAppliedPromo: (promo: { code: string; description: string; discount_bdt: number } | null) => void;
   setPickupCoords: (coords: { lat: number; lng: number } | null) => void;
   setDropoffCoords: (coords: { lat: number; lng: number } | null) => void;
+  setSelectedDiscount: (discount: { type: DiscountType; amount_bdt: number } | null) => void;
 }
 
 export interface ScheduledRide {
@@ -232,6 +244,7 @@ export const useRiderStore = create<RiderState>((set, get) => ({
   appliedPromo: null,
   pickupCoords: null,
   dropoffCoords: null,
+  selectedDiscount: null,
 
   setSelectedVehicleType: (vt) => set({ selectedVehicleType: vt }),
   setEstimates: (estimates) => set({ estimates }),
@@ -254,10 +267,11 @@ export const useRiderStore = create<RiderState>((set, get) => ({
       promoCode: null,
       promoDiscountBdt: 0,
       selectedPrefIds: [],
-      appliedPromo: null,
-      pickupCoords: null,
-      dropoffCoords: null,
-    }),
+  appliedPromo: null,
+  pickupCoords: null,
+  dropoffCoords: null,
+  selectedDiscount: null,
+  }),
   setActiveRide: (ride) => set({ activeRide: ride }),
   patchActiveRide: (patch) =>
     set((s) => ({
@@ -288,8 +302,9 @@ export const useRiderStore = create<RiderState>((set, get) => ({
   setWalletBalance: (balance) => set({ walletBalance: balance }),
   setTransactionHistory: (history) => set({ transactionHistory: history }),
   setAppliedPromo: (promo) => set({ appliedPromo: promo }),
-  setPickupCoords: (coords) => set({ pickupCoords: coords }),
+   setPickupCoords: (coords) => set({ pickupCoords: coords }),
   setDropoffCoords: (coords) => set({ dropoffCoords: coords }),
+  setSelectedDiscount: (discount) => set({ selectedDiscount: discount }),
 
   fetchActiveRide: async (token: string) => {
     try {

@@ -172,6 +172,9 @@ export const walletRiderTxnTypeEnum = pgEnum("wallet_rider_transaction_type", [
   "ride_discount",
   "adjustment",
   "upfront_tip",
+  "cashback_earn",
+  "cashback_redeem",
+  "cashback_expire",
 ]);
 export const pointTransactionTypeEnum = pgEnum("point_transaction_type", [
   "earned",
@@ -201,6 +204,17 @@ export const vehicleChangeStatusEnum = pgEnum("vehicle_change_status", [
   "approved",
   "rejected",
   "cooling_off",
+]);
+
+export const zoneLifecycleStageEnum = pgEnum("zone_lifecycle_stage", [
+  "candidate",
+  "pilot",
+  "active",
+  "growth",
+  "mature",
+  "expansion",
+  "paused",
+  "closed",
 ]);
 
 export const users = pgTable(
@@ -605,8 +619,16 @@ export const rides = pgTable(
     cancel_reason: varchar("cancel_reason", { length: 255 }),
     cancelled_by: varchar("cancelled_by", { length: 10 }),
     scheduled_dispatched_at: timestamptz("scheduled_dispatched_at"),
+    promo_code: varchar("promo_code", { length: 50 }),
     promo_code_id: uuid("promo_code_id").references(() => promoCodes.id),
     promo_discount_bdt: integer("promo_discount_bdt").notNull().default(0),
+    applied_discount_type: text("applied_discount_type", {
+      enum: ["intro", "promo", "pass", "wallet", "none"],
+    })
+      .notNull()
+      .default("none"),
+    applied_discount_bdt: integer("applied_discount_bdt").notNull().default(0),
+    wallet_redeemed_bdt: integer("wallet_redeemed_bdt").notNull().default(0),
     driver_fare_bdt: integer("driver_fare_bdt"),
     rider_payable_bdt: integer("rider_payable_bdt"),
     tip_bdt: integer("tip_bdt").default(0),
@@ -795,6 +817,9 @@ export const zones = pgTable(
     name: varchar("name", { length: 100 }).notNull(),
     polygon: jsonb("polygon").notNull(),
     is_active: boolean("is_active").notNull().default(false),
+    lifecycle_stage: zoneLifecycleStageEnum("lifecycle_stage")
+      .notNull()
+      .default("candidate"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -1247,6 +1272,7 @@ export const riderWalletTransactions = pgTable(
     amount_bdt: integer("amount_bdt").notNull(),
     reference_id: uuid("reference_id"),
     balance_after: integer("balance_after").notNull(),
+    expires_at: timestamptz("expires_at"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -1254,6 +1280,12 @@ export const riderWalletTransactions = pgTable(
     index("rwt_reference_idx")
       .on(t.reference_id)
       .where(sql`reference_id IS NOT NULL`),
+    index("rwt_expires_active_idx")
+      .on(t.expires_at)
+      .where(sql`expires_at IS NOT NULL`),
+    index("rwt_rider_expires_idx")
+      .on(t.rider_id, t.expires_at)
+      .where(sql`expires_at IS NOT NULL`),
   ],
 );
 
@@ -1599,7 +1631,21 @@ export const accountingEntries = pgTable("accounting_entries", {
   notes: text("notes"),
   is_reversed: boolean("is_reversed").notNull().default(false),
   reversed_by_id: uuid("reversed_by_id").references((): any => accountingEntries.id),
-  created_by: uuid("created_by").references(() => users.id),
+   zone_id: uuid("zone_id").references(() => zones.id),
+   campaign_id: uuid("campaign_id"),
+   subsidy_category: text("subsidy_category", {
+     enum: [
+       "rider_subsidy",
+       "driver_incentive",
+       "promo_redemption",
+       "wallet_credit",
+       "streak_reward",
+       "corporate_discount",
+       "behavior_reward",
+       "referral_bonus",
+     ],
+   }),
+   created_by: uuid("created_by").references(() => users.id),
   created_at: timestamptz("created_at").notNull().defaultNow(),
 });
 
@@ -1825,3 +1871,131 @@ export const eventCalendar = pgTable("event_calendar", {
   is_active: boolean("is_active").notNull().default(true),
   created_at: timestamptz("created_at").notNull().defaultNow(),
 });
+
+// ── Rider Growth Tier 1 ────────────────────────────────────────────────────
+
+// Audit trail of zone boundary + metadata revisions
+export const zoneVersions = pgTable(
+  "zone_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    zone_id: uuid("zone_id")
+      .notNull()
+      .references(() => zones.id, { onDelete: "cascade" }),
+    version_number: integer("version_number").notNull(),
+    boundary_geojson: jsonb("boundary_geojson").notNull(),
+    lifecycle_stage: zoneLifecycleStageEnum("lifecycle_stage")
+      .notNull()
+      .default("candidate"),
+    daily_budget_bdt: integer("daily_budget_bdt").notNull().default(0),
+    changed_by: uuid("changed_by").references(() => users.id),
+    change_reason: text("change_reason"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("zone_versions_zone_version_idx").on(t.zone_id, t.version_number),
+    index("zone_versions_zone_idx").on(t.zone_id),
+  ],
+);
+
+// Thresholds that drive zone lifecycle graduation (stage → stage)
+export const zoneGraduationRules = pgTable(
+  "zone_graduation_rules",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    zone_id: uuid("zone_id").references(() => zones.id, { onDelete: "cascade" }),
+    from_stage: text("from_stage", {
+      enum: ["candidate", "pilot", "active", "growth", "mature"],
+    }).notNull(),
+    to_stage: text("to_stage", {
+      enum: ["pilot", "active", "growth", "mature", "expansion"],
+    }).notNull(),
+    min_rides_per_day: integer("min_rides_per_day").notNull().default(0),
+    max_eta_seconds: integer("max_eta_seconds"),
+    min_acceptance_rate_pct: integer("min_acceptance_rate_pct"),
+    min_driver_utilization_pct: integer("min_driver_utilization_pct"),
+    evaluation_window_days: integer("evaluation_window_days").notNull().default(7),
+    is_active: boolean("is_active").notNull().default(true),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("zone_grad_rules_zone_stages_idx").on(t.zone_id, t.from_stage, t.to_stage),
+  ],
+);
+
+// Daily platform-funded discount budget per zone (reset at Dhaka midnight)
+export const zoneBudgets = pgTable(
+  "zone_budgets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    zone_id: uuid("zone_id")
+      .notNull()
+      .references(() => zones.id, { onDelete: "cascade" })
+      .unique(),
+    daily_budget_bdt: integer("daily_budget_bdt").notNull().default(0),
+    spent_today_bdt: integer("spent_today_bdt").notNull().default(0),
+    auto_pause_threshold_pct: integer("auto_pause_threshold_pct").notNull().default(100),
+    is_paused: boolean("is_paused").notNull().default(false),
+    reset_at: timestamptz("reset_at").notNull().defaultNow(),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("zone_budgets_zone_idx").on(t.zone_id),
+  ],
+);
+
+// Append-only log of every budget spend event
+export const zoneBudgetLogs = pgTable(
+  "zone_budget_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    zone_budget_id: uuid("zone_budget_id")
+      .notNull()
+      .references(() => zoneBudgets.id, { onDelete: "cascade" }),
+    zone_id: uuid("zone_id")
+      .notNull()
+      .references(() => zones.id),
+    amount_bdt: integer("amount_bdt").notNull(),
+    balance_before_bdt: integer("balance_before_bdt").notNull(),
+    balance_after_bdt: integer("balance_after_bdt").notNull(),
+    event: text("event", {
+      enum: ["spend", "reset", "pause", "resume", "reallocate_in", "reallocate_out"],
+    }).notNull(),
+    reference_id: uuid("reference_id"),
+    reason: text("reason"),
+    triggered_by: uuid("triggered_by").references(() => users.id),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("zone_budget_logs_zone_idx").on(t.zone_id, t.created_at),
+    index("zone_budget_logs_budget_idx").on(t.zone_budget_id, t.created_at),
+  ],
+);
+
+// Per-zone intro incentive discount curve for new riders
+export const riderIntroConfigs = pgTable(
+  "rider_intro_configs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    zone_id: uuid("zone_id")
+      .notNull()
+      .references(() => zones.id, { onDelete: "cascade" }),
+    is_active: boolean("is_active").notNull().default(true),
+    ride_number: integer("ride_number").notNull(),
+    discount_percent: integer("discount_percent").notNull().default(50),
+    max_discount_bdt: integer("max_discount_bdt"),
+    daily_cap_bdt: integer("daily_cap_bdt").notNull().default(10000),
+    effective_from: timestamptz("effective_from").notNull().defaultNow(),
+    effective_to: timestamptz("effective_to"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("rider_intro_configs_zone_ride_idx").on(t.zone_id, t.ride_number),
+    index("rider_intro_configs_active_idx")
+      .on(t.is_active, t.created_at)
+      .where(sql`is_active = true`),
+  ],
+);

@@ -8,14 +8,13 @@ import {
   zones,
   surgeCurrent,
   rideStops,
-  riderSubscriptions,
-  riderPasses,
 } from "@/src/db/schema";
-import { eq, and, sql, gte, gt } from "drizzle-orm";
+import { eq, and, sql, gte } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { validatePickupZone } from "@/lib/zone";
 import { calculateFare, haversineKm } from "@/lib/fareCalc";
 import { applySurge } from "@/lib/surge";
+import { getAvailableDiscounts } from "@/lib/discountEngine";
 import { sendSms } from "@/lib/dprelay";
 import { detectOriginCity, isIntercity } from "@/lib/cityBoundary";
 import { splitRoute } from "@/lib/routeSplit";
@@ -36,7 +35,10 @@ const requestSchema = z.object({
   vehicle_type: VEHICLE_TYPE_ZOD_ENUM,
   scheduled_at: z.string().datetime().optional(),
   allow_downgrade: z.boolean().optional().default(false),
-  promo_code: z.string().min(1).max(30).optional(),
+  selected_discount_type: z
+    .enum(["intro", "promo", "pass", "wallet", "none"])
+    .optional(),
+  selected_discount_amount_bdt: z.number().int().nonnegative().optional(),
   preference_ids: z.array(z.string().uuid()).max(10).optional(),
   secondary_rider_name: z.string().min(1).max(255).optional(),
   secondary_rider_phone: z.string().min(1).max(20).optional(),
@@ -51,7 +53,7 @@ export async function POST(request: Request) {
     const uid = supabaseUser.id;
 
     const [user] = await db
-      .select()
+      .select({ id: users.id, role: users.role, total_rides: users.total_rides })
       .from(users)
       .where(eq(users.auth_uid, uid))
       .limit(1);
@@ -73,11 +75,12 @@ export async function POST(request: Request) {
       dropoff_lat,
       dropoff_lng,
       dropoff_address,
-      vehicle_type,
-      scheduled_at,
-      allow_downgrade,
-      promo_code,
-      preference_ids,
+       vehicle_type,
+       scheduled_at,
+       allow_downgrade,
+       selected_discount_type,
+       selected_discount_amount_bdt,
+       preference_ids,
       secondary_rider_name,
       secondary_rider_phone,
       upfront_tip_bdt,
@@ -215,39 +218,6 @@ export async function POST(request: Request) {
       intercity,
     );
 
-    // ── Rider Pass discount — apply BEFORE surge ───────────────────
-    const [activePassSub] = await db
-      .select()
-      .from(riderSubscriptions)
-      .where(
-        and(
-          eq(riderSubscriptions.rider_id, user.id),
-          eq(riderSubscriptions.status, 'active'),
-          gt(riderSubscriptions.valid_until, new Date()),
-        ),
-      )
-      .limit(1);
-    if (activePassSub) {
-      const [riderPass] = await db
-        .select()
-        .from(riderPasses)
-        .where(eq(riderPasses.id, activePassSub.pass_id))
-        .limit(1);
-      if (riderPass && (!riderPass.max_rides || activePassSub.rides_used < riderPass.max_rides)) {
-        const discountPaisa = Math.round(
-          fareBreakdown.total_bdt * riderPass.discount_percent / 100,
-        );
-        fareBreakdown.total_bdt -= discountPaisa;
-        fareBreakdown.pass_discount_bdt = discountPaisa;
-        fareBreakdown.pass_name = riderPass.name;
-        const cp = Number(activePricing.platform_commission_percent ?? 0);
-        if (cp > 0) {
-          fareBreakdown.platform_commission_bdt = Math.floor(fareBreakdown.total_bdt * cp / 100);
-          fareBreakdown.driver_net_bdt = fareBreakdown.total_bdt - fareBreakdown.platform_commission_bdt;
-        }
-      }
-    }
-
     // ── Surge pricing — look up active zone's multiplier ────────────────
     const [activeZone] = await db
       .select({ id: zones.id })
@@ -274,6 +244,14 @@ export async function POST(request: Request) {
       fareBreakdown.driver_net_bdt = fareBreakdown.total_bdt - fareBreakdown.platform_commission_bdt;
     }
 
+    // ── Available discounts (calculated AFTER surge on the surged total) ──
+    const availableDiscounts = await getAvailableDiscounts({
+      riderId: user.id,
+      totalRides: user.total_rides ?? 0,
+      surgedTotalBdt: fareBreakdown.total_bdt,
+      zoneId,
+    });
+
     // ── Preference surcharge ───────────────────────────────────────────
     let preferenceSurchargeBdt = 0;
     if (preference_ids && preference_ids.length > 0) {
@@ -295,82 +273,85 @@ export async function POST(request: Request) {
       preferenceSurchargeBdt = prefRows.reduce((s, p) => s + p.charge_bdt, 0);
     }
 
-    // ── Promo processing ──────────────────────────────────────────────
-    let promoCodeId: string | null = null;
-    let promoDiscountBdt = 0;
-    let driverFareBdt = fareBreakdown.total_bdt + preferenceSurchargeBdt;
-    let riderPayableBdt = fareBreakdown.total_bdt + preferenceSurchargeBdt;
+    // ── Validate and lock selected discount ──────────────────────────────
+    const discountType = selected_discount_type ?? "none";
+    const discountAmount = selected_discount_amount_bdt ?? 0;
+    let appliedDiscountType: "intro" | "promo" | "pass" | "wallet" | "none" = "none";
+    let appliedDiscountBdt = 0;
+    let walletRedeemedBdt = 0;
     let platformSubsidyBdt = 0;
+    let promoCodeId: string | null = null;
 
-    // ── Upfront tip (100% to driver, not subject to commission) ─────────
+    if (discountType !== "none" && discountAmount > 0) {
+      const match = availableDiscounts.find(
+        (d) =>
+          d.type === discountType &&
+          d.amount_bdt === discountAmount,
+      );
+      if (!match) {
+        return Response.json(
+          {
+            error: "discount_mismatch",
+            message:
+              "Selected discount is no longer valid. Please re-estimate.",
+          },
+          { status: 409 },
+        );
+      }
+
+      appliedDiscountType = discountType;
+      appliedDiscountBdt = discountAmount;
+
+      if (discountType === "wallet") {
+        walletRedeemedBdt = discountAmount;
+      } else {
+        platformSubsidyBdt = discountAmount;
+      }
+
+      // Consume staged promo if the rider selected the promo option
+      if (discountType === "promo") {
+        const staged = getStagedPromo(user.id);
+        if (staged) {
+          const [promoRow] = await db
+            .select()
+            .from(promoCodes)
+            .where(eq(promoCodes.id, staged.promoCodeId))
+            .limit(1);
+          if (
+            promoRow &&
+            promoRow.is_active &&
+            promoRow.expires_at > new Date()
+          ) {
+            promoCodeId = staged.promoCodeId;
+            await db.insert(promoRedemptions).values({
+              promo_code_id: promoCodeId,
+              rider_id: user.id,
+              ride_id: "00000000-0000-0000-0000-000000000000",
+              discount_type: staged.discountType as any,
+              discount_value: staged.discountValue,
+              discounted_amount_bdt: appliedDiscountBdt,
+              driver_fare_bdt: fareBreakdown.total_bdt + preferenceSurchargeBdt,
+              rider_payable_bdt: fareBreakdown.total_bdt + preferenceSurchargeBdt - appliedDiscountBdt,
+              platform_subsidy_bdt: platformSubsidyBdt,
+            });
+            clearStagedPromo(user.id);
+            logger.info("[ride/request] promo applied", {
+              promoId: promoCodeId,
+              discount: appliedDiscountBdt,
+            });
+          }
+        }
+      }
+    }
+
+    // ── Finalize amounts (driver gets FULL fare, rider pays discounted) ───
+    let driverFareBdt = fareBreakdown.total_bdt + preferenceSurchargeBdt;
+    let riderPayableBdt = fareBreakdown.total_bdt + preferenceSurchargeBdt - appliedDiscountBdt;
+
+    // Upfront tip (100% to driver, not subject to commission)
     if (upfront_tip_bdt && upfront_tip_bdt > 0) {
       driverFareBdt += upfront_tip_bdt;
       riderPayableBdt += upfront_tip_bdt;
-    }
-
-    if (promo_code) {
-      // Check staged promo first (from POST /api/promo/redeem)
-      const staged = getStagedPromo(user.id);
-
-      if (staged) {
-        // Validate staged promo matches this ride's vehicle type context
-        // (the staged promo was already validated for zone + vehicle type at redeem time)
-        const [promoRow] = await db
-          .select()
-          .from(promoCodes)
-          .where(eq(promoCodes.id, staged.promoCodeId))
-          .limit(1);
-        if (
-          promoRow &&
-          promoRow.is_active &&
-          promoRow.expires_at > new Date()
-        ) {
-          // M9: Check min_spend_bdt eligibility
-          if (staged.minSpendBdt != null && fareBreakdown.total_bdt < staged.minSpendBdt) {
-            promoDiscountBdt = 0;
-          } else if (staged.discountType === "percent") {
-            promoDiscountBdt = Math.round(
-              (fareBreakdown.total_bdt * staged.discountValue) / 100,
-            );
-          } else {
-            promoDiscountBdt = Math.round(staged.discountValue);
-          }
-          // Apply max_discount_bdt cap
-          if (
-            staged.maxDiscountBdt != null &&
-            promoDiscountBdt > staged.maxDiscountBdt
-          ) {
-            promoDiscountBdt = staged.maxDiscountBdt;
-          }
-          // Don't discount more than the fare
-          if (promoDiscountBdt > fareBreakdown.total_bdt) {
-            promoDiscountBdt = fareBreakdown.total_bdt;
-          }
-
-          promoCodeId = staged.promoCodeId;
-          riderPayableBdt = fareBreakdown.total_bdt + preferenceSurchargeBdt - promoDiscountBdt;
-          platformSubsidyBdt = promoDiscountBdt;
-
-          // Write promo_redemptions row
-          await db.insert(promoRedemptions).values({
-            promo_code_id: promoCodeId,
-            rider_id: user.id,
-            ride_id: "00000000-0000-0000-0000-000000000000", // placeholder, updated after ride insert
-            discount_type: staged.discountType,
-            discount_value: staged.discountValue,
-            discounted_amount_bdt: promoDiscountBdt,
-            driver_fare_bdt: driverFareBdt,
-            rider_payable_bdt: riderPayableBdt,
-            platform_subsidy_bdt: platformSubsidyBdt,
-          });
-
-          clearStagedPromo(user.id);
-          logger.info("[ride/request] promo applied", {
-            promoId: promoCodeId,
-            discount: promoDiscountBdt,
-          });
-        }
-      }
     }
 
     let rideId = "";
@@ -392,10 +373,13 @@ export async function POST(request: Request) {
           status: "pending",
           fare_breakdown: fareBreakdown as any,
           distance_km: String(fareBreakdown.distance_km),
-          scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
-          promo_code_id: promoCodeId,
-          promo_discount_bdt: promoDiscountBdt > 0 ? promoDiscountBdt : 0,
-          driver_fare_bdt: driverFareBdt,
+           scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
+           promo_code_id: promoCodeId,
+           promo_discount_bdt: appliedDiscountBdt,
+           applied_discount_type: appliedDiscountType,
+           applied_discount_bdt: appliedDiscountBdt,
+           wallet_redeemed_bdt: walletRedeemedBdt,
+           driver_fare_bdt: driverFareBdt,
           rider_payable_bdt: riderPayableBdt,
           platform_subsidy_bdt:
             platformSubsidyBdt > 0 ? platformSubsidyBdt : null,

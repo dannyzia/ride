@@ -9,7 +9,7 @@ import { UpfrontTipSlider } from "@/components/UpfrontTipSlider";
 import CustomButton from "@/components/CustomButton";
 import { useEffect, useState, Fragment } from "react";
 import { Modal } from "react-native";
-import { useRiderStore, FareEstimate } from "@/store/useRiderStore";
+import { useRiderStore, FareEstimate, DiscountOption, DiscountType } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
@@ -34,8 +34,9 @@ const ConfirmRidePage = () => {
     setSearchingRideId,
     setRideStatus,
     scheduledAt,
-    promoCode,
     selectedPrefIds,
+    selectedDiscount,
+    setSelectedDiscount,
   } = useRiderStore();
   const [rideDuration, setRideDuration] = useState<string>("");
   const [rideDistance, setRideDistance] = useState<string>("");
@@ -121,9 +122,8 @@ const ConfirmRidePage = () => {
           vehicle_type: selectedVehicleType,
           preference_ids: selectedPrefIds.length > 0 ? selectedPrefIds : undefined,
           upfront_tip_bdt: upfrontTip > 0 ? upfrontTip * 100 : undefined,
-          stops: stops.length > 0 ? stops : undefined,
-        };
-        if (promoCode) body.promo_code = promoCode;
+           stops: stops.length > 0 ? stops : undefined,
+         };
 
         const res = await fetch(`${API_URL}/api/ride/estimate`, {
           method: "POST",
@@ -145,7 +145,7 @@ const ConfirmRidePage = () => {
 
     fetchEstimate();
     return () => { cancelled = true; };
-  }, [stops, upfrontTip, selectedVehicleType, userLatitude, userLongitude, destinationLatitude, destinationLongitude, selectedPrefIds, promoCode]);
+  }, [stops, upfrontTip, selectedVehicleType, userLatitude, userLongitude, destinationLatitude, destinationLongitude, selectedPrefIds]);
 
   const handleRequestRide = async () => {
     if (
@@ -190,9 +190,10 @@ const ConfirmRidePage = () => {
           dropoff_lng: destinationLongitude,
           dropoff_address: destinationAddress || "",
           vehicle_type: selectedVehicleType,
-          scheduled_at: scheduledAt || undefined,
-          promo_code: promoCode || undefined,
-          preference_ids:
+           scheduled_at: scheduledAt || undefined,
+           selected_discount_type: selectedDiscount ? selectedDiscount.type : "none",
+           selected_discount_amount_bdt: selectedDiscount ? selectedDiscount.amount_bdt : 0,
+           preference_ids:
             selectedPrefIds.length > 0 ? selectedPrefIds : undefined,
           secondary_rider_name: bookForOther ? otherName.trim() : undefined,
           secondary_rider_phone: bookForOther ? otherPhone.trim() : undefined,
@@ -311,36 +312,76 @@ const ConfirmRidePage = () => {
               {rideDuration}
             </Text>
           </View>
-          {promoCode && (
-            <View className="flex-row justify-between py-2 border-b border-borderColor">
-              <View className="flex-row items-center">
-                <MaterialIcons
-                  name="local-offer"
-                  size={14}
-                  color={colors.primary}
-                />
-                <Text className="text-secondaryTextColor ml-1.5">
-                  Promo ({promoCode})
-                </Text>
-              </View>
-              <Text
-                style={{
-                  fontFamily: "Inter",
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: colors.primary,
-                }}
-              >
-                −৳0
-              </Text>
-            </View>
-          )}
-          <View className="flex-row justify-between py-2 border-b border-borderColor">
-            <Text className="text-secondaryTextColor">Base fare</Text>
-            <Text className="text-primaryTextColor font-JakartaSemiBold">
-              ৳{displayEstimate ? (displayEstimate.total_bdt / 100).toFixed(0) : "—"}
-            </Text>
+        {/* Discount selector */}
+        {displayEstimate?.available_discounts && displayEstimate.available_discounts.length > 0 && (
+          <View className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-2xl p-4 mb-5">
+            <Text className="text-primaryTextColor text-sm font-JakartaSemiBold mb-3">Available Discounts</Text>
+            {displayEstimate.available_discounts.map((discount: DiscountOption) => {
+              const isSelected =
+                selectedDiscount?.type === discount.type &&
+                selectedDiscount?.amount_bdt === discount.amount_bdt;
+              return (
+                <TouchableOpacity
+                  key={discount.type}
+                  onPress={() =>
+                    setSelectedDiscount(
+                      isSelected
+                        ? null
+                        : { type: discount.type as DiscountType, amount_bdt: discount.amount_bdt },
+                    )
+                  }
+                  className="flex-row items-center py-2 border-b border-borderColor"
+                >
+                  <View
+                    className={`w-5 h-5 rounded-full border-2 items-center justify-center mr-3 ${
+                      isSelected
+                        ? "bg-goPrimary border-goPrimary"
+                        : "border-goBorderLight dark:border-goBorderDark"
+                    }`}
+                  >
+                    {isSelected && <Text className="text-[10px] text-goWhite">✓</Text>}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-primaryTextColor font-JakartaSemiBold">{discount.description}</Text>
+                    <Text className="text-secondaryTextColor text-xs">{discount.percent ? `${discount.percent}% off` : `৳${(discount.amount_bdt / 100).toFixed(0)} off`}</Text>
+                  </View>
+                  <Text
+                    style={{
+                      fontFamily: "Inter",
+                      fontSize: 14,
+                      fontWeight: "600",
+                      color: isSelected ? colors.primary : colors.textSecondaryLight,
+                    }}
+                  >
+                    −৳{(discount.amount_bdt / 100).toFixed(0)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
+        )}
+          <View className="flex-row justify-between py-2 border-b border-borderColor">
+             <Text className="text-secondaryTextColor">Base fare</Text>
+             <Text className="text-primaryTextColor font-JakartaSemiBold">
+               ৳{displayEstimate ? (displayEstimate.total_bdt / 100).toFixed(0) : "—"}
+             </Text>
+           </View>
+           {selectedDiscount && (
+             <View className="flex-row justify-between py-2 border-b border-borderColor">
+               <Text className="text-secondaryTextColor">
+                 {selectedDiscount.type === "intro"
+                   ? "Intro bonus"
+                   : selectedDiscount.type === "promo"
+                   ? "Promo discount"
+                   : selectedDiscount.type === "pass"
+                   ? "Pass discount"
+                   : "Wallet credit"}
+               </Text>
+               <Text className="text-goPrimary font-JakartaSemiBold">
+                 −৳{(selectedDiscount.amount_bdt / 100).toFixed(0)}
+               </Text>
+             </View>
+           )}
           {upfrontTip > 0 && (
             <View className="flex-row justify-between py-2 border-b border-borderColor">
               <Text className="text-secondaryTextColor">Tip</Text>
@@ -352,7 +393,7 @@ const ConfirmRidePage = () => {
           <View className="flex-row justify-between py-2">
             <Text className="text-goAccent text-lg font-JakartaBold">Total</Text>
             <Text className="text-goAccent text-lg font-JakartaBold">
-              ৳{displayEstimate ? ((displayEstimate.total_bdt / 100) + upfrontTip).toFixed(0) : "—"}
+               ৳{displayEstimate ? ((displayEstimate.total_bdt / 100) - (selectedDiscount?.amount_bdt ?? 0) / 100 + upfrontTip).toFixed(0) : "—"}
             </Text>
           </View>
         </View>

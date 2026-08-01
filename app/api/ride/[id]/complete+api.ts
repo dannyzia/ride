@@ -157,19 +157,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── P1-2: Re-apply stored rider pass discount (from fare_breakdown at request) ──
-    const storedBreakdown = ride.fare_breakdown as Record<string, unknown> | null;
-    const storedPassDiscount = Number(storedBreakdown?.pass_discount_bdt ?? 0);
-    if (storedPassDiscount > 0) {
-      fare.total_bdt -= storedPassDiscount;
-      fare.pass_discount_bdt = storedPassDiscount;
-      fare.pass_name = (storedBreakdown?.pass_name as string) ?? undefined;
-      const commPct = Number(pricingRow.platform_commission_percent ?? 0);
-      if (commPct > 0) {
-        fare.platform_commission_bdt = Math.floor(fare.total_bdt * commPct / 100);
-        fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
-      }
-    }
+    // ── Discount is locked at request time (applied_discount_bdt) ──────
+    // Driver always gets FULL fare; discount applied to rider_payable only
 
     // ── P1-4: Approved extra charges (toll/parking) — NOT commissionable ──
     // Placed after commission recalc so extra charges don't inflate commission base.
@@ -182,9 +171,9 @@ export async function POST(request: Request) {
       fare.driver_net_bdt = fare.total_bdt - (fare.platform_commission_bdt ?? 0);
     }
 
-    // ── P1-2: Re-apply stored preference surcharge and promo discount ──
+    // ── Locked discount from request time ──────────────────────────────
     const storedPrefSurcharge = Number(ride.preference_surcharge_bdt ?? 0);
-    const storedPromoDiscount = Number(ride.promo_discount_bdt ?? 0);
+    let appliedDiscountBdt = Number(ride.applied_discount_bdt ?? 0);
 
     await db.transaction(async (tx) => {
       const upfrontTip = Number(ride.upfront_tip_bdt ?? 0);
@@ -208,6 +197,26 @@ export async function POST(request: Request) {
           fare.driver_net_bdt += upfrontTip;
           tipApplied = true;
         }
+       }
+
+      if (ride.applied_discount_type === 'wallet' && appliedDiscountBdt > 0) {
+        const [rider] = await tx.select({ wallet: users.rider_wallet_balance_bdt })
+          .from(users).where(eq(users.id, ride.user_id)).limit(1);
+        if (rider.wallet >= appliedDiscountBdt) {
+          await tx.update(users).set({
+            rider_wallet_balance_bdt: sql`${users.rider_wallet_balance_bdt} - ${appliedDiscountBdt}`
+          }).where(eq(users.id, ride.user_id));
+          await tx.insert(riderWalletTransactions).values({
+            rider_id: ride.user_id,
+            amount_bdt: -appliedDiscountBdt,
+            transaction_type: 'cashback_redeem',
+            reference_id: ride.id,
+            balance_after: sql`(SELECT rider_wallet_balance_bdt FROM users WHERE id = ${ride.user_id})`,
+          });
+        } else {
+          logger.warn('[complete] rider insufficient wallet for redemption', { rideId, amount: appliedDiscountBdt, balance: rider.wallet });
+          appliedDiscountBdt = 0;
+        }
       }
 
       const [updatedRide] = await tx
@@ -218,7 +227,7 @@ export async function POST(request: Request) {
           platform_commission_bdt: fare.platform_commission_bdt,
           fare_breakdown: fare as any,
           updated_at: completedAt,
-          rider_payable_bdt: fare.total_bdt + storedPrefSurcharge - storedPromoDiscount + (tipApplied ? upfrontTip : 0),
+          rider_payable_bdt: fare.total_bdt + storedPrefSurcharge - appliedDiscountBdt + (tipApplied ? upfrontTip : 0),
           driver_fare_bdt: fare.driver_net_bdt + storedPrefSurcharge + (fare.platform_commission_bdt ?? 0),
         })
         .where(and(eq(rides.id, rideId), eq(rides.status, "in_progress")))
@@ -244,12 +253,14 @@ export async function POST(request: Request) {
         .where(eq(drivers.id, driver.id));
     });
 
-    // ── Rider pass usage increment (non-blocking) ──────────────────────
-    try {
-      await db.update(riderSubscriptions)
-        .set({ rides_used: sql`${riderSubscriptions.rides_used} + 1` })
-        .where(and(eq(riderSubscriptions.rider_id, ride.user_id), eq(riderSubscriptions.status, 'active')));
-    } catch { /* non-blocking */ }
+    // ── Rider pass usage increment (only if pass discount was used) ─────
+    if (ride.applied_discount_type === 'pass') {
+      try {
+        await db.update(riderSubscriptions)
+          .set({ rides_used: sql`${riderSubscriptions.rides_used} + 1` })
+          .where(and(eq(riderSubscriptions.rider_id, ride.user_id), eq(riderSubscriptions.status, 'active')));
+      } catch { /* non-blocking */ }
+    }
 
     // ── Accounting entries (non-blocking) ──────────────────────────────
     try {
