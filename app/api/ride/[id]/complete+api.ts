@@ -9,6 +9,8 @@ import { logger } from "@/lib/logger";
 import { sendNotification } from "@/lib/notify";
 import { recordRideCompletion, recordTip } from '@/lib/accounting';
 import { evaluateStreaks } from '@/lib/gamification';
+import { earnCashback } from '@/lib/walletCashback';
+import { spendZoneBudget } from '@/lib/zoneBudget';
 
 export async function POST(request: Request) {
   try {
@@ -237,6 +239,12 @@ export async function POST(request: Request) {
         throw new Error("TOCTOU: ride not in progress or already completed");
       }
 
+      // Phase C: Earn cashback on the rider's payable (discounted) fare
+      const riderPayableBdt = Number(updatedRide.rider_payable_bdt ?? 0);
+      if (riderPayableBdt > 0) {
+        await earnCashback(tx, ride.id, ride.user_id, riderPayableBdt);
+      }
+
       await tx.insert(driverWalletTransactions).values({
         driver_id: driver.id,
         transaction_type: "adjustment",
@@ -251,6 +259,16 @@ export async function POST(request: Request) {
           updated_at: new Date(),
         })
         .where(eq(drivers.id, driver.id));
+
+      // Phase D: Deduct platform-funded discount from zone budget
+      if (
+        ride.applied_discount_type !== "wallet" &&
+        appliedDiscountBdt > 0 &&
+        ride.zone_id
+      ) {
+        await spendZoneBudget(tx, ride.zone_id, appliedDiscountBdt, ride.id);
+      }
+
     });
 
     // ── Rider pass usage increment (only if pass discount was used) ─────

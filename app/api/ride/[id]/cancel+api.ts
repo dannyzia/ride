@@ -61,6 +61,10 @@ export async function POST(request: Request) {
       catch (e) { logger.warn('[accounting] cancellation fee entry failed', e); }
     }
 
+    // ── Wallet reversal if wallet was redeemed at request time ──────────────
+    // Wallet redemption is debited at completion, not request time. Pre-completion
+    // cancellation has nothing to reverse.
+
     await db.update(rides).set({
       status: 'cancelled',
       cancelled_by,
