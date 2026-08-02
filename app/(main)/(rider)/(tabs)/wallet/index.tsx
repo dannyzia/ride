@@ -8,6 +8,8 @@ export default function WalletScreen() {
   const [balancePaisa, setBalancePaisa] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [credits, setCredits] = useState<any[]>([]);
+  const [creditsLoading, setCreditsLoading] = useState(false);
 
   const fetchWallet = useCallback(async () => {
     setLoading(true);
@@ -30,7 +32,32 @@ export default function WalletScreen() {
     }
   }, []);
 
+  const fetchCredits = useCallback(async () => {
+    setCreditsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/cancellation-credits`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setCredits(data.credits ?? []);
+    } catch (err: any) {
+      logger.error("Cancellation credits fetch failed", err);
+    } finally {
+      setCreditsLoading(false);
+    }
+  }, []);
+
   useEffect(() => { fetchWallet(); }, [fetchWallet]);
+  useEffect(() => { fetchCredits(); }, [fetchCredits]);
+
+  const pendingCount = credits.filter((c) => c.status === "pending").length;
+  const totalPendingBdt = credits
+    .filter((c) => c.status === "pending")
+    .reduce((sum, c) => sum + c.amount_bdt, 0);
 
   return (
     <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
@@ -54,6 +81,59 @@ export default function WalletScreen() {
           <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
             Total earnings are credited here at ride completion and from gamification rewards. No withdrawals are available yet.
           </Text>
+        </View>
+
+        {/* Cancellation Compensation Section */}
+        <View className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] p-[14px]">
+          <View className="flex-row justify-between items-center mb-2">
+            <Text className="text-[14px] font-JakartaSemiBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
+              Cancellation Compensation
+            </Text>
+            <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+              {pendingCount} pending
+            </Text>
+          </View>
+          {creditsLoading ? (
+            <ActivityIndicator size="small" color="#0CC25F" />
+          ) : credits.length === 0 ? (
+            <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+              No cancellation compensations yet.
+            </Text>
+          ) : (
+            <View style={{ gap: 8 }}>
+              {credits.map((credit) => (
+                <View key={credit.id} className="flex-row justify-between items-center py-2 border-b border-goBorderLight dark:border-goBorderDark last:border-0">
+                  <View>
+                    <Text className="text-[13px] font-JakartaSemiBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
+                      ৳{(credit.amount_bdt / 100).toFixed(0)} bonus
+                    </Text>
+                    <Text className="text-[11px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+                      {credit.created_at ? new Date(credit.created_at).toLocaleDateString("en-BD") : ""}
+                    </Text>
+                  </View>
+                  <Text className={`text-[12px] font-Jakarta font-JakartaSemiBold ${
+                    credit.status === "pending"
+                      ? "text-goAccent"
+                      : credit.status === "applied"
+                      ? "text-goPrimary"
+                      : "text-goTextSecondaryLight dark:text-goTextSecondaryDark"
+                  }`}>
+                    {credit.status.toUpperCase()}
+                  </Text>
+                </View>
+              ))}
+              {totalPendingBdt > 0 && (
+                <View className="flex-row justify-between items-center pt-2 border-t border-goBorderLight dark:border-goBorderDark">
+                  <Text className="text-[13px] font-JakartaSemiBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
+                    Total pending credits
+                  </Text>
+                  <Text className="text-[14px] font-JakartaBold text-goPrimary">
+                    ৳{(totalPendingBdt / 100).toFixed(0)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

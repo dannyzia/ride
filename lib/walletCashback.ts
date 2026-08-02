@@ -1,7 +1,7 @@
 import { db } from "@/src/db";
 import * as schema from "@/src/db/schema";
-import { users, riderWalletTransactions, systemConfig } from "@/src/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { users, riderWalletTransactions, systemConfig, riderFeeDeductions } from "@/src/db/schema";
+import { eq, and, sql, asc } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import { logger } from "@/lib/logger";
@@ -110,20 +110,79 @@ export async function earnCashback(
     return 0;
   }
 
+  // ── Deduct from pending rider fee deductions (oldest first) ───────────
+  const now = new Date();
+  const pendingDeductions = await tx
+    .select({
+      id: riderFeeDeductions.id,
+      remaining_amount_bdt: riderFeeDeductions.remaining_amount_bdt,
+    })
+    .from(riderFeeDeductions)
+    .where(
+      and(
+        eq(riderFeeDeductions.rider_id, riderId),
+        sql`${riderFeeDeductions.status} IN ('pending', 'partially_collected')`,
+        sql`${riderFeeDeductions.expires_at} > ${now}`,
+      ),
+    )
+    .orderBy(asc(riderFeeDeductions.created_at));
+
+  let cashbackRemaining = finalCashback;
+
+  for (const deduction of pendingDeductions) {
+    if (cashbackRemaining <= 0) break;
+    const deductionAmount = Math.min(cashbackRemaining, deduction.remaining_amount_bdt);
+    cashbackRemaining -= deductionAmount;
+
+    const newRemaining = deduction.remaining_amount_bdt - deductionAmount;
+    const newStatus = newRemaining === 0 ? 'collected' : 'partially_collected';
+
+    await tx
+      .update(riderFeeDeductions)
+      .set({
+        remaining_amount_bdt: newRemaining,
+        status: newStatus as any,
+        updated_at: new Date(),
+      })
+      .where(eq(riderFeeDeductions.id, deduction.id));
+
+    logger.info("[walletCashback] cashback applied to cancellation fee", {
+      deductionId: deduction.id,
+      rideId,
+      deductionAmount,
+      newRemaining,
+    });
+  }
+
+  if (cashbackRemaining < finalCashback) {
+    logger.info("[walletCashback] cashback partially consumed by fee deductions", {
+      riderId,
+      deducted: finalCashback - cashbackRemaining,
+      remaining: cashbackRemaining,
+    });
+  }
+
+  // Only credit remaining cashback to wallet
+  const creditAmount = cashbackRemaining;
+  if (creditAmount <= 0) {
+    logger.info("[walletCashback] all cashback consumed by fee deductions", { riderId, rideId });
+    return finalCashback;
+  }
+
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + config.cashback_expiry_days);
 
   await tx
     .update(users)
     .set({
-      rider_wallet_balance_bdt: sql`${users.rider_wallet_balance_bdt} + ${finalCashback}`,
+      rider_wallet_balance_bdt: sql`${users.rider_wallet_balance_bdt} + ${creditAmount}`,
     })
     .where(eq(users.id, riderId));
 
   await tx.insert(riderWalletTransactions).values({
     rider_id: riderId,
     transaction_type: "cashback_earn",
-    amount_bdt: finalCashback,
+    amount_bdt: creditAmount,
     reference_id: rideId,
     balance_after: sql`(SELECT rider_wallet_balance_bdt FROM users WHERE id = ${riderId})`,
     expires_at: expiresAt,
@@ -132,8 +191,8 @@ export async function earnCashback(
   logger.info("[walletCashback] cashback earned", {
     rideId,
     riderId,
-    cashbackBdt: finalCashback,
-    newBalance: sql`(SELECT rider_wallet_balance_bdt FROM users WHERE id = ${riderId})`,
+    cashbackBdt: creditAmount,
+    deductedFromFees: finalCashback - creditAmount,
   });
 
   return finalCashback;
@@ -247,5 +306,54 @@ export async function expireCredits(): Promise<void> {
     }
   } catch (e) {
     logger.error("[walletCashback] expireCredits failed", e);
+  }
+}
+
+export async function expireRiderFeeDeductions(): Promise<number> {
+  const now = new Date();
+  try {
+    const result = await db.transaction(async (tx) => {
+      const pending = await tx
+        .select({
+          id: riderFeeDeductions.id,
+          rider_id: riderFeeDeductions.rider_id,
+          remaining_amount_bdt: riderFeeDeductions.remaining_amount_bdt,
+        })
+        .from(riderFeeDeductions)
+        .where(
+          and(
+            sql`${riderFeeDeductions.status} IN ('pending', 'partially_collected')`,
+            sql`${riderFeeDeductions.expires_at} <= ${now}`,
+          ),
+        )
+        .for('update');
+
+      for (const row of pending) {
+        await tx
+          .update(riderFeeDeductions)
+          .set({
+            status: 'expired' as any,
+            remaining_amount_bdt: 0,
+            updated_at: new Date(),
+          })
+          .where(eq(riderFeeDeductions.id, row.id));
+
+        logger.info("[walletCashback] rider fee deduction expired, amount forgiven", {
+          deductionId: row.id,
+          riderId: row.rider_id,
+          forgivenAmount: row.remaining_amount_bdt,
+        });
+      }
+
+      return pending.length;
+    });
+
+    if (result > 0) {
+      logger.info("[walletCashback] expired rider fee deductions", { count: result });
+    }
+    return result;
+  } catch (e) {
+    logger.error("[walletCashback] expireRiderFeeDeductions failed", e);
+    return 0;
   }
 }

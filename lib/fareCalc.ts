@@ -36,6 +36,7 @@ export interface FareBreakdown {
   ride_time_min: number;
   surge_multiplier: number;
   surge_fee_bdt: number;
+  cancellation_fee_bdt?: number;
   pass_discount_bdt?: number;
   pass_name?: string;
 }

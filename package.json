@@ -13,7 +13,12 @@
     "lint": "cross-env ESLINT_USE_FLAT_CONFIG=false npx eslint ."
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "testPathIgnorePatterns": [
+      "/_reference/",
+      "/node_modules/",
+      "/admin-test-results/"
+    ]
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",

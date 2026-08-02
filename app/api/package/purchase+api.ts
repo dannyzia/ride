@@ -223,6 +223,7 @@ export async function POST(request: Request) {
       paymentEventId: evt!.id,
       invoice_id,
       driverId: driver.id,
+      amountBdt: pkg.price_bdt,
     });
 
     return Response.json({ payment_url, payment_event_id: evt!.id });

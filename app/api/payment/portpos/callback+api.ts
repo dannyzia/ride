@@ -4,7 +4,7 @@
 import { portposClient, isConfigured } from "@/lib/portpos";
 import { db } from "@/src/db";
 import { paymentEvents, compensationQueue, users, drivers, driverWalletTransactions, riderWalletTransactions, riderPasses, riderSubscriptions } from "@/src/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { activateSubscription } from "@/lib/activateSubscription";
 import { logger } from "@/lib/logger";
 import { recordSubscriptionSale, recordWalletTopup, recordRiderPassPurchase } from '@/lib/accounting';
@@ -237,8 +237,18 @@ async function processPortposPayment(
       paymentEventId: evt.id,
       subscriptionId,
     });
-    try { await recordSubscriptionSale({ id: subscriptionId, driverId: evt.driver_id!, amountPaisa: evt.amount_bdt }); }
-    catch (e) { logger.warn('[accounting] subscription entry failed', e); }
+    if (evt.driver_id) {
+      const [dZone] = await db
+        .select({ zone_id: drivers.zone_id })
+        .from(drivers)
+        .where(eq(drivers.id, evt.driver_id))
+        .limit(1);
+      try { await recordSubscriptionSale({ id: subscriptionId, driverId: evt.driver_id!, amountPaisa: evt.amount_bdt, zoneId: dZone?.zone_id ?? undefined }); }
+      catch (e) { logger.warn('[accounting] subscription entry failed', e); }
+    } else {
+      try { await recordSubscriptionSale({ id: subscriptionId, driverId: evt.driver_id!, amountPaisa: evt.amount_bdt }); }
+      catch (e) { logger.warn('[accounting] subscription entry failed', e); }
+    }
     return "success";
   } catch (activationErr: any) {
     logger.error(

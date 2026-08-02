@@ -74,6 +74,7 @@ interface WSClient {
   role?: "driver" | "rider";
   driverId?: string;
   subscribedRideId?: string; // rider: which ride they are tracking
+  lastSeen?: number; // epoch ms of last heartbeat (for stale-connection cleanup)
 }
 
 // ── Connection Maps ────────────────────────────────────────────────────────
@@ -82,8 +83,13 @@ const connectedRiders = new Map<string, WSClient>(); // userId → client (rider
 const allClients = new Map<WebSocket, WSClient>();
 
 // ── Offer Locks (double-deduction prevention) ─────────────────────────────
-const offerLocks = new Map<string, true>();
+// Key: `${rideId}:${driverId}`, Value: epoch ms when the lock was acquired.
+// Cleaned up on accept/decline (immediate), setTimeout (TTL), and periodic sweep.
+const offerLocks = new Map<string, number>();
 const OFFER_LOCK_TTL_MS = 10_000;
+const OFFER_LOCK_SWEEP_MS = 30_000; // periodic sweep threshold
+const STALE_DRIVER_TIMEOUT_MS = 90_000;
+const CLEANUP_INTERVAL_MS = 60_000;
 
 // ── DB Persist Throttle (30s per driver) ───────────────────────────────────
 const lastPersist = new Map<string, number>();
@@ -520,6 +526,7 @@ wss.on("connection", (ws: WebSocket) => {
 
         // Persist to DB every 30s (throttled in h3Index.ts)
         const now = Date.now();
+        client.lastSeen = now; // refresh staleness tracker on every heartbeat
         const lastPersist = getLastPersist(client.driverId);
         if (now - lastPersist < 30_000) break;
         setLastPersist(client.driverId, now);
@@ -614,7 +621,7 @@ wss.on("connection", (ws: WebSocket) => {
             });
             break;
           }
-          offerLocks.set(lockKey, true);
+          offerLocks.set(lockKey, Date.now());
           logger.debug("[ws] offer lock set", { lockKey });
 
           // Auto-release after TTL
@@ -691,6 +698,9 @@ wss.on("connection", (ws: WebSocket) => {
             return;
           }
 
+          // Release the offer lock immediately — the driver has committed to accepting.
+          offerLocks.delete(`${rideId}:${client.driverId}`);
+
           // Update ride to matched + immediately to driver_arriving
           const [driverRow] = await db
             .select({
@@ -709,6 +719,14 @@ wss.on("connection", (ws: WebSocket) => {
           // Generate a 4-digit ride-start PIN (rider reads aloud, driver enters it)
           const startPin = String(crypto.randomInt(1000, 10000));
 
+          // Atomic match guard: the WHERE clause on status='dispatching' ensures
+          // that only the first driver to accept wins. If two drivers accept
+          // concurrently, the second UPDATE affects zero rows and .returning()
+          // yields undefined → the driver receives "already_assigned".
+          // This is the primary double-deduction / double-match prevention.
+          // Defense-in-depth: call_ledger has a partial unique index
+          // (ride_id, driver_id) WHERE event_type='deduction' that rejects
+          // any duplicate deduction INSERT at the DB layer.
           const [updatedRide] = await db
             .update(rides)
             .set({
@@ -822,6 +840,9 @@ wss.on("connection", (ws: WebSocket) => {
         ) {
           const rideId = msg.ride_id as string;
           const reason = msg.reason as string | undefined;
+
+          // Release the offer lock — the driver has declined the offer.
+          offerLocks.delete(`${rideId}:${client.driverId}`);
 
           await db
             .update(dispatchOffers)
@@ -1384,6 +1405,21 @@ async function startup() {
   } catch (e: any) {
     logger.error("[startup] recovery query failed", { error: e.message });
   }
+
+  // Periodic cleanup: expired offer locks + stale driver connections
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, ts] of offerLocks) {
+      if (now - ts > OFFER_LOCK_SWEEP_MS) {
+        offerLocks.delete(key);
+      }
+    }
+    for (const [driverId, client] of connectedDrivers) {
+      if (client.lastSeen && now - client.lastSeen > STALE_DRIVER_TIMEOUT_MS) {
+        connectedDrivers.delete(driverId);
+      }
+    }
+  }, CLEANUP_INTERVAL_MS);
 
   const PORT = parseInt(process.env.UTILS_SERVER_PORT ?? "3001");
   server.listen(PORT, () =>

@@ -165,7 +165,7 @@ export const creditVoucherSourceEnum = pgEnum("credit_voucher_source", [
 ]);
 export const walletDriverTxnTypeEnum = pgEnum(
   "wallet_driver_transaction_type",
-  ["promo_receivable", "referral_receivable", "payout", "adjustment"],
+  ["promo_receivable", "referral_receivable", "payout", "adjustment", "cancellation_compensation"],
 );
 export const walletRiderTxnTypeEnum = pgEnum("wallet_rider_transaction_type", [
   "referral_reward",
@@ -204,6 +204,19 @@ export const vehicleChangeStatusEnum = pgEnum("vehicle_change_status", [
   "approved",
   "rejected",
   "cooling_off",
+]);
+
+export const cancellationCreditStatusEnum = pgEnum("cancellation_credit_status", [
+  "pending",
+  "applied",
+  "expired",
+]);
+
+export const riderFeeDeductionStatusEnum = pgEnum("rider_fee_deduction_status", [
+  "pending",
+  "partially_collected",
+  "collected",
+  "expired",
 ]);
 
 export const zoneLifecycleStageEnum = pgEnum("zone_lifecycle_stage", [
@@ -598,6 +611,10 @@ export const rides = pgTable(
     is_booked_for_someone_else: boolean("is_booked_for_someone_else").default(false),
     reminder_sent: boolean("reminder_sent").default(false),
     cancellation_fee_bdt: integer("cancellation_fee_bdt"),
+    cancellation_compensation_driver_id: uuid("cancellation_compensation_driver_id")
+      .references(() => drivers.id),
+    cancellation_fee_applied: boolean("cancellation_fee_applied").notNull().default(false),
+    cancellation_fee_pending: boolean("cancellation_fee_pending").notNull().default(false),
     upfront_tip_bdt: integer("upfront_tip_bdt").default(0),
     female_driver_preference: boolean("female_driver_preference").default(false),
     distance_km: numeric("distance_km", { precision: 7, scale: 3 }).notNull(),
@@ -670,6 +687,56 @@ export const cancellationPolicies = pgTable("cancellation_policies", {
   created_at: timestamptz("created_at").notNull().defaultNow(),
   updated_at: timestamptz("updated_at").notNull().defaultNow(),
 });
+
+export const cancellationCredits = pgTable(
+  "cancellation_credits",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    original_driver_id: uuid("original_driver_id")
+      .notNull()
+      .references(() => drivers.id),
+    cancellation_ride_id: uuid("cancellation_ride_id")
+      .notNull()
+      .references(() => rides.id),
+    amount_bdt: integer("amount_bdt").notNull(),
+    status: cancellationCreditStatusEnum("status").notNull().default("pending"),
+    applied_to_ride_id: uuid("applied_to_ride_id").references(() => rides.id),
+    applied_at: timestamptz("applied_at"),
+    expires_at: timestamptz("expires_at").notNull(),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("cancellation_credits_driver_status_idx").on(t.original_driver_id, t.status),
+    index("cancellation_credits_expires_idx").on(t.expires_at),
+    uniqueIndex("cancellation_credits_ride_unique")
+      .on(t.cancellation_ride_id)
+      .where(sql`status = 'pending'`),
+  ],
+);
+
+export const riderFeeDeductions = pgTable(
+  "rider_fee_deductions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    rider_id: uuid("rider_id")
+      .notNull()
+      .references(() => users.id),
+    ride_id: uuid("ride_id")
+      .notNull()
+      .references(() => rides.id),
+    total_amount_bdt: integer("total_amount_bdt").notNull(),
+    remaining_amount_bdt: integer("remaining_amount_bdt").notNull(),
+    status: riderFeeDeductionStatusEnum("status").notNull().default("pending"),
+    expires_at: timestamptz("expires_at").notNull(),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("rider_fee_deductions_rider_idx").on(t.rider_id),
+    index("rider_fee_deductions_status_idx").on(t.status),
+    index("rider_fee_deductions_expires_idx").on(t.expires_at),
+  ],
+);
 
 export const dispatchOffers = pgTable(
   "dispatch_offers",

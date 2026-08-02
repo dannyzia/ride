@@ -144,6 +144,12 @@ const NAV: NavItem[] = [
     icon: "file-chart",
     group: "Finance",
   },
+  {
+    route: "/admin/zone-pnl",
+    label: "Zone P&L",
+    icon: "chart-pie",
+    group: "Finance",
+  },
 
   {
     route: "/admin/platform-config",

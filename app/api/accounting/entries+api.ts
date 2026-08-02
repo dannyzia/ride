@@ -16,9 +16,11 @@ export async function GET(request: Request) {
   try {
     await auth(request);
     const url = new URL(request.url);
-    const start = url.searchParams.get('start');
-    const end = url.searchParams.get('end');
-    const refType = url.searchParams.get('reference_type');
+const start = url.searchParams.get('start');
+     const end = url.searchParams.get('end');
+     if (start && isNaN(Date.parse(start))) return Response.json({ error: 'invalid_date' }, { status: 400 });
+     if (end && isNaN(Date.parse(end))) return Response.json({ error: 'invalid_date' }, { status: 400 });
+     const refType = url.searchParams.get('reference_type');
     const limit = parseInt(url.searchParams.get('limit') || '50', 10);
     const offset = parseInt(url.searchParams.get('offset') || '0', 10);
 

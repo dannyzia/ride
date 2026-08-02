@@ -1,7 +1,6 @@
 import { db } from '@/src/db';
 import { taxRates, taxLedgers, dailyTaxSummaries } from '@/src/db/schema';
 import { eq, and, between } from 'drizzle-orm';
-import { logger } from '@/lib/logger';
 
 export type TaxCode = 'vat_commission' | 'vat_subscription' | 'source_tax_payout';
 
@@ -26,18 +25,22 @@ export async function calculateTax(code: TaxCode, baseAmountPaisa: number): Prom
   return { baseAmountPaisa, taxAmountPaisa, netAmountPaisa, ratePercent, taxRateId: rate.id };
 }
 
-export async function recordTaxLedger(params: {
-  taxRateId: string;
-  referenceType: 'ride_commission' | 'subscription_sale' | 'driver_payout';
-  referenceId: string;
-  baseAmountPaisa: number;
-  taxAmountPaisa: number;
-  netAmountPaisa: number;
-  driverId?: string;
-  riderId?: string;
-  taxDate?: Date;
-}) {
-  return db.insert(taxLedgers).values({
+export async function recordTaxLedger(
+  params: {
+    taxRateId: string;
+    referenceType: 'ride_commission' | 'subscription_sale' | 'driver_payout';
+    referenceId: string;
+    baseAmountPaisa: number;
+    taxAmountPaisa: number;
+    netAmountPaisa: number;
+    driverId?: string;
+    riderId?: string;
+    taxDate?: Date;
+  },
+  tx?: typeof db | any,
+) {
+  const client = tx ?? db;
+  return client.insert(taxLedgers).values({
     tax_rate_id: params.taxRateId,
     reference_type: params.referenceType,
     reference_id: params.referenceId,

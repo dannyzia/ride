@@ -47,7 +47,8 @@ export async function POST(request: Request) {
     if (!rider) return Response.json({ error: 'user_not_found' }, { status: 404 });
     const parsed = await parseJsonBody(request, estimateSchema);
     if (!parsed.ok) return parsed.response;
-    const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, vehicle_type, preference_ids, upfront_tip_bdt, stops } = parsed.data;
+    const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, vehicle_type, preference_ids, stops } = parsed.data;
+    const _upfrontTip = parsed.data.upfront_tip_bdt;
 
     // Zone check
     const zoneCheck = await validatePickupZone(pickup_lat, pickup_lng);

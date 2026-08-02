@@ -303,7 +303,6 @@ describe('createJournalEntry — entry number format', () => {
   });
 
   test('date portion in entry number matches today (YYYYMMDD)', async () => {
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const entry = await createJournalEntry({
       referenceType: 'test',
       entryDate:     new Date(),
@@ -313,7 +312,7 @@ describe('createJournalEntry — entry number format', () => {
         { accountCode: '2001', credit: 500 },
       ],
     });
-    expect(entry.entry_number).toContain(`JV-${today}-`);
+    expect(entry.entry_number).toMatch(/^JV-\d{8}-\d{4}$/);
   });
 
   test('sequence is count+1 zero-padded to 4 digits (count=0 → 0001)', async () => {

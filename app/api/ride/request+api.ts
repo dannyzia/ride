@@ -392,7 +392,8 @@ export async function POST(request: Request) {
           is_booked_for_someone_else: !!(secondary_rider_phone || secondary_rider_name),
           upfront_tip_bdt: upfront_tip_bdt ?? 0,
           female_driver_preference: female_driver_preference ?? false,
-        })
+          cancellation_fee_applied: false,
+         })
         .returning();
 
       if (!ride) {

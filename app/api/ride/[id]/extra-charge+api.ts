@@ -17,7 +17,20 @@ export async function GET(request: Request, { id }: { id: string }) {
     const uuidParam = z.string().uuid().safeParse(id);
     if (!uuidParam.success) return Response.json({ error: 'invalid_uuid' }, { status: 400 });
 
-    await verifySupabaseToken(request);
+const user = await verifySupabaseToken(request);
+
+    const [dbUser] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, user.id)).limit(1);
+    if (!dbUser) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    const [driver] = await db.select({ id: drivers.id }).from(drivers).where(eq(drivers.user_id, dbUser.id)).limit(1);
+
+    const [ride] = await db.select({ user_id: rides.user_id, driver_id: rides.driver_id })
+      .from(rides).where(eq(rides.id, id)).limit(1);
+    if (!ride) return Response.json({ error: 'not_found' }, { status: 404 });
+    const isRider = ride.user_id === dbUser.id;
+    const isDriver = driver && ride.driver_id === driver.id;
+    if (!isRider && !isDriver) {
+      return Response.json({ error: 'forbidden' }, { status: 403 });
+    }
 
     const charges = await db.select().from(rideExtraCharges)
       .where(eq(rideExtraCharges.ride_id, id))

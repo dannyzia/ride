@@ -49,6 +49,7 @@ const ConfirmRidePage = () => {
   const [showStopModal, setShowStopModal] = useState(false);
   const [preferFemale, setPreferFemale] = useState(false);
   const [refreshedEstimate, setRefreshedEstimate] = useState<FareEstimate | null>(null);
+  const [pendingFeeDeduction, setPendingFeeDeduction] = useState<{ remaining: number } | null>(null);
 
   const selectedEstimate = estimates.find(
     (e) => e.vehicle_type === selectedVehicleType,
@@ -57,6 +58,25 @@ const ConfirmRidePage = () => {
   const vehicleDef = selectedVehicleType
     ? VEHICLE_TYPES.find((v) => v.key === selectedVehicleType)
     : null;
+
+  // Fetch pending fee deductions
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const res = await fetch(`${API_URL}/api/rider/fee-deductions`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.total_owed_bdt > 0) {
+          setPendingFeeDeduction({ remaining: data.total_owed_bdt });
+        }
+      } catch { /* non-blocking */ }
+    })();
+  }, []);
 
   useEffect(() => {
     if (
@@ -361,12 +381,20 @@ const ConfirmRidePage = () => {
           </View>
         )}
           <View className="flex-row justify-between py-2 border-b border-borderColor">
-             <Text className="text-secondaryTextColor">Base fare</Text>
-             <Text className="text-primaryTextColor font-JakartaSemiBold">
-               ৳{displayEstimate ? (displayEstimate.total_bdt / 100).toFixed(0) : "—"}
-             </Text>
+            <Text className="text-secondaryTextColor">Base fare</Text>
+            <Text className="text-primaryTextColor font-JakartaSemiBold">
+              ৳{displayEstimate ? (displayEstimate.total_bdt / 100).toFixed(0) : "—"}
+            </Text>
            </View>
-           {selectedDiscount && (
+           {pendingFeeDeduction && (
+             <View className="flex-row justify-between py-2 border-b border-borderColor">
+               <Text className="text-secondaryTextColor">Pending cancellation fee</Text>
+               <Text className="text-goDanger font-JakartaSemiBold">
+                 ৳{(pendingFeeDeduction.remaining / 100).toFixed(0)} (from cashback)
+               </Text>
+             </View>
+           )}
+            {selectedDiscount && (
              <View className="flex-row justify-between py-2 border-b border-borderColor">
                <Text className="text-secondaryTextColor">
                  {selectedDiscount.type === "intro"

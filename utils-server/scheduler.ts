@@ -28,6 +28,12 @@ import {
 import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte } from "drizzle-orm";
 import { detectStationaryAnomaly } from "../lib/safety";
 import { logger } from "../lib/logger";
+import { nextBdtMidnightUtc } from "../lib/time";
+import { resetAllBudgets } from "../lib/zoneBudget";
+import { evaluateGraduation } from "../lib/zoneLifecycle";
+import { expireCredits, expireRiderFeeDeductions } from "../lib/walletCashback";
+import { runFraudDetection } from "../lib/fraudDetection";
+import { expireCancellationCredits } from "../lib/cancellationCompensation";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 
@@ -934,5 +940,93 @@ export function startScheduler(): void {
     }
   }, 900_000);
 
-  logger.info("[scheduler] started (25 jobs)");
+  // ── (26) Zone budget daily reset — every 60s, fires at BDT midnight ──────
+  setInterval(async () => {
+    try {
+      const midnight = nextBdtMidnightUtc();
+      const now = new Date();
+      if (Math.abs(now.getTime() - midnight.getTime()) > 60_000) return;
+
+      await resetAllBudgets();
+      logger.info("[scheduler] zone-budget-daily-reset completed");
+    } catch (e) {
+      logger.error("[scheduler] zone budget daily reset error", e);
+    }
+  }, 60_000);
+
+  // ── (27) Zone graduation evaluation — daily at 06:00 BDT ──────────────────
+  setInterval(async () => {
+    try {
+      // Check if it's 06:00 BDT (UTC+6): hour 0 UTC
+      const now = new Date();
+      const utcHour = now.getUTCHours();
+      const utcMinutes = now.getUTCMinutes();
+      // 06:00 BDT = 00:00 UTC
+      if (utcHour !== 0 || utcMinutes >= 1) return;
+
+      await evaluateGraduation();
+      logger.info("[scheduler] zone-graduation-eval completed");
+    } catch (e) {
+      logger.error("[scheduler] zone graduation eval error", e);
+    }
+  }, 60_000);
+
+  // ── (28) Cashback expiry — daily at 01:00 BDT ─────────────────────────────
+  setInterval(async () => {
+    try {
+      // 01:00 BDT = 19:00 UTC (previous day)
+      const now = new Date();
+      const utcHour = now.getUTCHours();
+      const utcMinutes = now.getUTCMinutes();
+      if (utcHour !== 19 || utcMinutes >= 1) return;
+
+      await expireCredits();
+      logger.info("[scheduler] cashback-expiry completed");
+    } catch (e) {
+      logger.error("[scheduler] cashback expiry error", e);
+    }
+  }, 60_000);
+
+  // ── (29) Fraud detection — daily at 03:00 BDT (21:00 UTC) ─────────────
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const utcHour = now.getUTCHours();
+      const utcMinutes = now.getUTCMinutes();
+      if (utcHour !== 21 || utcMinutes >= 1) return;
+
+      await runFraudDetection();
+      logger.info("[scheduler] fraud-detection completed");
+    } catch (e: any) {
+      logger.error("[scheduler] fraud detection error", e);
+    }
+  }, 60_000);
+
+  // ── (30) Cancellation credit expiry — every 5 min ──────────────────────
+  setInterval(async () => {
+    try {
+      const expired = await expireCancellationCredits();
+      if (expired > 0) {
+        logger.info("[scheduler] cancellation credit expiry completed", { count: expired });
+      }
+    } catch (e: any) {
+      logger.error("[scheduler] cancellation credit expiry error", e);
+    }
+  }, 300_000);
+
+  // ── (31) Rider fee deduction expiry — daily at 02:00 BDT ──────────────
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getUTCHours() !== 20 || now.getUTCMinutes() !== 0) return;
+    try {
+      const expired = await expireRiderFeeDeductions();
+      if (expired > 0) {
+        logger.info("[scheduler] rider fee deduction expiry completed", { count: expired });
+      }
+    } catch (e: any) {
+      logger.error("[scheduler] rider fee deduction expiry error", e);
+    }
+  }, 60_000);
+
+  logger.info("[scheduler] started (31 jobs)");
 }

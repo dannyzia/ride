@@ -7,6 +7,7 @@ import { calculateFare } from "@/lib/fareCalc";
 import { applySurge } from "@/lib/surge";
 import { logger } from "@/lib/logger";
 import { sendNotification } from "@/lib/notify";
+import { z } from "zod";
 import { recordRideCompletion, recordTip } from '@/lib/accounting';
 import { evaluateStreaks } from '@/lib/gamification';
 import { earnCashback } from '@/lib/walletCashback';
@@ -16,11 +17,15 @@ export async function POST(request: Request) {
   try {
     const url = new URL(request.url);
     const segments = url.pathname.split("/");
-    const rideId = segments[segments.indexOf("ride") + 1];
-    if (!rideId)
-      return Response.json({ error: "missing_ride_id" }, { status: 400 });
+const rideId = segments[segments.indexOf("ride") + 1];
+     if (!rideId)
+       return Response.json({ error: "missing_ride_id" }, { status: 400 });
+     const uuidParam = z.string().uuid().safeParse(rideId);
+     if (!uuidParam.success) {
+       return Response.json({ error: "invalid_uuid" }, { status: 400 });
+     }
 
-    const { dbUser: user } = await requireRole("driver")(request);
+     const { dbUser: user } = await requireRole("driver")(request);
 
     const [driver] = await db
       .select({ id: drivers.id })
@@ -286,10 +291,11 @@ export async function POST(request: Request) {
         id: rideId, finalFarePaisa: fare.total_bdt,
         commissionPct: Number(pricingRow.platform_commission_percent ?? 0),
         driverId: driver.id, riderId: ride.user_id,
+        zoneId: ride.zone_id,
       });
     } catch (e) { logger.warn('[accounting] ride completion failed', e); }
     if (ride.tip_bdt && ride.tip_bdt > 0) {
-      try { await recordTip({ id: rideId, tipPaisa: ride.tip_bdt ?? 0, driverId: driver.id }); }
+      try { await recordTip({ id: rideId, tipPaisa: ride.tip_bdt ?? 0, driverId: driver.id, zoneId: ride.zone_id }); }
       catch (e) { logger.warn('[accounting] tip entry failed', e); }
     }
 

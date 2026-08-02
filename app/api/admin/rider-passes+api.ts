@@ -72,9 +72,11 @@ export async function DELETE(request: Request) {
   try {
     await requireRole('admin')(request);
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    if (!id) return Response.json({ error: 'id_required' }, { status: 400 });
-    await db.update(riderPasses).set({ is_active: false, updated_at: new Date() }).where(eq(riderPasses.id, id));
+const id = searchParams.get('id');
+     if (!id) return Response.json({ error: 'id_required' }, { status: 400 });
+     const uuidParam = z.string().uuid().safeParse(id);
+     if (!uuidParam.success) return Response.json({ error: 'invalid_uuid' }, { status: 400 });
+     await db.update(riderPasses).set({ is_active: false, updated_at: new Date() }).where(eq(riderPasses.id, id));
     return Response.json({ success: true });
   } catch (err: any) {
     if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });

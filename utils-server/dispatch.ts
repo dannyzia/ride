@@ -1,6 +1,6 @@
 import { db } from '../src/db';
 import { drivers, rides, dispatchOffers, systemConfig, pricing, preferences, subscriptions, packages, driverCommutePreferences, driverBlocklists, driverOnlineSessions } from '../src/db/schema';
-import { eq, and, inArray, sql } from 'drizzle-orm';
+import { eq, and, inArray, sql, isNotNull } from 'drizzle-orm';
 import { getH3Ring } from '../lib/h3';
 import { getDriversInCells } from './h3Index';
 import { checkDriverEligibility } from '../lib/vehicleTypes';
@@ -152,6 +152,31 @@ export async function scoreAndBatchDrivers(
     ),
   );
 
+  const driverIds = driverRows.map(d => d.id);
+
+  const qualityMap = new Map<string, { cancels_today: number; fives_today: number }>();
+  if (driverIds.length > 0) {
+    const qualityRows = await db.select({
+      driver_id: rides.driver_id,
+      cancels_today: sql<number>`SUM(CASE WHEN ${rides.status} = 'cancelled' THEN 1 ELSE 0 END)`,
+      fives_today: sql<number>`SUM(CASE WHEN ${rides.status} = 'completed' AND ${rides.rider_rating} = 5 THEN 1 ELSE 0 END)`,
+    })
+    .from(rides)
+    .where(and(
+      inArray(rides.driver_id, driverIds),
+      inArray(rides.status, ['cancelled', 'completed'] as any),
+      sql`date_trunc('day', CASE WHEN ${rides.status} = 'cancelled' THEN ${rides.updated_at} ELSE ${rides.completed_at} END) = CURRENT_DATE`,
+    ))
+    .groupBy(rides.driver_id);
+
+    for (const row of qualityRows) {
+      qualityMap.set(row.driver_id, {
+        cancels_today: Number(row.cancels_today),
+        fives_today: Number(row.fives_today),
+      });
+    }
+  }
+
   // ── Already-offered set ───────────────────────────────────────────────
   const existingOffers = await db
     .select({ driver_id: dispatchOffers.driver_id })
@@ -283,6 +308,8 @@ export async function scoreAndBatchDrivers(
     });
     if (!eligible) continue;
 
+    if (Number(d.rating) < 3.5) continue;
+
     if (d.min_per_km_bdt != null && systemPerKmBdt < d.min_per_km_bdt) {
       await db.insert(dispatchOffers).values({
         ride_id:         rideId,
@@ -352,6 +379,16 @@ export async function scoreAndBatchDrivers(
       W.acceptance * acceptanceScore +
       W.balance    * balanceScore    +
       W.online     * onlineScore;
+
+    const stats = qualityMap.get(d.id);
+    if (stats) {
+      if (stats.cancels_today >= 3) {
+        score *= 0.8;
+      }
+      if (stats.fives_today >= 5) {
+        score *= 1.1;
+      }
+    }
 
     logger.debug('[dispatch] driver scored', {
       driverId: d.id, distKm: distKm.toFixed(2),

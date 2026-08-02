@@ -47,36 +47,3 @@ export async function evaluateCancellation(
   // No matching policy within thresholds
   return { feeBdt: 0, reason: 'within_grace_period' };
 }
-
-/**
- * Apply cancellation fee to the ride row and deduct from rider wallet.
- */
-export async function applyCancellationFee(
-  rideId: string,
-  feeBdt: number,
-): Promise<void> {
-  if (feeBdt <= 0) return;
-  await db.transaction(async (tx) => {
-    const [ride] = await tx
-      .select({ user_id: rides.user_id })
-      .from(rides)
-      .where(and(eq(rides.id, rideId), sql`${rides.cancellation_fee_bdt} IS NULL`))
-      .limit(1);
-    if (!ride) return;
-
-    await tx
-      .update(rides)
-      .set({ cancellation_fee_bdt: feeBdt })
-      .where(eq(rides.id, rideId));
-
-    await tx.execute(
-      sql`UPDATE users SET rider_wallet_balance_bdt = rider_wallet_balance_bdt - ${feeBdt} WHERE id = ${ride.user_id}`,
-    );
-
-    await tx.execute(
-      sql`INSERT INTO rider_wallet_transactions (rider_id, transaction_type, amount_bdt, balance_after)
-          VALUES (${ride.user_id}, 'adjustment', -${feeBdt},
-            (SELECT rider_wallet_balance_bdt FROM users WHERE id = ${ride.user_id}))`,
-    );
-  });
-}

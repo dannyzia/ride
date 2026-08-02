@@ -44,10 +44,12 @@ export async function DELETE(request: Request) {
     if (!rider) return Response.json({ error: 'user_not_found' }, { status: 404 });
 
     const url = new URL(request.url);
-    const driverId = url.searchParams.get('driver_id');
-    if (!driverId) return Response.json({ error: 'driver_id_required' }, { status: 400 });
+const driverId = url.searchParams.get('driver_id');
+     if (!driverId) return Response.json({ error: 'driver_id_required' }, { status: 400 });
+     const uuidParam = z.string().uuid().safeParse(driverId);
+     if (!uuidParam.success) return Response.json({ error: 'invalid_uuid' }, { status: 400 });
 
-    await db.delete(driverBlocklists)
+     await db.delete(driverBlocklists)
       .where(and(eq(driverBlocklists.rider_id, rider.id), eq(driverBlocklists.driver_id, driverId)));
 
     return Response.json({ success: true, blocked: false });

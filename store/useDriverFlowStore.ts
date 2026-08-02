@@ -41,8 +41,8 @@ interface RideOffer {
     wait_charge_bdt: number;
     total_bdt: number;
     minimum_fare_bdt: number;
-    distance_km: number;
-  };
+     distance_km: number;
+   };
   vehicle_type: string;
   rider_first_name: string;
   rider_rating: number | null;

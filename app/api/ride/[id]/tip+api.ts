@@ -82,7 +82,7 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     // Accounting entry (non-blocking)
     try {
-      await recordTip({ id, tipPaisa: amount_bdt, driverId: driver.id });
+      await recordTip({ id, tipPaisa: amount_bdt, driverId: driver.id, zoneId: ride.zone_id });
     } catch (e) { logger.warn('[ride/tip] accounting entry failed', e); }
 
     logger.info('[ride/tip] tip submitted', { rideId: id, amount_bdt });

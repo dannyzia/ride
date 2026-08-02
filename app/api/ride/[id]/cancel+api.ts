@@ -1,11 +1,12 @@
 import { db } from '@/src/db';
-import { rides, users, drivers } from '@/src/db/schema';
+import { rides, users, drivers, riderFeeDeductions } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
-import { evaluateCancellation, applyCancellationFee } from '@/lib/cancellation';
+import { evaluateCancellation } from '@/lib/cancellation';
 import { recordCancellationFee } from '@/lib/accounting';
+import { createCancellationCredit } from '@/lib/cancellationCompensation';
 
 const cancelSchema = z.object({
   reason: z.string().max(255).optional(),
@@ -51,13 +52,12 @@ export async function POST(request: Request) {
       return Response.json({ error: 'ride_not_cancellable', message: `Cannot cancel ride in status: ${ride.status}` }, { status: 409 });
     }
 
-    // Evaluate and apply cancellation fee
+    // Evaluate cancellation fee (no wallet debit — collected from future cashback)
     const { feeBdt } = await evaluateCancellation(rideId, cancelled_by as 'rider' | 'driver');
-    await applyCancellationFee(rideId, feeBdt);
 
     // ── Accounting entry (non-blocking) ──────────────────────────────────
     if (feeBdt > 0) {
-      try { await recordCancellationFee({ id: rideId, feePaisa: feeBdt, riderId: ride.user_id }); }
+      try { await recordCancellationFee({ id: rideId, feePaisa: feeBdt, riderId: ride.user_id, zoneId: ride.zone_id }); }
       catch (e) { logger.warn('[accounting] cancellation fee entry failed', e); }
     }
 
@@ -70,6 +70,8 @@ export async function POST(request: Request) {
       cancelled_by,
       cancel_reason: reason ?? null,
       cancellation_fee_bdt: feeBdt > 0 ? feeBdt : undefined,
+      cancellation_compensation_driver_id: feeBdt > 0 ? ride.driver_id : undefined,
+      cancellation_fee_pending: feeBdt > 0 ? true : undefined,
     }).where(eq(rides.id, rideId));
 
     // Free the assigned driver if this cancelled ride had one
@@ -77,6 +79,37 @@ export async function POST(request: Request) {
       await db.update(drivers)
         .set({ is_online: true, updated_at: new Date() })
         .where(eq(drivers.id, ride.driver_id));
+    }
+
+    // Create compensation credit for the original driver (platform-funded)
+    if (feeBdt > 0 && ride.driver_id) {
+      try {
+        await createCancellationCredit({
+          originalDriverId: ride.driver_id,
+          cancellationRideId: rideId,
+          amountBdt: feeBdt,
+        });
+      } catch (e: any) {
+        logger.warn('[ride/cancel] cancellation credit creation failed', e);
+      }
+    }
+
+    // Create rider fee deduction (collected from future cashback)
+    if (feeBdt > 0) {
+      try {
+        const expiresAt = new Date(Date.now() + 90 * 86400_000);
+        await db.insert(riderFeeDeductions).values({
+          rider_id: ride.user_id,
+          ride_id: rideId,
+          total_amount_bdt: feeBdt,
+          remaining_amount_bdt: feeBdt,
+          status: 'pending',
+          expires_at: expiresAt,
+        });
+        logger.info('[ride/cancel] rider fee deduction created', { rideId, feeBdt });
+      } catch (e: any) {
+        logger.warn('[ride/cancel] rider fee deduction creation failed', e);
+      }
     }
 
     logger.info('[ride/cancel] ride cancelled', { rideId, cancelled_by, reason });
