@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -19,7 +20,7 @@ export default function SettingsContactSupport() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) { setError("Not authenticated"); return; }
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/support/ticket`, {
+      const res = await fetch(`${API_URL}/api/support/ticket`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({

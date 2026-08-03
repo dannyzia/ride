@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { API_URL } from "@/lib/config";
 import {
   View,
   Text,
@@ -36,7 +37,7 @@ export default function PreferenceChips({
   const fetchPreferences = useCallback(async () => {
     try {
       const res = await fetch(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/api/reference/preferences`,
+        `${API_URL}/api/reference/preferences`,
       );
       if (res.ok) {
         const data = await res.json();

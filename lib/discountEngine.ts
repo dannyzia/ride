@@ -1,12 +1,12 @@
-import { db } from "@/src/db";
+import { db } from "../src/db";
 import {
   users,
   riderSubscriptions,
   riderPasses,
-} from "@/src/db/schema";
+} from "../src/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { getStagedPromo } from "@/lib/promoCache";
-import { getIntroDiscount, type DiscountOption } from "@/lib/introIncentive";
+import { getIntroDiscount, type DiscountOption } from "./introIncentive";
 
 export type { DiscountOption };
 

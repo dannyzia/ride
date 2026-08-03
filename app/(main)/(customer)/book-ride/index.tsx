@@ -1,4 +1,5 @@
 import { colors, spacing } from "@/theme/goRide";
+import { API_URL } from "@/lib/config";
 import {
   View,
   Text,
@@ -20,8 +21,6 @@ import PreferenceChips from "@/components/PreferenceChips";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { icons } from "@/constants/data";
-
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 
 const VEHICLE_ICONS: Record<string, any> = {
   bike_basic: icons.cab,

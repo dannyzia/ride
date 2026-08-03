@@ -1,4 +1,5 @@
 import { colors, spacing, radii } from "@/theme/goRide";
+import { API_URL } from "@/lib/config";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
@@ -190,7 +191,7 @@ export default function CallLedgerScreen() {
           params.set("from_date", fromDate);
         }
         const res = await fetch(
-          `${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/call-ledger?${params.toString()}`,
+          `${API_URL}/api/driver/call-ledger?${params.toString()}`,
         );
         if (res.ok) {
           const data = await res.json();
@@ -230,7 +231,7 @@ export default function CallLedgerScreen() {
         params.set("limit", "50");
 
         const res = await fetch(
-          `${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/missed-requests?${params.toString()}`,
+          `${API_URL}/api/driver/missed-requests?${params.toString()}`,
         );
         if (res.ok) {
           const data = await res.json();

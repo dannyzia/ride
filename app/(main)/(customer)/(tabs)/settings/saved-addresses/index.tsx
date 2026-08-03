@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -25,7 +26,7 @@ export default function SavedAddresses() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) { setError("Not authenticated"); return; }
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/rider/addresses`, {
+      const res = await fetch(`${API_URL}/api/rider/addresses`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) { setError("Failed to load addresses"); return; }

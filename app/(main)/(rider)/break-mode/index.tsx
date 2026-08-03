@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -18,7 +19,7 @@ export default function BreakMode() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) { setLoading(false); return; }
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/break/start`, {
+        const res = await fetch(`${API_URL}/api/driver/break/start`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -49,7 +50,7 @@ export default function BreakMode() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (token) {
-        await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/break/end`, {
+        await fetch(`${API_URL}/api/driver/break/end`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         });

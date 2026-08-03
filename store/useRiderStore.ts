@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { API_URL } from "@/lib/config";
 
 export type VehicleType =
   | "bike_basic"
@@ -168,8 +169,6 @@ export interface Transaction {
   description: string;
   amount_bdt: number;
 }
-
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 
 // ── In-memory estimate cache (5-min TTL) ────────────────────────────────
 let estimateCache: {

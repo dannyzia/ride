@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -21,7 +22,7 @@ export default function RiderLoyalty() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/rider/points`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/rider/points`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setBalance(data.balance ?? 0);
@@ -42,7 +43,7 @@ export default function RiderLoyalty() {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           const token = session?.access_token;
-          const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/rider/points`, {
+          const res = await fetch(`${API_URL}/api/rider/points`, {
             method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify({ offer_id: offer.id }),
           });

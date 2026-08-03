@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -35,7 +36,7 @@ export default function ApplyPromos() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) { setPromosLoading(false); return; }
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/promo/list`, {
+        const res = await fetch(`${API_URL}/api/promo/list`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -58,7 +59,7 @@ export default function ApplyPromos() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) { setMessage("Not authenticated"); setMessageType("error"); setLoading(false); return; }
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/promo/redeem`, {
+      const res = await fetch(`${API_URL}/api/promo/redeem`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ code: promoCode.trim() }),

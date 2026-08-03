@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { API_URL, WS_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -17,6 +18,7 @@ import { icons, images } from "@/constants/data";
 import RideCard from "@/components/RideCard";
 import { useCallback, useEffect, useState } from "react";
 import * as Location from "expo-location";
+import { getBarikoiReverseGeocodeUrl } from "@/lib/useBarikoiMapStyle";
 import {
   useCustomer,
   useRidesStore,
@@ -39,9 +41,6 @@ if (Platform.OS !== "web") {
     };
   }
 }
-
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL;
-const WEBSOCKET_API_URL = process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "";
 
 const HomePage = () => {
   const { t } = useTranslation();
@@ -85,7 +84,7 @@ const HomePage = () => {
       const token = session?.access_token;
       if (!token) return;
 
-      ws = new WebSocket(WEBSOCKET_API_URL);
+      ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
         reconnectAttempts = 0;
@@ -145,20 +144,54 @@ const HomePage = () => {
 
       setHasPermissions(true);
 
-      const location = await Location.getCurrentPositionAsync();
+      // Get GPS with timeout — emulators can hang indefinitely on getCurrentPositionAsync
+      const location = await Promise.race([
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("gps_timeout")), 8000),
+        ),
+      ]);
 
-      const address = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
+      const { latitude, longitude } = location.coords;
 
-      setAddress(address[0]?.formattedAddress ?? "");
+      // Reverse geocode via Barikoi API first (native Geocoder hangs on emulators
+      // without full Google Play Services). Fall back to native, then to coordinates.
+      let resolvedAddress = "";
+      try {
+        const res = await fetch(getBarikoiReverseGeocodeUrl(latitude, longitude));
+        if (res.ok) {
+          const data = await res.json();
+          resolvedAddress =
+            data?.place?.address ??
+            data?.address ??
+            data?.places?.[0]?.address ??
+            "";
+        }
+      } catch {
+        // Barikoi failed (rate limit, network) — try native geocoder
+      }
+
+      if (!resolvedAddress) {
+        try {
+          const nativeAddr = await Promise.race([
+            Location.reverseGeocodeAsync({ latitude, longitude }),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("geocode_timeout")), 5000),
+            ),
+          ]);
+          resolvedAddress = nativeAddr[0]?.formattedAddress ?? "";
+        } catch {
+          // Both failed — leave empty, show coordinates as fallback
+        }
+      }
+
+      setAddress(resolvedAddress);
 
       if ((role ?? data?.role) === "customer") {
         setCustomerLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          address: address[0]?.formattedAddress ?? "",
+          latitude,
+          longitude,
+          address: resolvedAddress,
         });
 
         if (role) setCustomerRole({ role });

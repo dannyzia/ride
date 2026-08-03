@@ -1,4 +1,5 @@
 import { colors } from "@/theme/goRide";
+import { API_URL } from "@/lib/config";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
@@ -110,7 +111,7 @@ export default function DocumentsScreen() {
       const token = session?.access_token;
       if (!token) { Alert.alert("Error", "Not authenticated"); return; }
       const res = await fetch(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/documents`,
+        `${API_URL}/api/driver/documents`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

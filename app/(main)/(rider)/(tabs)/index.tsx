@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, Alert, TextInput, Modal } from "react-native";
+import { API_URL, WS_URL } from "@/lib/config";
 import { MaterialIcons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -17,9 +18,6 @@ import { colors } from "@/theme/goRide";
 import MapLibreGL from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle, DEFAULT_COORDINATES } from "@/utils/mapUtils";
 import { logger } from "@/lib/logger";
-
-const WS_URL =
-  process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "ws://localhost:3001";
 
 export default function DriverHome() {
   const {
@@ -54,7 +52,7 @@ export default function DriverHome() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (token) {
-          const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/earnings/breakdown`, { headers: { Authorization: `Bearer ${token}` } });
+          const res = await fetch(`${API_URL}/api/driver/earnings/breakdown`, { headers: { Authorization: `Bearer ${token}` } });
           if (res.ok) { const data = await res.json(); setEarningsToday(data.earnings_today_bdt ?? data.today_bdt ?? 0); }
         }
       } catch {}
@@ -272,7 +270,7 @@ export default function DriverHome() {
       const token = session?.access_token;
       if (!token) return;
       const res = await fetch(
-        `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/api/driver/me`,
+        `${API_URL}/api/driver/me`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (res.ok) {
@@ -281,7 +279,7 @@ export default function DriverHome() {
 
         // Load active subscription
         const subRes = await fetch(
-          `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/api/package/active`,
+          `${API_URL}/api/package/active`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
         if (subRes.ok) {
@@ -305,7 +303,7 @@ export default function DriverHome() {
 
       const newState = !isOnline;
       const res = await fetch(
-        `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/api/driver/status`,
+        `${API_URL}/api/driver/status`,
         {
           method: "POST",
           headers: {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { API_URL } from '@/lib/config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList, Text, View, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { colors } from '@/theme/goRide';
@@ -10,7 +11,6 @@ import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { logger } from '@/lib/logger';
 
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL;
 const FILTERS: { label: string; route: string }[] = [
   { label: 'All', route: '' },
   { label: 'Completed', route: '/(main)/(customer)/(tabs)/activity-completed' },

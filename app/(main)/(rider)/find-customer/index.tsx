@@ -1,4 +1,5 @@
 import { colors, spacing, radii } from "@/theme/goRide";
+import { API_URL, WS_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, Linking, Image, Alert, ActivityIndicator } from "react-native";
 import React, { useEffect, useRef, useState, Fragment } from "react";
 import { useRouter } from "expo-router";
@@ -11,8 +12,6 @@ import { supabase } from "@/lib/supabase";
 import RideLayout from "@/components/RideLayout";
 import TollParkingModal from "@/components/TollParkingModal";
 import { icons } from "@/constants/data";
-
-const WEBSOCKET_API_URL = process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "";
 
 const ReachCustomer = () => {
   const router = useRouter();
@@ -44,14 +43,14 @@ const ReachCustomer = () => {
     setWaitLoading(true);
     try {
       if (!waiting) {
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${activeRideId}/wait-start`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(`${API_URL}/api/ride/${activeRideId}/wait-start`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) { Alert.alert("Error", "Could not start waiting timer"); setWaitLoading(false); return; }
         setWaiting(true);
         setWaitSeconds(0);
         waitIntervalRef.current = setInterval(() => setWaitSeconds((s) => s + 1), 1000);
       } else {
         if (waitIntervalRef.current) clearInterval(waitIntervalRef.current);
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${activeRideId}/wait-end`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(`${API_URL}/api/ride/${activeRideId}/wait-end`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         setWaiting(false);
         Alert.alert("Waiting Time", `${data.total_wait_minutes ?? 0} min total\nFree: ${data.free_minutes ?? 3} min\nFee: ৳${((data.wait_fee_bdt ?? 0) / 100).toFixed(0)}`);
@@ -66,7 +65,7 @@ const ReachCustomer = () => {
     let _socket: WebSocket | null = null;
 
     if (!ws) {
-      const newWs = new WebSocket(WEBSOCKET_API_URL);
+      const newWs = new WebSocket(WS_URL);
 
       newWs.onopen = async () => {
         const {
@@ -99,7 +98,7 @@ const ReachCustomer = () => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${activeRideId}/stops`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/ride/${activeRideId}/stops`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setStops(data.stops ?? []);
@@ -329,7 +328,7 @@ const ReachCustomer = () => {
                   const token = session?.access_token;
                   if (!token) return;
                   const stop = stops[currentStopIdx];
-                  const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${activeRideId}/stops`, {
+                  const res = await fetch(`${API_URL}/api/ride/${activeRideId}/stops`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                     body: JSON.stringify({ stop_id: stop.id }),

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
@@ -26,7 +27,7 @@ export default function ExtraChargeApproval({ rideId }: Props) {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${rideId}/extra-charge`, {
+      const res = await fetch(`${API_URL}/api/ride/${rideId}/extra-charge`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -48,7 +49,7 @@ export default function ExtraChargeApproval({ rideId }: Props) {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${rideId}/extra-charge`, {
+      const res = await fetch(`${API_URL}/api/ride/${rideId}/extra-charge`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ charge_id: chargeId, action }),

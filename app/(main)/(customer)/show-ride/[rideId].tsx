@@ -1,4 +1,5 @@
 import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { API_URL } from '@/lib/config';
 import React, { useState, useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,7 +19,7 @@ const ShowRide = () => {
                 const { data: { session } } = await supabase.auth.getSession();
                 const token = session?.access_token;
                 if (!token) return;
-                const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${rideId}`, {
+                const res = await fetch(`${API_URL}/api/ride/${rideId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (res.ok) setRide((await res.json()).ride);

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -25,7 +26,7 @@ export default function ActivityCanceled() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) { setError("Not authenticated"); setLoading(false); return; }
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/get-all`, {
+        const res = await fetch(`${API_URL}/api/ride/get-all`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

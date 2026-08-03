@@ -1,10 +1,10 @@
-import { db } from "@/src/db";
-import * as schema from "@/src/db/schema";
-import { users, riderWalletTransactions, systemConfig, riderFeeDeductions } from "@/src/db/schema";
-import { eq, and, sql, asc } from "drizzle-orm";
+import { db } from "../src/db";
+import * as schema from "../src/db/schema";
+import { users, riderWalletTransactions, systemConfig, riderFeeDeductions } from "../src/db/schema";
+import { eq, and, sql, asc, gte, lt, gt, lte } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
-import { logger } from "@/lib/logger";
+import { logger } from "./logger";
 
 type Tx = PgTransaction<PostgresJsQueryResultHKT, typeof schema, any>;
 
@@ -92,8 +92,8 @@ export async function earnCashback(
       and(
         eq(riderWalletTransactions.rider_id, riderId),
         sql`${riderWalletTransactions.transaction_type} = 'cashback_earn'`,
-        sql`${riderWalletTransactions.created_at} >= ${startOfMonth}`,
-        sql`${riderWalletTransactions.created_at} < ${endOfMonth}`,
+        gte(riderWalletTransactions.created_at, startOfMonth),
+        lt(riderWalletTransactions.created_at, endOfMonth),
       ),
     );
 
@@ -122,7 +122,7 @@ export async function earnCashback(
       and(
         eq(riderFeeDeductions.rider_id, riderId),
         sql`${riderFeeDeductions.status} IN ('pending', 'partially_collected')`,
-        sql`${riderFeeDeductions.expires_at} > ${now}`,
+        gt(riderFeeDeductions.expires_at, now),
       ),
     )
     .orderBy(asc(riderFeeDeductions.created_at));
@@ -277,7 +277,7 @@ export async function expireCredits(): Promise<void> {
         .where(
           and(
             sql`${riderWalletTransactions.transaction_type} = 'cashback_earn'`,
-            sql`${riderWalletTransactions.expires_at} <= ${expiredAt}`,
+            lte(riderWalletTransactions.expires_at, expiredAt),
           ),
         );
 
@@ -323,7 +323,7 @@ export async function expireRiderFeeDeductions(): Promise<number> {
         .where(
           and(
             sql`${riderFeeDeductions.status} IN ('pending', 'partially_collected')`,
-            sql`${riderFeeDeductions.expires_at} <= ${now}`,
+            lte(riderFeeDeductions.expires_at, now),
           ),
         )
         .for('update');

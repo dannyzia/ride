@@ -1,11 +1,11 @@
-import { db } from "@/src/db";
-import * as schema from "@/src/db/schema";
-import { zoneBudgets, zoneBudgetLogs } from "@/src/db/schema";
+import { db } from "../src/db";
+import * as schema from "../src/db/schema";
+import { zoneBudgets, zoneBudgetLogs } from "../src/db/schema";
 import { eq } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
-import { logger } from "@/lib/logger";
-import { nextBdtMidnightUtc } from "@/lib/time";
+import { logger } from "./logger";
+import { nextBdtMidnightUtc } from "./time";
 
 type Tx = PgTransaction<PostgresJsQueryResultHKT, typeof schema, any>;
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -57,7 +58,7 @@ export default function DriverPersonalProfile() {
       if (profileImageUrl) body.profile_image_url = profileImageUrl;
       if (city.trim()) body.city = city.trim();
 
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/me`, {
+      const res = await fetch(`${API_URL}/api/driver/me`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),

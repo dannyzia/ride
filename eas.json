@@ -9,7 +9,10 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EAS_BUILD_PROFILE": "development"
+        "EAS_BUILD_PROFILE": "development",
+        "EXPO_PUBLIC_DEV_LAN_IP": "192.168.0.197",
+        "EXPO_PUBLIC_SERVER_URL": "http://192.168.0.197:8081",
+        "EXPO_PUBLIC_WEB_SOCKET_SERVER_URL": "ws://192.168.0.197:3001"
       }
     },
     "production": {

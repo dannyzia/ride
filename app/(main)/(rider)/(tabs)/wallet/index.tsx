@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
@@ -18,7 +19,7 @@ export default function WalletScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) { setError("Not authenticated"); return; }
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/wallet`, {
+      const res = await fetch(`${API_URL}/api/driver/wallet`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) { setError("Failed to load wallet"); return; }
@@ -38,7 +39,7 @@ export default function WalletScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/cancellation-credits`, {
+      const res = await fetch(`${API_URL}/api/driver/cancellation-credits`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;

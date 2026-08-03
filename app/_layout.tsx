@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useAppearance } from "@/lib/useAppearance";
 import "@/i18n/i18n";
+import { API_URL } from "@/lib/config";
 
 const isWeb = Platform.OS === "web";
 
@@ -20,7 +21,7 @@ async function registerPushForUser(token: string) {
     if (status !== "granted") return;
     const tokenData = await Notifications.getExpoPushTokenAsync();
     const deviceId = Application.getAndroidId?.() ?? tokenData.data;
-    await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/api/user/device`, {
+    await fetch(`${API_URL}/api/user/device`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
@@ -38,8 +39,6 @@ async function registerPushForUser(token: string) {
 if (!isWeb) {
   SplashScreen.preventAutoHideAsync().catch(() => {});
 }
-
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 
 export default function RootLayout() {
   const router = useRouter();

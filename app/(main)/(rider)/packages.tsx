@@ -1,4 +1,5 @@
 import { colors } from "@/theme/goRide";
+import { API_URL } from "@/lib/config";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
@@ -46,7 +47,7 @@ export default function PackagesScreen() {
   const fetchPackages = useCallback(async () => {
     try {
       const res = await fetch(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/api/package/list`,
+        `${API_URL}/api/package/list`,
       );
       if (res.ok) {
         const data = await res.json();
@@ -71,7 +72,7 @@ export default function PackagesScreen() {
     try {
       const idempotencyKey = crypto.randomUUID();
       const res = await fetch(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/api/package/purchase`,
+        `${API_URL}/api/package/purchase`,
         {
           method: "POST",
           headers: {
@@ -123,7 +124,7 @@ export default function PackagesScreen() {
         return;
       }
 
-      fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/package/active`)
+      fetch(`${API_URL}/api/package/active`)
         .then((res) => res.json())
         .then((data) => {
           if (data.subscription && data.subscription.id) {

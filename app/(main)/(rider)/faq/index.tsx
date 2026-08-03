@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -21,7 +22,7 @@ export default function DriverFAQ() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/faqs?role=driver`);
+      const res = await fetch(`${API_URL}/api/faqs?role=driver`);
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Failed"); setLoading(false); return; }
       setFaqs(data.faqs ?? []);

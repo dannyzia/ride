@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { API_URL } from "@/lib/config";
 import {
   View,
   Text,
@@ -23,8 +24,6 @@ import { router } from "expo-router";
 import { useDriver, useDriverDetails } from "@/store";
 import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";
-
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL;
 
 const VerificationPage = () => {
   const { user } = useSession();

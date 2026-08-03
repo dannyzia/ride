@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, Switch, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -31,7 +32,7 @@ export default function Schedule() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) return;
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/schedule`, {
+        const res = await fetch(`${API_URL}/api/driver/schedule`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -67,7 +68,7 @@ export default function Schedule() {
         end_time: DEFAULT_END,
         is_active: active[d.key] ?? false,
       }));
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/schedule`, {
+      const res = await fetch(`${API_URL}/api/driver/schedule`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ schedule }),

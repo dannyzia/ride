@@ -1,4 +1,5 @@
 import { colors } from "@/theme/goRide";
+import { API_URL } from "@/lib/config";
 import { View, Text, ActivityIndicator, Dimensions, Share } from "react-native";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,7 +12,6 @@ import { useWSStore } from "@/store";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import CustomButton from "@/components/CustomButton";
 
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 const MAP_STYLE =
   "https://map.barikoi.com/styles/osm-liberty/style.json?key=" +
   (process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "");
@@ -121,7 +121,7 @@ export default function FinalPage() {
   const handleShare = useCallback(async () => {
     const rideId = searchingRideId || activeRide?.id;
     if (!rideId) return;
-    const trackUrl = `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/track/${rideId}`;
+    const trackUrl = `${API_URL}/track/${rideId}`;
     await Share.share({ message: `Track my ride: ${trackUrl}` }).catch(() => {});
   }, [searchingRideId, activeRide?.id]);
 

@@ -1,7 +1,7 @@
-import { db } from "@/src/db";
-import { accountingEntries, accountingEntryLines, accountingAccounts, zones } from "@/src/db/schema";
+import { db } from "../src/db";
+import { accountingEntries, accountingEntryLines, accountingAccounts, zones } from "../src/db/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { logger } from "@/lib/logger";
+import { logger } from "./logger";
 
 export interface ZonePnL {
   zoneId: string;

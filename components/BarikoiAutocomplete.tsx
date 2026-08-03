@@ -13,12 +13,9 @@ import {
 import { BarikoiInputProps } from "@/types/type";
 import { icons } from "@/constants/data";
 import { useCustomer } from "@/store";
-import Constants from "expo-constants";
 import { getBarikoiAutocompleteUrl } from "@/lib/useBarikoiMapStyle";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
-
-const _API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
 
 const BarikoiAutocomplete = ({
   icon,

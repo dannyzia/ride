@@ -1,4 +1,5 @@
 import { colors, spacing, radii } from "@/theme/goRide";
+import { API_URL } from "@/lib/config";
 import { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -81,7 +82,7 @@ export default function IncentivesScreen() {
     else setLoading(true);
     try {
       const res = await fetch(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/incentives`,
+        `${API_URL}/api/driver/incentives`,
       );
       if (res.ok) {
         const json = await res.json();

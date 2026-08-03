@@ -1,7 +1,6 @@
 import { create } from 'zustand';
+import { API_URL } from '@/lib/config';
 import { supabase } from '@/lib/supabase';
-
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 
 interface Subscription {
   id: string;

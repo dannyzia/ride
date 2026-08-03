@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, Switch, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -32,7 +33,7 @@ export default function SettingsNotifications() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) return;
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/user/notification-prefs`, {
+        const res = await fetch(`${API_URL}/api/user/notification-prefs`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -54,7 +55,7 @@ export default function SettingsNotifications() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
-      await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/user/notification-prefs`, {
+      await fetch(`${API_URL}/api/user/notification-prefs`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ [key]: value }),

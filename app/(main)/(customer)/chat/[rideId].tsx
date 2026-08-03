@@ -1,4 +1,5 @@
 import { colors } from "@/theme/goRide";
+import { API_URL } from "@/lib/config";
 import React, { useEffect, useState } from "react";
 import { View, ActivityIndicator, Text, Linking } from "react-native";
 import { useLocalSearchParams, Stack } from "expo-router";
@@ -18,7 +19,7 @@ export default function CustomerChatRoute() {
 
   useEffect(() => {
     if (!rideId) return;
-    fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${rideId}/details`)
+    fetch(`${API_URL}/api/ride/${rideId}/details`)
       .then(async (res) => {
         if (!res.ok) {
           setError("Failed to load chat");

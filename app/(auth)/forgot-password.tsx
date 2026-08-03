@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { API_URL } from '@/lib/config';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StatusBar } from 'react-native';
 import { router } from 'expo-router';
 import { logger } from '@/lib/logger';
@@ -21,7 +22,7 @@ export default function ForgotPasswordScreen() {
     setError('');
 
     try {
-      const checkResponse = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/auth/check-user`, {
+      const checkResponse = await fetch(`${API_URL}/api/auth/check-user`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
@@ -39,7 +40,7 @@ export default function ForgotPasswordScreen() {
         return;
       }
 
-      const otpResponse = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/auth/send-otp`, {
+      const otpResponse = await fetch(`${API_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
@@ -87,7 +88,7 @@ export default function ForgotPasswordScreen() {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/auth/verify-otp`, {
+      const response = await fetch(`${API_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, otp }),
@@ -124,7 +125,7 @@ export default function ForgotPasswordScreen() {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/auth/reset-password`, {
+      const response = await fetch(`${API_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: fullPhone, newPassword }),

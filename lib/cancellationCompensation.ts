@@ -1,11 +1,11 @@
-import { db } from '@/src/db';
+import { db } from '../src/db';
 import {
   drivers,
   driverWalletTransactions,
   cancellationCredits,
-} from '@/src/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
-import { logger } from '@/lib/logger';
+} from '../src/db/schema';
+import { eq, and, sql, lt } from 'drizzle-orm';
+import { logger } from './logger';
 
 const CREDIT_EXPIRY_DAYS = 30;
 
@@ -76,7 +76,7 @@ export async function expireCancellationCredits(): Promise<number> {
       .where(
         and(
           eq(cancellationCredits.status, 'pending'),
-          sql`${cancellationCredits.expires_at} < ${now}`,
+          lt(cancellationCredits.expires_at, now),
         ),
       )
       .for('update');
@@ -119,7 +119,7 @@ export async function expireCancellationCredits(): Promise<number> {
       .where(
         and(
           eq(cancellationCredits.status, 'pending'),
-          sql`${cancellationCredits.expires_at} < ${now}`,
+          lt(cancellationCredits.expires_at, now),
         ),
       );
 

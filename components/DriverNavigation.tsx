@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
 import MapLibreGL from "@/utils/maplibreLoader";
@@ -34,7 +35,7 @@ export default function DriverNavigation({ pickupLat, pickupLng, dropoffLat, dro
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) return;
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/navigation/route`, {
+        const res = await fetch(`${API_URL}/api/navigation/route`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ waypoints: [{ lat: pickupLat, lng: pickupLng }, { lat: dropoffLat, lng: dropoffLng }] }),

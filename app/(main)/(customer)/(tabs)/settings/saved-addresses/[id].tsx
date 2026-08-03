@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -30,7 +31,7 @@ export default function AddressDetail() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) { setError("Not authenticated"); setLoading(false); return; }
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/rider/addresses?id=${id}`, {
+        const res = await fetch(`${API_URL}/api/rider/addresses?id=${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -60,7 +61,7 @@ export default function AddressDetail() {
               const { data: { session } } = await supabase.auth.getSession();
               const token = session?.access_token;
               if (!token) { setError("Not authenticated"); setDeleting(false); return; }
-               const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/rider/addresses?id=${id}`, {
+               const res = await fetch(`${API_URL}/api/rider/addresses?id=${id}`, {
                  method: "DELETE",
                  headers: { Authorization: `Bearer ${token}` },
                });

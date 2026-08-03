@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -37,7 +38,7 @@ export default function Inbox() {
           setLoading(false);
           return;
         }
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/rider/notifications`, {
+        const res = await fetch(`${API_URL}/api/rider/notifications`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_URL } from '@/lib/config';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StatusBar } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -34,7 +35,7 @@ export default function RegisterScreen() {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/register`, {
+      const response = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

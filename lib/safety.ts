@@ -1,8 +1,8 @@
-import { db } from "@/src/db";
-import { rides, drivers, safetyAnomalies, users, userDevices, sosAlerts } from "@/src/db/schema";
+import { db } from "../src/db";
+import { rides, drivers, safetyAnomalies, users, userDevices, sosAlerts } from "../src/db/schema";
 import { eq, and, sql, lte, isNotNull } from "drizzle-orm";
-import { logger } from "@/lib/logger";
-import { sendSms } from "@/lib/dprelay";
+import { logger } from "./logger";
+import { sendSms } from "./dprelay";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 

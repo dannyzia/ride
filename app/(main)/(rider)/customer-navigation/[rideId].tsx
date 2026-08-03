@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, ActivityIndicator } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -16,7 +17,7 @@ export default function CustomerNavigationScreen() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) return;
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${rideId}`, {
+        const res = await fetch(`${API_URL}/api/ride/${rideId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {

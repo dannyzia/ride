@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "@/lib/config";
 import { useTranslation } from "react-i18next";
 import {
   View,
@@ -33,7 +34,7 @@ export default function PhoneEntryScreen() {
 
     try {
       const checkResponse = await fetch(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/api/auth/check-user`,
+        `${API_URL}/api/auth/check-user`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -79,7 +80,7 @@ export default function PhoneEntryScreen() {
 
     try {
       const checkResponse = await fetch(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/api/auth/check-user`,
+        `${API_URL}/api/auth/check-user`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

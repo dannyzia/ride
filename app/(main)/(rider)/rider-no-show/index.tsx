@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -16,7 +17,7 @@ export default function RiderNoShow() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) { Alert.alert("Error", "Not authenticated"); return; }
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${rideId}/no-show`, {
+      const res = await fetch(`${API_URL}/api/ride/${rideId}/no-show`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       });

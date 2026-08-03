@@ -1,4 +1,5 @@
 import { colors, spacing, radii } from "@/theme/goRide";
+import { API_URL, WS_URL } from "@/lib/config";
 import { SuccessCheckmark } from "@/components/SuccessCheckmark";
 import TollParkingModal from "@/components/TollParkingModal";
 import {
@@ -23,9 +24,6 @@ import CustomButton from "@/components/CustomButton";
 import RideLayout from "@/components/RideLayout";
 import { icons } from "@/constants/data";
 
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
-const WEBSOCKET_API_URL = process.env.EXPO_PUBLIC_WEB_SOCKET_SERVER_URL ?? "";
-
 const FinishRide = () => {
   const router = useRouter();
   const { user } = useSession();
@@ -46,7 +44,7 @@ const FinishRide = () => {
 
   useEffect(() => {
     if (!ws) {
-      const newWs = new WebSocket(WEBSOCKET_API_URL);
+      const newWs = new WebSocket(WS_URL);
       newWs.onopen = () => {};
       newWs.onerror = () => {};
       setWebSocket(newWs);

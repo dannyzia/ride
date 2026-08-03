@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, Modal } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
@@ -26,7 +27,7 @@ export default function TollParkingModal({ visible, rideId, onClose }: Props) {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) { Alert.alert("Error", "Not authenticated"); return; }
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/${rideId}/extra-charge`, {
+      const res = await fetch(`${API_URL}/api/ride/${rideId}/extra-charge`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ type: chargeType, amount_bdt: amountBdt, description: description.trim() || undefined }),

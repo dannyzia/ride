@@ -1,0 +1,26 @@
+---
+appId: com.ride.bd
+name: Rider Login (no clearState)
+tags: [rider-login]
+---
+- tapOn:
+    text: "1XXXXXXXXX"
+- eraseText
+- inputText: "1613249520"
+- tapOn:
+    text: "Rider"
+- tapOn:
+    text: "Login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn:
+    text: "Password"
+- eraseText
+- inputText: "test1234"
+- tapOn:
+    text: "Login"
+- extendedWaitUntil:
+    visible: "Search destination"
+    timeout: 30000
+- assertVisible: "Search destination"

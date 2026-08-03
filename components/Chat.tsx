@@ -2,9 +2,7 @@ import { colors } from '@/theme/goRide';
 import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
+import { API_URL } from '@/lib/config';
 
 interface ChatMessage {
   id: string;

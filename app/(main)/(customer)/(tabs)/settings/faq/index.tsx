@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -20,7 +21,7 @@ export default function SettingsFAQ() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/faqs?role=rider`);
+        const res = await fetch(`${API_URL}/api/faqs?role=rider`);
         const data = await res.json();
         if (!res.ok) { setError(data.error || "Failed"); return; }
         if (!cancelled) setFaqs(data.faqs ?? []);

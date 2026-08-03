@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -28,7 +29,7 @@ export default function DueAmounts() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) { setError("Not authenticated"); return; }
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/dues`, {
+        const res = await fetch(`${API_URL}/api/driver/dues`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const json = await res.json();

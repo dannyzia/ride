@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
@@ -30,7 +31,7 @@ export default function Ratings() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) { setError("Not authenticated"); return; }
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/ratings`, {
+      const res = await fetch(`${API_URL}/api/driver/ratings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) { setError("Failed to load ratings"); return; }

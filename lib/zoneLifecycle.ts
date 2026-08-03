@@ -1,8 +1,8 @@
-import { db } from "@/src/db";
-import { zones, zoneBudgets, zoneGraduationRules, rides, dispatchOffers, drivers } from "@/src/db/schema";
-import { eq, and, sql } from "drizzle-orm";
-import { logger } from "@/lib/logger";
-import { nextBdtMidnightUtc } from "@/lib/time";
+import { db } from "../src/db";
+import { zones, zoneBudgets, zoneGraduationRules, rides, dispatchOffers, drivers } from "../src/db/schema";
+import { eq, and, sql, gte, lt } from "drizzle-orm";
+import { logger } from "./logger";
+import { nextBdtMidnightUtc } from "./time";
 
 type LifecycleStage = "candidate" | "pilot" | "active" | "growth" | "mature" | "expansion" | "paused" | "closed";
 
@@ -44,7 +44,7 @@ export async function evaluateGraduation(): Promise<void> {
           .where(
             and(
               eq(rides.zone_id, zone.id),
-              sql`${rides.created_at} >= ${since}`,
+              gte(rides.created_at, since),
             ),
           )
           .limit(1);
@@ -65,8 +65,8 @@ export async function evaluateGraduation(): Promise<void> {
               and(
                 eq(rides.zone_id, zone.id),
                 eq(rides.status, "completed"),
-                sql`${rides.completed_at} >= ${since}`,
-                sql`${rides.completed_at} < ${new Date()}>`,
+                gte(rides.completed_at, since),
+                lt(rides.completed_at, new Date()),
               ),
             )
             .limit(1);
@@ -86,8 +86,8 @@ export async function evaluateGraduation(): Promise<void> {
             .where(
               and(
                 eq(rides.zone_id, zone.id),
-                sql`${dispatchOffers.sent_at} >= ${since}`,
-                sql`${dispatchOffers.sent_at} < ${new Date()}>`,
+                gte(dispatchOffers.sent_at, since),
+                lt(dispatchOffers.sent_at, new Date()),
               ),
             )
             .limit(1);
@@ -105,8 +105,8 @@ export async function evaluateGraduation(): Promise<void> {
               and(
                 eq(rides.zone_id, zone.id),
                 eq(rides.status, "completed"),
-                sql`${rides.completed_at} >= ${since}`,
-                sql`${rides.completed_at} < ${new Date()}>`,
+                gte(rides.completed_at, since),
+                lt(rides.completed_at, new Date()),
               ),
             )
             .limit(1);

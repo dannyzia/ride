@@ -1,4 +1,5 @@
 import { Image, Text, View, TextInput, TouchableOpacity, Alert } from "react-native";
+import { API_URL } from "@/lib/config";
 import { MaterialIcons } from "@expo/vector-icons";
 import RideLayout from "@/components/RideLayout";
 import { useCustomer } from "@/store";
@@ -14,7 +15,6 @@ import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
 
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
 
 const ConfirmRidePage = () => {

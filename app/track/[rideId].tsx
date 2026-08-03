@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import MapLibreGL from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle } from "@/utils/mapUtils";
 
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 const STATUS_LABELS: Record<string, string> = {
   scheduled: "Scheduled", pending: "Searching for driver", dispatching: "Searching for driver",
   matched: "Driver on the way", driver_arriving: "Driver arriving",

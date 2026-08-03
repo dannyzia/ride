@@ -1,7 +1,7 @@
-import { db } from "@/src/db";
-import { riderIntroConfigs, rides } from "@/src/db/schema";
+import { db } from "../src/db";
+import { riderIntroConfigs, rides } from "../src/db/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { nextBdtMidnightUtc } from "@/lib/time";
+import { nextBdtMidnightUtc } from "./time";
 
 export interface DiscountOption {
   type: "intro" | "promo" | "pass" | "wallet";

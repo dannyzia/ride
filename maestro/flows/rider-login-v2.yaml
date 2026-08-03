@@ -1,0 +1,23 @@
+---
+appId: com.ride.bd
+---
+- tapOn:
+    textField: "1XXXXXXXXX"
+- eraseText
+- inputText: "1613249520"
+- tapOn:
+    text: "Rider"
+- tapOn:
+    text: "Login"
+- wait: 10000
+- tapOn:
+    text: "Password"
+- eraseText
+- inputText: "test1234"
+- tapOn:
+    text: "Login"
+- wait: 10000
+- scrollUntil:
+    visible: "Search destination"
+    timeout: 30000
+    scrollTimes: 0

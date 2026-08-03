@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ActivityIndicator, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import * as Clipboard from "expo-clipboard";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
@@ -24,7 +24,7 @@ export default function DriverReferral() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) { setError("Not authenticated"); return; }
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/user/referral`, {
+      const res = await fetch(`${API_URL}/api/user/referral`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -41,7 +41,12 @@ export default function DriverReferral() {
   };
 
   const handleCopy = async () => {
-    await Clipboard.setStringAsync(code);
+    try {
+      const Clipboard = await import("expo-clipboard");
+      await Clipboard.setStringAsync(code);
+    } catch {
+      // expo-clipboard native module not linked in current dev build — no-op
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, TextInput, FlatList, ActivityIndicator, Alert, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -26,7 +27,7 @@ export default function RiderLostItems() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/rider/lost-items`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/rider/lost-items`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setItems((await res.json()).items ?? []);
     } catch (e) { setError("Failed to load. Pull down to refresh."); logger.error("Fetch lost items failed", e); }
     finally { setLoading(false); }
@@ -38,7 +39,7 @@ export default function RiderLostItems() {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
     if (token) {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/ride/get-all`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/api/ride/get-all`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setRecentRides((await res.json()).data ?? []);
     }
     setModalVisible(true);
@@ -50,7 +51,7 @@ export default function RiderLostItems() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/rider/lost-items`, {
+      const res = await fetch(`${API_URL}/api/rider/lost-items`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ride_id: selectedRideId, item_description: description.trim() }),
       });

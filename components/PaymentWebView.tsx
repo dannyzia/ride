@@ -8,9 +8,7 @@ import {
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { colors } from "@/theme/goRide";
-import Constants from "expo-constants";
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_SERVER_URL;
+import { API_URL } from "@/lib/config";
 
 interface PaymentWebViewProps {
   /** The PortPos checkout URL to load in the WebView */

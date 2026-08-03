@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, Switch, ActivityIndicator, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -17,7 +18,7 @@ export default function AutoAcceptSettings() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) return;
-        const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/me`, { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(`${API_URL}/api/driver/me`, { headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
           const data = await res.json();
           const d = data.driver ?? data;
@@ -36,7 +37,7 @@ export default function AutoAcceptSettings() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/driver/me`, {
+      await fetch(`${API_URL}/api/driver/me`, {
         method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ auto_accept_enabled: enabled, auto_accept_radius_meters: radiusNum }),
       });

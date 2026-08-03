@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { API_URL } from '@/lib/config';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StatusBar } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { logger } from '@/lib/logger';
@@ -22,7 +23,7 @@ export default function OtpVerifyScreen() {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/auth/send-otp`, {
+      const response = await fetch(`${API_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
@@ -68,7 +69,7 @@ export default function OtpVerifyScreen() {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/auth/verify-otp`, {
+      const response = await fetch(`${API_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, otp }),

@@ -39,26 +39,52 @@ const AutocompletePage = () => {
       return;
     }
 
-    const fetchPlaces = async () => {
+    const timeoutId = setTimeout(async () => {
       setLoading(true);
       try {
-        const url = getBarikoiAutocompleteUrl(
+        // ── Try Barikoi first ──────────────────────────────
+        const barikoiUrl = getBarikoiAutocompleteUrl(
           query,
           userLatitude ?? undefined,
           userLongitude ?? undefined,
         );
-        const response = await fetch(url);
-        const data = await response.json();
-        const places = data.places || data.data || [];
-        setSuggestions(places);
+        const barikoiRes = await fetch(barikoiUrl);
+        if (barikoiRes.ok) {
+          const data = await barikoiRes.json();
+          const places = data.places || data.data || [];
+          if (places.length > 0) {
+            setSuggestions(places);
+            return;
+          }
+        }
+
+        // ── Fallback: OpenStreetMap Nominatim (free, no key) ──
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=8&countrycodes=bd`;
+        const nomRes = await fetch(nominatimUrl, {
+          headers: { "User-Agent": "Ride-App/1.0" },
+        });
+        if (nomRes.ok) {
+          const nomData = await nomRes.json();
+          const places = nomData.map((item: any) => ({
+            latitude: item.lat,
+            longitude: item.lon,
+            address: item.display_name,
+            name: item.name || item.display_name.split(",")[0],
+          }));
+          setSuggestions(places);
+          return;
+        }
+
+        setSuggestions([]);
       } catch (error) {
         logger.error("Error fetching autocomplete:", error);
+        setSuggestions([]);
       } finally {
         setLoading(false);
       }
-    };
+    }, 400); // 400ms debounce to avoid spamming the API on every keystroke
 
-    fetchPlaces();
+    return () => clearTimeout(timeoutId);
   }, [query]);
 
   const handlePlaceSelect = (place: any) => {
@@ -78,10 +104,10 @@ const AutocompletePage = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-bgColor px-5">
+    <SafeAreaView className="flex-1 bg-goBgLight px-5">
       <TouchableOpacity
         onPress={() => router.back()}
-        className="flex justify-center items-center w-10 h-10 rounded-full bg-primaryTextColor"
+        className="flex justify-center items-center w-10 h-10 rounded-full bg-goSurfaceLight"
       >
         <Image source={icons.backArrow} className="w-5 h-5" />
       </TouchableOpacity>
@@ -91,28 +117,30 @@ const AutocompletePage = () => {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View className="mt-10 mb-6 items-center">
-          <Text className="text-primaryTextColor text-3xl font-bold text-center">
+          <Text className="text-goTextPrimaryLight text-3xl font-bold text-center">
             Where do you want to go?
           </Text>
         </View>
 
-        <View className="flex-row items-center bg-cardBgColor rounded-full px-4 py-3 mb-5">
+        <View className="flex-row items-center bg-goSurfaceLight rounded-full px-4 py-3 mb-5">
           <Image
             source={icons.search}
-            className="w-6 h-6 tint-primaryTextColor"
+            className="w-6 h-6"
+            style={{ tintColor: colors.textSecondaryLight }}
           />
           <TextInput
             placeholder="Search destination..."
-            placeholderTextColor={colors.adminSubtle}
+            placeholderTextColor={colors.textSecondaryLight}
             value={query}
             onChangeText={setQuery}
-            className="flex-1 text-primaryTextColor text-base ml-3"
+            className="flex-1 text-goTextPrimaryLight text-base ml-3"
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery("")}>
               <Image
                 source={icons.close}
-                className="w-5 h-5 ml-2 tint-primaryTextColor"
+                className="w-5 h-5 ml-2"
+                style={{ tintColor: colors.textSecondaryLight }}
               />
             </TouchableOpacity>
           )}
@@ -121,7 +149,7 @@ const AutocompletePage = () => {
         {loading && (
           <ActivityIndicator
             size="large"
-            color={colors.textDisabledDark}
+            color={colors.primary}
             className="mt-5"
           />
         )}
@@ -136,12 +164,12 @@ const AutocompletePage = () => {
           renderItem={({ item }) => (
             <TouchableOpacity
               onPress={() => handlePlaceSelect(item)}
-              className="p-4 border-b border-borderColor"
+              className="p-4 border-b border-goBorderLight"
             >
-              <Text className="text-primaryTextColor text-xl">
+              <Text className="text-goTextPrimaryLight text-xl">
                 {item.address ||
                   item.place_name ||
-                  item.description ||
+                  item.display_name ||
                   item.name}
               </Text>
             </TouchableOpacity>

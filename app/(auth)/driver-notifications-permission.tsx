@@ -1,12 +1,11 @@
 import { View, Text, TouchableOpacity, Platform } from "react-native";
+import { API_URL } from "@/lib/config";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState } from "react";
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-
-const API_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 
 async function registerPushToken() {
   try {
