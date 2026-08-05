@@ -1,4 +1,4 @@
-import { colors, spacing } from "@/theme/goRide";
+import { colors } from "@/theme/goRide";
 import { Tabs } from "expo-router";
 import {
   Image,
@@ -7,6 +7,7 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import { icons } from "@/constants/data";
+import { FloatingNavMenu } from "@/components/FloatingNavMenu";
 
 const TabIcon = ({
   focused,
@@ -50,55 +51,46 @@ const TabBarButton = ({ children, onPress }: any) => {
 
 export default function TabsLayout() {
   return (
-    <Tabs
-      initialRouteName="home/index"
-      screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondaryLight,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: {
-          fontFamily: "Inter",
-          fontSize: 11,
-          fontWeight: "600",
-          marginTop: 4,
-        },
-        tabBarStyle: {
-          backgroundColor: colors.surfaceLight,
-          borderTopLeftRadius: spacing["2xl"],
-          borderTopRightRadius: spacing["2xl"],
-          paddingTop: spacing.sm,
-          paddingBottom: spacing.md,
-          height: 84,
-          position: "absolute",
-          borderTopWidth: 1,
-          borderTopColor: colors.borderLight,
-          shadowColor: colors.black,
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
-          elevation: 12,
-        },
-      }}
-    >
-      {[
-        { name: "home/index", icon: icons.home, label: "Home" },
-        { name: "rides/index", icon: icons.list, label: "Activity" },
-        { name: "chat/index", icon: icons.chat, label: "Chat" },
-        { name: "profile/index", icon: icons.profile, label: "Account" },
-      ].map(({ name, icon, label }) => (
-        <Tabs.Screen
-          key={name}
-          name={name}
-          options={{
-            headerShown: false,
-            tabBarLabel: label,
-            tabBarIcon: ({ focused }) => (
-              <TabIcon focused={focused} source={icon} />
-            ),
-            tabBarButton: (props) => <TabBarButton {...props} />,
-          }}
-        />
-      ))}
-    </Tabs>
+    <View style={{ flex: 1 }}>
+      <Tabs
+        initialRouteName="home/index"
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textSecondaryLight,
+          tabBarShowLabel: true,
+          tabBarLabelStyle: {
+            fontFamily: "Jakarta-Regular",
+            fontSize: 11,
+            fontWeight: "600",
+            marginTop: 4,
+          },
+          tabBarStyle: {
+            display: "none",
+          },
+        }}
+      >
+        {[
+          { name: "home/index", icon: icons.home, label: "Home" },
+          { name: "rides/index", icon: icons.list, label: "Activity" },
+          { name: "chat/index", icon: icons.chat, label: "Chat" },
+          { name: "profile/index", icon: icons.profile, label: "Account" },
+        ].map(({ name, icon, label }) => (
+          <Tabs.Screen
+            key={name}
+            name={name}
+            options={{
+              headerShown: false,
+              tabBarLabel: label,
+              tabBarIcon: ({ focused }) => (
+                <TabIcon focused={focused} source={icon} />
+              ),
+              tabBarButton: (props) => <TabBarButton {...props} />,
+            }}
+          />
+        ))}
+      </Tabs>
+      <FloatingNavMenu variant="customer" />
+    </View>
   );
 }

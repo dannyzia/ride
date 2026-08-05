@@ -1,3 +1,4 @@
+// Zone validation: lib/zone.ts has Bangladesh fallback polygon
 import { db } from "@/src/db";
 import {
   users,
@@ -61,9 +62,6 @@ export async function POST(request: Request) {
       return Response.json({ error: "user_not_found" }, { status: 404 });
     if (user.role !== "rider")
       return Response.json({ error: "forbidden" }, { status: 403 });
-
-    // M2: Advisory lock prevents concurrent ride creation for the same user
-    await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext('ride_request_' || ${user.id}))`);
 
     const parsed = await parseJsonBody(request, requestSchema);
     if (!parsed.ok) return parsed.response;
@@ -356,6 +354,8 @@ export async function POST(request: Request) {
 
     let rideId = "";
     await db.transaction(async (tx) => {
+      // M2: Advisory lock prevents concurrent ride creation for the same user
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('ride_request_' || ${user.id}))`);
       const [ride] = await tx
         .insert(rides)
         .values({

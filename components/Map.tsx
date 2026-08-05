@@ -9,7 +9,6 @@ import { useSession } from "@/lib/session";
 import {
   useBarikoiMapStyle,
   createBarikoiClient,
-  DEFAULT_COORDINATES,
 } from "@/utils/mapUtils";
 import MapLibreGL from "@/utils/maplibreLoader";
 
@@ -150,9 +149,17 @@ const Map = () => {
     Keyboard.dismiss();
   };
 
-  // Use user location if available, fall back to Dhaka city center
-  const displayLat = userLatitude ?? DEFAULT_COORDINATES.latitude;
-  const displayLng = userLongitude ?? DEFAULT_COORDINATES.longitude;
+  // No GPS fallback — only render the map when we have real coordinates
+  const displayLat = userLatitude;
+  const displayLng = userLongitude;
+
+  if (displayLat == null || displayLng == null) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", borderRadius: 16, backgroundColor: colors.gray100 }}>
+        <Text className="text-sm text-goTextSecondaryLight">Waiting for GPS...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>

@@ -41,7 +41,7 @@ const ErrorFindDriver = () => {
                 title='Find Other'
                 className='w-7/12 mt-10'
                 bgVariant='secondary'
-                onPress={() => router.replace('/(main)/book-ride')}
+                onPress={() => router.replace('/(main)/(customer)/book-ride')}
             />
         </View>
     );

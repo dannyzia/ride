@@ -30,6 +30,7 @@ import {
   dispatchOffers,
   driverOnlineSessions,
   subscriptions,
+  callLedger,
   pricing,
   userDevices,
   notifications as notifTable,
@@ -207,6 +208,8 @@ const server = http.createServer(async (req, res) => {
           writeJson(400, { error: "missing_ride_id" });
           return;
         }
+
+        logger.info('[dispatch] received dispatch request', { ride_id, allow_downgrade });
 
         if (await isDispatchPaused()) {
           logger.warn("[dispatch] paused via system_config, rejecting ride", {
@@ -444,25 +447,57 @@ wss.on("connection", (ws: WebSocket) => {
 
             if (role === "driver") {
               const [driver] = await db
-                .select({ id: drivers.id, h3_cell_res9: drivers.h3_cell_res9, vehicle_type: drivers.vehicle_type })
+                .select({
+                  id: drivers.id,
+                  status: drivers.status,
+                  h3_cell_res9: drivers.h3_cell_res9,
+                  vehicle_type: drivers.vehicle_type,
+                  last_location_lat: drivers.last_location_lat,
+                  last_location_lng: drivers.last_location_lng,
+                })
                 .from(drivers)
                 .where(eq(drivers.user_id, user.id))
                 .limit(1);
               if (driver) {
+                // BUG-R2 FIX: Reject non-active drivers on WS reconnect too
+                if (driver.status !== 'active') {
+                  send(ws, { type: "auth:error", message: "account_not_approved" });
+                  logger.warn("[ws] driver auth rejected — not active", {
+                    userId: user.id,
+                    driverId: driver.id,
+                    status: driver.status,
+                  });
+                  return;
+                }
                 client.driverId = driver.id;
                 connectedDrivers.set(driver.id, client);
 
-                // Re-online driver on WS reconnect. Handles the case where
-                // handleDriverDisconnect set is_online=false during a previous
-                // ride-flow disconnect (backgrounding, navigation). Immediately
-                // adds to the H3 index so dispatch finds the driver without
-                // waiting for the next periodic refresh (up to 30s away).
+                // Re-online driver on WS reconnect.
                 await db.update(drivers)
                   .set({ is_online: true, updated_at: new Date() })
                   .where(eq(drivers.id, driver.id));
-                if (driver.h3_cell_res9) {
-                  updateDriver(driver.id, driver.h3_cell_res9, driver.vehicle_type);
+
+                // BUG FIX: Index driver immediately — don't wait for first heartbeat.
+                // If h3_cell_res9 is NULL, compute from last known GPS coordinates.
+                let cell = driver.h3_cell_res9;
+                if (!cell && driver.last_location_lat != null && driver.last_location_lng != null) {
+                  cell = getH3Cell(
+                    Number(driver.last_location_lat),
+                    Number(driver.last_location_lng),
+                  );
+                  // Persist the computed cell so refreshH3Index finds it too
+                  await db.update(drivers)
+                    .set({ h3_cell_res9: cell })
+                    .where(eq(drivers.id, driver.id));
                 }
+                if (cell) {
+                  updateDriver(driver.id, cell, driver.vehicle_type);
+                }
+                logger.info("[ws] driver indexed on auth", {
+                  driverId: driver.id,
+                  cell,
+                  hasGps: driver.last_location_lat != null,
+                });
               }
             } else {
               connectedRiders.set(user.id, client);
@@ -513,6 +548,7 @@ wss.on("connection", (ws: WebSocket) => {
         }
 
         const cell = getH3Cell(lat, lng);
+        logger.info('[ws] heartbeat', { driverId: client.driverId, lat, lng, cell });
 
         // Always update in-memory H3 index for accurate dispatch scoring
         const [driverRow] = await db
@@ -738,6 +774,27 @@ wss.on("connection", (ws: WebSocket) => {
             .where(and(eq(rides.id, rideId), eq(rides.status, "dispatching")))
             .returning({ id: rides.id });
           if (!updatedRide) {
+            // Refund the losing driver's call deduction. The deduction happens
+            // at fetch:confirm (before offer:accept), so a concurrent acceptor
+            // that wins the race leaves this driver out of pocket otherwise.
+            try {
+              const [deductionRow] = await db.select({ id: callLedger.id, subscription_id: callLedger.subscription_id })
+                .from(callLedger)
+                .where(and(
+                  eq(callLedger.ride_id, rideId),
+                  eq(callLedger.driver_id, client.driverId),
+                  eq(callLedger.event_type, 'deduction'),
+                )).limit(1);
+              if (deductionRow) {
+                await db.delete(callLedger).where(eq(callLedger.id, deductionRow.id));
+                await db.update(subscriptions)
+                  .set({ calls_remaining: sql`${subscriptions.calls_remaining} + 1` })
+                  .where(eq(subscriptions.id, deductionRow.subscription_id));
+                logger.info('[ws] refunded losing driver deduction', { rideId, driverId: client.driverId });
+              }
+            } catch (e: any) {
+              logger.error('[ws] refund failed for losing driver', { rideId, driverId: client.driverId, error: e.message });
+            }
             send(ws, { type: "offer:rejected", ride_id: rideId, reason: "already_assigned" });
             return;
           }
@@ -1043,24 +1100,28 @@ wss.on("connection", (ws: WebSocket) => {
 // ── Disconnect Handler ─────────────────────────────────────────────────────
 async function handleDisconnect(client: WSClient) {
   if (client.driverId) {
-    await handleDriverDisconnect(client.driverId);
+    // BUG FIX: Only tear down if THIS socket is still the registered one.
+    // A newer reconnect will have replaced the map entry — don't wipe it.
+    if (connectedDrivers.get(client.driverId) === client) {
+      await handleDriverDisconnect(client.driverId);
+      connectedDrivers.delete(client.driverId);
+    }
   }
   if (client.role === "rider" && client.userId) {
-    connectedRiders.delete(client.userId);
-    // Cancel orphaned dispatching rides on rider disconnect
-    await db
-      .update(rides)
-      .set({ status: "cancelled", cancelled_by: "system" })
-      .where(
-        and(
-          eq(rides.user_id, client.userId),
-          eq(rides.status, "dispatching"),
-        ),
-      );
-  }
-  if (client.driverId) {
-    connectedDrivers.delete(client.driverId);
-    // Don't remove from H3 index on disconnect — periodic refresh handles cleanup
+    // Same guard for riders
+    if (connectedRiders.get(client.userId) === client) {
+      connectedRiders.delete(client.userId);
+      // Cancel orphaned dispatching rides on rider disconnect
+      await db
+        .update(rides)
+        .set({ status: "cancelled", cancelled_by: "system" })
+        .where(
+          and(
+            eq(rides.user_id, client.userId),
+            eq(rides.status, "dispatching"),
+          ),
+        );
+    }
   }
   logger.info("[ws] connection closed", {
     userId: client.userId,
@@ -1083,11 +1144,14 @@ async function handleDriverDisconnect(driverId: string) {
       ),
     );
 
-  // M1: Mark driver offline to prevent ghost entries in candidate pool
-  await db
-    .update(drivers)
-    .set({ is_online: false, updated_at: new Date() })
-    .where(eq(drivers.id, driverId));
+  // M1: Mark driver offline to prevent ghost entries in candidate pool.
+  // BUG FIX: Only flip is_online if no live connection exists (reconnect race).
+  if (!connectedDrivers.has(driverId)) {
+    await db
+      .update(drivers)
+      .set({ is_online: false, updated_at: new Date() })
+      .where(eq(drivers.id, driverId));
+  }
 }
 
 // ── Push Notification Helper (Expo Push API — no SDK needed) ───────────────
@@ -1174,8 +1238,25 @@ async function dispatchRidePipeline(
   const riderRating = rider?.rating != null ? Number(rider.rating) : null;
   const isScheduled = ride.scheduled_at != null;
 
-  const pickupLat = parseFloat(ride.origin_latitude?.toString() ?? "0");
-  const pickupLng = parseFloat(ride.origin_longitude?.toString() ?? "0");
+  const pickupLat = parseFloat(ride.origin_latitude?.toString() ?? "");
+  const pickupLng = parseFloat(ride.origin_longitude?.toString() ?? "");
+
+  // Abort if origin coordinates are missing/invalid — dispatching to (0,0)
+  // would search the Atlantic Ocean for drivers.
+  if (isNaN(pickupLat) || isNaN(pickupLng) || (pickupLat === 0 && pickupLng === 0)) {
+    logger.error('[dispatch] ride has invalid origin coordinates, aborting pipeline', {
+      ride_id: ride.id,
+      origin_latitude: ride.origin_latitude,
+      origin_longitude: ride.origin_longitude,
+    });
+    await db.update(rides).set({ status: 'expired' }).where(eq(rides.id, ride.id));
+    sendToRider(ride.user_id, {
+      type: 'ride:expired',
+      ride_id: ride.id,
+      reason: 'invalid_pickup_coordinates',
+    });
+    return;
+  }
 
   let batchIndex = 0;
 
@@ -1217,7 +1298,30 @@ async function dispatchRidePipeline(
       );
     }
 
+    // Check if auto-accept already matched the ride inside scoreAndBatchDrivers.
+    // Auto-accept returns [] and sets the ride to 'matched' + start_pin; this
+    // path notifies the rider (sendToRider lives here, not in dispatch.ts) and
+    // exits before inserting more dispatch_offers for an already-matched ride.
+    const [currentRide] = await db.select({
+      status: rides.status, driver_id: rides.driver_id, start_pin: rides.start_pin, user_id: rides.user_id,
+    }).from(rides).where(eq(rides.id, ride.id)).limit(1);
+    if (currentRide?.status === 'matched' && currentRide.driver_id) {
+      const [driverRow] = await db.select({
+        name: users.name, phone: users.phone, rating: drivers.rating, vehicle_type: drivers.vehicle_type,
+      }).from(drivers).innerJoin(users, eq(users.id, drivers.user_id))
+        .where(eq(drivers.id, currentRide.driver_id)).limit(1);
+      sendToRider(currentRide.user_id, {
+        type: "ride:status", ride_id: ride.id, status: "matched",
+        pin: currentRide.start_pin,
+        ride: { driver: { name: driverRow?.name ?? "", phone: driverRow?.phone ?? "",
+          rating: driverRow?.rating != null ? parseFloat(driverRow.rating) : null,
+          vehicle_type: driverRow?.vehicle_type ?? "" } },
+      });
+      return;
+    }
+
     if (scored.length === 0) {
+      if (batch < MAX_BATCHES) continue; // Try next batch — a driver may come online
       await handleNoDrivers(ride, allowDowngrade);
       return;
     }
@@ -1246,7 +1350,7 @@ async function dispatchRidePipeline(
         last_location_lng: drivers.last_location_lng,
       })
       .from(drivers)
-      .where(sql`${drivers.id} IN ${scoredDriverIds}`);
+      .where(inArray(drivers.id, scoredDriverIds));
     const locMap = new Map(driverLocRows.map((d) => [d.id, d]));
 
     // Fetch stop addresses once per ride (avoid N+1 in driver loop)
@@ -1345,7 +1449,18 @@ async function handleNoDrivers(
       alternatives.push({
         vehicle_type: vt,
         fare_breakdown: calculateFare(
-          pricingRow,
+          {
+            base_fare_bdt: pricingRow.base_fare_bdt,
+            per_km_bdt: pricingRow.per_km_bdt,
+            intercity_per_km_bdt: pricingRow.intercity_per_km_bdt ?? 0,
+            per_min_bdt: pricingRow.per_min_bdt,
+            floor_length_km: Number(pricingRow.floor_length_km ?? 0),
+            floor_min: pricingRow.floor_min ?? 0,
+            brta_fare_ceiling_bdt: pricingRow.brta_fare_ceiling_bdt,
+            platform_commission_percent: Number(
+              pricingRow.platform_commission_percent ?? 0,
+            ),
+          },
           parseFloat(ride.distance_km?.toString() ?? "0"),
           0,
           undefined,
@@ -1416,14 +1531,18 @@ async function startup() {
     }
     for (const [driverId, client] of connectedDrivers) {
       if (client.lastSeen && now - client.lastSeen > STALE_DRIVER_TIMEOUT_MS) {
+        // BUG-R3 FIX: Full cleanup — remove from H3 index + mark offline in DB
         connectedDrivers.delete(driverId);
+        removeDriver(driverId);
+        handleDriverDisconnect(driverId).catch(() => {});
+        logger.info("[ws] stale driver evicted", { driverId });
       }
     }
   }, CLEANUP_INTERVAL_MS);
 
   const PORT = parseInt(process.env.UTILS_SERVER_PORT ?? "3001");
-  server.listen(PORT, () =>
-    logger.info(`[ws] dispatch server listening on :${PORT}`),
+  server.listen(PORT, "0.0.0.0", () =>
+    logger.info(`[ws] dispatch server listening on 0.0.0.0:${PORT}`),
   );
 }
 

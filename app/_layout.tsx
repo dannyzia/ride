@@ -1,5 +1,5 @@
 import "../global.css";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Platform, View, ActivityIndicator, Appearance } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useFonts } from "expo-font";
@@ -43,6 +43,10 @@ if (!isWeb) {
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
+  const segmentsRef = useRef(segments);
+  useEffect(() => {
+    segmentsRef.current = segments;
+  }, [segments]);
   const [initializing, setInitializing] = useState(true);
   const [splashVisible, setSplashVisible] = useState(!isWeb);
 
@@ -84,10 +88,10 @@ export default function RootLayout() {
 
           if (res.ok) {
             const data = await res.json();
-            const inAuthGroup = segments[0] === "(auth)";
+            const inAuthGroup = segmentsRef.current[0] === "(auth)";
             // Allow admin routes through — the admin layout has its own
             // auth guard (role === "admin"). Do NOT redirect admin here.
-            const isAdminRoute = segments[0] === "admin";
+            const isAdminRoute = segmentsRef.current[0] === "admin";
             // Register push token after successful auth (fire-and-forget)
             registerPushForUser(session.access_token).catch(() => {});
 
@@ -100,17 +104,24 @@ export default function RootLayout() {
             } else if (!data.exists && !isAdminRoute) {
               router.replace("/(auth)/phone-entry");
             }
-          } else if (segments[0] !== "admin") {
-            router.replace("/(auth)/phone-entry");
+          } else if (res.status === 401 || res.status === 403) {
+            // Actual auth failure — sign out and redirect
+            if (segmentsRef.current[0] !== "admin") {
+              router.replace("/(auth)/phone-entry");
+            }
+          } else {
+            // 5xx / network error — do NOT log the user out, just log.
+            // The next auth event or app restart will retry.
+            logger.warn(`[auth] verify-token failed with status ${res.status} — keeping session`);
           }
         } catch {
-          if (segments[0] !== "admin") {
-            router.replace("/(auth)/phone-entry");
-          }
+          // Network error — do NOT log the user out. The next auth event
+          // or app restart will retry.
+          logger.warn("[auth] verify-token network error — keeping session");
         }
       } else {
-        const inAuthGroup = segments[0] === "(auth)";
-        const isAdminRoute = segments[0] === "admin";
+        const inAuthGroup = segmentsRef.current[0] === "(auth)";
+        const isAdminRoute = segmentsRef.current[0] === "admin";
         // Only redirect to auth for non-auth, non-admin routes.
         // Admin routes handle their own authentication.
         if (!inAuthGroup && !isAdminRoute) {
@@ -124,7 +135,8 @@ export default function RootLayout() {
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, [router, API_URL]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded && !isWeb) SplashScreen.hideAsync().catch(() => {});

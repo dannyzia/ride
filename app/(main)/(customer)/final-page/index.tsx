@@ -44,6 +44,8 @@ export default function FinalPage() {
   const [driverEta, setDriverEta] = useState<number | null>(null);
   const [ridePin, setRidePin] = useState<string | null>(null);
   const wsSubscribedRef = useRef(false);
+  const rideStatusRef = useRef(rideStatus);
+  useEffect(() => { rideStatusRef.current = rideStatus; }, [rideStatus]);
 
   const vehicleDef = activeRide?.vehicle_type
     ? VEHICLE_TYPES.find((v) => v.key === (activeRide.vehicle_type as any))
@@ -54,9 +56,9 @@ export default function FinalPage() {
     const rideId = searchingRideId || activeRide?.id;
     if (
       !rideId ||
-      rideStatus === "completed" ||
-      rideStatus === "cancelled" ||
-      rideStatus === "expired"
+      rideStatusRef.current === "completed" ||
+      rideStatusRef.current === "cancelled" ||
+      rideStatusRef.current === "expired"
     ) {
       wsSubscribedRef.current = false;
       return;
@@ -97,6 +99,13 @@ export default function FinalPage() {
             if (msg.eta_minutes != null) setDriverEta(msg.eta_minutes);
             break;
           }
+          case "ride_completed": {
+            setRideStatus("completed");
+            if (msg.fare_breakdown) {
+              patchActiveRide({ fare_breakdown: msg.fare_breakdown });
+            }
+            break;
+          }
         }
       } catch {
         // Ignore non-JSON messages
@@ -116,7 +125,57 @@ export default function FinalPage() {
       wsSubscribedRef.current = false;
       clearInterval(elapsedInt);
     };
-  }, [searchingRideId, activeRide?.id, rideStatus, ws]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchingRideId, activeRide?.id, ws]);
+
+  // One-shot REST fallback: hydrate ride status from the DB on mount in case
+  // the WS ride:status event was missed during a dropped/reconnected socket.
+  useEffect(() => {
+    const rideId = searchingRideId || activeRide?.id;
+    if (
+      !rideId ||
+      rideStatus === "completed" ||
+      rideStatus === "cancelled" ||
+      rideStatus === "expired"
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+
+        const res = await fetch(`${API_URL}/api/rider/ride/active`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const ride = data?.ride;
+        if (!ride || cancelled) return;
+
+        if (
+          ride.status === "matched" ||
+          ride.status === "driver_arrived" ||
+          ride.status === "driver_arriving" ||
+          ride.status === "in_progress"
+        ) {
+          if (ride.driver) patchActiveRide({ driver: ride.driver });
+          setRideStatus(mapStatus(ride.status));
+        }
+      } catch {
+        // Non-blocking: WebSocket is the primary source of truth.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchingRideId, activeRide?.id]);
 
   const handleShare = useCallback(async () => {
     const rideId = searchingRideId || activeRide?.id;
@@ -204,60 +263,66 @@ export default function FinalPage() {
         className="w-full rounded-2xl overflow-hidden border border-goBorderLight dark:border-goBorderDark mb-4"
         style={{ height: height * 0.35 }}
       >
-        <MapLibreGL.MapView
-          style={{ flex: 1 }}
-          styleURL={MAP_STYLE}
-          logoEnabled={false}
-          attributionEnabled={false}
-          scrollEnabled
-          pitchEnabled={false}
-          rotateEnabled={false}
-          {...({} as any)}
-        >
-          <MapLibreGL.Camera
-            centerCoordinate={
-              driverLat != null && driverLng != null
-                ? [driverLng, driverLat]
-                : activeRide?.origin_latitude != null &&
-                    activeRide?.origin_longitude != null
-                  ? [
-                      parseFloat(activeRide.origin_longitude.toString()),
-                      parseFloat(activeRide.origin_latitude.toString()),
-                    ]
-                  : [90.4125, 23.8103] // Dhaka fallback so the map never opens on null island / Africa
-            }
-            zoomLevel={15}
-            animationDuration={500}
-          />
-          {/* Driver pin */}
-          {driverLat != null && driverLng != null && (
-            <MapLibreGL.PointAnnotation
-              id="driver-location"
-              coordinate={[driverLng, driverLat]}
-            >
-              <View className="w-10 h-10 rounded-full bg-goAccent/20 items-center justify-center">
-                <View className="w-6 h-6 rounded-full bg-goAccent items-center justify-center">
-                  <Text className="text-white text-xs">🚗</Text>
-                </View>
-              </View>
-            </MapLibreGL.PointAnnotation>
-          )}
-          {/* Pickup marker */}
-          {activeRide?.origin_latitude != null &&
-            activeRide?.origin_longitude != null && (
+        {MapLibreGL && MapLibreGL.MapView ? (
+          <MapLibreGL.MapView
+            style={{ flex: 1 }}
+            styleURL={MAP_STYLE}
+            logoEnabled={false}
+            attributionEnabled={false}
+            scrollEnabled
+            pitchEnabled={false}
+            rotateEnabled={false}
+            {...({} as any)}
+          >
+            <MapLibreGL.Camera
+              centerCoordinate={
+                driverLat != null && driverLng != null
+                  ? [driverLng, driverLat]
+                  : activeRide?.origin_latitude != null &&
+                      activeRide?.origin_longitude != null
+                    ? [
+                        parseFloat(activeRide.origin_longitude.toString()),
+                        parseFloat(activeRide.origin_latitude.toString()),
+                      ]
+                    : undefined
+              }
+              zoomLevel={15}
+              animationDuration={500}
+            />
+            {/* Driver pin */}
+            {driverLat != null && driverLng != null && (
               <MapLibreGL.PointAnnotation
-                id="pickup"
-                coordinate={[
-                  parseFloat(activeRide.origin_longitude.toString()),
-                  parseFloat(activeRide.origin_latitude.toString()),
-                ]}
+                id="driver-location"
+                coordinate={[driverLng, driverLat]}
               >
-                <View className="w-6 h-6 rounded-full bg-green-500 items-center justify-center">
-                  <Text className="text-white text-xs">●</Text>
+                <View className="w-10 h-10 rounded-full bg-goAccent/20 items-center justify-center">
+                  <View className="w-6 h-6 rounded-full bg-goAccent items-center justify-center">
+                    <Text className="text-white text-xs">🚗</Text>
+                  </View>
                 </View>
               </MapLibreGL.PointAnnotation>
             )}
-        </MapLibreGL.MapView>
+            {/* Pickup marker */}
+            {activeRide?.origin_latitude != null &&
+              activeRide?.origin_longitude != null && (
+                <MapLibreGL.PointAnnotation
+                  id="pickup"
+                  coordinate={[
+                    parseFloat(activeRide.origin_longitude.toString()),
+                    parseFloat(activeRide.origin_latitude.toString()),
+                  ]}
+                >
+                  <View className="w-6 h-6 rounded-full bg-green-500 items-center justify-center">
+                    <Text className="text-white text-xs">●</Text>
+                  </View>
+                </MapLibreGL.PointAnnotation>
+              )}
+          </MapLibreGL.MapView>
+        ) : (
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            <Text>Map unavailable</Text>
+          </View>
+        )}
         {/* ETA overlay */}
         {driverEta != null && (
           <View className="absolute top-3 left-3 bg-white dark:bg-goSurfaceElevatedDark dark:bg-goSurfaceElevatedDark/90 rounded-full px-3 py-1.5 shadow-sm">

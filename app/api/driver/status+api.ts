@@ -3,10 +3,13 @@ import { drivers, users } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { getH3Cell } from '@/lib/h3';
 import { z } from 'zod';
 
 const statusSchema = z.object({
   is_online: z.boolean(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
 });
 
 export async function POST(request: Request) {
@@ -22,12 +25,33 @@ export async function POST(request: Request) {
       return Response.json({ error: 'validation_error' }, { status: 400 });
     }
 
-    const { is_online } = parsed.data;
+    const { is_online, lat, lng } = parsed.data;
 
-    await db.update(drivers)
-      .set({ is_online, updated_at: new Date() })
-      .where(eq(drivers.user_id, user.id));
+    // BUG 6 FIX: Reject going online if driver not approved
+    if (is_online) {
+      const [driver] = await db.select({ id: drivers.id, status: drivers.status })
+        .from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
+      if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });
+      if (driver.status !== 'active') {
+        return Response.json({
+          error: 'not_approved',
+          message: `Your account status is "${driver.status}". Only "active" drivers can go online.`,
+        }, { status: 403 });
+      }
+    }
 
+    // BUG 7 FIX: Save location and compute H3 cell when going online
+    const setClause: Record<string, unknown> = { is_online, updated_at: new Date() };
+    if (is_online && typeof lat === 'number' && typeof lng === 'number') {
+      setClause.last_location_lat = String(lat);
+      setClause.last_location_lng = String(lng);
+      setClause.last_location_at = new Date();
+      setClause.h3_cell_res9 = getH3Cell(lat, lng);
+    }
+
+    await db.update(drivers).set(setClause).where(eq(drivers.user_id, user.id));
+
+    logger.info('[driver/status] updated', { userId: user.id, is_online, hasGps: lat != null });
     return Response.json({ success: true, is_online });
 
   } catch (err: any) {

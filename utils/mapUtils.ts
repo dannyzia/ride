@@ -1,5 +1,6 @@
 import { setConfig } from "barikoiapis";
 import { Platform } from "react-native";
+import { logger } from "@/lib/logger";
 
 // ── Barikoi client initialiser (client-side) ───────────────
 
@@ -7,7 +8,7 @@ const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
 
 export function createBarikoiClient(): void {
   if (!BARIKOI_API_KEY) {
-    console.warn("[mapUtils] BARIKOI_API_KEY not configured");
+    logger.warn("[mapUtils] BARIKOI_API_KEY not configured");
     return;
   }
   setConfig({ apiKey: BARIKOI_API_KEY, version: "v1" });
@@ -16,9 +17,9 @@ export function createBarikoiClient(): void {
 // ── Map style presets ───────────────────────────────────────
 
 export const BARIKOI_DARK_STYLE =
-  "https://tiles.barikoi.com/styles/barikoi-dark/style.json";
+  `https://map.barikoi.com/styles/barikoi-dark/style.json?key=${BARIKOI_API_KEY}`;
 export const BARIKOI_LIGHT_STYLE =
-  "https://tiles.barikoi.com/styles/barikoi-light/style.json";
+  `https://map.barikoi.com/styles/osm-liberty/style.json?key=${BARIKOI_API_KEY}`;
 
 export interface MapStylePreset {
   dark: string;
@@ -30,22 +31,8 @@ export const MAP_STYLE_PRESETS: MapStylePreset = {
   light: BARIKOI_LIGHT_STYLE,
 };
 
-// ── Dhaka defaults ─────────────────────────────────────────
-
-export const DEFAULT_COORDINATES = {
-  latitude: 23.8103,
-  longitude: 90.4125,
-};
-
-export const CAMERA_CONFIG = {
-  centerCoordinate: [
-    DEFAULT_COORDINATES.longitude,
-    DEFAULT_COORDINATES.latitude,
-  ] as [number, number],
-  zoomLevel: 12,
-};
-
-// ── Hook for theme-aware map style ─────────────────────────
+// No default coordinates — GPS must be resolved before rendering maps.
+// If GPS is unavailable, show a loading state or error, never fake coordinates.
 
 export function useBarikoiMapStyle(dark = false): string {
   return dark ? MAP_STYLE_PRESETS.dark : MAP_STYLE_PRESETS.light;

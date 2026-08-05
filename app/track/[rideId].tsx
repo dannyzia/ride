@@ -82,12 +82,14 @@ export default function PublicTrackPage() {
           )}
         </View>
         <View className="flex-1 rounded-xl overflow-hidden">
-          {MapLibreGL && MapLibreGL.MapView ? (
+          {MapLibreGL && MapLibreGL.MapView && data.origin_lat != null && data.origin_lng != null ? (
             <MapLibreGL.MapView style={{ flex: 1 }} styleURL={mapStyleUrl}
-              centerCoordinate={[Number(data.origin_lng ?? 90.4125), Number(data.origin_lat ?? 23.8103)]} zoomLevel={12} />
+              centerCoordinate={[Number(data.origin_lng), Number(data.origin_lat)]} zoomLevel={12} />
           ) : (
             <View className="flex-1 bg-goGray100 dark:bg-goBgDark items-center justify-center rounded-xl">
-              <Text className="text-goTextSecondaryLight font-Jakarta">Map View</Text>
+              <Text className="text-goTextSecondaryLight font-Jakarta">
+                {data.origin_lat == null || data.origin_lng == null ? "Location unavailable" : "Map View"}
+              </Text>
             </View>
           )}
         </View>

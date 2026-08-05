@@ -37,6 +37,7 @@ const ConfirmRidePage = () => {
     selectedPrefIds,
     selectedDiscount,
     setSelectedDiscount,
+    stops: storeStops,
   } = useRiderStore();
   const [rideDuration, setRideDuration] = useState<string>("");
   const [rideDistance, setRideDistance] = useState<string>("");
@@ -45,7 +46,7 @@ const ConfirmRidePage = () => {
   const [otherName, setOtherName] = useState("");
   const [otherPhone, setOtherPhone] = useState("");
   const [upfrontTip, setUpfrontTip] = useState(0);
-  const [stops, setStops] = useState<{ lat: number; lng: number; address: string }[]>([]);
+  const [stops, setStops] = useState<{ lat: number; lng: number; address: string }[]>(storeStops);
   const [showStopModal, setShowStopModal] = useState(false);
   const [preferFemale, setPreferFemale] = useState(false);
   const [refreshedEstimate, setRefreshedEstimate] = useState<FareEstimate | null>(null);

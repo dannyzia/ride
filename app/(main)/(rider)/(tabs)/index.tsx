@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Alert, TextInput, Modal } from "react-native";
+import { View, Text, TouchableOpacity, Alert, TextInput, Modal, Animated } from "react-native";
 import { API_URL, WS_URL } from "@/lib/config";
 import { MaterialIcons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState, useCallback } from "react";
@@ -7,16 +7,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Location from "expo-location";
 import { supabase } from "@/lib/supabase";
-import { useTranslation } from "react-i18next";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useRideOfferStore, useWSStore } from "@/store";
 import CustomButton from "@/components/CustomButton";
 import SOSButton from "@/components/SOSButton";
 import RideOfferSheet from "@/components/RideOfferSheet";
+import ScreenLabel from "@/components/ScreenLabel";
 import { colors } from "@/theme/goRide";
 import MapLibreGL from "@/utils/maplibreLoader";
-import { useBarikoiMapStyle, DEFAULT_COORDINATES } from "@/utils/mapUtils";
+import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { logger } from "@/lib/logger";
 
 export default function DriverHome() {
@@ -45,6 +45,42 @@ export default function DriverHome() {
   const [goal, setGoal] = useState(100000);
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [goalInput, setGoalInput] = useState("1000");
+  const [locationLoading, setLocationLoading] = useState(true);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Pulsing marker animation
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.8, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ]),
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [pulseAnim]);
+
+  // Immediate GPS request on mount (don't wait for heartbeat interval)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const perm = await Location.requestForegroundPermissionsAsync();
+        if (!perm.granted || cancelled) return;
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        if (!cancelled) {
+          setLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+          setLocationLoading(false);
+        }
+      } catch (e) {
+        if (!cancelled) setLocationLoading(false);
+        logger.warn("[driver] initial GPS request failed:", e instanceof Error ? e.message : e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -335,6 +371,7 @@ export default function DriverHome() {
   // ── Render ───────────────────────────────────────────────────────
   return (
     <SafeAreaView className="flex-1 bg-goBgLight">
+      <ScreenLabel screenName="Go Online / Go Offline" screenNumber={1} />
       {/* Header */}
       <View className="px-4 py-3 flex-row items-center justify-between">
         <View>
@@ -367,7 +404,7 @@ export default function DriverHome() {
       {/* Earnings Goal Progress Bar */}
       <TouchableOpacity className="mx-4 mt-2 mb-2 p-3 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-[10px] border border-goBorderLight dark:border-goBorderDark" onPress={() => { setGoalInput(String(goal / 100)); setGoalModalVisible(true); }}>
         <View className="flex-row justify-between items-center mb-1.5">
-          <Text className="text-[11px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Today's Earnings Goal</Text>
+           <Text className="text-[11px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{"Today's Earnings Goal"}</Text>
           <Text className="text-[11px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">৳{(earningsToday / 100).toFixed(0)} / ৳{(goal / 100).toFixed(0)}</Text>
         </View>
         <View className="h-1.5 bg-goBorderLight dark:bg-goBorderDark rounded-full overflow-hidden">
@@ -391,23 +428,38 @@ export default function DriverHome() {
 
       {/* Live Map */}
       <View className="flex-1 mx-4 rounded-2xl overflow-hidden">
-        {MapLibreGL && MapLibreGL.MapView ? (
+        {!location ? (
+          <View className="flex-1 bg-goGray100 items-center justify-center rounded-2xl">
+            <MaterialIcons name="my-location" size={32} color={colors.textSecondaryLight} />
+            <Text className="text-goTextSecondaryLight font-Jakarta mt-2">
+              {locationLoading ? "Getting your location..." : "Location unavailable — enable GPS"}
+            </Text>
+          </View>
+        ) : MapLibreGL && MapLibreGL.MapView ? (
           <MapLibreGL.MapView
             style={{ flex: 1 }}
             styleURL={mapStyleUrl}
-            centerCoordinate={
-              location
-                ? [location.lng, location.lat]
-                : [DEFAULT_COORDINATES.longitude, DEFAULT_COORDINATES.latitude]
-            }
-            zoomLevel={15}
+            centerCoordinate={[location.lng, location.lat]}
+            zoomLevel={16}
           >
-            {location && MapLibreGL.PointAnnotation && (
+            {MapLibreGL.PointAnnotation && (
               <MapLibreGL.PointAnnotation
                 id="driver-location"
                 coordinate={[location.lng, location.lat]}
               >
-                <View className="w-4 h-4 rounded-full bg-goAccent" />
+                <View style={{ alignItems: "center", justifyContent: "center" }}>
+                  <Animated.View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: "rgba(10, 155, 76, 0.2)",
+                      transform: [{ scale: pulseAnim }],
+                      position: "absolute",
+                    }}
+                  />
+                  <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary }} />
+                </View>
               </MapLibreGL.PointAnnotation>
             )}
           </MapLibreGL.MapView>
@@ -417,6 +469,39 @@ export default function DriverHome() {
               Map View
             </Text>
           </View>
+        )}
+        {/* My Location button */}
+        {location && (
+          <TouchableOpacity
+            onPress={async () => {
+              try {
+                const loc = await Location.getCurrentPositionAsync({
+                  accuracy: Location.Accuracy.Balanced,
+                });
+                setLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+              } catch (e) {
+                logger.warn("[driver] recenter failed:", e instanceof Error ? e.message : e);
+              }
+            }}
+            style={{
+              position: "absolute",
+              bottom: 16,
+              right: 16,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: colors.white,
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 4,
+              elevation: 4,
+            }}
+          >
+            <MaterialIcons name="my-location" size={20} color={colors.primary} />
+          </TouchableOpacity>
         )}
       </View>
 

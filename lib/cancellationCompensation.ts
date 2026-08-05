@@ -4,7 +4,7 @@ import {
   driverWalletTransactions,
   cancellationCredits,
 } from '../src/db/schema';
-import { eq, and, sql, lt } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { logger } from './logger';
 
 const CREDIT_EXPIRY_DAYS = 30;
@@ -63,7 +63,10 @@ export async function createCancellationCredit(
 }
 
 export async function expireCancellationCredits(): Promise<number> {
-  const now = new Date();
+  // Use ISO string for timestamptz comparisons — postgres.js parameter
+  // serialization can throw ERR_INVALID_ARG_TYPE when a Date object is
+  // combined with .for('update') on a timestamptz column.
+  const nowIso = new Date().toISOString();
 
   return await db.transaction(async (tx) => {
     const expired = await tx
@@ -76,7 +79,7 @@ export async function expireCancellationCredits(): Promise<number> {
       .where(
         and(
           eq(cancellationCredits.status, 'pending'),
-          lt(cancellationCredits.expires_at, now),
+          sql`${cancellationCredits.expires_at} < ${nowIso}`,
         ),
       )
       .for('update');
@@ -119,7 +122,7 @@ export async function expireCancellationCredits(): Promise<number> {
       .where(
         and(
           eq(cancellationCredits.status, 'pending'),
-          lt(cancellationCredits.expires_at, now),
+          sql`${cancellationCredits.expires_at} < ${nowIso}`,
         ),
       );
 

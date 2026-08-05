@@ -3,15 +3,15 @@ import { API_URL } from "@/lib/config";
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Image,
   TextInput,
   Alert,
+  ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useEffect, useState } from "react";
-import RideLayout from "@/components/RideLayout";
 import { useRouter } from "expo-router";
 import { useCustomer } from "@/store";
 import { useRiderStore, VehicleType, getCachedEstimates, setCachedEstimates } from "@/store/useRiderStore";
@@ -147,50 +147,70 @@ const BookRidePage = () => {
 
   const handleSelectVehicle = (vt: VehicleType) => {
     setSelectedVehicleType(vt);
-    router.push("/(main)/confirm-ride");
+    router.push("/(main)/(customer)/confirm-ride");
   };
 
-  const renderItem = ({ item }: { item: any }) => {
+  const renderEstimate = (item: any) => {
     const def = VEHICLE_TYPES.find((v) => v.key === item.vehicle_type);
     const selected = selectedVehicleType === item.vehicle_type;
 
     return (
       <TouchableOpacity
+        key={item.vehicle_type}
         onPress={() => handleSelectVehicle(item.vehicle_type)}
         className={`flex-row items-center p-4 mb-3 rounded-2xl border ${
           selected
             ? "border-goAccent bg-goAccent/10"
-            : "border-transparent bg-cardBgColor"
+            : "border-goBorderLight dark:border-goBorderDark bg-goSurfaceLight dark:bg-goSurfaceElevatedDark"
         }`}
       >
-        <View className="w-16 h-16 rounded-full bg-bgColor items-center justify-center">
+        <View className="w-16 h-16 rounded-full bg-goLightGray dark:bg-goDarkSecondary items-center justify-center">
           <Image
             source={VEHICLE_ICONS[item.vehicle_type] || icons.cab}
-            className="w-8 h-8 tint-primaryTextColor"
+            className="w-8 h-8 tint-goTextPrimaryLight dark:tint-goTextPrimaryDark"
             resizeMode="contain"
           />
         </View>
         <View className="flex-1 ml-4">
-          <Text className="text-primaryTextColor text-lg font-JakartaBold">
+          <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-lg font-JakartaBold">
             {def?.display_en || item.vehicle_type}
           </Text>
-          <Text className="text-secondaryTextColor text-sm">
+          <Text className="text-goTextSecondaryLight dark:text-goTextSecondaryDark text-sm">
             {item.seats} seats • {item.eta_minutes} min
           </Text>
         </View>
         <View className="items-end">
-          <Text className="text-primaryTextColor text-lg font-JakartaBold">
+          <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-lg font-JakartaBold">
             ৳{(item.total_bdt / 100).toFixed(0)}
           </Text>
-          <Text className="text-secondaryTextColor text-xs">est.</Text>
+          <Text className="text-goTextSecondaryLight dark:text-goTextSecondaryDark text-xs">est.</Text>
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <RideLayout title="Choose Vehicle" disabled={false}>
-      <View className="flex-1">
+    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+      {/* Header */}
+      <View className="flex-row items-center px-5 py-4 border-b border-goBorderLight dark:border-goBorderDark">
+        <TouchableOpacity onPress={() => router.back()} className="p-1">
+          <Image
+            source={icons.backArrow}
+            className="w-6 h-6"
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <Text className="text-xl font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark ml-3">
+          Choose Vehicle
+        </Text>
+      </View>
+
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: spacing.xl, paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Pickup / destination summary */}
         <View className="mb-4">
           <View className="flex-row items-center mb-2">
             <Image
@@ -199,7 +219,7 @@ const BookRidePage = () => {
               resizeMode="contain"
             />
             <Text
-              className="text-primaryTextColor text-sm font-JakartaMedium ml-2 flex-1"
+              className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-sm font-JakartaMedium ml-2 flex-1"
               numberOfLines={1}
             >
               {userAddress || "Current location"}
@@ -208,11 +228,11 @@ const BookRidePage = () => {
           <View className="flex-row items-center">
             <Image
               source={icons.pin}
-              className="w-4 h-4 tint-danger-500"
+              className="w-4 h-4 tint-goDanger"
               resizeMode="contain"
             />
             <Text
-              className="text-primaryTextColor text-sm font-JakartaMedium ml-2 flex-1"
+              className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-sm font-JakartaMedium ml-2 flex-1"
               numberOfLines={1}
             >
               {destinationAddress || "Destination"}
@@ -255,12 +275,12 @@ const BookRidePage = () => {
                 height: 44,
                 borderRadius: 12,
                 borderWidth: 1,
-                borderColor: promoApplied ? colors.primary : colors.borderDark,
-                backgroundColor: colors.surfaceElevatedDark,
+                borderColor: promoApplied ? colors.primary : colors.borderLight,
+                backgroundColor: colors.surfaceLight,
                 paddingHorizontal: 14,
                 fontFamily: "Inter",
                 fontSize: 14,
-                color: colors.textPrimaryDark,
+                color: colors.textPrimaryLight,
               }}
             />
             {promoApplied ? (
@@ -366,15 +386,15 @@ const BookRidePage = () => {
         />
 
         {estimating ? (
-          <View className="flex-1 items-center justify-center">
+          <View className="items-center justify-center py-10">
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text className="text-secondaryTextColor mt-3">
+            <Text className="text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-3">
               Finding available vehicles...
             </Text>
           </View>
         ) : error ? (
-          <View className="flex-1 items-center justify-center">
-            <Text className="text-danger-500 text-base mb-4">{error}</Text>
+          <View className="items-center justify-center py-10">
+            <Text className="text-goDanger text-base mb-4">{error}</Text>
             <CustomButton
               title="Retry"
               onPress={fetchEstimates}
@@ -382,22 +402,16 @@ const BookRidePage = () => {
             />
           </View>
         ) : estimates.length > 0 ? (
-          <FlatList
-            data={estimates}
-            keyExtractor={(item) => item.vehicle_type}
-            renderItem={renderItem}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 20 }}
-          />
+          <View>{estimates.map((item: any) => renderEstimate(item))}</View>
         ) : (
-          <View className="flex-1 items-center justify-center">
-            <Text className="text-secondaryTextColor text-base">
+          <View className="items-center justify-center py-10">
+            <Text className="text-goTextSecondaryLight dark:text-goTextSecondaryDark text-base">
               No vehicles available for this route
             </Text>
           </View>
         )}
-      </View>
-    </RideLayout>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 

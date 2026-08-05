@@ -14,14 +14,16 @@ export const calculateRegion = ({
     userLongitude: number | null,
     destinationLatitude?: number | null,
     destinationLongitude?: number | null,
-}) => {
+}): {
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+} | null => {
     if (userLatitude == null || userLongitude == null) {
-        return {
-            latitude: 23.8103, // Dhaka center
-            longitude: 90.4125,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-        };
+        // No GPS fallback — caller must ensure GPS is resolved before calling.
+        // Returns null so the caller can show a loading state instead of a wrong location.
+        return null;
     }
 
     if (destinationLatitude == null || destinationLongitude == null) {

@@ -2,11 +2,11 @@ const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
 
 // Dark map style JSON for MapLibre (Barikoi vector tile style)
 export const DARK_MAP_STYLE =
-  "https://tiles.barikoi.com/styles/barikoi-dark/style.json";
+  `https://map.barikoi.com/styles/barikoi-dark/style.json?key=${BARIKOI_API_KEY}`;
 
 // Light map style JSON for MapLibre
 export const LIGHT_MAP_STYLE =
-  "https://tiles.barikoi.com/styles/barikoi-light/style.json";
+  `https://map.barikoi.com/styles/osm-liberty/style.json?key=${BARIKOI_API_KEY}`;
 
 export function getBarikoiApiKey(): string {
   return BARIKOI_API_KEY;

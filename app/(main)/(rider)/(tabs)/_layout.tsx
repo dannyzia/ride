@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import { View, Text } from "react-native";
-import { colors } from "@/theme/goRide";
+import { FloatingNavMenu } from "@/components/FloatingNavMenu";
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const icons: Record<string, string> = {
@@ -18,23 +18,21 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
 
 export default function DriverTabLayout() {
   return (
-    <Tabs screenOptions={{
-      headerShown: false,
-      tabBarStyle: {
-        backgroundColor: colors.surfaceElevatedDark,
-        borderTopColor: colors.borderDark,
-        borderTopWidth: 1,
-        height: 65,
-        paddingBottom: 8,
-        paddingTop: 4,
-      },
-      tabBarShowLabel: false,
-    }}>
-      <Tabs.Screen name="index" options={{ tabBarIcon: ({ focused }) => <TabIcon label="Home" focused={focused} /> }} />
-      <Tabs.Screen name="earning/index" options={{ tabBarIcon: ({ focused }) => <TabIcon label="Earning" focused={focused} /> }} />
-      <Tabs.Screen name="activity/index" options={{ tabBarIcon: ({ focused }) => <TabIcon label="Activity" focused={focused} /> }} />
-      <Tabs.Screen name="wallet/index" options={{ tabBarIcon: ({ focused }) => <TabIcon label="Wallet" focused={focused} /> }} />
-      <Tabs.Screen name="profile/index" options={{ tabBarIcon: ({ focused }) => <TabIcon label="Profile" focused={focused} /> }} />
-    </Tabs>
+    <View style={{ flex: 1 }}>
+      <Tabs screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          display: "none",
+        },
+        tabBarShowLabel: false,
+      }}>
+        <Tabs.Screen name="index" options={{ tabBarIcon: ({ focused }) => <TabIcon label="Home" focused={focused} /> }} />
+        <Tabs.Screen name="earning/index" options={{ tabBarIcon: ({ focused }) => <TabIcon label="Earning" focused={focused} /> }} />
+        <Tabs.Screen name="activity/index" options={{ tabBarIcon: ({ focused }) => <TabIcon label="Activity" focused={focused} /> }} />
+        <Tabs.Screen name="wallet/index" options={{ tabBarIcon: ({ focused }) => <TabIcon label="Wallet" focused={focused} /> }} />
+        <Tabs.Screen name="profile/index" options={{ tabBarIcon: ({ focused }) => <TabIcon label="Profile" focused={focused} /> }} />
+      </Tabs>
+      <FloatingNavMenu variant="driver" />
+    </View>
   );
 }

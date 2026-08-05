@@ -25,7 +25,7 @@ import {
   useAppUserStore,
   useWSStore,
 } from "@/store";
-import Map from "@/components/Map";
+import ScreenLabel from "@/components/ScreenLabel";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { logger } from "@/lib/logger";
@@ -65,6 +65,26 @@ const HomePage = () => {
   const [address, setAddress] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
   const [_, forceUpdate] = useState(0);
+  const [displayName, setDisplayName] = useState("Rider");
+  const [gpsError, setGpsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (!user) return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const res = await fetch(`${API_URL}/api/user/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.name) setDisplayName(data.name);
+        }
+      } catch {}
+    })();
+  }, [user]);
 
   //setting the ws server
   useEffect(() => {
@@ -134,6 +154,7 @@ const HomePage = () => {
   };
 
   const requestLocation = async () => {
+    setGpsError(null);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
@@ -144,21 +165,46 @@ const HomePage = () => {
 
       setHasPermissions(true);
 
-      // Get GPS with timeout — emulators can hang indefinitely on getCurrentPositionAsync
+      // Get GPS with timeout
       const location = await Promise.race([
         Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("gps_timeout")), 8000),
+          setTimeout(() => reject(new Error("gps_timeout")), 10000),
         ),
       ]);
 
       const { latitude, longitude } = location.coords;
 
-      // Reverse geocode via Barikoi API first (native Geocoder hangs on emulators
-      // without full Google Play Services). Fall back to native, then to coordinates.
+      // Store coordinates IMMEDIATELY — set both local state and store
+      const coordAddress = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      setAddress(coordAddress);
+
+      if ((role ?? data?.role) === "customer") {
+        setCustomerLocation({
+          latitude,
+          longitude,
+          address: coordAddress,
+        });
+
+        if (role) setCustomerRole({ role });
+        if (user) {
+          setCustomerId({ customerId: user.uid });
+          setCustomerFullName({ full_name: user.fullName ?? "" });
+          setCustomerProfileImageURL({
+            profile_image_url: user.imageUrl ?? "",
+          });
+        }
+      }
+
+      // Now try to resolve a human-readable address (non-blocking for GPS coords)
       let resolvedAddress = "";
       try {
-        const res = await fetch(getBarikoiReverseGeocodeUrl(latitude, longitude));
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(getBarikoiReverseGeocodeUrl(latitude, longitude), {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
         if (res.ok) {
           const data = await res.json();
           resolvedAddress =
@@ -168,7 +214,7 @@ const HomePage = () => {
             "";
         }
       } catch {
-        // Barikoi failed (rate limit, network) — try native geocoder
+        // Barikoi failed or timed out
       }
 
       if (!resolvedAddress) {
@@ -181,30 +227,25 @@ const HomePage = () => {
           ]);
           resolvedAddress = nativeAddr[0]?.formattedAddress ?? "";
         } catch {
-          // Both failed — leave empty, show coordinates as fallback
+          // Both failed — use coordinates as address
         }
       }
 
-      setAddress(resolvedAddress);
-
+      // Update with resolved address if we got one
+      const finalAddress = resolvedAddress || coordAddress;
+      setAddress(finalAddress);
       if ((role ?? data?.role) === "customer") {
         setCustomerLocation({
           latitude,
           longitude,
-          address: resolvedAddress,
+          address: finalAddress,
         });
-
-        if (role) setCustomerRole({ role });
-        if (user) {
-          setCustomerId({ customerId: user.uid });
-          setCustomerFullName({ full_name: user.fullName ?? "" });
-          setCustomerProfileImageURL({
-            profile_image_url: user.imageUrl ?? "",
-          });
-        }
       }
     } catch (error) {
       logger.warn("Error in requestLocation:", error);
+      setGpsError(
+        "Unable to get your location. Tap retry or set a location in your emulator.",
+      );
     }
   };
 
@@ -265,6 +306,7 @@ const HomePage = () => {
 
   return (
     <SafeAreaView className="bg-goBgLight flex-1">
+      <ScreenLabel screenName="Welcome" screenNumber={1} />
       <FlatList
         data={(Rides || []).slice(0, 3)}
         keyExtractor={(item, index) =>
@@ -306,7 +348,7 @@ const HomePage = () => {
           <>
             <View className="flex flex-row items-center justify-between my-5">
               <Text className="text-xl text-goTextPrimaryLight capitalize font-JakartaBold tracking-tight">
-            {t('home.welcome_name', { name: user?.fullName ?? 'Rider' })}
+            {t('home.welcome_name', { name: displayName })}
           </Text>
               <TouchableOpacity
                 onPress={handleSignOut}
@@ -328,27 +370,42 @@ const HomePage = () => {
               </TouchableOpacity>
             </View>
 
-            <Text className="mt-5 mb-3">
-              <Text className="text-xl text-goTextPrimaryLight font-JakartaBold">
-                {t('home.your_current_location')}
-              </Text>{" "}
-              <Text className="text-lg font-Jakarta text-goTextSecondaryLight">
-                {address
-                  ? address
-                  : userAddress
-                    ? userAddress
-                    : userLatitude
-                      ? userLatitude
-                      : t('home.fetching')}
+            <View className="mt-5 mb-3">
+              <Text>
+                <Text className="text-xl text-goTextPrimaryLight font-JakartaBold">
+                  {t('home.your_current_location')}
+                </Text>{" "}
+                {gpsError ? (
+                  <Text
+                    className="text-lg font-Jakarta"
+                    style={{ color: colors.danger }}
+                  >
+                    {gpsError}
+                  </Text>
+                ) : (
+                  <Text className="text-lg font-Jakarta text-goTextSecondaryLight">
+                    {address
+                      ? address
+                      : userAddress
+                        ? userAddress
+                        : userLatitude
+                          ? userLatitude
+                          : t('home.fetching')}
+                  </Text>
+                )}
               </Text>
-            </Text>
-
-            <View
-              className="w-full"
-              style={{ height: 300, borderRadius: 16, overflow: "hidden" }}
-            >
-              <Map />
+              {gpsError ? (
+                <TouchableOpacity
+                  onPress={requestLocation}
+                  className="mt-2 self-start bg-goSurfaceLight px-4 py-2 rounded-full"
+                >
+                  <Text className="text-goTextPrimaryLight font-JakartaBold">
+                    Retry
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
+
             <Text className="text-2xl text-goTextPrimaryLight font-JakartaBold tracking-tight mt-10 mb-3">
               {t('home.recent_rides')}
             </Text>

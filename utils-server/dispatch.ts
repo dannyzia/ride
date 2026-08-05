@@ -1,5 +1,5 @@
 import { db } from '../src/db';
-import { drivers, rides, dispatchOffers, systemConfig, pricing, preferences, subscriptions, packages, driverCommutePreferences, driverBlocklists, driverOnlineSessions } from '../src/db/schema';
+import { drivers, rides, dispatchOffers, systemConfig, pricing, preferences, subscriptions, packages, driverCommutePreferences, driverBlocklists } from '../src/db/schema';
 import { eq, and, inArray, sql, isNotNull } from 'drizzle-orm';
 import { getH3Ring } from '../lib/h3';
 import { getDriversInCells } from './h3Index';
@@ -7,6 +7,7 @@ import { checkDriverEligibility } from '../lib/vehicleTypes';
 import { haversineKm } from '../lib/fareCalc';
 import { logger } from '../lib/logger';
 import { recordCallDeduction } from './heartbeat';
+import crypto from 'crypto';
 
 // ── Scoring weights ────────────────────────────────────────────────────────
 // Defaults used when system_config key 'dispatch_scoring_weights' is absent.
@@ -54,7 +55,7 @@ async function getScoringWeights(): Promise<typeof DEFAULT_WEIGHTS> {
 // Must be >= the actual search radius (DISPATCH_RING_K * ~0.174 km per H3 res-9 step).
 // k=16 → ~2.8 km real radius; 5 km ceiling prevents compressing far-but-eligible
 // drivers to near-zero scores while still honouring the distance-primary intent.
-const MAX_RADIUS_KM = parseFloat(process.env.DISPATCH_MAX_RADIUS_KM ?? '5');
+const MAX_RADIUS_KM = parseFloat(process.env.DISPATCH_MAX_RADIUS_KM ?? '15');
 
 // H3 ring radius for the dispatch candidate search. At resolution 9 (~174m
 // cells) each grid step is ~0.32km, so k=16 ≈ 5km — which matches the scoring
@@ -63,7 +64,7 @@ const MAX_RADIUS_KM = parseFloat(process.env.DISPATCH_MAX_RADIUS_KM ?? '5');
 // whenever the nearest driver was more than a few hundred metres away (the
 // Banani pickup to the indexed driver at ~1.9km = grid distance 6 was never
 // reached). Tunable via DISPATCH_H3_RING_K without a code change.
-export const DISPATCH_RING_K = parseInt(process.env.DISPATCH_H3_RING_K ?? '16');
+export const DISPATCH_RING_K = parseInt(process.env.DISPATCH_H3_RING_K ?? '60');
 
 export interface ScoredDriver {
   driverId: string;
@@ -88,7 +89,25 @@ export async function scoreAndBatchDrivers(
 ): Promise<ScoredDriver[]> {
   const cells = getH3Ring(originLat, originLng, DISPATCH_RING_K);
   const candidateIds = getDriversInCells(cells, vehicleType);
-  if (!candidateIds.length) return [];
+  logger.info('[dispatch] scoreAndBatchDrivers', {
+    rideId,
+    originLat,
+    originLng,
+    vehicleType,
+    zoneId,
+    cellsSearched: cells.length,
+    ringK: DISPATCH_RING_K,
+    candidatesFound: candidateIds.length,
+  });
+  if (!candidateIds.length) {
+    // Log what's in the index for debugging
+    const { getIndexedDriverCount } = require('./h3Index');
+    logger.warn('[dispatch] ZERO candidates — index has drivers but none match cells+vehicleType', {
+      totalIndexed: getIndexedDriverCount(),
+      vehicleTypeWanted: vehicleType,
+    });
+    return [];
+  }
 
   // ── Load scoring weights (cached, 30s TTL) ────────────────────────────
   const W = await getScoringWeights();
@@ -145,14 +164,23 @@ export async function scoreAndBatchDrivers(
       eq(drivers.vehicle_type, vehicleType as any),
       inArray(drivers.id, candidateIds),
       sql`NOT EXISTS (
-        SELECT 1 FROM rides 
-        WHERE rides.driver_id = drivers.id 
+        SELECT 1 FROM rides
+        WHERE rides.driver_id = drivers.id
         AND rides.status IN ('matched', 'driver_arrived', 'in_progress')
+        AND rides.updated_at > now() - interval '3 hours'
       )`,
     ),
   );
 
   const driverIds = driverRows.map(d => d.id);
+
+  logger.info('[dispatch] candidate pipeline', {
+    rideId,
+    h3Candidates: candidateIds.length,
+    dbRows: driverRows.length,
+    vehicleType,
+    ringK: DISPATCH_RING_K,
+  });
 
   const qualityMap = new Map<string, { cancels_today: number; fives_today: number }>();
   if (driverIds.length > 0) {
@@ -264,7 +292,12 @@ export async function scoreAndBatchDrivers(
     if (femalePref && d.gender !== 'female') continue;
 
     // ── Balance checks (required before auto-accept) ─────────────────────
-    if (d.calls_remaining === null || d.calls_remaining === 0) continue;
+    if (d.calls_remaining === null || d.calls_remaining === 0) {
+      logger.debug('[dispatch] driver filtered — no subscription balance', {
+        driverId: d.id, callsRemaining: d.calls_remaining, subscriptionId: d.subscription_id,
+      });
+      continue;
+    }
     if (d.daily_calls_used != null && d.daily_calls_used >= (d.daily_cap ?? Infinity)) continue;
 
     // ── Auto-accept — driver auto-accepts close rides without offer sheet ──
@@ -274,30 +307,53 @@ export async function scoreAndBatchDrivers(
       if (dlLat !== 0 && dlLng !== 0) {
         const dist = haversineMeters(originLat, originLng, dlLat, dlLng);
         if (dist <= (d.auto_accept_radius_meters ?? 500)) {
-          // Call deduction via heartbeat (ownership: call_ledger deduction rows
-          // are ONLY written by heartbeat.ts, never by dispatch.ts directly).
           if (!d.subscription_id) continue;
-          const deduction = await recordCallDeduction({
-            driverId: d.id,
-            subscriptionId: d.subscription_id,
-            rideId,
-            confirmedAt: new Date(),
-          });
-          if (!deduction.deducted) continue;
-          await db.insert(driverOnlineSessions).values({
-            driver_id: d.id,
-            subscription_id: d.subscription_id,
-            went_online_at: new Date(),
-          });
-          await db.update(rides).set({
+          // Atomic match FIRST, with a start PIN. This prevents the race-loser
+          // from consuming a call credit: the WHERE status='dispatching' guard
+          // means only the first auto-acceptor wins; losers `continue` below
+          // without deducting.
+          const pin = crypto.randomInt(1000, 10000);
+          const matched = await db.update(rides).set({
             driver_id: d.id, status: 'matched', matched_at: new Date(),
-          }).where(eq(rides.id, rideId));
+            start_pin: String(pin),
+          }).where(and(eq(rides.id, rideId), eq(rides.status, 'dispatching')))
+            .returning({ id: rides.id });
+          if (matched.length === 0) {
+            logger.warn('[dispatch] auto-accept race lost — ride already matched by another path', {
+              rideId, driverId: d.id,
+            });
+            continue;
+          }
+          // Call deduction via heartbeat AFTER the match is won (ownership:
+          // call_ledger deduction rows are ONLY written by heartbeat.ts, never
+          // by dispatch.ts directly). The driver already passed the balance
+          // check above, so if deduction now fails we keep the match and log.
+          try {
+            const deduction = await recordCallDeduction({
+              driverId: d.id,
+              subscriptionId: d.subscription_id,
+              rideId,
+              confirmedAt: new Date(),
+            });
+            if (!deduction.deducted) {
+              logger.warn('[dispatch] auto-accept deduction failed after match — keeping match', {
+                rideId, driverId: d.id,
+              });
+            }
+          } catch (e: any) {
+            logger.warn('[dispatch] auto-accept deduction error after match — keeping match', {
+              rideId, driverId: d.id, error: e.message,
+            });
+          }
           await db.insert(dispatchOffers).values({
             ride_id: rideId, driver_id: d.id, batch_index: 0, sent_at: new Date(),
             outcome: 'accepted',
           });
           logger.info('[dispatch] auto-accepted', { rideId, driverId: d.id });
-          return scored; // Ride already matched — stop processing
+          // Return empty so the pipeline does NOT insert ghost offers for an
+          // already-matched ride. dispatchRidePipeline detects the 'matched'
+          // status and notifies the rider itself (sendToRider lives there).
+          return [];
         }
       }
     }
@@ -310,7 +366,7 @@ export async function scoreAndBatchDrivers(
 
     if (Number(d.rating) < 3.5) continue;
 
-    if (d.min_per_km_bdt != null && systemPerKmBdt < d.min_per_km_bdt) {
+      if (d.min_per_km_bdt != null && systemPerKmBdt > 0 && systemPerKmBdt < d.min_per_km_bdt) {
       await db.insert(dispatchOffers).values({
         ride_id:         rideId,
         driver_id:       d.id,
@@ -373,7 +429,7 @@ export async function scoreAndBatchDrivers(
       heartbeatAgeSec < 90  ? 0.5 :
       0.0;  // >90s: should have been excluded by H3 index refresh, but guard here
 
-    const score =
+    let score =
       W.distance   * distanceScore   +
       W.rating     * ratingScore     +
       W.acceptance * acceptanceScore +
@@ -401,6 +457,13 @@ export async function scoreAndBatchDrivers(
     });
     scored.push({ driverId: d.id, score });
   }
+
+  logger.info('[dispatch] scoring complete', {
+    rideId,
+    scored: scored.length,
+    batchSize,
+    topScore: scored[0]?.score.toFixed(4) ?? 'none',
+  });
 
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, batchSize);
