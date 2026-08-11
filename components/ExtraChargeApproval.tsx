@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 

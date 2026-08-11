@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
-import { users, userDevices, notifications } from '@/src/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { userDevices, notifications } from '@/src/db/schema';
 import { logger } from '@/lib/logger';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
@@ -86,11 +86,11 @@ export async function sendNotification(
  * Wire notification calls into ride lifecycle events.
  * Call from API routes after ride status transitions.
  */
-export function notifyRideMatched(riderId: string, driverId: string): void {
+export function notifyRideMatched(riderId: string, _driverId: string): void {
   sendNotification(riderId, 'ride:matched', 'Driver Found', 'Your driver is on the way!').catch(() => {});
 }
 
-export function notifyRideCompleted(riderId: string, driverId: string): void {
+export function notifyRideCompleted(riderId: string, _driverId: string): void {
   sendNotification(riderId, 'ride:completed', 'Ride Complete', 'Thanks for riding with us! Rate your driver.').catch(() => {});
 }
 

@@ -3,7 +3,6 @@ import { users } from '@/src/db/schema';
 import { eq, desc, like, and, sql } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
-import { z } from 'zod';
 
 export async function GET(request: Request) {
   try {

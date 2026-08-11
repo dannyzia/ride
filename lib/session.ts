@@ -45,6 +45,14 @@ export function useSession() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    // Eagerly read the existing session synchronously — avoids a null
+    // flash while waiting for the async INITIAL_SESSION onAuthStateChange
+    // event.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(buildAppUser(session?.user ?? null));
+      setIsLoaded(true);
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(buildAppUser(session?.user ?? null));
       setIsLoaded(true);

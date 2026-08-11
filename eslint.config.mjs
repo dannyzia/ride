@@ -2,7 +2,7 @@ import expoFlat from 'eslint-config-expo/flat.js';
 
 export default [
   {
-    ignores: ['_reference/**', 'utils-server/**'],
+    ignores: ['_reference/**', 'utils-server/**', 'dist/**', 'build/**', 'android/**', 'ios/**', '.kilo/**', 'admin-test-results/**', 'App Design/**', 'scripts/**', 'server.js', 'start-ws.js'],
   },
   ...expoFlat,
   {

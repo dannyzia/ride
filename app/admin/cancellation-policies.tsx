@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, Pressable, TextInput, ActivityIndicator, Switch } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
 import { AdminModal } from "@/components/admin/AdminModal";
@@ -17,7 +17,6 @@ export default function CancellationPolicies() {
   const toast = useAdminToast();
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editPolicy, setEditPolicy] = useState<Policy | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [form, setForm] = useState({ name: "", canceller_role: "rider", ride_status: "matched", time_threshold_seconds: "120", fee_type: "flat", fee_amount_bdt: "0", max_fee_bdt: "0" });
 

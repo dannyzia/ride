@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 const supabaseUrl =
   Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL ??
@@ -27,6 +28,20 @@ const isServer =
 // gracefully — the auth gate in _layout.tsx detects the missing client.
 const isConfigured = supabaseUrl.length > 0 && supabaseAnonKey.length > 0;
 
+// React Native has no native localStorage.  Without an explicit storage
+// adapter, persistSession:true silently fails and sessions are lost on every
+// reload — the auth gate then redirects to login and the user never reaches
+// the home screen.  AsyncStorage fills this gap.
+let storageAdapter: any = undefined;
+if (!isServer && Platform.OS !== "web") {
+  try {
+    const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+    storageAdapter = AsyncStorage;
+  } catch {
+    // AsyncStorage not available — sessions won't persist
+  }
+}
+
 export const supabase: SupabaseClient = isServer || !isConfigured
   ? ({} as SupabaseClient)
   : createClient(supabaseUrl, supabaseAnonKey, {
@@ -34,5 +49,6 @@ export const supabase: SupabaseClient = isServer || !isConfigured
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
+        ...(storageAdapter ? { storage: storageAdapter } : {}),
       },
     });

@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { icons, images } from "@/constants/data";
 import RideCard from "@/components/RideCard";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as Location from "expo-location";
 import { getBarikoiReverseGeocodeUrl } from "@/lib/useBarikoiMapStyle";
 import {
@@ -52,6 +52,7 @@ const HomePage = () => {
     setProfileImageURL: setCustomerProfileImageURL,
     userAddress,
     userLatitude,
+    userLongitude,
   } = useCustomer();
 
   const { setRides, Rides } = useRidesStore();
@@ -64,9 +65,23 @@ const HomePage = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [address, setAddress] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
-  const [_, forceUpdate] = useState(0);
-  const [displayName, setDisplayName] = useState("Rider");
+  // Name from the API (most authoritative). Falls back to the session's
+  // user_metadata.name (available immediately at mount, zero network) and
+  // finally to "Rider". Mirrors how the driver home uses driver?.name.
+  const [apiName, setApiName] = useState<string | null>(null);
+  const displayName = apiName ?? user?.fullName ?? "Rider";
   const [gpsError, setGpsError] = useState<string | null>(null);
+  const reconnectAttempts = useRef(0);
+
+  // Diagnostic: trace name resolution
+  useEffect(() => {
+    logger.info("[home] name resolution:", {
+      apiName,
+      sessionFullName: user?.fullName,
+      displayName,
+      hasUser: !!user,
+    });
+  }, [apiName, user?.fullName, displayName, user]);
 
   useEffect(() => {
     (async () => {
@@ -80,9 +95,13 @@ const HomePage = () => {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.name) setDisplayName(data.name);
+          if (data.user?.name) setApiName(data.user.name);
+        } else {
+          logger.warn(`[home] /api/user/me returned ${res.status}`);
         }
-      } catch {}
+      } catch (err) {
+        logger.warn("[home] failed to load display name:", err);
+      }
     })();
   }, [user]);
 
@@ -95,7 +114,6 @@ const HomePage = () => {
     if (existing && existing.readyState === WebSocket.OPEN) return;
 
     let ws: WebSocket;
-    let reconnectAttempts = 0;
 
     const connect = async () => {
       const {
@@ -107,7 +125,7 @@ const HomePage = () => {
       ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
-        reconnectAttempts = 0;
+        reconnectAttempts.current = 0;
         setWebSocket(ws);
         // Authenticate (auth:hello) so the server registers this rider and
         // can push ride:status / location:driver.
@@ -130,9 +148,9 @@ const HomePage = () => {
         // Reconnect with exponential backoff so a transient close doesn't
         // strand the rider mid-ride.
         const delay =
-          Math.min(1000 * Math.pow(2, reconnectAttempts), 30_000) +
+          Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30_000) +
           Math.random() * 1000;
-        reconnectAttempts++;
+        reconnectAttempts.current += 1;
         setTimeout(connect, delay);
       };
     };
@@ -147,105 +165,94 @@ const HomePage = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-
-    forceUpdate((n) => n + 1);
-
+    await fetchRides();
     setRefreshing(false);
   };
 
   const requestLocation = async () => {
     setGpsError(null);
+    setAddress("Acquiring location...");
+    logger.info("[home] requestLocation STARTED");
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      // Wrap permission request in a timeout — on some devices this native
+      // call hangs indefinitely even when permission is already granted.
+      let status = "undetermined";
+      try {
+        const permResult = await Promise.race([
+          Location.requestForegroundPermissionsAsync(),
+          new Promise<{ status: string }>((resolve) =>
+            setTimeout(() => resolve({ status: "granted" }), 5000),
+          ),
+        ]);
+        status = permResult.status;
+      } catch (permErr) {
+        logger.warn("[home] permission request threw, assuming granted:", permErr);
+        status = "granted";
+      }
+      logger.info("[home] location permission status:", status);
       if (status !== "granted") {
         Alert.alert("Permission Denied", "Location permission not granted");
         setHasPermissions(false);
+        setGpsError(
+          "Location permission denied. Enable location access in your device settings, then tap retry.",
+        );
+        setAddress("");
         return;
       }
 
       setHasPermissions(true);
 
-      // Get GPS with timeout
-      const location = await Promise.race([
-        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("gps_timeout")), 10000),
-        ),
-      ]);
+      // Strategy: try last-known position FIRST (instant, never hangs), then
+      // attempt a fresh GPS fix with a short timeout to refine.
+      let location: Location.LocationObject | null =
+        await Location.getLastKnownPositionAsync();
+      logger.info("[home] lastKnownPosition:", location ? `${location.coords.latitude}, ${location.coords.longitude}` : "null");
 
-      const { latitude, longitude } = location.coords;
-
-      // Store coordinates IMMEDIATELY — set both local state and store
-      const coordAddress = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-      setAddress(coordAddress);
-
-      if ((role ?? data?.role) === "customer") {
-        setCustomerLocation({
-          latitude,
-          longitude,
-          address: coordAddress,
-        });
-
-        if (role) setCustomerRole({ role });
-        if (user) {
-          setCustomerId({ customerId: user.uid });
-          setCustomerFullName({ full_name: user.fullName ?? "" });
-          setCustomerProfileImageURL({
-            profile_image_url: user.imageUrl ?? "",
-          });
+      if (location) {
+        const { latitude, longitude } = location.coords;
+        const coordAddress = `📍 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        setAddress(coordAddress);
+        if ((role ?? data?.role) === "customer") {
+          setCustomerLocation({ latitude, longitude, address: coordAddress });
         }
       }
 
-      // Now try to resolve a human-readable address (non-blocking for GPS coords)
-      let resolvedAddress = "";
+      // Now try a fresh fix (non-blocking — refine the location if it arrives)
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const res = await fetch(getBarikoiReverseGeocodeUrl(latitude, longitude), {
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-        if (res.ok) {
-          const data = await res.json();
-          resolvedAddress =
-            data?.place?.address ??
-            data?.address ??
-            data?.places?.[0]?.address ??
-            "";
+        const fresh = await Promise.race([
+          Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          }),
+          new Promise<null>((resolve) =>
+            setTimeout(() => resolve(null), 8000),
+          ),
+        ]);
+        if (fresh) {
+          const { latitude, longitude } = fresh.coords;
+          const coordAddress = `📍 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          setAddress(coordAddress);
+          if ((role ?? data?.role) === "customer") {
+            setCustomerLocation({ latitude, longitude, address: coordAddress });
+          }
         }
-      } catch {
-        // Barikoi failed or timed out
+      } catch (e) {
+        logger.warn("[home] getCurrentPositionAsync threw:", e);
       }
 
-      if (!resolvedAddress) {
-        try {
-          const nativeAddr = await Promise.race([
-            Location.reverseGeocodeAsync({ latitude, longitude }),
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("geocode_timeout")), 5000),
-            ),
-          ]);
-          resolvedAddress = nativeAddr[0]?.formattedAddress ?? "";
-        } catch {
-          // Both failed — use coordinates as address
-        }
-      }
-
-      // Update with resolved address if we got one
-      const finalAddress = resolvedAddress || coordAddress;
-      setAddress(finalAddress);
-      if ((role ?? data?.role) === "customer") {
-        setCustomerLocation({
-          latitude,
-          longitude,
-          address: finalAddress,
-        });
+      // If we still have no location at all, show error
+      const currentAddress = useCustomer.getState().userAddress;
+      if (!currentAddress && !useCustomer.getState().userLatitude) {
+        setGpsError(
+          "Unable to get your location. Make sure GPS/Location is enabled in device settings.",
+        );
+        setAddress("");
       }
     } catch (error) {
-      logger.warn("Error in requestLocation:", error);
+      logger.warn("[home] Error in requestLocation:", error);
       setGpsError(
         "Unable to get your location. Tap retry or set a location in your emulator.",
       );
+      setAddress("");
     }
   };
 
@@ -275,34 +282,44 @@ const HomePage = () => {
     }
   }, []);
 
+  const fetchRides = useCallback(async () => {
+    if (!user?.id && !user?.uid) return;
+    setLoading(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const response = await fetch(`${API_URL}/api/ride/get-all`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const body = await response.json();
+        setRides(body.data || []);
+      }
+    } catch (error) {
+      logger.warn("Error fetching rides:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user?.uid, setRides]);
+
   //getting all rides from api
   useEffect(() => {
-    if (!user?.uid) return;
+    fetchRides();
+  }, [fetchRides]);
 
-    const getAllRides = async () => {
-      setLoading(true);
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        const response = await fetch(`${API_URL}/api/ride/get-all`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const { data } = await response.json();
-        setRides(data);
-      } catch (error) {
-        logger.warn("Error fetching rides:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getAllRides();
-  }, [user?.uid]);
+  const locationDisplay = address
+    ? address
+    : userAddress
+      ? userAddress
+      : (userLatitude && userLongitude)
+        ? `📍 ${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}`
+        : t('home.fetching');
 
   return (
     <SafeAreaView className="bg-goBgLight flex-1">
@@ -384,13 +401,7 @@ const HomePage = () => {
                   </Text>
                 ) : (
                   <Text className="text-lg font-Jakarta text-goTextSecondaryLight">
-                    {address
-                      ? address
-                      : userAddress
-                        ? userAddress
-                        : userLatitude
-                          ? userLatitude
-                          : t('home.fetching')}
+                    {locationDisplay}
                   </Text>
                 )}
               </Text>

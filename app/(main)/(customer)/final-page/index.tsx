@@ -31,7 +31,7 @@ export default function FinalPage() {
 
   const ws = useWSStore((s) => s.ws);
 
-  const [cancelling, setCancelling] = useState(false);
+  const [cancelling, _setCancelling] = useState(false);
   const [elapsed, setElapsed] = useState(() =>
     activeRide?.created_at
       ? Math.floor((Date.now() - new Date(activeRide.created_at).getTime()) / 1000)
@@ -125,7 +125,7 @@ export default function FinalPage() {
       wsSubscribedRef.current = false;
       clearInterval(elapsedInt);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [searchingRideId, activeRide?.id, ws]);
 
   // One-shot REST fallback: hydrate ride status from the DB on mount in case

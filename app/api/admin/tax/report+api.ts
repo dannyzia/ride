@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { taxLedgers } from '@/src/db/schema';
-import { eq, and, gte, lte, inArray } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
 import { getTaxReportRange } from '@/lib/tax';

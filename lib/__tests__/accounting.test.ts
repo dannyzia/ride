@@ -16,6 +16,16 @@
 
 // ── Mocks (hoisted before imports by babel-jest) ──────────────────────────────
 
+// ── Imports ───────────────────────────────────────────────────────────────────
+
+import { db } from '@/src/db';
+import { calculateTax } from '../tax';
+import {
+  createJournalEntry,
+  recordDriverPayout,
+  recordRideCompletion,
+} from '../accounting';
+
 jest.mock('@/lib/logger', () => ({
   logger: {
     error: jest.fn(),
@@ -60,16 +70,6 @@ jest.mock('@/src/db', () => {
   (dbMock.transaction as jest.Mock).mockImplementation(async (cb: Function) => cb(dbMock));
   return { db: dbMock };
 });
-
-// ── Imports ───────────────────────────────────────────────────────────────────
-
-import { db } from '@/src/db';
-import { calculateTax } from '../tax';
-import {
-  createJournalEntry,
-  recordDriverPayout,
-  recordRideCompletion,
-} from '../accounting';
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 

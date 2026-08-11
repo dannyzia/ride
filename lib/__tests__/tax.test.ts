@@ -16,6 +16,11 @@
 
 // ── Mocks (hoisted before imports by babel-jest) ──────────────────────────────
 
+// ── Imports ───────────────────────────────────────────────────────────────────
+
+import { db } from '@/src/db';
+import { calculateTax } from '../tax';
+
 jest.mock('@/lib/logger', () => ({
   logger: {
     error: jest.fn(),
@@ -49,11 +54,6 @@ jest.mock('@/src/db', () => ({
   },
 }));
 
-// ── Imports ───────────────────────────────────────────────────────────────────
-
-import { db } from '@/src/db';
-import { calculateTax } from '../tax';
-
 // ── Seed rate fixtures (matching REFERENCE.md seed SQL) ───────────────────────
 
 const VAT_COMM = {
@@ -63,7 +63,7 @@ const VAT_COMM = {
   is_active: true,
 };
 
-const VAT_SUB = {
+const _VAT_SUB = {
   id: 'uuid-vat-subscription',
   code: 'vat_subscription',
   rate_percent: '15.00',

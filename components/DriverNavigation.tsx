@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
@@ -23,7 +23,7 @@ interface RouteData {
   steps: { instruction: string; distance: number }[];
 }
 
-export default function DriverNavigation({ pickupLat, pickupLng, dropoffLat, dropoffLng, rideId }: NavigationProps) {
+export default function DriverNavigation({ pickupLat, pickupLng, dropoffLat, dropoffLng, rideId: _rideId }: NavigationProps) {
   const [route, setRoute] = useState<RouteData | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);

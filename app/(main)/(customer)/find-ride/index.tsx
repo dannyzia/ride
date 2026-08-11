@@ -1,5 +1,6 @@
 import { colors, fonts } from "@/theme/goRide";
 import { API_URL } from "@/lib/config";
+import { logger } from "@/lib/logger";
 import {
   View,
   Text,
@@ -76,6 +77,7 @@ const PlanRidePage = () => {
   const [stops, setLocalStops] = useState<Stop[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [locating, setLocating] = useState(false);
 
   const hasRoute = !!(
     userLatitude &&
@@ -188,11 +190,12 @@ const PlanRidePage = () => {
   };
 
   const useCurrentLocation = async () => {
-    if (userLatitude != null && userLongitude != null) {
-      return;
-    }
+    // Always fetch a fresh GPS fix when the user explicitly taps the button.
+    logger.info("[find-ride] useCurrentLocation TAPPED");
+    setLocating(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
+      logger.info("[find-ride] permission status:", status);
       if (status !== "granted") {
         Alert.alert(
           "Permission Denied",
@@ -200,19 +203,51 @@ const PlanRidePage = () => {
         );
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+
+      // Race getCurrentPositionAsync against an 8-second timeout so the
+      // spinner never hangs forever (common when indoors with no GPS fix).
+      let loc: Location.LocationObject | null = null;
+      try {
+        loc = await Promise.race([
+          Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          }),
+          new Promise<null>((resolve) =>
+            setTimeout(() => resolve(null), 8000),
+          ),
+        ]);
+      } catch (e) {
+        logger.warn("[find-ride] getCurrentPositionAsync threw:", e);
+      }
+
+      // Fallback: use last known position if fresh fix failed/timed out
+      if (!loc) {
+        logger.info("[find-ride] trying last known position fallback");
+        loc = await Location.getLastKnownPositionAsync();
+      }
+
+      if (!loc) {
+        Alert.alert(
+          "Location Unavailable",
+          "Could not get your location. Make sure GPS/Location is enabled in your device settings and try again outside.",
+        );
+        return;
+      }
+
+      logger.info("[find-ride] GPS fix:", loc.coords.latitude, loc.coords.longitude);
       setUserLocation({
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
         address: `${loc.coords.latitude.toFixed(4)}, ${loc.coords.longitude.toFixed(4)}`,
       });
     } catch (_e) {
+      logger.warn("[find-ride] GPS error:", _e instanceof Error ? _e.message : _e);
       Alert.alert(
         "GPS Unavailable",
         "Could not get your location. Make sure GPS is enabled and try again.",
       );
+    } finally {
+      setLocating(false);
     }
   };
 
@@ -270,18 +305,28 @@ const PlanRidePage = () => {
         <View style={{ flex: 1 }}>
           <BottomSheetScrollView
             style={{ flex: 1 }}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 8 }}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            contentContainerStyle={{ paddingBottom: 150 }}
           >
             {/* Pickup */}
             <Text style={styles.sectionLabel}>Pickup</Text>
             <TouchableOpacity
               onPress={useCurrentLocation}
               style={styles.currentLocationBtn}
+              disabled={locating}
             >
-              <MaterialIcons name="my-location" size={16} color={colors.primary} />
+              {locating ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <MaterialIcons name="my-location" size={16} color={colors.primary} />
+              )}
               <Text style={styles.currentLocationText}>
-                {userLatitude ? "Use Current Location" : "Get My Location"}
+                {locating
+                  ? "Getting your location..."
+                  : userLatitude
+                    ? "Use Current Location"
+                    : "Get My Location"}
               </Text>
             </TouchableOpacity>
             <BarikoiAutocomplete

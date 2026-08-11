@@ -135,7 +135,7 @@ export default function RootLayout() {
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   useEffect(() => {

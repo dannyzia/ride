@@ -13,7 +13,7 @@ export default function DriverTerms() {
       <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingVertical: 16, gap: 12 }}>
         <Text className="text-sm font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark leading-6">
           By using the Ride platform, you agree to the following terms and conditions.{"\n\n"}
-          1. You must be at least 18 years old and possess a valid driver's license.{"\n\n"}
+          1. You must be at least 18 years old and possess a valid driver&apos;s license.{"\n\n"}
           2. You are responsible for maintaining the confidentiality of your account credentials.{"\n\n"}
           3. All earnings are subject to applicable taxes. You are responsible for reporting your income.{"\n\n"}
           4. Ride reserves the right to suspend accounts that violate our community guidelines.{"\n\n"}

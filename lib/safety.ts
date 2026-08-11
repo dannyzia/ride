@@ -1,5 +1,5 @@
 import { db } from "../src/db";
-import { rides, drivers, safetyAnomalies, users, userDevices, sosAlerts } from "../src/db/schema";
+import { rides, safetyAnomalies, users, userDevices, sosAlerts } from "../src/db/schema";
 import { eq, and, sql, lte, isNotNull } from "drizzle-orm";
 import { logger } from "./logger";
 import { sendSms } from "./dprelay";
@@ -62,7 +62,7 @@ export async function detectRouteDeviation(
             body: "Your driver is on an alternate route. Tap to view map.",
             data: { ride_id: rideId },
           });
-        } catch (e) { /* non-blocking */ }
+        } catch (_e) { /* non-blocking */ }
       }
 
       const adminDevices = await db
@@ -83,7 +83,7 @@ export async function detectRouteDeviation(
             body: `Route deviation on ride ${rideId}. Driver ${ride?.driver_id ?? "unknown"} off by ${Math.round(deviation)}m.`,
             data: { ride_id: rideId, type: "safety_alert" },
           });
-        } catch (e) { /* non-blocking */ }
+        } catch (_e) { /* non-blocking */ }
       }
     }
   } catch (e) { logger.error('[safety] detectRouteDeviation error', e); }
@@ -108,7 +108,7 @@ export async function detectStationaryAnomaly(): Promise<void> {
             body: "Your ride has been stationary. Is everything OK?",
             data: { ride_id: ride.id },
           });
-        } catch (e) { /* non-blocking */ }
+        } catch (_e) { /* non-blocking */ }
       }
 
       const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);

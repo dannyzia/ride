@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
-import { accountingEntryLines, accountingEntries, accountingAccounts } from '@/src/db/schema';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { accountingEntries } from '@/src/db/schema';
+import { gte, lte, sql, and } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 
 const API_KEY = process.env.ACCOUNTING_API_KEY;

@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { accountingEntries, accountingEntryLines } from '@/src/db/schema';
-import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
+import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 

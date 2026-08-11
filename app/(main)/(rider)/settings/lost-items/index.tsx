@@ -46,7 +46,7 @@ export default function DriverLostItems() {
       });
       if (res.ok) { Alert.alert("Updated", "Response submitted."); fetchItems(); }
       else { const d = await res.json(); Alert.alert("Error", d.error ?? "Failed"); }
-    } catch (err: any) { Alert.alert("Error", "Network error"); }
+    } catch (_err: any) { Alert.alert("Error", "Network error"); }
     finally { setSubmittingId(null); }
   };
 

@@ -1,6 +1,6 @@
 import { verifySupabaseToken } from '@/lib/auth';
 import { db } from '@/src/db';
-import { rideExtraCharges, rides } from '@/src/db/schema';
+import { rideExtraCharges } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -11,7 +11,7 @@ export async function POST(request: Request, { id, chargeId }: { id: string; cha
     const uuidCharge = z.string().uuid().safeParse(chargeId);
     if (!uuidId.success || !uuidCharge.success) return Response.json({ error: 'invalid_uuid' }, { status: 400 });
 
-    const supabaseUser = await verifySupabaseToken(request);
+    const _supabaseUser = await verifySupabaseToken(request);
 
     const [charge] = await db.select().from(rideExtraCharges).where(eq(rideExtraCharges.id, chargeId)).limit(1);
     if (!charge || charge.ride_id !== id) return Response.json({ error: 'not_found' }, { status: 404 });

@@ -1,7 +1,7 @@
 import { verifySupabaseToken } from '@/lib/auth';
 import { db } from '@/src/db';
 import { users, drivers, driverStreaks, driverAchievements, driverMysteryBonuses } from '@/src/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { getCurrentTier } from '@/lib/gamification';
 import { logger } from '@/lib/logger';
 

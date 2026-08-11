@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { cancellationPolicies } from '@/src/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { desc } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';

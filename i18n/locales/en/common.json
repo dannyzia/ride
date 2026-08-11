@@ -48,8 +48,8 @@
     "total_fare": "Total Fare",
     "back_to_home": "Back to Home",
     "cancel_ride": "Cancel Ride",
-    "free_cancellation": "Free cancellation for {minutes}:{seconds}",
-    "cancellation_fee": "Cancellation fee: ৳{fee}",
+    "free_cancellation": "Free cancellation for {{minutes}}:{{seconds}}",
+    "cancellation_fee": "Cancellation fee: ৳{{fee}}",
     "no_fee_within_grace": "No fee within grace period",
     "fee_will_be_deducted": "Fee will be deducted from your wallet",
     "no_fee_applies": "No fee applies",
@@ -78,10 +78,10 @@
     "search": "Search destination...",
     "calls_remaining": "Calls Remaining",
     "connected": "Connected",
-    "welcome_name": "Welcome, {name}",
+    "welcome_name": "Welcome, {{name}}",
     "your_current_location": "Your Current Location:",
     "no_recent_rides": "No recent rides found",
-    "fetching": "Fetching..."
+    "fetching": "Locating you..."
   },
   "settings": {
     "title": "Settings",

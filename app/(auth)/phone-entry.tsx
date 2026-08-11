@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { API_URL } from "@/lib/config";
-import { useTranslation } from "react-i18next";
 import {
   View,
   Text,

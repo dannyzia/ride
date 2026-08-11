@@ -1,4 +1,4 @@
-﻿export default {
+export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const targetUrl = `https://${env.SUPABASE_TARGET}${url.pathname}${url.search}`;

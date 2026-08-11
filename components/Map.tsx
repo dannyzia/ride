@@ -4,7 +4,6 @@ import { useCustomer, useDriver, useDriverStore, useWSStore } from "@/store";
 import { usePathname, useRouter } from "expo-router";
 import { colors, spacing } from "@/theme/goRide";
 import { Driver } from "@/types/type";
-import Constants from "expo-constants";
 import { useSession } from "@/lib/session";
 import {
   useBarikoiMapStyle,
@@ -66,15 +65,12 @@ const Map = () => {
   const [_driverPickupLatitude, _setDriverPickupLatitude] = useState<number>();
   const [_driverPickupLongitude, _setDriverPickupLongitude] =
     useState<number>();
-  const [driverDropoffLatitude, _setDriverDropoffLatitude] = useState<number>();
-  const [driverDropoffLongitude, _setDriverDropoffLongitude] =
-    useState<number>();
   const [_rideStatus, _setRideStatus] = useState<string>("Offer");
 
   const [_offerSentToDriver, _setOfferSentToDriver] = useState(false);
   const [_tripConfirmed, setTripConfirmed] = useState(false);
   const [_tripStarted, _setTripStarted] = useState(false);
-  const [_arrived, setArrived] = useState(false);
+  const [_arrived, _setArrived] = useState(false);
   const [_driverArrived, _setDriverArrived] = useState(false);
   const [_pickup, _setPickup] = useState(false);
   const [_dropoff, _setDropoff] = useState(false);
@@ -87,7 +83,7 @@ const Map = () => {
     useState(0);
   const [_driverDestinationAddress, _setDriverDestinationAddress] =
     useState("");
-  const [_rideOfferMap, setRideOfferMap] = useState<any>();
+  const [_rideOfferMap, _setRideOfferMap] = useState<any>();
 
   const {
     selectedDriverId: _selectedDriverId,
@@ -95,7 +91,7 @@ const Map = () => {
     setSelectedDriverDetails: _setSelectedDriverDetails,
     setNearbyDrivers: _setNearbyDrivers,
     updateDriverLocation: _updateDriverLocation,
-    updateSelectedDriverLocation,
+    updateSelectedDriverLocation: _updateSelectedDriverLocation,
     selectedDriverDetails: _selectedDriverDetails,
   } = useDriverStore();
   const { userAddress: _userAddress } = useCustomer();
@@ -117,29 +113,7 @@ const Map = () => {
   // WebSocket is managed by the parent screen (home/index.tsx).
   // Map is a display-only component — no WS setup here.
 
-  const handleWSMessage = (msg: any) => {
-    switch (msg.type) {
-      case "offer:new":
-        setRideOfferMap(msg.payload);
-        break;
-      case "ride:matched":
-        handleRideMatched(msg.payload);
-        break;
-      case "driver:arrived":
-        setArrived(true);
-        break;
-      case "driver:location":
-        if (msg.payload?.driverId)
-          updateSelectedDriverLocation(
-            msg.payload.latitude,
-            msg.payload.longitude,
-            msg.payload.driverId,
-          );
-        break;
-    }
-  };
-
-  const handleRideMatched = (payload: any) => {
+  const _handleRideMatched = (payload: any) => {
     setRideID(payload.rideId);
     setTripConfirmed(true);
     setSelectedDriverRideStatus("Arriving");

@@ -1,6 +1,5 @@
 import { db } from '@/src/db';
-import { zones, weatherConditions, surgeCurrent } from '@/src/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { weatherConditions, surgeCurrent } from '@/src/db/schema';
 import { logger } from '@/lib/logger';
 
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY;

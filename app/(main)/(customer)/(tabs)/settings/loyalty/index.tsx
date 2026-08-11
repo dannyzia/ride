@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -8,12 +8,10 @@ import { logger } from "@/lib/logger";
 import Skeleton from "@/components/Skeleton";
 
 interface Offer { id: string; title: string; points_required: number; reward_type: string; reward_value_bdt: number | null; }
-interface Tx { id: string; transaction_type: string; amount: number; balance_after: number; created_at: string; }
 
 export default function RiderLoyalty() {
   const [balance, setBalance] = useState(0);
   const [offers, setOffers] = useState<Offer[]>([]);
-  const [history, setHistory] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
 
@@ -27,7 +25,6 @@ export default function RiderLoyalty() {
         const data = await res.json();
         setBalance(data.balance ?? 0);
         setOffers(data.offers ?? []);
-        setHistory(data.history ?? []);
       }
     } catch (e) { logger.error("Loyalty fetch failed", e); }
     finally { setLoading(false); }
@@ -50,7 +47,7 @@ export default function RiderLoyalty() {
           const data = await res.json();
           if (res.ok) { Alert.alert("Redeemed!", `Reward: ৳${((data.reward_bdt ?? 0) / 100).toFixed(0)}`); fetchData(); }
           else { Alert.alert("Error", data.error ?? "Failed"); }
-        } catch (e: any) { Alert.alert("Error", "Network error"); }
+        } catch (_e: any) { Alert.alert("Error", "Network error"); }
         setRedeeming(null);
       }},
     ]);

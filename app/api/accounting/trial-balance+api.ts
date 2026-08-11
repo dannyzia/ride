@@ -1,5 +1,4 @@
 import { db } from '@/src/db';
-import { accountingEntryLines, accountingAccounts } from '@/src/db/schema';
 import { sql } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 

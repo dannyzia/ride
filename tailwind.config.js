@@ -117,9 +117,6 @@ module.exports = {
         'go-glow-primary': '0 4px 20px 0 rgba(10, 155, 76, 0.35)',
         'go-glow-danger': '0 4px 20px 0 rgba(227, 29, 28, 0.30)',
       },
-      borderRadius: {
-        '4xl': '32px',
-      },
     },
   },
   plugins: [],

@@ -1,7 +1,7 @@
 import { verifySupabaseToken } from '@/lib/auth';
 import { db } from '@/src/db';
 import { users, lostItems, rides } from '@/src/db/schema';
-import { eq, desc, and, gte } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';

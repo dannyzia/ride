@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, Pressable, TextInput, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
 import { adminFetch } from "@/lib/adminFetch";

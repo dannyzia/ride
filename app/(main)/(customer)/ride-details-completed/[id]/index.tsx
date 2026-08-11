@@ -57,7 +57,7 @@ export default function RideDetailsCompleted() {
       });
       if (res.ok) { Alert.alert("Dispute Filed", "Under review. Admin will respond within 24h."); setDisputeModal(false); }
       else { const d = await res.json(); Alert.alert("Error", d.error ?? d.message ?? "Failed"); }
-    } catch (err: any) { Alert.alert("Error", "Network error"); }
+    } catch (_err: any) { Alert.alert("Error", "Network error"); }
     finally { setDisputing(false); }
   };
 

@@ -2,10 +2,9 @@ import { db } from "../src/db";
 import {
   users,
   rides,
-  referrals,
   userDevices,
 } from "../src/db/schema";
-import { eq, and, sql, gt, gte, lt, isNotNull } from "drizzle-orm";
+import { eq, and, sql, gt, isNotNull } from "drizzle-orm";
 import { logger } from "./logger";
 
 const ONE_DAY_AGO = new Date(Date.now() - 24 * 60 * 60 * 1000);

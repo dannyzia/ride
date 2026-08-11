@@ -1,4 +1,4 @@
-import { Image, Text, View, TextInput, TouchableOpacity, Alert } from "react-native";
+import { Image, Text, View, TextInput, TouchableOpacity, Alert , Modal } from "react-native";
 import { API_URL } from "@/lib/config";
 import { MaterialIcons } from "@expo/vector-icons";
 import RideLayout from "@/components/RideLayout";
@@ -9,7 +9,6 @@ import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
 import { UpfrontTipSlider } from "@/components/UpfrontTipSlider";
 import CustomButton from "@/components/CustomButton";
 import { useEffect, useState, Fragment } from "react";
-import { Modal } from "react-native";
 import { useRiderStore, FareEstimate, DiscountOption, DiscountType } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";

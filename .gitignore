@@ -128,3 +128,9 @@ admin-test-results.zip
 # Test screenshots / captures
 /*.png
 /driver-screen.png
+
+# Tooling / scratch artifacts
+.playwright-mcp/
+list.txt
+FileList.ps1
+driver_ui.xml

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, TextInput, FlatList, ActivityIndicator, Alert, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -57,7 +57,7 @@ export default function RiderLostItems() {
       });
       if (res.ok) { Alert.alert("Reported", "Driver has been notified."); setModalVisible(false); setDescription(""); fetchItems(); }
       else { const d = await res.json(); Alert.alert("Error", d.error ?? "Failed"); }
-    } catch (err: any) { Alert.alert("Error", "Network error"); }
+    } catch (_err: any) { Alert.alert("Error", "Network error"); }
     finally { setSubmitting(false); }
   };
 
