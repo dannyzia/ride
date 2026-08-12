@@ -1,68 +1,110 @@
-import { ButtonProps } from '@/types/type';
-import { Text, TouchableOpacity } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { ButtonProps } from "@/types/type";
+import { Text, TouchableOpacity } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
+import { colors } from "@/theme/goRide";
+import { useAppearance } from "@/lib/useAppearance";
 
-const getBgVariantStyle = (variant: ButtonProps['bgVariant']) => {
-    switch (variant) {
-        case "secondary":
-            return 'bg-goSurfaceElevatedDark border border-goBorderDark active:bg-goDarkSecondary';
-        case "danger":
-            return 'bg-goDanger active:bg-goDangerPressed shadow-md shadow-goDanger/25';
-        case "success":
-            return 'bg-goGreenVariant shadow-md shadow-green-500/40 border border-green-500/60';
-        case "outline":
-            return 'bg-transparent border-2 border-goAccent active:bg-goAccentLight';
-        default:
-            return 'bg-goAccent active:bg-goAccentPressed shadow-lg shadow-goAccent/30';
-    }
+const getBgVariantStyle = (variant: ButtonProps["bgVariant"], isDark: boolean) => {
+  switch (variant) {
+    case "secondary":
+      return {
+        backgroundColor: "transparent",
+        borderWidth: 1.5,
+        borderColor: isDark ? colors.borderDark : colors.borderLight,
+      };
+    case "danger":
+      return {
+        backgroundColor: colors.danger,
+      };
+    case "success":
+      return {
+        backgroundColor: colors.greenVariant,
+      };
+    case "outline":
+      return {
+        backgroundColor: "transparent",
+        borderWidth: 2,
+        borderColor: colors.primary,
+      };
+    default:
+      return {
+        backgroundColor: colors.primary,
+      };
+  }
 };
 
-const getTextVariantStyle = (variant: ButtonProps['textVariant']) => {
-    switch (variant) {
-        case "primary":
-            return 'text-goWhite';
-        case "secondary":
-            return 'text-goLightGray';
-        case "success":
-            return 'text-goLightGreenText';
-        case "danger":
-            return 'text-goLightRedText';
-        default:
-            return 'text-goWhite';
-    }
+const getTextVariantStyle = (variant: ButtonProps["textVariant"], isDark: boolean) => {
+  switch (variant) {
+    case "primary":
+      return { color: colors.white };
+    case "secondary":
+      return { color: isDark ? colors.textPrimaryDark : colors.textPrimaryLight };
+    case "success":
+      return { color: colors.lightGreenText };
+    case "danger":
+      return { color: colors.lightRedText };
+    default:
+      return { color: colors.white };
+  }
 };
 
 const CustomButton = ({
-    onPress,
-    disabled,
-    title,
-    bgVariant = "primary",
-    textVariant = "primary",
-    IconLeft,
-    IconRight,
-    className,
-    ...props
+  onPress,
+  disabled,
+  title,
+  bgVariant = "primary",
+  textVariant = "primary",
+  IconLeft,
+  IconRight,
+  className,
+  ...props
 }: ButtonProps) => {
-    const scale = useSharedValue(1);
-    const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
 
-    return (
-        <Animated.View style={animatedStyle}>
-            <TouchableOpacity
-                disabled={disabled}
-                onPress={onPress}
-                activeOpacity={0.9}
-                onPressIn={() => { scale.value = withSpring(0.96, { stiffness: 400, damping: 15 }); }}
-                onPressOut={() => { scale.value = withSpring(1, { stiffness: 400, damping: 15 }); }}
-                className={`rounded-full py-3.5 px-8 flex flex-row justify-center items-center ${getBgVariantStyle(bgVariant)} ${className} ${disabled ? 'opacity-40' : ''}`}
-                {...props}
-            >
-                {IconLeft && <IconLeft />}
-                <Text className={`text-goWhite text-[15px] font-JakartaBold tracking-tight ${getTextVariantStyle(textVariant)}`}>{title}</Text>
-                {IconRight && <IconRight />}
-            </TouchableOpacity>
-        </Animated.View>
-    );
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const bgStyle = getBgVariantStyle(bgVariant, isDark);
+  const textStyle = getTextVariantStyle(textVariant, isDark);
+
+  return (
+    <Animated.View style={[animatedStyle, { width: "100%" }]}>
+      <TouchableOpacity
+        disabled={disabled}
+        onPress={onPress}
+        activeOpacity={0.9}
+        onPressIn={() => {
+          if (!disabled) {
+            scale.value = withSpring(0.96, { stiffness: 400, damping: 15 });
+          }
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { stiffness: 400, damping: 15 });
+        }}
+        className={`rounded-full min-h-[58px] flex flex-row justify-center items-center px-6 ${className} ${
+          disabled ? "opacity-50" : "opacity-100"
+        }`}
+        style={bgStyle}
+        {...props}
+      >
+        {IconLeft && <IconLeft />}
+        <Text
+          className="text-[16px] font-JakartaBold tracking-tight"
+          style={textStyle}
+        >
+          {title}
+        </Text>
+        {IconRight && <IconRight />}
+      </TouchableOpacity>
+    </Animated.View>
+  );
 };
 
 export default CustomButton;

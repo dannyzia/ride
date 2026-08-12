@@ -1,5 +1,8 @@
-import { View, Text } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radii } from '@/theme/goRide';
+import { useAppearance } from '@/lib/useAppearance';
 
 interface FareRow {
   label: string;
@@ -11,78 +14,124 @@ interface FareBreakdownSheetProps {
 }
 
 export default function FareBreakdownSheet({ fareBreakdown }: FareBreakdownSheetProps) {
-  const rows: FareRow[] = [];
+  const [expanded, setExpanded] = useState(false);
+  const { theme } = useAppearance();
+  const isDark = theme === 'dark' || theme === 'system';
+
+  const detailRows: FareRow[] = [];
 
   if (fareBreakdown.base_fare_bdt != null) {
-    rows.push({ label: 'Base fare', amount_bdt: fareBreakdown.base_fare_bdt });
+    detailRows.push({ label: 'Base fare', amount_bdt: fareBreakdown.base_fare_bdt });
   }
   if (fareBreakdown.distance_charge_bdt != null) {
-    rows.push({ label: 'Distance charge', amount_bdt: fareBreakdown.distance_charge_bdt });
+    detailRows.push({ label: 'Distance charge', amount_bdt: fareBreakdown.distance_charge_bdt });
   }
   if (fareBreakdown.time_charge_bdt != null && fareBreakdown.time_charge_bdt > 0) {
-    rows.push({ label: 'Time charge', amount_bdt: fareBreakdown.time_charge_bdt });
+    detailRows.push({ label: 'Time charge', amount_bdt: fareBreakdown.time_charge_bdt });
   }
   if (fareBreakdown.floor_fare_bdt != null && fareBreakdown.floor_fare_bdt > fareBreakdown.total_bdt) {
-    // Only show floor if it's higher than the computed total (meaning floor applied)
-    rows.push({ label: 'Minimum fare floor', amount_bdt: fareBreakdown.floor_fare_bdt });
+    detailRows.push({ label: 'Minimum fare floor', amount_bdt: fareBreakdown.floor_fare_bdt });
   }
   if (fareBreakdown.preference_surcharge_bdt != null && fareBreakdown.preference_surcharge_bdt > 0) {
-    rows.push({ label: 'Preferences', amount_bdt: fareBreakdown.preference_surcharge_bdt });
-  }
-  if (fareBreakdown.total_bdt != null) {
-    rows.push({ label: 'Total', amount_bdt: fareBreakdown.total_bdt });
+    detailRows.push({ label: 'Preferences', amount_bdt: fareBreakdown.preference_surcharge_bdt });
   }
   if (fareBreakdown.driver_net_bdt != null && fareBreakdown.driver_net_bdt !== fareBreakdown.total_bdt) {
-    rows.push({ label: 'Driver receives', amount_bdt: fareBreakdown.driver_net_bdt });
+    detailRows.push({ label: 'Driver receives', amount_bdt: fareBreakdown.driver_net_bdt });
   }
 
-  if (rows.length === 0) return null;
+  const totalRow: FareRow | null = fareBreakdown.total_bdt != null
+    ? { label: 'Total', amount_bdt: fareBreakdown.total_bdt }
+    : null;
+
+  if (!totalRow && detailRows.length === 0) return null;
+
+  const bg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   return (
     <View style={{
-      backgroundColor: colors.bgLight,
+      backgroundColor: bg,
       borderRadius: radii['2xl'],
       padding: spacing.lg,
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: borderColor,
     }}>
-      <Text style={{
-        fontSize: 16, fontFamily: 'Urbanist', fontWeight: '700',
-        color: colors.textPrimaryLight, marginBottom: spacing.md,
-      }}>
-        Fare Breakdown
-      </Text>
-      {rows.map((row, i) => {
-        const isTotal = row.label === 'Total';
-        return (
-          <View
-            key={i}
-            style={{
-              flexDirection: 'row', justifyContent: 'space-between',
-              alignItems: 'center', paddingVertical: 6,
-              ...(isTotal ? {
-                borderTopWidth: 1, borderTopColor: colors.borderLight,
-                marginTop: spacing.xs, paddingTop: spacing.sm,
-              } : {}),
-            }}
-          >
+      {/* Total row — always visible, tap to expand */}
+      <TouchableOpacity
+        onPress={() => detailRows.length > 0 && setExpanded(!expanded)}
+        activeOpacity={detailRows.length > 0 ? 0.7 : 1}
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <Text style={{
+          fontSize: 16,
+          fontFamily: 'Jakarta-Bold',
+          color: textPrimary,
+        }}>
+          {totalRow ? 'Total' : 'Fare Breakdown'}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {totalRow && (
             <Text style={{
-              fontSize: 14, fontFamily: isTotal ? 'Urbanist' : 'Inter',
-              fontWeight: isTotal ? '700' : '400',
-              color: isTotal ? colors.textPrimaryLight : colors.textSecondaryLight,
+              fontSize: 16,
+              fontFamily: 'Jakarta-Bold',
+              color: colors.primary,
             }}>
-              {row.label}
+              ৳{(totalRow.amount_bdt / 100).toFixed(0)}
             </Text>
-            <Text style={{
-              fontSize: 14, fontFamily: 'Inter',
-              fontWeight: isTotal ? '700' : '400',
-              color: isTotal ? colors.primary : colors.textPrimaryLight,
-            }}>
-              ৳{(row.amount_bdt / 100).toFixed(0)}
-            </Text>
+          )}
+          {detailRows.length > 0 && (
+            <Ionicons
+              name={expanded ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color={textSecondary}
+            />
+          )}
+        </View>
+      </TouchableOpacity>
+
+      {/* Detail rows — only when expanded */}
+      {expanded && detailRows.length > 0 && (
+        <View style={{ marginTop: spacing.md }}>
+          <View style={{
+            borderTopWidth: 1,
+            borderTopColor: borderColor,
+            paddingTop: spacing.sm,
+          }}>
+            {detailRows.map((row, i) => (
+              <View
+                key={i}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingVertical: 6,
+                }}
+              >
+                <Text style={{
+                  fontSize: 14,
+                  fontFamily: 'Jakarta-Regular',
+                  color: textSecondary,
+                }}>
+                  {row.label}
+                </Text>
+                <Text style={{
+                  fontSize: 14,
+                  fontFamily: 'Jakarta-Regular',
+                  color: textPrimary,
+                }}>
+                  ৳{(row.amount_bdt / 100).toFixed(0)}
+                </Text>
+              </View>
+            ))}
           </View>
-        );
-      })}
+        </View>
+      )}
     </View>
   );
 }

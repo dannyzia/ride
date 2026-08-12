@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useChatStore, ChatMessage } from '@/store/useChatStore';
 import { colors } from '@/theme/goRide';
+import { useAppearance } from '@/lib/useAppearance';
 
 interface ChatScreenProps {
   rideId: string;
@@ -21,6 +22,8 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
   const router = useRouter();
   const { messages, loading, error, hasMore, loadMessages, sendMessage, onNewMessage, clearChat } = useChatStore();
   const wsRef = useRef<WebSocket | null>(null);
+  const { theme } = useAppearance();
+  const isDark = theme === 'dark' || theme === 'system';
 
   // Initial load
   useEffect(() => {
@@ -78,28 +81,34 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
     }
   }, [hasMore, loading, messages, rideId, loadMessages]);
 
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   const renderBubble = (props: any) => (
     <Bubble
       {...props}
       wrapperStyle={{
         right: { backgroundColor: colors.primary },
-        left: { backgroundColor: colors.borderLight },
+        left: { backgroundColor: isDark ? colors.surfaceElevatedDark : colors.gray100 },
       }}
       textStyle={{
-        right: { color: colors.textPrimaryDark },
-        left: { color: colors.textPrimaryLight },
+        right: { color: colors.white, fontFamily: 'Jakarta-Regular' },
+        left: { color: textPrimary, fontFamily: 'Jakarta-Regular' },
       }}
       timeTextStyle={{
-        right: { color: 'rgba(255,255,255,0.7)', fontSize: 11 },
-        left: { color: colors.grayMedium, fontSize: 11 },
+        right: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontFamily: 'Jakarta-Regular' },
+        left: { color: textSecondary, fontSize: 11, fontFamily: 'Jakarta-Regular' },
       }}
     />
   );
 
   const renderSend = (props: any) => (
     <Send {...props} containerStyle={{ justifyContent: 'center', marginRight: 8 }}>
-      <View style={styles.sendButton}>
-        <Ionicons name="send" size={16} color={colors.textPrimaryDark} />
+      <View style={[styles.sendButton, { backgroundColor: colors.primary }]}>
+        <Ionicons name="send" size={16} color={colors.white} />
       </View>
     </Send>
   );
@@ -109,7 +118,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
     return (
       <InputToolbar
         {...props}
-        containerStyle={styles.inputToolbar}
+        containerStyle={[styles.inputToolbar, { backgroundColor: surfaceBg, borderTopColor: borderColor }]}
         primaryStyle={{ alignItems: 'center' }}
       />
     );
@@ -120,8 +129,8 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
     if (!currentMessage || currentMessage.user?._id === currentUserId) return null;
     const initial = (otherUserName?.[0] ?? '?').toUpperCase();
     return (
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initial}</Text>
+      <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+        <Text style={[styles.avatarText, { color: colors.white }]}>{initial}</Text>
       </View>
     );
   };
@@ -129,7 +138,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
   // Loading state (initial load only)
   if (loading && messages.length === 0) {
     return (
-      <View style={[styles.centerContainer, { paddingTop: insets.top }]}>
+      <View style={[styles.centerContainer, { paddingTop: insets.top, backgroundColor: bg }]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -138,25 +147,25 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
   // Error state (no messages cached)
   if (error && messages.length === 0) {
     return (
-      <View style={[styles.centerContainer, { paddingTop: insets.top }]}>
+      <View style={[styles.centerContainer, { paddingTop: insets.top, backgroundColor: bg }]}>
         <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => loadMessages(rideId)}>
-          <Text style={styles.retryText}>Retry</Text>
+        <Text style={[styles.errorText, { color: textSecondary }]}>{error}</Text>
+        <TouchableOpacity style={[styles.retryButton, { backgroundColor: colors.primary }]} onPress={() => loadMessages(rideId)}>
+          <Text style={[styles.retryText, { color: colors.white }]}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: bg }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: surfaceBg, borderBottomColor: borderColor }]}>
         <TouchableOpacity style={styles.backButton} onPress={onBackPress ?? (() => router.back())}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimaryLight} />
+          <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle} numberOfLines={1}>Chat with {otherUserName}</Text>
+          <Text style={[styles.headerTitle, { color: textPrimary }]} numberOfLines={1}>Chat with {otherUserName}</Text>
         </View>
         {onCallPress ? (
           <TouchableOpacity style={styles.callButton} onPress={onCallPress}>
@@ -183,7 +192,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
         renderAvatar={renderAvatar}
         isSendButtonAlwaysVisible
         isAvatarVisibleForEveryMessage
-        messagesContainerStyle={{ paddingBottom: 4 }}
+        messagesContainerStyle={{ paddingBottom: 4, backgroundColor: bg }}
       />
     </View>
   );
@@ -192,13 +201,11 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bgLight,
   },
   centerContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bgLight,
     paddingHorizontal: 24,
   },
   header: {
@@ -207,8 +214,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surfaceLight,
   },
   backButton: {
     width: 44,
@@ -222,8 +227,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimaryLight,
+    fontFamily: 'Jakarta-SemiBold',
   },
   callButton: {
     width: 44,
@@ -235,33 +239,29 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   inputToolbar: {
-    borderTopWidth: 0,
+    borderTopWidth: 1,
     paddingHorizontal: 8,
     paddingBottom: 4,
-    backgroundColor: colors.surfaceLight,
   },
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
   },
   avatarText: {
-    color: colors.textPrimaryDark,
-    fontWeight: '600',
+    fontFamily: 'Jakarta-SemiBold',
     fontSize: 14,
   },
   errorText: {
     fontSize: 15,
-    color: colors.gray,
+    fontFamily: 'Jakarta-Regular',
     textAlign: 'center',
     marginTop: 12,
   },
@@ -270,11 +270,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 1000,
-    backgroundColor: colors.primary,
   },
   retryText: {
-    color: colors.textPrimaryDark,
-    fontWeight: '600',
+    fontFamily: 'Jakarta-SemiBold',
     fontSize: 14,
   },
 });

@@ -7,6 +7,7 @@ import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
 import Map from './Map'
 import { useCustomer, useDriverStore } from '@/store'
 import { colors, radii, spacing } from '@/theme/goRide'
+import { useAppearance } from '@/lib/useAppearance'
 
 const RideLayout = ({ title, children, snapPoints, disabled, footer }: {
     title: string,
@@ -15,9 +16,10 @@ const RideLayout = ({ title, children, snapPoints, disabled, footer }: {
     disabled: boolean,
     footer?: React.ReactNode,
 }) => {
-
     const { clearDestinationLocation } = useCustomer();
     const { clearSelectedDriver } = useDriverStore();
+    const { theme } = useAppearance();
+    const isDark = theme === 'dark' || theme === 'system';
 
     const bottomSheetRef = useRef<BottomSheet>(null);
     const router = useRouter()
@@ -35,14 +37,20 @@ const RideLayout = ({ title, children, snapPoints, disabled, footer }: {
         restSpeedThreshold: 0.01,
     }), []);
 
+    const sheetBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+    const handleColor = isDark ? colors.borderDark : colors.borderLight;
+    const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+    const backBtnBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+    const backBtnBorder = isDark ? colors.borderDark : colors.borderLight;
+
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            {/* ── Layer 0: Full-screen map (base layer) ───────────────── */}
+            {/* Map layer */}
             <View style={StyleSheet.absoluteFill}>
                 <Map />
             </View>
 
-            {/* ── Layer 1: Back button + title (floats over map) ───────── */}
+            {/* Back button + title */}
             <View style={{
                 flexDirection: 'row',
                 position: 'absolute',
@@ -67,12 +75,12 @@ const RideLayout = ({ title, children, snapPoints, disabled, footer }: {
                         <View style={{
                             width: 40,
                             height: 40,
-                            backgroundColor: colors.surfaceElevatedDark,
+                            backgroundColor: backBtnBg,
                             borderRadius: radii.pill,
                             alignItems: 'center',
                             justifyContent: 'center',
                             borderWidth: 1,
-                            borderColor: colors.borderDark,
+                            borderColor: backBtnBorder,
                         }}>
                             <Image source={icons.backArrow} style={{ width: 20, height: 20 }} />
                         </View>
@@ -81,7 +89,7 @@ const RideLayout = ({ title, children, snapPoints, disabled, footer }: {
                 {!disabled && (
                     <Text style={{
                         fontSize: 18,
-                        color: colors.textPrimaryDark,
+                        color: textPrimary,
                         fontFamily: 'Jakarta-SemiBold',
                         marginLeft: spacing.md,
                     }}>
@@ -90,7 +98,7 @@ const RideLayout = ({ title, children, snapPoints, disabled, footer }: {
                 )}
             </View>
 
-            {/* ── Layer 2: Bottom sheet (top layer, sits over map) ─────── */}
+            {/* Bottom sheet */}
             <BottomSheet
                 keyboardBehavior='extend'
                 ref={bottomSheetRef}
@@ -99,16 +107,16 @@ const RideLayout = ({ title, children, snapPoints, disabled, footer }: {
                 enablePanDownToClose={false}
                 animationConfigs={springConfig}
                 backgroundStyle={{
-                    backgroundColor: colors.surfaceElevatedDark,
+                    backgroundColor: sheetBg,
                     borderTopLeftRadius: radii['3xl'],
                     borderTopRightRadius: radii['3xl'],
                 }}
-                handleIndicatorStyle={{ backgroundColor: colors.borderDark }}
+                handleIndicatorStyle={{ backgroundColor: handleColor, width: 40, height: 4, borderRadius: 2 }}
             >
                 <BottomSheetView style={{
                     flex: 1,
                     padding: spacing.xl,
-                    backgroundColor: colors.surfaceElevatedDark,
+                    backgroundColor: sheetBg,
                 }}>
                     {footer ? (
                         <View style={{ marginBottom: spacing.md }}>

@@ -1,23 +1,60 @@
-import { View, Text } from 'react-native';
+import { View, Text } from "react-native";
+import { colors } from "@/theme/goRide";
+import { useAppearance } from "@/lib/useAppearance";
 
 interface DriverStatusBadgeProps {
   status: string;
 }
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  active:     { bg: 'bg-goGreenVariant', text: 'text-white', label: 'Active' },
-  pending:    { bg: 'bg-goAmber', text: 'text-white', label: 'Pending' },
-  suspended:  { bg: 'bg-goDanger', text: 'text-white', label: 'Suspended' },
-  inactive:   { bg: 'bg-gray-400',  text: 'text-white', label: 'Inactive' },
-  rejected:   { bg: 'bg-goDanger', text: 'text-white', label: 'Rejected' },
-};
-
 export default function DriverStatusBadge({ status }: DriverStatusBadgeProps) {
-  const style = STATUS_STYLES[status.toLowerCase()] ?? STATUS_STYLES.inactive;
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
+
+  const s = status.toLowerCase();
+
+  const getColors = () => {
+    switch (s) {
+      case "active":
+        return { bg: colors.greenVariant, text: colors.white };
+      case "pending":
+        return { bg: colors.amber, text: colors.white };
+      case "suspended":
+        return { bg: colors.danger, text: colors.white };
+      case "rejected":
+        return { bg: colors.danger, text: colors.white };
+      case "inactive":
+      default:
+        return {
+          bg: isDark ? colors.borderDark : colors.gray200,
+          text: isDark ? colors.textSecondaryDark : colors.textSecondaryLight,
+        };
+    }
+  };
+
+  const getLabel = () => {
+    switch (s) {
+      case "active": return "Active";
+      case "pending": return "Pending";
+      case "suspended": return "Suspended";
+      case "rejected": return "Rejected";
+      case "inactive": return "Inactive";
+      default: return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+  };
+
+  const style = getColors();
 
   return (
-    <View className={`px-3 py-1 rounded-full ${style.bg}`}>
-      <Text className={`text-xs font-Jakarta font-semibold ${style.text}`}>{style.label}</Text>
+    <View
+      className="px-3 py-1 rounded-full"
+      style={{ backgroundColor: style.bg }}
+    >
+      <Text
+        className="text-xs font-JakartaSemiBold"
+        style={{ color: style.text }}
+      >
+        {getLabel()}
+      </Text>
     </View>
   );
 }

@@ -1,28 +1,30 @@
-import { View, Text, Image, ActivityIndicator } from 'react-native'
-import { icons } from '@/constants/data'
+import { View, Text, ActivityIndicator } from "react-native";
+import { colors } from "@/theme/goRide";
+import { useAppearance } from "@/lib/useAppearance";
 
-const LoadingRider = () => {
-    return (
-        <View className='flex-row'>
-            <View className='h-20  w-20'>
-                <Image
-                    source={icons.cab}
-                    className='w-full h-full'
-                    resizeMode='contain'
-                />
-            </View>
-            <View className='w-3/6 pl-5 m-auto'>
-                <Text className='font-Jakarta text-lg'>Looking for your</Text>
-                <Text className='font-Jakarta text-lg'>Cab Driver</Text>
-            </View>
-            <View className='m-auto flex-row gap-x-2'>
-                <Text className='text-lg font-Jakarta'>
-                    Loading
-                </Text>
-                <ActivityIndicator />
-            </View>
-        </View>
-    )
+interface LoadingRiderProps {
+  message?: string;
 }
 
-export default LoadingRider
+export default function LoadingRider({ message }: LoadingRiderProps) {
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+
+  return (
+    <View
+      className="flex-1 justify-center items-center px-6"
+      style={{ backgroundColor: bg }}
+    >
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text
+        className="mt-4 text-base font-JakartaSemiBold text-center"
+        style={{ color: textPrimary }}
+      >
+        {message || "Looking for drivers..."}
+      </Text>
+    </View>
+  );
+}

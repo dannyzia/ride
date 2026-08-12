@@ -79,7 +79,7 @@ This repo has **two independently-typed packages**:
 npx expo start                              # Dev server
 npx expo run:android                        # Native build (required after plugin changes)
 npx tsc --noEmit                            # Type check (must pass)
-npx eslint .                                # Lint (must pass; unused _-prefixed vars allowed)
+npm run lint                                # Lint (must pass; unused _-prefixed vars allowed). Uses legacy .eslintrc.json — do NOT run bare `npx eslint .`
 npx jest --testPathPattern="name"           # Single test
 
 # Database
@@ -235,7 +235,7 @@ All tables: uuid PKs, created_at/updated_at timestamptz. Append-only tables (`ca
 - WebSocket events: `{domain}:{action}` kebab-case (`ride:offer`, `fetch:confirm`, `location:update`)
 
 ### ESLint
-`eslint.config.mjs` uses `eslint-config-expo/flat.js`. Unused vars with `_` prefix allowed. Config ignores `_reference/` and `utils-server/`.
+Legacy `.eslintrc.json` config (NOT flat config). Always lint via `npm run lint` (script sets `ESLINT_USE_FLAT_CONFIG=false`). Unused vars with `_` prefix allowed. Config ignores `_reference/` and `utils-server/`.
 
 ## Environment Variables
 
@@ -256,6 +256,11 @@ Full reference: `docs/Plan/11-ENV-VARS.md`.
 - **Dispatch invariants** that must always pass: (1) single deduction per `(ride_id, driver_id)`, (2) deduction row has matching `dispatch_offers` row with `outcome='delivered'`, (3) `calls_remaining = 0` drivers never in candidate pool, (4) daily cap exceeded drivers never in candidate pool, (5) no driver receives same offer in consecutive batches.
 - **Payment invariants**: (1) same idempotency key → exactly one `payment_events` row, (2) duplicate callback activates subscription exactly once, (3) failed activation → `compensation_queue` entry within 30 seconds.
 - Test templates: `docs/Plan/22-TEST-TEMPLATES.md`.
+
+### Maestro / UI-flow testing — mandatory pre-reads
+Before generating, editing, or evaluating ANY Maestro YAML flow file, read in full:
+1. `.claude/rules/testing-agent.md` — 4 non-negotiable rules: (1) Section 4 Feature Coverage Matrix is the only feature source of truth, NOT `FEATURES.md`; (2) Section 17 folder paths are authoritative; (3) the 6 Section 20 pre-implementation gates are hard blockers — refuse to generate and report open gates if unmet; (4) generate all 29 subflows before any module/E2E flow.
+2. `plans/maestro-architecture.md` — complete enterprise QA blueprint (157 features, 195 planned flows, 12 testability gaps). Carries a top-of-file MANDATORY READ banner.
 
 ## Graph Maintenance
 

@@ -5,17 +5,17 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { BarikoiInputProps } from "@/types/type";
-import { icons } from "@/constants/data";
 import { useCustomer } from "@/store";
 import { getBarikoiAutocompleteUrl } from "@/lib/useBarikoiMapStyle";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
+import { useAppearance } from "@/lib/useAppearance";
 
 const BarikoiAutocomplete = ({
   icon,
@@ -31,6 +31,17 @@ const BarikoiAutocomplete = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const { userLatitude, userLongitude } = useCustomer();
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
+
+  const bg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const placeholderColor = isDark ? colors.textDisabledDark : colors.textDisabledLight;
+  const suggestionBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const suggestionBorder = isDark ? colors.borderDark : colors.borderLight;
+  const iconColor = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   useEffect(() => {
     if (query.length < 3) {
@@ -62,7 +73,6 @@ const BarikoiAutocomplete = ({
   }, [query]);
 
   const handleSelect = (place: any) => {
-    // Barikoi autocomplete already returns lat/lng — no detail fetch needed.
     const lat = parseFloat(place.latitude || place.lat || 0);
     const lng = parseFloat(place.longitude || place.lng || place.lon || 0);
     const address =
@@ -85,22 +95,31 @@ const BarikoiAutocomplete = ({
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       className={`z-50 mb-5 ${containerStyle}`}
     >
-      <View className="flex-row items-center bg-white rounded-full px-4 py-3 shadow shadow-neutral-300">
-        <Image
-          source={icon || icons.search}
-          className="w-5 h-5 mr-3 tint-black"
-          resizeMode="contain"
+      <View
+        className="flex-row items-center rounded-full px-4 py-3 shadow-sm"
+        style={{
+          backgroundColor: bg,
+          borderWidth: 1,
+          borderColor: borderColor,
+        }}
+      >
+        <Ionicons
+          name={(icon as any) || "search"}
+          size={20}
+          color={iconColor}
+          style={{ marginRight: 12 }}
         />
         <TextInput
           ref={inputRef}
           placeholder={initialLocation || "Where to?"}
-          placeholderTextColor="gray"
+          placeholderTextColor={placeholderColor}
           value={query}
           onChangeText={(text) => {
             setQuery(text);
             setShowSuggestions(true);
           }}
-          className="flex-1 text-black text-base"
+          className="flex-1 text-base font-Jakarta"
+          style={{ color: textPrimary }}
         />
         {query.length > 0 && (
           <TouchableOpacity
@@ -110,17 +129,13 @@ const BarikoiAutocomplete = ({
               setShowSuggestions(false);
             }}
           >
-            <Image
-              source={icons.close}
-              className="w-4 h-4 tint-black"
-              resizeMode="contain"
-            />
+            <Ionicons name="close-circle" size={20} color={iconColor} />
           </TouchableOpacity>
         )}
       </View>
 
       {loading && (
-        <ActivityIndicator className="mt-3" color={colors.gray} size="small" />
+        <ActivityIndicator className="mt-3" color={colors.primary} size="small" />
       )}
 
       {showSuggestions && suggestions.length > 0 && (
@@ -130,9 +145,17 @@ const BarikoiAutocomplete = ({
           renderItem={({ item }) => (
             <TouchableOpacity
               onPress={() => handleSelect(item)}
-              className="bg-white px-4 py-3 border-b border-neutral-200"
+              className="px-4 py-3"
+              style={{
+                backgroundColor: suggestionBg,
+                borderBottomWidth: 1,
+                borderBottomColor: suggestionBorder,
+              }}
             >
-              <Text className="text-black">
+              <Text
+                className="text-base font-Jakarta"
+                style={{ color: textPrimary }}
+              >
                 {item.address ||
                   item.place_name ||
                   item.description ||
@@ -140,7 +163,12 @@ const BarikoiAutocomplete = ({
               </Text>
             </TouchableOpacity>
           )}
-          className="mt-2 max-h-60 rounded-xl bg-white"
+          className="mt-2 max-h-60 rounded-xl"
+          style={{
+            backgroundColor: suggestionBg,
+            borderWidth: 1,
+            borderColor: suggestionBorder,
+          }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}

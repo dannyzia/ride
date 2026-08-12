@@ -1,209 +1,110 @@
-import React, { useEffect } from 'react';
-import {
-  ImageBackground,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useRef } from "react";
+import { View, Text, StatusBar } from "react-native";
 import Animated, {
-  cancelAnimation,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  withSequence,
   Easing,
   runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+} from "react-native-reanimated";
+import { colors } from "@/theme/goRide";
+import { useAppearance } from "@/lib/useAppearance";
 
-// ─────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────
-interface Props {
-  /** Flip to true once auth initialisation resolves. Triggers the fade-out. */
+interface SplashAnimationProps {
+  // True once auth + fonts have finished loading. The splash stays visible
+  // until BOTH the entrance/exit animation has completed AND this is true,
+  // so we never reveal a blank/uninitialized screen.
   loadComplete: boolean;
-  /** Called after the fade-out animation completes. Unmount the splash here. */
   onHidden: () => void;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────────
-export default function SplashAnimation({ loadComplete, onHidden }: Props) {
-  const { width: screenW, height: screenH } = useWindowDimensions();
+export default function SplashAnimation({ loadComplete, onHidden }: SplashAnimationProps) {
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
 
-  // ── Layout constants ─────────────────────────────────────
-  // Derived from visual analysis of Splash_Screen_2.png.
-  // The PNG contains a progress bar track at these positions.
-  // The animated fill must sit exactly on top of that track.
-  const BAR_WIDTH  = screenW * 0.62;                              // 62 % of screen width
-  const BAR_HEIGHT = 10;                                           // px — matches image track height
-  const BAR_TOP    = screenH * 0.882;                             // 88.2 % down the screen
-  const BAR_LEFT   = screenW * 0.19;                              // 19 % from left (centres bar)
-  const DOT_SIZE   = 14;                                           // leading glow dot diameter px
-  const DOT_TOP    = BAR_TOP + BAR_HEIGHT / 2 - DOT_SIZE / 2;    // vertically centred on bar
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
 
-  // ── Reanimated shared values ──────────────────────────────
-  const fillWidth        = useSharedValue(0); // current fill width in px
-  const containerOpacity = useSharedValue(1); // whole-screen opacity
+  const opacity = useSharedValue(0);
+  const scale = useSharedValue(0.8);
+  const translateY = useSharedValue(20);
 
-  // ── On mount: start fill animation ───────────────────────
-  useEffect(() => {
-    fillWidth.value = withTiming(BAR_WIDTH, {
-      duration: 3000,
-      easing: Easing.out(Easing.cubic),
-    });
+  // The animation worklet is created once (empty deps below), so it captures
+  // `tryHide` from the first render. `tryHide` is stable (useCallback) and
+  // reads the latest flags/callback through refs, so it behaves correctly
+  // regardless of whether the animation finishes before or after the load.
+  const animationDoneRef = useRef(false);
+  const loadCompleteRef = useRef(loadComplete);
+  const onHiddenRef = useRef(onHidden);
 
-    return () => {
-      cancelAnimation(fillWidth);
-      cancelAnimation(containerOpacity);
-    };
+  const tryHide = useCallback(() => {
+    if (animationDoneRef.current && loadCompleteRef.current) {
+      onHiddenRef.current();
+    }
   }, []);
 
-  // ── When auth resolves: fade out the whole screen ────────
+  // Keep the load flag in sync. If auth/fonts resolve AFTER the animation
+  // already completed, hide now.
   useEffect(() => {
-    if (!loadComplete) return;
+    loadCompleteRef.current = loadComplete;
+    tryHide();
+  }, [loadComplete, tryHide]);
 
-    containerOpacity.value = withTiming(
-      0,
-      { duration: 600 },
-      (finished) => {
-        if (finished) {
-          runOnJS(onHidden)();
-        }
-      },
+  useEffect(() => {
+    opacity.value = withSequence(
+      withTiming(1, { duration: 600, easing: Easing.out(Easing.ease) }),
+      withDelay(
+        1200,
+        withTiming(0, { duration: 500, easing: Easing.in(Easing.ease) }, () => {
+          animationDoneRef.current = true;
+          runOnJS(tryHide)();
+        })
+      )
     );
-  }, [loadComplete]);
 
-  // ── Animated styles ───────────────────────────────────────
-  const containerAnimStyle = useAnimatedStyle(() => ({
-    opacity: containerOpacity.value,
+    scale.value = withSequence(
+      withTiming(1, { duration: 600, easing: Easing.out(Easing.back(1.5)) }),
+      withDelay(1200, withTiming(0.9, { duration: 500 }))
+    );
+
+    translateY.value = withSequence(
+      withTiming(0, { duration: 600, easing: Easing.out(Easing.ease) }),
+      withDelay(1200, withTiming(-20, { duration: 500 }))
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }, { translateY: translateY.value }],
   }));
 
-  // Clip container grows from 0 → BAR_WIDTH, revealing the gradient
-  const fillAnimStyle = useAnimatedStyle(() => ({
-    width: fillWidth.value,
-  }));
-
-  // Dot centre tracks the right edge of the fill
-  const dotAnimStyle = useAnimatedStyle(() => ({
-    left: BAR_LEFT + fillWidth.value - DOT_SIZE / 2,
-  }));
-
-  // ── Render ────────────────────────────────────────────────
   return (
-    <Animated.View style={[styles.container, containerAnimStyle]}>
-
-      {/* ── Background illustration ─────────────────────────
-          The cityscape, car, logo, UI cards, and text are all
-          baked into this PNG. Do not recreate them in code.   */}
-      <ImageBackground
-        source={require('@/assets/splash/Splash_Screen_2.png')}
-        resizeMode="cover"
-        style={styles.image}
+    <View
+      className="flex-1 justify-center items-center"
+      style={{ backgroundColor: bg }}
+    >
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={bg}
+        translucent
       />
 
-      {/* ── Progress bar ────────────────────────────────────
-          Positioned on top of the track that is drawn in the
-          PNG image at BAR_TOP / BAR_LEFT.                    */}
-      <View
-        style={[
-          styles.barTrack,
-          {
-            top:    BAR_TOP,
-            left:   BAR_LEFT,
-            width:  BAR_WIDTH,
-            height: BAR_HEIGHT,
-          },
-        ]}
-      >
-        {/* Track background — always full width, dark navy */}
-        <View style={[StyleSheet.absoluteFillObject, styles.trackBg]} />
-
-        {/* Animated fill — clips the gradient SVG as width grows */}
-        <Animated.View style={[styles.barFill, fillAnimStyle]}>
-          {/*
-           * SVG is always BAR_WIDTH wide so the gradient always spans
-           * its full intended range. The parent Animated.View clips it.
-           * Gradient: #0CC25F (Ride green, left) → #00CFFF (cyan, right)
-           */}
-          <Svg width={BAR_WIDTH} height={BAR_HEIGHT}>
-            <Defs>
-              <LinearGradient id="barGrad" x1="0" y1="0" x2="1" y2="0">
-                <Stop offset="0" stopColor="#0CC25F" stopOpacity="1" />
-                <Stop offset="1" stopColor="#00CFFF" stopOpacity="1" />
-              </LinearGradient>
-            </Defs>
-            <Rect
-              x={0}
-              y={0}
-              width={BAR_WIDTH}
-              height={BAR_HEIGHT}
-              rx={BAR_HEIGHT / 2}
-              fill="url(#barGrad)"
-            />
-          </Svg>
-        </Animated.View>
-      </View>
-
-      {/* ── Leading glow dot ────────────────────────────────
-          Sibling of the barTrack View (not nested inside it)
-          so it can use a screen-absolute `left` value driven
-          by the same fillWidth shared value.                 */}
-      <Animated.View
-        style={[
-          styles.dot,
-          {
-            top:          DOT_TOP,
-            width:        DOT_SIZE,
-            height:       DOT_SIZE,
-            borderRadius: DOT_SIZE / 2,
-          },
-          dotAnimStyle,
-        ]}
-      />
-
-    </Animated.View>
+      <Animated.View style={animatedStyle} className="items-center">
+        <Text
+          className="text-[48px] font-JakartaBold"
+          style={{ color: colors.primary }}
+        >
+          Ride
+        </Text>
+        <Text
+          className="text-[16px] font-Jakarta mt-2"
+          style={{ color: textPrimary }}
+        >
+          Your ride, your way
+        </Text>
+      </Animated.View>
+    </View>
   );
 }
-
-// ─────────────────────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: {
-    // flex:1 makes this fill whatever parent renders it.
-    // _layout.tsx renders it as the sole child while splashVisible=true,
-    // so it naturally takes the full screen.
-    flex: 1,
-  },
-  image: {
-    // Must fill its container completely.
-    // resizeMode="cover" on the ImageBackground prop handles scaling.
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  barTrack: {
-    // Absolute so it floats above the ImageBackground at exact coordinates.
-    position: 'absolute',
-  },
-  trackBg: {
-    // Matches the dark navy track drawn in the PNG image.
-    borderRadius: 5,
-    backgroundColor: '#0D1B2A',
-  },
-  barFill: {
-    // overflow:hidden clips the full-width SVG to the animated width.
-    // Without this the gradient would always be fully visible.
-    height: 10,
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  dot: {
-    // Absolutely positioned — left is driven by dotAnimStyle.
-    position: 'absolute',
-    // Light cyan-white to suggest a glow at the leading edge of the fill.
-    backgroundColor: '#AAEEFF',
-    opacity: 0.9,
-  },
-});

@@ -1,6 +1,7 @@
 import { colors } from '@/theme/goRide';
 import React, { useRef } from 'react';
 import { View, Text, Animated, PanResponder, Dimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -14,7 +15,7 @@ interface SlideButtonProps {
 const SlideButton: React.FC<SlideButtonProps> = ({
     title,
     onComplete,
-    bgColor = colors.slideGreen,
+    bgColor = colors.primary,
     textColor = colors.white,
 }) => {
     const sliderWidth = SCREEN_WIDTH * 0.85;
@@ -57,7 +58,7 @@ const SlideButton: React.FC<SlideButtonProps> = ({
             style={{ width: sliderWidth, backgroundColor: bgColor }}
         >
             <Text
-                className="absolute font-semibold text-base z-10"
+                className="absolute font-JakartaSemiBold text-base z-10"
                 style={{ color: textColor }}
             >
                 {title}
@@ -65,14 +66,21 @@ const SlideButton: React.FC<SlideButtonProps> = ({
 
             <Animated.View
                 {...panResponder.panHandlers}
-                className="absolute top-0 left-0 rounded-full z-20"
+                className="absolute top-0 left-0 rounded-full z-20 items-center justify-center"
                 style={{
                     width: handleWidth,
                     height: handleWidth,
                     backgroundColor: textColor,
                     transform: [{ translateX: pan.x }],
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 4,
+                    elevation: 4,
                 }}
-            />
+            >
+                <Ionicons name="chevron-forward" size={24} color={bgColor} />
+            </Animated.View>
         </View>
     );
 };

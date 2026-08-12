@@ -7,6 +7,7 @@ import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
+import { useAppearance } from "@/lib/useAppearance";
 
 interface NavigationProps {
   pickupLat: number;
@@ -27,7 +28,15 @@ export default function DriverNavigation({ pickupLat, pickupLng, dropoffLat, dro
   const [route, setRoute] = useState<RouteData | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
-  const mapStyleUrl = useBarikoiMapStyle(false);
+
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
+  const mapStyleUrl = useBarikoiMapStyle(isDark);
+
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   useEffect(() => {
     (async () => {
@@ -57,15 +66,21 @@ export default function DriverNavigation({ pickupLat, pickupLng, dropoffLat, dro
   };
 
   return (
-    <View className="flex-1 bg-goBgLight dark:bg-goBgDark">
+    <View className="flex-1" style={{ backgroundColor: isDark ? colors.bgDark : colors.bgLight }}>
       {/* Navigation banner */}
-      <View className="bg-goPrimary px-4 py-3">
+      <View className="px-4 py-3" style={{ backgroundColor: colors.primary }}>
         {route && route.steps[currentStep] ? (
-          <Text className="text-goWhite font-JakartaBold text-[16px]">{route.steps[currentStep].instruction}</Text>
+          <Text className="font-JakartaBold text-[16px]" style={{ color: colors.white }}>
+            {route.steps[currentStep].instruction}
+          </Text>
         ) : loading ? (
-          <Text className="text-goWhite font-Jakarta text-[14px]">Loading route...</Text>
+          <Text className="font-Jakarta text-[14px]" style={{ color: colors.white }}>
+            Loading route...
+          </Text>
         ) : (
-          <Text className="text-goWhite font-Jakarta text-[14px]">Route loaded. Follow the map.</Text>
+          <Text className="font-Jakarta text-[14px]" style={{ color: colors.white }}>
+            Route loaded. Follow the map.
+          </Text>
         )}
       </View>
 
@@ -82,28 +97,28 @@ export default function DriverNavigation({ pickupLat, pickupLng, dropoffLat, dro
             {MapLibreGL.PointAnnotation && (
               <>
                 <MapLibreGL.PointAnnotation id="pickup" coordinate={[pickupLng, pickupLat]}>
-                  <View className="w-3 h-3 rounded-full bg-goAccent" />
+                  <View className="w-3 h-3 rounded-full" style={{ backgroundColor: colors.primary }} />
                 </MapLibreGL.PointAnnotation>
                 <MapLibreGL.PointAnnotation id="dropoff" coordinate={[dropoffLng, dropoffLat]}>
-                  <View className="w-3 h-3 rounded-full bg-goDanger" />
+                  <View className="w-3 h-3 rounded-full" style={{ backgroundColor: colors.danger }} />
                 </MapLibreGL.PointAnnotation>
               </>
             )}
           </MapLibreGL.MapView>
         ) : (
-          <View className="flex-1 items-center justify-center bg-goBgLight dark:bg-goBgDark">
-            <Text className="text-goTextSecondaryLight dark:text-goTextSecondaryDark font-Jakarta">Navigation Map</Text>
+          <View className="flex-1 items-center justify-center" style={{ backgroundColor: isDark ? colors.bgDark : colors.bgLight }}>
+            <Text className="font-Jakarta" style={{ color: textSecondary }}>Navigation Map</Text>
           </View>
         )}
       </View>
 
       {/* Bottom controls */}
-      <View className="flex-row px-4 py-3 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border-t border-goBorderLight dark:border-goBorderDark">
-        <TouchableOpacity className="flex-1 bg-goPrimary rounded-full py-3 items-center mr-2" onPress={nextStep}>
-          <Text className="text-goWhite font-JakartaBold text-[14px]">Next Step</Text>
+      <View className="flex-row px-4 py-3 border-t" style={{ backgroundColor: surfaceBg, borderTopColor: borderColor }}>
+        <TouchableOpacity className="flex-1 rounded-full py-3 items-center mr-2" style={{ backgroundColor: colors.primary }} onPress={nextStep}>
+          <Text className="font-JakartaBold text-[14px]" style={{ color: colors.white }}>Next Step</Text>
         </TouchableOpacity>
-        <TouchableOpacity className="flex-1 border border-goBorderLight dark:border-goBorderDark rounded-full py-3 items-center ml-2" onPress={() => router.back()}>
-          <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark font-JakartaBold text-[14px]">Close</Text>
+        <TouchableOpacity className="flex-1 rounded-full py-3 items-center ml-2 border" style={{ borderColor: borderColor }} onPress={() => router.back()}>
+          <Text className="font-JakartaBold text-[14px]" style={{ color: textPrimary }}>Close</Text>
         </TouchableOpacity>
       </View>
     </View>

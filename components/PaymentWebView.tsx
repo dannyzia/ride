@@ -9,28 +9,15 @@ import {
 import { WebView } from "react-native-webview";
 import { colors } from "@/theme/goRide";
 import { API_URL } from "@/lib/config";
+import { useAppearance } from "@/lib/useAppearance";
 
 interface PaymentWebViewProps {
-  /** The PortPos checkout URL to load in the WebView */
   bkashURL: string;
-  /** Payment event ID used for status polling */
   paymentID: string;
-  /** Called when polling confirms the payment has been completed */
   onSuccess: () => void;
-  /** Called when payment fails or the user cancels */
   onError: (error: string) => void;
 }
 
-/**
- * Modal WebView wrapper for PortPos hosted checkout payment.
- *
- * 1. Opens the PortPos checkout URL inside a full-screen Modal WebView.
- * 2. Polls GET /api/payment/portpos/status?invoice_id=... every 2 seconds
- *    to detect when the payment is confirmed.
- * 3. On success (status === 'paid'): calls onSuccess and closes.
- * 4. On failure: calls onError and closes.
- * 5. Shows a loading spinner overlay while polling.
- */
 export default function PaymentWebView({
   bkashURL,
   paymentID,
@@ -40,6 +27,15 @@ export default function PaymentWebView({
   const [visible, setVisible] = useState(true);
   const [polling, setPolling] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   const checkStatus = useCallback(async () => {
     try {
@@ -57,10 +53,9 @@ export default function PaymentWebView({
           setVisible(false);
           onError("Payment failed");
         }
-        // 'initiated' / 'callback_pending' → continue polling
       }
     } catch {
-      // Network error — silently retry on next interval
+      // Network error — silently retry
     }
   }, [paymentID, onSuccess, onError]);
 
@@ -88,7 +83,6 @@ export default function PaymentWebView({
     return stopPolling;
   }, [visible, bkashURL, startPolling, stopPolling]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => stopPolling();
   }, [stopPolling]);
@@ -101,23 +95,37 @@ export default function PaymentWebView({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
-      <View className="flex-1 bg-goBgLight dark:bg-goBgDark">
+      <View className="flex-1" style={{ backgroundColor: bg }}>
         {/* Header bar */}
-        <View className="flex-row items-center justify-between px-4 py-3 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border-b border-goBorderLight dark:border-goBorderDark">
-          <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-base font-bold">
+        <View
+          className="flex-row items-center justify-between px-4 py-3 border-b"
+          style={{ backgroundColor: surfaceBg, borderBottomColor: borderColor }}
+        >
+          <Text
+            className="text-base font-JakartaBold"
+            style={{ color: textPrimary }}
+          >
             Payment
           </Text>
           <TouchableOpacity onPress={handleClose} className="px-3 py-1">
-            <Text className="text-goDanger text-base">Close</Text>
+            <Text className="text-base font-JakartaSemiBold" style={{ color: colors.danger }}>
+              Close
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Polling status overlay */}
         {polling && (
           <View className="absolute top-14 left-0 right-0 items-center z-10">
-            <View className="bg-white/90 rounded-full px-4 py-2 flex-row items-center shadow-sm">
+            <View
+              className="rounded-full px-4 py-2 flex-row items-center shadow-sm"
+              style={{ backgroundColor: isDark ? "rgba(28,30,35,0.95)" : "rgba(255,255,255,0.95)" }}
+            >
               <ActivityIndicator size="small" color={colors.primary} />
-              <Text className="ml-2 text-sm text-gray-700 font-medium">
+              <Text
+                className="ml-2 text-sm font-JakartaSemiBold"
+                style={{ color: textPrimary }}
+              >
                 Verifying payment...
               </Text>
             </View>
@@ -131,7 +139,10 @@ export default function PaymentWebView({
           domStorageEnabled
           startInLoadingState
           renderLoading={() => (
-            <View className="absolute inset-0 items-center justify-center bg-goBgLight dark:bg-goBgDark">
+            <View
+              className="absolute inset-0 items-center justify-center"
+              style={{ backgroundColor: bg }}
+            >
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
           )}

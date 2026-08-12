@@ -1,24 +1,75 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { colors } from "@/theme/goRide";
+import { useAppearance } from "@/lib/useAppearance";
+import CustomButton from "@/components/CustomButton";
 
 export default function Walkthrough3() {
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
-      <View className="flex-1 items-center justify-center">
-        <Text className="text-[32px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">
-          Pay with Ease
-        </Text>
-        <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">
-          Cash, bKash, Nagad — pay your driver however you prefer.
-        </Text>
+    <SafeAreaView className="flex-1 px-6" style={{ backgroundColor: bg }}>
+      {/* Top spacer */}
+      <View className="flex-1" />
+
+      {/* Illustration placeholder */}
+      <View className="items-center mb-10">
+        <View
+          className="w-56 h-56 rounded-full items-center justify-center"
+          style={{ backgroundColor: colors.primary + "15" }}
+        >
+          <Text className="text-[80px]">💳</Text>
+        </View>
       </View>
-      <TouchableOpacity
-        className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-[40px]"
-        onPress={() => router.replace("/(auth)/phone-entry")}
+
+      {/* Title */}
+      <Text
+        className="text-[28px] font-JakartaBold text-center mb-3"
+        style={{ color: textPrimary }}
       >
-        <Text className="text-[18px] font-JakartaBold text-goWhite">Get Started</Text>
-      </TouchableOpacity>
+        Pay with Ease
+      </Text>
+
+      {/* Description */}
+      <Text
+        className="text-[16px] font-Jakarta text-center px-4 leading-[24px]"
+        style={{ color: textSecondary }}
+      >
+        Cash, bKash, Nagad — pay your driver however you prefer.
+      </Text>
+
+      {/* Dot indicators */}
+      <View className="flex-row justify-center items-center mt-8 gap-2">
+        <View
+          className="w-2 h-2 rounded-full"
+          style={{ backgroundColor: isDark ? colors.borderDark : colors.borderLight }}
+        />
+        <View
+          className="w-2 h-2 rounded-full"
+          style={{ backgroundColor: isDark ? colors.borderDark : colors.borderLight }}
+        />
+        <View
+          className="w-3 h-3 rounded-full"
+          style={{ backgroundColor: colors.primary }}
+        />
+      </View>
+
+      {/* Bottom spacer */}
+      <View className="flex-1" />
+
+      {/* Button */}
+      <View className="w-full pb-10">
+        <CustomButton
+          title="Get Started"
+          onPress={() => router.replace("/(auth)/phone-entry")}
+        />
+      </View>
     </SafeAreaView>
   );
 }

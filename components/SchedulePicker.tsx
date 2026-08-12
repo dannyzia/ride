@@ -1,30 +1,36 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { colors, spacing, radii } from '@/theme/goRide';
+import React, { useState, useMemo } from "react";
+import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
+import { colors, spacing, radii } from "@/theme/goRide";
+import { useAppearance } from "@/lib/useAppearance";
 
 export interface ScheduleOption {
   label: string;
-  offsetMinutes: number; // 0 = "Now"
+  offsetMinutes: number;
 }
 
 const PRESET_OPTIONS: ScheduleOption[] = [
-  { label: 'Now', offsetMinutes: 0 },
-  { label: '+15 min', offsetMinutes: 15 },
-  { label: '+30 min', offsetMinutes: 30 },
-  { label: '+45 min', offsetMinutes: 45 },
-  { label: '+60 min', offsetMinutes: 60 },
+  { label: "Now", offsetMinutes: 0 },
+  { label: "+15 min", offsetMinutes: 15 },
+  { label: "+30 min", offsetMinutes: 30 },
+  { label: "+45 min", offsetMinutes: 45 },
+  { label: "+60 min", offsetMinutes: 60 },
 ];
 
 interface SchedulePickerProps {
-  /** Currently selected option index. Default 0 ("Now"). */
   selectedIndex?: number;
-  /** Callback fired when user selects an option. Returns the ISO string for scheduled_at, or null for "Now". */
   onSelect: (scheduledAt: string | null, option: ScheduleOption) => void;
 }
 
 export default function SchedulePicker({ selectedIndex = 0, onSelect }: SchedulePickerProps) {
   const [activeIndex, setActiveIndex] = useState(selectedIndex);
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
+
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   const handleSelect = (index: number) => {
     setActiveIndex(index);
@@ -42,20 +48,19 @@ export default function SchedulePicker({ selectedIndex = 0, onSelect }: Schedule
   const formattedTime = useMemo(() => {
     if (selectedOption.offsetMinutes === 0) return null;
     const d = new Date(Date.now() + selectedOption.offsetMinutes * 60_000);
-    return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
   }, [activeIndex]);
 
   return (
     <View style={{ marginBottom: spacing.md }}>
       {/* Header row */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: spacing.sm }}>
         <MaterialIcons name="schedule" size={18} color={colors.primary} />
         <Text
           style={{
-            fontFamily: 'Urbanist',
-            fontWeight: '700',
+            fontFamily: "Jakarta-Bold",
             fontSize: 14,
-            color: colors.textPrimaryDark,
+            color: textPrimary,
             marginLeft: spacing.xs,
           }}
         >
@@ -73,9 +78,8 @@ export default function SchedulePicker({ selectedIndex = 0, onSelect }: Schedule
           >
             <Text
               style={{
-                fontFamily: 'Inter',
+                fontFamily: "Jakarta-SemiBold",
                 fontSize: 12,
-                fontWeight: '600',
                 color: colors.primary,
               }}
             >
@@ -103,16 +107,15 @@ export default function SchedulePicker({ selectedIndex = 0, onSelect }: Schedule
                 paddingVertical: spacing.sm,
                 borderRadius: radii.pill,
                 borderWidth: 1,
-                borderColor: isActive ? colors.primary : colors.borderDark,
-                backgroundColor: isActive ? colors.primary : colors.bgDark,
+                borderColor: isActive ? colors.primary : borderColor,
+                backgroundColor: isActive ? colors.primary : surfaceBg,
               }}
             >
               <Text
                 style={{
-                  fontFamily: 'Urbanist',
-                  fontWeight: '600',
+                  fontFamily: "Jakarta-SemiBold",
                   fontSize: 13,
-                  color: isActive ? colors.white : colors.textSecondaryDark,
+                  color: isActive ? colors.white : textSecondary,
                   letterSpacing: 0.3,
                 }}
               >

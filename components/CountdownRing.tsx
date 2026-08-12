@@ -1,19 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
-import { View, Text } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
-import { colors } from '@/theme/goRide';
+import { useEffect, useRef, useState } from "react";
+import { View, Text } from "react-native";
+import Svg, { Circle } from "react-native-svg";
+import { colors } from "@/theme/goRide";
+import { useAppearance } from "@/lib/useAppearance";
 
 interface CountdownRingProps {
   expiresAt: string;
   onExpire: () => void;
   size?: number;
-  duration?: number; // total duration in seconds (default 15)
+  duration?: number;
 }
 
 export default function CountdownRing({ expiresAt, onExpire, size = 56, duration = 15 }: CountdownRingProps) {
   const [remainingMs, setRemainingMs] = useState(0);
   const onExpireRef = useRef(onExpire);
   onExpireRef.current = onExpire;
+
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
 
   useEffect(() => {
     const update = () => {
@@ -42,21 +46,20 @@ export default function CountdownRing({ expiresAt, onExpire, size = 56, duration
   const strokeDashoffset = circumference * (1 - progress);
 
   const strokeColor = isExpiring ? colors.danger : colors.primary;
-  const textColor = isExpiring ? colors.danger : colors.textPrimaryDark;
+  const textColor = isExpiring ? colors.danger : (isDark ? colors.textPrimaryDark : colors.textPrimaryLight);
+  const trackColor = isDark ? colors.borderDark : colors.borderLight;
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
-        {/* Background circle */}
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      <Svg width={size} height={size} style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}>
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={colors.borderDark}
+          stroke={trackColor}
           strokeWidth={strokeWidth}
           fill="none"
         />
-        {/* Progress circle */}
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -71,8 +74,7 @@ export default function CountdownRing({ expiresAt, onExpire, size = 56, duration
       </Svg>
       <Text
         style={{
-          fontFamily: 'Urbanist',
-          fontWeight: '700',
+          fontFamily: "Jakarta-Bold",
           fontSize: size > 48 ? 16 : 14,
           color: textColor,
         }}

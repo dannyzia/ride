@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface SettingsItem {
   label: string;
@@ -28,6 +29,9 @@ export default function DriverSettings() {
         <Text className="text-[20px] font-JakartaBold tracking-tight text-goTextPrimaryLight dark:text-goTextPrimaryDark">Settings</Text>
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
+        <View className="mb-4">
+          <ThemeToggle />
+        </View>
         {items.map((it) => (
           <TouchableOpacity
             key={it.route}

@@ -5,17 +5,19 @@ import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useWSStore } from "@/store";
 import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";
+import { useAppearance } from "@/lib/useAppearance";
 import CountdownRing from "./CountdownRing";
 
 export default function RideOfferSheet() {
   const { activeOffer, setActiveOffer } = useDriverFlowStore();
   const ws = useWSStore((s) => s.ws);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
 
   useEffect(() => {
     if (!activeOffer) return;
 
-    // Haptic + sound notification on offer arrival
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
       () => {},
     );
@@ -53,13 +55,11 @@ export default function RideOfferSheet() {
       return;
     }
 
-    // Haptic feedback on accept
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
     const rideId = activeOffer.ride_id;
     ws.send(JSON.stringify({ type: "fetch:confirm", ride_id: rideId }));
 
-    // Wait for server ACK before sending offer:accept
     const onMessage = (ev: MessageEvent) => {
       try {
         const msg = JSON.parse(ev.data);
@@ -89,7 +89,6 @@ export default function RideOfferSheet() {
 
     ws.addEventListener("message", onMessage);
 
-    // Timeout fallback — if no ACK within 3s, still try offer:accept
     setTimeout(() => {
       ws.removeEventListener("message", onMessage);
       if (ws.readyState === WebSocket.OPEN) {
@@ -118,6 +117,11 @@ export default function RideOfferSheet() {
   const isScheduled = activeOffer.is_scheduled;
   const preferences = activeOffer.preference_ids || [];
 
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+
   return (
     <Animated.View
       style={{
@@ -125,7 +129,7 @@ export default function RideOfferSheet() {
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: colors.surfaceElevatedDark,
+        backgroundColor: surfaceBg,
         borderTopLeftRadius: radii["3xl"],
         borderTopRightRadius: radii["3xl"],
         padding: spacing.lg,
@@ -171,10 +175,9 @@ export default function RideOfferSheet() {
           <View>
             <Text
               style={{
-                fontFamily: "Urbanist",
-                fontWeight: "700",
+                fontFamily: "Jakarta-Bold",
                 fontSize: 17,
-                color: colors.textPrimaryDark,
+                color: textPrimary,
               }}
             >
               New Ride Offer
@@ -192,9 +195,8 @@ export default function RideOfferSheet() {
               >
                 <Text
                   style={{
-                    fontFamily: "Inter",
+                    fontFamily: "Jakarta-Bold",
                     fontSize: 10,
-                    fontWeight: "700",
                     color: colors.info,
                   }}
                 >
@@ -227,8 +229,7 @@ export default function RideOfferSheet() {
         >
           <Text
             style={{
-              fontFamily: "Urbanist",
-              fontWeight: "700",
+              fontFamily: "Jakarta-Bold",
               fontSize: 16,
               color: colors.primary,
             }}
@@ -239,10 +240,9 @@ export default function RideOfferSheet() {
         <View style={{ flex: 1 }}>
           <Text
             style={{
-              fontFamily: "Urbanist",
-              fontWeight: "600",
+              fontFamily: "Jakarta-SemiBold",
               fontSize: 15,
-              color: colors.textPrimaryDark,
+              color: textPrimary,
             }}
           >
             {activeOffer.rider_first_name || "Rider"}
@@ -257,7 +257,7 @@ export default function RideOfferSheet() {
             >
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 12,
                   color: colors.amber,
                 }}
@@ -266,10 +266,9 @@ export default function RideOfferSheet() {
               </Text>
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-SemiBold",
                   fontSize: 12,
-                  fontWeight: "600",
-                  color: colors.textSecondaryDark,
+                  color: textSecondary,
                   marginLeft: 2,
                 }}
               >
@@ -282,19 +281,18 @@ export default function RideOfferSheet() {
         <View style={{ alignItems: "flex-end" }}>
           <Text
             style={{
-              fontFamily: "Urbanist",
-              fontWeight: "700",
+              fontFamily: "Jakarta-Bold",
               fontSize: 22,
-              color: colors.textPrimaryDark,
+              color: textPrimary,
             }}
           >
             ৳{fareTk}
           </Text>
           <Text
             style={{
-              fontFamily: "Inter",
+              fontFamily: "Jakarta-Regular",
               fontSize: 12,
-              color: colors.textSecondaryDark,
+              color: textSecondary,
             }}
           >
             {activeOffer.distance_km} km
@@ -304,9 +302,20 @@ export default function RideOfferSheet() {
 
       {/* Upfront tip badge */}
       {activeOffer.upfront_tip_bdt > 0 ? (
-        <View className="bg-goAccentLight dark:bg-goAccent/10 rounded-lg px-3 py-1.5 mb-2 flex-row items-center">
-          <Text className="text-[14px] font-JakartaBold text-goPrimary dark:text-goPrimary mr-1">💰</Text>
-          <Text className="text-[14px] font-JakartaBold text-goPrimary dark:text-goPrimary">
+        <View
+          className="rounded-lg px-3 py-1.5 mb-2 flex-row items-center"
+          style={{ backgroundColor: colors.primaryLight }}
+        >
+          <Text
+            className="text-[14px] font-JakartaBold mr-1"
+            style={{ color: colors.primary }}
+          >
+            💰
+          </Text>
+          <Text
+            className="text-[14px] font-JakartaBold"
+            style={{ color: colors.primary }}
+          >
             +৳{((activeOffer.upfront_tip_bdt / 100).toFixed(0))} tip
           </Text>
         </View>
@@ -336,9 +345,8 @@ export default function RideOfferSheet() {
             >
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-SemiBold",
                   fontSize: 11,
-                  fontWeight: "600",
                   color: colors.primary,
                 }}
               >
@@ -364,9 +372,9 @@ export default function RideOfferSheet() {
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 12,
-                  color: colors.textSecondaryDark,
+                  color: textSecondary,
                 }}
               >
                 📍 {pickupDist.toFixed(1)} km away
@@ -377,9 +385,9 @@ export default function RideOfferSheet() {
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 12,
-                  color: colors.textSecondaryDark,
+                  color: textSecondary,
                 }}
               >
                 ⏱ ~{pickupEta} min to pickup
@@ -409,9 +417,9 @@ export default function RideOfferSheet() {
           />
           <Text
             style={{
-              fontFamily: "Inter",
+              fontFamily: "Jakarta-Regular",
               fontSize: 14,
-              color: colors.textPrimaryDark,
+              color: textPrimary,
               flex: 1,
             }}
             numberOfLines={1}
@@ -431,9 +439,9 @@ export default function RideOfferSheet() {
           />
           <Text
             style={{
-              fontFamily: "Inter",
+              fontFamily: "Jakarta-Regular",
               fontSize: 14,
-              color: colors.textPrimaryDark,
+              color: textPrimary,
               flex: 1,
             }}
             numberOfLines={1}
@@ -451,7 +459,7 @@ export default function RideOfferSheet() {
             flex: 1,
             backgroundColor: "transparent",
             borderWidth: 1.5,
-            borderColor: colors.borderDark,
+            borderColor: borderColor,
             borderRadius: radii.pill,
             paddingVertical: spacing.md,
             alignItems: "center",
@@ -459,10 +467,9 @@ export default function RideOfferSheet() {
         >
           <Text
             style={{
-              fontFamily: "Urbanist",
-              fontWeight: "700",
+              fontFamily: "Jakarta-Bold",
               fontSize: 15,
-              color: colors.textSecondaryDark,
+              color: textSecondary,
             }}
           >
             Decline
@@ -480,8 +487,7 @@ export default function RideOfferSheet() {
         >
           <Text
             style={{
-              fontFamily: "Urbanist",
-              fontWeight: "700",
+              fontFamily: "Jakarta-Bold",
               fontSize: 15,
               color: colors.white,
             }}

@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { icons } from "@/constants/data";
 import { FloatingNavMenu } from "@/components/FloatingNavMenu";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const TabIcon = ({
   focused,
@@ -51,7 +52,8 @@ const TabBarButton = ({ children, onPress }: any) => {
 
 export default function TabsLayout() {
   return (
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
       <Tabs
         initialRouteName="home/index"
         screenOptions={{
@@ -92,5 +94,6 @@ export default function TabsLayout() {
       </Tabs>
       <FloatingNavMenu variant="customer" />
     </View>
+    </GestureHandlerRootView>
   );
 }

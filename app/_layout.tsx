@@ -99,7 +99,7 @@ export default function RootLayout() {
               router.replace(
                 data.role === "driver"
                   ? "/(main)/(rider)"
-                  : "/(main)/(customer)",
+                  : "/(main)/(customer)/services-hub",
               );
             } else if (!data.exists && !isAdminRoute) {
               router.replace("/(auth)/phone-entry");

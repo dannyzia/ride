@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import { View, Text } from "react-native";
 import { FloatingNavMenu } from "@/components/FloatingNavMenu";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const icons: Record<string, string> = {
@@ -18,7 +19,8 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
 
 export default function DriverTabLayout() {
   return (
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
       <Tabs screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -33,6 +35,7 @@ export default function DriverTabLayout() {
         <Tabs.Screen name="profile/index" options={{ tabBarIcon: ({ focused }) => <TabIcon label="Profile" focused={focused} /> }} />
       </Tabs>
       <FloatingNavMenu variant="driver" />
-    </View>
+      </View>
+    </GestureHandlerRootView>
   );
 }

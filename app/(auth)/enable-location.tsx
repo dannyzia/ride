@@ -1,35 +1,72 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Location from "expo-location";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/theme/goRide";
+import { useAppearance } from "@/lib/useAppearance";
+import CustomButton from "@/components/CustomButton";
 
 export default function EnableLocation() {
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   const allow = async () => {
     await Location.requestForegroundPermissionsAsync();
     router.replace("/(auth)/notifications-permission");
   };
+
   const skip = () => router.replace("/(auth)/notifications-permission");
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
-      <View className="flex-1 items-center justify-center">
-        <View className="w-24 h-24 rounded-full bg-goAccentLight items-center justify-center mb-8">
-          <Text className="text-[40px]">📍</Text>
+    <SafeAreaView className="flex-1 px-6" style={{ backgroundColor: bg }}>
+      {/* Top spacer */}
+      <View className="flex-1" />
+
+      {/* Icon */}
+      <View className="items-center mb-8">
+        <View
+          className="w-20 h-20 rounded-full items-center justify-center"
+          style={{ backgroundColor: colors.primary + "18" }}
+        >
+          <Ionicons name="location-outline" size={32} color={colors.primary} />
         </View>
-        <Text className="text-[24px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark text-center mb-3">
-          Allow Ride to access your location
-        </Text>
-        <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">
-          We need your location to find drivers near you.
-        </Text>
       </View>
-      <View className="flex-row w-full pb-[40px]">
-        <TouchableOpacity className="flex-1 border border-goBorderLight dark:border-goBorderDark rounded-full py-[16px] items-center mr-2" onPress={skip}>
-          <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Not Now</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="flex-1 bg-goPrimary rounded-full py-[16px] items-center ml-2" onPress={allow}>
-          <Text className="text-[18px] font-JakartaBold text-goWhite">Allow</Text>
-        </TouchableOpacity>
+
+      {/* Title */}
+      <Text
+        className="text-[24px] font-JakartaBold text-center mb-3 px-4"
+        style={{ color: textPrimary }}
+      >
+        Allow Ride to access your location
+      </Text>
+
+      {/* Description */}
+      <Text
+        className="text-[16px] font-Jakarta text-center px-6"
+        style={{ color: textSecondary }}
+      >
+        We need your location to find drivers near you.
+      </Text>
+
+      {/* Bottom spacer */}
+      <View className="flex-1" />
+
+      {/* Buttons */}
+      <View className="w-full pb-10 gap-3">
+        <CustomButton
+          title="Allow"
+          onPress={allow}
+        />
+        <CustomButton
+          title="Not Now"
+          bgVariant="secondary"
+          onPress={skip}
+        />
       </View>
     </SafeAreaView>
   );

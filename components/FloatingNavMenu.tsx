@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,22 @@ import {
   StyleSheet,
   Modal,
   Platform,
+  Dimensions,
 } from "react-native";
 import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+} from "react-native-reanimated";
+import {
+  Gesture,
+  GestureDetector,
+} from "react-native-gesture-handler";
 import { colors } from "@/theme/goRide";
 import { router, usePathname } from "expo-router";
+import { useAppearance } from "@/lib/useAppearance";
 
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
@@ -22,42 +34,38 @@ interface NavItem {
 }
 
 const CUSTOMER_ITEMS: NavItem[] = [
-  // Ride
   { route: "/(main)/(customer)/(tabs)/home/index", label: "Home", icon: "home", group: "Ride" },
   { route: "/(main)/(customer)/find-ride", label: "Book Ride", icon: "car", group: "Ride" },
   { route: "/(main)/(customer)/schedule-ride", label: "Schedule Ride", icon: "calendar-clock", group: "Ride" },
-  // Activity
   { route: "/(main)/(customer)/(tabs)/rides/index", label: "Activity / Rides", icon: "history", group: "Activity" },
   { route: "/(main)/(customer)/(tabs)/chat/index", label: "Chat", icon: "message-text", group: "Activity" },
-  // Account
   { route: "/(main)/(customer)/(tabs)/profile/index", label: "Account / Profile", icon: "account", group: "Account" },
   { route: "/(main)/(customer)/(tabs)/settings/index", label: "Settings", icon: "cog", group: "Account" },
   { route: "/(main)/(customer)/apply-promos", label: "Apply Promos", icon: "ticket-percent", group: "Account" },
   { route: "/(main)/(customer)/add-tip", label: "Add Tip", icon: "hand-coin", group: "Account" },
-  // Safety
   { route: "/(main)/(customer)/emergency-sos", label: "Emergency SOS", icon: "alert-circle", group: "Safety" },
 ];
 
 const DRIVER_ITEMS: NavItem[] = [
-  // Main
   { route: "/(main)/(rider)/(tabs)/index", label: "Home (Go Online/Offline)", icon: "home", group: "Main" },
   { route: "/(main)/(rider)/(tabs)/earning/index", label: "Earning", icon: "cash", group: "Main" },
   { route: "/(main)/(rider)/(tabs)/activity/index", label: "Activity", icon: "history", group: "Main" },
   { route: "/(main)/(rider)/(tabs)/wallet/index", label: "Wallet", icon: "wallet", group: "Main" },
-  // Account
   { route: "/(main)/(rider)/(tabs)/profile/index", label: "Profile", icon: "account", group: "Account" },
   { route: "/(main)/(rider)/(tabs)/settings/index", label: "Settings", icon: "cog", group: "Account" },
-  // Programs
   { route: "/(main)/(rider)/packages", label: "Packages", icon: "package-variant-closed", group: "Programs" },
   { route: "/(main)/(rider)/incentives", label: "Incentives", icon: "trophy", group: "Programs" },
   { route: "/(main)/(rider)/call-ledger", label: "Call Ledger", icon: "clipboard-text", group: "Programs" },
-  // Compliance
   { route: "/(main)/(rider)/documents", label: "Documents", icon: "file-document", group: "Compliance" },
   { route: "/(main)/(rider)/verification", label: "Verification", icon: "check-decagram", group: "Compliance" },
 ];
 
 const GROUP_ORDER_CUSTOMER = ["Ride", "Activity", "Account", "Safety"];
 const GROUP_ORDER_DRIVER = ["Main", "Account", "Programs", "Compliance"];
+
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+const FAB_SIZE = 48;
+const SPRING_CONFIG = { damping: 20, stiffness: 200, mass: 0.8 };
 
 interface FloatingNavMenuProps {
   variant: "customer" | "driver";
@@ -66,6 +74,15 @@ interface FloatingNavMenuProps {
 export function FloatingNavMenu({ variant }: FloatingNavMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const { theme } = useAppearance();
+  const isDark = theme === "dark" || theme === "system";
+
+  // Draggable position — starts bottom-right
+  const translateX = useSharedValue(SCREEN_W - FAB_SIZE - 20);
+  const translateY = useSharedValue(SCREEN_H - FAB_SIZE - (Platform.OS === "ios" ? 120 : 100));
+  const contextX = useSharedValue(0);
+  const contextY = useSharedValue(0);
+
   const items = variant === "customer" ? CUSTOMER_ITEMS : DRIVER_ITEMS;
   const groupOrder = variant === "customer" ? GROUP_ORDER_CUSTOMER : GROUP_ORDER_DRIVER;
 
@@ -74,37 +91,78 @@ export function FloatingNavMenu({ variant }: FloatingNavMenuProps) {
     return acc;
   }, {});
 
-  const isLight = variant === "customer";
-  const textPrimary = isLight ? colors.textPrimaryLight : colors.textPrimaryDark;
-  const textSecondary = isLight ? colors.textSecondaryLight : colors.textSecondaryDark;
-  const textMuted = isLight ? colors.textDisabledLight : colors.textDisabledDark;
-  const surfaceBg = isLight ? colors.white : colors.surfaceElevatedDark;
-  const overlayBg = isLight ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.6)";
-  const activeBg = isLight ? colors.primaryLight : "rgba(100, 181, 246, 0.10)";
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const textMuted = isDark ? colors.textDisabledDark : colors.textDisabledLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const overlayBg = isDark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.4)";
+  const activeBg = isDark ? "rgba(12,194,95,0.10)" : colors.primaryLight;
   const activeText = colors.primary;
-  const fabBg = isLight ? colors.white : colors.surfaceElevatedDark;
-  const fabBorder = isLight ? colors.borderLight : colors.borderDark;
+  const fabBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const fabBorder = isDark ? colors.borderDark : colors.borderLight;
 
-  const navigateTo = (route: string) => {
+  // Pan gesture for dragging
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      contextX.value = translateX.value;
+      contextY.value = translateY.value;
+    })
+    .onUpdate((event) => {
+      let newX = contextX.value + event.translationX;
+      let newY = contextY.value + event.translationY;
+
+      // Constrain to screen bounds
+      newX = Math.max(0, Math.min(newX, SCREEN_W - FAB_SIZE));
+      newY = Math.max(40, Math.min(newY, SCREEN_H - FAB_SIZE - 20));
+
+      translateX.value = newX;
+      translateY.value = newY;
+    })
+    .onEnd(() => {
+      // Snap to nearest edge (left or right) for clean UX
+      const centerX = translateX.value + FAB_SIZE / 2;
+      const snapToLeft = centerX < SCREEN_W / 2;
+      const targetX = snapToLeft ? 8 : SCREEN_W - FAB_SIZE - 8;
+
+      translateX.value = withSpring(targetX, SPRING_CONFIG);
+      translateY.value = withSpring(
+        Math.max(60, Math.min(translateY.value, SCREEN_H - FAB_SIZE - 80)),
+        SPRING_CONFIG
+      );
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+    ],
+  }));
+
+  const navigateTo = useCallback((route: string) => {
     setIsOpen(false);
-    // Use navigate for tab routes (replaces current tab), push for others
     if (route.includes("(tabs)")) {
       router.navigate(route as any);
     } else {
       router.push(route as any);
     }
-  };
+  }, []);
 
   return (
     <>
-      <Pressable
-        onPress={() => setIsOpen(true)}
-        style={[styles.fab, { backgroundColor: fabBg, borderColor: fabBorder }]}
-        hitSlop={12}
-      >
-        <AntDesign name="bars" size={20} color={textPrimary} />
-      </Pressable>
+      {/* Draggable FAB */}
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={[styles.fabContainer, animatedStyle]}>
+          <Pressable
+            onPress={() => setIsOpen(true)}
+            style={[styles.fab, { backgroundColor: fabBg, borderColor: fabBorder }]}
+            hitSlop={12}
+          >
+            <AntDesign name="bars" size={20} color={textPrimary} />
+          </Pressable>
+        </Animated.View>
+      </GestureDetector>
 
+      {/* Menu Modal */}
       <Modal
         visible={isOpen}
         transparent
@@ -181,13 +239,15 @@ export function FloatingNavMenu({ variant }: FloatingNavMenuProps) {
 }
 
 const styles = StyleSheet.create({
-  fab: {
+  fabContainer: {
     position: "absolute",
-    bottom: Platform.OS === "web" ? 24 : 40,
-    right: 20,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    zIndex: 999,
+    elevation: 999,
+  },
+  fab: {
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -196,7 +256,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
-    zIndex: 999,
   },
   backdrop: {
     flex: 1,

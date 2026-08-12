@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface UserProfile {
   id: string;
@@ -125,6 +126,10 @@ const Profile = () => {
               <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Rating: {profile.rating.toFixed(2)} ({profile.rating_count} reviews)</Text>
             </View>
           ) : null}
+        </View>
+
+        <View className="mt-6">
+          <ThemeToggle />
         </View>
 
         <TouchableOpacity

@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useDriverStore } from "@/store/useDriverStore";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function ProfileScreen() {
   const { driver } = useDriverStore();
@@ -68,6 +69,7 @@ export default function ProfileScreen() {
           )}
         </View>
         <View className="px-[24px] pt-[16px] gap-3">
+          <ThemeToggle />
           <TouchableOpacity className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]" onPress={() => router.push("/(main)/(rider)/edit-profile")}>
             <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Edit Profile</Text>
           </TouchableOpacity>

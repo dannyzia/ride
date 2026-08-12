@@ -1,6 +1,6 @@
 export const colors = {
-  primary: "#0A9B4C",
-  primaryPressed: "#08843E",
+  primary: "#0CC25F",
+  primaryPressed: "#0AA84E",
   primaryLight: "#E6F7EE",
 
   danger: "#E31D1C",
@@ -11,33 +11,38 @@ export const colors = {
   infoLight: "#EAECF6",
 
   bgLight: "#F8FAFC",
-  bgDark: "#0F1115",
+  bgDark: "#181A20",
 
   surfaceLight: "#FFFFFF",
+  surfaceDark: "#181A20",
   surfaceElevatedDark: "#1C1E23",
   darkSurface: "#0F1115",
   nearBlack: "#0A0B0F",
 
-  borderLight: "#D1D5DB",
-  borderDark: "#2E3038",
+  borderLight: "#E5E7EB",
+  borderDark: "#35383F",
 
   textPrimaryLight: "#1C1E23",
-  textPrimaryDark: "#F0F1F5",
+  textPrimaryDark: "#FFFFFF",
   textSecondaryLight: "#6B7280",
   textSecondaryDark: "#9CA3AF",
   textDisabledLight: "#D1D5DB",
   textDisabledDark: "#555555",
 
   white: "#FFFFFF",
+  black: "#000000",
   gray: "#666666",
   grayLight: "#888888",
   grayMedium: "#999999",
   gray100: "#F3F4F6",
+  gray200: "#E5E7EB",
+  gray600: "#4B5563",
 
-  adminAccent: "#64B5F6",
-  adminSubtle: "#E0E0E0",
-  adminIconDark: "#3A3A3A",
-
+  accent: "#0CC25F",
+  accentPressed: "#0AA84E",
+  accentLight: "#E6F7EE",
+  surfaceElevated: "#1C1E23",
+  borderDefault: "#35383F",
   blue: "#0286FF",
   darkSecondary: "#1A1C22",
   darkSecondaryAlt: "#1C1E23",
@@ -51,17 +56,12 @@ export const colors = {
   yellow: "#EDD228",
   mediumGray: "#AAAAAA",
   indigo: "#6366F1",
-  black: "#000000",
   checkGreen: "#22C55E",
   amber: "#F59E0B",
-  gray200: "#E5E7EB",
-  gray600: "#4B5563",
 
-  accentLight: "#E6F7EE",
-  accentPressed: "#08843E",
-  accent: "#0A9B4C",
-  surfaceElevated: "#1C1E23",
-  borderDefault: "#2E3038",
+  adminAccent: "#64B5F6",
+  adminSubtle: "#E0E0E0",
+  adminIconDark: "#3A3A3A",
 } as const;
 
 export const fonts = {
@@ -121,13 +121,13 @@ export const shadows = {
     elevation: 3,
   },
   buttonLight: {
-    shadowColor: "#0A9B4C",
+    shadowColor: "#0CC25F",
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
     elevation: 4,
   },
   buttonDark: {
-    shadowColor: "#0A9B4C",
+    shadowColor: "#0CC25F",
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
     elevation: 4,

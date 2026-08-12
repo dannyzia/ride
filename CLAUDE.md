@@ -78,6 +78,8 @@ Read in this order:
 - `docs/Plan/21-MIGRATION-SQL.md` — SQL migration reference.
 - `docs/Plan/22-TEST-TEMPLATES.md` — Unit test templates for critical modules.
 
+> ⚠️ **The root `README.md` is stale.** It is the original GlideX README and contradicts the current architecture (it documents Clerk auth, Stripe payments, Google Maps, Firebase storage, Neon DB, and wrong store names). **Do not trust it.** Auth = Supabase phone OTP, payments = PortPos, maps = Barikoi/MapLibre, storage = Supabase, DB = Supabase Postgres. For accuracy, read this file and AGENTS.md instead. (If you rewrite README.md, update or remove this note.)
+
 ## Project Overview
 
 **Ride** is a subscription-based ride lead distribution platform for Bangladesh. Drivers buy call packages and keep the fare minus optional platform commission. Rebuilt from the GlideX open-source ride-hailing codebase.
@@ -127,15 +129,15 @@ See AGENTS.md for the complete command reference. Key commands:
 
 ```bash
 # Expo app
-npx expo start                  # Dev server
+npx expo start                  # Dev server  (alias: `npm start`)
 npx expo run:android            # Native build (required after plugin changes)
 npx tsc --noEmit                # Type check (must pass)
-npx eslint .                    # Lint (must pass; unused _-prefixed vars allowed)
+npm run lint                    # Lint (must pass; unused _-prefixed vars allowed)
 npx jest --testPathPattern="name"  # Single test
 
 # Database
 npx drizzle-kit generate        # Generate migration SQL from schema
-npx drizzle-kit push            # Push to remote Supabase DB
+npx drizzle-kit push            # Push to remote Supabase DB  (alias: `npm run push`)
 
 # utils-server (separate process)
 cd utils-server && npm run dev  # Start WebSocket server with tsx watch
@@ -157,6 +159,14 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 - `theme/goRide.ts` — Single-file design token source (colors, typography, spacing, radii, shadows). Dark mode via NativeWind `dark:` variants + `tailwind.config.js` aliases — no `ThemeProvider`/theme Context
 
 > **Expo API route params**: Dynamic segment params are passed **directly** as the second argument (`{ id }`), not wrapped in `{ params: { id } }` like Next.js. See Critical Coding Rules below.
+
+### 🧪 Testing / Maestro Work — Mandatory Pre-Reads
+
+**Before generating, editing, or evaluating ANY Maestro YAML flow file**, you MUST read — in full, no skipping:
+1. **`.claude/rules/testing-agent.md`** — the 4 non-negotiable rules (feature scope source, folder layout source, the 6 pre-implementation gates as hard blockers, and "subflows before flows").
+2. **`plans/maestro-architecture.md`** — the complete enterprise QA blueprint (157 features, 16 business capabilities, 6 state machines, 29 subflows, 20 journeys, 24 edge cases, 195 planned flows, 12 testability gaps). It carries a top-of-file MANDATORY READ banner.
+
+If you cannot confirm the six Section 20 gates are complete, **do not generate flows** — refuse and report which gates are open (per Rule 3 of `testing-agent.md`).
 
 ### Auth System (Supabase — Implemented)
 - **Client**: `lib/supabase.ts` — client-side Supabase client (`EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY`)
@@ -289,7 +299,7 @@ See AGENTS.md for the complete rules reference. Key rules:
 - **All tables**: uuid PKs, created_at/updated_at timestamptz. Append-only tables (call_ledger, dispatch_offers, used_challenges, rate_limits) exempt from updated_at.
 - **Soft deletes**: No hard deletes on users, drivers, riders, packages, call_ledger, rides, documents
 - **Commit format**: Conventional Commits with scope (auth, dispatch, payment, ledger, admin, schema, driver, rider)
-- **ESLint**: `eslint.config.mjs` uses `eslint-config-expo/flat.js`. Unused vars with `_` prefix are allowed (`argsIgnorePattern: '^_'`, `varsIgnorePattern: '^_'`).
+- **ESLint**: This repo uses the **legacy `.eslintrc.json`** config (NOT flat config). Always lint via `npm run lint` — the script sets `ESLINT_USE_FLAT_CONFIG=false` explicitly, so do not run bare `npx eslint .`. Unused vars with `_` prefix are allowed (`argsIgnorePattern: '^_'`, `varsIgnorePattern: '^_'`).
 - **TypeScript**: `tsconfig.json` excludes `functions/` and `utils-server/`. Those have their own configs.
 
 ## Known Issues & Tech Debt
