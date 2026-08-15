@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useCustomer } from "@/store";
+import { ensureRiderSocket } from "@/lib/riderSocket";
 import { VEHICLE_CATEGORIES } from "@/lib/vehicleTypes";
 
 function getGreeting(): string {
@@ -29,6 +30,9 @@ export default function ServicesHub() {
 
   useEffect(() => {
     setGreeting(getGreeting());
+    // L8: open the rider session's WS singleton here (the driver side opens
+    // its singleton on driver home). Ride screens subscribe per ride.
+    ensureRiderSocket();
   }, []);
 
   const handleSelect = (serviceKey: string) => {

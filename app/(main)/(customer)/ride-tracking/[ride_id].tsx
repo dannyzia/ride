@@ -17,6 +17,7 @@ import MapLibreGL from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { useWSStore } from "@/store";
 import { API_URL } from "@/lib/config";
+import { ensureRiderSocket, subscribeRiderSocket, unsubscribeRiderSocket } from "@/lib/riderSocket";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
@@ -135,20 +136,36 @@ export default function RideTrackingScreen() {
         const msg = JSON.parse(event.data);
         if (msg.ride_id !== ride_id) return;
         switch (msg.type) {
-          case "driver:location":
+          // Server protocol (utils-server/types.ts): riders receive
+          // location:driver, ride:status, ride:arrived, ride:complete.
+          case "location:driver":
             setDriverLocation({ lat: msg.lat, lng: msg.lng });
+            if (typeof msg.eta_minutes === "number" && msg.eta_minutes > 0) {
+              setEtaMinutes(Math.round(msg.eta_minutes));
+            }
             break;
-          case "driver:eta":
-            setEtaMinutes(msg.minutes);
+          case "ride:status":
+            if (msg.status === "driver_arrived") setTrackingState("arrived");
+            else if (msg.status === "in_progress") setTrackingState("in_progress");
+            else if (msg.status === "completed") setTrackingState("complete");
+            else if (msg.status === "cancelled") {
+              Alert.alert("Ride Cancelled", "The ride was cancelled");
+              router.replace("/(main)/(customer)/(tabs)/home");
+            }
             break;
-          case "driver:arrived":
+          case "ride:arrived":
             setTrackingState("arrived");
             break;
           case "ride:started":
             setTrackingState("in_progress");
             break;
           case "ride:completed":
+          case "ride:complete":
             setTrackingState("complete");
+            break;
+          case "ride:cancelled":
+            Alert.alert("Ride Cancelled", "The ride was cancelled");
+            router.replace("/(main)/(customer)/(tabs)/home");
             break;
         }
       } catch {
@@ -158,6 +175,46 @@ export default function RideTrackingScreen() {
     ws.addEventListener("message", handler);
     return () => ws.removeEventListener("message", handler);
   }, [ws, ride_id]);
+
+  // ── Ride subscription (L8: socket is a session singleton) ──────────
+  // The rider socket lives in lib/riderSocket.ts (opened once per session at
+  // services-hub) and is stored in useWSStore. This screen only subscribes and
+  // unsubscribes; the server then forwards location:driver / ride:status /
+  // ride:arrived / ride:complete events to that socket. Depends on the store
+  // socket so a reconnect (new socket object) re-attaches the auth:ok handler.
+  useEffect(() => {
+    let disposed = false;
+    let attached: WebSocket | null = null;
+
+    const onAuthOk = (event: MessageEvent) => {
+      try {
+        const msg = JSON.parse(event.data);
+        // The server only honors ride:subscribe after auth:ok, so re-send it
+        // once auth completes (also covers reconnect + deep links).
+        if (msg.type === "auth:ok" && msg.role === "rider") {
+          subscribeRiderSocket(ride_id);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    const attach = (socket: WebSocket | null) => {
+      if (!socket || disposed) return;
+      attached = socket;
+      socket.addEventListener("message", onAuthOk);
+      // Session socket already up and authed — subscribe immediately.
+      if (socket.readyState === WebSocket.OPEN) subscribeRiderSocket(ride_id);
+    };
+
+    ensureRiderSocket().then(attach);
+
+    return () => {
+      disposed = true;
+      if (attached) attached.removeEventListener("message", onAuthOk);
+      unsubscribeRiderSocket(ride_id);
+    };
+  }, [ride_id, ws]);
 
   useEffect(() => {
     if (trackingState === "in_progress") {

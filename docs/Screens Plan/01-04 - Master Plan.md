@@ -20,7 +20,7 @@ L4	Icons	Ionicons only. No emoji in production UI.
 L5	Map	components/Map.tsx (MapLibre) + useBarikoiMapStyle(isDark).
 L6	Typography	Plus Jakarta Sans ONLY. Driver screens one step larger than rider.
 L7	Money	Integer paisa everywhere; divide by 100 only at display.
-L8	WS Singleton	ONLY driver home creates WebSocket. Others use addEventListener("message").
+L8	WS Singleton	Driver home is the ONLY driver-side WebSocket creator; services-hub opens the rider session socket (lib/riderSocket.ts). All other screens only use addEventListener("message").
 L9	Expo Managed	No bare workflow. EAS Build for production.
 L10	Phone validation	+880 + 10 digits = 14 chars. Strip leading 0 if user types 11 chars.
 L11	Hamburger > Tab Bar	Draggable FAB hamburger menu. No bottom tab bar for riders.
@@ -279,7 +279,7 @@ ONLINE: 3 concentric radar rings, staggered 500ms
 Stats bar: "Today: taka X · N trips · Hh" → tappable to earnings
 RIDE_OFFER: RideOfferSheet + CountdownRing (15s)
 Slide to Accept: SlideButton, primary bg
-WS: home ONLY creates WebSocket. Others use addEventListener
+WS: driver home is the ONLY driver socket creator; services-hub opens the rider session socket (lib/riderSocket.ts). All other screens only use addEventListener
 Reconnect banner: amber "Reconnecting…"
 Reduced motion gates pulse/radar
 7.2 Reach Customer (app/(main)/(rider)/find-customer/index.tsx) ✅
