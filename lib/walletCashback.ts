@@ -279,9 +279,20 @@ export async function expireCredits(): Promise<void> {
             sql`${riderWalletTransactions.transaction_type} = 'cashback_earn'`,
             lte(riderWalletTransactions.expires_at, expiredAt),
           ),
-        );
+        )
+        .for('update');
 
       for (const row of expired) {
+        // V-1: CLAIM the earn row first — null out expires_at so no later
+        // daily run can match it again. Previously the row was never marked:
+        // the same expired credit debited the wallet EVERY day, forever
+        // (unbounded recurring debit, phantom debt, wallets bleeding negative).
+        // FOR UPDATE on the select serializes concurrent runs; a loser's
+        // locked re-select re-evaluates and sees the consumed (NULL) row.
+        await tx.update(riderWalletTransactions)
+          .set({ expires_at: null })
+          .where(eq(riderWalletTransactions.id, row.id));
+
         await tx
           .update(users)
           .set({
