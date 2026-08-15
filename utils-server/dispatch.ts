@@ -239,26 +239,16 @@ export async function scoreAndBatchDrivers(
     }
   }
 
-  // ── Commute filter ─────────────────────────────────────────────────────
+  // ── Commute + blocklist filters — batched before the loop ─────────────
+  // (the per-candidate SELECTs below were an N+1 in the hottest loop of the
+  // dispatch tick; both preference sets are now fetched once in bulk)
   function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
     return haversineKm(lat1, lng1, lat2, lng2) * 1000;
   }
 
-  async function isRideTowardCommute(driverId: string, rideDestLat: number, rideDestLng: number): Promise<boolean> {
-    const [commute] = await db.select().from(driverCommutePreferences)
-      .where(and(eq(driverCommutePreferences.driver_id, driverId), eq(driverCommutePreferences.active, true)))
-      .limit(1);
-    if (!commute) return true;
-    const destLat = parseFloat(commute.destination_lat);
-    const destLng = parseFloat(commute.destination_lng);
-    if (isNaN(destLat) || isNaN(destLng)) return true;
-    const distToCommute = haversineMeters(rideDestLat, rideDestLng, destLat, destLng);
-    if (distToCommute <= commute.max_deviation_meters) return true;
-    return false;
-  }
-
-  // ── Score each candidate ──────────────────────────────────────────────
-  const scored: ScoredDriver[] = [];
+  type CommutePref = typeof driverCommutePreferences.$inferSelect;
+  const commuteByDriver = new Map<string, CommutePref>();
+  const blockedDriverIds = new Set<string>();
 
   // ── Female preference global check — done once before loop ────────────
   const [rideOwner] = await db.select({ user_id: rides.user_id, female_driver_preference: rides.female_driver_preference })
@@ -269,25 +259,59 @@ export async function scoreAndBatchDrivers(
     if (femaleCount === 0) femalePref = false; // No female drivers — fall back to all
   }
 
+  if (driverIds.length > 0) {
+    // Fail-open by design: a DB error leaves every driver eligible. These are
+    // preferences, not correctness gates — same semantics as the old
+    // per-driver `.catch(() => true)` on the commute check.
+    try {
+      const commuteRows = await db.select().from(driverCommutePreferences)
+        .where(and(
+          inArray(driverCommutePreferences.driver_id, driverIds),
+          eq(driverCommutePreferences.active, true),
+        ));
+      for (const c of commuteRows) {
+        if (!commuteByDriver.has(c.driver_id)) commuteByDriver.set(c.driver_id, c);
+      }
+      if (rideOwner) {
+        const blockedRows = await db.select({ driver_id: driverBlocklists.driver_id })
+          .from(driverBlocklists)
+          .where(and(
+            eq(driverBlocklists.rider_id, rideOwner.user_id),
+            inArray(driverBlocklists.driver_id, driverIds),
+          ));
+        for (const b of blockedRows) blockedDriverIds.add(b.driver_id);
+      }
+    } catch (e: any) {
+      logger.warn('[dispatch] commute/blocklist pref fetch failed — failing open', { error: e.message });
+    }
+  }
+
+  // ── Score each candidate ──────────────────────────────────────────────
+  const scored: ScoredDriver[] = [];
+
   for (const d of driverRows) {
     if (alreadyOffered.has(d.id)) continue;
     if (preferenceEligibleIds != null && !preferenceEligibleIds.has(d.id)) continue;
-    if (!await isRideTowardCommute(d.id, destinationLat, destinationLng).catch(() => true)) {
-      await db.insert(dispatchOffers).values({
-        ride_id: rideId, driver_id: d.id, batch_index: -1, sent_at: new Date(),
-        outcome: 'filtered' as any, filtered_reason: 'commute',
-      }).onConflictDoNothing();
-      continue;
-    }
-    // ── Blocklist filter ──
-    try {
-      if (rideOwner) {
-        const [blocked] = await db.select().from(driverBlocklists)
-          .where(and(eq(driverBlocklists.rider_id, rideOwner.user_id), eq(driverBlocklists.driver_id, d.id)))
-          .limit(1);
-        if (blocked) continue;
+
+    // ── Commute filter (batched) ──
+    const commute = commuteByDriver.get(d.id);
+    if (commute) {
+      const destLat = parseFloat(commute.destination_lat);
+      const destLng = parseFloat(commute.destination_lng);
+      if (!isNaN(destLat) && !isNaN(destLng)) {
+        const distToCommute = haversineMeters(destinationLat, destinationLng, destLat, destLng);
+        if (distToCommute > commute.max_deviation_meters) {
+          await db.insert(dispatchOffers).values({
+            ride_id: rideId, driver_id: d.id, batch_index: -1, sent_at: new Date(),
+            outcome: 'filtered' as any, filtered_reason: 'commute',
+          }).onConflictDoNothing();
+          continue;
+        }
       }
-    } catch { /* fail-open */ }
+    }
+
+    // ── Blocklist filter (batched) ──
+    if (rideOwner && blockedDriverIds.has(d.id)) continue;
 
     // ── Female driver preference — skip male drivers if femalePref is active ──
     if (femalePref && d.gender !== 'female') continue;
