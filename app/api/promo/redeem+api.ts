@@ -5,6 +5,7 @@ import { verifySupabaseToken } from "@/lib/auth";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { parseJsonBody } from "@/lib/parseBody";
 import { stagePromo } from "@/lib/promoCache";
 
 const redeemSchema = z.object({
@@ -26,14 +27,8 @@ export async function POST(request: Request) {
     if (!user)
       return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
-    const body = await request.json();
-    const parsed = redeemSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: "validation_error", message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    const parsed = await parseJsonBody(request, redeemSchema);
+    if (!parsed.ok) return parsed.response;
 
     const { code, pickup_lat, pickup_lng } = parsed.data;
 

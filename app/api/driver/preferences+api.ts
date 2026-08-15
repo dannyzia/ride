@@ -4,6 +4,7 @@ import { eq, and, inArray } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { parseJsonBody } from '@/lib/parseBody';
 
 const updateSchema = z.object({
   preference_ids: z.array(z.string().uuid()).max(20),
@@ -53,11 +54,8 @@ export async function POST(request: Request) {
     const [driver] = await db.select({ id: drivers.id }).from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
-    const body = await request.json();
-    const parsed = updateSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json({ error: 'validation_error', message: parsed.error.flatten() }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(request, updateSchema);
+    if (!parsed.ok) return parsed.response;
 
     const { preference_ids } = parsed.data;
 

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { parseJsonBody } from "@/lib/parseBody";
 
 const DEFAULT_CONTROLS = {
   share_usage_data: true,
@@ -38,11 +39,8 @@ export async function PATCH(request: Request) {
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
     if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
-    const body = await request.json();
-    const parsed = patchSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json({ error: "validation_error", message: parsed.error.flatten() }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(request, patchSchema);
+    if (!parsed.ok) return parsed.response;
 
     const current = { ...DEFAULT_CONTROLS, ...(dbUser.data_controls as Record<string, boolean> ?? {}) };
     const merged = { ...current, ...parsed.data };

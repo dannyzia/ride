@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseJsonBody } from "@/lib/parseBody";
 import { db } from "../../../src/db";
 import { chatMessages, rides, users } from "../../../src/db/schema";
 import { eq } from "drizzle-orm";
@@ -12,7 +13,9 @@ const sendSchema = z.object({
 export async function POST(request: Request) {
   try {
     const user = await verifySupabaseToken(request);
-    const body = await sendSchema.parseAsync(await request.json());
+    const bodyResult = await parseJsonBody(request, sendSchema);
+    if (!bodyResult.ok) return bodyResult.response;
+    const body = bodyResult.data;
 
     // Resolve auth uid to DB user id
     const [sender] = await db

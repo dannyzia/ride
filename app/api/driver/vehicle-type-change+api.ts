@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { parseJsonBody } from '@/lib/parseBody';
 import { VEHICLE_TYPE_VALUES, checkDriverEligibility } from '@/lib/vehicleTypes';
 
 const schema = z.object({
@@ -15,9 +16,8 @@ export async function POST(request: Request) {
   try {
     const { supabaseUser } = await requireRole('driver')(request);
 
-    const body = await request.json();
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) return Response.json({ error: 'invalid_body', message: 'Invalid request body' }, { status: 400 });
+    const parsed = await parseJsonBody(request, schema);
+    if (!parsed.ok) return parsed.response;
 
     const { new_vehicle_type } = parsed.data;
 

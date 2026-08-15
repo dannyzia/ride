@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { API_URL } from "@/lib/config";
+import type { FareBreakdown } from "@/lib/fareCalc";
 
 export type VehicleType =
   | "bike_basic"
@@ -31,6 +32,8 @@ export interface FareEstimate {
   distance_km: number;
   eta_minutes: number;
   available_discounts?: DiscountOption[];
+  /** Provided by GET/POST /api/ride/estimate — includes surge pricing. */
+  fare_breakdown?: FareBreakdown;
 }
 
 export interface ActiveRide {

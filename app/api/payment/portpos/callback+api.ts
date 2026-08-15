@@ -7,6 +7,7 @@
 // with no matching ACCEPTED invoice is rejected.
 
 import { z } from "zod";
+import { parseJsonBody } from "@/lib/parseBody";
 import { portposClient, isConfigured } from "@/lib/portpos";
 import { db } from "@/src/db";
 import { paymentEvents, compensationQueue, users, drivers, driverWalletTransactions, riderWalletTransactions, riderPasses, riderSubscriptions } from "@/src/db/schema";
@@ -370,11 +371,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const parsedBody = ipnSchema.safeParse(await request.json());
-    if (!parsedBody.success) {
-      logger.warn("[portpos/callback] IPN invalid body", {
-        issues: parsedBody.error.issues,
-      });
+    const parsedBody = await parseJsonBody(request, ipnSchema);
+    if (!parsedBody.ok) {
+      logger.warn("[portpos/callback] IPN invalid body");
       return Response.json(
         { result: "error", message: "invalid_body" },
         { status: 400 },

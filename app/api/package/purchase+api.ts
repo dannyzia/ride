@@ -3,6 +3,7 @@
 // Idempotency-Key header required — prevents double-charge
 
 import { z } from "zod";
+import { parseJsonBody } from "@/lib/parseBody";
 import { db } from "@/src/db";
 import {
   packages,
@@ -69,14 +70,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-    const parsed = purchaseSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: "invalid_body", message: parsed.error.flatten() },
-        { status: 400 },
-      );
-    }
+    const parsed = await parseJsonBody(request, purchaseSchema);
+    if (!parsed.ok) return parsed.response;
     const { package_id } = parsed.data;
 
     const idempotencyKey = request.headers.get("Idempotency-Key");

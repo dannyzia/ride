@@ -3,6 +3,7 @@ import { sosAlerts } from "../../../src/db/schema";
 import { requireRole } from "../../../lib/auth";
 import { logger } from "../../../lib/logger";
 import { z } from "zod";
+import { parseJsonBody } from "@/lib/parseBody";
 
 const sosSchema = z.object({
   lat: z.number().min(-90).max(90),
@@ -13,14 +14,8 @@ export async function POST(request: Request) {
   try {
     const { dbUser } = await requireRole("driver")(request);
 
-    const body = await request.json();
-    const parsed = sosSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { error: "validation_error", message: parsed.error.format() },
-        { status: 400 },
-      );
-    }
+    const parsed = await parseJsonBody(request, sosSchema);
+    if (!parsed.ok) return parsed.response;
 
     const { lat, lng } = parsed.data;
 

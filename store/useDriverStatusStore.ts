@@ -29,9 +29,11 @@ export const useDriverStatusStore = create<DriverStatusStore>((set) => ({
         return;
       }
 
+      // Supabase untyped client — pin the driver row shape instead of `as any`.
+      const row = data as { status: string; is_online: boolean | null };
       set({
-        driverStatus: (data as any).status as string,
-        isOnline: Boolean((data as any).is_online),
+        driverStatus: row.status,
+        isOnline: Boolean(row.is_online),
         loading: false,
       });
     } catch {

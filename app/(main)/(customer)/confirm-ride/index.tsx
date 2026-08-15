@@ -1,6 +1,6 @@
 import { Image, Text, View, TextInput, TouchableOpacity, Alert , Modal } from "react-native";
 import { API_URL } from "@/lib/config";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import RideLayout from "@/components/RideLayout";
 import { useCustomer } from "@/store";
 import { icons } from "@/constants/data";
@@ -313,7 +313,7 @@ const ConfirmRidePage = () => {
           {/* Scheduled time badge */}
           {scheduledAt && (
             <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
-              <MaterialIcons name="schedule" size={16} color={colors.primary} />
+              <Ionicons name="time-outline" size={16} color={colors.primary} />
               <Text style={{ color: textSecondary, marginLeft: 8 }}>Pickup at</Text>
               <View
                 style={{ marginLeft: "auto", paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, backgroundColor: colors.primaryLight }}
@@ -478,16 +478,17 @@ const ConfirmRidePage = () => {
         </View>
 
         {/* Surge notice */}
-        {(displayEstimate as any)?.fare_breakdown?.surge_multiplier > 1.0 && (
-          <View style={{ backgroundColor: surgeBg, borderWidth: 1, borderColor: surgeBorder, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 16 }}>
-            <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: surgeTitle }}>
-              ⚡ High Demand — {(displayEstimate as any).fare_breakdown.surge_multiplier}× pricing active
-            </Text>
-            <Text style={{ fontSize: 13, fontFamily: fonts.body, color: surgeBody }}>
-              Includes ৳{(((displayEstimate as any)?.fare_breakdown?.surge_fee_bdt ?? 0) / 100).toFixed(0)} surge fee
-            </Text>
-          </View>
-        )}
+        {displayEstimate?.fare_breakdown?.surge_multiplier != null &&
+          displayEstimate.fare_breakdown.surge_multiplier > 1.0 && (
+            <View style={{ backgroundColor: surgeBg, borderWidth: 1, borderColor: surgeBorder, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 16 }}>
+              <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: surgeTitle }}>
+                <Ionicons name="flash" size={14} color={surgeTitle} /> High Demand — {displayEstimate.fare_breakdown.surge_multiplier}× pricing active
+              </Text>
+              <Text style={{ fontSize: 13, fontFamily: fonts.body, color: surgeBody }}>
+                Includes ৳{((displayEstimate.fare_breakdown?.surge_fee_bdt ?? 0) / 100).toFixed(0)} surge fee
+              </Text>
+            </View>
+          )}
 
         {/* Book for someone else */}
         <TouchableOpacity
