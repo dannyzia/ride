@@ -154,10 +154,14 @@ const rideId = segments[segments.indexOf("ride") + 1];
     }
 
     // ── Waiting time fee ────────────────────────────────────────────────
+    // Kept in its own wait_fee_bdt field — NEVER folded into surge_fee_bdt.
+    // The rider receipt renders a "Surge" row from surge_fee_bdt and a
+    // "Waiting Fee" row from the wait amount; conflating them double-counts
+    // the wait fee on the receipt and corrupts any analytics keyed on surge.
     const waitFee = Number(ride.wait_fee_bdt ?? 0);
     if (waitFee > 0) {
       fare.total_bdt += waitFee;
-      fare.surge_fee_bdt = (fare.surge_fee_bdt ?? 0) + waitFee;
+      fare.wait_fee_bdt = (fare.wait_fee_bdt ?? 0) + waitFee;
       const commPct = Number(pricingRow.platform_commission_percent ?? 0);
       if (commPct > 0) {
         fare.platform_commission_bdt = percentOf(fare.total_bdt, commPct);
