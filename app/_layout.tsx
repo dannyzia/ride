@@ -7,6 +7,7 @@ import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import * as Application from "expo-application";
 import SplashAnimation from "@/components/SplashAnimation";
+import { ToastHost } from "@/components/Toast";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useAppearance } from "@/lib/useAppearance";
@@ -211,5 +212,10 @@ export default function RootLayout() {
     );
   }
 
-  return <Slot />;
+  return (
+    <>
+      <Slot />
+      <ToastHost />
+    </>
+  );
 }

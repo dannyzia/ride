@@ -3,7 +3,7 @@ import { drivers, driverOnlineSessions, rides, users } from '@/src/db/schema';
 import { eq, and, gte, lt, or, isNull, sql } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
-import { nextBdtMidnightUtc } from '@/lib/time';
+import { nextBdtMidnightUtc, prevBdtMidnightUtc } from '@/lib/time';
 
 export async function GET(request: Request) {
   try {
@@ -19,12 +19,15 @@ export async function GET(request: Request) {
     }).from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
-    // Today in Dhaka time: [previous BDT midnight UTC, next BDT midnight UTC)
+    // Today in Dhaka time: [previous BDT midnight UTC, next BDT midnight UTC).
+    // Computing the previous boundary from the calendar (not windowEnd − 24h)
+    // keeps the math correct even if a zone ever adopts DST.
     const windowEnd = nextBdtMidnightUtc();
-    const windowStart = new Date(windowEnd.getTime() - 24 * 60 * 60 * 1000);
+    const windowStart = prevBdtMidnightUtc();
 
     const [rideAgg] = await db.select({
-      earnings_bdt: sql<number | null>`COALESCE(SUM(${rides.driver_fare_bdt}), 0)`,
+      // Driver take = fare + tips (tip_bdt is recorded separately on the ride).
+      earnings_bdt: sql<number | null>`COALESCE(SUM(${rides.driver_fare_bdt}), 0) + COALESCE(SUM(${rides.tip_bdt}), 0)`,
       trips: sql<number>`COUNT(*)`,
     })
       .from(rides)

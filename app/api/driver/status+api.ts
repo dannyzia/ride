@@ -27,20 +27,29 @@ export async function POST(request: Request) {
 
     const { is_online, lat, lng } = parsed.data;
 
-    // BUG 6 FIX: Reject going online if driver not approved
-    if (is_online) {
-      const [driver] = await db.select({ id: drivers.id, status: drivers.status })
-        .from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
-      if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
-      if (driver.status !== 'active') {
-        return Response.json({
-          error: 'not_approved',
-          message: `Your account status is "${driver.status}". Only "active" drivers can go online.`,
-        }, { status: 403 });
-      }
+    // N5: (0, 0) is Null Island — the Gulf of Guinea — not a real position.
+    // The client used to send 0,0 when GPS wasn't fixed yet, which would have
+    // indexed the driver into an h3 cell hundreds of km away. Only enforced
+    // when going ONLINE (coordinates are irrelevant when going offline).
+    if (is_online && lat === 0 && lng === 0) {
+      return Response.json({ error: 'invalid_coordinates', message: 'Location not available — enable GPS before going online' }, { status: 400 });
     }
 
-    // BUG 7 FIX: Save location and compute H3 cell when going online
+    // Always resolve the driver row — the offline path previously updated
+    // zero rows (no driver-existence check) and still returned success.
+    const [driver] = await db.select({ id: drivers.id, status: drivers.status })
+      .from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
+    if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
+
+    // Reject going online if driver not approved
+    if (is_online && driver.status !== 'active') {
+      return Response.json({
+        error: 'not_approved',
+        message: `Your account status is "${driver.status}". Only "active" drivers can go online.`,
+      }, { status: 403 });
+    }
+
+    // Save location and compute H3 cell when going online
     const setClause: Record<string, unknown> = { is_online, updated_at: new Date() };
     if (is_online && typeof lat === 'number' && typeof lng === 'number') {
       setClause.last_location_lat = String(lat);
@@ -49,7 +58,7 @@ export async function POST(request: Request) {
       setClause.h3_cell_res9 = getH3Cell(lat, lng);
     }
 
-    await db.update(drivers).set(setClause).where(eq(drivers.user_id, user.id));
+    await db.update(drivers).set(setClause).where(eq(drivers.id, driver.id));
 
     logger.info('[driver/status] updated', { userId: user.id, is_online, hasGps: lat != null });
     return Response.json({ success: true, is_online });

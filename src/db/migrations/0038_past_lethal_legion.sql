@@ -1,0 +1,1 @@
+ALTER TABLE "rides" ADD COLUMN "upfront_tip_forfeited_bdt" integer DEFAULT 0 NOT NULL;

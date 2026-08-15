@@ -31,6 +31,7 @@ interface CompletionSummary {
   total_bdt: number;
   distance_km: number | null;
   ride_time_min: number | null;
+  upfront_tip_forfeited_bdt?: number;
 }
 
 const FinishRide = () => {
@@ -70,8 +71,8 @@ const FinishRide = () => {
   // drop-off screen this screen must react to ride:cancelled / rider:cancelled.
   // Without this the "Slide to Confirm Drop-off" button stays live on a
   // cancelled ride (and Home's handler only resets store state, it does not
-  // navigate). Attach our own onmessage for the lifetime of this screen; Home
-  // re-attaches its handler on return.
+  // navigate). Use addEventListener (NOT ws.onmessage, which would clobber
+  // Home's handler) and remove the listener on unmount (N4).
   useEffect(() => {
     if (!ws) return;
     const handleWsMessage = (event: MessageEvent) => {
@@ -79,19 +80,23 @@ const FinishRide = () => {
         const msg = JSON.parse(event.data);
         const type = msg.type as string;
         if (type === "ride:cancelled" || type === "rider:cancelled") {
-          // Rider cancelled while the ride was being completed — clear ride
-          // state and return home so the driver can pick up new work.
+          // Driver's own cancel must not raise a "Rider cancelled" alert (N2).
+          if (msg.cancelled_by !== "driver") {
+            Alert.alert("Ride Cancelled", "Rider cancelled the ride", [
+              { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+            ]);
+          } else {
+            router.replace("/(main)/(rider)");
+          }
           if (msg.ride_id) removeRideOffer(msg.ride_id);
           setActiveRideId(null);
-          Alert.alert("Ride Cancelled", "Rider cancelled the ride", [
-            { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
-          ]);
         }
       } catch {
         // ignore parse errors
       }
     };
-    ws.onmessage = handleWsMessage;
+    ws.addEventListener("message", handleWsMessage);
+    return () => ws.removeEventListener("message", handleWsMessage);
   }, [ws, router, removeRideOffer, setActiveRideId]);
 
   const calculateDistance = (
@@ -226,12 +231,14 @@ const FinishRide = () => {
         fare_breakdown?: { total_bdt?: number; distance_km?: number; ride_time_min?: number };
         total_bdt?: number;
         ride_time_min?: number;
+        upfront_tip_forfeited_bdt?: number;
       } = await res.json().catch(() => ({}));
       const fb = data.fare_breakdown ?? {};
       setCompletion({
         total_bdt: fb.total_bdt ?? data.total_bdt ?? 0,
         distance_km: fb.distance_km ?? null,
         ride_time_min: data.ride_time_min ?? fb.ride_time_min ?? null,
+        upfront_tip_forfeited_bdt: data.upfront_tip_forfeited_bdt ?? 0,
       });
       setCompletedRideId(activeRideId);
       removeRideOffer(activeRideId);
@@ -429,8 +436,36 @@ const FinishRide = () => {
               fontVariant: ["tabular-nums"],
             }}
           >
-            Collect ৳{(totalPaisa / 100).toFixed(0)} cash from rider
+            Collect ৳{(totalPaisa / 100).toFixed(2)} cash from rider
           </Text>
+
+          {/* N3: forfeited upfront tip — never let a promised tip vanish silently */}
+          {(completion?.upfront_tip_forfeited_bdt ?? 0) > 0 && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spacing.sm,
+                backgroundColor: colors.amber + "1A",
+                borderRadius: radii.md,
+                padding: spacing.md,
+                marginBottom: spacing.lg,
+              }}
+            >
+              <Ionicons name="alert-circle" size={18} color={colors.amber} />
+              <Text
+                style={{
+                  flex: 1,
+                  fontFamily: "Jakarta-SemiBold",
+                  fontSize: 13,
+                  color: colors.amber,
+                }}
+              >
+                Upfront tip ৳{((completion?.upfront_tip_forfeited_bdt ?? 0) / 100).toFixed(2)} could not
+                be collected from the rider's wallet.
+              </Text>
+            </View>
+          )}
 
           {/* Fare Summary */}
           <View
@@ -452,7 +487,7 @@ const FinishRide = () => {
               <Text
                 style={[valueStyle, { color: colors.primary, fontSize: 16 }]}
               >
-                ৳{(totalPaisa / 100).toFixed(0)}
+                ৳{(totalPaisa / 100).toFixed(2)}
               </Text>
             </View>
             <View

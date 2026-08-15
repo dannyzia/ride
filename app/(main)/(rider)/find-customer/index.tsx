@@ -86,8 +86,9 @@ const ReachCustomer = () => {
   // Home owns the socket + its own onmessage, but while the driver is en route
   // to the pickup this screen must react to ride:cancelled / rider:cancelled —
   // otherwise the driver is stuck here after the rider cancels (Home's handler
-  // only resets store state, it does not navigate). Attach our own onmessage
-  // for the lifetime of this screen; Home re-attaches its handler on return.
+  // only resets store state, it does not navigate). Use addEventListener (NOT
+  // ws.onmessage, which would clobber Home's handler and leave it dead when
+  // this screen pops back) and remove the listener on unmount (N4).
   useEffect(() => {
     if (!ws) return;
     const handleWsMessage = (event: MessageEvent) => {
@@ -95,18 +96,23 @@ const ReachCustomer = () => {
         const msg = JSON.parse(event.data);
         const type = msg.type as string;
         if (type === "ride:cancelled" || type === "rider:cancelled") {
-          // Rider cancelled while en route — clear ride state and return home.
+          // Driver's own cancel must not raise a "Rider cancelled" alert (N2).
+          if (msg.cancelled_by !== "driver") {
+            Alert.alert("Ride Cancelled", "Rider cancelled the ride", [
+              { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+            ]);
+          } else {
+            router.replace("/(main)/(rider)");
+          }
           if (msg.ride_id) removeRideOffer(msg.ride_id);
           setActiveRideId(null);
-          Alert.alert("Ride Cancelled", "Rider cancelled the ride", [
-            { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
-          ]);
         }
       } catch {
         // ignore parse errors
       }
     };
-    ws.onmessage = handleWsMessage;
+    ws.addEventListener("message", handleWsMessage);
+    return () => ws.removeEventListener("message", handleWsMessage);
   }, [ws, router, removeRideOffer, setActiveRideId]);
 
   // ── Fetch stops on mount ──────────────────────────────────────────────

@@ -163,15 +163,22 @@ export function checkDriverEligibility(
   const def = getVehicleType(vehicleType);
   if (!def.driver_req) return { eligible: true };
   const { min_rides, min_rating } = def.driver_req;
-  if (
-    min_rides &&
-    driver.completed_rides_count >= min_rides &&
-    driver.rating < (min_rating ?? 0)
-  )
+  // Both thresholds are independent gates: a driver below the ride minimum is
+  // ineligible regardless of rating, and vice versa. (Previous logic only
+  // rejected drivers who met the ride count but failed the rating — drivers
+  // below the ride minimum sailed straight through.)
+  if (min_rides && driver.completed_rides_count < min_rides) {
+    return {
+      eligible: false,
+      reason: `${min_rides}+ completed rides required for ${vehicleType}`,
+    };
+  }
+  if (min_rating && driver.rating < min_rating) {
     return {
       eligible: false,
       reason: `Rating must be ≥ ${min_rating} for ${vehicleType}`,
     };
+  }
   return { eligible: true };
 }
 

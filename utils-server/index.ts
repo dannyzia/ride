@@ -381,7 +381,7 @@ const server = http.createServer(async (req, res) => {
     });
     req.on("end", async () => {
       try {
-        const { ride_id, driver_id } = JSON.parse(body);
+        const { ride_id, driver_id, cancelled_by } = JSON.parse(body);
         if (!ride_id || !driver_id) {
           writeJson(400, { error: "missing_fields" });
           return;
@@ -389,6 +389,7 @@ const server = http.createServer(async (req, res) => {
         sendToDriver(driver_id, {
           type: "ride:cancelled",
           ride_id,
+          cancelled_by: cancelled_by === "driver" ? "driver" : cancelled_by === "system" ? "system" : "rider",
         });
         writeJson(200, { ok: true });
       } catch {
@@ -494,6 +495,17 @@ wss.on("connection", (ws: WebSocket) => {
                   return;
                 }
                 client.driverId = driver.id;
+
+                // One driver, one live socket. On reconnect, close the
+                // previous socket (if any) so the orphan can't keep sending
+                // heartbeats / answering offers as a second identity.
+                const prevDriver = connectedDrivers.get(driver.id);
+                if (prevDriver && prevDriver.ws !== ws) {
+                  logger.info("[ws] closing previous socket on reconnect", {
+                    driverId: driver.id,
+                  });
+                  prevDriver.ws.close();
+                }
                 connectedDrivers.set(driver.id, client);
 
                 // Re-online driver on WS reconnect.
@@ -524,6 +536,10 @@ wss.on("connection", (ws: WebSocket) => {
                 });
               }
             } else {
+              const prevRider = connectedRiders.get(user.id);
+              if (prevRider && prevRider.ws !== ws) {
+                prevRider.ws.close();
+              }
               connectedRiders.set(user.id, client);
             }
 

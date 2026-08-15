@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { rides, users, drivers, riderFeeDeductions } from '@/src/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -8,6 +8,14 @@ import { parseJsonBody } from '@/lib/parseBody';
 import { evaluateCancellation } from '@/lib/cancellation';
 import { recordCancellationFee } from '@/lib/accounting';
 import { createCancellationCredit } from '@/lib/cancellationCompensation';
+
+const CANCELLABLE_STATUSES = [
+  'pending',
+  'dispatching',
+  'matched',
+  'driver_arriving',
+  'driver_arrived',
+] as const;
 
 const cancelSchema = z.object({
   reason: z.string().max(255).optional(),
@@ -46,13 +54,31 @@ export async function POST(request: Request, { id }: { id: string }) {
     // Derive cancelled_by server-side from role
     const cancelled_by = dbUser.role === 'driver' ? 'driver' : 'rider';
 
-    // Only allow cancellation of pending/dispatching/matched/driver_arriving/driver_arrived rides
-    if (!['pending', 'dispatching', 'matched', 'driver_arriving', 'driver_arrived'].includes(ride.status)) {
+    // Atomic claim: a single conditional UPDATE is the exactly-once guard.
+    // Two concurrent cancels both pass the pre-check above; only one wins the
+    // status transition — the loser gets 409 and writes nothing (no double
+    // fee deductions / compensation credits).
+    const [claimed] = await db.update(rides)
+      .set({
+        status: 'cancelled',
+        cancelled_by,
+        cancel_reason: reason ?? null,
+        updated_at: new Date(),
+      })
+      .where(and(eq(rides.id, rideId), inArray(rides.status, [...CANCELLABLE_STATUSES])))
+      .returning({ id: rides.id });
+
+    if (!claimed) {
       return Response.json({ error: 'ride_not_cancellable', message: `Cannot cancel ride in status: ${ride.status}` }, { status: 409 });
     }
 
-    // Evaluate cancellation fee (no wallet debit — collected from future cashback)
-    const { feeBdt } = await evaluateCancellation(rideId, cancelled_by as 'rider' | 'driver');
+    // Evaluate cancellation fee against the PRE-cancel snapshot (no wallet
+    // debit — collected from future cashback). Never re-read the ride here:
+    // the claim above already flipped it to 'cancelled'.
+    const { feeBdt } = await evaluateCancellation(
+      { status: ride.status, created_at: ride.created_at },
+      cancelled_by as 'rider' | 'driver',
+    );
 
     // ── Accounting entry (non-blocking) ──────────────────────────────────
     if (feeBdt > 0) {
@@ -64,10 +90,9 @@ export async function POST(request: Request, { id }: { id: string }) {
     // Wallet redemption is debited at completion, not request time. Pre-completion
     // cancellation has nothing to reverse.
 
+    // Second (unconditional) update to stamp the fee fields, computed after
+    // the atomic claim. Safe: we already own the status transition.
     await db.update(rides).set({
-      status: 'cancelled',
-      cancelled_by,
-      cancel_reason: reason ?? null,
       cancellation_fee_bdt: feeBdt > 0 ? feeBdt : undefined,
       cancellation_compensation_driver_id: feeBdt > 0 ? ride.driver_id : undefined,
       cancellation_fee_pending: feeBdt > 0 ? true : undefined,
@@ -129,6 +154,7 @@ export async function POST(request: Request, { id }: { id: string }) {
           body: JSON.stringify({
             ride_id: rideId,
             driver_id: ride.driver_id,
+            cancelled_by,
           }),
         }).catch((e: any) =>
           logger.error("[ride/cancel] WS ride:cancelled broadcast failed", { rideId, driverId: ride.driver_id, error: e.message }),

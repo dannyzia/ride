@@ -623,6 +623,10 @@ export const rides = pgTable(
     cancellation_fee_applied: boolean("cancellation_fee_applied").notNull().default(false),
     cancellation_fee_pending: boolean("cancellation_fee_pending").notNull().default(false),
     upfront_tip_bdt: integer("upfront_tip_bdt").default(0),
+    // Set when an upfront tip was promised at request but the rider's wallet
+    // couldn't cover it at completion. Never silently drop the tip: the amount
+    // is recorded and surfaced to the driver (see [id]/complete+api.ts).
+    upfront_tip_forfeited_bdt: integer("upfront_tip_forfeited_bdt").notNull().default(0),
     female_driver_preference: boolean("female_driver_preference").default(false),
     distance_km: numeric("distance_km", { precision: 7, scale: 3 }).notNull(),
     platform_commission_bdt: integer("platform_commission_bdt"),

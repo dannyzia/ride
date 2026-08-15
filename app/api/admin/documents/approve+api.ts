@@ -1,6 +1,6 @@
 // Auth: verifySupabaseToken via requireRole
 import { db } from '../../../../src/db';
-import { documents, drivers } from '../../../../src/db/schema';
+import { documents, vehicles } from '../../../../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireRole } from '../../../../lib/auth';
 import { logger } from '../../../../lib/logger';
@@ -26,14 +26,17 @@ export async function POST(request: Request) {
     const [doc] = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
     if (!doc) return Response.json({ error: 'document_not_found', message: 'Document not found' }, { status: 404 });
 
-    // BRTA: check vehicle age for warning (informational only, independent of activation)
+    // BRTA: check vehicle age for warning (informational only, independent of
+    // activation). The vehicle's registration_date is the source of truth —
+    // B-2 writes it (drivers.vehicle_registration_date is legacy and never
+    // populated by onboarding).
     let vehicleAgeDays: number | null = null;
-    const [driverInfo] = await db.select({
-      vehicle_registration_date: drivers.vehicle_registration_date,
-    }).from(drivers).where(eq(drivers.id, doc.driver_id)).limit(1);
+    const [vehicleInfo] = await db.select({
+      registration_date: vehicles.registration_date,
+    }).from(vehicles).where(eq(vehicles.driver_id, doc.driver_id)).limit(1);
 
-    if (driverInfo?.vehicle_registration_date) {
-      const regDate = new Date(driverInfo.vehicle_registration_date);
+    if (vehicleInfo?.registration_date) {
+      const regDate = new Date(vehicleInfo.registration_date);
       const now = new Date();
       vehicleAgeDays = Math.floor((now.getTime() - regDate.getTime()) / 86400000);
     }

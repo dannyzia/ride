@@ -14,6 +14,7 @@ import { useRideOfferStore, useWSStore } from "@/store";
 import SOSButton from "@/components/SOSButton";
 import RideOfferSheet from "@/components/RideOfferSheet";
 import DriverStatsBar from "@/components/DriverStatsBar";
+import { showToast } from "@/components/Toast";
 import ThemeToggle from "@/components/ThemeToggle";
 import ScreenLabel from "@/components/ScreenLabel";
 import { colors, spacing, radii } from "@/theme/goRide";
@@ -286,14 +287,18 @@ export default function DriverHome() {
         } else if (type === "offer:lost" || type === "offer:expired") {
           if (msg.ride_id) removeRideOffer(msg.ride_id);
           setActiveOffer(null);
+          showToast("Offer expired", "info");
         } else if (type === "offer:accepted") {
           setActiveRideId(msg.ride_id);
           setActiveOffer(null);
           router.replace("/(main)/(rider)/find-customer");
         } else if (type === "ride:cancelled" || type === "rider:cancelled") {
-          // New backend broadcasts ride:cancelled (B-7); rider:cancelled kept
-          // as the legacy spelling for safety. Either way: reset to ONLINE.
-          Alert.alert("Ride Cancelled", "Rider cancelled the ride");
+          // ride:cancelled (B-7) carries cancelled_by; rider:cancelled is the
+          // legacy spelling (treated as rider-initiated). A driver's own
+          // cancel must not raise a "Rider cancelled" alert — just reset.
+          if (msg.cancelled_by !== "driver") {
+            Alert.alert("Ride Cancelled", "Rider cancelled the ride");
+          }
           if (msg.ride_id) removeRideOffer(msg.ride_id);
           setActiveRideId(null);
           setActiveOffer(null);
@@ -426,6 +431,14 @@ export default function DriverHome() {
       if (!token) return;
 
       const newState = !isOnline;
+      // N5: never send (0,0) when GPS hasn't fixed yet — the server rejects
+      // Null Island when going online, and omitting the coords lets the toggle
+      // still work (location gets filled by the next heartbeat).
+      const body: Record<string, unknown> = { is_online: newState };
+      if (location?.lat != null && location?.lng != null) {
+        body.lat = location.lat;
+        body.lng = location.lng;
+      }
       const res = await fetch(
         `${API_URL}/api/driver/status`,
         {
@@ -434,11 +447,7 @@ export default function DriverHome() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            is_online: newState,
-            lat: location?.lat ?? 0,
-            lng: location?.lng ?? 0,
-          }),
+          body: JSON.stringify(body),
         },
       );
 

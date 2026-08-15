@@ -3,16 +3,37 @@ import { useRef, useEffect } from "react";
 import * as Haptics from "expo-haptics";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useWSStore } from "@/store";
+import { showToast } from "@/components/Toast";
 import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import CountdownRing from "./CountdownRing";
 
+const FETCH_ERROR_MESSAGES: Record<string, string> = {
+  offer_expired: "Offer expired",
+  deduction_failed: "Call could not be deducted — try again",
+  no_subscription: "No active call package",
+};
+
 export default function RideOfferSheet() {
   const { activeOffer, setActiveOffer } = useDriverFlowStore();
   const ws = useWSStore((s) => s.ws);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const acceptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDark = useIsDark();
+
+  // Cancel any in-flight accept handshake when the sheet unmounts or the
+  // offer changes (offer:lost / offer expired) so the blind-accept timer can
+  // never fire for a dead offer.
+  useEffect(() => {
+    return () => {
+      if (acceptTimeoutRef.current) {
+        clearTimeout(acceptTimeoutRef.current);
+        acceptTimeoutRef.current = null;
+      }
+    };
+    // fadeAnim is a stable useRef value; include it to satisfy exhaustive-deps.
+  }, [fadeAnim]);
 
   useEffect(() => {
     if (!activeOffer) return;
@@ -57,29 +78,52 @@ export default function RideOfferSheet() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
     const rideId = activeOffer.ride_id;
-    ws.send(JSON.stringify({ type: "fetch:confirm", ride_id: rideId }));
+    // Exactly-once handshake guard (C1): the 3s fallback previously fired
+    // offer:accept UNCONDITIONALLY — double-sending after a fast
+    // fetch:confirmed (which made the server refund the accepted driver's
+    // call deduction) and even sending it after fetch:error (matching a ride
+    // without a deduction). Only a fetch:confirmed reply may commit.
+    const state = { resolved: false };
+
+    const finish = (accepted: boolean) => {
+      if (state.resolved) return;
+      state.resolved = true;
+      if (acceptTimeoutRef.current) {
+        clearTimeout(acceptTimeoutRef.current);
+        acceptTimeoutRef.current = null;
+      }
+      ws.removeEventListener("message", onMessage);
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
+        setActiveOffer(null);
+      });
+      if (!accepted) {
+        showToast("Ride could not be confirmed", "error");
+      }
+    };
 
     const onMessage = (ev: MessageEvent) => {
       try {
         const msg = JSON.parse(ev.data);
-        if (msg.ride_id === rideId) {
-          if (msg.type === "fetch:confirmed") {
-            ws.send(JSON.stringify({ type: "offer:accept", ride_id: rideId }));
-            ws.removeEventListener("message", onMessage);
-            Animated.timing(fadeAnim, {
-              toValue: 0,
-              duration: 200,
-              useNativeDriver: true,
-            }).start(() => {
-              setActiveOffer(null);
-            });
-          } else if (msg.type === "fetch:error") {
-            ws.removeEventListener("message", onMessage);
-            logger.warn("[RideOfferSheet] fetch:confirm failed", {
-              rideId,
-              error: msg.error,
-            });
-          }
+        if (msg.ride_id !== rideId) return;
+        if (msg.type === "fetch:confirmed") {
+          // The server deducted the call — commit exactly once.
+          ws.send(JSON.stringify({ type: "offer:accept", ride_id: rideId }));
+          finish(true);
+        } else if (msg.type === "fetch:error") {
+          logger.warn("[RideOfferSheet] fetch:confirm failed", {
+            rideId,
+            error: msg.reason ?? msg.error,
+          });
+          showToast(
+            FETCH_ERROR_MESSAGES[msg.reason ?? msg.error] ??
+              "Ride could not be confirmed",
+            "error",
+          );
+          finish(false);
         }
       } catch {
         // Ignore non-JSON messages
@@ -88,18 +132,14 @@ export default function RideOfferSheet() {
 
     ws.addEventListener("message", onMessage);
 
-    setTimeout(() => {
-      ws.removeEventListener("message", onMessage);
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "offer:accept", ride_id: rideId }));
-      }
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start(() => {
-        setActiveOffer(null);
-      });
+    // Fallback if fetch:confirmed never arrives (lost message, dead socket).
+    // Deliberately does NOT send offer:accept — the server only deducts on
+    // fetch:confirm, so a blind accept would match without a deduction.
+    acceptTimeoutRef.current = setTimeout(() => {
+      if (state.resolved) return;
+      logger.warn("[RideOfferSheet] fetch:confirm timed out", { rideId });
+      showToast("Could not confirm the ride — please try again", "error");
+      finish(false);
     }, 3000);
   };
 
@@ -109,7 +149,7 @@ export default function RideOfferSheet() {
     setActiveOffer(null);
   };
 
-  const fareTk = (activeOffer.fare_breakdown?.total_bdt / 100).toFixed(0);
+  const fareTk = (activeOffer.fare_breakdown?.total_bdt / 100).toFixed(2);
   const pickupDist = activeOffer.pickup_distance_km;
   const pickupEta = activeOffer.pickup_eta_minutes;
   const riderRating = activeOffer.rider_rating;
@@ -315,7 +355,7 @@ export default function RideOfferSheet() {
             className="text-[14px] font-JakartaBold"
             style={{ color: colors.primary }}
           >
-            +৳{((activeOffer.upfront_tip_bdt / 100).toFixed(0))} tip
+            +৳{((activeOffer.upfront_tip_bdt / 100).toFixed(2))} tip
           </Text>
         </View>
       ) : null}

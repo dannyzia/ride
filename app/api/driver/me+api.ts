@@ -3,10 +3,14 @@ import { drivers, users, subscriptions, pricing, platformConfig } from '@/src/db
 import { eq, and, inArray } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { isAllowedStorageUrl } from '@/lib/storageUrl';
 import { z } from 'zod';
 
-import { VEHICLE_TYPE_VALUES } from '@/lib/vehicleTypes';
-
+// NOTE: `vehicle_type` is intentionally NOT part of the PATCH schema. The
+// driver's dispatch-facing type is owned by POST /api/driver/vehicles (B-2,
+// which enforces eligibility on changes and syncs drivers.vehicle_type) and
+// POST /api/driver/vehicle-type-change (gated). Accepting it here was a third,
+// unguarded write path that bypassed both gates (N1).
 const patchSchema = z.object({
   min_per_km_bdt: z.number().int().nonnegative().optional(),
   name: z.string().min(1).max(200).optional(),
@@ -14,7 +18,6 @@ const patchSchema = z.object({
   profile_image_url: z.string().url().optional(),
   email: z.string().email().optional(),
   city: z.string().min(1).max(100).optional(),
-  vehicle_type: z.enum(VEHICLE_TYPE_VALUES).optional(),
   auto_accept_enabled: z.boolean().optional(),
   auto_accept_radius_meters: z.number().int().min(100).max(5000).optional(),
 });
@@ -112,12 +115,6 @@ export async function PATCH(request: Request) {
       updates.min_per_km_bdt = val === 0 ? null : val;
     }
 
-    if (parsed.data.vehicle_type !== undefined) {
-      await db.update(drivers)
-        .set({ vehicle_type: parsed.data.vehicle_type as any, updated_at: new Date() })
-        .where(eq(drivers.id, driver.id));
-    }
-
     if (parsed.data.auto_accept_enabled !== undefined) updates.auto_accept_enabled = parsed.data.auto_accept_enabled;
     if (parsed.data.auto_accept_radius_meters !== undefined) updates.auto_accept_radius_meters = parsed.data.auto_accept_radius_meters;
 
@@ -130,7 +127,14 @@ export async function PATCH(request: Request) {
     const userUpdates: Record<string, any> = {};
     if (parsed.data.name !== undefined) userUpdates.name = parsed.data.name;
     if (parsed.data.phone !== undefined) userUpdates.phone = parsed.data.phone;
-    if (parsed.data.profile_image_url !== undefined) userUpdates.profile_image_url = parsed.data.profile_image_url;
+    if (parsed.data.profile_image_url !== undefined) {
+      // C3a: the profile photo is verification-adjacent display data — keep it
+      // inside the project's own storage.
+      if (!isAllowedStorageUrl(parsed.data.profile_image_url, 'driver-documents')) {
+        return Response.json({ error: 'invalid_storage_url', message: 'Profile image must be uploaded to Ride storage' }, { status: 400 });
+      }
+      userUpdates.profile_image_url = parsed.data.profile_image_url;
+    }
     if (parsed.data.email !== undefined) userUpdates.email = parsed.data.email;
     if (parsed.data.city !== undefined) userUpdates.city = parsed.data.city;
     if (Object.keys(userUpdates).length > 0) {

@@ -16,6 +16,8 @@ interface DocumentUploadCardProps {
 export default function DocumentUploadCard({ docType, label, onUploadComplete }: DocumentUploadCardProps) {
   const [uploading, setUploading] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
+  // H3: surface upload failures instead of silently logging them.
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const isDark = useIsDark();
 
   const bg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -35,14 +37,23 @@ export default function DocumentUploadCard({ docType, label, onUploadComplete }:
 
       const file = result.assets[0];
       setUploading(true);
+      setUploadError(null);
+
+      // H2: scope the storage path with the authenticated user id so one
+      // driver's documents can never collide with another's, and drop
+      // upsert:true so a (timestamped) collision errors loudly instead of
+      // silently overwriting an existing document.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id ?? "anonymous";
+      const safeName = (file.fileName ?? "document.jpg").replace(/[^\w.\-]/g, "_");
+      const fileName = `${userId}/${docType}/${Date.now()}_${safeName}`;
 
       const response = await fetch(file.uri);
       const blob = await response.blob();
-      const fileName = `${docType}/${Date.now()}_${file.fileName ?? "document.jpg"}`;
 
       const { data, error } = await supabase.storage
         .from("driver-documents")
-        .upload(fileName, blob, { upsert: true });
+        .upload(fileName, blob);
 
       if (error) throw error;
 
@@ -55,6 +66,7 @@ export default function DocumentUploadCard({ docType, label, onUploadComplete }:
       logger.info("[DocumentUploadCard] upload complete", { docType, path: data.path });
     } catch (e: any) {
       logger.error("[DocumentUploadCard] upload failed", { docType, error: e.message });
+      setUploadError("Upload failed — tap to try again");
     } finally {
       setUploading(false);
     }
@@ -91,15 +103,17 @@ export default function DocumentUploadCard({ docType, label, onUploadComplete }:
             style={{
               fontFamily: "Jakarta-Regular",
               fontSize: 12,
-              color: textSecondary,
+              color: uploadError ? colors.danger : textSecondary,
               marginTop: 2,
             }}
           >
             {uploading
               ? "Uploading..."
-              : previewUri
-                ? "Tap to replace document"
-                : "Tap to upload document"}
+              : uploadError
+                ? uploadError
+                : previewUri
+                  ? "Tap to replace document"
+                  : "Tap to upload document"}
           </Text>
         </View>
         {uploading ? (

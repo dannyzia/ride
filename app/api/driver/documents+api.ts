@@ -1,10 +1,11 @@
 import { db } from '@/src/db';
 import { documents, documentTypeEnum, drivers, users } from '@/src/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, inArray, isNull, sql } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
+import { isAllowedStorageUrl } from '@/lib/storageUrl';
 
 export async function GET(request: Request) {
   try {
@@ -54,12 +55,25 @@ export async function POST(request: Request) {
     const parsed = await parseJsonBody(request, docSchema);
     if (!parsed.ok) return parsed.response;
 
-    const { documents: docMap, vehicle_id, consent_accepted, consent_version } = parsed.data;
+    const { documents: docMap, vehicle_id, consent_accepted, consent_version, expiry_date } = parsed.data;
 
     const invalidKeys = Object.keys(docMap).filter((key) => !ALLOWED_DOC_TYPES.has(key));
     if (invalidKeys.length > 0) {
       return Response.json(
         { error: 'invalid_doc_type', message: `Unsupported document type(s): ${invalidKeys.join(', ')}` },
+        { status: 400 },
+      );
+    }
+
+    // C3a: reject any storage_url that is not served by this project's own
+    // Supabase storage. The admin trusts these URLs as verification evidence;
+    // a bare z.string().url() accepts arbitrary external hosts.
+    const spoofed = Object.entries(docMap).filter(
+      ([, storageUrl]) => !isAllowedStorageUrl(storageUrl, 'driver-documents'),
+    );
+    if (spoofed.length > 0) {
+      return Response.json(
+        { error: 'invalid_storage_url', message: 'Document URLs must be uploaded to Ride storage' },
         { status: 400 },
       );
     }
@@ -70,11 +84,37 @@ export async function POST(request: Request) {
       storage_url: storageUrl,
       vehicle_id: vehicle_id ?? null,
       status: 'pending' as const,
+      expiry_date: expiry_date ? new Date(expiry_date) : null,
       // TODO: accept optional per-doc file_size_bytes instead of hardcoding 0
       file_size_bytes: 0,
     }));
 
-    await db.insert(documents).values(insertValues);
+    // The documents table has a partial unique index
+    // documents_one_per_type (driver_id, doc_type) WHERE status IN
+    // ('pending','approved') AND deleted_at IS NULL. A plain insert 500s on
+    // resubmission (network retry, photo swap after posting). The server owns
+    // this invariant: within one transaction, soft-delete any live row of the
+    // submitted types (history preserved for the admin — rows stay readable
+    // with deleted_at set), then insert the new pending rows.
+    //
+    // A per-driver advisory lock serializes CONCURRENT submissions too: under
+    // READ COMMITTED, two parallel POSTs would otherwise both pass the
+    // soft-delete (each missing the other's just-inserted row) and collide on
+    // the unique index (N6).
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('driver_docs_' || ${driver.id}))`);
+      const submittedTypes = Object.keys(docMap);
+      if (submittedTypes.length > 0) {
+        await tx.update(documents)
+          .set({ deleted_at: new Date(), updated_at: new Date() })
+          .where(and(
+            eq(documents.driver_id, driver.id),
+            inArray(documents.doc_type, submittedTypes as any),
+            isNull(documents.deleted_at),
+          ));
+      }
+      await tx.insert(documents).values(insertValues);
+    });
 
     // Legacy rideshare platform screenshots flag the driver as a legacy operator
     const isLegacySubmission = Object.keys(docMap).some(

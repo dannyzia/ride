@@ -5,16 +5,24 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 /**
  * Evaluate cancellation fee by querying DB-driven cancellation_policies.
  * Returns { feeBdt, reason } where feeBdt is in integer paisa.
+ *
+ * Accepts either a rideId (re-read from the DB) or an already-fetched ride
+ * snapshot. Callers that flip the ride status BEFORE evaluating (the cancel
+ * race fix) MUST pass the snapshot — re-reading would see status='cancelled'
+ * and match no policy, silently dropping the fee.
  */
 export async function evaluateCancellation(
-  rideId: string,
+  rideIdOrSnapshot: string | { status: string; created_at: Date },
   cancelledBy: 'rider' | 'driver',
 ): Promise<{ feeBdt: number; reason: string }> {
-  const [ride] = await db
-    .select({ status: rides.status, created_at: rides.created_at })
-    .from(rides)
-    .where(eq(rides.id, rideId))
-    .limit(1);
+  const ride =
+    typeof rideIdOrSnapshot === 'string'
+      ? (await db
+          .select({ status: rides.status, created_at: rides.created_at })
+          .from(rides)
+          .where(eq(rides.id, rideIdOrSnapshot))
+          .limit(1))[0]
+      : rideIdOrSnapshot;
   if (!ride) return { feeBdt: 0, reason: 'ride_not_found' };
 
   const elapsedSec = (Date.now() - new Date(ride.created_at).getTime()) / 1000;

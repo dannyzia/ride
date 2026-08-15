@@ -1,6 +1,6 @@
 // Auth: verifySupabaseToken via requireRole
 import { db } from '@/src/db';
-import { drivers, users } from '@/src/db/schema';
+import { drivers, vehicles, users } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -44,10 +44,17 @@ export async function POST(request: Request) {
       }, { status: 422 });
     }
 
-    // Update driver's vehicle type
-    await db.update(drivers)
-      .set({ vehicle_type: new_vehicle_type as any, updated_at: new Date() })
-      .where(eq(drivers.id, driver.id));
+    // Update driver's vehicle type AND keep the vehicles row in sync — the two
+    // tables must never diverge (dispatch reads drivers.vehicle_type; the
+    // vehicle record is the admin-facing source).
+    await db.transaction(async (tx) => {
+      await tx.update(drivers)
+        .set({ vehicle_type: new_vehicle_type as any, updated_at: new Date() })
+        .where(eq(drivers.id, driver.id));
+      await tx.update(vehicles)
+        .set({ vehicle_type: new_vehicle_type as any, updated_at: new Date() })
+        .where(eq(vehicles.driver_id, driver.id));
+    });
 
     return Response.json({ success: true, vehicle_type: new_vehicle_type });
   } catch (err: any) {

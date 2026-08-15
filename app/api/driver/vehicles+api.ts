@@ -5,7 +5,14 @@ import { verifySupabaseToken } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
-import { VEHICLE_TYPE_ZOD_ENUM } from '@/lib/vehicleTypes';
+import { VEHICLE_TYPE_ZOD_ENUM, checkDriverEligibility } from '@/lib/vehicleTypes';
+
+class EligibilityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EligibilityError';
+  }
+}
 
 export async function GET(request: Request) {
   try {
@@ -70,7 +77,11 @@ export async function POST(request: Request) {
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
     if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
-    const [driver] = await db.select({ id: drivers.id })
+    const [driver] = await db.select({
+      id: drivers.id,
+      completed_rides_count: drivers.completed_rides_count,
+      rating: drivers.rating,
+    })
       .from(drivers).where(eq(drivers.user_id, dbUser.id)).limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
@@ -92,65 +103,105 @@ export async function POST(request: Request) {
       ))
       .limit(1);
 
-    let model_created = false;
-    if (!existingModel) {
-      await db.insert(vehicleModels).values({
-        brand,
-        model,
-        source: 'driver',
-        created_by: dbUser.id,
-        is_active: false,
-        default_vehicle_type: vehicle_type as any,
-        passenger_seats: number_of_seats ?? 4,
-      }).onConflictDoNothing();
-      model_created = true;
-    }
-
     const now = new Date();
     const oneYearAhead = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
 
-    const [vehicle] = await db.insert(vehicles).values({
-      driver_id: driver.id,
-      vehicle_type: vehicle_type as any,
-      manufacturer: brand,
-      model,
-      // TODO: manufacturing_year = BRTA registration year placeholder (UI collects
-      // only one year) — admin-correctable
-      manufacturing_year: registration_year,
-      has_ac: null,
-      passenger_seats: number_of_seats ?? 4,
-      // TODO: registration_area is a NOT NULL placeholder — admin-correctable
-      registration_area: 'DHAKA_METRO' as any,
-      // TODO: vehicle_class_letter is a NOT NULL placeholder — admin-correctable
-      vehicle_class_letter: 'KA' as any,
-      registration_number: registration_plate.toUpperCase(),
-      // Jan 1 of the BRTA registration year (UI collects only the year)
-      registration_date: `${registration_year}-01-01`,
-      // TODO: fitness expiry +1yr placeholder — admin-correctable
-      fitness_expires_at: toDateStr(oneYearAhead),
-      // TODO: tax token expiry +1yr placeholder — admin-correctable
-      tax_token_expires_at: toDateStr(oneYearAhead),
-    }).onConflictDoUpdate({
-      target: vehicles.driver_id,
-      set: {
+    // One transaction: eligibility gate + vehicle upsert + drivers.vehicle_type
+    // sync. Dispatch reads drivers.vehicle_type for candidate filtering, so
+    // B-2 must keep the two tables reconciled or the onboarding vehicle type
+    // never reaches the dispatch pool.
+    const { vehicle, model_created } = await db.transaction(async (tx) => {
+      // Eligibility gate: only enforced when this is a type CHANGE (the driver
+      // already has a vehicle of a different type). First-time registration is
+      // the initial setup — new drivers have no history to gate on, and admin
+      // adjusts the type at activation (admin/driver/approve
+      // vehicle_type_adjusted). Mid-career changes go through the same gate as
+      // vehicle-type-change+api.ts.
+      const [existingVehicle] = await tx
+        .select({ vehicle_type: vehicles.vehicle_type })
+        .from(vehicles)
+        .where(eq(vehicles.driver_id, driver.id))
+        .limit(1);
+
+      if (existingVehicle && existingVehicle.vehicle_type !== vehicle_type) {
+        const eligibility = checkDriverEligibility(vehicle_type, {
+          completed_rides_count: driver.completed_rides_count,
+          rating: Number(driver.rating),
+        });
+        if (!eligibility.eligible) {
+          throw new EligibilityError(eligibility.reason ?? 'Eligibility requirements not met');
+        }
+      }
+
+      // Model insert guarded by returning(): onConflictDoNothing() may no-op on
+      // a concurrent insert — only report model_created when a row really landed.
+      let modelCreated = false;
+      if (!existingModel) {
+        const inserted = await tx.insert(vehicleModels).values({
+          brand,
+          model,
+          source: 'driver',
+          created_by: dbUser.id,
+          is_active: false,
+          default_vehicle_type: vehicle_type as any,
+          passenger_seats: number_of_seats ?? 4,
+        }).onConflictDoNothing().returning({ id: vehicleModels.id });
+        modelCreated = inserted.length > 0;
+      }
+
+      const [vehicleRow] = await tx.insert(vehicles).values({
+        driver_id: driver.id,
         vehicle_type: vehicle_type as any,
         manufacturer: brand,
         model,
         // TODO: manufacturing_year = BRTA registration year placeholder (UI collects
         // only one year) — admin-correctable
         manufacturing_year: registration_year,
+        has_ac: null,
         passenger_seats: number_of_seats ?? 4,
+        // TODO: registration_area is a NOT NULL placeholder — admin-correctable
+        registration_area: 'DHAKA_METRO' as any,
+        // TODO: vehicle_class_letter is a NOT NULL placeholder — admin-correctable
+        vehicle_class_letter: 'KA' as any,
         registration_number: registration_plate.toUpperCase(),
-        // Jan 1 of the BRTA registration year (UI collects only the year)
+        // Jan 1 of the BRTA registration year (UI collects only the year; D-1)
         registration_date: `${registration_year}-01-01`,
-        updated_at: now,
-      },
-    }).returning();
+        // TODO: fitness expiry +1yr placeholder — admin-correctable
+        fitness_expires_at: toDateStr(oneYearAhead),
+        // TODO: tax token expiry +1yr placeholder — admin-correctable
+        tax_token_expires_at: toDateStr(oneYearAhead),
+      }).onConflictDoUpdate({
+        target: vehicles.driver_id,
+        set: {
+          vehicle_type: vehicle_type as any,
+          manufacturer: brand,
+          model,
+          // TODO: manufacturing_year = BRTA registration year placeholder (UI collects
+          // only one year) — admin-correctable
+          manufacturing_year: registration_year,
+          passenger_seats: number_of_seats ?? 4,
+          registration_number: registration_plate.toUpperCase(),
+          // Jan 1 of the BRTA registration year (UI collects only the year; D-1)
+          registration_date: `${registration_year}-01-01`,
+          updated_at: now,
+        },
+      }).returning();
+
+      // Keep the driver's dispatch-facing type in sync with the vehicle.
+      await tx.update(drivers)
+        .set({ vehicle_type: vehicle_type as any, updated_at: now })
+        .where(eq(drivers.id, driver.id));
+
+      return { vehicle: vehicleRow, model_created: modelCreated };
+    });
 
     return Response.json({ vehicle, model_created }, { status: 201 });
 
   } catch (err: any) {
     if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (err instanceof EligibilityError) {
+      return Response.json({ error: 'eligibility_not_met', message: err.message }, { status: 422 });
+    }
     logger.error('[driver/vehicles] POST error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

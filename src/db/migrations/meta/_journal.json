@@ -267,6 +267,13 @@
       "when": 1786776750515,
       "tag": "0037_brief_emma_frost",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1786783270237,
+      "tag": "0038_past_lethal_legion",
+      "breakpoints": true
     }
   ]
 }

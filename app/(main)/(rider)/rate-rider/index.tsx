@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { API_URL } from "@/lib/config";
 import {
   View,
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,6 +12,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { showToast } from "@/components/Toast";
 import { colors, spacing, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
@@ -54,6 +54,7 @@ export default function RateRider() {
   const [rating, setRating] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const submitted = useRef(false);
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -63,9 +64,14 @@ export default function RateRider() {
     ? colors.textSecondaryDark
     : colors.textSecondaryLight;
 
-  const goHome = () => router.replace("/(main)/(rider)");
+  const goHomeDelayed = () => {
+    // Non-blocking toast (spec §4.4: submit → toast → router.replace); brief
+    // pause lets the driver register the confirmation before navigating.
+    setTimeout(() => router.replace("/(main)/(rider)"), 1400);
+  };
 
   const handleSubmit = async () => {
+    if (submitted.current) return;
     if (rating === 0) {
       setError("Please select a rating");
       return;
@@ -96,17 +102,16 @@ export default function RateRider() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (res.status === 409 && data.error === "already_rated") {
-          Alert.alert("Already rated", "You have already rated this ride.", [
-            { text: "OK", onPress: goHome },
-          ]);
+          showToast("You have already rated this ride.", "info");
+          goHomeDelayed();
           return;
         }
         setError(data.message || data.error || "Failed to submit rating");
         return;
       }
-      Alert.alert("Thank you", "Your rating has been submitted.", [
-        { text: "OK", onPress: goHome },
-      ]);
+      submitted.current = true;
+      showToast("Rating submitted — thank you!");
+      goHomeDelayed();
     } catch (err: any) {
       setError(err?.message || "Network error");
       logger.error("Rate rider failed", err);

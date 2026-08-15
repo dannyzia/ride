@@ -8,6 +8,7 @@
 
 import { db } from './index';
 import { systemConfig } from './schema';
+import { logger } from '../../lib/logger';
 import { eq } from 'drizzle-orm';
 
 async function seedSystemConfig() {
@@ -15,9 +16,9 @@ async function seedSystemConfig() {
   const existing = await db.select().from(systemConfig).where(eq(systemConfig.key, 'maps_provider')).limit(1);
   if (!existing.length) {
     await db.insert(systemConfig).values({ key: 'maps_provider', value: 'barikoi' });
-    console.log('[seed] system_config: maps_provider = barikoi');
+    logger.info('[seed] system_config: maps_provider = barikoi');
   } else {
-    console.log('[seed] system_config: maps_provider already set =', existing[0].value);
+    logger.info('[seed] system_config: maps_provider already set =', existing[0].value);
   }
 
   // dispatch_scoring_weights — all five keys must be present and sum to 1.0.
@@ -33,9 +34,9 @@ async function seedSystemConfig() {
   const weightsExisting = await db.select().from(systemConfig).where(eq(systemConfig.key, weightsKey)).limit(1);
   if (!weightsExisting.length) {
     await db.insert(systemConfig).values({ key: weightsKey, value: defaultWeights });
-    console.log('[seed] system_config: dispatch_scoring_weights seeded with defaults');
+    logger.info('[seed] system_config: dispatch_scoring_weights seeded with defaults');
   } else {
-    console.log('[seed] system_config: dispatch_scoring_weights already set');
+    logger.info('[seed] system_config: dispatch_scoring_weights already set');
   }
 
   // eta_speed_kmh — time-of-day speed table for ETA estimation.
@@ -48,20 +49,20 @@ async function seedSystemConfig() {
   const speedExisting = await db.select().from(systemConfig).where(eq(systemConfig.key, speedKey)).limit(1);
   if (!speedExisting.length) {
     await db.insert(systemConfig).values({ key: speedKey, value: defaultSpeedTable });
-    console.log('[seed] system_config: eta_speed_kmh seeded with defaults');
+    logger.info('[seed] system_config: eta_speed_kmh seeded with defaults');
   } else {
-    console.log('[seed] system_config: eta_speed_kmh already set');
+    logger.info('[seed] system_config: eta_speed_kmh already set');
   }
 }
 
 async function main() {
-  console.log('[seed] Starting...');
+  logger.info('[seed] Starting...');
   await seedSystemConfig();
-  console.log('[seed] Done.');
+  logger.info('[seed] Done.');
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error('[seed] Error:', err);
+  logger.error('[seed] Error:', err);
   process.exit(1);
 });

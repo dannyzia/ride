@@ -1,3 +1,9 @@
+// WebSocket protocol types — synchronized with the actual message handlers in
+// utils-server/index.ts (B-8). Inbound = client→server, Outbound = server→client.
+// Phantom types (offer:expired, ride:matched as WS, ride:accept-alternative)
+// were removed; the real wire names (offer:lost, ride:status, ride:expired)
+// are declared here.
+
 import type { FareBreakdown } from "../lib/fareCalc";
 
 export interface AuthHelloMessage {
@@ -6,18 +12,25 @@ export interface AuthHelloMessage {
   role: "driver" | "rider";
 }
 
+export interface AuthRefreshMessage {
+  type: "auth:refresh";
+  access_token: string;
+}
+
 export interface HeartbeatMessage {
   type: "heartbeat";
   lat: number;
   lng: number;
-  ts: number;
+  // Client sends an ISO-8601 string; keep the union so both are accepted.
+  ts: string | number;
 }
 
 export interface LocationUpdateMessage {
   type: "location:update";
   lat: number;
   lng: number;
-  ts: number;
+  ts: string | number;
+  ride_id: string;
 }
 
 export interface FetchConfirmMessage {
@@ -25,19 +38,21 @@ export interface FetchConfirmMessage {
   ride_id: string;
 }
 
-export interface DriverArrivedMessage {
+export interface RideArrivedMessage {
   type: "ride:arrived";
   ride_id: string;
-  arrived_at: string;
+  arrived_at?: string;
 }
 
-export interface RideCompletedMessage {
+export interface RideStartMessage {
+  type: "ride:start";
+  ride_id: string;
+  pin: string;
+}
+
+export interface RideCompleteLegacyMessage {
   type: "ride:complete";
   ride_id: string;
-  total_bdt: number;
-  driver_net_bdt: number;
-  ride_time_min: number;
-  fare_breakdown: FareBreakdown;
 }
 
 export interface OfferAcceptMessage {
@@ -48,7 +63,32 @@ export interface OfferAcceptMessage {
 export interface OfferRejectMessage {
   type: "offer:reject";
   ride_id: string;
+  reason?: string;
 }
+
+export interface ChatTypingMessage {
+  type: "chat:typing";
+  ride_id: string;
+}
+
+export interface RideSubscribeMessage {
+  type: "ride:subscribe" | "ride:unsubscribe";
+  ride_id: string;
+}
+
+export type InboundMessage =
+  | AuthHelloMessage
+  | AuthRefreshMessage
+  | HeartbeatMessage
+  | LocationUpdateMessage
+  | FetchConfirmMessage
+  | RideArrivedMessage
+  | RideStartMessage
+  | RideCompleteLegacyMessage
+  | OfferAcceptMessage
+  | OfferRejectMessage
+  | ChatTypingMessage
+  | RideSubscribeMessage;
 
 export interface RideOfferMessage {
   type: "ride:offer";
@@ -68,39 +108,32 @@ export interface RideOfferMessage {
   expires_at: string;
 }
 
-export interface AcceptAlternativeMessage {
-  type: "ride:accept-alternative";
-  ride_id: string;
-  vehicle_type: string;
-}
-
-export type InboundMessage =
-  | AuthHelloMessage
-  | HeartbeatMessage
-  | LocationUpdateMessage
-  | FetchConfirmMessage
-  | DriverArrivedMessage
-  | RideCompletedMessage
-  | OfferAcceptMessage
-  | OfferRejectMessage
-  | AcceptAlternativeMessage;
-
 export type OutboundMessage =
-  | RideOfferMessage
-  | { type: "offer:expired"; ride_id: string }
-  | {
-      type: "ride:matched";
-      ride_id: string;
-      driver_id: string;
-      driver_phone: string;
-    }
-   | { type: "ride:cancelled"; ride_id: string }
+  | { type: "auth:ok"; user_id: string; role: "driver" | "rider" }
+  | { type: "auth:error"; message: string }
+  | { type: "admin:suspended"; message?: string }
   | { type: "error"; message: string }
+  | RideOfferMessage
+  | { type: "offer:accepted"; ride_id: string }
+  | { type: "offer:rejected"; ride_id: string; reason?: string }
+  | { type: "offer:lost"; ride_id: string; reason?: string }
+  | { type: "fetch:confirmed"; ride_id: string }
+  | { type: "fetch:error"; ride_id: string; reason: string }
+  | { type: "ride:status"; ride_id: string; status: string; pin?: string; ride?: Record<string, unknown> }
+  | { type: "ride:started"; ride_id: string }
+  | { type: "ride:start_failed"; ride_id: string; error: string }
   | {
-      type: "ride:alternatives";
+      type: "ride:completed";
       ride_id: string;
-      alternatives: {
-        vehicle_type: string;
-        fare_breakdown: Record<string, unknown>;
-      }[];
-    };
+      total_bdt: number;
+      driver_net_bdt: number;
+      ride_time_min: number;
+      fare_breakdown: FareBreakdown;
+    }
+  | { type: "ride:arrived"; ride_id: string }
+  | { type: "ride:cancelled"; ride_id: string; cancelled_by?: "rider" | "driver" | "system" }
+  | { type: "ride:expired"; ride_id: string }
+  | { type: "ride:alternatives"; ride_id: string; alternatives: { vehicle_type: string; fare_breakdown: Record<string, unknown> }[] }
+  | { type: "chat:message"; ride_id: string; message: string; sender: string }
+  | { type: "chat:typing"; ride_id: string }
+  | { type: "location:driver"; ride_id: string; lat: number; lng: number };

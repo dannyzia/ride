@@ -183,6 +183,11 @@ const rideId = segments[segments.indexOf("ride") + 1];
     const storedPrefSurcharge = Number(ride.preference_surcharge_bdt ?? 0);
     let appliedDiscountBdt = Number(ride.applied_discount_bdt ?? 0);
 
+    // N3: an upfront tip promised at request must never vanish silently. If
+    // the rider's wallet can't cover it at completion, record the forfeited
+    // amount on the ride so the driver's UI can surface it.
+    let upfrontTipForfeitedBdt = 0;
+
     await db.transaction(async (tx) => {
       const upfrontTip = Number(ride.upfront_tip_bdt ?? 0);
       let tipApplied = false;
@@ -190,7 +195,8 @@ const rideId = segments[segments.indexOf("ride") + 1];
         const [rider] = await tx.select({ wallet: users.rider_wallet_balance_bdt })
           .from(users).where(eq(users.id, ride.user_id)).limit(1);
         if (rider.wallet < upfrontTip) {
-          logger.warn('[complete] rider insufficient balance for upfront tip', { rideId, tip: upfrontTip, balance: rider.wallet });
+          upfrontTipForfeitedBdt = upfrontTip;
+          logger.warn('[complete] rider insufficient balance for upfront tip', { rideId, tip: upfrontTip, balance: rider.wallet, forfeited: true });
         } else {
           await tx.update(users).set({
             rider_wallet_balance_bdt: sql`${users.rider_wallet_balance_bdt} - ${upfrontTip}`
@@ -237,6 +243,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
           updated_at: completedAt,
           rider_payable_bdt: fare.total_bdt + storedPrefSurcharge - appliedDiscountBdt + (tipApplied ? upfrontTip : 0),
           driver_fare_bdt: fare.driver_net_bdt + storedPrefSurcharge + (fare.platform_commission_bdt ?? 0),
+          upfront_tip_forfeited_bdt: upfrontTipForfeitedBdt,
         })
         .where(and(eq(rides.id, rideId), eq(rides.status, "in_progress")))
         .returning();
@@ -345,6 +352,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
       status: "completed",
       completed_at: completedAt.toISOString(),
       fare_breakdown: fare,
+      upfront_tip_forfeited_bdt: upfrontTipForfeitedBdt,
     });
   } catch (err: any) {
     if (err.status === 401 || err.status === 403) {

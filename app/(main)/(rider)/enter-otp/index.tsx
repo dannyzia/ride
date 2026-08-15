@@ -22,6 +22,21 @@ const EnterOtp = () => {
   const pinBorder = isDark ? colors.borderDark : colors.textDisabledLight;
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  // N4: guard against a half-open socket swallowing ride:started — without a
+  // timeout the button stays "Starting..." forever and the retry guard blocks
+  // re-submission.
+  const verifyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearVerifyTimeout = () => {
+    if (verifyTimeoutRef.current) {
+      clearTimeout(verifyTimeoutRef.current);
+      verifyTimeoutRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => clearVerifyTimeout();
+  }, []);
 
   useEffect(() => {
     if (!error) return;
@@ -43,9 +58,11 @@ const EnterOtp = () => {
         const msg = JSON.parse(ev.data);
         if (!activeRideId || msg.ride_id !== activeRideId) return;
         if (msg.type === "ride:started") {
+          clearVerifyTimeout();
           setVerifying(false);
           router.replace("/(main)/(rider)/finish-ride");
         } else if (msg.type === "ride:start_failed") {
+          clearVerifyTimeout();
           setVerifying(false);
           setError("Incorrect Ride Pin. Ask your rider and try again.");
           setPinInput("");
@@ -77,6 +94,10 @@ const EnterOtp = () => {
         pin: pinInput,
       }),
     );
+    verifyTimeoutRef.current = setTimeout(() => {
+      setVerifying(false);
+      setError("No response from server. Please try again.");
+    }, 15_000);
   };
 
   return (
