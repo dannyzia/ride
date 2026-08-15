@@ -42,6 +42,10 @@ interface RideOffer {
     minimum_fare_bdt: number;
      distance_km: number;
    };
+  // M-B: amount the driver will earn (total + preference surcharge) — the
+  // offer card shows this, NOT fare_breakdown.total_bdt. Null when the server
+  // predates the field.
+  driver_fare_bdt: number | null;
   vehicle_type: string;
   rider_first_name: string;
   rider_rating: number | null;

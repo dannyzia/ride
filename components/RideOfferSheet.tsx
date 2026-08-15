@@ -86,6 +86,12 @@ export default function RideOfferSheet() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
     const rideId = activeOffer.ride_id;
+    // K-1: the accept handshake was dead — nothing ever sent fetch:confirm,
+    // so the server never emitted fetch:confirmed and every Accept fell
+    // through to the 3s timeout. Fire it here (the maestro driver-core flow
+    // documents Accept as the trigger: "sends fetch:confirm then
+    // offer:accept"), then wait for the server's deduction confirmation.
+    ws.send(JSON.stringify({ type: "fetch:confirm", ride_id: rideId }));
     // Exactly-once handshake guard (C1): the 3s fallback previously fired
     // offer:accept UNCONDITIONALLY — double-sending after a fast
     // fetch:confirmed (which made the server refund the accepted driver's
@@ -171,9 +177,14 @@ export default function RideOfferSheet() {
     setActiveOffer(null);
   };
 
-  // M-5: the payload may arrive without a fare_breakdown (home null-guards it;
-  // this sheet didn't, rendering ৳NaN).
-  const fareTotalBdt = activeOffer.fare_breakdown?.total_bdt;
+  // M-5/M-B: the payload may arrive without a fare_breakdown (home
+  // null-guards it; this sheet didn't, rendering ৳NaN), and the card must show
+  // driver_fare_bdt (= total + preference surcharge) per 06-API.md — not the
+  // raw fare_breakdown.total_bdt.
+  const fareTotalBdt =
+    activeOffer.driver_fare_bdt != null
+      ? activeOffer.driver_fare_bdt
+      : activeOffer.fare_breakdown?.total_bdt;
   const fareTk = fareTotalBdt != null ? (fareTotalBdt / 100).toFixed(2) : "—";
   const pickupDist = activeOffer.pickup_distance_km;
   const pickupEta = activeOffer.pickup_eta_minutes;
@@ -233,6 +244,7 @@ export default function RideOfferSheet() {
         >
           <CountdownRing
             expiresAt={activeOffer.expires_at}
+            expiresInMs={activeOffer.expires_in_ms}
             onExpire={() => setActiveOffer(null)}
             size={48}
           />

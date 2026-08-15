@@ -34,6 +34,7 @@ interface CompletionSummary {
   upfront_tip_forfeited_bdt?: number;
   rider_payable_bdt?: number;
   wallet_debit_bdt?: number;
+  cash_to_collect_bdt?: number;
 }
 
 const FinishRide = () => {
@@ -236,6 +237,7 @@ const FinishRide = () => {
         upfront_tip_forfeited_bdt?: number;
         rider_payable_bdt?: number;
         wallet_debit_bdt?: number;
+        cash_to_collect_bdt?: number;
       } = await res.json().catch(() => ({}));
       const fb = data.fare_breakdown ?? {};
       setCompletion({
@@ -245,6 +247,7 @@ const FinishRide = () => {
         upfront_tip_forfeited_bdt: data.upfront_tip_forfeited_bdt ?? 0,
         rider_payable_bdt: data.rider_payable_bdt ?? undefined,
         wallet_debit_bdt: data.wallet_debit_bdt ?? undefined,
+        cash_to_collect_bdt: data.cash_to_collect_bdt ?? undefined,
       });
       setCompletedRideId(activeRideId);
       removeRideOffer(activeRideId);
@@ -281,14 +284,18 @@ const FinishRide = () => {
   // fall back to what the offer carried (fare in the store is paisa).
   const totalPaisa =
     completion?.total_bdt ?? Number(rideDetails?.fare || 0);
-  // H-3: the cash line must be the rider's actual out-of-pocket, not the
-  // gross fare — a wallet redemption or collected tip already settled part of
-  // the bill. Fall back to the gross fare when the response predates the
-  // fields (server never returns them).
+  // H-3/H-B: the cash line must be the rider's actual out-of-pocket, not the
+  // gross fare. The server computes cash_to_collect_bdt (total + surcharge −
+  // discount) — the tip is wallet-settled when collected and zero when
+  // forfeited, and subtracting it once is correct. The old client-side
+  // `payable − wallet_debit` double-subtracted the discount, so it is only a
+  // fallback for pre-upgrade servers.
   const cashPaisa =
-    completion?.rider_payable_bdt != null
-      ? completion.rider_payable_bdt - (completion.wallet_debit_bdt ?? 0)
-      : totalPaisa;
+    completion?.cash_to_collect_bdt != null
+      ? completion.cash_to_collect_bdt
+      : completion?.rider_payable_bdt != null
+        ? completion.rider_payable_bdt - (completion.wallet_debit_bdt ?? 0)
+        : totalPaisa;
   const distanceText =
     completion?.distance_km != null
       ? `${completion.distance_km.toFixed(1)} km`

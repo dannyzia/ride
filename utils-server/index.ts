@@ -20,7 +20,7 @@ import {
   updateDriverAcceptanceRate,
   DISPATCH_RING_K,
 } from "./dispatch";
-import { recordCallDeduction } from "./heartbeat";
+import { recordCallDeduction, recordCallRefund } from "./heartbeat";
 import { estimateEtaMinutes } from "./eta";
 import { db } from "../src/db";
 import {
@@ -707,10 +707,17 @@ wss.on("connection", (ws: WebSocket) => {
             }
           }, OFFER_LOCK_TTL_MS);
 
-          // M4: Verify offer exists and is in delivered state
+          // M-A: verify the offer exists and is still deliverable, WITHOUT
+          // stamping outcome='accepted' — that stamp belongs to the real
+          // accept (or 'rejected'/'refunded' for the other terminal states).
+          // Stamping it here meant a confirm-then-ignore was counted as an
+          // acceptance in acceptance-rate analytics. The in-memory offer lock
+          // (above) plus the call_ledger partial unique index on
+          // (ride_id, driver_id) WHERE event_type='deduction' still prevent
+          // duplicate deductions.
           const [offer] = await db
-            .update(dispatchOffers)
-            .set({ outcome: "accepted" })
+            .select({ id: dispatchOffers.id })
+            .from(dispatchOffers)
             .where(
               and(
                 eq(dispatchOffers.ride_id, rideId),
@@ -718,7 +725,7 @@ wss.on("connection", (ws: WebSocket) => {
                 eq(dispatchOffers.outcome, "delivered"),
               ),
             )
-            .returning({ id: dispatchOffers.id });
+            .limit(1);
           if (!offer) {
             send(ws, { type: "fetch:error", ride_id: rideId, reason: "offer_expired" });
             return;
@@ -795,6 +802,13 @@ wss.on("connection", (ws: WebSocket) => {
           // Generate a 4-digit ride-start PIN (rider reads aloud, driver enters it)
           const startPin = String(crypto.randomInt(1000, 10000));
 
+          // Revenue guard: never match a ride for a driver who never confirmed
+          // (and therefore never had a call deducted). A client that sends
+          // offer:accept directly would otherwise match with zero deduction —
+          // a revenue leak. The deduction row is kept even after a refund, so
+          // this passes for the race-loser's retry too (the match guard below
+          // rejects it and the refund is idempotent).
+
           // Atomic match guard: the WHERE clause on status='dispatching' ensures
           // that only the first driver to accept wins. If two drivers accept
           // concurrently, the second UPDATE affects zero rows and .returning()
@@ -803,6 +817,19 @@ wss.on("connection", (ws: WebSocket) => {
           // Defense-in-depth: call_ledger has a partial unique index
           // (ride_id, driver_id) WHERE event_type='deduction' that rejects
           // any duplicate deduction INSERT at the DB layer.
+          const [deductionRow] = await db.select({ id: callLedger.id })
+            .from(callLedger)
+            .where(and(
+              eq(callLedger.ride_id, rideId),
+              eq(callLedger.driver_id, client.driverId),
+              eq(callLedger.event_type, 'deduction'),
+            ))
+            .limit(1);
+          if (!deductionRow) {
+            send(ws, { type: "offer:rejected", ride_id: rideId, reason: "no_deduction" });
+            return;
+          }
+
           const [updatedRide] = await db
             .update(rides)
             .set({
@@ -817,6 +844,12 @@ wss.on("connection", (ws: WebSocket) => {
             // Refund the losing driver's call deduction. The deduction happens
             // at fetch:confirm (before offer:accept), so a concurrent acceptor
             // that wins the race leaves this driver out of pocket otherwise.
+            // call_ledger is append-only (K-2): the deduction row is KEPT and
+            // a `refund` row (delta=+1) is appended inside recordCallRefund's
+            // transaction — never db.delete. The restore is guarded against
+            // the unlimited sentinel (-1 stays -1; `-1 + 1 = 0` would bench an
+            // unlimited driver as exhausted). Idempotent: a repeat accept after
+            // a refund is a no-op.
             try {
               const [deductionRow] = await db.select({ id: callLedger.id, subscription_id: callLedger.subscription_id })
                 .from(callLedger)
@@ -826,11 +859,22 @@ wss.on("connection", (ws: WebSocket) => {
                   eq(callLedger.event_type, 'deduction'),
                 )).limit(1);
               if (deductionRow) {
-                await db.delete(callLedger).where(eq(callLedger.id, deductionRow.id));
-                await db.update(subscriptions)
-                  .set({ calls_remaining: sql`${subscriptions.calls_remaining} + 1` })
-                  .where(eq(subscriptions.id, deductionRow.subscription_id));
-                logger.info('[ws] refunded losing driver deduction', { rideId, driverId: client.driverId });
+                const { refunded } = await recordCallRefund({
+                  driverId: client.driverId,
+                  subscriptionId: deductionRow.subscription_id,
+                  rideId,
+                });
+                if (refunded) {
+                  // AC-7: mark the offer refunded so it never counts as an
+                  // acceptance in acceptance-rate analytics.
+                  await db.update(dispatchOffers)
+                    .set({ outcome: 'refunded', responded_at: new Date() })
+                    .where(and(
+                      eq(dispatchOffers.ride_id, rideId),
+                      eq(dispatchOffers.driver_id, client.driverId),
+                    ));
+                }
+                logger.info('[ws] refunded losing driver deduction', { rideId, driverId: client.driverId, refunded });
               }
             } catch (e: any) {
               logger.error('[ws] refund failed for losing driver', { rideId, driverId: client.driverId, error: e.message });
@@ -1268,9 +1312,10 @@ async function dispatchRidePipeline(
   const BATCH_SIZE = 5;
   const BATCH_INTERVAL_MS = 3000;
 
-  // Pre-fetch rider name and rating once for all batches
+  // Pre-fetch rider name, rating and phone once for all batches (phone feeds
+  // the driver's Call button — H-A).
   const [rider] = await db
-    .select({ name: users.name, rating: users.rating })
+    .select({ name: users.name, rating: users.rating, phone: users.phone })
     .from(users)
     .where(eq(users.id, ride.user_id))
     .limit(1);
@@ -1429,7 +1474,17 @@ async function dispatchRidePipeline(
           address: ride.destination_address,
         },
         fare_breakdown: ride.fare_breakdown,
+        // M-B: 06-API.md §ride:offer — driver_fare_bdt is the amount the
+        // driver will earn (fare_breakdown.total_bdt + preference surcharge;
+        // the upfront tip rides separately in upfront_tip_bdt and is shown as
+        // an additive badge). The offer card MUST display this, not the raw
+        // fare_breakdown.total_bdt.
+        driver_fare_bdt:
+          Number((ride.fare_breakdown as Record<string, unknown> | null)?.total_bdt ?? 0) +
+          Number(ride.preference_surcharge_bdt ?? 0),
         vehicle_type: ride.vehicle_type,
+        rider_id: ride.user_id,
+        rider_phone: rider?.phone ?? "",
         rider_first_name: riderFirstName,
         rider_rating: riderRating,
         distance_km: parseFloat(ride.distance_km?.toString() ?? "0"),

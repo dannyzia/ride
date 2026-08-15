@@ -6,12 +6,17 @@ import { useIsDark } from "@/lib/useAppearance";
 
 interface CountdownRingProps {
   expiresAt: string;
+  /** Server-provided remaining lifetime in ms (M-D). When present, the ring
+   *  counts down from it with local elapsed time, which is immune to device
+   *  clock skew — a clock ahead by >15s used to expire every offer
+   *  immediately. Falls back to expiresAt-vs-now when absent. */
+  expiresInMs?: number;
   onExpire: () => void;
   size?: number;
   duration?: number;
 }
 
-export default function CountdownRing({ expiresAt, onExpire, size = 56, duration = 15 }: CountdownRingProps) {
+export default function CountdownRing({ expiresAt, expiresInMs, onExpire, size = 56, duration = 15 }: CountdownRingProps) {
   const [remainingMs, setRemainingMs] = useState(0);
   const onExpireRef = useRef(onExpire);
   onExpireRef.current = onExpire;
@@ -19,6 +24,23 @@ export default function CountdownRing({ expiresAt, onExpire, size = 56, duration
   const isDark = useIsDark();
 
   useEffect(() => {
+    if (expiresInMs != null) {
+      // M-D: seed from the server's expires_in_ms and measure elapsed locally
+      // — skew-proof.
+      const startedAt = Date.now();
+      const update = () => {
+        const diff = Math.max(0, expiresInMs - (Date.now() - startedAt));
+        setRemainingMs(diff);
+        if (diff <= 0) {
+          onExpireRef.current();
+        }
+      };
+      update();
+      const interval = setInterval(update, 250);
+      return () => clearInterval(interval);
+    }
+
+    // Legacy path — device clock vs server timestamp.
     const update = () => {
       const now = Date.now();
       const target = new Date(expiresAt).getTime();
@@ -33,11 +55,12 @@ export default function CountdownRing({ expiresAt, onExpire, size = 56, duration
     update();
     const interval = setInterval(update, 250);
     return () => clearInterval(interval);
-  }, [expiresAt]);
+  }, [expiresAt, expiresInMs]);
 
   const seconds = Math.ceil(remainingMs / 1000);
   const isExpiring = seconds <= 5;
-  const progress = Math.max(0, Math.min(1, remainingMs / (duration * 1000)));
+  const totalMs = expiresInMs != null ? expiresInMs : duration * 1000;
+  const progress = Math.max(0, Math.min(1, remainingMs / totalMs));
 
   const strokeWidth = 4;
   const radius = (size - strokeWidth) / 2;

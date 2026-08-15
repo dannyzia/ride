@@ -96,7 +96,12 @@ export interface RideOfferMessage {
   pickup: { address: string; lat: number; lng: number };
   dropoff: { address: string; lat: number; lng: number };
   fare_breakdown: FareBreakdown;
+  /** M-B: amount the driver will earn (fare_breakdown.total_bdt + preference
+   *  surcharge) — the offer card MUST display this, not total_bdt. */
+  driver_fare_bdt: number;
   vehicle_type: string;
+  rider_id: string;
+  rider_phone: string;
   rider_first_name: string;
   rider_rating: number | null;
   distance_km: number;

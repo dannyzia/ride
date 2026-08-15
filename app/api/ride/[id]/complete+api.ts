@@ -360,13 +360,18 @@ const rideId = segments[segments.indexOf("ride") + 1];
       completed_at: completedAt.toISOString(),
       fare_breakdown: fare,
       upfront_tip_forfeited_bdt: upfrontTipForfeitedBdt,
-      // H-3: the modal tells the driver how much cash to collect. The gross
-      // fare overstates it whenever a wallet redemption or collected tip
-      // already settled part of the bill, so surface the rider's real
-      // out-of-pocket (rider_payable_bdt) and what the wallet covered
-      // (wallet_debit_bdt). Cash to collect = the difference.
+      // H-3/H-B: the modal tells the driver how much cash to collect. The
+      // gross fare overstates it whenever a wallet redemption or collected
+      // tip settled part of the bill, so surface the rider's real
+      // out-of-pocket (rider_payable_bdt), what the wallet covered
+      // (wallet_debit_bdt), and the exact cash figure computed server-side.
+      // cash_to_collect = total + surcharge − discount: the tip is never in
+      // the cash amount (wallet-settled when collected, zero when forfeited),
+      // and subtracting the discount once — NOT payable − debit, which would
+      // subtract it twice (H-B).
       rider_payable_bdt: finalRiderPayableBdt,
       wallet_debit_bdt: walletDebitBdt,
+      cash_to_collect_bdt: fare.total_bdt + storedPrefSurcharge - appliedDiscountBdt,
     });
   } catch (err: any) {
     if (err.status === 401 || err.status === 403) {

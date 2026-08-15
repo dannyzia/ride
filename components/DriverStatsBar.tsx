@@ -53,7 +53,7 @@ export default function DriverStatsBar({
           fontVariant: ["tabular-nums"],
         }}
       >
-        Today: ৳{earningsTk}
+        Today: {earningsTk}
       </Text>
       <Text
         style={{

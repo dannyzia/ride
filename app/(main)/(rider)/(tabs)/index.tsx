@@ -278,6 +278,7 @@ export default function DriverHome() {
             pickup: msg.pickup,
             dropoff: msg.dropoff,
             fare_breakdown: msg.fare_breakdown,
+            driver_fare_bdt: msg.driver_fare_bdt ?? null,
             vehicle_type: msg.vehicle_type,
             rider_first_name: msg.rider_first_name,
             rider_rating: msg.rider_rating,
