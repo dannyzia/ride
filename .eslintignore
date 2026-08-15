@@ -1,0 +1,6 @@
+node_modules/
+dist/
+utils-server/
+_reference/
+admin-test-results/
+.playwright-mcp/
