@@ -1,5 +1,5 @@
 import { db } from "../src/db";
-import { subscriptions, callLedger, packages } from "../src/db/schema";
+import { subscriptions, callLedger, packages, dispatchOffers } from "../src/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
@@ -60,6 +60,18 @@ export async function recordCallDeduction(
       }
       throw e;
     }
+
+    // BUG-4: stamp when the offer was confirmed so the AC-7 scheduler sweep
+    // (refund confirmed-but-ignored offers) and the dispatch-log views can see
+    // it. The WHERE guards against a concurrent expiry/refund flipping the
+    // outcome first — the deduction is still refunded by the sweep.
+    await tx.update(dispatchOffers)
+      .set({ fetch_confirmed_at: ctx.confirmedAt })
+      .where(and(
+        eq(dispatchOffers.ride_id, ctx.rideId),
+        eq(dispatchOffers.driver_id, ctx.driverId),
+        eq(dispatchOffers.outcome, "delivered"),
+      ));
 
     await tx
       .update(subscriptions)

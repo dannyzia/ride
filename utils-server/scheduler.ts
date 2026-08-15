@@ -14,6 +14,7 @@ import {
   riderSubscriptions,
   userDevices,
   dispatchOffers,
+  callLedger,
   rateLimits,
   creditVouchers,
   ownerConsents,
@@ -28,6 +29,7 @@ import {
 import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte } from "drizzle-orm";
 import { detectStationaryAnomaly } from "../lib/safety";
 import { logger } from "../lib/logger";
+import { recordCallRefund } from "./heartbeat";
 import { nextBdtMidnightUtc } from "../lib/time";
 import { resetAllBudgets } from "../lib/zoneBudget";
 import { evaluateGraduation } from "../lib/zoneLifecycle";
@@ -684,9 +686,60 @@ export function startScheduler(): void {
     }
   }, 10_000);
 
-  // ── (20) Stale delivered dispatch offer expiry — every 10s ─────────
+  // ── (20) Stale dispatch offer expiry + AC-7 refund — every 10s ────
   setInterval(async () => {
     try {
+      // AC-7 (01-PRD.md:313): a CONFIRMED offer the driver never responded to
+      // within the offer window gets the call refunded (append-only refund row
+      // via recordCallRefund) and the offer marked outcome='refunded'. Covers
+      // both driver ignore and race loss (another driver accepted first — the
+      // losing driver's offer was never flipped by the accept handler).
+      const ignored = await db.select({
+        id: dispatchOffers.id,
+        ride_id: dispatchOffers.ride_id,
+        driver_id: dispatchOffers.driver_id,
+      })
+        .from(dispatchOffers)
+        .where(and(
+          eq(dispatchOffers.outcome, "delivered"),
+          isNotNull(dispatchOffers.fetch_confirmed_at),
+          isNull(dispatchOffers.responded_at),
+          sql`${dispatchOffers.fetch_confirmed_at} < now() - interval '15 seconds'`,
+        ));
+      for (const offer of ignored) {
+        try {
+          const [deductionRow] = await db
+            .select({ subscription_id: callLedger.subscription_id })
+            .from(callLedger)
+            .where(and(
+              eq(callLedger.ride_id, offer.ride_id),
+              eq(callLedger.driver_id, offer.driver_id),
+              eq(callLedger.event_type, "deduction"),
+            ))
+            .limit(1);
+          if (!deductionRow) continue;
+          const { refunded } = await recordCallRefund({
+            driverId: offer.driver_id,
+            subscriptionId: deductionRow.subscription_id,
+            rideId: offer.ride_id,
+          });
+          if (refunded) {
+            await db.update(dispatchOffers)
+              .set({ outcome: "refunded", responded_at: new Date() })
+              .where(eq(dispatchOffers.id, offer.id));
+          }
+        } catch (e: any) {
+          logger.error("[scheduler] AC-7 refund failed", {
+            offerId: offer.id,
+            error: e.message,
+          });
+        }
+      }
+      if (ignored.length > 0) {
+        logger.info(`[scheduler] refunded ${ignored.length} confirmed-but-ignored offers (AC-7)`);
+      }
+
+      // Unconfirmed offers nobody engaged with simply expire.
       const result = await db.update(dispatchOffers)
         .set({ outcome: "expired" })
         .where(and(
