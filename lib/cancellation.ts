@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { rides, cancellationPolicies } from '@/src/db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 
 /**
  * Evaluate cancellation fee by querying DB-driven cancellation_policies.
@@ -37,9 +37,13 @@ export async function evaluateCancellation(
         eq(cancellationPolicies.ride_status, ride.status),
       ),
     )
-    .orderBy(desc(cancellationPolicies.priority), sql`${cancellationPolicies.time_threshold_seconds} asc`);
+    .orderBy(desc(cancellationPolicies.priority), desc(cancellationPolicies.time_threshold_seconds));
 
-  // Find the first matching policy where elapsed >= time_threshold
+  // Find the first matching policy where elapsed >= time_threshold.
+  // DESC threshold order → the LARGEST qualifying threshold wins (escalating
+  // fees: the longer the driver waited, the higher the tier the rider pays).
+  // With ascending order the smallest qualifying threshold would match first
+  // and every steeper tier would be unreachable.
   for (const policy of policies) {
     if (elapsedSec >= policy.time_threshold_seconds) {
       let fee = policy.fee_amount_bdt;
