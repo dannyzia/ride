@@ -1150,14 +1150,50 @@ wss.on("connection", (ws: WebSocket) => {
           const rideId = msg.ride_id as string;
           const recipientUserId = msg.recipient_user_id as string;
           const isTyping = msg.is_typing as boolean;
+          const senderUserId = client.userId;
           if (!rideId || !recipientUserId) {
             send(ws, { type: "error", message: "missing_chat_fields" });
+            return;
+          }
+          if (!senderUserId) {
+            send(ws, { type: "error", message: "not_authenticated" });
+            return;
+          }
+          // S-1: never forward typing to an arbitrary user ID. The recipient
+          // must be the OTHER party of the ride and the sender a participant
+          // — otherwise this endpoint is a live-user oracle / spam vector.
+          const [ride] = await db
+            .select({ user_id: rides.user_id, driver_id: rides.driver_id })
+            .from(rides)
+            .where(eq(rides.id, rideId))
+            .limit(1);
+          if (!ride) {
+            send(ws, { type: "error", message: "ride_not_found" });
+            return;
+          }
+          // The ride stores the driver's drivers.id; resolve it to their
+          // users.id so both participants are compared in the same ID space.
+          const [driverUser] = ride.driver_id
+            ? await db
+                .select({ user_id: drivers.user_id })
+                .from(drivers)
+                .where(eq(drivers.id, ride.driver_id))
+                .limit(1)
+            : [];
+          const participants = new Set<string>([ride.user_id]);
+          if (driverUser?.user_id) participants.add(driverUser.user_id);
+          if (
+            !participants.has(senderUserId) ||
+            !participants.has(recipientUserId) ||
+            recipientUserId === senderUserId
+          ) {
+            send(ws, { type: "error", message: "not_ride_participant" });
             return;
           }
           sendToUser(recipientUserId, {
             type: "chat:typing",
             ride_id: rideId,
-            sender_user_id: client.userId,
+            sender_user_id: senderUserId,
             is_typing: isTyping,
           });
         }
