@@ -1629,7 +1629,22 @@ async function startup() {
         // BUG-R3 FIX: Full cleanup — remove from H3 index + mark offline in DB
         connectedDrivers.delete(driverId);
         removeDriver(driverId);
-        handleDriverDisconnect(driverId).catch(() => {});
+        // BUG-FIX: never swallow disconnect cleanup — a failure here leaves the
+        // driver marked online in the DB (ghost in future pools). Log + retry once.
+        handleDriverDisconnect(driverId).catch((e) => {
+          logger.error("[ws] stale driver disconnect cleanup failed — retrying", {
+            driverId,
+            error: e.message,
+          });
+          setTimeout(() => {
+            handleDriverDisconnect(driverId).catch((retryErr) => {
+              logger.error("[ws] stale driver disconnect cleanup retry failed", {
+                driverId,
+                error: retryErr.message,
+              });
+            });
+          }, 2000);
+        });
         logger.info("[ws] stale driver evicted", { driverId });
       }
     }

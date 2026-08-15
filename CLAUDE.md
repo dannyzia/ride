@@ -273,8 +273,8 @@ See AGENTS.md for the complete rules reference. Key rules:
 
 - **Money**: All amounts in integer paisa (BDT), never floats. Divide by 100 only at UI display.
 - **Vehicle types**: 8 lowercase: `bike_basic`, `bike_standard`, `bike_plus`, `cng`, `car_economy`, `car_comfort`, `car_premium`, `car_xl`
-- **call_ledger writes**: ONLY `utils-server/heartbeat.ts` (deductions) and `lib/activateSubscription.ts` (initial_load, credit, expiry_writeoff)
-- **dispatch_offers writes**: ONLY `utils-server/dispatch.ts` and `utils-server/heartbeat.ts`
+- **call_ledger writes**: `utils-server/heartbeat.ts` (deductions + AC-7 refund rows via `recordCallRefund`) and `lib/activateSubscription.ts` (initial_load, credit, expiry_writeoff)
+- **dispatch_offers writes**: `utils-server/dispatch.ts` (scoring/filter/auto-accept rows), `utils-server/index.ts` (dispatchRidePipeline `delivered` rows), `utils-server/heartbeat.ts` (`fetch_confirmed_at` stamps)
 - **payment_events writes**: row creation + PortPos invoice initiation ONLY via `lib/paymentEvents.ts` (`initiatePortposPayment` — used by rider/wallet/topup, rider/passes, driver/wallet/topup, package/purchase); status transitions (`paid`/`failed`) ONLY in `lib/activateSubscription.ts` and `app/api/payment/portpos/callback+api.ts`
 - **PortPos callback security**: the public callback must call `portposClient.verifyIPN()` (secret-bearing) and Zod-validate the invoice response before crediting wallets / activating subscriptions
 - **Single instance**: `INSTANCE_COUNT=1` required for WebSocket dispatch (no split-brain)

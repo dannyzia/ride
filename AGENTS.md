@@ -143,8 +143,9 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 
 ### Write Ownership (violating these is a critical bug)
 - `call_ledger` deduction rows (`event_type='deduction'`) → ONLY `utils-server/heartbeat.ts`
+- `call_ledger` refund rows (`event_type='refund'`, AC-7 accept-race refunds) → ONLY `utils-server/heartbeat.ts` (`recordCallRefund`)
 - `call_ledger` all other event types (`initial_load`, `credit`, `expiry_writeoff`) → ONLY `lib/activateSubscription.ts`
-- `dispatch_offers` → ONLY `utils-server/dispatch.ts` and `utils-server/heartbeat.ts`
+- `dispatch_offers` → `utils-server/dispatch.ts` (scoring/filter/auto-accept rows), `utils-server/index.ts` (`dispatchRidePipeline` `delivered` rows), and `utils-server/heartbeat.ts` (`fetch_confirmed_at` stamps)
 - `payment_events` row creation + PortPos invoice initiation → ONLY `lib/paymentEvents.ts` (`initiatePortposPayment`), called by `app/api/rider/wallet/topup+api.ts`, `app/api/rider/passes+api.ts`, `app/api/driver/wallet/topup+api.ts`, `app/api/package/purchase+api.ts`
 - `payment_events` status transitions (`paid`/`failed`, `confirmed_at`, `subscription_id`) → ONLY `lib/activateSubscription.ts` and `app/api/payment/portpos/callback+api.ts`
 - No other file writes these tables directly.
