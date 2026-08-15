@@ -133,19 +133,23 @@ export function startScheduler(): void {
     }
   }, 30_000);
 
-  // ── (2) Daily call reset — every 60s (resets at BDT midnight) ───────
+  // ── (2) Daily call reset — every 60s (fires when the stored reset time has passed) ──
   setInterval(async () => {
     try {
-      const midnight = nextBdtMidnightUtc();
-      const now = new Date();
-      // Run within 60s of midnight
-      if (Math.abs(now.getTime() - midnight.getTime()) > 60_000) return;
-
+      // Z-7: fire whenever daily_reset_at has passed, NOT only within 60s of
+      // midnight. A missed tick (deploy restart, event-loop stall, server
+      // down at 00:00 BDT) previously skipped an entire day's reset — drivers
+      // hit caps early and the pool shrank for 24h. After each reset
+      // daily_reset_at advances to the next BDT midnight, so this can't
+      // double-fire within the same day.
       await db
         .update(subscriptions)
         .set({ daily_calls_used: 0, daily_reset_at: nextBdtMidnightUtc() })
-        .where(eq(subscriptions.status, "active"));
-      logger.info("[scheduler] daily call reset completed");
+        .where(and(
+          eq(subscriptions.status, "active"),
+          sql`${subscriptions.daily_reset_at} <= now()`,
+        ));
+      logger.info("[scheduler] daily call reset check completed");
     } catch (e) {
       logger.error("[scheduler] daily reset error", e);
     }
