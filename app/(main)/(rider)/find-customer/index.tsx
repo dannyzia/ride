@@ -36,6 +36,9 @@ const ReachCustomer = () => {
   const { activeRideId, giveRideDetails, removeRideOffer, setActiveRideId } = useRideOfferStore();
   const { user } = useSession();
   const lastLocationRef = useRef<Location.LocationObject | null>(null);
+  // LOW-8: last reverse-geocoded address, reused while the position barely
+  // moves instead of re-geocoding on every watch tick.
+  const lastAddressRef = useRef("");
   const [waiting, setWaiting] = useState(false);
   const [waitSeconds, setWaitSeconds] = useState(0);
   const [waitLoading, setWaitLoading] = useState(false);
@@ -63,7 +66,7 @@ const ReachCustomer = () => {
         const res = await fetch(`${API_URL}/api/ride/${activeRideId}/wait-end`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         setWaiting(false);
-        Alert.alert("Waiting Time", `${data.total_wait_minutes ?? 0} min total\nFree: ${data.free_minutes ?? 3} min\nFee: ৳${((data.wait_fee_bdt ?? 0) / 100).toFixed(0)}`);
+        Alert.alert("Waiting Time", `${data.total_wait_minutes ?? 0} min total\nFree: ${data.free_minutes ?? 3} min\nFee: ৳${((data.wait_fee_bdt ?? 0) / 100).toFixed(2)}`);
       }
     } catch { Alert.alert("Error", "Failed to update waiting timer"); }
     setWaitLoading(false);
@@ -96,8 +99,12 @@ const ReachCustomer = () => {
         const msg = JSON.parse(event.data);
         const type = msg.type as string;
         if (type === "ride:cancelled" || type === "rider:cancelled") {
-          // Driver's own cancel must not raise a "Rider cancelled" alert (N2).
-          if (msg.cancelled_by !== "driver") {
+          // N2/M-7: only rider-initiated cancels get the "Rider cancelled"
+          // copy — a driver's own cancel and a system cancel (timeout/admin)
+          // both just send the driver home.
+          const cancelledByDriver = msg.cancelled_by === "driver";
+          const cancelledBySystem = msg.cancelled_by === "system";
+          if (!cancelledByDriver && !cancelledBySystem) {
             Alert.alert("Ride Cancelled", "Rider cancelled the ride", [
               { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
             ]);
@@ -126,6 +133,12 @@ const ReachCustomer = () => {
       if (res.ok) {
         const data = await res.json();
         setStops(data.stops ?? []);
+        // LOW-6: resume from the server's completion state instead of always
+        // restarting at stop 0 after an app kill / screen remount.
+        const completedCount = (data.stops ?? []).filter(
+          (s: { status?: string }) => s.status === "completed",
+        ).length;
+        setCurrentStopIdx(completedCount);
       }
     })();
   }, [activeRideId]);
@@ -176,6 +189,7 @@ const ReachCustomer = () => {
                 latitude: location.coords.latitude,
                 longitude: location.coords.longitude,
               });
+              lastAddressRef.current = address[0]?.formattedAddress ?? "";
               if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(
                   JSON.stringify({
@@ -189,23 +203,20 @@ const ReachCustomer = () => {
               setDriverLocation({
                 latitude: location.coords.latitude,
                 longitude: location.coords.longitude,
-                address: address[0]?.formattedAddress!,
+                address: lastAddressRef.current,
               });
               lastLocationRef.current = location;
             }
           } else {
             lastLocationRef.current = location;
           }
+          // LOW-8: only the ≥5m branch reverse-geocodes; ticks that barely
+          // moved reuse the last resolved address instead of firing a second
+          // reverseGeocodeAsync on every watch callback.
           setDriverLocation({
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
-            address:
-              (
-                await Location.reverseGeocodeAsync({
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                })
-              )[0]?.formattedAddress ?? "",
+            address: lastAddressRef.current,
           });
         },
       );
@@ -226,14 +237,21 @@ const ReachCustomer = () => {
   const handleSlideComplete = () => {
     // Tell the server the driver reached the pickup -> ride becomes driver_arrived,
     // the rider is notified, and we move on to the Ride-Pin screen.
-    if (ws && ws.readyState === WebSocket.OPEN && activeRideId) {
-      ws.send(
-        JSON.stringify({
-          type: "ride:arrived",
-          ride_id: activeRideId,
-        }),
-      );
+    // LOW-16: if the socket is dead the ride:arrived message never lands — the
+    // rider never gets the notification and the pin flow depends on the rider
+    // app polling. Don't advance silently; surface it and let the driver retry.
+    if (!ws || ws.readyState !== WebSocket.OPEN || !activeRideId) {
+      Alert.alert("Connection Lost", "Not connected to the server. Returning home.", [
+        { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+      ]);
+      return;
     }
+    ws.send(
+      JSON.stringify({
+        type: "ride:arrived",
+        ride_id: activeRideId,
+      }),
+    );
     router.replace("/(main)/(rider)/enter-otp");
   };
 

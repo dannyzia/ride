@@ -1,5 +1,5 @@
 import { db } from '@/src/db';
-import { documents, documentTypeEnum, drivers, users } from '@/src/db/schema';
+import { documents, documentTypeEnum, drivers, users, vehicles } from '@/src/db/schema';
 import { eq, and, inArray, isNull, sql } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -35,12 +35,18 @@ export async function GET(request: Request) {
 const ALLOWED_DOC_TYPES = new Set<string>(documentTypeEnum.enumValues);
 
 const docSchema = z.object({
+  // M-2: an empty map used to reach tx.insert(values([])) and 500. Require at
+  // least one document UNLESS this call only persists consent (the wizard's
+  // re-submit path may legitimately send consent with no docs — M-9).
   documents: z.record(z.string(), z.string().url()),
   vehicle_id: z.string().uuid().optional(),
   consent_accepted: z.boolean().optional(),
   consent_version: z.string().optional(),
   expiry_date: z.string().datetime().optional(),
-});
+}).refine(
+  (data) => Object.keys(data.documents).length > 0 || data.consent_accepted === true,
+  'Either a document or consent acceptance is required',
+);
 
 export async function POST(request: Request) {
   try {
@@ -56,6 +62,19 @@ export async function POST(request: Request) {
     if (!parsed.ok) return parsed.response;
 
     const { documents: docMap, vehicle_id, consent_accepted, consent_version, expiry_date } = parsed.data;
+
+    // M-1: a client-supplied vehicle_id must belong to THIS driver — otherwise
+    // driver A could link photo rows to driver B's vehicle. Only check when a
+    // vehicle_id is actually supplied (docs can be submitted before step 2).
+    if (vehicle_id) {
+      const [ownedVehicle] = await db.select({ id: vehicles.id })
+        .from(vehicles)
+        .where(and(eq(vehicles.id, vehicle_id), eq(vehicles.driver_id, driver.id)))
+        .limit(1);
+      if (!ownedVehicle) {
+        return Response.json({ error: 'vehicle_not_found', message: 'Vehicle does not belong to this driver' }, { status: 400 });
+      }
+    }
 
     const invalidKeys = Object.keys(docMap).filter((key) => !ALLOWED_DOC_TYPES.has(key));
     if (invalidKeys.length > 0) {
@@ -113,7 +132,11 @@ export async function POST(request: Request) {
             isNull(documents.deleted_at),
           ));
       }
-      await tx.insert(documents).values(insertValues);
+      // M-2 defense-in-depth: never insert an empty values array (the schema
+      // refine above already blocks pure-empty submissions).
+      if (insertValues.length > 0) {
+        await tx.insert(documents).values(insertValues);
+      }
     });
 
     // Legacy rideshare platform screenshots flag the driver as a legacy operator

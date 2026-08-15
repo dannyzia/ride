@@ -1,12 +1,13 @@
 import { colors, spacing } from "@/theme/goRide";
-import { View, Text, Animated } from "react-native";
+import { View, Text, Animated, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomButton from "@/components/CustomButton";
 import { useRideOfferStore, useWSStore } from "@/store";
 import { router } from "expo-router";
 import { OtpInput } from "react-native-otp-entry";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 const EnterOtp = () => {
   const [pinInput, setPinInput] = useState("");
@@ -15,6 +16,7 @@ const EnterOtp = () => {
   const { ws } = useWSStore();
   const { activeRideId } = useRideOfferStore();
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -102,6 +104,33 @@ const EnterOtp = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      {/* M-6: appearance toggle — this screen has no header row, so it floats
+          top-right like find-customer's. */}
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        accessibilityRole="button"
+        accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
+        style={{
+          position: "absolute",
+          top: 64,
+          right: spacing.xl,
+          zIndex: 11,
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: isDark ? colors.surfaceElevatedDark : colors.surfaceLight,
+          borderWidth: 1,
+          borderColor: isDark ? colors.borderDark : colors.borderLight,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Ionicons
+          name={isDark ? "moon-outline" : "sunny-outline"}
+          size={18}
+          color={textPrimary}
+        />
+      </TouchableOpacity>
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: spacing["2xl"] }}>
         <Text
           style={{

@@ -187,9 +187,17 @@ export async function POST(request: Request) {
         },
       }).returning();
 
-      // Keep the driver's dispatch-facing type in sync with the vehicle.
+      // Keep the driver's dispatch-facing type AND vehicle link in sync with
+      // the vehicle row (M-3). drivers.vehicle_id was previously written by
+      // nothing — so the wizard's "Skip — I already have a vehicle on file"
+      // path (me?.vehicle_id) was dead code and docs could be submitted with
+      // vehicle_id: null after an app kill between steps 2 and 3.
       await tx.update(drivers)
-        .set({ vehicle_type: vehicle_type as any, updated_at: now })
+        .set({
+          vehicle_type: vehicle_type as any,
+          vehicle_id: vehicleRow.id,
+          updated_at: now,
+        })
         .where(eq(drivers.id, driver.id));
 
       return { vehicle: vehicleRow, model_created: modelCreated };

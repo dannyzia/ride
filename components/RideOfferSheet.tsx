@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, Animated } from "react-native";
 import { useRef, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useWSStore } from "@/store";
@@ -20,6 +21,11 @@ export default function RideOfferSheet() {
   const ws = useWSStore((s) => s.ws);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const acceptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // H-2: a live handle to an in-flight accept handshake so handleReject can
+  // tear it down. Previously Accept armed a message listener + 3s timeout that
+  // only unmount/offer-change could clear — declining within the window left a
+  // late fetch:confirmed free to send offer:accept for a ride just declined.
+  const acceptHandshakeRef = useRef<(() => void) | null>(null);
   const isDark = useIsDark();
 
   // Cancel any in-flight accept handshake when the sheet unmounts or the
@@ -31,6 +37,7 @@ export default function RideOfferSheet() {
         clearTimeout(acceptTimeoutRef.current);
         acceptTimeoutRef.current = null;
       }
+      acceptHandshakeRef.current = null;
     };
     // fadeAnim is a stable useRef value; include it to satisfy exhaustive-deps.
   }, [fadeAnim]);
@@ -72,6 +79,7 @@ export default function RideOfferSheet() {
   const handleAccept = () => {
     if (!ws || ws.readyState !== WebSocket.OPEN || !activeOffer) {
       logger.warn("[RideOfferSheet] WS not ready for accept");
+      showToast("Not connected — cannot accept", "error");
       return;
     }
 
@@ -93,6 +101,7 @@ export default function RideOfferSheet() {
         acceptTimeoutRef.current = null;
       }
       ws.removeEventListener("message", onMessage);
+      acceptHandshakeRef.current = null;
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 200,
@@ -100,9 +109,9 @@ export default function RideOfferSheet() {
       }).start(() => {
         setActiveOffer(null);
       });
-      if (!accepted) {
-        showToast("Ride could not be confirmed", "error");
-      }
+      // No toast here — callers (fetch:error, timeout) already surfaced the
+      // specific reason before calling finish(false); finish was previously
+      // double-toasting on top of them.
     };
 
     const onMessage = (ev: MessageEvent) => {
@@ -131,6 +140,8 @@ export default function RideOfferSheet() {
     };
 
     ws.addEventListener("message", onMessage);
+    // H-2: expose the teardown so a Decline tap can abort the handshake.
+    acceptHandshakeRef.current = () => finish(false);
 
     // Fallback if fetch:confirmed never arrives (lost message, dead socket).
     // Deliberately does NOT send offer:accept — the server only deducts on
@@ -145,11 +156,25 @@ export default function RideOfferSheet() {
 
   const handleReject = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    sendWS("offer:reject", { reason: "driver_declined" });
+    // H-2: abort any in-flight accept handshake first — a late
+    // fetch:confirmed must not send offer:accept for a ride just declined.
+    if (acceptHandshakeRef.current) {
+      acceptHandshakeRef.current();
+      acceptHandshakeRef.current = null;
+    }
+    if (ws?.readyState === WebSocket.OPEN) {
+      sendWS("offer:reject", { reason: "driver_declined" });
+    } else {
+      logger.warn("[RideOfferSheet] WS not open, cannot send offer:reject");
+      showToast("Not connected — try again", "error");
+    }
     setActiveOffer(null);
   };
 
-  const fareTk = (activeOffer.fare_breakdown?.total_bdt / 100).toFixed(2);
+  // M-5: the payload may arrive without a fare_breakdown (home null-guards it;
+  // this sheet didn't, rendering ৳NaN).
+  const fareTotalBdt = activeOffer.fare_breakdown?.total_bdt;
+  const fareTk = fareTotalBdt != null ? (fareTotalBdt / 100).toFixed(2) : "—";
   const pickupDist = activeOffer.pickup_distance_km;
   const pickupEta = activeOffer.pickup_eta_minutes;
   const riderRating = activeOffer.rider_rating;
@@ -294,15 +319,7 @@ export default function RideOfferSheet() {
                 marginTop: 2,
               }}
             >
-              <Text
-                style={{
-                  fontFamily: "Jakarta-Regular",
-                  fontSize: 12,
-                  color: colors.amber,
-                }}
-              >
-                ★
-              </Text>
+          <Ionicons name="star" size={12} color={colors.amber} />
               <Text
                 style={{
                   fontFamily: "Jakarta-SemiBold",
@@ -334,26 +351,33 @@ export default function RideOfferSheet() {
               color: textSecondary,
             }}
           >
-            {activeOffer.distance_km} km
+            {activeOffer.distance_km != null ? `${activeOffer.distance_km} km` : ""}
           </Text>
         </View>
       </View>
 
-      {/* Upfront tip badge */}
+      {/* Upfront tip badge (Pattern A inline styles — no NativeWind, no emoji) */}
       {activeOffer.upfront_tip_bdt > 0 ? (
         <View
-          className="rounded-lg px-3 py-1.5 mb-2 flex-row items-center"
-          style={{ backgroundColor: colors.primaryLight }}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: spacing.xs,
+            backgroundColor: colors.primaryLight,
+            borderRadius: radii.md,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.xs + 2,
+            marginBottom: spacing.md,
+            alignSelf: "flex-start",
+          }}
         >
+          <Ionicons name="cash-outline" size={14} color={colors.primary} />
           <Text
-            className="text-[14px] font-JakartaBold mr-1"
-            style={{ color: colors.primary }}
-          >
-            💰
-          </Text>
-          <Text
-            className="text-[14px] font-JakartaBold"
-            style={{ color: colors.primary }}
+            style={{
+              fontFamily: "Jakarta-Bold",
+              fontSize: 13,
+              color: colors.primary,
+            }}
           >
             +৳{((activeOffer.upfront_tip_bdt / 100).toFixed(2))} tip
           </Text>
@@ -409,28 +433,34 @@ export default function RideOfferSheet() {
         >
           {pickupDist > 0 && (
             <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text
-                style={{
-                  fontFamily: "Jakarta-Regular",
-                  fontSize: 12,
-                  color: textSecondary,
-                }}
-              >
-                📍 {pickupDist.toFixed(1)} km away
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Ionicons name="location-outline" size={12} color={textSecondary} />
+                <Text
+                  style={{
+                    fontFamily: "Jakarta-Regular",
+                    fontSize: 12,
+                    color: textSecondary,
+                  }}
+                >
+                  {pickupDist.toFixed(1)} km away
+                </Text>
+              </View>
             </View>
           )}
           {pickupEta > 0 && (
             <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text
-                style={{
-                  fontFamily: "Jakarta-Regular",
-                  fontSize: 12,
-                  color: textSecondary,
-                }}
-              >
-                ⏱ ~{pickupEta} min to pickup
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Ionicons name="time-outline" size={12} color={textSecondary} />
+                <Text
+                  style={{
+                    fontFamily: "Jakarta-Regular",
+                    fontSize: 12,
+                    color: textSecondary,
+                  }}
+                >
+                  ~{pickupEta} min to pickup
+                </Text>
+              </View>
             </View>
           )}
         </View>

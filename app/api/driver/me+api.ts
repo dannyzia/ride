@@ -4,6 +4,8 @@ import { eq, and, inArray } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { isAllowedStorageUrl } from '@/lib/storageUrl';
+import { parseJsonBody } from '@/lib/parseBody';
+import { validateMinPerKm } from '@/lib/validateMinPerKm';
 import { z } from 'zod';
 
 // NOTE: `vehicle_type` is intentionally NOT part of the PATCH schema. The
@@ -11,10 +13,13 @@ import { z } from 'zod';
 // which enforces eligibility on changes and syncs drivers.vehicle_type) and
 // POST /api/driver/vehicle-type-change (gated). Accepting it here was a third,
 // unguarded write path that bypassed both gates (N1).
+// NOTE: `phone` is intentionally NOT part of the PATCH schema. Phone is
+// identity (the register flow verifies it via OTP) — letting it be changed
+// here would let an account transfer to another number with no verification
+// (M-8).
 const patchSchema = z.object({
   min_per_km_bdt: z.number().int().nonnegative().optional(),
   name: z.string().min(1).max(200).optional(),
-  phone: z.string().min(1).max(20).optional(),
   profile_image_url: z.string().url().optional(),
   email: z.string().email().optional(),
   city: z.string().min(1).max(100).optional(),
@@ -72,11 +77,8 @@ export async function PATCH(request: Request) {
     const [driver] = await db.select().from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
-    const body = await request.json();
-    const parsed = patchSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json({ error: 'validation_error', message: parsed.error.flatten() }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(request, patchSchema);
+    if (!parsed.ok) return parsed.response;
 
     const updates: Record<string, any> = {};
     if (parsed.data.min_per_km_bdt !== undefined) {
@@ -90,7 +92,9 @@ export async function PATCH(request: Request) {
           .limit(1);
         if (!activePricing) return Response.json({ error: 'pricing_not_found', message: 'Pricing configuration not found' }, { status: 422 });
 
-        // Read min/max ratios from platform_config
+        // Ratios come from platform_config (config-driven, admin-tunable) —
+        // pass them through the shared validator rather than inlining bounds
+        // (AGENTS.md: never inline min_per_km validation).
         const configRows = await db.select()
           .from(platformConfig)
           .where(inArray(platformConfig.key, ['driver_min_ratio', 'driver_max_ratio']));
@@ -99,15 +103,12 @@ export async function PATCH(request: Request) {
         const minRatio = get('driver_min_ratio', 0.70);
         const maxRatio = get('driver_max_ratio', 1.50);
 
-        const lowerBound = Math.floor(activePricing.per_km_bdt * minRatio);
-        const upperBound = Math.ceil(activePricing.per_km_bdt * maxRatio);
-
-        if (val < lowerBound || val > upperBound) {
+        const check = validateMinPerKm(activePricing.per_km_bdt, val, { minRatio, maxRatio });
+        if (!check.valid) {
           return Response.json({
             error: 'min_per_km_out_of_bounds',
+            message: check.error,
             system_rate_bdt: activePricing.per_km_bdt,
-            lower_bound: lowerBound,
-            upper_bound: upperBound,
           }, { status: 422 });
         }
       }
@@ -126,7 +127,6 @@ export async function PATCH(request: Request) {
 
     const userUpdates: Record<string, any> = {};
     if (parsed.data.name !== undefined) userUpdates.name = parsed.data.name;
-    if (parsed.data.phone !== undefined) userUpdates.phone = parsed.data.phone;
     if (parsed.data.profile_image_url !== undefined) {
       // C3a: the profile photo is verification-adjacent display data — keep it
       // inside the project's own storage.

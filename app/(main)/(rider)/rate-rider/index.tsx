@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
 import {
   View,
@@ -55,6 +55,16 @@ export default function RateRider() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const submitted = useRef(false);
+  // LOW-10: the delayed home navigation must be cancelled on unmount — a
+  // driver who backs out within the 1.4s window used to get hijacked home by
+  // a late router.replace.
+  const goHomeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (goHomeTimerRef.current) clearTimeout(goHomeTimerRef.current);
+    };
+  }, []);
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -67,7 +77,11 @@ export default function RateRider() {
   const goHomeDelayed = () => {
     // Non-blocking toast (spec §4.4: submit → toast → router.replace); brief
     // pause lets the driver register the confirmation before navigating.
-    setTimeout(() => router.replace("/(main)/(rider)"), 1400);
+    if (goHomeTimerRef.current) clearTimeout(goHomeTimerRef.current);
+    goHomeTimerRef.current = setTimeout(
+      () => router.replace("/(main)/(rider)"),
+      1400,
+    );
   };
 
   const handleSubmit = async () => {

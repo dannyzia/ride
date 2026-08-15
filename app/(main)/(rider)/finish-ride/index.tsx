@@ -32,6 +32,8 @@ interface CompletionSummary {
   distance_km: number | null;
   ride_time_min: number | null;
   upfront_tip_forfeited_bdt?: number;
+  rider_payable_bdt?: number;
+  wallet_debit_bdt?: number;
 }
 
 const FinishRide = () => {
@@ -54,6 +56,9 @@ const FinishRide = () => {
   const [completion, setCompletion] = useState<CompletionSummary | null>(null);
   const [completedRideId, setCompletedRideId] = useState<string | null>(null);
   const lastLocationRef = useRef<Location.LocationObject | null>(null);
+  // LOW-8: last reverse-geocoded address, reused while the position barely
+  // moves instead of re-geocoding on every watch tick.
+  const lastAddressRef = useRef("");
 
   // Only the driver Home screen creates the WebSocket. If we got here without
   // one the connection is dead — the ride can still complete over HTTP, but
@@ -80,8 +85,12 @@ const FinishRide = () => {
         const msg = JSON.parse(event.data);
         const type = msg.type as string;
         if (type === "ride:cancelled" || type === "rider:cancelled") {
-          // Driver's own cancel must not raise a "Rider cancelled" alert (N2).
-          if (msg.cancelled_by !== "driver") {
+          // N2/M-7: a driver's own cancel must not raise a "Rider cancelled"
+          // alert, and a system cancel (timeout, admin) isn't the rider's
+          // doing either — only rider-initiated cancels get that copy.
+          const cancelledByDriver = msg.cancelled_by === "driver";
+          const cancelledBySystem = msg.cancelled_by === "system";
+          if (!cancelledByDriver && !cancelledBySystem) {
             Alert.alert("Ride Cancelled", "Rider cancelled the ride", [
               { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
             ]);
@@ -140,6 +149,7 @@ const FinishRide = () => {
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
             });
+            lastAddressRef.current = address[0]?.formattedAddress ?? "";
             if (ws && ws.readyState === WebSocket.OPEN) {
               ws.send(
                 JSON.stringify({
@@ -151,25 +161,17 @@ const FinishRide = () => {
                 }),
               );
             }
-            setDriverLocation({
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              address: address[0]?.formattedAddress!,
-            });
             lastLocationRef.current = location;
           } else if (!lastLocationRef.current) {
             lastLocationRef.current = location;
           }
+          // LOW-8: only the ≥5m branch reverse-geocodes; ticks that barely
+          // moved reuse the last resolved address instead of firing a second
+          // reverseGeocodeAsync on every watch callback.
           setDriverLocation({
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
-            address:
-              (
-                await Location.reverseGeocodeAsync({
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                })
-              )[0]?.formattedAddress ?? "",
+            address: lastAddressRef.current,
           });
         },
       );
@@ -232,6 +234,8 @@ const FinishRide = () => {
         total_bdt?: number;
         ride_time_min?: number;
         upfront_tip_forfeited_bdt?: number;
+        rider_payable_bdt?: number;
+        wallet_debit_bdt?: number;
       } = await res.json().catch(() => ({}));
       const fb = data.fare_breakdown ?? {};
       setCompletion({
@@ -239,9 +243,14 @@ const FinishRide = () => {
         distance_km: fb.distance_km ?? null,
         ride_time_min: data.ride_time_min ?? fb.ride_time_min ?? null,
         upfront_tip_forfeited_bdt: data.upfront_tip_forfeited_bdt ?? 0,
+        rider_payable_bdt: data.rider_payable_bdt ?? undefined,
+        wallet_debit_bdt: data.wallet_debit_bdt ?? undefined,
       });
       setCompletedRideId(activeRideId);
       removeRideOffer(activeRideId);
+      // LOW-9: the ride is done — drop the active ride id (previously only the
+      // cancellation paths cleared it, so a stale id lingered after completion).
+      setActiveRideId(null);
       setShowModal(true);
     } catch (e) {
       Alert.alert("Error", e instanceof Error ? e.message : "Network error completing ride");
@@ -272,6 +281,14 @@ const FinishRide = () => {
   // fall back to what the offer carried (fare in the store is paisa).
   const totalPaisa =
     completion?.total_bdt ?? Number(rideDetails?.fare || 0);
+  // H-3: the cash line must be the rider's actual out-of-pocket, not the
+  // gross fare — a wallet redemption or collected tip already settled part of
+  // the bill. Fall back to the gross fare when the response predates the
+  // fields (server never returns them).
+  const cashPaisa =
+    completion?.rider_payable_bdt != null
+      ? completion.rider_payable_bdt - (completion.wallet_debit_bdt ?? 0)
+      : totalPaisa;
   const distanceText =
     completion?.distance_km != null
       ? `${completion.distance_km.toFixed(1)} km`
@@ -436,7 +453,7 @@ const FinishRide = () => {
               fontVariant: ["tabular-nums"],
             }}
           >
-            Collect ৳{(totalPaisa / 100).toFixed(2)} cash from rider
+            Collect ৳{(cashPaisa / 100).toFixed(2)} cash from rider
           </Text>
 
           {/* N3: forfeited upfront tip — never let a promised tip vanish silently */}

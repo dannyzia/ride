@@ -180,17 +180,27 @@ export default function BreakMode() {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (token) {
-        await fetch(`${API_URL}/api/driver/break/end`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      if (!token) {
+        setError("Not authenticated");
+        return;
       }
+      const res = await fetch(`${API_URL}/api/driver/break/end`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // LOW-7: a failed /break/end used to navigate back anyway, leaving the
+      // server on_break while dispatch kept the driver off the pool silently.
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.message || "Failed to end break — please try again");
+        return;
+      }
+      router.back();
     } catch (err) {
       logger.error("BreakMode end failed", err);
+      setError("Network error — please try again");
     } finally {
       setEnding(false);
-      router.back();
     }
   };
 

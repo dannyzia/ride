@@ -16,7 +16,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const { supabaseUser: admin } = await requireRole('admin')(request);
+    const { dbUser: admin } = await requireRole('admin')(request);
 
     const result = await parseJsonBody(request, schema);
     if (!result.ok) return result.response;

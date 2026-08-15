@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { getH3Cell } from '@/lib/h3';
+import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 
 const statusSchema = z.object({
@@ -19,11 +20,8 @@ export async function POST(request: Request) {
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
-    const body = await request.json();
-    const parsed = statusSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json({ error: 'validation_error', message: 'Invalid input data' }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(request, statusSchema);
+    if (!parsed.ok) return parsed.response;
 
     const { is_online, lat, lng } = parsed.data;
 

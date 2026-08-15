@@ -22,6 +22,13 @@ import { useIsDark } from "@/lib/useAppearance";
 import MapLibreGL from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { logger } from "@/lib/logger";
+import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
+
+// LOW-13: drivers.vehicle_type is a machine key (e.g. bike_standard); show the
+// human label ("Bike Standard") in the header.
+const vehicleTypeDisplay: Record<string, string> = Object.fromEntries(
+  VEHICLE_TYPES.map((v) => [v.key, v.display_en]),
+);
 
 interface DailyStats {
   earnings_bdt: number;
@@ -58,7 +65,6 @@ export default function DriverHome() {
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
-  const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectRef = useRef<NodeJS.Timeout | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
@@ -294,9 +300,12 @@ export default function DriverHome() {
           router.replace("/(main)/(rider)/find-customer");
         } else if (type === "ride:cancelled" || type === "rider:cancelled") {
           // ride:cancelled (B-7) carries cancelled_by; rider:cancelled is the
-          // legacy spelling (treated as rider-initiated). A driver's own
-          // cancel must not raise a "Rider cancelled" alert — just reset.
-          if (msg.cancelled_by !== "driver") {
+          // legacy spelling (treated as rider-initiated). Neither a driver's
+          // own cancel nor a system cancel (timeout/admin) is the rider's
+          // doing — only rider-initiated cancels get that copy (M-7).
+          const cancelledByDriver = msg.cancelled_by === "driver";
+          const cancelledBySystem = msg.cancelled_by === "system";
+          if (!cancelledByDriver && !cancelledBySystem) {
             Alert.alert("Ride Cancelled", "Rider cancelled the ride");
           }
           if (msg.ride_id) removeRideOffer(msg.ride_id);
@@ -313,10 +322,14 @@ export default function DriverHome() {
     // ride) so we never spin up a duplicate connection.
     const existing = useWSStore.getState().ws;
     if (existing && existing.readyState === WebSocket.OPEN) {
-      wsRef.current = existing;
       existing.onmessage = handleWsMessage;
       setWsConnected(true);
-      return;
+      // H-4: detach on unmount so this mount's handler can't keep navigating
+      // from another screen (the socket itself stays alive for the next mount
+      // to reuse).
+      return () => {
+        if (existing) existing.onmessage = null;
+      };
     }
 
     async function connect() {
@@ -355,8 +368,6 @@ export default function DriverHome() {
       ws.onerror = () => {
         // onclose will fire after this
       };
-
-      wsRef.current = ws;
     }
 
     connect();
@@ -364,11 +375,14 @@ export default function DriverHome() {
     return () => {
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      // Intentionally do NOT close the WebSocket here. The driver socket must
-      // persist across navigation (Home -> find-customer -> enter-otp ->
-      // finish-ride) so every screen shares one authenticated connection.
-      // Closing it on unmount left downstream screens with a dead socket, so
-      // ride:arrived / ride:start were silently dropped.
+      // H-4: detach the message handler so a stale mount's closure can't
+      // navigate from another screen (M3-class). Intentionally do NOT detach
+      // onclose and do NOT close the WebSocket: the socket must persist across
+      // navigation (Home -> find-customer -> enter-otp -> finish-ride), and
+      // the onclose reconnect keeps the connection alive while the driver is
+      // away — the store is updated on every onopen, so downstream screens
+      // re-bind their addEventListener to the new socket.
+      if (ws) ws.onmessage = null;
     };
   }, []);
 
@@ -383,7 +397,13 @@ export default function DriverHome() {
     }
 
     const sendHeartbeat = async () => {
-      const ws = wsRef.current;
+      // C2: read the socket LIVE from the store, never a per-mount ref.
+      // An unmounted mount's orphaned onclose kept rebuilding the socket and
+      // writing its own wsRef, so the current mount's ref could point at a
+      // dead socket forever — heartbeats silently died while the store (and
+      // the green dot) still said connected. The store is updated on every
+      // onopen, so it is always the current connection.
+      const ws = useWSStore.getState().ws;
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
       try {
         const perm = await Location.requestForegroundPermissionsAsync();
@@ -722,7 +742,7 @@ export default function DriverHome() {
             </Text>
             {driver?.vehicle_type ? (
               <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: textSecondary }}>
-                · {driver.vehicle_type}
+                · {vehicleTypeDisplay[driver.vehicle_type] ?? driver.vehicle_type}
               </Text>
             ) : null}
           </View>

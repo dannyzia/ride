@@ -187,6 +187,10 @@ const rideId = segments[segments.indexOf("ride") + 1];
     // the rider's wallet can't cover it at completion, record the forfeited
     // amount on the ride so the driver's UI can surface it.
     let upfrontTipForfeitedBdt = 0;
+    // H-3: hoisted so the response can report the rider's real out-of-pocket
+    // and what was already settled from the wallet.
+    let finalRiderPayableBdt = 0;
+    let walletDebitBdt = 0;
 
     await db.transaction(async (tx) => {
       const upfrontTip = Number(ride.upfront_tip_bdt ?? 0);
@@ -210,6 +214,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
           });
           fare.driver_net_bdt += upfrontTip;
           tipApplied = true;
+          walletDebitBdt += upfrontTip;
         }
        }
 
@@ -227,6 +232,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
             reference_id: ride.id,
             balance_after: sql`(SELECT rider_wallet_balance_bdt FROM users WHERE id = ${ride.user_id})`,
           });
+          walletDebitBdt += appliedDiscountBdt;
         } else {
           logger.warn('[complete] rider insufficient wallet for redemption', { rideId, amount: appliedDiscountBdt, balance: rider.wallet });
           appliedDiscountBdt = 0;
@@ -251,6 +257,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
       if (!updatedRide) {
         throw new Error("TOCTOU: ride not in progress or already completed");
       }
+      finalRiderPayableBdt = Number(updatedRide.rider_payable_bdt ?? 0);
 
       // Phase C: Earn cashback on the rider's payable (discounted) fare
       const riderPayableBdt = Number(updatedRide.rider_payable_bdt ?? 0);
@@ -353,6 +360,13 @@ const rideId = segments[segments.indexOf("ride") + 1];
       completed_at: completedAt.toISOString(),
       fare_breakdown: fare,
       upfront_tip_forfeited_bdt: upfrontTipForfeitedBdt,
+      // H-3: the modal tells the driver how much cash to collect. The gross
+      // fare overstates it whenever a wallet redemption or collected tip
+      // already settled part of the bill, so surface the rider's real
+      // out-of-pocket (rider_payable_bdt) and what the wallet covered
+      // (wallet_debit_bdt). Cash to collect = the difference.
+      rider_payable_bdt: finalRiderPayableBdt,
+      wallet_debit_bdt: walletDebitBdt,
     });
   } catch (err: any) {
     if (err.status === 401 || err.status === 403) {

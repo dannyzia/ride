@@ -30,6 +30,9 @@ interface DocRow {
   created_at: string | null;
 }
 
+// LOW-5: must mirror every required upload the wizard collects — the 7 core
+// docs PLUS the 4 vehicle photos. The old subset let "Documents ✓" show while
+// vehicle photos were still pending.
 const EXPECTED_DOC_KEYS = [
   "nid_front",
   "nid_back",
@@ -38,6 +41,10 @@ const EXPECTED_DOC_KEYS = [
   "reg_scan_front",
   "reg_scan_back",
   "brta_certificate",
+  "vehicle_photo_front",
+  "vehicle_photo_left",
+  "vehicle_photo_back",
+  "vehicle_photo_right",
 ];
 
 class ApiError extends Error {

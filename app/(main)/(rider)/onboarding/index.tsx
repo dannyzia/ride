@@ -21,7 +21,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { uploadImage } from "@/lib/imageToURL";
 import { colors, radii, spacing } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import DocumentUploadCard from "@/components/DocumentUploadCard";
 import { VEHICLE_TYPES, type VehicleTypeEnum } from "@/lib/vehicleTypes";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
@@ -256,6 +256,7 @@ function OptionPickerModal({
 
 export default function OnboardingWizard() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
   const fetchDriver = useDriverFlowStore((s) => s.fetchDriver);
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -556,16 +557,18 @@ export default function OnboardingWizard() {
       if (legacyAnswer === "yes") {
         Object.assign(finalDocs, legacyDocs);
       }
-      if (Object.keys(finalDocs).length > 0) {
-        await apiFetch("/api/driver/documents", {
-          method: "POST",
-          body: JSON.stringify({
-            documents: finalDocs,
-            consent_accepted: true,
-            consent_version: "v1",
-          }),
-        });
-      }
+      // M-9: consent was previously persisted only when finalDocs was
+      // non-empty — a re-entry with empty doc state silently dropped it. The
+      // documents endpoint now accepts consent without docs, so persist it
+      // unconditionally.
+      await apiFetch("/api/driver/documents", {
+        method: "POST",
+        body: JSON.stringify({
+          documents: finalDocs,
+          consent_accepted: true,
+          consent_version: "v1",
+        }),
+      });
       await fetchDriver();
       router.replace("/(main)/(rider)/verification");
     } catch (err) {
@@ -722,7 +725,25 @@ export default function OnboardingWizard() {
         >
           Driver Onboarding
         </Text>
-        <View style={{ width: 32 }} />
+        {/* M-6: appearance toggle — the header's right slot was an empty spacer */}
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
+          onPress={() => setTheme(isDark ? "light" : "dark")}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: radii.md,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons
+            name={isDark ? "sunny-outline" : "moon-outline"}
+            size={20}
+            color={textPrimary}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Segmented progress bar */}
