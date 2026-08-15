@@ -24,7 +24,7 @@ export async function GET() {
     return Response.json({ policies: rows });
   } catch (err: any) {
     logger.error('[admin/cancellation-policies] GET error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -36,8 +36,8 @@ export async function POST(request: Request) {
     const [policy] = await db.insert(cancellationPolicies).values(parsed.data).returning();
     return Response.json({ policy });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/cancellation-policies] POST error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

@@ -29,13 +29,13 @@
 
 Ride is a subscription-based ride lead distribution platform for Bangladesh, rebuilt from the GlideX open-source codebase. Drivers buy call packages; riders request rides; the WebSocket dispatch engine matches them using H3 hexagonal geo-indexing.
 
-### Current Implementation Status (as of 2026-06)
+### Current Implementation Status (as of 2026-08)
 
 All core features are **fully implemented**:
 - **Auth**: Supabase phone OTP (not Firebase/HMAC). `app/(auth)/phone-entry`, `otp-verify`, `register`. API routes in `app/api/auth/`. **No Firebase Cloud Functions exist.**
 - **Payments**: PortPos unified gateway (not bKash/Nagad directly). `lib/portpos.ts` active. `lib/bkash.ts` and `lib/nagad.ts` are inert stubs (throw errors).
 - **Dispatch**: WebSocket server in `utils-server/` with H3 indexing, heartbeat-gated call deduction, batch broadcasting.
-- **Database**: 49 tables, 26 enums in `src/db/schema.ts` (vehicleTypeEnum with 8 lowercase values, rideStatusEnum, etc.). See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema for the full inventory — do not manually re-list all 49 tables here or elsewhere; reference that doc.
+- **Database**: 85 tables, 29 enums in `src/db/schema.ts` (vehicleTypeEnum with 8 lowercase values, rideStatusEnum, etc.). See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema for the full inventory — do not manually re-list all 85 tables here or elsewhere; reference that doc.
 - **Admin panel**: `app/admin/` with web-only routes for verification, packages, zones, configuration. **Phase F15** consolidated all admin entities (driver queue, lifecycle, incentives, promos, preferences, referral campaigns, point offers, vehicle models, sample media, platform config, monitoring) into one coherent dashboard. All 10 API items + 14 UI items built and tsc-clean. See `docs/Plan/14-DEV-CHECKLIST.yaml` phase F15.
 - **Chat**: In-app messaging with `store/useChatStore.ts` and `app/api/chat/`.
 - **Driver flows**: Onboarding, home, offers, ledger. 7 Zustand stores in `store/`.
@@ -60,7 +60,7 @@ This repo has **two independently-typed packages**:
 5. `docs/Plan/06-API.md` — API and WebSocket contracts.
 6. `docs/Plan/05-DATA-MODEL.md` — Database schema deltas.
 7. `docs/Plan/13-CONVENTIONS.md` — Coding conventions and critical rules.
-8. `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` — Canonical backend spec: full schema (49 tables, 26 enums), auth flow, PortPos payment integration, dispatch engine architecture. Treat this as authoritative over any older doc that states a different table count.
+8. `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` — Canonical backend spec: full schema (85 tables, 29 enums), auth flow, PortPos payment integration, dispatch engine architecture. Treat this as authoritative over any older doc that states a different table count.
 
 **For frontend/backend AI-agent coding sessions:**
 - `App Design/GoRide - Ride-Hailing App UI Kit (Preview)/GoRide-Wireframes.md` — Canonical 182-screen UI spec (Rider + Driver), with a standard-header convention note and per-screen build/modify guidance.
@@ -128,7 +128,7 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 - `theme/goRide.ts` — Single-file design token source (colors, typography, spacing, radii, shadows). Dark mode is handled by NativeWind `dark:` variants + `tailwind.config.js` aliases — there is no `ThemeProvider`/theme Context
 - `lib/` — Shared utilities (auth, DB, map, payment, validation)
 - `store/` — Zustand state stores (7 stores: useDriverStore, useRiderStore, useChatStore, useDriverStatusStore, usePackageStore, useCallLedgerStore, useDriverFlowStore)
-- `src/db/schema.ts` — Drizzle schema (49 tables, 26 enums exported)
+- `src/db/schema.ts` — Drizzle schema (85 tables, 29 enums exported)
 - `utils-server/` — WebSocket dispatch server (separate package)
 - `scripts/` — Seed scripts (system-config, pricing, packages, platform-config, admin)
 
@@ -145,7 +145,13 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 - `call_ledger` deduction rows (`event_type='deduction'`) → ONLY `utils-server/heartbeat.ts`
 - `call_ledger` all other event types (`initial_load`, `credit`, `expiry_writeoff`) → ONLY `lib/activateSubscription.ts`
 - `dispatch_offers` → ONLY `utils-server/dispatch.ts` and `utils-server/heartbeat.ts`
+- `payment_events` row creation + PortPos invoice initiation → ONLY `lib/paymentEvents.ts` (`initiatePortposPayment`), called by `app/api/rider/wallet/topup+api.ts`, `app/api/rider/passes+api.ts`, `app/api/driver/wallet/topup+api.ts`, `app/api/package/purchase+api.ts`
+- `payment_events` status transitions (`paid`/`failed`, `confirmed_at`, `subscription_id`) → ONLY `lib/activateSubscription.ts` and `app/api/payment/portpos/callback+api.ts`
 - No other file writes these tables directly.
+
+### Payments (PortPos callback security)
+- `app/api/payment/portpos/callback+api.ts` is a public endpoint that credits wallets / activates subscriptions. It MUST call `portposClient.verifyIPN(invoiceId, amountTaka)` (secret-bearing) and Zod-validate the PortPos response BEFORE touching any state. Never remove the signature check.
+- The callback compares the invoice amount against the locally-stored `payment_events.amount_bdt` in integer paisa (never float taka).
 
 ### Auth
 Supabase phone OTP. Client uses `lib/supabase.ts` (`EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY`). Server uses `lib/supabaseServer.ts` (`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`). Protected API routes call `verifySupabaseToken(request)` or `requireRole(request, role)` from `lib/auth.ts`. **No exceptions.** No `x-user-id` header substitution.
@@ -173,6 +179,7 @@ Always UTC `timestamptz`. Convert to `Asia/Dhaka` only at display. Use `lib/time
 - POST/PUT/PATCH bodies: use `parseJsonBody(request, schema)` from `lib/parseBody.ts` — it handles body reading + Zod validation and returns a `{ ok, response }` discriminated union. Never call `await request.json()` directly.
 - URL path params (dynamic segments): validate with `z.string().uuid()` before any DB query. Invalid UUIDs return `400 invalid_uuid`.
 - Error format: `{ error: 'machine_code', message: 'Human description' }`. Never expose stack traces or Drizzle internals.
+- Bodyless POST endpoints (e.g. `auth/logout`, `auth/verify-token`, `driver/break/start|end`, `user/request-data`) take no request body — the only input boundary is the auth token, so `parseJsonBody` is NOT required there. Any POST that reads a body MUST validate it.
 
 ### Expo API Routes (NOT Next.js)
 Expo's `@expo/server` adapter passes dynamic route params **directly** as the second argument — flat, NOT wrapped in `{ params }`. This differs from Next.js.
@@ -225,7 +232,7 @@ Payment credentials (`PORTPOS_APP_KEY`, `PORTPOS_SECRET_KEY`, `SUPABASE_SERVICE_
 - WebSocket message types defined in `utils-server/types.ts`.
 
 ### Database Tables
-All tables: uuid PKs, created_at/updated_at timestamptz. Append-only tables (`call_ledger`, `dispatch_offers`, `used_challenges`, `rate_limits`) are exempt from `updated_at`. Soft deletes (no hard deletes) on users, drivers, riders, packages, `call_ledger`, rides, documents.
+All tables: uuid PKs, created_at/updated_at timestamptz. Append-only tables (`call_ledger`, `dispatch_offers`, `used_challenges`, `rate_limits`) are exempt from `updated_at`. Soft deletes (`deleted_at` column, no hard deletes) exist on: users, packages, promoCodes, documents, incentiveDefinitions, riderAddresses. Rides use status transitions (`cancelled`/`expired`) instead of `deleted_at`; drivers use `status` (`suspended`/`rejected`) instead of `deleted_at`.
 
 ### File Naming
 - `lib/`: camelCase (`fareCalc.ts`, `activateSubscription.ts`)
@@ -267,6 +274,17 @@ Before generating, editing, or evaluating ANY Maestro YAML flow file, read in fu
 After modifying any code files, run:
 - `code-review-graph update` — always (fast, <2s)
 - `graphify update .` — after large batches of changes only
+
+### Codebase Memory MCP
+
+`codebase-memory-mcp` is available as an additional tool for code understanding and structural analysis. It can be used alongside `code-review-graph` and `graphify` — do not treat it as a replacement for either.
+
+Use it when:
+- You need fast structural queries across the codebase (`search_graph`, `trace_path`, `get_architecture`, `detect_changes`, etc.)
+- You want to explore relationships or trace call paths without running a full graph rebuild
+- You are investigating unfamiliar areas and need an index-assisted overview
+
+It complements the existing graph tools; run it in addition to them when it adds value to the current task.
 
 ## Known Issues (`docs/Plan/18-KNOWN-ISSUES.md` — check before fixing bugs)
 

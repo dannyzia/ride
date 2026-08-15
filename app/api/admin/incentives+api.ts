@@ -49,11 +49,11 @@ export async function GET(req: Request) {
     return Response.json({ incentives: rows });
   } catch (err: any) {
     if (err.status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (err.status === 403)
-      return Response.json({ error: "forbidden" }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/incentives] list error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -128,7 +128,7 @@ export async function PATCH(req: Request) {
   const url = new URL(req.url);
   const incentiveId = url.searchParams.get("id");
   if (!incentiveId)
-    return Response.json({ error: "missing_id" }, { status: 400 });
+    return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });
 
   const result = await parseJsonBody(req, patchSchema);
   if (!result.ok) return result.response;
@@ -151,7 +151,7 @@ export async function PATCH(req: Request) {
   if (data.is_active !== undefined) updates.is_active = data.is_active;
 
   if (Object.keys(updates).length <= 1) {
-    return Response.json({ error: "no_fields_to_update" }, { status: 400 });
+    return Response.json({ error: 'no_fields_to_update', message: 'No fields to update' }, { status: 400 });
   }
 
   const [incentive] = await db
@@ -161,7 +161,7 @@ export async function PATCH(req: Request) {
     .returning();
 
   if (!incentive)
-    return Response.json({ error: "incentive_not_found" }, { status: 404 });
+    return Response.json({ error: 'incentive_not_found', message: 'Incentive not found' }, { status: 404 });
 
   logger.info("[admin/incentives] updated", { incentiveId: incentive.id });
   return Response.json({ incentive });
@@ -173,7 +173,7 @@ export async function DELETE(req: Request) {
   const url = new URL(req.url);
   const incentiveId = url.searchParams.get("id");
   if (!incentiveId)
-    return Response.json({ error: "missing_id" }, { status: 400 });
+    return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });
 
   const [incentive] = await db
     .update(incentiveDefinitions)
@@ -182,7 +182,7 @@ export async function DELETE(req: Request) {
     .returning();
 
   if (!incentive)
-    return Response.json({ error: "incentive_not_found" }, { status: 404 });
+    return Response.json({ error: 'incentive_not_found', message: 'Incentive not found' }, { status: 404 });
 
   logger.info("[admin/incentives] deleted", { incentiveId: incentive.id });
   return Response.json({ deleted: true });

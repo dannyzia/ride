@@ -3,6 +3,7 @@ import * as schema from '@/src/db/schema';
 import { accountingAccounts, accountingEntries, accountingEntryLines } from '@/src/db/schema';
 import { sql } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
+import { percentOf } from './money';
 import { calculateTax, recordTaxLedger } from './tax';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
@@ -95,7 +96,9 @@ export async function recordRideCompletion(ride: {
   driverId: string; riderId: string; zoneId?: string;
 }) {
   const fare = ride.finalFarePaisa;
-  const commission = Math.floor(fare * ride.commissionPct / 100);
+  // fare is integer paisa; percentOf keeps the intermediate product in BigInt
+  // so it can never overflow Number.MAX_SAFE_INTEGER (see lib/money.ts)
+  const commission = percentOf(fare, ride.commissionPct);
   const driverShare = fare - commission;
 
   const vat = await calculateTax('vat_commission', commission);

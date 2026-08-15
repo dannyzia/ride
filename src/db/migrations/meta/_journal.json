@@ -246,6 +246,27 @@
       "when": 1785632620094,
       "tag": "0034_huge_captain_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1786738754491,
+      "tag": "0035_bored_scarlet_spider",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1786740118400,
+      "tag": "0036_great_enchantress",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1786776750515,
+      "tag": "0037_brief_emma_frost",
+      "breakpoints": true
     }
   ]
 }

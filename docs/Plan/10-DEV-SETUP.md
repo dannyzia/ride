@@ -215,7 +215,7 @@ Required before drivers can purchase subscriptions in the app.
 - [ ] Expo app loads on Android with no red-screen errors
 - [ ] Health check passes: `curl http://localhost:8081/api/ping` → `{"status":"ok"}`
 - [ ] WebSocket server responds: `wscat -c ws://localhost:3001` → connection established
-- [ ] DB migration applied: 49 tables, 26 enums visible in Supabase dashboard (Table Editor). See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema or `docs/Plan/05-DATA-MODEL.md` for the full authoritative inventory rather than a manually maintained list here.
+- [ ] DB migration applied: 85 tables, 29 enums visible in Supabase dashboard (Table Editor). See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema or `docs/Plan/05-DATA-MODEL.md` for the full authoritative inventory rather than a manually maintained list here.
 - [ ] Admin user exists: can log in with seed phone number
 
 ---

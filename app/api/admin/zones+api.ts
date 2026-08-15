@@ -46,11 +46,11 @@ export async function GET(request: Request) {
     return Response.json({ zones: result });
   } catch (err: any) {
     if (err.status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (err.status === 403)
-      return Response.json({ error: "forbidden" }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/zones] list error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -101,14 +101,14 @@ export async function POST(request: Request) {
       return Response.json({ pricing: price }, { status: 201 });
     }
 
-    return Response.json({ error: "invalid_payload" }, { status: 400 });
+    return Response.json({ error: 'invalid_payload', message: 'Invalid request payload' }, { status: 400 });
   } catch (err: any) {
     if (err.status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (err.status === 403)
-      return Response.json({ error: "forbidden" }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/zones] create error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -145,7 +145,7 @@ export async function PUT(request: Request) {
         .where(eq(zones.id, id))
         .returning();
       if (!zone)
-        return Response.json({ error: "zone_not_found" }, { status: 404 });
+        return Response.json({ error: 'zone_not_found', message: 'Zone not found' }, { status: 404 });
       return Response.json({ zone });
     }
 
@@ -178,18 +178,18 @@ export async function PUT(request: Request) {
         .where(eq(pricing.id, id))
         .returning();
       if (!price)
-        return Response.json({ error: "pricing_not_found" }, { status: 404 });
+        return Response.json({ error: 'pricing_not_found', message: 'Pricing configuration not found' }, { status: 404 });
       return Response.json({ pricing: price });
     }
 
-    return Response.json({ error: "invalid_payload" }, { status: 400 });
+    return Response.json({ error: 'invalid_payload', message: 'Invalid request payload' }, { status: 400 });
   } catch (err: any) {
     if (err.status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (err.status === 403)
-      return Response.json({ error: "forbidden" }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/zones] update error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -198,7 +198,7 @@ export async function DELETE(request: Request) {
     await requireRole("admin")(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
+    if (!id) return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });
 
     // Soft-delete: deactivate zone and its pricing rows
     await db
@@ -212,10 +212,10 @@ export async function DELETE(request: Request) {
     return Response.json({ success: true });
   } catch (err: any) {
     if (err.status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (err.status === 403)
-      return Response.json({ error: "forbidden" }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/zones] delete error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

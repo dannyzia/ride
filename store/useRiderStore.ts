@@ -104,6 +104,7 @@ interface RiderState {
   setPickup: (addr: string, lat: number, lng: number) => void;
   setDropoff: (addr: string, lat: number, lng: number) => void;
   clearRoute: () => void;
+  reset: () => void;
   setActiveRide: (ride: ActiveRide | null) => void;
   patchActiveRide: (patch: Partial<ActiveRide>) => void;
   setSearchingRideId: (id: string | null) => void;
@@ -217,7 +218,7 @@ export function setCachedEstimates(
   };
 }
 
-export const useRiderStore = create<RiderState>((set, get) => ({
+const initialRiderState = {
   selectedVehicleType: null,
   estimates: [],
   estimating: false,
@@ -229,7 +230,7 @@ export const useRiderStore = create<RiderState>((set, get) => ({
   dropoffLng: null,
   activeRide: null,
   searchingRideId: null,
-  rideStatus: "idle",
+  rideStatus: "idle" as RiderState["rideStatus"],
   scheduledAt: null,
   promoCode: null,
   promoDiscountBdt: 0,
@@ -247,6 +248,10 @@ export const useRiderStore = create<RiderState>((set, get) => ({
   dropoffCoords: null,
   selectedDiscount: null,
   stops: [],
+};
+
+export const useRiderStore = create<RiderState>((set, get) => ({
+  ...initialRiderState,
 
   setSelectedVehicleType: (vt) => set({ selectedVehicleType: vt }),
   setEstimates: (estimates) => set({ estimates }),
@@ -309,6 +314,11 @@ export const useRiderStore = create<RiderState>((set, get) => ({
   setDropoffCoords: (coords) => set({ dropoffCoords: coords }),
   setSelectedDiscount: (discount) => set({ selectedDiscount: discount }),
   setStops: (stops) => set({ stops }),
+
+  reset: () => {
+    estimateCache = null;
+    set(initialRiderState);
+  },
 
   fetchActiveRide: async (token: string) => {
     try {

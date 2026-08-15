@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useChatStore, ChatMessage } from '@/store/useChatStore';
 import { colors } from '@/theme/goRide';
-import { useAppearance } from '@/lib/useAppearance';
+import { useIsDark } from '@/lib/useAppearance';
 
 interface ChatScreenProps {
   rideId: string;
@@ -22,8 +22,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
   const router = useRouter();
   const { messages, loading, error, hasMore, loadMessages, sendMessage, onNewMessage, clearChat } = useChatStore();
   const wsRef = useRef<WebSocket | null>(null);
-  const { theme } = useAppearance();
-  const isDark = theme === 'dark' || theme === 'system';
+  const isDark = useIsDark();
 
   // Initial load
   useEffect(() => {

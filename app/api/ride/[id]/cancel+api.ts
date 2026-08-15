@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import { parseJsonBody } from '@/lib/parseBody';
 import { evaluateCancellation } from '@/lib/cancellation';
 import { recordCancellationFee } from '@/lib/accounting';
 import { createCancellationCredit } from '@/lib/cancellationCompensation';
@@ -12,35 +13,33 @@ const cancelSchema = z.object({
   reason: z.string().max(255).optional(),
 });
 
-export async function POST(request: Request) {
+export async function POST(request: Request, { id }: { id: string }) {
   try {
-    const url = new URL(request.url);
-    const segments = url.pathname.split('/');
-    const rideId = segments[segments.indexOf('ride') + 1];
-    if (!rideId) return Response.json({ error: 'missing_ride_id' }, { status: 400 });
-
-    const _user = await verifySupabaseToken(request);
-
-    const body = await request.json().catch(() => ({}));
-    const parsed = cancelSchema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json({ error: 'validation_error', message: parsed.error.flatten() }, { status: 400 });
+    const uuidParam = z.string().uuid().safeParse(id);
+    if (!uuidParam.success) {
+      return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
     }
+    const rideId = id;
+
+    const user = await verifySupabaseToken(request);
+
+    const parsed = await parseJsonBody(request, cancelSchema);
+    if (!parsed.ok) return parsed.response;
 
     const { reason } = parsed.data;
 
-    const [dbUser] = await db.select().from(users).where(eq(users.auth_uid, _user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    const [dbUser] = await db.select().from(users).where(eq(users.auth_uid, user.id)).limit(1);
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     // Verify ownership for rider/driver cancellations
     const [ride] = await db.select().from(rides).where(eq(rides.id, rideId)).limit(1);
-    if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
+    if (!ride) return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
 
     if (ride.user_id !== dbUser.id) {
       const [driver] = await db.select({ id: drivers.id }).from(drivers)
         .where(eq(drivers.user_id, dbUser.id)).limit(1);
       if (!driver || ride.driver_id !== driver.id) {
-        return Response.json({ error: 'forbidden' }, { status: 403 });
+        return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
       }
     }
 
@@ -114,9 +113,33 @@ export async function POST(request: Request) {
 
     logger.info('[ride/cancel] ride cancelled', { rideId, cancelled_by, reason });
 
+    // Notify the assigned driver's WebSocket — fire-and-forget, must never
+    // fail the cancellation itself if utils-server is down.
+    if (ride.driver_id) {
+      const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
+      const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
+      if (internalSecret) {
+        fetch(`http://127.0.0.1:${wsPort}/internal/ride/cancelled`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${internalSecret}`,
+          },
+          signal: AbortSignal.timeout(3_000),
+          body: JSON.stringify({
+            ride_id: rideId,
+            driver_id: ride.driver_id,
+          }),
+        }).catch((e: any) =>
+          logger.error("[ride/cancel] WS ride:cancelled broadcast failed", { rideId, driverId: ride.driver_id, error: e.message }),
+        );
+      }
+    }
+
     return Response.json({ ok: true, status: 'cancelled' });
   } catch (e: any) {
-    if (e.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    if (e.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    logger.error('[ride/cancel] error', e);
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

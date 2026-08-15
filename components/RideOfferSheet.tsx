@@ -5,15 +5,14 @@ import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useWSStore } from "@/store";
 import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 import CountdownRing from "./CountdownRing";
 
 export default function RideOfferSheet() {
   const { activeOffer, setActiveOffer } = useDriverFlowStore();
   const ws = useWSStore((s) => s.ws);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   useEffect(() => {
     if (!activeOffer) return;

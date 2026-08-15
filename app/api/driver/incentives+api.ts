@@ -14,11 +14,11 @@ export async function GET(request: Request) {
     const supabaseUser = await verifySupabaseToken(request);
 
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
-    if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const [driver] = await db.select({ id: drivers.id, vehicle_type: drivers.vehicle_type })
       .from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
-    if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });
+    if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     const now = new Date();
 
@@ -92,8 +92,8 @@ export async function GET(request: Request) {
       total_bonus_calls_earned: Number(totalBonus ?? 0),
     });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/incentives] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

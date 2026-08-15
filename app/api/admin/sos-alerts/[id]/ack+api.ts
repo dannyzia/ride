@@ -8,7 +8,7 @@ import { z } from 'zod';
 export async function POST(request: Request, { id }: { id: string }) {
   try {
     const uuidParam = z.string().uuid().safeParse(id);
-    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid' }, { status: 400 });
+    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
 
     const { dbUser } = await requireRole('admin')(request);
 
@@ -21,13 +21,13 @@ export async function POST(request: Request, { id }: { id: string }) {
       .where(eq(sosAlerts.id, id))
       .returning();
 
-    if (!updated) return Response.json({ error: 'not_found' }, { status: 404 });
+    if (!updated) return Response.json({ error: 'not_found', message: 'Resource not found' }, { status: 404 });
 
     logger.info('[admin] SOS alert acknowledged', { id, by: dbUser.id });
     return Response.json({ success: true, alert: updated });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/sos-alerts/ack] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

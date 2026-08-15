@@ -45,10 +45,10 @@ export async function GET(request: Request) {
     }));
     return Response.json({ configs: result });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/rider-intro-configs] GET error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -68,10 +68,10 @@ export async function POST(request: Request) {
       .returning();
     return Response.json({ config }, { status: 201 });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/rider-intro-configs] POST error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -93,13 +93,13 @@ export async function PATCH(request: Request) {
       .where(eq(riderIntroConfigs.id, id))
       .returning();
     if (!config)
-      return Response.json({ error: 'config_not_found' }, { status: 404 });
+      return Response.json({ error: 'config_not_found', message: 'Configuration not found' }, { status: 404 });
     return Response.json({ config });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/rider-intro-configs] PATCH error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -108,16 +108,16 @@ export async function DELETE(request: Request) {
     await requireRole('admin')(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    if (!id) return Response.json({ error: 'id_required' }, { status: 400 });
+    if (!id) return Response.json({ error: 'id_required', message: 'ID parameter required' }, { status: 400 });
     await db
       .update(riderIntroConfigs)
       .set({ is_active: false, updated_at: new Date() })
       .where(eq(riderIntroConfigs.id, id));
     return Response.json({ success: true });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/rider-intro-configs] DELETE error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

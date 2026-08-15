@@ -29,8 +29,8 @@ export async function GET(request: Request) {
 
     return Response.json({ accounts, total_balance_bdt: totalBalance, total_balance_taka: totalBalance / 100 });
   } catch (err: any) {
-    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[accounting/balance] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

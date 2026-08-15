@@ -14,7 +14,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Location from "expo-location";
 import { colors, spacing, radii } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 
@@ -35,8 +35,7 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
   const [contacts, setContacts] = useState<SOSContact[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;

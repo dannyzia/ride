@@ -17,12 +17,12 @@ export async function POST(request: Request) {
     const supabaseUser = await verifySupabaseToken(request);
 
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
-    if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const body = await request.json();
     const parsed = statusSchema.safeParse(body);
     if (!parsed.success) {
-      return Response.json({ error: 'validation_error' }, { status: 400 });
+      return Response.json({ error: 'validation_error', message: 'Invalid input data' }, { status: 400 });
     }
 
     const { is_online, lat, lng } = parsed.data;
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     if (is_online) {
       const [driver] = await db.select({ id: drivers.id, status: drivers.status })
         .from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
-      if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });
+      if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
       if (driver.status !== 'active') {
         return Response.json({
           error: 'not_approved',
@@ -55,8 +55,8 @@ export async function POST(request: Request) {
     return Response.json({ success: true, is_online });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/status] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

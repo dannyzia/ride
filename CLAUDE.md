@@ -179,7 +179,7 @@ If you cannot confirm the six Section 20 gates are complete, **do not generate f
 - **UI**: NativeWind (TailwindCSS), Lottie, react-native-paper, GoRide design tokens in `theme/goRide.ts`
 - **State**: Zustand stores in `store/` (7 stores: useDriverStore, useRiderStore, useChatStore, useDriverStatusStore, usePackageStore, useCallLedgerStore, useDriverFlowStore)
 - **Map**: `@maplibre/maplibre-react-native` + Barikoi API (`barikoiapis`) via `utils/mapUtils.ts`
-- **Database**: Supabase PostgreSQL + Drizzle ORM (`src/db/schema.ts`) — 49 tables, 26 enums
+- **Database**: Supabase PostgreSQL + Drizzle ORM (`src/db/schema.ts`) — 85 tables, 29 enums
 - **Auth**: Supabase Auth phone OTP (`lib/auth.ts`, `lib/supabase.ts`, `lib/supabaseServer.ts`)
 - **Storage**: Supabase Storage (`driver-documents` bucket via `lib/imageToURL.ts`)
 - **Payments**: PortPos via WebView (`lib/portpos.ts`, `components/PaymentWebView.tsx`). Old `lib/bkash.ts` and `lib/nagad.ts` kept as inert fallback.
@@ -209,8 +209,8 @@ Rider requests ride → POST /api/ride/request → zone check + fare calc
   → Driver fetch:confirm → heartbeat deduction window (call_ledger write, unique on ride_id+driver_id)
 ```
 
-### Database Schema (49 tables, 26 enums, implemented)
-See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema or `docs/Plan/05-DATA-MODEL.md` for the full, authoritative table/enum inventory — do not manually re-list all 49 tables here; this avoids the list drifting out of sync (this section previously understated the count as "22 tables" for that reason).
+### Database Schema (85 tables, 29 enums, implemented)
+See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema or `docs/Plan/05-DATA-MODEL.md` for the full, authoritative table/enum inventory — do not manually re-list all 85 tables here; this avoids the list drifting out of sync (this section previously understated the count as "22 tables" for that reason).
 
 ### Seed Scripts (`scripts/`)
 `seed-system-config.js`, `seed-pricing.js`, `seed-packages.js`, `seed-platform-config.js`, `seed-admin.js`
@@ -275,6 +275,8 @@ See AGENTS.md for the complete rules reference. Key rules:
 - **Vehicle types**: 8 lowercase: `bike_basic`, `bike_standard`, `bike_plus`, `cng`, `car_economy`, `car_comfort`, `car_premium`, `car_xl`
 - **call_ledger writes**: ONLY `utils-server/heartbeat.ts` (deductions) and `lib/activateSubscription.ts` (initial_load, credit, expiry_writeoff)
 - **dispatch_offers writes**: ONLY `utils-server/dispatch.ts` and `utils-server/heartbeat.ts`
+- **payment_events writes**: row creation + PortPos invoice initiation ONLY via `lib/paymentEvents.ts` (`initiatePortposPayment` — used by rider/wallet/topup, rider/passes, driver/wallet/topup, package/purchase); status transitions (`paid`/`failed`) ONLY in `lib/activateSubscription.ts` and `app/api/payment/portpos/callback+api.ts`
+- **PortPos callback security**: the public callback must call `portposClient.verifyIPN()` (secret-bearing) and Zod-validate the invoice response before crediting wallets / activating subscriptions
 - **Single instance**: `INSTANCE_COUNT=1` required for WebSocket dispatch (no split-brain)
 - **No client secrets**: Payment credentials never in `EXPO_PUBLIC_*` vars
 - **No Clerk/Stripe**: Removed entirely — any reference is a bug
@@ -297,7 +299,7 @@ See AGENTS.md for the complete rules reference. Key rules:
 - **Daily cap check**: In dispatch candidate pool, not in heartbeat deduction path
 - **Batch exclusion**: Query `dispatch_offers` for excluded driver_ids before building each batch
 - **All tables**: uuid PKs, created_at/updated_at timestamptz. Append-only tables (call_ledger, dispatch_offers, used_challenges, rate_limits) exempt from updated_at.
-- **Soft deletes**: No hard deletes on users, drivers, riders, packages, call_ledger, rides, documents
+- **Soft deletes**: No hard deletes. `deleted_at` columns exist on users, packages, promoCodes, documents, incentiveDefinitions, riderAddresses; rides use status transitions (`cancelled`/`expired`) and drivers use `status` (`suspended`/`rejected`) — those tables have no `deleted_at` column
 - **Commit format**: Conventional Commits with scope (auth, dispatch, payment, ledger, admin, schema, driver, rider)
 - **ESLint**: This repo uses the **legacy `.eslintrc.json`** config (NOT flat config). Always lint via `npm run lint` — the script sets `ESLINT_USE_FLAT_CONFIG=false` explicitly, so do not run bare `npx eslint .`. Unused vars with `_` prefix are allowed (`argsIgnorePattern: '^_'`, `varsIgnorePattern: '^_'`).
 - **TypeScript**: `tsconfig.json` excludes `functions/` and `utils-server/`. Those have their own configs.
@@ -323,6 +325,17 @@ See `docs/Plan/18-KNOWN-ISSUES.md` before fixing bugs. Key issues:
 After modifying any code files, run:
 - `code-review-graph update` — always (fast, <2s)
 - `graphify update .` — after large batches of changes only
+
+### Codebase Memory MCP
+
+`codebase-memory-mcp` is available as an additional tool for code understanding and structural analysis. It can be used alongside `code-review-graph` and `graphify` — do not treat it as a replacement for either.
+
+Use it when:
+- You need fast structural queries across the codebase (`search_graph`, `trace_path`, `get_architecture`, `detect_changes`, etc.)
+- You want to explore relationships or trace call paths without running a full graph rebuild
+- You are investigating unfamiliar areas and need an index-assisted overview
+
+It complements the existing graph tools; run it in addition to them when it adds value to the current task.
 
 ## File Naming Conventions
 

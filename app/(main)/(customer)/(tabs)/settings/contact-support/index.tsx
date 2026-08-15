@@ -1,94 +1,203 @@
-import { useState } from "react";
-import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from "react-native";
+import {
+  Alert,
+  Linking,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { supabase } from "@/lib/supabase";
+import { Ionicons } from "@expo/vector-icons";
 import { logger } from "@/lib/logger";
+import { colors } from "@/theme/goRide";
+import { useAppearance, useIsDark } from "@/lib/useAppearance";
+import SettingsRow from "@/components/plan03/SettingsRow";
+
+const CHAT_ROUTE = "/(main)/(customer)/(tabs)/chat";
+const SUPPORT_EMAIL = "support@ride.app.bd";
+const SUPPORT_PHONE = process.env.EXPO_PUBLIC_SUPPORT_PHONE ?? "+880 1XXX-XXXXXX";
 
 export default function SettingsContactSupport() {
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
-  const handleSubmit = async () => {
-    if (!subject.trim() || !message.trim()) return;
-    setIsSubmitting(true); setError("");
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surface = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark
+    ? colors.textSecondaryDark
+    : colors.textSecondaryLight;
+
+  const openExternal = async (label: string, url: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) { setError("Not authenticated"); return; }
-      const res = await fetch(`${API_URL}/api/support/ticket`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          category: "general",
-          subject: subject.trim(),
-          description: message.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Failed to send"); return; }
-      setSent(true);
-      setTimeout(() => router.back(), 1500);
-    } catch (err: any) {
-      setError(err?.message || "Network error");
-      logger.error("ContactSupport submit failed", err);
-    } finally {
-      setIsSubmitting(false);
+      const canOpen = await Linking.canOpenURL(url);
+      if (!canOpen) {
+        Alert.alert(
+          "Unavailable",
+          "No app is available to handle this request on your device."
+        );
+        return;
+      }
+      await Linking.openURL(url);
+    } catch (err) {
+      logger.error(`[settings/contact-support] failed to open ${label}`, err);
+      Alert.alert(
+        "Something went wrong",
+        `Could not open ${label}. Please try again.`
+      );
     }
   };
 
+  const callEmergency = () => {
+    Alert.alert(
+      "Call Emergency: 999",
+      "This will place a call to the national emergency number. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Call 999",
+          style: "destructive",
+          onPress: () => {
+            void openExternal("emergency call", "tel:999");
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle={isDark ? "light-content" : "dark-content"}
+      />
+      <View style={[styles.header, { borderBottomColor: borderColor }]}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Contact Support</Text>
-        <View className="w-[50px]" />
+        <Text style={[styles.headerTitle, { color: textPrimary }]}>
+          Contact Support
+        </Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Toggle theme"
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          onPress={() => setTheme(isDark ? "light" : "dark")}
+        >
+          <Ionicons
+            name={isDark ? "sunny-outline" : "moon-outline"}
+            size={24}
+            color={textPrimary}
+          />
+        </TouchableOpacity>
       </View>
-      <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
-        {sent ? (
-          <View className="flex-1 items-center justify-center py-20">
-            <View className="w-20 h-20 rounded-full bg-goAccentLight items-center justify-center mb-4">
-              <Text className="text-[40px]">✅</Text>
-            </View>
-            <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Message sent</Text>
-            <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">We&apos;ll get back to you soon</Text>
-          </View>
-        ) : (
-          <>
-            <View className="mt-4 mb-6">
-              <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Subject</Text>
-              <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark" placeholder="What is this about?" placeholderTextColor="#9CA3AF" value={subject} onChangeText={setSubject} />
-            </View>
-            <View className="mb-6">
-              <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Message</Text>
-              <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark" placeholder="Describe your issue..." placeholderTextColor="#9CA3AF" value={message} onChangeText={setMessage} multiline numberOfLines={8} textAlignVertical="top" />
-            </View>
-            {error ? <Text className="text-[14px] font-Jakarta text-goDanger mb-3">{error}</Text> : null}
-            <TouchableOpacity
-              className={'bg-goPrimary rounded-full w-full py-[16px] items-center ' + (isSubmitting || !subject.trim() || !message.trim() ? 'opacity-40' : '')}
-              onPress={handleSubmit}
-              disabled={isSubmitting || !subject.trim() || !message.trim()}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size={20} color="#FFFFFF" />
-              ) : (
-                <Text className="text-[18px] font-JakartaBold text-goWhite">Send Message</Text>
-              )}
-            </TouchableOpacity>
-            <View className="mt-6 items-center">
-              <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
-                Or call us at {process.env.EXPO_PUBLIC_SUPPORT_PHONE ?? "+880 1XXX-XXXXXX"}
-              </Text>
-            </View>
-          </>
-        )}
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={[styles.sectionTitle, { color: textPrimary }]}>
+          Support Channels
+        </Text>
+        <View style={[styles.card, { backgroundColor: surface }]}>
+          <SettingsRow
+            icon="chatbubble-ellipses-outline"
+            label="Live Chat"
+            onPress={() => router.push(CHAT_ROUTE)}
+          />
+          <SettingsRow
+            icon="mail-outline"
+            iconColor={colors.info}
+            label="Email Support"
+            onPress={() => {
+              void openExternal("email", `mailto:${SUPPORT_EMAIL}`);
+            }}
+          />
+          <SettingsRow
+            icon="call-outline"
+            iconColor={colors.checkGreen}
+            label="Call Us"
+            onPress={() => {
+              void openExternal(
+                "phone call",
+                `tel:${SUPPORT_PHONE.replace(/\s+/g, "")}`
+              );
+            }}
+            isLast
+          />
+        </View>
+        <Text style={[styles.channelHint, { color: textSecondary }]}>
+          Email: {SUPPORT_EMAIL}
+        </Text>
+        <Text style={[styles.channelHint, { color: textSecondary }]}>
+          Phone: {SUPPORT_PHONE}
+        </Text>
+        <Text
+          style={[styles.sectionTitle, { color: textPrimary, marginTop: 32 }]}
+        >
+          Emergency
+        </Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Call Emergency 999"
+          activeOpacity={0.8}
+          onPress={callEmergency}
+          style={[styles.emergencyButton, { backgroundColor: colors.danger }]}
+        >
+          <Ionicons name="warning" size={20} color={colors.white} />
+          <Text style={styles.emergencyButtonText}>Call Emergency: 999</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    flex: 1,
+    fontFamily: "Jakarta-Bold",
+    fontSize: 28,
+  },
+  content: { padding: 16, paddingBottom: 32 },
+  sectionTitle: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 18,
+    marginBottom: 12,
+  },
+  card: { borderRadius: 16, overflow: "hidden" },
+  channelHint: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 13,
+    marginTop: 12,
+    marginLeft: 4,
+  },
+  emergencyButton: {
+    minHeight: 56,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  emergencyButtonText: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 16,
+    color: colors.white,
+  },
+});

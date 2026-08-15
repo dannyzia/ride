@@ -47,8 +47,8 @@ export async function GET(request: Request) {
 
     return Response.json({ rows: data });
   } catch (err: any) {
-    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[accounting/export] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

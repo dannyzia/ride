@@ -22,6 +22,13 @@ const client = postgres(DATABASE_URL, {
   max: 5,
   idle_timeout: 30,
   connect_timeout: 30,
+  // Recycle connections every 30min to prevent stale pooler connections
+  max_lifetime: 60 * 30,
+  // Set statement_timeout to 30s so no query can hang forever (prevents
+  // the 2-hour stuck UPDATE that blocked RLS migration).
+  connection: {
+    statement_timeout: 30000,
+  },
 });
 
 export const db = drizzle(client, { schema });

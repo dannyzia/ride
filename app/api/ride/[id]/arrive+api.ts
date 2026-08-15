@@ -4,15 +4,16 @@ import { rides, drivers } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { z } from "zod";
 
-export async function POST(request: Request) {
+export async function POST(request: Request, { id }: { id: string }) {
+  const parsed = z.string().uuid().safeParse(id);
+  if (!parsed.success) {
+    return Response.json({ error: "invalid_uuid", message: "Invalid UUID format" }, { status: 400 });
+  }
+  const rideId = parsed.data;
+
   try {
-    const url = new URL(request.url);
-    const segments = url.pathname.split("/");
-    const rideId = segments[segments.indexOf("ride") + 1];
-    if (!rideId)
-      return Response.json({ error: "missing_ride_id" }, { status: 400 });
-
     const { dbUser: user } = await requireRole("driver")(request);
 
     const [driver] = await db
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
       .where(eq(drivers.user_id, user.id))
       .limit(1);
     if (!driver)
-      return Response.json({ error: "driver_not_found" }, { status: 404 });
+      return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     const [ride] = await db
       .select()
@@ -29,9 +30,9 @@ export async function POST(request: Request) {
       .where(eq(rides.id, rideId))
       .limit(1);
     if (!ride)
-      return Response.json({ error: "ride_not_found" }, { status: 404 });
+      return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
     if (ride.driver_id !== driver.id) {
-      return Response.json({ error: "not_your_ride" }, { status: 403 });
+      return Response.json({ error: 'not_your_ride', message: 'This ride does not belong to you' }, { status: 403 });
     }
     if (!["matched", "driver_arriving"].includes(ride.status)) {
       return Response.json(
@@ -81,9 +82,9 @@ export async function POST(request: Request) {
     });
   } catch (err: any) {
     if (err.status === 401 || err.status === 403) {
-      return Response.json({ error: "unauthorized" }, { status: err.status });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: err.status });
     }
     logger.error("[ride/arrive] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

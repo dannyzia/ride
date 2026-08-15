@@ -18,9 +18,9 @@ export async function GET(request: Request) {
     const items = await db.select().from(lostItems).orderBy(desc(lostItems.reported_at));
     return Response.json({ items });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/lost-items] GET error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -36,8 +36,8 @@ export async function PATCH(request: Request) {
     await db.update(lostItems).set(update).where(eq(lostItems.id, parsed.data.item_id));
     return Response.json({ success: true });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/lost-items] PATCH error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

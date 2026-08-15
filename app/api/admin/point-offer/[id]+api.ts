@@ -33,16 +33,16 @@ export async function GET(request: Request, { id }: { id: string }) {
       .from(pointOffers)
       .where(eq(pointOffers.id, parsedId.data))
       .limit(1);
-    if (!row) return Response.json({ error: 'not_found' }, { status: 404 });
+    if (!row) return Response.json({ error: 'not_found', message: 'Resource not found' }, { status: 404 });
     return Response.json({ offer: row });
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
     if (status === 401)
-      return Response.json({ error: 'unauthorized' }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
-      return Response.json({ error: 'forbidden' }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/point-offer/:id] GET error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -69,7 +69,7 @@ export async function PATCH(request: Request, { id }: { id: string }) {
       .set(updates)
       .where(eq(pointOffers.id, parsedId.data))
       .returning();
-    if (!updated) return Response.json({ error: 'not_found' }, { status: 404 });
+    if (!updated) return Response.json({ error: 'not_found', message: 'Resource not found' }, { status: 404 });
 
     logger.info('[admin/point-offer/:id] updated', {
       offerId: parsedId.data,
@@ -80,10 +80,10 @@ export async function PATCH(request: Request, { id }: { id: string }) {
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
     if (status === 401)
-      return Response.json({ error: 'unauthorized' }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
-      return Response.json({ error: 'forbidden' }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/point-offer/:id] PATCH error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

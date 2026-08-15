@@ -23,7 +23,8 @@ export async function autoArbitrateDispute(disputeId: string): Promise<{ resolut
     .set({
       status: 'under_review',
       final_resolution: 'pending',
-      resolved_at: new Date(),
+      // NOTE: do NOT set resolved_at here — the dispute is not resolved yet.
+      // resolved_at is set only when an admin/auto flow actually resolves it.
     })
     .where(eq(fareDisputes.id, disputeId));
 

@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const supabaseUser = await verifySupabaseToken(request);
     const [user] = await db.select().from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user || user.role !== 'rider') {
-      return Response.json({ error: 'forbidden' }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     }
 
     const [ride] = await db.select().from(rides).where(
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (e: any) {
-    if (e.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    if (e.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

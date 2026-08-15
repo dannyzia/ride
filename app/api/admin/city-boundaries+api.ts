@@ -67,11 +67,11 @@ export async function GET(request: Request) {
   } catch (err: any) {
     const status = err.status ?? 500;
     if (status === 401)
-      return Response.json({ error: 'unauthorized' }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
-      return Response.json({ error: 'forbidden' }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/city-boundaries] GET error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       .where(eq(cityBoundaries.name, result.data.name))
       .limit(1);
     if (existing) {
-      return Response.json({ error: 'city_already_exists' }, { status: 409 });
+      return Response.json({ error: 'city_already_exists', message: 'City already registered' }, { status: 409 });
     }
 
     const [city] = await db
@@ -104,11 +104,11 @@ export async function POST(request: Request) {
   } catch (err: any) {
     const status = err.status ?? 500;
     if (status === 401)
-      return Response.json({ error: 'unauthorized' }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
-      return Response.json({ error: 'forbidden' }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/city-boundaries] POST error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -117,7 +117,7 @@ export async function PATCH(request: Request) {
     await requireAdmin(request);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
-    if (!id) return Response.json({ error: 'missing_id' }, { status: 400 });
+    if (!id) return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });
 
     const result = await parseJsonBody(request, updateSchema);
     if (!result.ok) return result.response;
@@ -134,18 +134,18 @@ export async function PATCH(request: Request) {
       .set(updates)
       .where(eq(cityBoundaries.id, id))
       .returning();
-    if (!updated) return Response.json({ error: 'not_found' }, { status: 404 });
+    if (!updated) return Response.json({ error: 'not_found', message: 'Resource not found' }, { status: 404 });
 
     clearCityBoundaryCache();
     return Response.json({ city_boundary_id: updated.id, updated: true });
   } catch (err: any) {
     const status = err.status ?? 500;
     if (status === 401)
-      return Response.json({ error: 'unauthorized' }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
-      return Response.json({ error: 'forbidden' }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/city-boundaries] PATCH error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -154,24 +154,24 @@ export async function DELETE(request: Request) {
     await requireAdmin(request);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
-    if (!id) return Response.json({ error: 'missing_id' }, { status: 400 });
+    if (!id) return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });
 
     const [updated] = await db
       .update(cityBoundaries)
       .set({ is_active: false, updated_at: new Date() })
       .where(eq(cityBoundaries.id, id))
       .returning();
-    if (!updated) return Response.json({ error: 'not_found' }, { status: 404 });
+    if (!updated) return Response.json({ error: 'not_found', message: 'Resource not found' }, { status: 404 });
 
     clearCityBoundaryCache();
     return Response.json({ city_boundary_id: updated.id, is_active: false });
   } catch (err: any) {
     const status = err.status ?? 500;
     if (status === 401)
-      return Response.json({ error: 'unauthorized' }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
-      return Response.json({ error: 'forbidden' }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/city-boundaries] DELETE error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

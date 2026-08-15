@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   try {
     const supabaseUser = await verifySupabaseToken(request);
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
-    if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const [pointRow] = await db.select().from(points).where(eq(points.user_id, user.id)).limit(1);
     const history = await db.select().from(pointTransactions).where(eq(pointTransactions.user_id, user.id)).orderBy(desc(pointTransactions.created_at)).limit(50);
@@ -18,9 +18,9 @@ export async function GET(request: Request) {
 
     return Response.json({ balance: pointRow?.balance ?? 0, history, offers });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[rider/points] GET error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -30,13 +30,13 @@ export async function POST(request: Request) {
   try {
     const supabaseUser = await verifySupabaseToken(request);
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
-    if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const parsed = await parseJsonBody(request, redeemSchema);
     if (!parsed.ok) return parsed.response;
 
     const [offer] = await db.select().from(pointOffers).where(and(eq(pointOffers.id, parsed.data.offer_id), eq(pointOffers.is_active, true))).limit(1);
-    if (!offer) return Response.json({ error: 'offer_not_found' }, { status: 404 });
+    if (!offer) return Response.json({ error: 'offer_not_found', message: 'Offer not found' }, { status: 404 });
 
     const result = await db.transaction(async (tx) => {
       const [pointRow] = await tx.select().from(points).where(eq(points.user_id, user.id)).limit(1).for('update');
@@ -52,11 +52,11 @@ export async function POST(request: Request) {
       return { ok: true as const };
     });
 
-    if (!result.ok) return Response.json({ error: 'insufficient_points' }, { status: 422 });
+    if (!result.ok) return Response.json({ error: 'insufficient_points', message: 'Insufficient loyalty points' }, { status: 422 });
     return Response.json({ success: true, reward_bdt: offer.reward_value_bdt ?? 0 });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[rider/points] POST error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

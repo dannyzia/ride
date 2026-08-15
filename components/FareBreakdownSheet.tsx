@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radii } from '@/theme/goRide';
-import { useAppearance } from '@/lib/useAppearance';
+import { useIsDark } from '@/lib/useAppearance';
 
 interface FareRow {
   label: string;
@@ -15,8 +15,7 @@ interface FareBreakdownSheetProps {
 
 export default function FareBreakdownSheet({ fareBreakdown }: FareBreakdownSheetProps) {
   const [expanded, setExpanded] = useState(false);
-  const { theme } = useAppearance();
-  const isDark = theme === 'dark' || theme === 'system';
+  const isDark = useIsDark();
 
   const detailRows: FareRow[] = [];
 

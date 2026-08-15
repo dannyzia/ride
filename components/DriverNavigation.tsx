@@ -7,7 +7,7 @@ import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface NavigationProps {
   pickupLat: number;
@@ -29,8 +29,7 @@ export default function DriverNavigation({ pickupLat, pickupLng, dropoffLat, dro
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
 
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
   const mapStyleUrl = useBarikoiMapStyle(isDark);
 
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;

@@ -8,7 +8,7 @@ import { z } from 'zod';
 export async function GET(request: Request, { id }: { id: string }) {
   try {
     const uuidParam = z.string().uuid().safeParse(id);
-    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid' }, { status: 400 });
+    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
 
     await requireRole('admin')(request);
     const rows = await db
@@ -26,8 +26,8 @@ export async function GET(request: Request, { id }: { id: string }) {
       .orderBy(desc(ticketReplies.created_at));
     return Response.json({ replies: rows });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/tickets/replies] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

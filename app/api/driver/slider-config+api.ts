@@ -9,11 +9,11 @@ export async function GET(req: Request) {
     const { supabaseUser } = await requireRole('driver')(req);
 
     const [dbUser] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
-    if (!dbUser) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const [driver] = await db.select({ vehicle_type: drivers.vehicle_type })
       .from(drivers).where(eq(drivers.user_id, dbUser.id)).limit(1);
-    if (!driver) return Response.json({ error: 'Driver not found' }, { status: 404 });
+    if (!driver) return Response.json({ error: 'Driver not found', message: 'Driver not found' }, { status: 404 });
 
     const [pricingRow] = await db.select({ per_km_bdt: pricing.per_km_bdt })
       .from(pricing)
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
       upper_bound:      Math.ceil(systemPerKmBdt * maxRatio),
     });
   } catch (err: any) {
-    if (err.status === 401 || err.status === 403) return Response.json({ error: 'unauthorized' }, { status: err.status });
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    if (err.status === 401 || err.status === 403) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: err.status });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

@@ -3,12 +3,11 @@ import { icons } from "@/constants/data";
 import CustomButton from "./CustomButton";
 import { useRouter } from "expo-router";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 export default function ErrorFindDriver() {
   const router = useRouter();
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -63,7 +62,7 @@ export default function ErrorFindDriver() {
         title="Find Other"
         className="w-7/12 mt-10"
         bgVariant="secondary"
-        onPress={() => router.replace("/(main)/(customer)/book-ride")}
+        onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
       />
     </View>
   );

@@ -8,8 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Share,
-  TextInput,
-  ScrollView,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -21,7 +20,7 @@ import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import SOSButton from "@/components/SOSButton";
 
 let MapViewLib: any = MapLibreGL.MapView ?? MapLibreGL.default ?? null;
@@ -70,15 +69,11 @@ export default function RideTrackingScreen() {
   const [etaMinutes, setEtaMinutes] = useState(5);
   const [tripSeconds, setTripSeconds] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [rating, setRating] = useState(0);
-  const [feedback, setFeedback] = useState("");
-  const [tipAmount, setTipAmount] = useState(0);
-  const [submittingRating, setSubmittingRating] = useState(false);
   const tripTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const ws = useWSStore((s) => s.ws);
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
   const mapStyleURL = useBarikoiMapStyle(isDark);
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -194,12 +189,18 @@ export default function RideTrackingScreen() {
         {
           text: "Cancel Ride",
           style: "destructive",
-          onPress: async () => {
-            try {
-              const res = await fetch(`${API_URL}/api/ride/${ride_id}/cancel`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-              });
+            onPress: async () => {
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+                const res = await fetch(`${API_URL}/api/ride/${ride_id}/cancel`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                  },
+                  body: JSON.stringify({}),
+                });
               if (res.ok) {
                 router.replace("/(main)/(customer)/(tabs)/home");
               } else {
@@ -223,50 +224,6 @@ export default function RideTrackingScreen() {
       logger.warn("[tracking] share failed");
     }
   };
-
-  const handleSubmitRating = async () => {
-    if (rating === 0) {
-      Alert.alert("Rate Driver", "Please select a star rating.");
-      return;
-    }
-    setSubmittingRating(true);
-    try {
-      const res = await fetch(`${API_URL}/api/ride/${ride_id}/rate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rating,
-          feedback: feedback.trim() || undefined,
-          tip_bdt: tipAmount * 100,
-          role: "rider",
-        }),
-      });
-      if (res.ok) {
-        router.replace("/(main)/(customer)/(tabs)/home");
-      } else {
-        const err = await res.json().catch(() => ({}));
-        Alert.alert("Error", err.error || "Could not submit rating.");
-      }
-    } catch {
-      Alert.alert("Error", "Network error. Please try again.");
-    } finally {
-      setSubmittingRating(false);
-    }
-  };
-
-  const StarRating = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => (
-    <View style={styles.starRow}>
-      {[1, 2, 3, 4, 5].map((star) => (
-        <TouchableOpacity key={star} onPress={() => onChange(star)} style={{ padding: 4 }}>
-          <Ionicons
-            name={star <= value ? "star" : "star-outline"}
-            size={36}
-            color={star <= value ? colors.amber : textDisabled}
-          />
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
 
   if (loading) {
     return (
@@ -298,6 +255,7 @@ export default function RideTrackingScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
+      <StatusBar translucent backgroundColor="transparent" barStyle={isDark ? "light-content" : "dark-content"} />
       {/* Map Layer */}
       <View style={StyleSheet.absoluteFill}>
         {MapViewLib ? (
@@ -373,6 +331,12 @@ export default function RideTrackingScreen() {
             {trackingState === "en_route" ? "Driver en route" : trackingState === "arrived" ? "Driver arrived" : trackingState === "in_progress" ? "On trip" : "Complete"}
           </Text>
         </View>
+        <TouchableOpacity
+          style={[styles.iconBtn, { backgroundColor: surfaceBg, borderColor: borderColor }]}
+          onPress={() => setTheme(isDark ? "light" : "dark")}
+        >
+          <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={22} color={textPrimary} />
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.iconBtn, { backgroundColor: surfaceBg, borderColor: borderColor }]}
           onPress={handleShare}
@@ -499,84 +463,27 @@ export default function RideTrackingScreen() {
           </>
         )}
 
-        {/* ── COMPLETE: RATE & PAY ── */}
+        {/* ── COMPLETE: FARE + RATE DRIVER ── */}
         {trackingState === "complete" && (
-          <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+          <View style={[styles.completeContainer, { backgroundColor: surfaceBg }]}>
             <Text style={[styles.completeTitle, { color: textPrimary }]}>Ride Complete</Text>
 
-            {/* Fare display */}
-            <View style={[styles.fareDisplay, { borderColor: borderColor }]}>
-              <Text style={[styles.fareAmount, { color: textPrimary }]}>৳{(ride.fare_bdt / 100).toFixed(0)}</Text>
-              <Text style={[styles.fareLabel, { color: textSecondary }]}>Pay driver in cash</Text>
+            <View style={[styles.fareCard, { borderColor: borderColor }]}>
+              <Text style={[styles.fareAmount, { color: colors.primary }]}>
+                ৳{(ride.fare_bdt / 100).toFixed(0)}
+              </Text>
+              <Text style={[styles.fareLabel, { color: textSecondary }]}>
+                Pay driver in cash
+              </Text>
             </View>
 
-            {/* Driver summary */}
-            <View style={[styles.driverSummary, { borderColor: borderColor }]}>
-              <View style={[styles.driverAvatar, { backgroundColor: colors.primary + "20" }]}>
-                {driver.avatar_url ? (
-                  <Image source={{ uri: driver.avatar_url }} style={styles.avatarImg} />
-                ) : (
-                  <Text style={[styles.avatarInitial, { color: colors.primary }]}>
-                    {driver.first_name?.[0]?.toUpperCase() || "D"}
-                  </Text>
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.driverName, { color: textPrimary }]}>{driver.full_name}</Text>
-                <Text style={[styles.ratingText, { color: textSecondary }]}>{driver.vehicle_color} {driver.vehicle_model}</Text>
-              </View>
-            </View>
-
-            {/* Star rating */}
-            <Text style={[styles.rateLabel, { color: textPrimary }]}>How was your ride?</Text>
-            <StarRating value={rating} onChange={setRating} />
-
-            {/* Feedback */}
-            <TextInput
-              style={[styles.feedbackInput, { color: textPrimary, borderColor: borderColor, backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
-              placeholder="Any feedback? (optional)"
-              placeholderTextColor={textDisabled}
-              value={feedback}
-              onChangeText={setFeedback}
-              multiline
-              numberOfLines={3}
-            />
-
-            {/* Tip */}
-            <Text style={[styles.rateLabel, { color: textPrimary, marginTop: 16 }]}>Add a tip (optional)</Text>
-            <View style={styles.tipRow}>
-              {[0, 20, 50, 100].map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[
-                    styles.tipBtn,
-                    {
-                      backgroundColor: tipAmount === t ? colors.primary : isDark ? colors.darkSecondary : colors.gray100,
-                      borderColor: tipAmount === t ? colors.primary : borderColor,
-                    },
-                  ]}
-                  onPress={() => setTipAmount(t)}
-                >
-                  <Text style={{ color: tipAmount === t ? colors.white : textPrimary, fontFamily: "Jakarta-SemiBold" }}>
-                    {t === 0 ? "No Tip" : `৳${t}`}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Submit */}
             <TouchableOpacity
-              style={[styles.submitBtn, { backgroundColor: rating > 0 ? colors.primary : textDisabled, opacity: rating > 0 ? 1 : 0.5 }]}
-              onPress={handleSubmitRating}
-              disabled={submittingRating || rating === 0}
+              style={[styles.rateDriverBtn, { backgroundColor: colors.primary }]}
+              onPress={() => router.push(`/(main)/(customer)/rate-driver?rideId=${ride_id}`)}
             >
-              {submittingRating ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <Text style={styles.submitBtnText}>Submit & Done</Text>
-              )}
+              <Text style={styles.rateDriverBtnText}>Rate Your Driver</Text>
             </TouchableOpacity>
-          </ScrollView>
+          </View>
         )}
       </View>
     </SafeAreaView>
@@ -728,20 +635,6 @@ const styles = StyleSheet.create({
   tripTimer: { fontFamily: "Jakarta-Bold", fontSize: 32 },
   tripLabel: { fontFamily: "Jakarta-Regular", fontSize: 13, marginTop: 2 },
   farePreview: { fontFamily: "Jakarta-Bold", fontSize: 24 },
-  completeTitle: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 22,
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  fareDisplay: {
-    alignItems: "center",
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    marginBottom: 16,
-  },
-  fareAmount: { fontFamily: "Jakarta-Bold", fontSize: 42 },
-  fareLabel: { fontFamily: "Jakarta-Regular", fontSize: 14, marginTop: 4 },
   driverSummary: {
     flexDirection: "row",
     alignItems: "center",
@@ -756,35 +649,41 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: "center",
   },
-  starRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 16,
+  completeContainer: {
+    alignItems: "center",
+    paddingVertical: 24,
+    gap: 20,
   },
-  feedbackInput: {
+  completeTitle: {
+    fontFamily: "Jakarta-Bold",
+    fontSize: 22,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  fareCard: {
+    alignItems: "center",
+    paddingVertical: 24,
+    paddingHorizontal: 32,
+    borderRadius: 16,
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
+    width: "100%",
+    gap: 4,
+  },
+  fareAmount: {
+    fontFamily: "Jakarta-Bold",
+    fontSize: 42,
+  },
+  fareLabel: {
     fontFamily: "Jakarta-Regular",
     fontSize: 14,
-    minHeight: 80,
-    textAlignVertical: "top",
   },
-  tipRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
-  tipBtn: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  submitBtn: {
-    borderRadius: 100,
+  rateDriverBtn: {
+    width: "100%",
     paddingVertical: 16,
+    borderRadius: 100,
     alignItems: "center",
-    marginTop: 4,
   },
-  submitBtnText: {
+  rateDriverBtnText: {
     fontFamily: "Jakarta-Bold",
     fontSize: 16,
     color: colors.white,

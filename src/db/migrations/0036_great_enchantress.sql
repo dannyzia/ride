@@ -1,0 +1,1 @@
+ALTER TABLE "promo_codes" ADD COLUMN "validity_days" integer DEFAULT 7 NOT NULL;

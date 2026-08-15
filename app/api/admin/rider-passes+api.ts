@@ -33,9 +33,9 @@ export async function GET(request: Request) {
     const rows = await db.select().from(riderPasses).orderBy(desc(riderPasses.created_at));
     return Response.json({ passes: rows });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/rider-passes] GET error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -47,9 +47,9 @@ export async function POST(request: Request) {
     const [pass] = await db.insert(riderPasses).values(parsed.data).returning();
     return Response.json({ pass });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/rider-passes] POST error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -62,9 +62,9 @@ export async function PATCH(request: Request) {
     await db.update(riderPasses).set({ ...data, updated_at: new Date() }).where(eq(riderPasses.id, id));
     return Response.json({ success: true });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/rider-passes] PATCH error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -73,14 +73,14 @@ export async function DELETE(request: Request) {
     await requireRole('admin')(request);
     const { searchParams } = new URL(request.url);
 const id = searchParams.get('id');
-     if (!id) return Response.json({ error: 'id_required' }, { status: 400 });
+     if (!id) return Response.json({ error: 'id_required', message: 'ID parameter required' }, { status: 400 });
      const uuidParam = z.string().uuid().safeParse(id);
-     if (!uuidParam.success) return Response.json({ error: 'invalid_uuid' }, { status: 400 });
+     if (!uuidParam.success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
      await db.update(riderPasses).set({ is_active: false, updated_at: new Date() }).where(eq(riderPasses.id, id));
     return Response.json({ success: true });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/rider-passes] DELETE error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

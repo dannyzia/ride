@@ -1,124 +1,302 @@
-import { useState, useEffect } from "react";
-import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  RefreshControl,
+  StatusBar,
+  StyleSheet,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import NotificationCard from "@/components/plan03/NotificationCard";
+import NotificationSkeleton from "@/components/plan03/NotificationSkeleton";
+import EmptyState from "@/components/plan03/EmptyState";
 
-interface Notification {
+const READ_IDS_KEY = "@rider_read_notification_ids";
+
+interface NotificationRow {
   id: string;
+  type: string;
   title: string;
-  body: string;
-  time_ago: string;
-  read: boolean;
-  type: "promo" | "trip" | "payment" | "system";
+  body: string | null;
+  data: Record<string, unknown> | null;
+  sent_at: string;
+  created_at: string;
 }
 
-const FALLBACK_NOTIFICATIONS: Notification[] = [
-  { id: "n1", title: "Promo unlocked!", body: "Use WELCOME10 for 10% off your next ride.", time_ago: "2h", read: false, type: "promo" },
-  { id: "n2", title: "Trip completed", body: "Thanks for riding with Ride. Rate your driver.", time_ago: "1d", read: true, type: "trip" },
-  { id: "n3", title: "Top-up successful", body: "৳500 has been added to your wallet.", time_ago: "2d", read: true, type: "payment" },
-  { id: "n4", title: "New feature", body: "You can now share your trip with trusted contacts.", time_ago: "3d", read: false, type: "system" },
-];
+interface NotificationsResponse {
+  notifications: NotificationRow[];
+}
+
+type CardType = "promo" | "trip" | "payment" | "system";
+
+function toCardType(apiType: string): CardType {
+  switch (apiType) {
+    case "promo":
+    case "promotion":
+      return "promo";
+    case "trip":
+    case "ride":
+      return "trip";
+    case "payment":
+    case "wallet":
+      return "payment";
+    default:
+      return "system";
+  }
+}
+
+function extractDeepLink(data: Record<string, unknown> | null): string | null {
+  if (!data) return null;
+  const candidates = [data.deep_link, data.link, data.route];
+  for (const value of candidates) {
+    if (typeof value === "string" && value.startsWith("/")) return value;
+  }
+  return null;
+}
 
 export default function Inbox() {
-  const [notifications, setNotifications] = useState<Notification[]>(FALLBACK_NOTIFICATIONS);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
+  const loadReadIds = useCallback(async (): Promise<Set<string>> => {
+    try {
+      const raw = await AsyncStorage.getItem(READ_IDS_KEY);
+      if (!raw) return new Set();
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return new Set(parsed.filter((v): v is string => typeof v === "string"));
+      }
+      return new Set();
+    } catch (err) {
+      logger.warn("[inbox] failed to load read notification ids", err);
+      return new Set();
+    }
+  }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setError(false);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setError(true);
+        return;
+      }
+      const res = await fetch(`${API_URL}/api/rider/notifications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        setError(true);
+        return;
+      }
+      const data = (await res.json()) as NotificationsResponse;
+      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+    } catch (err) {
+      setError(true);
+      logger.error("[inbox] notifications fetch failed", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        setLoading(true); setError("");
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) {
-          setLoading(false);
-          return;
-        }
-        const res = await fetch(`${API_URL}/api/rider/notifications`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          logger.warn("Notifications API failed, using fallback", data);
-          return;
-        }
-        if (!cancelled && data.notifications) {
-          setNotifications(data.notifications);
-        }
-      } catch (err: any) {
-        logger.warn("Notifications fetch failed, using fallback", err?.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      const ids = await loadReadIds();
+      if (!cancelled) setReadIds(ids);
+      await fetchNotifications();
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
+  }, [loadReadIds, fetchNotifications]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const markRead = useCallback((id: string) => {
+    setReadIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
   }, []);
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "promo": return "🎁";
-      case "trip": return "🚗";
-      case "payment": return "💳";
-      case "system": return "📢";
-      default: return "🔔";
+  // Persist outside the state updater (updaters must be pure; StrictMode double-invokes
+  // them) and prune to the last 200 ids so the AsyncStorage payload stays bounded.
+  useEffect(() => {
+    if (readIds.size === 0) return;
+    const pruned = [...readIds].slice(-200);
+    AsyncStorage.setItem(READ_IDS_KEY, JSON.stringify(pruned)).catch((err) => {
+      logger.warn("[inbox] failed to persist read notification ids", err);
+    });
+  }, [readIds]);
+
+  const handlePress = useCallback(
+    (notification: NotificationRow) => {
+      markRead(notification.id);
+      const link = extractDeepLink(notification.data);
+      if (link) router.push(link);
+    },
+    [markRead],
+  );
+
+  const listEmpty = useMemo(() => {
+    if (error) {
+      return (
+        <View style={styles.stateWrap}>
+          <Ionicons name="warning-outline" size={48} color={colors.danger} />
+          <Text style={[styles.errorTitle, { color: colors.danger }]}>
+            Could not load notifications
+          </Text>
+          <Text style={[styles.stateSubtitle, { color: textSecondary }]}>
+            Pull down to retry
+          </Text>
+        </View>
+      );
     }
-  };
+    return (
+      <EmptyState
+        icon="notifications-off-outline"
+        title="No notifications yet"
+        subtitle="We'll notify you about rides, promos, and updates"
+      />
+    );
+  }, [error, textSecondary]);
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: bg }]} edges={["top", "left", "right"]}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={bg}
+        translucent
+      />
+      <View style={[styles.header, { borderBottomColor: borderColor }]}>
+        <Text style={[styles.headerTitle, { color: textPrimary }]}>Notifications</Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Toggle theme"
+          onPress={() => setTheme(isDark ? "light" : "dark")}
+          style={[styles.themeToggle, { backgroundColor: surfaceBg, borderColor }]}
+        >
+          <Ionicons
+            name={isDark ? "sunny-outline" : "moon-outline"}
+            size={24}
+            color={textPrimary}
+          />
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Notifications</Text>
-        <View className="w-[50px]" />
       </View>
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#0CC25F" />
-        </View>
-      ) : error ? (
-        <View className="flex-1 items-center justify-center px-[24px]">
-          <Text className="text-[16px] font-Jakarta text-goDanger text-center">{error}</Text>
-        </View>
-      ) : notifications.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-[24px]">
-          <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">No notifications yet</Text>
+        <View style={styles.skeletonWrap}>
+          <NotificationSkeleton />
+          <NotificationSkeleton />
+          <NotificationSkeleton />
+          <NotificationSkeleton />
         </View>
       ) : (
-        <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
-          {notifications.map((n) => (
-            <View
-              key={n.id}
-              className={`p-[14px] rounded-[12px] border mb-3 ${
-                n.read
-                  ? "bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border-goBorderLight dark:border-goBorderDark"
-                  : "bg-goAccentLight border-goPrimary"
-              }`}
-            >
-              <View className="flex-row items-start">
-                <View className="w-8 h-8 rounded-full bg-goBgLight dark:bg-goBgDark items-center justify-center mr-3">
-                  <Text className="text-[16px]">{getIcon(n.type)}</Text>
-                </View>
-                <View className="flex-1">
-                  <View className="flex-row justify-between">
-                    <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{n.title}</Text>
-                    <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{n.time_ago}</Text>
-                  </View>
-                  <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">{n.body}</Text>
-                </View>
-                {!n.read && (
-                  <View className="w-2 h-2 rounded-full bg-goPrimary ml-2 mt-2" />
-                )}
-              </View>
-            </View>
-          ))}
-        </ScrollView>
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          ListEmptyComponent={listEmpty}
+          renderItem={({ item }) => (
+            <NotificationCard
+              type={toCardType(item.type)}
+              title={item.title}
+              body={item.body ?? ""}
+              isRead={readIds.has(item.id)}
+              createdAt={item.sent_at}
+              onPress={() => handlePress(item)}
+            />
+          )}
+        />
       )}
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    fontFamily: "Jakarta-Bold",
+    fontSize: 28,
+  },
+  themeToggle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  skeletonWrap: {
+    padding: 16,
+    gap: 12,
+  },
+  listContent: {
+    padding: 16,
+    gap: 12,
+  },
+  stateWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    paddingTop: 80,
+  },
+  errorTitle: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 15,
+    marginTop: 16,
+    textAlign: "center",
+  },
+  stateSubtitle: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 13,
+    marginTop: 8,
+    textAlign: "center",
+  },
+});

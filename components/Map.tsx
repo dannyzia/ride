@@ -1,8 +1,8 @@
-import { View, Text, Keyboard, Image, Appearance } from "react-native";
+import { View, Text, Keyboard, Image } from "react-native";
 import { useEffect, useRef } from "react";
 import { useCustomer } from "@/store";
 import { colors, spacing } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 import {
   useBarikoiMapStyle,
   createBarikoiClient,
@@ -19,9 +19,7 @@ let Camera: any = MapLibreGL.Camera ?? null;
 const Map = () => {
   const cameraRef = useRef<any>(null);
 
-  const { theme } = useAppearance();
-  const isDark =
-    theme === "dark" || (theme === "system" && Appearance.getColorScheme() === "dark");
+  const isDark = useIsDark();
   const mapStyleURL = useBarikoiMapStyle(isDark);
 
   const {

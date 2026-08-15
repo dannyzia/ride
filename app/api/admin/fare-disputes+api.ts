@@ -19,9 +19,9 @@ export async function GET(request: Request) {
     const disputes = await db.select().from(fareDisputes).orderBy(desc(fareDisputes.created_at));
     return Response.json({ disputes });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/fare-disputes] GET error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -38,7 +38,7 @@ export async function PATCH(request: Request) {
     if (!parsed.ok) return parsed.response;
 
     const [dispute] = await db.select().from(fareDisputes).where(eq(fareDisputes.id, parsed.data.dispute_id)).limit(1);
-    if (!dispute) return Response.json({ error: 'not_found' }, { status: 404 });
+    if (!dispute) return Response.json({ error: 'not_found', message: 'Resource not found' }, { status: 404 });
 
     const refundBdt = parsed.data.adjustment_bdt ?? (parsed.data.action === 'admin_approved' ? dispute.charged_fare_bdt - dispute.claimed_fare_bdt : 0);
 
@@ -60,8 +60,8 @@ export async function PATCH(request: Request) {
 
     return Response.json({ success: true, resolution: parsed.data.action, refund_bdt: refundBdt });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/fare-disputes] PATCH error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const end = url.searchParams.get('end');
     const format = url.searchParams.get('format');
 
-    if (!start || !end) return Response.json({ error: 'start and end params required' }, { status: 400 });
+    if (!start || !end) return Response.json({ error: 'start and end params required', message: 'Start and end parameters required' }, { status: 400 });
 
     const report = await getTaxReportRange(new Date(start), new Date(end));
 
@@ -37,9 +37,9 @@ export async function GET(request: Request) {
 
     return Response.json(report);
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/tax/report] GET error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -53,8 +53,8 @@ export async function POST(request: Request) {
       .where(inArray(taxLedgers.id, parsed.data.transaction_ids));
     return Response.json({ success: true });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/tax/report] POST error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

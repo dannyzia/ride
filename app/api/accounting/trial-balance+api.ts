@@ -38,8 +38,8 @@ export async function GET(request: Request) {
       is_balanced: Math.abs(totalDr - totalCr) < 1,
     });
   } catch (err: any) {
-    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[accounting/trial-balance] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

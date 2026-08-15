@@ -18,8 +18,8 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
 const start = url.searchParams.get('start');
      const end = url.searchParams.get('end');
-     if (start && isNaN(Date.parse(start))) return Response.json({ error: 'invalid_date' }, { status: 400 });
-     if (end && isNaN(Date.parse(end))) return Response.json({ error: 'invalid_date' }, { status: 400 });
+     if (start && isNaN(Date.parse(start))) return Response.json({ error: 'invalid_date', message: 'Invalid date format' }, { status: 400 });
+     if (end && isNaN(Date.parse(end))) return Response.json({ error: 'invalid_date', message: 'Invalid date format' }, { status: 400 });
      const refType = url.searchParams.get('reference_type');
     const limit = parseInt(url.searchParams.get('limit') || '50', 10);
     const offset = parseInt(url.searchParams.get('offset') || '0', 10);
@@ -42,8 +42,8 @@ const start = url.searchParams.get('start');
 
     return Response.json({ entries: entriesWithLines, limit, offset });
   } catch (err: any) {
-    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[accounting/entries] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

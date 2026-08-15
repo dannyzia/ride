@@ -1,9 +1,12 @@
 import { colors, spacing, radii } from "@/theme/goRide";
-import { API_URL, WS_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, Linking, Image, Alert, ActivityIndicator } from "react-native";
+import { API_URL } from "@/lib/config";
+import { View, Text, TouchableOpacity, Linking, Alert, ActivityIndicator } from "react-native";
 import React, { useEffect, useRef, useState, Fragment } from "react";
 import { useRouter } from "expo-router";
 import SlideButton from "@/components/SlideButton";
+import DriverActionBar from "@/components/DriverActionBar";
+import RideInfoCard from "@/components/RideInfoCard";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useDriver, useRideOfferStore, useWSStore } from "@/store";
 import { useSession } from "@/lib/session";
 import * as Location from "expo-location";
@@ -11,10 +14,16 @@ import { LocationObject } from "expo-location";
 import { supabase } from "@/lib/supabase";
 import RideLayout from "@/components/RideLayout";
 import TollParkingModal from "@/components/TollParkingModal";
-import { icons } from "@/constants/data";
+import { useIsDark } from "@/lib/useAppearance";
+import { Ionicons } from "@expo/vector-icons";
+import ReactNativeModal from "react-native-modal";
 
 const ReachCustomer = () => {
   const router = useRouter();
+  const isDark = useIsDark();
+
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   const {
     userAddress: _userAddress,
@@ -23,8 +32,8 @@ const ReachCustomer = () => {
     setRole: _setDriverRole,
     setFullName: _setDriverFullName,
   } = useDriver();
-  const { ws, setWebSocket } = useWSStore();
-  const { activeRideId, giveRideDetails } = useRideOfferStore();
+  const { ws } = useWSStore();
+  const { activeRideId, giveRideDetails, removeRideOffer, setActiveRideId } = useRideOfferStore();
   const { user } = useSession();
   const lastLocationRef = useRef<Location.LocationObject | null>(null);
   const [waiting, setWaiting] = useState(false);
@@ -32,6 +41,7 @@ const ReachCustomer = () => {
   const [waitLoading, setWaitLoading] = useState(false);
   const waitIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showTollModal, setShowTollModal] = useState(false);
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [stops, setStops] = useState<any[]>([]);
   const [currentStopIdx, setCurrentStopIdx] = useState(0);
 
@@ -61,35 +71,43 @@ const ReachCustomer = () => {
 
   useEffect(() => { return () => { if (waitIntervalRef.current) clearInterval(waitIntervalRef.current); }; }, []);
 
+  // Only the driver Home screen creates the WebSocket. If we got here without
+  // one the connection is dead — nothing on this screen can work, so send the
+  // driver home (Home owns reconnect).
   useEffect(() => {
-    let _socket: WebSocket | null = null;
-
     if (!ws) {
-      const newWs = new WebSocket(WS_URL);
-
-      newWs.onopen = async () => {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (token) {
-          newWs.send(
-            JSON.stringify({
-              type: "auth:hello",
-              access_token: token,
-              role: "driver",
-            }),
-          );
-        }
-      };
-
-      newWs.onerror = () => {};
-      setWebSocket(newWs);
-      _socket = newWs;
-    } else {
-      _socket = ws;
+      Alert.alert("Connection Lost", "You are no longer connected to the server. Returning home.", [
+        { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+      ]);
     }
-  }, [ws]);
+  }, [ws, router]);
+
+  // ── Ride-cancellation handling ─────────────────────────────────────
+  // Home owns the socket + its own onmessage, but while the driver is en route
+  // to the pickup this screen must react to ride:cancelled / rider:cancelled —
+  // otherwise the driver is stuck here after the rider cancels (Home's handler
+  // only resets store state, it does not navigate). Attach our own onmessage
+  // for the lifetime of this screen; Home re-attaches its handler on return.
+  useEffect(() => {
+    if (!ws) return;
+    const handleWsMessage = (event: MessageEvent) => {
+      try {
+        const msg = JSON.parse(event.data);
+        const type = msg.type as string;
+        if (type === "ride:cancelled" || type === "rider:cancelled") {
+          // Rider cancelled while en route — clear ride state and return home.
+          if (msg.ride_id) removeRideOffer(msg.ride_id);
+          setActiveRideId(null);
+          Alert.alert("Ride Cancelled", "Rider cancelled the ride", [
+            { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+          ]);
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+    ws.onmessage = handleWsMessage;
+  }, [ws, router, removeRideOffer, setActiveRideId]);
 
   // ── Fetch stops on mount ──────────────────────────────────────────────
   useEffect(() => {
@@ -224,7 +242,7 @@ const ReachCustomer = () => {
     if (customerPhone) {
       Linking.openURL(`tel:${customerPhone}`);
     } else {
-      alert("Phone number not available");
+      Alert.alert("Unavailable", "Phone number not available");
     }
   };
 
@@ -245,82 +263,65 @@ const ReachCustomer = () => {
           <Text
             style={{
               fontSize: 20,
-              fontWeight: "700",
-              fontFamily: "Urbanist",
-              color: colors.textPrimaryDark,
+              fontFamily: "Jakarta-Bold",
+              color: textPrimary,
               marginBottom: spacing["2xl"],
             }}
           >
             Ride Details
           </Text>
 
-          {/* Pickup Location */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "flex-start",
-              marginBottom: spacing.lg,
-            }}
-          >
-            <Image
-              source={icons.origin}
-              style={{ height: 24, width: 24, marginTop: 2 }}
-              resizeMode="contain"
-            />
-            <Text
-              style={{
-                marginLeft: spacing.md,
-                fontSize: 15,
-                color: colors.textPrimaryDark,
-                flex: 1,
-                lineHeight: 22,
-                fontFamily: "Urbanist",
-              }}
-            >
-              {pickupAddress}
-            </Text>
-          </View>
-
-          {/* Destination */}
-          <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-            <Image
-              source={icons.destination}
-              style={{ height: 24, width: 24, marginTop: 2 }}
-              resizeMode="contain"
-            />
-            <Text
-              style={{
-                marginLeft: spacing.md,
-                fontSize: 15,
-                color: colors.textPrimaryDark,
-                flex: 1,
-                lineHeight: 22,
-                fontFamily: "Urbanist",
-              }}
-            >
-              {destinationAddress}
-            </Text>
-          </View>
+          {/* Pickup / Destination */}
+          <RideInfoCard
+            origin={pickupAddress}
+            destination={destinationAddress}
+            stop_count={stops.length}
+          />
         </View>
 
         {/* Multi-Stops */}
         {stops.length > 0 && (
-          <View className="px-6 py-3">
-            <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">
-              📍 Stops ({currentStopIdx + 1}/{stops.length + 1})
+          <View style={{ marginTop: spacing.lg }}>
+            <Text
+              style={{
+                fontSize: 14,
+                fontFamily: "Jakarta-Bold",
+                color: textPrimary,
+                marginBottom: spacing.sm,
+              }}
+            >
+              Stops ({currentStopIdx + 1}/{stops.length + 1})
             </Text>
-            {stops.map((stop: any, i: number) => (
-              <View key={stop.id} className="flex-row items-center py-1">
-                <Text className={`text-[13px] font-Jakarta ${
-                  i < currentStopIdx ? 'text-goTextSecondaryLight dark:text-goTextSecondaryDark line-through' :
-                  i === currentStopIdx ? 'text-goPrimary font-JakartaBold' :
-                  'text-goTextSecondaryLight dark:text-goTextSecondaryDark'
-                }`}>
-                  {i + 1}. {stop.address}
-                </Text>
-              </View>
-            ))}
-            <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">Final: {destinationAddress}</Text>
+            {stops.map((stop: any, i: number) => {
+              const completed = i < currentStopIdx;
+              const current = i === currentStopIdx;
+              return (
+                <View key={stop.id} style={{ paddingVertical: 4 }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontFamily: current ? "Jakarta-Bold" : "Jakarta-Regular",
+                      color: current
+                        ? colors.primary
+                        : textSecondary,
+                      textDecorationLine: completed ? "line-through" : "none",
+                    }}
+                  >
+                    {i + 1}. {stop.address}
+                  </Text>
+                </View>
+              );
+            })}
+            <Text
+              style={{
+                fontSize: 13,
+                fontFamily: "Jakarta-Regular",
+                color: textSecondary,
+                marginTop: 4,
+              }}
+            >
+              Final: {destinationAddress}
+            </Text>
             {currentStopIdx < stops.length && (
               <TouchableOpacity
                 onPress={async () => {
@@ -338,90 +339,72 @@ const ReachCustomer = () => {
                     Alert.alert('Stop completed', 'Continue to next destination.');
                   }
                 }}
-                className="bg-goPrimary rounded-full py-3 px-6 items-center mt-3"
+                accessibilityRole="button"
+                accessibilityLabel={`Complete stop ${currentStopIdx + 1}`}
+                style={{
+                  backgroundColor: colors.primary,
+                  borderRadius: radii.pill,
+                  paddingVertical: spacing.md,
+                  paddingHorizontal: spacing["2xl"],
+                  alignItems: "center",
+                  marginTop: spacing.md,
+                  alignSelf: "flex-start",
+                }}
               >
-                <Text className="text-goWhite font-JakartaBold text-[15px]">✓ Complete Stop {currentStopIdx + 1}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+                  <Ionicons name="checkmark" size={16} color={colors.white} />
+                  <Text
+                    style={{
+                      color: colors.white,
+                      fontFamily: "Jakarta-Bold",
+                      fontSize: 15,
+                    }}
+                  >
+                    Complete Stop {currentStopIdx + 1}
+                  </Text>
+                </View>
               </TouchableOpacity>
             )}
           </View>
         )}
 
-        {/* Call Customer */}
-        {customerPhone ? (
-          <View
+        {/* Rider actions */}
+        <View style={{ marginTop: spacing["3xl"] }}>
+          <Text
             style={{
-              marginTop: spacing["3xl"],
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              backgroundColor: colors.bgDark,
-              padding: spacing.lg,
-              borderRadius: radii.md,
-              borderWidth: 1,
-              borderColor: colors.borderDark,
+              fontSize: 15,
+              fontFamily: "Jakarta-SemiBold",
+              color: textPrimary,
+              marginBottom: spacing.sm,
             }}
           >
-            <View>
-              <Text
-                style={{
-                  fontSize: 15,
-                  fontFamily: "Urbanist",
-                  fontWeight: "500",
-                  color: colors.textPrimaryDark,
-                }}
-              >
-                Need Help?
-              </Text>
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: colors.textSecondaryDark,
-                  fontFamily: "Urbanist",
-                }}
-              >
-                Call the customer
-              </Text>
-            </View>
-              <TouchableOpacity
-                onPress={callCustomer}
-                style={{
-                  backgroundColor: colors.primary,
-                  paddingHorizontal: spacing.lg,
-                  paddingVertical: spacing.sm,
-                  borderRadius: radii.pill,
-                  marginRight: 8,
-                }}
-              >
-                <Text
-                  style={{
-                    color: colors.white,
-                    fontFamily: "Urbanist",
-                    fontWeight: "700",
-                    fontSize: 14,
-                  }}
-                >
-                  Call
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={openNavigation}
-                style={{ backgroundColor: colors.gray600, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill, marginRight: 8 }}>
-                <Text style={{ color: colors.white, fontFamily: "Urbanist", fontWeight: "700", fontSize: 14 }}>🗺️ Nav</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={openChat}
-                style={{ backgroundColor: colors.gray600, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill }}>
-                <Text style={{ color: colors.white, fontFamily: "Urbanist", fontWeight: "700", fontSize: 14 }}>💬 Chat</Text>
-              </TouchableOpacity>
-          </View>
-        ) : null}
+            Need Help?
+          </Text>
+          <Text
+            style={{
+              fontSize: 13,
+              color: textSecondary,
+              fontFamily: "Jakarta-Regular",
+              marginBottom: spacing.md,
+            }}
+          >
+            Contact or navigate to your rider
+          </Text>
+          <DriverActionBar
+            onCall={callCustomer}
+            onNavigate={openNavigation}
+            onChat={openChat}
+          />
+        </View>
 
         {/* Slide Button */}
         <View style={{ marginTop: spacing["3xl"] }}>
           <Text
             style={{
               textAlign: "center",
-              color: colors.textSecondaryDark,
+              color: textSecondary,
               fontSize: 13,
-              fontFamily: "Urbanist",
+              fontFamily: "Jakarta-Regular",
               marginBottom: spacing.md,
             }}
           >
@@ -433,26 +416,111 @@ const ReachCustomer = () => {
             bgColor={colors.slideGreen}
             textColor={colors.white}
           />
-          <TouchableOpacity onPress={toggleWait} disabled={waitLoading}
-            className={`mt-3 py-3 px-4 rounded-full items-center ${waiting ? "bg-goAmber" : "bg-goGray600 dark:bg-goSurfaceElevatedDark"}`}>
-            {waitLoading ? <ActivityIndicator size={16} color="#FFF" /> : (
-              <Text className="text-white font-JakartaBold text-[14px]">
-                {waiting ? `⏱️ ${Math.floor(waitSeconds / 60)}:${String(waitSeconds % 60).padStart(2, '0')} — Stop` : '⏱️ Start Waiting Timer'}
-              </Text>
+          <TouchableOpacity
+            onPress={toggleWait}
+            disabled={waitLoading}
+            accessibilityRole="button"
+            accessibilityLabel={waiting ? "Stop waiting timer" : "Start waiting timer"}
+            style={{
+              marginTop: spacing.md,
+              paddingVertical: spacing.md,
+              paddingHorizontal: spacing.lg,
+              borderRadius: radii.pill,
+              alignItems: "center",
+              backgroundColor: waiting ? colors.amber : (isDark ? colors.surfaceElevatedDark : colors.gray600),
+            }}
+          >
+            {waitLoading ? (
+              <ActivityIndicator size={16} color={colors.white} />
+            ) : (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+                <Ionicons name="timer-outline" size={16} color={colors.white} />
+                <Text
+                  style={{
+                    color: colors.white,
+                    fontFamily: "Jakarta-Bold",
+                    fontSize: 14,
+                    fontVariant: ["tabular-nums"],
+                  }}
+                >
+                  {waiting
+                    ? `${Math.floor(waitSeconds / 60)}:${String(waitSeconds % 60).padStart(2, "0")} — Stop`
+                    : "Start Waiting Timer"}
+                </Text>
+              </View>
             )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => activeRideId && router.push(`/(main)/(rider)/cancellation-reasons?rideId=${activeRideId}`)}
-            className="mt-4 items-center"
+            accessibilityRole="button"
+            accessibilityLabel="Cancel ride"
+            style={{ marginTop: spacing.md, alignItems: "center" }}
           >
-            <Text className="text-goDanger text-[14px] font-JakartaBold">Cancel Ride</Text>
+            <Text style={{ color: colors.danger, fontSize: 14, fontFamily: "Jakarta-Bold" }}>
+              Cancel Ride
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowTollModal(true)} className="mt-3 py-2 px-4 rounded-full bg-goGray600 dark:bg-goSurfaceElevatedDark items-center">
-            <Text className="text-white font-JakartaBold text-[14px]">🧾 Add Charge</Text>
+          <TouchableOpacity
+            onPress={() => setShowTollModal(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Add toll or parking charge"
+            style={{
+              marginTop: spacing.md,
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.lg,
+              borderRadius: radii.pill,
+              backgroundColor: isDark ? colors.surfaceElevatedDark : colors.gray600,
+              alignItems: "center",
+              alignSelf: "center",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+              <Ionicons name="receipt-outline" size={16} color={colors.white} />
+              <Text style={{ color: colors.white, fontFamily: "Jakarta-Bold", fontSize: 14 }}>
+                Add Charge
+              </Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
     </RideLayout>
+
+      {/* Appearance toggle (top-right, beside RideLayout's back button) */}
+      <TouchableOpacity
+        onPress={() => setThemeModalVisible(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Appearance settings"
+        style={{
+          position: "absolute",
+          top: 64,
+          right: spacing.xl,
+          zIndex: 11,
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: isDark ? colors.surfaceElevatedDark : colors.surfaceLight,
+          borderWidth: 1,
+          borderColor: isDark ? colors.borderDark : colors.borderLight,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Ionicons
+          name={isDark ? "moon-outline" : "sunny-outline"}
+          size={18}
+          color={textPrimary}
+        />
+      </TouchableOpacity>
+      <ReactNativeModal
+        isVisible={themeModalVisible}
+        onBackdropPress={() => setThemeModalVisible(false)}
+        onBackButtonPress={() => setThemeModalVisible(false)}
+      >
+        <View style={{ width: "91%", alignSelf: "center" }}>
+          <ThemeToggle />
+        </View>
+      </ReactNativeModal>
+
       <TollParkingModal visible={showTollModal} rideId={activeRideId} onClose={() => setShowTollModal(false)} />
     </Fragment>
   );

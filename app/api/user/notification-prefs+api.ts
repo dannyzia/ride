@@ -27,14 +27,14 @@ export async function GET(request: Request) {
     const user = await verifySupabaseToken(request);
     const [dbUser] = await db.select({ notification_prefs: users.notification_prefs })
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const prefs = { ...DEFAULT_PREFS, ...(dbUser.notification_prefs as Record<string, boolean> ?? {}) };
     return Response.json({ notification_prefs: prefs }, { status: 200 });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/notification-prefs] GET error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -43,7 +43,7 @@ export async function PATCH(request: Request) {
     const user = await verifySupabaseToken(request);
     const [dbUser] = await db.select({ id: users.id, notification_prefs: users.notification_prefs })
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const parsed = await parseJsonBody(request, patchSchema);
     if (!parsed.ok) return parsed.response;
@@ -57,8 +57,8 @@ export async function PATCH(request: Request) {
 
     return Response.json({ notification_prefs: merged }, { status: 200 });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/notification-prefs] PATCH error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

@@ -15,16 +15,16 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const segments = url.pathname.split('/');
     const rideId = segments[segments.indexOf('ride') + 1];
-    if (!rideId) return Response.json({ error: 'missing_ride_id' }, { status: 400 });
+    if (!rideId) return Response.json({ error: 'missing_ride_id', message: 'Ride ID is required' }, { status: 400 });
 
     const { dbUser: user } = await requireRole('rider')(req);
 
     const [ride] = await db.select().from(rides)
       .where(and(eq(rides.id, rideId), eq(rides.user_id, user.id)))
       .limit(1);
-    if (!ride) return Response.json({ error: 'Ride not found' }, { status: 404 });
+    if (!ride) return Response.json({ error: 'Ride not found', message: 'Ride not found' }, { status: 404 });
     if (ride.status !== 'no_drivers' && ride.status !== 'pending') {
-      return Response.json({ error: 'Ride not in no_drivers state' }, { status: 409 });
+      return Response.json({ error: 'Ride not in no_drivers state', message: 'Ride is not in a no-drivers state' }, { status: 409 });
     }
 
     const cells = getH3Ring(
@@ -79,9 +79,9 @@ export async function GET(req: Request) {
       alternatives,
     });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[ride/alternatives] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

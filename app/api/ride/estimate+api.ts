@@ -12,6 +12,7 @@ import { getRouteDistance } from '@/lib/barikoi';
 import { VEHICLE_TYPE_VALUES, VEHICLE_TYPES } from '@/lib/vehicleTypes';
 import { loadSpeedTableFromConfig, type EtaSpeedTable, timeBucket, etaSpeedKmh, computeEtaMinutes } from '@/lib/eta';
 import { parseJsonBody } from '@/lib/parseBody';
+import { percentOf } from '@/lib/money';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
   try {
     const supabaseUser = await verifySupabaseToken(request);
     const [rider] = await db.select({ id: users.id, total_rides: users.total_rides }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
-    if (!rider) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    if (!rider) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
     const parsed = await parseJsonBody(request, estimateSchema);
     if (!parsed.ok) return parsed.response;
     const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, vehicle_type, preference_ids, stops } = parsed.data;
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
           eq(pricing.is_active, true),
         )).limit(1);
       if (!activePricing) {
-        return Response.json({ error: 'pricing_not_found' }, { status: 422 });
+        return Response.json({ error: 'pricing_not_found', message: 'Pricing configuration not found' }, { status: 422 });
       }
       const fare = calculateFare({
         base_fare_bdt:        activePricing.base_fare_bdt,
@@ -143,7 +144,7 @@ export async function POST(request: Request) {
         fare.surge_multiplier = surge.multiplier;
         fare.surge_fee_bdt = surge.surgeFeeBdt;
         const cp = Number(activePricing.platform_commission_percent ?? 0);
-        if (cp > 0) { fare.platform_commission_bdt = Math.floor(fare.total_bdt * cp / 100); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
+        if (cp > 0) { fare.platform_commission_bdt = percentOf(fare.total_bdt, cp); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
        }
 
       // ── Available discounts (calculated AFTER surge on the surged total) ──
@@ -216,7 +217,7 @@ export async function POST(request: Request) {
         fare.surge_multiplier = surge.multiplier;
         fare.surge_fee_bdt = surge.surgeFeeBdt;
         const cp = Number(p.platform_commission_percent ?? 0);
-        if (cp > 0) { fare.platform_commission_bdt = Math.floor(fare.total_bdt * cp / 100); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
+        if (cp > 0) { fare.platform_commission_bdt = percentOf(fare.total_bdt, cp); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
       }
 
       const availableDiscounts = await getAvailableDiscounts({
@@ -252,8 +253,8 @@ export async function POST(request: Request) {
     return Response.json({ estimates, distance_km: totalDistanceKm, preferences_applied: preference_ids ?? [] });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[ride/estimate] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

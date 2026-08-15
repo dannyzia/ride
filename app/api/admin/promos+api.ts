@@ -64,10 +64,10 @@ export async function POST(req: Request) {
     );
   } catch (err: any) {
     if (err.code === "23505") {
-      return Response.json({ error: "promo_code_exists" }, { status: 409 });
+      return Response.json({ error: 'promo_code_exists', message: 'Promo code already in use' }, { status: 409 });
     }
     logger.error("[admin/promos] create error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -76,7 +76,7 @@ export async function PATCH(req: Request) {
 
   const url = new URL(req.url);
   const promoId = url.searchParams.get("id");
-  if (!promoId) return Response.json({ error: "missing_id" }, { status: 400 });
+  if (!promoId) return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });
 
   const result = await parseJsonBody(req, patchSchema);
   if (!result.ok) return result.response;
@@ -107,7 +107,7 @@ export async function PATCH(req: Request) {
   if (data.is_active !== undefined) updates.is_active = data.is_active;
 
   if (Object.keys(updates).length <= 1) {
-    return Response.json({ error: "no_fields_to_update" }, { status: 400 });
+    return Response.json({ error: 'no_fields_to_update', message: 'No fields to update' }, { status: 400 });
   }
 
   try {
@@ -118,16 +118,16 @@ export async function PATCH(req: Request) {
       .returning();
 
     if (!promo)
-      return Response.json({ error: "promo_not_found" }, { status: 404 });
+      return Response.json({ error: 'promo_not_found', message: 'Promo code not found' }, { status: 404 });
 
     logger.info("[admin/promos] updated", { promoId: promo.id });
     return Response.json({ promo });
   } catch (err: any) {
     if (err.code === "23505") {
-      return Response.json({ error: "promo_code_exists" }, { status: 409 });
+      return Response.json({ error: 'promo_code_exists', message: 'Promo code already in use' }, { status: 409 });
     }
     logger.error("[admin/promos] update error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -136,7 +136,7 @@ export async function DELETE(req: Request) {
 
   const url = new URL(req.url);
   const promoId = url.searchParams.get("id");
-  if (!promoId) return Response.json({ error: "missing_id" }, { status: 400 });
+  if (!promoId) return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });
 
   const [promo] = await db
     .update(promoCodes)
@@ -145,7 +145,7 @@ export async function DELETE(req: Request) {
     .returning();
 
   if (!promo)
-    return Response.json({ error: "promo_not_found" }, { status: 404 });
+    return Response.json({ error: 'promo_not_found', message: 'Promo code not found' }, { status: 404 });
 
   logger.info("[admin/promos] deleted", { promoId: promo.id });
   return Response.json({ deleted: true });
@@ -237,10 +237,10 @@ export async function GET(req: Request) {
     });
   } catch (err: any) {
     if (err.status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (err.status === 403)
-      return Response.json({ error: "forbidden" }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/promos] GET error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

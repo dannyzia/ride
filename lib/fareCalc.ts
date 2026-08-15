@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { percentOf } from "./money";
 
 export interface PricingRow {
   base_fare_bdt: number;
@@ -104,7 +105,7 @@ export function calculateFare(
   // Platform commission (percentage of final fare, after floor)
   const commissionPct = pricing.platform_commission_percent ?? 0;
   const platformFee =
-    commissionPct > 0 ? Math.floor((totalFare * commissionPct) / 100) : 0;
+    commissionPct > 0 ? percentOf(totalFare, commissionPct) : 0;
 
   // Driver net
   const driverNet = totalFare - platformFee;

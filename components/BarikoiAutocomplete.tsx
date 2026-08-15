@@ -15,7 +15,7 @@ import { useCustomer } from "@/store";
 import { getBarikoiAutocompleteUrl } from "@/lib/useBarikoiMapStyle";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 const BarikoiAutocomplete = ({
   icon,
@@ -31,8 +31,7 @@ const BarikoiAutocomplete = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const { userLatitude, userLongitude } = useCustomer();
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const bg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;

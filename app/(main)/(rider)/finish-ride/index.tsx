@@ -1,15 +1,17 @@
 import { colors, spacing, radii } from "@/theme/goRide";
-import { API_URL, WS_URL } from "@/lib/config";
+import { API_URL } from "@/lib/config";
 import { SuccessCheckmark } from "@/components/SuccessCheckmark";
 import TollParkingModal from "@/components/TollParkingModal";
+import DriverActionBar from "@/components/DriverActionBar";
+import RideInfoCard from "@/components/RideInfoCard";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   View,
   Text,
-  ActivityIndicator,
   Alert,
-  Image,
   TouchableOpacity,
   Linking,
+  TextStyle,
 } from "react-native";
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "expo-router";
@@ -22,39 +24,75 @@ import { supabase } from "@/lib/supabase";
 import ReactNativeModal from "react-native-modal";
 import CustomButton from "@/components/CustomButton";
 import RideLayout from "@/components/RideLayout";
-import { icons } from "@/constants/data";
+import { useIsDark } from "@/lib/useAppearance";
+import { Ionicons } from "@expo/vector-icons";
+
+interface CompletionSummary {
+  total_bdt: number;
+  distance_km: number | null;
+  ride_time_min: number | null;
+}
 
 const FinishRide = () => {
   const router = useRouter();
   const { user } = useSession();
+  const isDark = useIsDark();
+
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   const { userAddress: _userAddress, setUserLocation: setDriverLocation } =
     useDriver();
-  const { activeRideId, giveRideDetails, removeRideOffer } = useRideOfferStore(
+  const { activeRideId, giveRideDetails, removeRideOffer, setActiveRideId } = useRideOfferStore(
     (state) => state,
   );
-  const { ws, setWebSocket } = useWSStore();
+  const { ws } = useWSStore();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showTollModal, setShowTollModal] = useState(false);
-  const [verifyReached, _setVerifyReached] = useState<boolean>(false);
-  const [verifyReachedStage, setVerifyReachedStage] = useState<
-    "waiting" | "alert"
-  >("waiting");
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const [completion, setCompletion] = useState<CompletionSummary | null>(null);
+  const [completedRideId, setCompletedRideId] = useState<string | null>(null);
   const lastLocationRef = useRef<Location.LocationObject | null>(null);
 
+  // Only the driver Home screen creates the WebSocket. If we got here without
+  // one the connection is dead — the ride can still complete over HTTP, but
+  // nothing else works, so send the driver home (Home owns reconnect).
   useEffect(() => {
     if (!ws) {
-      const newWs = new WebSocket(WS_URL);
-      newWs.onopen = () => {};
-      newWs.onerror = () => {};
-      setWebSocket(newWs);
+      Alert.alert("Connection Lost", "You are no longer connected to the server. Returning home.", [
+        { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+      ]);
     }
-    // NOTE: do NOT assign ws.onmessage here. Assigning ws.onmessage
-    // overwrites the driver Home's ride:offer handler, so after finishing one
-    // ride the driver stopped receiving offer popups entirely. The messages
-    // this previously handled (reachedVerified / customerDidNotVerify) were
-    // legacy types from the old drop-off flow and are no longer sent.
-  }, [ws]);
+  }, [ws, router]);
+
+  // ── Ride-cancellation handling ─────────────────────────────────────
+  // Home owns the socket + its own onmessage, but while the driver is on the
+  // drop-off screen this screen must react to ride:cancelled / rider:cancelled.
+  // Without this the "Slide to Confirm Drop-off" button stays live on a
+  // cancelled ride (and Home's handler only resets store state, it does not
+  // navigate). Attach our own onmessage for the lifetime of this screen; Home
+  // re-attaches its handler on return.
+  useEffect(() => {
+    if (!ws) return;
+    const handleWsMessage = (event: MessageEvent) => {
+      try {
+        const msg = JSON.parse(event.data);
+        const type = msg.type as string;
+        if (type === "ride:cancelled" || type === "rider:cancelled") {
+          // Rider cancelled while the ride was being completed — clear ride
+          // state and return home so the driver can pick up new work.
+          if (msg.ride_id) removeRideOffer(msg.ride_id);
+          setActiveRideId(null);
+          Alert.alert("Ride Cancelled", "Rider cancelled the ride", [
+            { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+          ]);
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+    ws.onmessage = handleWsMessage;
+  }, [ws, router, removeRideOffer, setActiveRideId]);
 
   const calculateDistance = (
     location1: LocationObject,
@@ -144,7 +182,6 @@ const FinishRide = () => {
   const rideDetails = giveRideDetails(activeRideId!);
   const customerPhone = rideDetails?.customerDetails?.number || "";
   const rideDuration = rideDetails?.duration || "0 mins";
-  const rideFare = rideDetails?.fare || "0";
   const rideDistance = rideDetails?.distance || "0 km";
   const pickupAddress =
     rideDetails?.pickupDetails?.pickupAddress || "Pickup location";
@@ -185,10 +222,22 @@ const FinishRide = () => {
         );
         return;
       }
+      const data: {
+        fare_breakdown?: { total_bdt?: number; distance_km?: number; ride_time_min?: number };
+        total_bdt?: number;
+        ride_time_min?: number;
+      } = await res.json().catch(() => ({}));
+      const fb = data.fare_breakdown ?? {};
+      setCompletion({
+        total_bdt: fb.total_bdt ?? data.total_bdt ?? 0,
+        distance_km: fb.distance_km ?? null,
+        ride_time_min: data.ride_time_min ?? fb.ride_time_min ?? null,
+      });
+      setCompletedRideId(activeRideId);
       removeRideOffer(activeRideId);
       setShowModal(true);
-    } catch (e: any) {
-      Alert.alert("Error", e?.message || "Network error completing ride");
+    } catch (e) {
+      Alert.alert("Error", e instanceof Error ? e.message : "Network error completing ride");
     }
   };
 
@@ -200,12 +249,6 @@ const FinishRide = () => {
     }
   };
 
-  const handleCallSupport = () => {
-    Linking.openURL("tel:16263").catch(() =>
-      Alert.alert("Error", "Unable to place call."),
-    );
-  };
-
   const openNav = () => {
     if (activeRideId) router.push(`/(main)/(rider)/customer-navigation/${activeRideId}`);
   };
@@ -215,173 +258,93 @@ const FinishRide = () => {
   };
 
   const handleGoHome = () => {
-    _setVerifyReached(false);
-    setVerifyReachedStage("waiting");
-    if (activeRideId) {
-      removeRideOffer(rideDetails?.id!);
-    }
     router.replace("/(main)/(rider)");
   };
 
-  const rowStyle = {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    marginBottom: spacing.sm,
-  };
+  // Prefer the values recalculated server-side in the complete response;
+  // fall back to what the offer carried (fare in the store is paisa).
+  const totalPaisa =
+    completion?.total_bdt ?? Number(rideDetails?.fare || 0);
+  const distanceText =
+    completion?.distance_km != null
+      ? `${completion.distance_km.toFixed(1)} km`
+      : rideDistance;
+  const durationText =
+    completion?.ride_time_min != null
+      ? `${completion.ride_time_min} min`
+      : rideDuration;
+
   const labelStyle = {
     fontSize: 13,
-    color: colors.textSecondaryDark,
-    fontFamily: "JakartaBold",
+    color: textSecondary,
+    fontFamily: "Jakarta-SemiBold",
   };
-  const valueStyle = {
+  const valueStyle: TextStyle = {
     fontSize: 13,
-    color: colors.textPrimaryDark,
-    fontFamily: "Urbanist",
-    fontWeight: "600" as const,
+    color: textPrimary,
+    fontFamily: "Jakarta-SemiBold",
+    fontVariant: ["tabular-nums"],
   };
 
   return (
-    <RideLayout disabled={true} title="" snapPoints={["40%", "50%"]}>
-      <View style={{ justifyContent: "space-between" }}>
+    <>
+      <RideLayout disabled={true} title="" snapPoints={["40%", "50%"]}>
+        <View style={{ justifyContent: "space-between" }}>
         {/* Heading */}
         <Text
           style={{
             fontSize: 20,
-            fontWeight: "700",
-            fontFamily: "Urbanist",
-            color: colors.textPrimaryDark,
+            fontFamily: "Jakarta-Bold",
+            color: textPrimary,
             marginBottom: spacing["2xl"],
           }}
         >
           Ride Details
         </Text>
 
-        {/* Pickup */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "flex-start",
-            marginBottom: spacing.lg,
-          }}
-        >
-          <Image
-            source={icons.origin}
-            style={{ height: 24, width: 24, marginTop: 2 }}
-            resizeMode="contain"
-          />
+        {/* Pickup / Destination */}
+        <RideInfoCard
+          origin={pickupAddress}
+          destination={destinationAddress}
+        />
+
+        {/* Rider actions */}
+        <View style={{ marginTop: spacing["3xl"] }}>
           <Text
             style={{
-              marginLeft: spacing.md,
               fontSize: 15,
-              color: colors.textPrimaryDark,
-              flex: 1,
-              lineHeight: 22,
-              fontFamily: "Urbanist",
+              fontFamily: "Jakarta-SemiBold",
+              color: textPrimary,
+              marginBottom: spacing.sm,
             }}
           >
-            {pickupAddress}
+            Need Help?
           </Text>
-        </View>
-
-        {/* Destination */}
-        <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-          <Image
-            source={icons.destination}
-            style={{ height: 24, width: 24, marginTop: 2 }}
-            resizeMode="contain"
-          />
           <Text
             style={{
-              marginLeft: spacing.md,
-              fontSize: 15,
-              color: colors.textPrimaryDark,
-              flex: 1,
-              lineHeight: 22,
-              fontFamily: "Urbanist",
+              fontSize: 13,
+              color: textSecondary,
+              fontFamily: "Jakarta-Regular",
+              marginBottom: spacing.md,
             }}
           >
-            {destinationAddress}
+            Contact or navigate while on trip
           </Text>
+          <DriverActionBar
+            onCall={handleCallCustomer}
+            onNavigate={openNav}
+            onChat={openChat}
+          />
         </View>
-
-        {/* Call Customer */}
-        {customerPhone ? (
-          <View
-            style={{
-              marginTop: spacing["3xl"],
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              backgroundColor: colors.bgDark,
-              padding: spacing.lg,
-              borderRadius: radii.md,
-              borderWidth: 1,
-              borderColor: colors.borderDark,
-            }}
-          >
-            <View>
-              <Text
-                style={{
-                  fontSize: 15,
-                  fontFamily: "Urbanist",
-                  fontWeight: "500",
-                  color: colors.textPrimaryDark,
-                }}
-              >
-                Need Help?
-              </Text>
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: colors.textSecondaryDark,
-                  fontFamily: "Urbanist",
-                }}
-              >
-                Call the customer
-              </Text>
-            </View>
-            <View style={{ flexDirection: "row" }}>
-              <TouchableOpacity
-                onPress={handleCallCustomer}
-                style={{
-                  backgroundColor: colors.primary,
-                  paddingHorizontal: spacing.lg,
-                  paddingVertical: spacing.sm,
-                  borderRadius: radii.pill,
-                  marginRight: 8,
-                }}
-              >
-                <Text
-                  style={{
-                    color: colors.white,
-                    fontFamily: "Urbanist",
-                    fontWeight: "700",
-                    fontSize: 14,
-                  }}
-                >
-                  Call
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={openNav}
-                style={{ backgroundColor: colors.gray600, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill, marginRight: 8 }}>
-                <Text style={{ color: colors.white, fontFamily: "Urbanist", fontWeight: "700", fontSize: 14 }}>🗺️ Nav</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={openChat}
-                style={{ backgroundColor: colors.gray600, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill }}>
-                <Text style={{ color: colors.white, fontFamily: "Urbanist", fontWeight: "700", fontSize: 14 }}>💬 Chat</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : null}
 
         {/* Slide */}
         <View style={{ marginTop: spacing["3xl"] }}>
           <Text
             style={{
               textAlign: "center",
-              color: colors.textSecondaryDark,
+              color: textSecondary,
               fontSize: 13,
-              fontFamily: "Urbanist",
+              fontFamily: "Jakarta-Regular",
               marginBottom: spacing.md,
             }}
           >
@@ -394,13 +357,25 @@ const FinishRide = () => {
             textColor={colors.white}
           />
           <TouchableOpacity
-            onPress={() => activeRideId && router.push(`/(main)/(rider)/cancellation-reasons?rideId=${activeRideId}`)}
-            className="mt-4 items-center"
+            onPress={() => setShowTollModal(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Add toll or parking charge"
+            style={{
+              marginTop: spacing.md,
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.lg,
+              borderRadius: radii.pill,
+              backgroundColor: isDark ? colors.surfaceElevatedDark : colors.gray600,
+              alignItems: "center",
+              alignSelf: "center",
+            }}
           >
-            <Text className="text-goDanger text-[14px] font-JakartaBold">Cancel Ride</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowTollModal(true)} className="mt-3 py-2 px-4 rounded-full bg-goGray600 dark:bg-goSurfaceElevatedDark items-center">
-            <Text className="text-white font-JakartaBold text-[14px]">🧾 Add Charge</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+              <Ionicons name="receipt-outline" size={16} color={colors.white} />
+              <Text style={{ color: colors.white, fontFamily: "Jakarta-Bold", fontSize: 14 }}>
+                Add Charge
+              </Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -409,11 +384,11 @@ const FinishRide = () => {
       <ReactNativeModal isVisible={showModal}>
         <View
           style={{
-            backgroundColor: colors.surfaceElevatedDark,
+            backgroundColor: isDark ? colors.surfaceElevatedDark : colors.surfaceLight,
             padding: spacing["2xl"],
             borderRadius: radii["2xl"],
             borderWidth: 1,
-            borderColor: colors.borderDark,
+            borderColor: isDark ? colors.borderDark : colors.borderLight,
             width: "91%",
             alignSelf: "center",
           }}
@@ -423,9 +398,8 @@ const FinishRide = () => {
             <Text
               style={{
                 fontSize: 20,
-                fontFamily: "Urbanist",
-                fontWeight: "700",
-                color: colors.textPrimaryDark,
+                fontFamily: "Jakarta-Bold",
+                color: textPrimary,
                 textAlign: "center",
                 marginBottom: spacing.xs,
               }}
@@ -435,8 +409,8 @@ const FinishRide = () => {
             <Text
               style={{
                 fontSize: 13,
-                color: colors.textSecondaryDark,
-                fontFamily: "Urbanist",
+                color: textSecondary,
+                fontFamily: "Jakarta-Regular",
                 textAlign: "center",
               }}
             >
@@ -444,157 +418,122 @@ const FinishRide = () => {
             </Text>
           </View>
 
+          {/* Cash collection — dominant */}
+          <Text
+            style={{
+              fontSize: 28,
+              fontFamily: "Jakarta-Bold",
+              color: colors.accent,
+              textAlign: "center",
+              marginBottom: spacing.lg,
+              fontVariant: ["tabular-nums"],
+            }}
+          >
+            Collect ৳{(totalPaisa / 100).toFixed(0)} cash from rider
+          </Text>
+
           {/* Fare Summary */}
           <View
             style={{
               marginVertical: spacing.lg,
-              backgroundColor: colors.bgDark,
+              backgroundColor: isDark ? colors.bgDark : colors.gray100,
               borderRadius: radii.md,
               padding: spacing.lg,
             }}
           >
-            <View style={rowStyle}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginBottom: spacing.sm,
+              }}
+            >
               <Text style={labelStyle}>Total Fare</Text>
               <Text
                 style={[valueStyle, { color: colors.primary, fontSize: 16 }]}
               >
-                ৳{rideFare}
+                ৳{(totalPaisa / 100).toFixed(0)}
               </Text>
             </View>
-            <View style={rowStyle}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginBottom: spacing.sm,
+              }}
+            >
               <Text style={labelStyle}>Distance</Text>
-              <Text style={labelStyle}>{rideDistance}</Text>
+              <Text style={valueStyle}>{distanceText}</Text>
             </View>
-            <View style={rowStyle}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginBottom: spacing.sm,
+              }}
+            >
               <Text style={labelStyle}>Duration</Text>
-              <Text style={labelStyle}>{rideDuration}</Text>
+              <Text style={valueStyle}>{durationText}</Text>
             </View>
           </View>
-
-          <Text
-            style={{
-              fontSize: 15,
-              fontFamily: "Urbanist",
-              fontWeight: "500",
-              color: colors.textPrimaryDark,
-              marginBottom: spacing.lg,
-            }}
-          >
-            Collect Payment From Customer
-          </Text>
 
           <CustomButton
             title="Rate Rider"
             className="w-full mb-3"
-            onPress={() => { setShowModal(false); router.push(`/(main)/(rider)/rate-rider?rideId=${activeRideId}`); }}
+            onPress={() => {
+              setShowModal(false);
+              if (completedRideId) {
+                router.push(`/(main)/(rider)/rate-rider?rideId=${completedRideId}`);
+              }
+            }}
           />
           <CustomButton
-            title="Browse Home"
+            title="Back to Home"
             className="w-full"
             onPress={handleGoHome}
           />
         </View>
       </ReactNativeModal>
 
-      {/* Waiting / Alert Modal */}
-      <ReactNativeModal isVisible={verifyReached}>
-        <View
-          style={{
-            backgroundColor: colors.surfaceElevatedDark,
-            borderWidth: 1,
-            borderColor: colors.borderDark,
-            padding: spacing["2xl"],
-            borderRadius: radii["2xl"],
-            alignItems: "center",
-            width: "91%",
-            alignSelf: "center",
-          }}
-        >
-          {verifyReachedStage === "waiting" ? (
-            <>
-              <Text
-                style={{
-                  fontSize: 20,
-                  fontFamily: "Urbanist",
-                  fontWeight: "700",
-                  color: colors.textPrimaryDark,
-                  textAlign: "center",
-                  marginBottom: spacing.sm,
-                }}
-              >
-                Waiting for Customer Confirmation
-              </Text>
-              <Text
-                style={{
-                  textAlign: "center",
-                  color: colors.textSecondaryDark,
-                  fontFamily: "Urbanist",
-                  marginBottom: spacing.xl,
-                }}
-              >
-                Request sent to customer. Awaiting their drop-off confirmation.
-              </Text>
-              <ActivityIndicator size="small" color={colors.primary} />
-            </>
-          ) : (
-            <>
-              <Text
-                style={{
-                  fontSize: 20,
-                  fontFamily: "Urbanist",
-                  fontWeight: "700",
-                  color: colors.danger,
-                  textAlign: "center",
-                  marginBottom: spacing.sm,
-                }}
-              >
-                ⚠️ No Response from Customer
-              </Text>
-              <Text
-                style={{
-                  textAlign: "center",
-                  color: colors.textSecondaryDark,
-                  fontFamily: "Urbanist",
-                  marginBottom: spacing["2xl"],
-                }}
-              >
-                Customer hasn&apos;t confirmed. Please check their safety or
-                report the situation.
-              </Text>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginBottom: spacing.xl,
-                  gap: 8,
-                }}
-              >
-                <CustomButton
-                  title="Call Customer"
-                  className="w-1/2 mb-3"
-                  onPress={handleCallCustomer}
-                />
-                <CustomButton
-                  title="Call Support"
-                  bgVariant="danger"
-                  textVariant="primary"
-                  className="w-1/2 mb-3"
-                  onPress={handleCallSupport}
-                />
-              </View>
-              <CustomButton
-                title="Browse Home"
-                bgVariant="secondary"
-                textVariant="secondary"
-                className="w-full"
-                onPress={handleGoHome}
-              />
-            </>
-          )}
+      <TollParkingModal visible={showTollModal} rideId={activeRideId} onClose={() => setShowTollModal(false)} />
+      </RideLayout>
+
+      {/* Appearance toggle (top-right, beside RideLayout's back button) */}
+      <TouchableOpacity
+        onPress={() => setThemeModalVisible(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Appearance settings"
+        style={{
+          position: "absolute",
+          top: 64,
+          right: spacing.xl,
+          zIndex: 11,
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: isDark ? colors.surfaceElevatedDark : colors.surfaceLight,
+          borderWidth: 1,
+          borderColor: isDark ? colors.borderDark : colors.borderLight,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Ionicons
+          name={isDark ? "moon-outline" : "sunny-outline"}
+          size={18}
+          color={textPrimary}
+        />
+      </TouchableOpacity>
+      <ReactNativeModal
+        isVisible={themeModalVisible}
+        onBackdropPress={() => setThemeModalVisible(false)}
+        onBackButtonPress={() => setThemeModalVisible(false)}
+      >
+        <View style={{ width: "91%", alignSelf: "center" }}>
+          <ThemeToggle />
         </View>
-    </ReactNativeModal>
-    <TollParkingModal visible={showTollModal} rideId={activeRideId} onClose={() => setShowTollModal(false)} />
-  </RideLayout>
+      </ReactNativeModal>
+    </>
   );
 };
 

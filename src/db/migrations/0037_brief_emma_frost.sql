@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "fare_disputes_one_per_ride" ON "fare_disputes" USING btree ("ride_id");

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       .where(eq(users.auth_uid, supabaseUser.id))
       .limit(1);
     if (!user)
-      return Response.json({ error: "user_not_found" }, { status: 404 });
+      return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const body = await request.json();
     const parsed = redeemSchema.safeParse(body);
@@ -51,13 +51,13 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (!promo)
-      return Response.json({ error: "promo_not_found" }, { status: 404 });
+      return Response.json({ error: 'promo_not_found', message: 'Promo code not found' }, { status: 404 });
 
     const now = new Date();
     if (promo.valid_from > now)
-      return Response.json({ error: "promo_not_found" }, { status: 404 });
+      return Response.json({ error: 'promo_not_found', message: 'Promo code not found' }, { status: 404 });
     if (promo.expires_at < now)
-      return Response.json({ error: "promo_expired" }, { status: 410 });
+      return Response.json({ error: 'promo_expired', message: 'Promo code has expired' }, { status: 410 });
 
     // Check per-rider usage
     const [{ riderUses }] = await db
@@ -132,8 +132,8 @@ export async function POST(request: Request) {
     });
   } catch (err: any) {
     if (err.status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[promo/redeem] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

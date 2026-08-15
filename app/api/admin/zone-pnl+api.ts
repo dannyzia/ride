@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
       const pnl = await getZonePnL(zoneId, periodStart, now);
       if (!pnl) {
-        return Response.json({ error: "zone_not_found" }, { status: 404 });
+        return Response.json({ error: 'zone_not_found', message: 'Zone not found' }, { status: 404 });
       }
 
       const budgets = await db.select().from(zoneBudgets).where(eq(zoneBudgets.zone_id, zoneId));
@@ -53,9 +53,9 @@ export async function GET(request: Request) {
 
     return Response.json({ zones: zonePnLs });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: "forbidden" }, { status: 403 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/zone-pnl] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

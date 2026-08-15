@@ -36,8 +36,8 @@ export async function POST(request: Request) {
     const uid = supabaseUser.id;
 
     const [user] = await db.select().from(users).where(eq(users.auth_uid, uid)).limit(1);
-    if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
-    if (user.role !== 'rider') return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
+    if (user.role !== 'rider') return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
 
     await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext('ride_schedule_' || ${user.id}))`);
 
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       .from(rides)
       .where(and(eq(rides.user_id, user.id), eq(rides.status, 'scheduled'), gte(rides.created_at, hourAgo)));
     if (Number(countResult?.count ?? 0) >= 3) {
-      return Response.json({ error: 'rider_rate_limited' }, { status: 429 });
+      return Response.json({ error: 'rider_rate_limited', message: 'Rate limit exceeded for this rider' }, { status: 429 });
     }
 
     const zoneCheck = await validatePickupZone(pickup_lat, pickup_lng);
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
     } else { insideKm = totalDistanceKm; }
 
     const [activePricing] = await db.select().from(pricing).where(and(eq(pricing.vehicle_type, vehicle_type as any), eq(pricing.zone_id, zoneId), eq(pricing.is_active, true))).limit(1);
-    if (!activePricing) return Response.json({ error: 'pricing_not_found' }, { status: 422 });
+    if (!activePricing) return Response.json({ error: 'pricing_not_found', message: 'Pricing configuration not found' }, { status: 422 });
 
     const fareBreakdown = calculateFare(
       {
@@ -217,8 +217,8 @@ export async function POST(request: Request) {
 
     return Response.json({ ride_id: rideId, fare_breakdown: fareBreakdown, status: 'scheduled' });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[ride/schedule] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

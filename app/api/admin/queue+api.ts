@@ -194,9 +194,9 @@ export async function GET(request: Request) {
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
     if (status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
-      return Response.json({ error: "forbidden" }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/queue] error", err);
     // Detect schema-mismatch (missing column) and return a specific machine
     // code so the admin UI can surface a helpful message. Full Postgres

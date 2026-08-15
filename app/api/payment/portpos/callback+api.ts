@@ -1,6 +1,12 @@
 // [public] PortPos payment callback — handles both redirect (GET) and IPN (POST)
 // After payment, PortPos redirects the user and also sends an IPN notification.
+//
+// SECURITY: this is a public endpoint that credits wallets / activates
+// subscriptions, so every request is verified against PortPos (verifyIPN) using
+// the secret-bearing auth token BEFORE any state is touched. A forged request
+// with no matching ACCEPTED invoice is rejected.
 
+import { z } from "zod";
 import { portposClient, isConfigured } from "@/lib/portpos";
 import { db } from "@/src/db";
 import { paymentEvents, compensationQueue, users, drivers, driverWalletTransactions, riderWalletTransactions, riderPasses, riderSubscriptions } from "@/src/db/schema";
@@ -9,6 +15,20 @@ import { activateSubscription } from "@/lib/activateSubscription";
 import { logger } from "@/lib/logger";
 import { recordSubscriptionSale, recordWalletTopup, recordRiderPassPurchase } from '@/lib/accounting';
 
+const ipnSchema = z.object({ invoice: z.string().min(1) });
+
+// Validated shape of the PortPos getInvoice response (order.amount is a taka
+// string like "500.00").
+const invoiceSchema = z.object({
+  invoice_id: z.string(),
+  order: z.object({
+    amount: z.string(),
+    currency: z.string(),
+    status: z.string(),
+  }),
+  reference: z.string().optional(),
+});
+
 const baseUrl = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
 const successUrl = `${baseUrl}/payment/success`;
 const failureUrl = `${baseUrl}/payment/failure`;
@@ -16,7 +36,42 @@ const failureUrl = `${baseUrl}/payment/failure`;
 async function processPortposPayment(
   invoiceId: string,
 ): Promise<"success" | "failed"> {
-  const inv = await portposClient.getInvoice(invoiceId);
+  // 1. Resolve the local payment_event that initiated this invoice — it is the
+  //    source of truth for the expected amount.
+  const [localRow] = await db
+    .select()
+    .from(paymentEvents)
+    .where(eq(paymentEvents.provider_txn_id, invoiceId))
+    .limit(1);
+  if (!localRow) {
+    logger.error("[portpos/callback] payment_event not found", { invoiceId });
+    return "failed";
+  }
+
+  // 2. Verify the IPN with PortPos itself (secret-bearing auth token). This is
+  //    what makes the endpoint forgery-proof: an attacker who knows the URL
+  //    cannot create an ACCEPTED invoice on PortPos for a wallet/package amount
+  //    they never paid.
+  const verified = await portposClient.verifyIPN(
+    invoiceId,
+    (localRow.amount_bdt / 100).toFixed(2),
+  );
+  if (!verified) {
+    logger.error("[portpos/callback] IPN verification failed", { invoiceId });
+    return "failed";
+  }
+
+  // 3. Fetch + validate the invoice from PortPos.
+  const invRaw = await portposClient.getInvoice(invoiceId);
+  const parsedInvoice = invoiceSchema.safeParse(invRaw);
+  if (!parsedInvoice.success) {
+    logger.error("[portpos/callback] unexpected invoice shape", {
+      invoiceId,
+      issues: parsedInvoice.error.issues,
+    });
+    return "failed";
+  }
+  const inv = parsedInvoice.data;
   const orderStatus = inv.order?.status;
 
   if (orderStatus !== "ACCEPTED" && orderStatus !== "COMPLETED") {
@@ -60,12 +115,13 @@ async function processPortposPayment(
       return;
     }
 
-    const invoiceAmountTaka = parseFloat(inv.order.amount);
-    const eventAmountTaka = row.amount_bdt / 100;
-    if (Math.abs(invoiceAmountTaka - eventAmountTaka) > 0.01) {
+    // Amount must match the locally-stored expected amount, compared in integer
+    // paisa (never float taka) to avoid rounding drift.
+    const invoiceAmountPaisa = Math.round(parseFloat(inv.order.amount) * 100);
+    if (invoiceAmountPaisa !== row.amount_bdt) {
       logger.error("[portpos/callback] amount mismatch", {
         invoiceAmount: inv.order.amount,
-        expectedAmount: eventAmountTaka,
+        expectedAmountPaisa: row.amount_bdt,
       });
       await tx
         .update(paymentEvents)
@@ -314,16 +370,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-    const invoiceId = body.invoice as string;
-
-    if (!invoiceId) {
-      logger.warn("[portpos/callback] IPN missing invoice");
+    const parsedBody = ipnSchema.safeParse(await request.json());
+    if (!parsedBody.success) {
+      logger.warn("[portpos/callback] IPN invalid body", {
+        issues: parsedBody.error.issues,
+      });
       return Response.json(
-        { result: "error", message: "missing_invoice" },
+        { result: "error", message: "invalid_body" },
         { status: 400 },
       );
     }
+    const invoiceId = parsedBody.data.invoice;
 
     const result = await processPortposPayment(invoiceId);
     return Response.json({

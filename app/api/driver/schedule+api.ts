@@ -23,11 +23,11 @@ export async function GET(request: Request) {
 
     const [dbUser] = await db.select({ id: users.id })
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const [driver] = await db.select({ id: drivers.id })
       .from(drivers).where(eq(drivers.user_id, dbUser.id)).limit(1);
-    if (!driver) return Response.json({ error: "driver_not_found" }, { status: 404 });
+    if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     const rows = await db.select({
       day_of_week: driverSchedule.day_of_week,
@@ -42,9 +42,9 @@ export async function GET(request: Request) {
     return Response.json({ schedule: rows }, { status: 200 });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[driver/schedule] GET error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -54,11 +54,11 @@ export async function PUT(request: Request) {
 
     const [dbUser] = await db.select({ id: users.id })
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const [driver] = await db.select({ id: drivers.id })
       .from(drivers).where(eq(drivers.user_id, dbUser.id)).limit(1);
-    if (!driver) return Response.json({ error: "driver_not_found" }, { status: 404 });
+    if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     const parsed = await parseJsonBody(request, putSchema);
     if (!parsed.ok) return parsed.response;
@@ -83,8 +83,8 @@ export async function PUT(request: Request) {
     return Response.json({ success: true }, { status: 200 });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[driver/schedule] PUT error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

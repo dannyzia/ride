@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const url = new URL(request.url);
     const segments = url.pathname.split('/');
     const rideId = segments[segments.indexOf('ride') + 1];
-    if (!rideId) return Response.json({ error: 'missing_ride_id' }, { status: 400 });
+    if (!rideId) return Response.json({ error: 'missing_ride_id', message: 'Ride ID is required' }, { status: 400 });
 
     const { dbUser: user } = await requireRole('driver')(request);
 
@@ -20,12 +20,12 @@ export async function POST(request: Request) {
       .from(drivers)
       .where(eq(drivers.user_id, user.id))
       .limit(1);
-    if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });
+    if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     const [ride] = await db.select().from(rides).where(eq(rides.id, rideId)).limit(1);
-    if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
+    if (!ride) return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
     if (ride.driver_id !== driver.id) {
-      return Response.json({ error: 'not_your_ride' }, { status: 403 });
+      return Response.json({ error: 'not_your_ride', message: 'This ride does not belong to you' }, { status: 403 });
     }
     if (!['driver_arrived', 'driver_arriving'].includes(ride.status)) {
       return Response.json({
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const pinParsed = await parseJsonBody(request, z.object({ pin: z.string() }));
     if (!pinParsed.ok) return pinParsed.response;
     if (!ride.start_pin || ride.start_pin !== pinParsed.data.pin) {
-      return Response.json({ error: 'invalid_pin' }, { status: 403 });
+      return Response.json({ error: 'invalid_pin', message: 'Invalid PIN' }, { status: 403 });
     }
 
     const now = new Date();
@@ -51,9 +51,9 @@ export async function POST(request: Request) {
 
   } catch (err: any) {
     if (err.status === 401 || err.status === 403) {
-      return Response.json({ error: 'unauthorized' }, { status: err.status });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: err.status });
     }
     logger.error('[ride/start] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

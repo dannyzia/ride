@@ -314,7 +314,7 @@ export const useRideOfferStore = create<RideOffer>((set, get) => ({
         const ride = get().rideOffer.find(offer => offer.id === rideId);
         return ride;
     },
-    setActiveRideId: (rideId: string) => {
+    setActiveRideId: (rideId: string | null) => {
         set(() => ({
             activeRideId: rideId
         }))

@@ -14,7 +14,7 @@ export async function GET(request: Request) {
       .where(eq(users.auth_uid, supabaseUser.id))
       .limit(1);
     if (!dbUser)
-      return Response.json({ error: "user_not_found" }, { status: 404 });
+      return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const now = new Date();
     const deductions = await db
@@ -53,8 +53,8 @@ export async function GET(request: Request) {
     });
   } catch (err: any) {
     if (err.status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[rider/fee-deductions] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

@@ -92,6 +92,12 @@ export const documentTypeEnum = pgEnum("document_type", [
   "driver_photo",
   "vehicle_video",
   "vehicle_photo_seats",
+  "nid_front",
+  "nid_back",
+  "uber_screenshot",
+  "pathao_screenshot",
+  "obhai_screenshot",
+  "indrive_screenshot",
 ]);
 export const documentStatusEnum = pgEnum("document_status", [
   "pending",
@@ -428,6 +434,7 @@ export const promoCodes = pgTable(
     target_role: varchar("target_role", { length: 20 }).notNull().default("rider"),
     metric: varchar("metric", { length: 30 }),
     target_value: integer("target_value"),
+    validity_days: integer("validity_days").notNull().default(7),
     created_by: uuid("created_by").references(() => users.id),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
@@ -1209,6 +1216,8 @@ export const vehicleModels = pgTable(
     has_ac: boolean("has_ac"),
     passenger_seats: integer("passenger_seats").notNull().default(4),
     is_active: boolean("is_active").notNull().default(true),
+    source: varchar("source", { length: 20 }).notNull().default("admin"),
+    created_by: uuid("created_by").references((): any => users.id),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -1784,7 +1793,10 @@ export const fareDisputes = pgTable("fare_disputes", {
   resolved_by: uuid("resolved_by").references(() => users.id),
   created_at: timestamptz("created_at").notNull().defaultNow(),
   resolved_at: timestamptz("resolved_at"),
-});
+}, (t) => [
+  // One dispute per ride — DB-level guard against duplicate disputes / double refunds.
+  uniqueIndex("fare_disputes_one_per_ride").on(t.ride_id),
+]);
 
 export const driverBlocklists = pgTable("driver_blocklists", {
   id: uuid("id").primaryKey().defaultRandom(),

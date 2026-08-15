@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   try {
     const supabaseUser = await verifySupabaseToken(request);
     const [appUser] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
-    if (!appUser) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    if (!appUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const rows = await db
       .select()
@@ -18,8 +18,8 @@ export async function GET(request: Request) {
       .limit(50);
     return Response.json({ notifications: rows });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[rider/notifications] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

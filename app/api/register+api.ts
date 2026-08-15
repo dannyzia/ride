@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
   const [existing] = await db.select().from(users).where(eq(users.phone, phone));
   if (existing) {
-    return Response.json({ error: "phone_exists" }, { status: 409 });
+    return Response.json({ error: 'phone_exists', message: 'Phone number already registered' }, { status: 409 });
   }
 
   const {
@@ -92,6 +92,6 @@ export async function POST(request: Request) {
       logger.error("[register] failed to delete orphaned auth user", { authUid, cleanupErr });
     });
 
-    return Response.json({ error: "registration_failed" }, { status: 500 });
+    return Response.json({ error: 'registration_failed', message: 'Registration failed' }, { status: 500 });
   }
 }

@@ -5,12 +5,11 @@ import { icons } from '@/constants/data'
 import { useRouter } from 'expo-router'
 import { formatDate } from '@/lib/utils'
 import { colors } from '@/theme/goRide'
-import { useAppearance } from '@/lib/useAppearance'
+import { useIsDark } from '@/lib/useAppearance'
 
 const RideCard = ({ ride }: { ride: RideData }) => {
   const router = useRouter();
-  const { theme } = useAppearance();
-  const isDark = theme === 'dark' || theme === 'system';
+  const isDark = useIsDark();
 
   const {
     origin_address,

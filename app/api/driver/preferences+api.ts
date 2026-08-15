@@ -14,10 +14,10 @@ export async function GET(request: Request) {
     const supabaseUser = await verifySupabaseToken(request);
 
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
-    if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const [driver] = await db.select({ id: drivers.id }).from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
-    if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });
+    if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     const rows = await db.select({
       preference_id: driverPreferences.preference_id,
@@ -37,9 +37,9 @@ export async function GET(request: Request) {
 
     return Response.json({ preferences: rows });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/preferences] GET error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -48,10 +48,10 @@ export async function POST(request: Request) {
     const supabaseUser = await verifySupabaseToken(request);
 
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
-    if (!user) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const [driver] = await db.select({ id: drivers.id }).from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
-    if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });
+    if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     const body = await request.json();
     const parsed = updateSchema.safeParse(body);
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
           eq(preferences.is_active, true),
         ));
       if (existingPrefs.length !== preference_ids.length) {
-        return Response.json({ error: 'invalid_preference_ids' }, { status: 400 });
+        return Response.json({ error: 'invalid_preference_ids', message: 'Invalid preference selection' }, { status: 400 });
       }
     }
 
@@ -91,8 +91,8 @@ export async function POST(request: Request) {
 
     return Response.json({ updated: true, preference_ids });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/preferences] POST error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

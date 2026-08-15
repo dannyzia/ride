@@ -7,7 +7,7 @@ import { useDriverStore } from "@/store/useDriverStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function SelectActiveVehicle() {
@@ -16,8 +16,7 @@ export default function SelectActiveVehicle() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;

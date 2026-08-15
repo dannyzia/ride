@@ -12,6 +12,7 @@ import { logger } from "@/lib/logger";
 import { useAppearance } from "@/lib/useAppearance";
 import "@/i18n/i18n";
 import { API_URL } from "@/lib/config";
+import { colors } from "@/theme/goRide";
 
 const isWeb = Platform.OS === "web";
 
@@ -174,7 +175,7 @@ export default function RootLayout() {
         if (data?.type === 'ride:offer') {
           router.push(`/(main)/(rider)`);
         } else {
-          router.push(`/(main)/(customer)/final-page?ride_id=${data.ride_id}`);
+          router.push(`/(main)/(customer)/ride-tracking/${data.ride_id}`);
         }
       }
     });
@@ -192,10 +193,10 @@ export default function RootLayout() {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: "#181A20",
+          backgroundColor: colors.bgDark,
         }}
       >
-        <ActivityIndicator size="large" color="#0CC25F" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }

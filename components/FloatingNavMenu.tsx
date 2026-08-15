@@ -22,7 +22,7 @@ import {
 } from "react-native-gesture-handler";
 import { colors } from "@/theme/goRide";
 import { router, usePathname } from "expo-router";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
@@ -38,6 +38,7 @@ const CUSTOMER_ITEMS: NavItem[] = [
   { route: "/(main)/(customer)/find-ride", label: "Book Ride", icon: "car", group: "Ride" },
   { route: "/(main)/(customer)/schedule-ride", label: "Schedule Ride", icon: "calendar-clock", group: "Ride" },
   { route: "/(main)/(customer)/(tabs)/rides/index", label: "Activity / Rides", icon: "history", group: "Activity" },
+  { route: "/(main)/(customer)/(tabs)/wallet/index", label: "Wallet", icon: "wallet", group: "Activity" },
   { route: "/(main)/(customer)/(tabs)/chat/index", label: "Chat", icon: "message-text", group: "Activity" },
   { route: "/(main)/(customer)/(tabs)/profile/index", label: "Account / Profile", icon: "account", group: "Account" },
   { route: "/(main)/(customer)/(tabs)/settings/index", label: "Settings", icon: "cog", group: "Account" },
@@ -74,8 +75,7 @@ interface FloatingNavMenuProps {
 export function FloatingNavMenu({ variant }: FloatingNavMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   // Draggable position — starts bottom-right
   const translateX = useSharedValue(SCREEN_W - FAB_SIZE - 20);
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     maxHeight: "70%",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,

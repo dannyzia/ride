@@ -75,8 +75,8 @@ export async function POST(request: Request) {
     logger.info('[admin/broadcast] done', { target, sent, failed, total: tokens.length });
     return Response.json({ success: true, sent, failed, total: tokens.length });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/broadcast] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

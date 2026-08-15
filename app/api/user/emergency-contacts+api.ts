@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const [dbUser] = await db.select({ id: users.id })
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const contacts = await db.select({
       id: userEmergencyContacts.id,
@@ -33,9 +33,9 @@ export async function GET(request: Request) {
     return Response.json({ contacts }, { status: 200 });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/emergency-contacts] GET error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
     const [dbUser] = await db.select({ id: users.id })
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const parsed = await parseJsonBody(request, contactSchema);
     if (!parsed.ok) return parsed.response;
@@ -65,9 +65,9 @@ export async function POST(request: Request) {
     return Response.json({ contact: contact! }, { status: 201 });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/emergency-contacts] POST error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -77,12 +77,12 @@ export async function DELETE(request: Request) {
 
     const [dbUser] = await db.select({ id: users.id })
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const url = new URL(request.url);
     const contactId = url.searchParams.get("id");
     if (!contactId) return Response.json({ error: "invalid_uuid", message: "Contact id is required" }, { status: 400 });
-    if (!z.string().uuid().safeParse(contactId).success) return Response.json({ error: "invalid_uuid" }, { status: 400 });
+    if (!z.string().uuid().safeParse(contactId).success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
 
     await db.delete(userEmergencyContacts)
       .where(and(
@@ -93,8 +93,8 @@ export async function DELETE(request: Request) {
     return Response.json({ success: true }, { status: 200 });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/emergency-contacts] DELETE error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

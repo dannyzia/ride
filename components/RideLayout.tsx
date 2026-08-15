@@ -7,7 +7,7 @@ import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
 import Map from './Map'
 import { useCustomer, useDriverStore } from '@/store'
 import { colors, radii, spacing } from '@/theme/goRide'
-import { useAppearance } from '@/lib/useAppearance'
+import { useIsDark } from '@/lib/useAppearance'
 
 const RideLayout = ({ title, children, snapPoints, disabled, footer }: {
     title: string,
@@ -18,8 +18,7 @@ const RideLayout = ({ title, children, snapPoints, disabled, footer }: {
 }) => {
     const { clearDestinationLocation } = useCustomer();
     const { clearSelectedDriver } = useDriverStore();
-    const { theme } = useAppearance();
-    const isDark = theme === 'dark' || theme === 'system';
+    const isDark = useIsDark();
 
     const bottomSheetRef = useRef<BottomSheet>(null);
     const router = useRouter()

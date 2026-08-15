@@ -10,11 +10,11 @@ export async function GET(request: Request) {
 
     const [dbUser] = await db.select({ id: users.id })
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const [driver] = await db.select({ id: drivers.id })
       .from(drivers).where(eq(drivers.user_id, dbUser.id)).limit(1);
-    if (!driver) return Response.json({ error: "driver_not_found" }, { status: 404 });
+    if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     const url = new URL(request.url);
     const range = url.searchParams.get("range") ?? "week";
@@ -76,8 +76,8 @@ export async function GET(request: Request) {
     }, { status: 200 });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[driver/earnings/breakdown] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

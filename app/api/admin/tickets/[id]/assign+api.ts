@@ -13,7 +13,7 @@ const assignSchema = z.object({
 export async function POST(request: Request, { id }: { id: string }) {
   try {
     const uuidParam = z.string().uuid().safeParse(id);
-    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid' }, { status: 400 });
+    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
 
     await requireRole('admin')(request);
     const parsed = await parseJsonBody(request, assignSchema);
@@ -25,8 +25,8 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     return Response.json({ success: true });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/tickets/assign] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

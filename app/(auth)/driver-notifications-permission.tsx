@@ -6,11 +6,30 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Crypto from "expo-crypto";
 import CustomButton from "@/components/CustomButton";
+
+const DEVICE_ID_KEY = "@driver_device_id";
+
+// Stable device identifier — push tokens rotate (reinstall, OS changes), so they
+// must not be used as device_id or user_devices accumulates stale duplicate rows.
+async function getDeviceId(): Promise<string> {
+  try {
+    const existing = await AsyncStorage.getItem(DEVICE_ID_KEY);
+    if (existing) return existing;
+    const id = Crypto.randomUUID();
+    await AsyncStorage.setItem(DEVICE_ID_KEY, id);
+    return id;
+  } catch (err) {
+    logger.warn("[push] failed to persist device id", err);
+    return Crypto.randomUUID();
+  }
+}
 
 async function registerPushToken() {
   try {
@@ -29,10 +48,12 @@ async function registerPushToken() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return;
 
+    const device_id = await getDeviceId();
+
     await fetch(`${API_URL}/api/user/device`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ push_token: pushToken, platform, device_id: pushToken }),
+      body: JSON.stringify({ push_token: pushToken, platform, device_id }),
     });
   } catch (e) {
     logger.warn("[push] driver token registration failed", e);
@@ -41,8 +62,7 @@ async function registerPushToken() {
 
 export default function DriverNotificationsPermission() {
   const [busy, setBusy] = useState(false);
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;

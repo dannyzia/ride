@@ -2,17 +2,17 @@ import { View, Text, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import CustomButton from "@/components/CustomButton";
-import { useAppearance } from "@/lib/useAppearance";
+import { colors } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 export default function WelcomeScreen() {
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   return (
     <SafeAreaView
       className="flex-1 px-6"
       style={{
-        backgroundColor: isDark ? "#181A20" : "#F8FAFC",
+        backgroundColor: isDark ? colors.bgDark : colors.bgLight,
       }}
     >
       {/* Top spacer */}
@@ -28,7 +28,7 @@ export default function WelcomeScreen() {
         <Text
           className="text-[32px] font-JakartaBold mb-2 text-center"
           style={{
-            color: isDark ? "#FFFFFF" : "#1C1E23",
+            color: isDark ? colors.textPrimaryDark : colors.textPrimaryLight,
           }}
         >
           Welcome to Ride
@@ -36,7 +36,7 @@ export default function WelcomeScreen() {
         <Text
           className="text-[16px] font-Jakarta text-center mb-12"
           style={{
-            color: isDark ? "#9CA3AF" : "#6B7280",
+            color: isDark ? colors.textSecondaryDark : colors.textSecondaryLight,
           }}
         >
           Your ride, your way. Get started in seconds.
@@ -48,7 +48,7 @@ export default function WelcomeScreen() {
         <View
           className="w-48 h-48 rounded-full items-center justify-center"
           style={{
-            backgroundColor: isDark ? "rgba(12,194,95,0.1)" : "rgba(12,194,95,0.08)",
+            backgroundColor: isDark ? colors.primary + "1A" : colors.primary + "14",
           }}
         >
           <Text className="text-[64px]">🚗</Text>

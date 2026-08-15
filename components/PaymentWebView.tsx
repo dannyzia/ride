@@ -9,7 +9,7 @@ import {
 import { WebView } from "react-native-webview";
 import { colors } from "@/theme/goRide";
 import { API_URL } from "@/lib/config";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface PaymentWebViewProps {
   bkashURL: string;
@@ -28,8 +28,7 @@ export default function PaymentWebView({
   const [polling, setPolling] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;

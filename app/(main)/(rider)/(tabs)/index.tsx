@@ -1,23 +1,38 @@
-import { View, Text, TouchableOpacity, Alert, TextInput, Modal, Animated } from "react-native";
+import { View, Text, TouchableOpacity, Alert, Animated, StyleSheet, AccessibilityInfo } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { API_URL, WS_URL } from "@/lib/config";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Location from "expo-location";
+import ReactNativeModal from "react-native-modal";
 import { supabase } from "@/lib/supabase";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useRideOfferStore, useWSStore } from "@/store";
-import CustomButton from "@/components/CustomButton";
 import SOSButton from "@/components/SOSButton";
 import RideOfferSheet from "@/components/RideOfferSheet";
+import DriverStatsBar from "@/components/DriverStatsBar";
+import ThemeToggle from "@/components/ThemeToggle";
 import ScreenLabel from "@/components/ScreenLabel";
-import { colors } from "@/theme/goRide";
+import { colors, spacing, radii } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 import MapLibreGL from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { logger } from "@/lib/logger";
+
+interface DailyStats {
+  earnings_bdt: number;
+  trips: number;
+  online_hours: number;
+  rating: number;
+  acceptance_rate: number;
+}
+
+const RADAR_RING_COUNT = 3;
+const RADAR_RING_SIZE = 120;
+const GO_CIRCLE_SIZE = 80;
 
 export default function DriverHome() {
   const {
@@ -31,7 +46,16 @@ export default function DriverHome() {
     setWsConnected,
   } = useDriverStore();
   const { addRideOffer, removeRideOffer, setActiveRideId } = useRideOfferStore();
-  const { setActiveOffer } = useDriverFlowStore();
+  const { activeOffer, setActiveOffer } = useDriverFlowStore();
+
+  const isDark = useIsDark();
+  const mapStyleUrl = useBarikoiMapStyle(isDark);
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
@@ -39,26 +63,84 @@ export default function DriverHome() {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
     null,
   );
-  const mapStyleUrl = useBarikoiMapStyle(false);
-
-  const [earningsToday, setEarningsToday] = useState(0);
-  const [goal, setGoal] = useState(100000);
-  const [goalModalVisible, setGoalModalVisible] = useState(false);
-  const [goalInput, setGoalInput] = useState("1000");
   const [locationLoading, setLocationLoading] = useState(true);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [stats, setStats] = useState<DailyStats>({
+    earnings_bdt: 0,
+    trips: 0,
+    online_hours: 0,
+    rating: 0,
+    acceptance_rate: 0,
+  });
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
-  // Pulsing marker animation
+  const markerPulseAnim = useRef(new Animated.Value(1)).current;
+  const goOnlinePulse = useRef(new Animated.Value(0)).current;
+  const radarRings = useRef(
+    Array.from({ length: RADAR_RING_COUNT }, () => new Animated.Value(0)),
+  ).current;
+
+  // ── Reduce-motion preference ──────────────────────────────────────
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+  }, []);
+
+  // Pulsing driver-marker animation on the map
+  useEffect(() => {
+    if (reduceMotion) {
+      markerPulseAnim.stopAnimation();
+      markerPulseAnim.setValue(1);
+      return;
+    }
     const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.8, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(markerPulseAnim, { toValue: 1.8, duration: 1000, useNativeDriver: true }),
+        Animated.timing(markerPulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
       ]),
     );
     pulse.start();
     return () => pulse.stop();
-  }, [pulseAnim]);
+  }, [markerPulseAnim, reduceMotion]);
+
+  // OFFLINE: pulsing halo behind the "Go Online" circle (2s, gated by reduce-motion)
+  useEffect(() => {
+    if (reduceMotion || isOnline) {
+      goOnlinePulse.stopAnimation();
+      goOnlinePulse.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.parallel([
+        Animated.timing(goOnlinePulse, { toValue: 1, duration: 2000, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [goOnlinePulse, isOnline, reduceMotion]);
+
+  // ONLINE: searching radar — 3 rings staggered 500ms, scale 0.5→2, opacity 0.8→0
+  useEffect(() => {
+    if (reduceMotion || !isOnline) {
+      radarRings.forEach((v) => {
+        v.stopAnimation();
+        v.setValue(0);
+      });
+      return;
+    }
+    const loops = radarRings.map((value, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 500),
+          Animated.parallel([
+            Animated.timing(value, { toValue: 1, duration: 2000, useNativeDriver: true }),
+          ]),
+        ]),
+      ),
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline, reduceMotion]);
 
   // Immediate GPS request on mount (don't wait for heartbeat interval)
   useEffect(() => {
@@ -82,28 +164,63 @@ export default function DriverHome() {
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (token) {
-          const res = await fetch(`${API_URL}/api/driver/earnings/breakdown`, { headers: { Authorization: `Bearer ${token}` } });
-          if (res.ok) { const data = await res.json(); setEarningsToday(data.earnings_today_bdt ?? data.today_bdt ?? 0); }
+  // ── Load driver profile ──────────────────────────────────────────
+  const loadDriverProfile = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch(
+        `${API_URL}/api/driver/me`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setDriver(data.driver ?? data);
+
+        // Load active subscription
+        const subRes = await fetch(
+          `${API_URL}/api/package/active`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          setActiveSubscription(subData.subscription);
         }
-      } catch {}
-      const saved = await AsyncStorage.getItem('earnings_goal');
-      if (saved) setGoal(parseInt(saved, 10));
-    })();
+      }
+    } catch {
+      // Network error
+    }
   }, []);
 
-  const saveGoal = async () => {
-    const v = parseInt(goalInput, 10) * 100;
-    if (v > 0) { setGoal(v); await AsyncStorage.setItem('earnings_goal', String(v)); }
-    setGoalModalVisible(false);
-  };
+  // ── Daily stats (real endpoint — paisa integers from server) ──────
+  const fetchDailyStats = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/driver/daily-stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data: DailyStats = await res.json();
+        setStats(data);
+      }
+    } catch {
+      // Network error — keep last known stats
+    }
+  }, []);
 
-  // ── WebSocket Connection ──────────────────────────────────────────
+  // Fetch on mount and whenever we come back ONLINE (offline→online transition)
+  useEffect(() => {
+    fetchDailyStats();
+  }, [fetchDailyStats, isOnline]);
+
+  // ── WebSocket Connection (this screen OWNS the socket + onmessage) ─
   useEffect(() => {
     let ws: WebSocket;
     let reconnectAttempts = 0;
@@ -147,6 +264,7 @@ export default function DriverHome() {
             rider_id: msg.rider_id ?? "",
             customer_id: msg.rider_id ?? "",
             status: "pending",
+            // Legacy RideOfferDetails shape predates the WS payload — kept as-is
           } as any);
           setActiveOffer({
             ride_id: msg.ride_id,
@@ -166,20 +284,20 @@ export default function DriverHome() {
             upfront_tip_bdt: msg.upfront_tip_bdt ?? 0,
           });
         } else if (type === "offer:lost" || type === "offer:expired") {
-          removeRideOffer(msg.ride_id);
+          if (msg.ride_id) removeRideOffer(msg.ride_id);
           setActiveOffer(null);
         } else if (type === "offer:accepted") {
           setActiveRideId(msg.ride_id);
           setActiveOffer(null);
           router.replace("/(main)/(rider)/find-customer");
-        } else if (type === "subscription:expired") {
-          setActiveSubscription(null);
-        } else if (type === "admin:suspended") {
-          Alert.alert(
-            "Suspended",
-            msg.reason ?? "Your account has been suspended.",
-          );
-          setIsOnline(false);
+        } else if (type === "ride:cancelled" || type === "rider:cancelled") {
+          // New backend broadcasts ride:cancelled (B-7); rider:cancelled kept
+          // as the legacy spelling for safety. Either way: reset to ONLINE.
+          Alert.alert("Ride Cancelled", "Rider cancelled the ride");
+          if (msg.ride_id) removeRideOffer(msg.ride_id);
+          setActiveRideId(null);
+          setActiveOffer(null);
+          setIsOnline(true);
         }
       } catch (_e) {
         // ignore parse errors
@@ -192,6 +310,7 @@ export default function DriverHome() {
     if (existing && existing.readyState === WebSocket.OPEN) {
       wsRef.current = existing;
       existing.onmessage = handleWsMessage;
+      setWsConnected(true);
       return;
     }
 
@@ -297,37 +416,6 @@ export default function DriverHome() {
     };
   }, [isOnline, wsConnected]);
 
-  // ── Load driver profile ──────────────────────────────────────────
-  const loadDriverProfile = useCallback(async () => {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) return;
-      const res = await fetch(
-        `${API_URL}/api/driver/me`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setDriver(data.driver ?? data);
-
-        // Load active subscription
-        const subRes = await fetch(
-          `${API_URL}/api/package/active`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (subRes.ok) {
-          const subData = await subRes.json();
-          setActiveSubscription(subData.subscription);
-        }
-      }
-    } catch {
-      // Network error
-    }
-  }, []);
-
   // ── Online/Offline Toggle ────────────────────────────────────────
   const toggleOnline = async () => {
     try {
@@ -368,70 +456,40 @@ export default function DriverHome() {
     }
   };
 
+  // Map dimming: OFFLINE = 30%, RIDE_OFFER = 40%, ONLINE = none
+  const dimOpacity = activeOffer ? 0.4 : isOnline ? 0 : 0.3;
+  const showReconnectBanner = isOnline && !wsConnected;
+
   // ── Render ───────────────────────────────────────────────────────
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight">
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <StatusBar
+        style={isDark ? "light" : "dark"}
+        translucent
+        backgroundColor="transparent"
+      />
       <ScreenLabel screenName="Go Online / Go Offline" screenNumber={1} />
-      {/* Header */}
-      <View className="px-4 py-3 flex-row items-center justify-between">
-        <View>
-          <Text className="text-lg font-JakartaBold text-goTextPrimaryLight">
-            {driver?.name ?? "Driver"}
-          </Text>
-          <Text className="text-sm text-goTextSecondaryLight font-Jakarta">
-            {driver?.vehicle_type ?? ""}
-          </Text>
-        </View>
-        <View className="flex-row items-center gap-3">
-          <TouchableOpacity
-            onPress={() => router.push("/(main)/(rider)/incentives")}
-          >
-            <MaterialIcons
-              name="card-giftcard"
-              size={22}
-              color={colors.primary}
-            />
-          </TouchableOpacity>
-          <View
-            className={`w-2 h-2 rounded-full mr-2 ${wsConnected ? "bg-goAccent" : "bg-goDanger"}`}
-          />
-          <Text className="text-xs text-goTextSecondaryLight">
-            {wsConnected ? "Connected" : "Offline"}
-          </Text>
-        </View>
-      </View>
-
-      {/* Earnings Goal Progress Bar */}
-      <TouchableOpacity className="mx-4 mt-2 mb-2 p-3 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-[10px] border border-goBorderLight dark:border-goBorderDark" onPress={() => { setGoalInput(String(goal / 100)); setGoalModalVisible(true); }}>
-        <View className="flex-row justify-between items-center mb-1.5">
-           <Text className="text-[11px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{"Today's Earnings Goal"}</Text>
-          <Text className="text-[11px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">৳{(earningsToday / 100).toFixed(0)} / ৳{(goal / 100).toFixed(0)}</Text>
-        </View>
-        <View className="h-1.5 bg-goBorderLight dark:bg-goBorderDark rounded-full overflow-hidden">
-          <View className="h-full bg-goAccent rounded-full" style={{ width: `${Math.min(100, goal > 0 ? (earningsToday / goal) * 100 : 0)}%` as any }} />
-        </View>
-        <Text className="text-[10px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1 text-right">Tap to set goal</Text>
-      </TouchableOpacity>
-
-      <Modal visible={goalModalVisible} transparent animationType="fade" onRequestClose={() => setGoalModalVisible(false)}>
-        <View className="flex-1 items-center justify-center px-6 bg-black/50">
-          <View className="w-full bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-2xl shadow-go-sm p-6">
-            <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-3">Set Daily Goal (BDT)</Text>
-            <TextInput className="bg-goBgLight dark:bg-goBgDark border border-goBorderLight dark:border-goBorderDark rounded-lg px-4 py-3 text-goTextPrimaryLight dark:text-goTextPrimaryDark font-Jakarta text-base mb-4" keyboardType="numeric" value={goalInput} onChangeText={setGoalInput} />
-            <View className="flex-row gap-3">
-              <TouchableOpacity className="flex-1 py-3 rounded-full border border-goBorderLight dark:border-goBorderDark items-center" onPress={() => setGoalModalVisible(false)}><Text className="font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Cancel</Text></TouchableOpacity>
-              <TouchableOpacity className="flex-1 py-3 rounded-full bg-goAccent items-center" onPress={saveGoal}><Text className="font-JakartaBold text-goWhite">Save</Text></TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Live Map */}
-      <View className="flex-1 mx-4 rounded-2xl overflow-hidden">
+      <View style={{ flex: 1 }}>
         {!location ? (
-          <View className="flex-1 bg-goGray100 items-center justify-center rounded-2xl">
-            <MaterialIcons name="my-location" size={32} color={colors.textSecondaryLight} />
-            <Text className="text-goTextSecondaryLight font-Jakarta mt-2">
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: isDark ? colors.surfaceElevatedDark : colors.gray100,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="location-outline" size={32} color={textSecondary} />
+            <Text
+              style={{
+                fontFamily: "Jakarta-Regular",
+                fontSize: 14,
+                color: textSecondary,
+                marginTop: spacing.sm,
+              }}
+            >
               {locationLoading ? "Getting your location..." : "Location unavailable — enable GPS"}
             </Text>
           </View>
@@ -453,8 +511,8 @@ export default function DriverHome() {
                       width: 40,
                       height: 40,
                       borderRadius: 20,
-                      backgroundColor: "rgba(10, 155, 76, 0.2)",
-                      transform: [{ scale: pulseAnim }],
+                      backgroundColor: "rgba(12, 194, 95, 0.2)",
+                      transform: [{ scale: markerPulseAnim }],
                       position: "absolute",
                     }}
                   />
@@ -464,12 +522,309 @@ export default function DriverHome() {
             )}
           </MapLibreGL.MapView>
         ) : (
-          <View className="flex-1 bg-goGray100 items-center justify-center rounded-2xl">
-            <Text className="text-goTextSecondaryLight font-Jakarta">
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: isDark ? colors.surfaceElevatedDark : colors.gray100,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary }}>
               Map View
             </Text>
           </View>
         )}
+
+        {/* Map dim overlay (OFFLINE 30% / RIDE_OFFER 40%) */}
+        {dimOpacity > 0 && (
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { backgroundColor: colors.black, opacity: dimOpacity }]}
+          />
+        )}
+
+        {/* ONLINE: searching radar rings */}
+        {isOnline && !activeOffer && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {!reduceMotion &&
+              radarRings.map((value, i) => (
+                <Animated.View
+                  key={i}
+                  style={{
+                    position: "absolute",
+                    width: RADAR_RING_SIZE,
+                    height: RADAR_RING_SIZE,
+                    borderRadius: RADAR_RING_SIZE / 2,
+                    borderWidth: 2,
+                    borderColor: colors.primary,
+                    transform: [
+                      {
+                        scale: value.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.5, 2],
+                        }),
+                      },
+                    ],
+                    opacity: value.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 0],
+                    }),
+                  }}
+                />
+              ))}
+            <View
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: 7,
+                backgroundColor: colors.primary,
+              }}
+            />
+          </View>
+        )}
+
+        {/* OFFLINE: pulsing Go Online circle */}
+        {!isOnline && !activeOffer && (
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <TouchableOpacity
+              onPress={toggleOnline}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Go online"
+              accessibilityHint="Start receiving ride requests"
+              style={{ alignItems: "center", justifyContent: "center" }}
+            >
+              {!reduceMotion && (
+                <Animated.View
+                  pointerEvents="none"
+                  style={{
+                    position: "absolute",
+                    width: GO_CIRCLE_SIZE,
+                    height: GO_CIRCLE_SIZE,
+                    borderRadius: GO_CIRCLE_SIZE / 2,
+                    backgroundColor: colors.primary,
+                    transform: [
+                      {
+                        scale: goOnlinePulse.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [1, 1.15],
+                        }),
+                      },
+                    ],
+                    opacity: goOnlinePulse.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.6, 0],
+                    }),
+                  }}
+                />
+              )}
+              <View
+                style={{
+                  width: GO_CIRCLE_SIZE,
+                  height: GO_CIRCLE_SIZE,
+                  borderRadius: GO_CIRCLE_SIZE / 2,
+                  backgroundColor: colors.primary,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="power" size={22} color={colors.white} />
+                <Text
+                  style={{
+                    fontFamily: "Jakarta-Bold",
+                    fontSize: 10,
+                    color: colors.white,
+                    marginTop: 2,
+                  }}
+                >
+                  GO ONLINE
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Header */}
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.sm,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: spacing.sm,
+              backgroundColor: surfaceBg,
+              borderWidth: 1,
+              borderColor: borderColor,
+              borderRadius: radii.pill,
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.xs + 2,
+            }}
+          >
+            <View
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: wsConnected ? colors.success : colors.danger,
+              }}
+            />
+            <Text
+              style={{
+                fontFamily: "Jakarta-SemiBold",
+                fontSize: 14,
+                color: textPrimary,
+              }}
+              numberOfLines={1}
+            >
+              {driver?.name ?? "Driver"}
+            </Text>
+            {driver?.vehicle_type ? (
+              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: textSecondary }}>
+                · {driver.vehicle_type}
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+            <TouchableOpacity
+              onPress={() => setThemeModalVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Appearance settings"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: surfaceBg,
+                borderWidth: 1,
+                borderColor: borderColor,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons
+                name={isDark ? "moon-outline" : "sunny-outline"}
+                size={18}
+                color={textPrimary}
+              />
+            </TouchableOpacity>
+
+            {isOnline ? (
+              <TouchableOpacity
+                onPress={toggleOnline}
+                accessibilityRole="button"
+                accessibilityLabel="Go offline"
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: colors.danger,
+                  borderRadius: radii.pill,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.xs + 2,
+                  backgroundColor: surfaceBg,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: "Jakarta-Bold",
+                    fontSize: 13,
+                    color: colors.danger,
+                  }}
+                >
+                  Go Offline
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={() => router.push("/(main)/(rider)/break-mode")}
+                accessibilityRole="button"
+                accessibilityLabel="Take a break"
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: borderColor,
+                  borderRadius: radii.pill,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.xs + 2,
+                  backgroundColor: surfaceBg,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: "Jakarta-Bold",
+                    fontSize: 13,
+                    color: textPrimary,
+                  }}
+                >
+                  Take a Break
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Reconnecting banner — WS dropped while ONLINE */}
+        {showReconnectBanner && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: 60,
+              left: spacing.lg,
+              right: spacing.lg,
+              backgroundColor: colors.amber,
+              borderRadius: radii.md,
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.md,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: spacing.sm,
+            }}
+          >
+            <Ionicons name="cloud-offline-outline" size={16} color={colors.black} />
+            <Text
+              style={{
+                fontFamily: "Jakarta-SemiBold",
+                fontSize: 14,
+                color: colors.black,
+              }}
+            >
+              Reconnecting…
+            </Text>
+          </View>
+        )}
+
         {/* My Location button */}
         {location && (
           <TouchableOpacity
@@ -483,6 +838,8 @@ export default function DriverHome() {
                 logger.warn("[driver] recenter failed:", e instanceof Error ? e.message : e);
               }
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Recenter map on my location"
             style={{
               position: "absolute",
               bottom: 16,
@@ -490,70 +847,92 @@ export default function DriverHome() {
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: colors.white,
+              backgroundColor: surfaceBg,
+              borderWidth: 1,
+              borderColor: borderColor,
               alignItems: "center",
               justifyContent: "center",
-              shadowColor: "#000",
+              shadowColor: colors.black,
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.15,
               shadowRadius: 4,
               elevation: 4,
             }}
           >
-            <MaterialIcons name="my-location" size={20} color={colors.primary} />
+            <Ionicons name="locate" size={20} color={colors.primary} />
           </TouchableOpacity>
         )}
-      </View>
 
-      {/* Wallet Card */}
-      {activeSubscription && (
-        <View className="mx-4 mt-4 p-4 bg-goSurfaceLight rounded-2xl shadow-sm border border-goBorderLight">
-          <View className="flex-row justify-between items-center">
-            <Text className="text-sm font-Jakarta text-goTextSecondaryLight">
-              Calls Remaining
-            </Text>
-            <Text className="text-lg font-JakartaBold text-goTextPrimaryLight">
-              {activeSubscription.calls_remaining === -1
-                ? "Unlimited"
-                : activeSubscription.calls_remaining}
-            </Text>
-          </View>
-          <View className="flex-row justify-between items-center mt-2">
-            <Text className="text-sm font-Jakarta text-goTextSecondaryLight">
-              Today
-            </Text>
-            <Text className="text-sm font-Jakarta text-goTextPrimaryLight">
-              {activeSubscription.daily_calls_used} used
-            </Text>
-          </View>
-          {activeSubscription.expires_at && (
-            <Text className="text-xs font-Jakarta text-goTextSecondaryLight mt-2">
-              Expires:{" "}
-              {new Date(activeSubscription.expires_at).toLocaleDateString()}
-            </Text>
-          )}
-        </View>
-      )}
-
-      {/* Buy Package */}
-      {!activeSubscription && (
-        <TouchableOpacity
-          onPress={() => router.push("/(main)/(rider)/packages")}
-          className="mx-4 mt-4 p-4 bg-goSurfaceLight rounded-2xl shadow-go-sm border border-goBorderLight items-center"
+        {/* Bottom: subscription line + stats bar */}
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            paddingHorizontal: spacing.lg,
+            paddingBottom: spacing.lg,
+            gap: spacing.sm,
+          }}
         >
-          <Text className="text-goAccent font-JakartaBold">
-            Buy a Package to Start
-          </Text>
-        </TouchableOpacity>
-      )}
+          {activeSubscription ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: surfaceBg,
+                borderWidth: 1,
+                borderColor: borderColor,
+                borderRadius: radii.lg,
+                paddingHorizontal: spacing.lg,
+                paddingVertical: spacing.sm,
+              }}
+            >
+              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 13, color: textSecondary }}>
+                Calls Remaining
+              </Text>
+              <Text
+                style={{
+                  fontFamily: "Jakarta-Bold",
+                  fontSize: 15,
+                  color: textPrimary,
+                  fontVariant: ["tabular-nums"],
+                }}
+              >
+                {activeSubscription.calls_remaining === -1
+                  ? "Unlimited"
+                  : activeSubscription.calls_remaining}
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => router.push("/(main)/(rider)/packages")}
+              accessibilityRole="button"
+              accessibilityLabel="Buy a package"
+              style={{
+                backgroundColor: surfaceBg,
+                borderWidth: 1,
+                borderColor: colors.primary + "40",
+                borderRadius: radii.lg,
+                paddingHorizontal: spacing.lg,
+                paddingVertical: spacing.sm,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 14, color: colors.primary }}>
+                Buy a Package to Start
+              </Text>
+            </TouchableOpacity>
+          )}
 
-      {/* Online/Offline Button */}
-      <View className="px-4 py-4">
-        <CustomButton
-          title={isOnline ? "Go Offline" : "Go Online"}
-          onPress={toggleOnline}
-          bgVariant={isOnline ? "danger" : "primary"}
-        />
+          <DriverStatsBar
+            earnings_bdt={stats.earnings_bdt}
+            trips={stats.trips}
+            online_hours={Math.round(stats.online_hours * 10) / 10}
+            onPress={() => router.push("/(main)/(rider)/earnings")}
+          />
+        </View>
       </View>
 
       {/* SOS Button */}
@@ -561,6 +940,17 @@ export default function DriverHome() {
 
       {/* Ride Offer Sheet */}
       <RideOfferSheet />
+
+      {/* Appearance toggle */}
+      <ReactNativeModal
+        isVisible={themeModalVisible}
+        onBackdropPress={() => setThemeModalVisible(false)}
+        onBackButtonPress={() => setThemeModalVisible(false)}
+      >
+        <View style={{ width: "91%", alignSelf: "center" }}>
+          <ThemeToggle />
+        </View>
+      </ReactNativeModal>
     </SafeAreaView>
   );
 }

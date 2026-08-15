@@ -6,9 +6,10 @@ import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
+// NOTE: `phone` is intentionally NOT patchable here — it is the Supabase-auth
+// credential and must only change through the OTP-verified auth flows.
 const patchSchema = z.object({
   name: z.string().min(1).max(255).optional(),
-  phone: z.string().regex(/^(\+880|01)[0-9]{9,11}$/).optional(),
   profile_image_url: z.string().url().optional(),
 });
 
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
       .where(and(eq(users.auth_uid, user.id), isNull(users.deleted_at)))
       .limit(1);
 
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     return Response.json({
       user: {
@@ -47,9 +48,9 @@ export async function GET(request: Request) {
     }, { status: 200 });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/me] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }
 
@@ -58,14 +59,13 @@ export async function PATCH(request: Request) {
     const user = await verifySupabaseToken(request);
 
     const [dbUser] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const parsed = await parseJsonBody(request, patchSchema);
     if (!parsed.ok) return parsed.response;
 
     const updates: Record<string, any> = {};
     if (parsed.data.name !== undefined) updates.name = parsed.data.name;
-    if (parsed.data.phone !== undefined) updates.phone = parsed.data.phone;
     if (parsed.data.profile_image_url !== undefined) updates.profile_image_url = parsed.data.profile_image_url;
     if (Object.keys(updates).length > 0) {
       updates.updated_at = new Date();
@@ -99,8 +99,8 @@ export async function PATCH(request: Request) {
     }, { status: 200 });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/me] PATCH error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

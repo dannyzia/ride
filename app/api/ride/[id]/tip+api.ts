@@ -15,7 +15,7 @@ export async function POST(request: Request, { id }: { id: string }) {
   try {
     const user = await verifySupabaseToken(request);
 
-    if (!z.string().uuid().safeParse(id).success) return Response.json({ error: 'invalid_ride_id' }, { status: 400 });
+    if (!z.string().uuid().safeParse(id).success) return Response.json({ error: 'invalid_ride_id', message: 'Invalid ride ID' }, { status: 400 });
 
     const body = await parseJsonBody(request, tipSchema);
     if (!body.ok) return body.response;
@@ -23,27 +23,27 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     const [dbUser] = await db.select({ id: users.id })
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: 'user_not_found' }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const [ride] = await db.select().from(rides).where(eq(rides.id, id)).limit(1);
-    if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
+    if (!ride) return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
 
     if (ride.status !== 'completed') {
       return Response.json({ error: 'ride_not_completed', message: `Ride status is ${ride.status}` }, { status: 422 });
     }
 
     if (ride.user_id !== dbUser.id) {
-      return Response.json({ error: 'not_rider' }, { status: 403 });
+      return Response.json({ error: 'not_rider', message: 'Only riders can perform this action' }, { status: 403 });
     }
 
     if (ride.tip_bdt !== null && ride.tip_bdt > 0) {
-      return Response.json({ error: 'already_tipped' }, { status: 409 });
+      return Response.json({ error: 'already_tipped', message: 'Tip already added' }, { status: 409 });
     }
 
     // Look up the ride's driver
     const [driver] = await db.select({ id: drivers.id })
       .from(drivers).where(eq(drivers.id, ride.driver_id!)).limit(1);
-    if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });
+    if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     await db.transaction(async (tx) => {
       // Debit rider wallet
@@ -88,9 +88,9 @@ export async function POST(request: Request, { id }: { id: string }) {
     logger.info('[ride/tip] tip submitted', { rideId: id, amount_bdt });
     return Response.json({ success: true, tip_bdt: amount_bdt });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (err.status === 422) return Response.json({ error: 'insufficient_balance' }, { status: 422 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (err.status === 422) return Response.json({ error: 'insufficient_balance', message: 'Insufficient account balance' }, { status: 422 });
     logger.error('[ride/tip] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

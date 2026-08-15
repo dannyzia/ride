@@ -327,7 +327,7 @@ const server = http.createServer(async (req, res) => {
           return;
         }
         sendToRider(rider_user_id, {
-          type: "driver_arrived",
+          type: "ride:arrived",
           ride_id,
           arrived_at: arrived_at ?? new Date().toISOString(),
         });
@@ -359,12 +359,36 @@ const server = http.createServer(async (req, res) => {
           return;
         }
         sendToRider(rider_user_id, {
-          type: "ride_completed",
+          type: "ride:complete",
           ride_id,
           total_bdt,
           driver_net_bdt,
           ride_time_min,
           fare_breakdown,
+        });
+        writeJson(200, { ok: true });
+      } catch {
+        writeJson(400, { error: "invalid_body" });
+      }
+    });
+    return;
+  }
+
+  if (req.url === "/internal/ride/cancelled" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", async () => {
+      try {
+        const { ride_id, driver_id } = JSON.parse(body);
+        if (!ride_id || !driver_id) {
+          writeJson(400, { error: "missing_fields" });
+          return;
+        }
+        sendToDriver(driver_id, {
+          type: "ride:cancelled",
+          ride_id,
         });
         writeJson(200, { ok: true });
       } catch {
@@ -854,7 +878,7 @@ wss.on("connection", (ws: WebSocket) => {
               await db.update(rides).set({ eta_minutes: etaMin }).where(eq(rides.id, rideId));
             }
             // Tell the rider a driver was found, with the PIN (to read aloud)
-            // and the driver info. final-page listens for "ride:status".
+            // and the driver info. The rider app listens for "ride:status".
             sendToRider(ride.user_id, {
               type: "ride:status",
               ride_id: rideId,
@@ -1545,6 +1569,16 @@ async function startup() {
     logger.info(`[ws] dispatch server listening on 0.0.0.0:${PORT}`),
   );
 }
+
+// ── Global Error Handlers ──────────────────────────────────────────────
+// Prevent postgres.js or other async errors from crashing the process.
+process.on("unhandledRejection", (reason: unknown) => {
+  logger.error("[process] unhandled rejection — keeping server alive", reason);
+});
+
+process.on("uncaughtException", (err: Error) => {
+  logger.error("[process] uncaught exception — keeping server alive", err);
+});
 
 startup().catch((e) => {
   logger.error("[startup] fatal", e);

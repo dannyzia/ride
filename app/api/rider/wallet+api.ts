@@ -1,6 +1,6 @@
 import { db } from "@/src/db";
 import { riderWalletTransactions, users } from "@/src/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
     const [dbUser] = await db.select({ id: users.id, rider_wallet_balance_bdt: users.rider_wallet_balance_bdt })
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const recent = await db.select({
       id: riderWalletTransactions.id,
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     })
       .from(riderWalletTransactions)
       .where(eq(riderWalletTransactions.rider_id, dbUser.id))
-      .orderBy(riderWalletTransactions.created_at)
+      .orderBy(desc(riderWalletTransactions.created_at))
       .limit(20);
 
     return Response.json({
@@ -36,8 +36,8 @@ export async function GET(request: Request) {
     }, { status: 200 });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[rider/wallet] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

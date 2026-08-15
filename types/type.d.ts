@@ -232,7 +232,7 @@ declare interface RideOffer {
     rideOffer: RideOfferDetails[],
     activeRideId: string | null,
     addRideOffer: (ride: RideOfferDetails) => void;
-    setActiveRideId: (rideId: string) => void;
+    setActiveRideId: (rideId: string | null) => void;
     removeRideOffer: (rideId: string) => void;
     giveRideDetails: (rideId: string) => RideOfferDetails | undefined;
     changeStatus: (rideId: string, newStatus: string) => void;

@@ -1,369 +1,348 @@
-import React, { useState } from "react";
-import { API_URL } from "@/lib/config";
+import { useCallback, useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  Image,
+  ActivityIndicator,
+  RefreshControl,
   ScrollView,
-  TouchableOpacity,
-  Alert,
   StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import { Rating } from "react-native-ratings";
-import { uploadImage } from "@/lib/imageToURL";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSession } from "@/lib/session";
-import { supabase } from "@/lib/supabase";
-import { AntDesign } from "@expo/vector-icons";
-import ReactNativeModal from "react-native-modal";
-import CustomButton from "@/components/CustomButton";
 import { router } from "expo-router";
-import { useDriver, useDriverDetails } from "@/store";
+import { Ionicons } from "@expo/vector-icons";
+import { API_URL } from "@/lib/config";
+import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-import { colors, spacing, radii } from "@/theme/goRide";
+import { colors, radii, spacing } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
+import ThemeToggle from "@/components/ThemeToggle";
+import VerificationStep from "@/components/VerificationStep";
 
-const VerificationPage = () => {
-  const { user } = useSession();
+interface DriverMe {
+  status: string;
+}
 
-  const [carImageUri, setCarImageUri] = useState<string | null>(null);
-  const [showCarImageModal, setShowCarImageModal] = useState<boolean>(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [showProfileImageModal, setShowProfileImageModal] =
-    useState<boolean>(false);
+interface DocRow {
+  id: string;
+  doc_type: string;
+  status: string;
+  created_at: string | null;
+}
 
-  const [rating, setRating] = useState(0);
-  const [carSeats, setCarSeats] = useState("");
+const EXPECTED_DOC_KEYS = [
+  "nid_front",
+  "nid_back",
+  "license_front",
+  "license_back",
+  "reg_scan_front",
+  "reg_scan_back",
+  "brta_certificate",
+];
 
-  const [carImageLoading, setCarImageLoading] = useState<boolean>(false);
-  const [profileImageLoading, setProfileImageLoading] =
-    useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+class ApiError extends Error {
+  code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.code = code;
+  }
+}
 
-  const { setProfileImageURL, setRating: setStoreRating } = useDriver();
-  const { setIsVerified } = useDriverDetails();
+async function authedGet(path: string): Promise<Response> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) {
+    throw new ApiError("not_authenticated", "Not authenticated");
+  }
+  return fetch(`${API_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
 
-  const pickCarImage = async () => {
-    setCarImageLoading(true);
+export default function VerificationScreen() {
+  const isDark = useIsDark();
+  const [driver, setDriver] = useState<DriverMe | null>(null);
+  const [docs, setDocs] = useState<DocRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<{ code: string; message: string } | null>(
+    null,
+  );
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark
+    ? colors.textSecondaryDark
+    : colors.textSecondaryLight;
+
+  const fetchAll = useCallback(async (showRefresh: boolean) => {
+    if (showRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError(null);
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
-      if (!result.canceled) {
-        const uri = result.assets?.[0]?.uri;
-        const fileName = result.assets?.[0]?.fileName ?? `${Date.now()}.jpg`;
-        try {
-          const imageUrl = await uploadImage(uri, fileName);
-          setCarImageUri(imageUrl);
-        } catch (error) {
-          logger.error("Error uploading image:", error);
-        }
+      const [meRes, docsRes] = await Promise.all([
+        authedGet("/api/driver/me"),
+        authedGet("/api/driver/documents"),
+      ]);
+      if (!meRes.ok || !docsRes.ok) {
+        const failed = meRes.ok ? docsRes : meRes;
+        const data = await failed.json().catch(() => ({}));
+        throw new ApiError(
+          typeof data.error === "string" ? data.error : `http_${failed.status}`,
+          typeof data.message === "string"
+            ? data.message
+            : "Failed to load verification status",
+        );
       }
-    } catch (error: any) {
-      logger.info(error);
-      Alert.alert("Car Image Upload Failed", error.message);
-    } finally {
-      setCarImageLoading(false);
-    }
-  };
-
-  const pickProfileImage = async () => {
-    setProfileImageLoading(true);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
-      if (!result.canceled) {
-        const uri = result.assets?.[0]?.uri;
-        const fileName = result.assets?.[0]?.fileName ?? `${Date.now()}.jpg`;
-        try {
-          const imageUrl = await uploadImage(uri, fileName);
-          setProfileImage(imageUrl);
-        } catch (error: any) {
-          logger.error("Error uploading image:", error);
-          Alert.alert("Profile Image Upload Failed", error.message);
-        }
-      }
-    } catch (error: any) {
-      logger.info(error);
-      Alert.alert("Profile Image Upload Failed", error.message);
-    } finally {
-      setProfileImageLoading(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!user || !carImageUri || !profileImage || !rating || !carSeats) {
-      Alert.alert(
-        "Submission Failed",
-        "Please fill all the details to continue.",
+      const meData = await meRes.json();
+      const docsData = await docsRes.json();
+      setDriver(meData.driver ?? null);
+      setDocs(docsData.documents ?? []);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? { code: err.code, message: err.message }
+          : {
+              code: "network_error",
+              message: err instanceof Error ? err.message : "Network error",
+            },
       );
-      return;
-    }
-    setLoading(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      await fetch(`${API_URL}/api/driver/verify-driver`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ carImageUri, profileImage, rating, carSeats }),
-      });
-      setProfileImageURL({ profile_image_url: profileImage! });
-      setStoreRating({ rating });
-      setIsVerified(true);
-      router.replace("/(main)/(rider)/home");
-    } catch (error: any) {
-      logger.info("error in driver verification page", error);
-      Alert.alert("Submission Failed", error.message);
+      logger.error("[verification] fetch failed", { error: String(err) });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
-  const sectionLabel = (text: string) => (
-    <Text
-      style={{
-        fontFamily: "Urbanist",
-        fontSize: 14,
-        fontWeight: "600",
-        color: colors.textSecondaryDark,
-        textTransform: "uppercase",
-        letterSpacing: 0.8,
-        marginBottom: spacing.sm,
-      }}
-    >
-      {text}
-    </Text>
-  );
+  useEffect(() => {
+    void fetchAll(false);
+  }, [fetchAll]);
 
-  const uploadedBadge = (onShow: () => void) => (
-    <View
-      style={{
-        flexDirection: "row",
-        marginTop: spacing.md,
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
-    >
-      <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
-        <Text
-          style={{
-            color: colors.primary,
-            fontFamily: "Urbanist",
-            fontWeight: "600",
-          }}
-        >
-          Uploaded
-        </Text>
-        <AntDesign name="check" size={18} color={colors.primary} />
-      </View>
-      <TouchableOpacity onPress={onShow}>
-        <Text
-          style={{
-            color: colors.textSecondaryDark,
-            fontFamily: "Urbanist",
-            fontSize: 13,
-          }}
-        >
-          Show Image
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const latestByType = docs.reduce<Record<string, DocRow>>((acc, row) => {
+    acc[row.doc_type] = row;
+    return acc;
+  }, {});
+
+  const driverStatus = driver?.status ?? "";
+  const isActive = driverStatus === "active";
+  const approvedCount = EXPECTED_DOC_KEYS.filter(
+    (k) => latestByType[k]?.status === "approved",
+  ).length;
+  const submittedCount = EXPECTED_DOC_KEYS.filter(
+    (k) => latestByType[k] != null,
+  ).length;
+
+  const step1Status =
+    driverStatus && driverStatus !== "temporary" ? "completed" : "current";
+  const step2Status =
+    approvedCount === EXPECTED_DOC_KEYS.length
+      ? "completed"
+      : submittedCount === EXPECTED_DOC_KEYS.length
+        ? "current"
+        : "pending";
+  const step2Subtitle =
+    approvedCount === EXPECTED_DOC_KEYS.length
+      ? `${approvedCount}/${EXPECTED_DOC_KEYS.length} approved`
+      : submittedCount === EXPECTED_DOC_KEYS.length
+        ? `${approvedCount}/${EXPECTED_DOC_KEYS.length} approved`
+        : "Missing documents — complete onboarding";
+  const step3Status = isActive ? "completed" : "current";
+
+  const contactSupport = () => router.push("/(main)/(rider)/support");
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgDark }}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
-      <ScrollView
-        style={{ flex: 1, padding: spacing["2xl"] }}
-        contentContainerStyle={{ paddingBottom: 60 }}
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: spacing.lg,
+          paddingVertical: spacing.md,
+          borderBottomWidth: 1,
+          borderBottomColor: borderColor,
+        }}
       >
-        {/* Back */}
         <TouchableOpacity
-          style={{ marginBottom: spacing["3xl"] }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
           onPress={() => router.back()}
+          style={{ padding: spacing.xs }}
         >
-          <AntDesign name="close" size={26} color={colors.textPrimaryDark} />
+          <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
-
         <Text
           style={{
-            fontFamily: "Urbanist",
-            fontSize: 22,
-            fontWeight: "800",
-            color: colors.textPrimaryDark,
-            marginBottom: spacing["3xl"],
+            flex: 1,
+            textAlign: "center",
+            fontFamily: "Jakarta-Bold",
+            fontSize: 17,
+            color: textPrimary,
           }}
         >
-          Driver Verification
+          Verification
         </Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Refresh verification status"
+          onPress={() => void fetchAll(true)}
+          style={{ padding: spacing.xs }}
+        >
+          <Ionicons name="refresh" size={22} color={textPrimary} />
+        </TouchableOpacity>
+      </View>
 
-        {/* Car Image */}
-        <View style={{ marginBottom: spacing["2xl"] }}>
-          {sectionLabel("Car Image")}
-          <Button
-            title="Upload Car Image"
-            onPress={pickCarImage}
-            disabled={carImageLoading}
-            color={colors.primary}
-          />
-          {carImageUri && uploadedBadge(() => setShowCarImageModal(true))}
+      {loading ? (
+        <View
+          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+        >
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
-
-        <ReactNativeModal isVisible={showCarImageModal}>
-          <View
+      ) : error ? (
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: spacing.xl,
+          }}
+        >
+          <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
+          <Text
             style={{
-              height: "50%",
-              padding: spacing.xl,
-              backgroundColor: colors.surfaceElevatedDark,
-              borderRadius: radii["2xl"],
-              margin: "auto",
-              width: "100%",
-            }}
-          >
-            <TouchableOpacity
-              onPress={() => setShowCarImageModal(false)}
-              style={{
-                position: "absolute",
-                top: spacing.md,
-                right: spacing.md,
-                zIndex: 10,
-              }}
-            >
-              <AntDesign
-                name="close"
-                size={26}
-                color={colors.textPrimaryDark}
-              />
-            </TouchableOpacity>
-            {carImageUri && (
-              <Image
-                source={{ uri: carImageUri }}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  marginTop: spacing.xl,
-                  borderRadius: radii.md,
-                }}
-                resizeMode="contain"
-              />
-            )}
-          </View>
-        </ReactNativeModal>
-
-        {/* Profile Image */}
-        <View style={{ marginBottom: spacing["2xl"] }}>
-          {sectionLabel("Profile Image")}
-          <Button
-            title="Upload Profile Image"
-            onPress={pickProfileImage}
-            disabled={profileImageLoading}
-            color={colors.primary}
-          />
-          {profileImage && uploadedBadge(() => setShowProfileImageModal(true))}
-        </View>
-
-        <ReactNativeModal isVisible={showProfileImageModal}>
-          <View
-            style={{
-              height: "50%",
-              padding: spacing.xl,
-              backgroundColor: colors.surfaceElevatedDark,
-              borderRadius: radii["2xl"],
-              margin: "auto",
-              width: "100%",
-            }}
-          >
-            <TouchableOpacity
-              onPress={() => setShowProfileImageModal(false)}
-              style={{
-                position: "absolute",
-                top: spacing.md,
-                right: spacing.md,
-                zIndex: 10,
-              }}
-            >
-              <AntDesign
-                name="close"
-                size={26}
-                color={colors.textPrimaryDark}
-              />
-            </TouchableOpacity>
-            {profileImage && (
-              <Image
-                source={{ uri: profileImage }}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  marginTop: spacing.xl,
-                  borderRadius: radii.md,
-                }}
-                resizeMode="contain"
-              />
-            )}
-          </View>
-        </ReactNativeModal>
-
-        {/* Rating */}
-        <View style={{ marginBottom: spacing["2xl"] }}>
-          {sectionLabel("Rating")}
-          <Rating
-            ratingCount={5}
-            imageSize={30}
-            showRating
-            onFinishRating={setRating}
-            style={{
-              marginTop: 4,
-              marginBottom: spacing.md,
-              backgroundColor: "transparent",
-            }}
-          />
-        </View>
-
-        {/* Car Seats */}
-        <View style={{ marginBottom: spacing["2xl"] }}>
-          {sectionLabel("Car Seats")}
-          <TextInput
-            style={{
-              backgroundColor: colors.surfaceElevatedDark,
-              color: colors.textPrimaryDark,
-              padding: spacing.md,
-              borderRadius: radii.md,
-              borderWidth: 1,
-              borderColor: colors.borderDark,
-              fontFamily: "Urbanist",
+              fontFamily: "Jakarta-SemiBold",
               fontSize: 15,
+              color: textPrimary,
+              marginTop: spacing.md,
+              textAlign: "center",
             }}
-            placeholder="Enter number of seats"
-            placeholderTextColor={colors.textDisabledDark}
-            keyboardType="numeric"
-            value={carSeats}
-            onChangeText={setCarSeats}
-          />
+          >
+            {`${error.code}: ${error.message}`}
+          </Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading verification status"
+            onPress={() => void fetchAll(false)}
+            style={{
+              marginTop: spacing.lg,
+              paddingHorizontal: spacing.xl,
+              paddingVertical: spacing.md,
+              borderRadius: radii.pill,
+              backgroundColor: colors.primary,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: "Jakarta-Bold",
+                fontSize: 14,
+                color: colors.white,
+              }}
+            >
+              Retry
+            </Text>
+          </TouchableOpacity>
         </View>
+      ) : (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            padding: spacing.lg,
+            paddingBottom: spacing["4xl"],
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void fetchAll(true)}
+              tintColor={colors.primary}
+            />
+          }
+        >
+          <View style={{ alignItems: "center", marginBottom: spacing.xl }}>
+            <Ionicons
+              name="shield-checkmark"
+              size={64}
+              color={isActive ? colors.success : colors.primary}
+            />
+            <Text
+              style={{
+                fontFamily: "Jakarta-Bold",
+                fontSize: 22,
+                color: isActive ? colors.success : textPrimary,
+                marginTop: spacing.md,
+                textAlign: "center",
+              }}
+            >
+              {isActive ? "Account Active" : "Account Under Review"}
+            </Text>
+            {!isActive && (
+              <Text
+                style={{
+                  fontFamily: "Jakarta-Regular",
+                  fontSize: 14,
+                  color: textSecondary,
+                  marginTop: spacing.sm,
+                  textAlign: "center",
+                }}
+              >
+                Your submission is being reviewed — usually 1–2 business days.
+              </Text>
+            )}
+          </View>
 
-        <CustomButton
-          title="Submit"
-          style={{ marginTop: spacing["3xl"], opacity: loading ? 0.6 : 1 }}
-          onPress={handleSubmit}
-        />
-      </ScrollView>
+          <View style={{ marginBottom: spacing.xl }}>
+            <VerificationStep
+              status={step1Status}
+              title="Profile submitted"
+              subtitle={
+                step1Status === "completed"
+                  ? undefined
+                  : "Complete your profile in onboarding"
+              }
+            />
+            <VerificationStep
+              status={step2Status}
+              title="Documents under review"
+              subtitle={step2Subtitle}
+            />
+            <VerificationStep
+              status={step3Status}
+              title="Admin review & activation"
+              subtitle="Admin reviews and activates manually — usually 1–2 business days"
+              isLast
+            />
+          </View>
+
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Contact support"
+            onPress={contactSupport}
+            style={{
+              borderWidth: 1.5,
+              borderColor: colors.primary,
+              borderRadius: radii.pill,
+              paddingVertical: spacing.md,
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: "Jakarta-Bold",
+                fontSize: 15,
+                color: colors.primary,
+              }}
+            >
+              Contact Support
+            </Text>
+          </TouchableOpacity>
+
+          <View style={{ marginTop: spacing.xl }}>
+            <ThemeToggle />
+          </View>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
-};
-
-export default VerificationPage;
+}

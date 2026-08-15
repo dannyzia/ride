@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const user = await verifySupabaseToken(request);
 
     const [dbUser] = await db.select().from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const userRides = await db.select().from(rides).where(eq(rides.user_id, dbUser.id)).limit(1000);
     const riderTxns = await db.select().from(riderWalletTransactions).where(eq(riderWalletTransactions.rider_id, dbUser.id)).limit(1000);
@@ -40,8 +40,8 @@ export async function POST(request: Request) {
     return Response.json(data, { status: 200 });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/request-data] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

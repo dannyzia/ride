@@ -1,6 +1,6 @@
 // Auth: verifySupabaseToken via Bearer token
 import { db } from "@/src/db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { rides, users, drivers } from "@/src/db/schema";
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -38,12 +38,13 @@ export async function GET(request: Request) {
       .from(rides)
       .innerJoin(users, eq(rides.user_id, users.id))
       .leftJoin(drivers, eq(rides.driver_id, drivers.id))
-      .where(eq(users.auth_uid, user.id));
+      .where(eq(users.auth_uid, user.id))
+      .orderBy(desc(rides.created_at));
 
     return Response.json({ data: allRides }, { status: 200 });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[ride/get-all] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

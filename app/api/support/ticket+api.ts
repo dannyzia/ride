@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
     const [dbUser] = await db.select({ id: users.id })
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
-    if (!dbUser) return Response.json({ error: "user_not_found" }, { status: 404 });
+    if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const parsed = await parseJsonBody(request, ticketSchema);
     if (!parsed.ok) return parsed.response;
@@ -37,8 +37,8 @@ export async function POST(request: Request) {
     return Response.json({ ticket_id: ticket!.id, status: "open" }, { status: 201 });
 
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[support/ticket] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

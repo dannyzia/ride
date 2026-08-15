@@ -6,20 +6,29 @@ import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useRiderStore } from "@/store/useRiderStore";
+import { colors, fonts, radii } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 const PRESET_TIPS_BDT = [0, 20, 50, 100]; // in BDT (not paisa)
 
 export default function AddTip() {
+  const isDark = useIsDark();
+
   const { activeRide } = useRiderStore();
   const [tipAmount, setTipAmount] = useState(0);
   const [customTip, setCustomTip] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const surface = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const border = isDark ? colors.borderDark : colors.borderLight;
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+
   const handleAddTip = async () => {
     const finalAmount = customTip ? parseInt(customTip, 10) : tipAmount;
     if (finalAmount === 0) {
-      router.replace("/(main)/(customer)/ride-completed");
+      router.replace("/(main)/(customer)/services-hub");
       return;
     }
     if (!activeRide?.id) return;
@@ -41,7 +50,7 @@ export default function AddTip() {
         return;
       }
       setSubmitting(false);
-      router.replace("/(main)/(customer)/ride-completed");
+      router.replace("/(main)/(customer)/services-hub");
     } catch (err: any) {
       setError(err?.message || "Network error");
       setSubmitting(false);
@@ -50,57 +59,59 @@ export default function AddTip() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+          <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Add Tip</Text>
-        <View className="w-[50px]" />
+        <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>Add Tip</Text>
+        <View style={{ width: 50 }} />
       </View>
-      <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 40 }}>
-        <View className="items-center mb-6 mt-4">
-          <View className="w-20 h-20 rounded-full bg-goAccentLight items-center justify-center mb-3">
-            <Text className="text-[28px] font-JakartaBold tracking-tight text-goPrimary">
+      <ScrollView style={{ flex: 1, paddingHorizontal: 24 }} contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={{ alignItems: "center", marginBottom: 24, marginTop: 16 }}>
+          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.accentLight, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+            <Text style={{ fontSize: 28, fontFamily: fonts.heading, letterSpacing: -0.5, color: colors.primary }}>
               {activeRide?.driver?.name?.charAt(0) ?? "D"}
             </Text>
           </View>
-          <Text className="text-[20px] font-JakartaBold tracking-tight text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-6">
+          <Text style={{ fontSize: 20, fontFamily: fonts.heading, letterSpacing: -0.5, color: textPrimary, marginBottom: 24 }}>
             {activeRide?.driver?.name ?? "Driver"}
           </Text>
         </View>
-        <View className="mb-6">
-          <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">
+        <View style={{ marginBottom: 24 }}>
+          <Text style={{ fontSize: 16, fontFamily: fonts.heading, color: textPrimary, marginBottom: 8 }}>
             Tip Amount
           </Text>
-          <View className="flex-row flex-wrap gap-2 mb-4">
-            {PRESET_TIPS_BDT.map((amount) => (
-              <TouchableOpacity
-                key={amount}
-                className={`px-[16px] py-[10px] rounded-[8px] border ${
-                  amount === tipAmount && !customTip
-                    ? "border-goPrimary bg-goAccentLight"
-                    : "border-goBorderLight dark:border-goBorderDark bg-goSurfaceLight dark:bg-goSurfaceElevatedDark"
-                }`}
-                onPress={() => {
-                  setTipAmount(amount);
-                  setCustomTip("");
-                }}
-              >
-                <Text className={`text-[14px] font-Jakarta ${
-                  amount === tipAmount && !customTip
-                    ? "text-goPrimary"
-                    : "text-goTextPrimaryLight dark:text-goTextPrimaryDark"
-                }`}>
-                  {amount === 0 ? "No Tip" : `৳${amount}`}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+            {PRESET_TIPS_BDT.map((amount) => {
+              const selected = amount === tipAmount && !customTip;
+              return (
+                <TouchableOpacity
+                  key={amount}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: selected ? colors.primary : border,
+                    backgroundColor: selected ? colors.accentLight : surface,
+                  }}
+                  onPress={() => {
+                    setTipAmount(amount);
+                    setCustomTip("");
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontFamily: fonts.body, color: selected ? colors.primary : textPrimary }}>
+                    {amount === 0 ? "No Tip" : `৳${amount}`}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
           <TextInput
-            className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark"
+            style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontFamily: fonts.body, color: textPrimary }}
             placeholder="Or enter custom amount (BDT)"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.textSecondaryDark}
             value={customTip}
             onChangeText={(text) => {
               setCustomTip(text);
@@ -110,17 +121,17 @@ export default function AddTip() {
           />
         </View>
       </ScrollView>
-      <View className="px-[24px] pb-[24px]">
-        {error ? <Text className="text-[14px] font-Jakarta text-goDanger text-center mb-3">{error}</Text> : null}
+      <View style={{ paddingHorizontal: 24, paddingBottom: 24 }}>
+        {error ? <Text style={{ fontSize: 14, fontFamily: fonts.body, color: colors.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
         <TouchableOpacity
-          className="bg-goPrimary rounded-full w-full py-[16px] items-center"
+          style={{ backgroundColor: colors.primary, borderRadius: radii.pill, width: "100%", paddingVertical: 16, alignItems: "center" }}
           onPress={handleAddTip}
           disabled={submitting}
         >
           {submitting ? (
-            <ActivityIndicator size={20} color="#FFFFFF" />
+            <ActivityIndicator size={20} color={colors.white} />
           ) : (
-            <Text className="text-[18px] font-JakartaBold text-goWhite">Add Tip</Text>
+            <Text style={{ fontSize: 18, fontFamily: fonts.heading, color: colors.white }}>Add Tip</Text>
           )}
         </TouchableOpacity>
       </View>

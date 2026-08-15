@@ -5,10 +5,20 @@ import { router } from "expo-router";
 import { useRiderStore } from "@/store/useRiderStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { colors, fonts } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 export default function ActivityCompleted() {
+  const isDark = useIsDark();
+
   const { completedRides, fetchRideHistory } = useRiderStore();
   const [loading, setLoading] = useState(true);
+
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const surface = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const border = isDark ? colors.borderDark : colors.borderLight;
+  const bg = isDark ? colors.bgDark : colors.bgLight;
 
   useEffect(() => {
     let cancelled = false;
@@ -30,71 +40,71 @@ export default function ActivityCompleted() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center">
-        <ActivityIndicator size="large" color="#0CC25F" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
         <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+          <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Completed</Text>
-        <View className="w-[50px]" />
+        <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>Completed</Text>
+        <View style={{ width: 50 }} />
       </View>
-      <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 24 }}>
+      <ScrollView style={{ flex: 1, paddingHorizontal: 24 }} contentContainerStyle={{ paddingVertical: 24 }}>
         {(completedRides?.length ?? 0) > 0 ? (
           completedRides!.map((ride: any, index: number) => (
-            <View key={index} className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] p-[16px] mb-4">
-              <View className="flex-row items-center mb-3">
-                <View className="w-10 h-10 rounded-full bg-goAccentLight items-center justify-center mr-3">
-                  <Text className="text-[20px] font-JakartaBold tracking-tight text-goPrimary">✓</Text>
+            <View key={index} style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accentLight, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+                  <Text style={{ fontSize: 20, fontFamily: fonts.heading, letterSpacing: -0.5, color: colors.primary }}>✓</Text>
                 </View>
-                <View className="flex-1">
-                  <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: textPrimary }}>
                     {ride.vehicle_type?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? "Ride"}
                   </Text>
-                  <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+                  <Text style={{ fontSize: 12, fontFamily: fonts.body, color: textSecondary }}>
                     {ride.date ?? ""} · {ride.time ?? ""}
                   </Text>
                 </View>
               </View>
-              <View className="gap-1 mb-3">
-                <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+              <View style={{ gap: 4, marginBottom: 12 }}>
+                <Text style={{ fontSize: 12, fontFamily: fonts.body, color: textSecondary }}>
                   Pickup: {ride.pickup_address ?? "—"}
                 </Text>
-                <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+                <Text style={{ fontSize: 12, fontFamily: fonts.body, color: textSecondary }}>
                   Destination: {ride.destination_address ?? "—"}
                 </Text>
-                <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+                <Text style={{ fontSize: 12, fontFamily: fonts.body, color: textSecondary }}>
                   Fare: ৳{((ride.fare_bdt ?? 0) / 100).toFixed(0)}
                 </Text>
               </View>
-              <View className="flex-row gap-2">
+              <View style={{ flexDirection: "row", gap: 8 }}>
                 <TouchableOpacity
-                  className="flex-1 bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[8px] items-center"
-                  onPress={() => router.push(`/(main)/(customer)/ride-details-completed/${ride.id}`)}
+                  style={{ flex: 1, backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: "center" }}
+                  onPress={() => router.push(`/(main)/(customer)/show-ride/${ride.id}`)}
                 >
-                  <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">View Receipt</Text>
+                  <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: textPrimary }}>View Receipt</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  className="flex-1 bg-goPrimary rounded-[8px] px-[12px] py-[8px] items-center"
+                  style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: "center" }}
                   onPress={() => router.push("/(main)/(customer)/rate-driver")}
                 >
-                  <Text className="text-[14px] font-JakartaBold text-goWhite">Rate Driver</Text>
+                  <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: colors.white }}>Rate Driver</Text>
                 </TouchableOpacity>
               </View>
             </View>
           ))
         ) : (
-          <View className="items-center py-8">
-            <Text className="text-[20px] font-JakartaBold tracking-tight text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-4">
+          <View style={{ alignItems: "center", paddingVertical: 32 }}>
+            <Text style={{ fontSize: 20, fontFamily: fonts.heading, letterSpacing: -0.5, color: textSecondary, marginBottom: 16 }}>
               No completed rides
             </Text>
-            <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">
+            <Text style={{ fontSize: 16, fontFamily: fonts.body, color: textSecondary, textAlign: "center" }}>
               Your completed rides will appear here
             </Text>
           </View>

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     const { waypoints } = parsed.data;
     const apiKey = process.env.EXPO_PUBLIC_BARIKOI_API_KEY;
-    if (!apiKey) return Response.json({ error: 'config_missing' }, { status: 500 });
+    if (!apiKey) return Response.json({ error: 'config_missing', message: 'Configuration missing' }, { status: 500 });
 
     const from = `${waypoints[0].lng},${waypoints[0].lat}`;
     const to = `${waypoints[waypoints.length - 1].lng},${waypoints[waypoints.length - 1].lat}`;
@@ -33,8 +33,8 @@ export async function POST(request: Request) {
       },
     });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[navigation/route] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

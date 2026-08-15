@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { AntDesign } from "@expo/vector-icons";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 import PaymentWebView from "@/components/PaymentWebView";
 
 interface CallPackage {
@@ -41,8 +41,7 @@ export default function PackagesScreen() {
   const [paymentURL, setPaymentURL] = useState<string | null>(null);
   const [paymentID, setPaymentID] = useState<string | null>(null);
 
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;

@@ -13,7 +13,8 @@ import {
 } from "@/src/db/schema";
 import { eq, and } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
-import { portposClient, isConfigured } from "@/lib/portpos";
+import { isConfigured } from "@/lib/portpos";
+import { initiatePortposPayment } from "@/lib/paymentEvents";
 import { logger } from "@/lib/logger";
 
 const purchaseSchema = z
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
       .where(eq(users.auth_uid, supabaseUser.id))
       .limit(1);
     if (!user)
-      return Response.json({ error: "user_not_found" }, { status: 404 });
+      return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const [driver] = await db
       .select({
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       .where(eq(drivers.user_id, user.id))
       .limit(1);
     if (!driver)
-      return Response.json({ error: "driver_not_found" }, { status: 404 });
+      return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     if (!["active", "temporary"].includes(driver.status)) {
       return Response.json(
@@ -163,21 +164,25 @@ export async function POST(request: Request) {
       }
     }
 
-    const [evt] = await db
-      .insert(paymentEvents)
-      .values({
-        driver_id: driver.id,
-        package_id: pkg.id,
-        idempotency_key: idempotencyKey,
-        provider: "portpos",
-        amount_bdt: pkg.price_bdt,
-        status: "initiated",
-        purpose: "driver_package",
-      })
-      .onConflictDoNothing()
-      .returning();
+    // Create the payment_events row + PortPos invoice via the shared owner
+    // (lib/paymentEvents.ts, see AGENTS.md). Idempotency-Key collision returns
+    // null — replay the existing payment_event instead of a second invoice.
+    const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
+    const initiated = await initiatePortposPayment({
+      driver_id: driver.id,
+      package_id: pkg.id,
+      idempotency_key: idempotencyKey,
+      amount_bdt: pkg.price_bdt,
+      purpose: "driver_package",
+      package_name: pkg.name,
+      customer_name: "Driver",
+      customer_email: "driver@ride.app",
+      customer_phone: "+880",
+      redirect_url: `${serverUrl}/api/payment/portpos/callback`,
+      ipn_url: `${serverUrl}/api/payment/portpos/callback`,
+    }, { onConflictDoNothing: true });
 
-    if (!evt) {
+    if (!initiated) {
       const [existing] = await db
         .select()
         .from(paymentEvents)
@@ -191,47 +196,12 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create PortPos invoice — user picks bKash/Nagad/Rocket/card on PortPos's hosted checkout
-    const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
-    const { invoice_id, payment_url } = await portposClient.createInvoice({
-      amount: pkg.price_bdt,
-      reference: idempotencyKey,
-      redirectUrl: `${serverUrl}/api/payment/portpos/callback`,
-      ipnUrl: `${serverUrl}/api/payment/portpos/callback`,
-      packageName: pkg.name,
-      billing: {
-        customer: { name: "Driver", email: "driver@ride.app", phone: "+880" },
-        address: {
-          street: "N/A",
-          city: "Dhaka",
-          state: "Dhaka",
-          zipcode: "1200",
-          country: "BD",
-        },
-      },
-    });
-
-    await db
-      .update(paymentEvents)
-      .set({
-        provider_txn_id: invoice_id,
-        status: "callback_pending",
-      })
-      .where(eq(paymentEvents.id, evt!.id));
-
-    logger.info("[package/purchase] PortPos payment initiated", {
-      paymentEventId: evt!.id,
-      invoice_id,
-      driverId: driver.id,
-      amountBdt: pkg.price_bdt,
-    });
-
-    return Response.json({ payment_url, payment_event_id: evt!.id });
+    return Response.json({ payment_url: initiated!.payment_url, payment_event_id: initiated!.payment_event_id });
   } catch (e: any) {
     if (e.status === 401) {
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     }
     logger.error("[package/purchase] error", e);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

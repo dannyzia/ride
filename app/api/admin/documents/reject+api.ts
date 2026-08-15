@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const { documentId, reason } = result.data;
 
     const [doc] = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
-    if (!doc) return Response.json({ error: 'document_not_found' }, { status: 404 });
+    if (!doc) return Response.json({ error: 'document_not_found', message: 'Document not found' }, { status: 404 });
 
     await db.update(documents)
       .set({
@@ -36,9 +36,9 @@ export async function POST(request: Request) {
 
     return Response.json({ success: true });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/documents/reject] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

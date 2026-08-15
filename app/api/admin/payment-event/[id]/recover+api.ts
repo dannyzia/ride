@@ -68,10 +68,10 @@ export async function POST(request: Request, { id }: { id: string }) {
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
     if (status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
-      return Response.json({ error: "forbidden" }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/payment-event/recover] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

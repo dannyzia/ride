@@ -26,13 +26,13 @@ export interface FetchConfirmMessage {
 }
 
 export interface DriverArrivedMessage {
-  type: "driver_arrived";
+  type: "ride:arrived";
   ride_id: string;
   arrived_at: string;
 }
 
 export interface RideCompletedMessage {
-  type: "ride_completed";
+  type: "ride:complete";
   ride_id: string;
   total_bdt: number;
   driver_net_bdt: number;
@@ -79,6 +79,8 @@ export type InboundMessage =
   | HeartbeatMessage
   | LocationUpdateMessage
   | FetchConfirmMessage
+  | DriverArrivedMessage
+  | RideCompletedMessage
   | OfferAcceptMessage
   | OfferRejectMessage
   | AcceptAlternativeMessage;
@@ -92,7 +94,7 @@ export type OutboundMessage =
       driver_id: string;
       driver_phone: string;
     }
-  | { type: "ride:cancelled"; ride_id: string; reason?: string }
+   | { type: "ride:cancelled"; ride_id: string }
   | { type: "error"; message: string }
   | {
       type: "ride:alternatives";
@@ -101,13 +103,4 @@ export type OutboundMessage =
         vehicle_type: string;
         fare_breakdown: Record<string, unknown>;
       }[];
-    }
-  | { type: "driver_arrived"; ride_id: string; arrived_at: string }
-  | {
-      type: "ride_completed";
-      ride_id: string;
-      total_bdt: number;
-      driver_net_bdt: number;
-      ride_time_min: number;
-      fare_breakdown: FareBreakdown;
     };

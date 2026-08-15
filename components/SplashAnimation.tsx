@@ -10,7 +10,7 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface SplashAnimationProps {
   // True once auth + fonts have finished loading. The splash stays visible
@@ -21,8 +21,7 @@ interface SplashAnimationProps {
 }
 
 export default function SplashAnimation({ loadComplete, onHidden }: SplashAnimationProps) {
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -45,6 +44,16 @@ export default function SplashAnimation({ loadComplete, onHidden }: SplashAnimat
     }
   }, []);
 
+  // FIX: the withTiming completion callback runs on the Reanimated UI/worklet
+  // thread, not the JS thread. Setting animationDoneRef.current there only
+  // mutates Reanimated's copy of the closure — the JS thread's ref stays false.
+  // Moving both the ref mutation and tryHide() into this callback, called via
+  // runOnJS, ensures they both execute on the JS thread where the ref is owned.
+  const markDoneAndHide = useCallback(() => {
+    animationDoneRef.current = true;
+    tryHide();
+  }, [tryHide]);
+
   // Keep the load flag in sync. If auth/fonts resolve AFTER the animation
   // already completed, hide now.
   useEffect(() => {
@@ -52,14 +61,17 @@ export default function SplashAnimation({ loadComplete, onHidden }: SplashAnimat
     tryHide();
   }, [loadComplete, tryHide]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     opacity.value = withSequence(
       withTiming(1, { duration: 600, easing: Easing.out(Easing.ease) }),
       withDelay(
         1200,
         withTiming(0, { duration: 500, easing: Easing.in(Easing.ease) }, () => {
-          animationDoneRef.current = true;
-          runOnJS(tryHide)();
+          // Must not set animationDoneRef.current here — this callback runs on
+          // the Reanimated UI thread and would only update a worklet-side copy.
+          // markDoneAndHide (called via runOnJS) sets the ref on the JS thread.
+          runOnJS(markDoneAndHide)();
         })
       )
     );
@@ -74,6 +86,17 @@ export default function SplashAnimation({ loadComplete, onHidden }: SplashAnimat
       withDelay(1200, withTiming(-20, { duration: 500 }))
     );
   }, []);
+
+  // Belt-and-suspenders: if the Reanimated callback is ever silently skipped
+  // (rare Hermes/Reanimated edge case), this JS-thread timer ensures the splash
+  // always exits. Fires 300 ms after the animation should complete (2 300 ms).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      animationDoneRef.current = true;
+      tryHide();
+    }, 2600);
+    return () => clearTimeout(t);
+  }, [tryHide]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

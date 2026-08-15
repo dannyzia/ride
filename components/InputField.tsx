@@ -3,7 +3,7 @@ import { useState } from "react";
 import { InputFieldProps } from "@/types/type";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 const InputField = ({
   label,
@@ -18,10 +18,7 @@ const InputField = ({
 }: InputFieldProps) => {
   const [isFocused, setIsFocused] = useState(false);
   const [dontShowPassword, setDontShowPassword] = useState(secureTextEntry);
-  const { theme } = useAppearance();
-
-  const isDark =
-    theme === "dark" || (theme === "system" && true); // system defaults to dark for now
+  const isDark = useIsDark();
 
   const borderColor = isFocused
     ? colors.primary

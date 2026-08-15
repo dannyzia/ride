@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const { driver_id, new_status, vehicle_type_adjusted, reason } = result.data;
 
     const [driver] = await db.select().from(drivers).where(eq(drivers.id, driver_id)).limit(1);
-    if (!driver) return Response.json({ error: 'driver_not_found' }, { status: 404 });
+    if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     // Decide final status: explicit override, else active (admin confirms full review)
     const finalStatus = new_status ?? 'active';
@@ -121,9 +121,9 @@ export async function POST(request: Request) {
     });
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
-    if (status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/driver/approve] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

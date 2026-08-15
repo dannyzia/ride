@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface VehicleCategoryCardProps {
   icon: string;
@@ -12,8 +12,7 @@ interface VehicleCategoryCardProps {
 }
 
 export default function VehicleCategoryCard({ icon, label, estimatedFare, eta, onPress }: VehicleCategoryCardProps) {
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const cardBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;

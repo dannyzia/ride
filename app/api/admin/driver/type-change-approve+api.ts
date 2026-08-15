@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       .from(vehicleTypeChanges)
       .where(eq(vehicleTypeChanges.id, change_id))
       .limit(1);
-    if (!change) return Response.json({ error: 'change_not_found' }, { status: 404 });
+    if (!change) return Response.json({ error: 'change_not_found', message: 'Change record not found' }, { status: 404 });
     if (change.status !== 'pending') {
       return Response.json(
         { error: 'change_already_resolved', message: `Change is already ${change.status}` },
@@ -111,9 +111,9 @@ export async function POST(request: Request) {
     }
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
-    if (status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
-    if (status === 403) return Response.json({ error: 'forbidden' }, { status: 403 });
+    if (status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/driver/type-change-approve] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

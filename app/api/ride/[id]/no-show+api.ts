@@ -10,7 +10,7 @@ import { z } from 'zod';
 export async function POST(request: Request, { id }: { id: string }) {
   try {
     const uuidParam = z.string().uuid().safeParse(id);
-    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid' }, { status: 400 });
+    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
 
     const { dbUser } = await requireRole('driver')(request);
     const driverId = dbUser.id;
@@ -20,7 +20,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       .from(rides)
       .where(and(eq(rides.id, id), eq(rides.driver_id, driverId)))
       .limit(1);
-    if (!ride) return Response.json({ error: 'ride_not_found' }, { status: 404 });
+    if (!ride) return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
     if (!['matched', 'driver_arriving', 'driver_arrived'].includes(ride.status)) {
       return Response.json({ error: 'invalid_status', message: `Cannot mark no-show in status: ${ride.status}` }, { status: 409 });
     }
@@ -71,8 +71,8 @@ export async function POST(request: Request, { id }: { id: string }) {
     logger.info('[no-show] driver marked rider no-show', { ride_id: id, driver_id: driverId, fee_bdt: feeBdt });
     return Response.json({ success: true, fee_bdt: feeBdt });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[no-show] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

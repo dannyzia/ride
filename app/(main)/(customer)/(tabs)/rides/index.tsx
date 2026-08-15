@@ -3,65 +3,166 @@ import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
+  SectionList,
   RefreshControl,
-  ActivityIndicator,
   StyleSheet,
   Alert,
   TextInput,
   Modal,
   ScrollView,
   Image,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
-import { colors, spacing, radii } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { colors, radii } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { supabase } from "@/lib/supabase";
+import { formatBDT, formatDateTime } from "@/lib/format";
+import StatusBadge from "@/components/plan03/StatusBadge";
+import RideCardSkeleton from "@/components/plan03/RideCardSkeleton";
 
-type RideStatus = "completed" | "cancelled" | "no_show" | "disputed" | "in_progress";
+type BadgeStatus = "completed" | "cancelled" | "in_progress" | "scheduled";
+
+interface RideApiDriver {
+  driver_id: string | null;
+  full_name: string | null;
+  profile_image_url: string | null;
+  rating: number | null;
+}
+
+interface RideApiRow {
+  ride_id: string;
+  origin_address: string | null;
+  destination_address: string | null;
+  origin_latitude: string | null;
+  origin_longitude: string | null;
+  destination_latitude: string | null;
+  destination_longitude: string | null;
+  created_at: string | null;
+  status: string;
+  scheduled_at: string | null;
+  completed_at: string | null;
+  vehicle_type: string | null;
+  cancel_reason: string | null;
+  cancelled_by: string | null;
+  driver_id: string | null;
+  fare_breakdown: {
+    total_bdt?: number | null;
+    base_fare_bdt?: number | null;
+    distance_charge_bdt?: number | null;
+    time_charge_bdt?: number | null;
+    surge_fee_bdt?: number | null;
+  } | null;
+  driver: RideApiDriver | null;
+}
 
 interface RideItem {
   id: string;
-  created_at: string;
-  status: RideStatus;
+  created_at: string | null;
+  completed_at: string | null;
+  status: string;
   origin_address: string;
   destination_address: string;
-  fare_bdt: number;
-  final_fare_bdt: number | null;
-  driver_name: string;
-  driver_avatar: string | null;
-  driver_rating: number;
+  origin_lat: number | null;
+  origin_lng: number | null;
+  dest_lat: number | null;
+  dest_lng: number | null;
   vehicle_type: string;
-  vehicle_plate: string;
-  payment_method: string;
-  cancelled_by?: "rider" | "driver";
-  cancellation_reason?: string;
-  dispute_status?: string;
-  tip_bdt: number;
+  cancel_reason: string | null;
+  cancelled_by: string | null;
+  fare_bdt: number;
+  fare_base_bdt: number | null;
+  fare_distance_bdt: number | null;
+  fare_time_bdt: number | null;
+  fare_surge_bdt: number | null;
+  driver_name: string | null;
+  driver_avatar: string | null;
+  driver_rating: number | null;
 }
 
-type FilterTab = "all" | "completed" | "cancelled" | "disputed";
+type FilterTab = "all" | "completed" | "cancelled";
 
 interface DateGroup {
   title: string;
   data: RideItem[];
 }
 
+const FILTER_LABELS: Record<FilterTab, string> = {
+  all: "All",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+const toPaisa = (value: number | null | undefined): number | null =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const parseCoord = (value: string | null | undefined): number | null => {
+  const n = value == null ? NaN : parseFloat(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+// Bucket keys in Asia/Dhaka so date grouping matches the displayed dates (lib/format.ts).
+const dhakaDateKey = (d: Date): string => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+};
+
+const toBadgeStatus = (status: string): BadgeStatus => {
+  if (status === "completed") return "completed";
+  if (status === "in_progress") return "in_progress";
+  if (status === "cancelled") return "cancelled";
+  if (status === "expired" || status === "no_drivers") return "cancelled";
+  if (status === "scheduled") return "scheduled";
+  return "in_progress";
+};
+
+const mapRideRow = (row: RideApiRow): RideItem => ({
+  id: row.ride_id,
+  created_at: row.created_at ?? null,
+  completed_at: row.completed_at ?? null,
+  status: row.status,
+  origin_address: row.origin_address ?? "",
+  destination_address: row.destination_address ?? "",
+  origin_lat: parseCoord(row.origin_latitude),
+  origin_lng: parseCoord(row.origin_longitude),
+  dest_lat: parseCoord(row.destination_latitude),
+  dest_lng: parseCoord(row.destination_longitude),
+  vehicle_type: row.vehicle_type ?? "",
+  cancel_reason: row.cancel_reason ?? null,
+  cancelled_by: row.cancelled_by ?? null,
+  fare_bdt: toPaisa(row.fare_breakdown?.total_bdt) ?? 0,
+  fare_base_bdt: toPaisa(row.fare_breakdown?.base_fare_bdt),
+  fare_distance_bdt: toPaisa(row.fare_breakdown?.distance_charge_bdt),
+  fare_time_bdt: toPaisa(row.fare_breakdown?.time_charge_bdt),
+  fare_surge_bdt: toPaisa(row.fare_breakdown?.surge_fee_bdt),
+  driver_name: row.driver?.full_name ?? null,
+  driver_avatar: row.driver?.profile_image_url ?? null,
+  driver_rating: row.driver?.rating ?? null,
+});
+
 export default function RidesScreen() {
   const [rides, setRides] = useState<RideItem[]>([]);
   const [filteredRides, setFilteredRides] = useState<RideItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRide, setSelectedRide] = useState<RideItem | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
 
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -72,12 +173,23 @@ export default function RidesScreen() {
 
   const fetchRides = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/ride/history`);
-      if (!res.ok) throw new Error("Failed to fetch rides");
-      const data = await res.json();
-      setRides(data.rides || []);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error("Not authenticated");
+      const res = await fetch(`${API_URL}/api/ride/get-all`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const rows: RideApiRow[] = Array.isArray(json?.data) ? json.data : [];
+      setRides(rows.map(mapRideRow));
+      setFetchError(false);
     } catch (e) {
       logger.error("[rides] fetch failed", e);
+      setRides([]);
+      setFetchError(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -93,8 +205,8 @@ export default function RidesScreen() {
     if (activeFilter !== "all") {
       result = result.filter((r) => {
         if (activeFilter === "completed") return r.status === "completed";
-        if (activeFilter === "cancelled") return r.status === "cancelled" || r.status === "no_show";
-        if (activeFilter === "disputed") return r.status === "disputed";
+        if (activeFilter === "cancelled")
+          return r.status === "cancelled" || r.status === "expired" || r.status === "no_drivers";
         return true;
       });
     }
@@ -115,47 +227,23 @@ export default function RidesScreen() {
     fetchRides();
   };
 
-  const getStatusColor = (status: RideStatus) => {
-    switch (status) {
-      case "completed":
-        return { bg: colors.primaryLight, text: colors.primary };
-      case "cancelled":
-      case "no_show":
-        return { bg: colors.dangerLight, text: colors.danger };
-      case "disputed":
-        return { bg: colors.amber + "20", text: colors.amber };
-      case "in_progress":
-        return { bg: colors.info + "20", text: colors.info };
-      default:
-        return { bg: isDark ? colors.darkSecondary : colors.gray100, text: textSecondary };
-    }
-  };
-
-  const getStatusLabel = (status: RideStatus) => {
-    switch (status) {
-      case "completed": return "Completed";
-      case "cancelled": return "Cancelled";
-      case "no_show": return "No Show";
-      case "disputed": return "Disputed";
-      case "in_progress": return "In Progress";
-      default: return status;
-    }
-  };
-
   const groupByDate = (items: RideItem[]): DateGroup[] => {
     const groups: Record<string, RideItem[]> = {};
-    const now = new Date();
-    const today = now.toDateString();
-    const yesterday = new Date(now.setDate(now.getDate() - 1)).toDateString();
+    const now = Date.now();
+    const todayKey = dhakaDateKey(new Date(now));
+    const yesterdayKey = dhakaDateKey(new Date(now - 86400000));
+    const weekAgo = now - 7 * 86400000;
+    const monthAgo = now - 30 * 86400000;
 
     items.forEach((item) => {
-      const d = new Date(item.created_at);
-      const dateStr = d.toDateString();
+      const d = new Date(item.created_at ?? "");
+      const valid = Number.isFinite(d.getTime());
       let key: string;
-      if (dateStr === today) key = "Today";
-      else if (dateStr === yesterday) key = "Yesterday";
-      else if (d > new Date(Date.now() - 7 * 86400000)) key = "This Week";
-      else if (d > new Date(Date.now() - 30 * 86400000)) key = "This Month";
+      if (!valid) key = "Earlier";
+      else if (dhakaDateKey(d) === todayKey) key = "Today";
+      else if (dhakaDateKey(d) === yesterdayKey) key = "Yesterday";
+      else if (d.getTime() > weekAgo) key = "This Week";
+      else if (d.getTime() > monthAgo) key = "This Month";
       else key = "Earlier";
       if (!groups[key]) groups[key] = [];
       groups[key].push(item);
@@ -178,6 +266,10 @@ export default function RidesScreen() {
             params: {
               rebook_origin: ride.origin_address,
               rebook_dest: ride.destination_address,
+              rebook_origin_lat: ride.origin_lat?.toString() ?? "",
+              rebook_origin_lng: ride.origin_lng?.toString() ?? "",
+              rebook_dest_lat: ride.dest_lat?.toString() ?? "",
+              rebook_dest_lng: ride.dest_lng?.toString() ?? "",
               vehicle_type: ride.vehicle_type,
             },
           });
@@ -187,38 +279,14 @@ export default function RidesScreen() {
   };
 
   const handleDispute = (ride: RideItem) => {
-    if (ride.status === "disputed") {
-      Alert.alert("Dispute Status", `Current status: ${ride.dispute_status || "Under review"}`);
+    if (ride.fare_bdt <= 0) {
+      Alert.alert("Error", "No fare on record to dispute.");
       return;
     }
-    Alert.alert("Dispute Fare?", "Are you sure you want to dispute this ride's fare?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Dispute",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const res = await fetch(`${API_URL}/api/ride/${ride.id}/dispute`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ reason: "Fare discrepancy" }),
-            });
-            if (res.ok) {
-              Alert.alert("Dispute Filed", "We'll review your case within 24 hours.");
-              fetchRides();
-            } else {
-              Alert.alert("Error", "Could not file dispute.");
-            }
-          } catch {
-            Alert.alert("Error", "Network error.");
-          }
-        },
-      },
-    ]);
+    router.push(`/(main)/(customer)/fare-dispute?rideId=${ride.id}`);
   };
 
   const renderRideCard = ({ item }: { item: RideItem }) => {
-    const statusStyle = getStatusColor(item.status);
     const isCompleted = item.status === "completed";
 
     return (
@@ -229,21 +297,14 @@ export default function RidesScreen() {
           setDetailModalVisible(true);
         }}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={`Ride to ${item.destination_address}`}
       >
         <View style={styles.cardHeader}>
           <Text style={[styles.cardDate, { color: textSecondary }]}>
-            {new Date(item.created_at).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {formatDateTime(item.created_at)}
           </Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-            <Text style={[styles.statusText, { color: statusStyle.text }]}>
-              {getStatusLabel(item.status)}
-            </Text>
-          </View>
+          <StatusBadge status={toBadgeStatus(item.status)} size="sm" />
         </View>
 
         <View style={styles.routeRow}>
@@ -275,22 +336,15 @@ export default function RidesScreen() {
             </View>
             <View>
               <Text style={[styles.driverName, { color: textPrimary }]} numberOfLines={1}>
-                {item.driver_name}
+                {item.driver_name ?? "No driver assigned"}
               </Text>
-              <Text style={[styles.vehicleInfo, { color: textSecondary }]}>
-                {item.vehicle_type} · {item.vehicle_plate}
+              <Text style={[styles.vehicleInfo, { color: textSecondary }]} numberOfLines={1}>
+                {item.vehicle_type}
               </Text>
             </View>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={[styles.fareText, { color: textPrimary }]}>
-              ৳{((item.final_fare_bdt ?? item.fare_bdt) / 100).toFixed(0)}
-            </Text>
-            {item.tip_bdt > 0 && (
-              <Text style={[styles.tipText, { color: colors.primary }]}>
-                +৳{(item.tip_bdt / 100).toFixed(0)} tip
-              </Text>
-            )}
+            <Text style={[styles.fareText, { color: textPrimary }]}>{formatBDT(item.fare_bdt)}</Text>
           </View>
         </View>
 
@@ -299,6 +353,8 @@ export default function RidesScreen() {
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
               onPress={() => handleRebook(item)}
+              accessibilityRole="button"
+              accessibilityLabel="Rebook ride"
             >
               <Ionicons name="refresh" size={16} color={colors.primary} />
               <Text style={[styles.actionBtnText, { color: textPrimary }]}>Rebook</Text>
@@ -306,6 +362,8 @@ export default function RidesScreen() {
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
               onPress={() => handleDispute(item)}
+              accessibilityRole="button"
+              accessibilityLabel="Dispute fare"
             >
               <Ionicons name="flag" size={16} color={colors.danger} />
               <Text style={[styles.actionBtnText, { color: colors.danger }]}>Dispute</Text>
@@ -318,7 +376,6 @@ export default function RidesScreen() {
 
   const renderDetailModal = () => {
     if (!selectedRide) return null;
-    const statusStyle = getStatusColor(selectedRide.status);
 
     return (
       <Modal
@@ -331,16 +388,18 @@ export default function RidesScreen() {
           <View style={[styles.modalContent, { backgroundColor: surfaceBg }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: textPrimary }]}>Ride Receipt</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+              <TouchableOpacity
+                onPress={() => setDetailModalVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close receipt"
+              >
                 <Ionicons name="close" size={24} color={textSecondary} />
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={[styles.modalStatus, { backgroundColor: statusStyle.bg }]}>
-                <Text style={[styles.modalStatusText, { color: statusStyle.text }]}>
-                  {getStatusLabel(selectedRide.status)}
-                </Text>
+              <View style={styles.modalStatus}>
+                <StatusBadge status={toBadgeStatus(selectedRide.status)} size="md" />
               </View>
 
               <View style={styles.modalRoute}>
@@ -359,69 +418,90 @@ export default function RidesScreen() {
                 </View>
               </View>
 
+              {selectedRide.status === "cancelled" && selectedRide.cancelled_by && (
+                <Text style={[styles.cancelledByText, { color: textSecondary }]}>
+                  Cancelled by {selectedRide.cancelled_by}
+                </Text>
+              )}
+              {selectedRide.status === "cancelled" && selectedRide.cancel_reason && (
+                <Text style={[styles.cancelledByText, { color: textSecondary }]}>
+                  Reason: {selectedRide.cancel_reason}
+                </Text>
+              )}
+
               <View style={[styles.fareBreakdown, { borderColor: borderColor }]}>
-                <View style={styles.fareRow}>
-                  <Text style={[styles.fareLabel, { color: textSecondary }]}>Base Fare</Text>
-                  <Text style={[styles.fareValue, { color: textPrimary }]}>
-                    ৳{(selectedRide.fare_bdt / 100).toFixed(0)}
-                  </Text>
-                </View>
-                {selectedRide.tip_bdt > 0 && (
+                {selectedRide.fare_base_bdt !== null && (
                   <View style={styles.fareRow}>
-                    <Text style={[styles.fareLabel, { color: textSecondary }]}>Tip</Text>
-                    <Text style={[styles.fareValue, { color: colors.primary }]}>
-                      +৳{(selectedRide.tip_bdt / 100).toFixed(0)}
+                    <Text style={[styles.fareLabel, { color: textSecondary }]}>Base Fare</Text>
+                    <Text style={[styles.fareValue, { color: textPrimary }]}>
+                      {formatBDT(selectedRide.fare_base_bdt)}
+                    </Text>
+                  </View>
+                )}
+                {selectedRide.fare_distance_bdt !== null && (
+                  <View style={styles.fareRow}>
+                    <Text style={[styles.fareLabel, { color: textSecondary }]}>Distance</Text>
+                    <Text style={[styles.fareValue, { color: textPrimary }]}>
+                      {formatBDT(selectedRide.fare_distance_bdt)}
+                    </Text>
+                  </View>
+                )}
+                {selectedRide.fare_time_bdt !== null && (
+                  <View style={styles.fareRow}>
+                    <Text style={[styles.fareLabel, { color: textSecondary }]}>Time</Text>
+                    <Text style={[styles.fareValue, { color: textPrimary }]}>
+                      {formatBDT(selectedRide.fare_time_bdt)}
+                    </Text>
+                  </View>
+                )}
+                {selectedRide.fare_surge_bdt !== null && selectedRide.fare_surge_bdt > 0 && (
+                  <View style={styles.fareRow}>
+                    <Text style={[styles.fareLabel, { color: textSecondary }]}>Surge</Text>
+                    <Text style={[styles.fareValue, { color: textPrimary }]}>
+                      {formatBDT(selectedRide.fare_surge_bdt)}
                     </Text>
                   </View>
                 )}
                 <View style={[styles.fareRow, styles.fareTotal, { borderTopColor: borderColor }]}>
-                  <Text style={[styles.fareTotalLabel, { color: textPrimary }]}>Total Paid</Text>
+                  <Text style={[styles.fareTotalLabel, { color: textPrimary }]}>Total Fare</Text>
                   <Text style={[styles.fareTotalValue, { color: colors.primary }]}>
-                    ৳{((selectedRide.final_fare_bdt ?? selectedRide.fare_bdt) / 100).toFixed(0)}
+                    {formatBDT(selectedRide.fare_bdt)}
                   </Text>
                 </View>
               </View>
 
-              <View style={[styles.driverDetail, { borderColor: borderColor }]}>
-                <View style={[styles.driverAvatar, { backgroundColor: colors.primary + "20" }]}>
-                  {selectedRide.driver_avatar ? (
-                    <Image source={{ uri: selectedRide.driver_avatar }} style={styles.avatarImg} />
-                  ) : (
-                    <Text style={[styles.avatarInitial, { color: colors.primary }]}>
-                      {selectedRide.driver_name?.[0]?.toUpperCase() || "D"}
-                    </Text>
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.driverName, { color: textPrimary }]}>{selectedRide.driver_name}</Text>
-                  <View style={styles.ratingRow}>
-                    <Ionicons name="star" size={14} color={colors.amber} />
-                    <Text style={[styles.ratingText, { color: textSecondary }]}>
-                      {selectedRide.driver_rating.toFixed(1)}
-                    </Text>
+              {selectedRide.driver_name && (
+                <View style={[styles.driverDetail, { borderColor: borderColor }]}>
+                  <View style={[styles.driverAvatar, { backgroundColor: colors.primary + "20" }]}>
+                    {selectedRide.driver_avatar ? (
+                      <Image source={{ uri: selectedRide.driver_avatar }} style={styles.avatarImg} />
+                    ) : (
+                      <Text style={[styles.avatarInitial, { color: colors.primary }]}>
+                        {selectedRide.driver_name?.[0]?.toUpperCase() || "D"}
+                      </Text>
+                    )}
                   </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.driverName, { color: textPrimary }]}>
+                      {selectedRide.driver_name}
+                    </Text>
+                    {typeof selectedRide.driver_rating === "number" && (
+                      <View style={styles.ratingRow}>
+                        <Ionicons name="star" size={14} color={colors.amber} />
+                        <Text style={[styles.ratingText, { color: textSecondary }]}>
+                          {selectedRide.driver_rating.toFixed(1)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.vehicleInfo, { color: textSecondary }]}>
+                    {selectedRide.vehicle_type}
+                  </Text>
                 </View>
-                <Text style={[styles.vehicleInfo, { color: textSecondary }]}>
-                  {selectedRide.vehicle_type}
-                </Text>
-              </View>
-
-              <View style={styles.paymentRow}>
-                <Ionicons name="cash" size={20} color={colors.greenVariant} />
-                <Text style={[styles.paymentText, { color: textPrimary }]}>
-                  Paid with {selectedRide.payment_method || "Cash"}
-                </Text>
-              </View>
+              )}
 
               <Text style={[styles.receiptDate, { color: textDisabled }]}>
-                {new Date(selectedRide.created_at).toLocaleString("en-GB", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                {formatDateTime(selectedRide.created_at)}
               </Text>
 
               <View style={styles.modalActions}>
@@ -431,6 +511,8 @@ export default function RidesScreen() {
                     setDetailModalVisible(false);
                     handleRebook(selectedRide);
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Rebook this route"
                 >
                   <Text style={styles.modalActionText}>Rebook This Route</Text>
                 </TouchableOpacity>
@@ -438,6 +520,8 @@ export default function RidesScreen() {
                   <TouchableOpacity
                     style={[styles.modalActionBtnSecondary, { borderColor: borderColor }]}
                     onPress={() => handleDispute(selectedRide)}
+                    accessibilityRole="button"
+                    accessibilityLabel="File fare dispute"
                   >
                     <Text style={[styles.modalActionTextSecondary, { color: textPrimary }]}>
                       File Dispute
@@ -459,27 +543,55 @@ export default function RidesScreen() {
       <Ionicons name="car-outline" size={64} color={textDisabled} />
       <Text style={[styles.emptyTitle, { color: textPrimary }]}>No rides yet</Text>
       <Text style={[styles.emptySub, { color: textSecondary }]}>
-        {activeFilter === "all"
-          ? "Your ride history will appear here"
-          : `No ${activeFilter} rides found`}
+        {searchQuery.trim()
+          ? "No rides match your search"
+          : activeFilter === "all"
+            ? "Your ride history will appear here"
+            : `No ${FILTER_LABELS[activeFilter].toLowerCase()} rides found`}
       </Text>
       <TouchableOpacity
         style={[styles.bookBtn, { backgroundColor: colors.primary }]}
         onPress={() => router.push("/(main)/(customer)/(tabs)/home")}
+        accessibilityRole="button"
+        accessibilityLabel="Book a ride"
       >
         <Text style={styles.bookBtnText}>Book a Ride</Text>
       </TouchableOpacity>
     </View>
   );
 
+  const renderErrorState = () => (
+    <View style={styles.emptyState}>
+      <Ionicons name="warning-outline" size={48} color={colors.danger} />
+      <Text style={[styles.emptyTitle, { color: textPrimary }]}>Could not load rides</Text>
+      <Text style={[styles.emptySub, { color: textSecondary }]}>Pull down to retry</Text>
+    </View>
+  );
+
   const renderSectionHeader = (title: string) => (
-    <Text style={[styles.sectionHeader, { color: textSecondary }]}>{title}</Text>
+    <Text style={[styles.sectionHeader, { color: textSecondary, backgroundColor: bg }]}>{title}</Text>
   );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={bg}
+      />
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>Your Rides</Text>
+        <TouchableOpacity
+          onPress={() => setTheme(isDark ? "light" : "dark")}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Toggle theme"
+        >
+          <Ionicons
+            name={isDark ? "sunny-outline" : "moon-outline"}
+            size={24}
+            color={textPrimary}
+          />
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.searchBar, { backgroundColor: surfaceBg, borderColor: borderColor }]}>
@@ -492,14 +604,18 @@ export default function RidesScreen() {
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery("")}>
+          <TouchableOpacity
+            onPress={() => setSearchQuery("")}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+          >
             <Ionicons name="close-circle" size={18} color={textDisabled} />
           </TouchableOpacity>
         )}
       </View>
 
       <View style={styles.filterRow}>
-        {(["all", "completed", "cancelled", "disputed"] as FilterTab[]).map((tab) => (
+        {(Object.keys(FILTER_LABELS) as FilterTab[]).map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[
@@ -510,6 +626,8 @@ export default function RidesScreen() {
               },
             ]}
             onPress={() => setActiveFilter(tab)}
+            accessibilityRole="button"
+            accessibilityLabel={`Filter ${FILTER_LABELS[tab]}`}
           >
             <Text
               style={{
@@ -518,34 +636,34 @@ export default function RidesScreen() {
                 color: activeFilter === tab ? colors.white : textSecondary,
               }}
             >
-              {tab === "all" ? "All" : tab === "completed" ? "Completed" : tab === "cancelled" ? "Cancelled" : "Disputed"}
+              {FILTER_LABELS[tab]}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={styles.skeletonList}>
+          <RideCardSkeleton />
+          <RideCardSkeleton />
+          <RideCardSkeleton />
         </View>
-      ) : filteredRides.length === 0 ? (
-        renderEmptyState()
       ) : (
-        <FlatList
-          data={groupedRides}
-          keyExtractor={(item) => item.title}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-          renderItem={({ item: group }) => (
-            <View>
-              {renderSectionHeader(group.title)}
-              {group.data.map((ride) => (
-                <View key={ride.id} style={{ marginHorizontal: 16, marginBottom: 12 }}>
-                  {renderRideCard({ item: ride })}
-                </View>
-              ))}
+        <SectionList
+          sections={groupedRides.map((g) => ({ title: g.title, data: g.data }))}
+          keyExtractor={(item) => item.id}
+          stickySectionHeadersEnabled
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          }
+          ListEmptyComponent={fetchError ? renderErrorState() : renderEmptyState()}
+          renderSectionHeader={({ section }) => renderSectionHeader(section.title)}
+          renderItem={({ item }) => (
+            <View style={{ marginHorizontal: 16, marginBottom: 12 }}>
+              {renderRideCard({ item })}
             </View>
           )}
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={groupedRides.length === 0 ? { flexGrow: 1 } : { paddingBottom: 24 }}
         />
       )}
 
@@ -557,6 +675,9 @@ export default function RidesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
@@ -595,10 +716,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
   },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+  skeletonList: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 12,
   },
   emptyState: {
     flex: 1,
@@ -641,7 +762,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     padding: 16,
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -656,15 +777,6 @@ const styles = StyleSheet.create({
   cardDate: {
     fontFamily: "Jakarta-Regular",
     fontSize: 12,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 100,
-  },
-  statusText: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 11,
   },
   routeRow: {
     flexDirection: "row",
@@ -731,11 +843,6 @@ const styles = StyleSheet.create({
     fontFamily: "Jakarta-Bold",
     fontSize: 18,
   },
-  tipText: {
-    fontFamily: "Jakarta-Regular",
-    fontSize: 11,
-    marginTop: 2,
-  },
   actionRow: {
     flexDirection: "row",
     gap: 10,
@@ -779,14 +886,7 @@ const styles = StyleSheet.create({
   },
   modalStatus: {
     alignSelf: "flex-start",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 100,
     marginBottom: 16,
-  },
-  modalStatusText: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 13,
   },
   modalRoute: {
     flexDirection: "row",
@@ -797,6 +897,11 @@ const styles = StyleSheet.create({
   modalRouteText: {
     fontFamily: "Jakarta-SemiBold",
     fontSize: 15,
+  },
+  cancelledByText: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 12,
+    marginBottom: 12,
   },
   fareBreakdown: {
     borderWidth: 1,
@@ -848,16 +953,6 @@ const styles = StyleSheet.create({
   ratingText: {
     fontFamily: "Jakarta-SemiBold",
     fontSize: 13,
-  },
-  paymentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 16,
-  },
-  paymentText: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 15,
   },
   receiptDate: {
     fontFamily: "Jakarta-Regular",

@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "rea
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/goRide";
 
 interface RideDetail {
   id: string;
@@ -51,7 +52,13 @@ export default function RideHistoryDetail() {
   const formatDate = (iso: string) => {
     try {
       const d = new Date(iso);
-      return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      return new Intl.DateTimeFormat("bn-BD", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        numberingSystem: "latn",
+        timeZone: "Asia/Dhaka",
+      }).format(d);
     } catch { return iso; }
   };
 
@@ -66,7 +73,7 @@ export default function RideHistoryDetail() {
       </View>
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#0CC25F" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : error ? (
         <View className="flex-1 items-center justify-center px-[24px]">

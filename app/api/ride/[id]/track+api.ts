@@ -7,7 +7,7 @@ import { z } from 'zod';
 export async function GET(request: Request, { id }: { id: string }) {
   try {
     const uuidParam = z.string().uuid().safeParse(id);
-    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid' }, { status: 400 });
+    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
 
     const [ride] = await db.select({
       status: rides.status,
@@ -18,7 +18,7 @@ export async function GET(request: Request, { id }: { id: string }) {
       destination_longitude: rides.destination_longitude,
     }).from(rides).where(eq(rides.id, id)).limit(1);
 
-    if (!ride) return Response.json({ error: 'not_found' }, { status: 404 });
+    if (!ride) return Response.json({ error: 'not_found', message: 'Resource not found' }, { status: 404 });
 
     let driverName: string | null = null;
     let driverRating: string | null = null;
@@ -47,6 +47,6 @@ export async function GET(request: Request, { id }: { id: string }) {
     });
   } catch (err: any) {
     logger.error('[track] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

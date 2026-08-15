@@ -1,14 +1,13 @@
 import { View, Text, ActivityIndicator } from "react-native";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface LoadingRiderProps {
   message?: string;
 }
 
 export default function LoadingRider({ message }: LoadingRiderProps) {
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;

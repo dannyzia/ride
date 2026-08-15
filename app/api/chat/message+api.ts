@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       .where(eq(users.auth_uid, user.id))
       .limit(1);
     if (!sender)
-      return Response.json({ error: "user_not_found" }, { status: 404 });
+      return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     // Verify sender is participant in this ride
     const [ride] = await db
@@ -30,9 +30,9 @@ export async function POST(request: Request) {
       .where(eq(rides.id, body.ride_id))
       .limit(1);
     if (!ride)
-      return Response.json({ error: "ride_not_found" }, { status: 404 });
+      return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
     if (ride.user_id !== sender.id && ride.driver_id !== sender.id) {
-      return Response.json({ error: "not_ride_participant" }, { status: 403 });
+      return Response.json({ error: 'not_ride_participant', message: 'You are not a participant in this ride' }, { status: 403 });
     }
 
     const [msg] = await db
@@ -88,7 +88,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const rideId = url.searchParams.get("ride_id");
     if (!rideId)
-      return Response.json({ error: "ride_id_required" }, { status: 400 });
+      return Response.json({ error: 'ride_id_required', message: 'Ride ID is required' }, { status: 400 });
 
     const messages = await db
       .select()
@@ -99,6 +99,6 @@ export async function GET(request: Request) {
 
     return Response.json({ messages });
   } catch (_e: any) {
-    return Response.json({ error: "unauthorized" }, { status: 401 });
+    return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
   }
 }

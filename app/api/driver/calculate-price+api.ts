@@ -55,6 +55,6 @@ export async function GET(request: Request) {
     }, { status: 200 });
   } catch (error) {
     logger.error('[driver/calculate-price] error', error);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

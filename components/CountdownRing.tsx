@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { View, Text } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface CountdownRingProps {
   expiresAt: string;
@@ -16,8 +16,7 @@ export default function CountdownRing({ expiresAt, onExpire, size = 56, duration
   const onExpireRef = useRef(onExpire);
   onExpireRef.current = onExpire;
 
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   useEffect(() => {
     const update = () => {

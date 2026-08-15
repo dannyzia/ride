@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { colors, spacing, radii } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 export interface ScheduleOption {
   label: string;
@@ -24,8 +24,7 @@ interface SchedulePickerProps {
 
 export default function SchedulePicker({ selectedIndex = 0, onSelect }: SchedulePickerProps) {
   const [activeIndex, setActiveIndex] = useState(selectedIndex);
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;

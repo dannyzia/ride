@@ -198,6 +198,7 @@ export async function scoreAndBatchDrivers(
     .groupBy(rides.driver_id);
 
     for (const row of qualityRows) {
+      if (!row.driver_id) continue;
       qualityMap.set(row.driver_id, {
         cancels_today: Number(row.cancels_today),
         fives_today: Number(row.fives_today),

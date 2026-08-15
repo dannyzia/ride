@@ -518,7 +518,7 @@ export function startScheduler(): void {
               // Approximate from driver acceptance_rate as a proxy
               // For a real implementation, use driver_online_sessions
               const [{ hours }] = await db.execute<
-                [{ hours: string | null }]
+                { hours: string | null }
               >(sql`
                 SELECT COALESCE(SUM(duration_minutes), 0) / 60.0 as hours
                 FROM driver_online_sessions
@@ -542,7 +542,7 @@ export function startScheduler(): void {
             case "consecutive_accepts": {
               // Count consecutive accepted offers in the incentive period
               const [{ maxStreak }] = await db.execute<
-                [{ maxStreak: string | null }]
+                { maxStreak: string | null }
               >(sql`
                 WITH ordered AS (
                   SELECT outcome,

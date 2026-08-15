@@ -98,7 +98,11 @@ plugins: [
     },
     web: {
       bundler: "metro",
-      output: "server",
+      // Dev-only override: web.output "server" (SSR) crashes on Node >= 22
+      // with "Object prototype may only be an Object or null". Production
+      // (Render) keeps the default "server" output; set EXPO_WEB_OUTPUT=single
+      // locally (see .freebuff/run.md) to preview in the browser.
+      output: process.env.EXPO_WEB_OUTPUT === "single" ? "single" : "server",
       favicon: "./assets/images/favicon.png",
     },
   },

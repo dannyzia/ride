@@ -12,12 +12,27 @@ import { useEffect, useState, Fragment } from "react";
 import { useRiderStore, FareEstimate, DiscountOption, DiscountType } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
-import { colors } from "@/theme/goRide";
+import { colors, fonts, surge } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
 
 const ConfirmRidePage = () => {
   const router = useRouter();
+  const isDark = useIsDark();
+
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const surface = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const border = isDark ? colors.borderDark : colors.borderLight;
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const dividerBorder = isDark ? colors.borderDark : colors.borderLight;
+  // Surge notice palette — tokens in theme/goRide.ts (surge.*)
+  const surgeBg = isDark ? surge.bg.dark : surge.bg.light;
+  const surgeBorder = isDark ? surge.border.dark : surge.border.light;
+  const surgeTitle = isDark ? surge.title.dark : surge.title.light;
+  const surgeBody = isDark ? surge.body.dark : surge.body.light;
+
   const {
     userAddress,
     destinationAddress,
@@ -224,8 +239,9 @@ const ConfirmRidePage = () => {
       });
       const data = await response.json();
       if (data.ride_id) {
-        // Seed activeRide with the ride details + fare so the tracking screen
-        // (final-page) can render the fare, pickup/dropoff, etc. immediately —
+        // Seed activeRide with the ride details + fare so the search/tracking
+        // screens (finding-driver, then ride-tracking) can render the fare,
+        // pickup/dropoff, etc. immediately —
         // previously activeRide was never set, so the rider saw no fare and a
         // blank ride card.
         setActiveRide({
@@ -245,7 +261,7 @@ const ConfirmRidePage = () => {
         });
         setSearchingRideId(data.ride_id);
         setRideStatus("finding");
-        router.replace("/(main)/(customer)/final-page");
+        router.replace("/(main)/(customer)/finding-driver");
       } else {
         Alert.alert(
           "Request Failed",
@@ -262,30 +278,30 @@ const ConfirmRidePage = () => {
   return (
     <Fragment>
       <RideLayout title="Confirm Ride" disabled={false}>
-      <View className="flex-1">
+      <View style={{ flex: 1 }}>
         {/* Selected vehicle info */}
         {displayEstimate && vehicleDef && (
-          <View className="flex-row items-center p-4 mb-5 rounded-2xl bg-cardBgColor">
-            <View className="w-16 h-16 rounded-full bg-bgColor items-center justify-center">
+          <View style={{ flexDirection: "row", alignItems: "center", padding: 16, marginBottom: 20, borderRadius: 16, backgroundColor: surface }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
               <Image
                 source={icons.cab}
-                className="w-8 h-8 tint-primaryTextColor"
+                style={{ width: 32, height: 32, tintColor: textPrimary }}
                 resizeMode="contain"
               />
             </View>
-            <View className="flex-1 ml-4">
-              <Text className="text-primaryTextColor text-lg font-JakartaBold">
+            <View style={{ flex: 1, marginLeft: 16 }}>
+              <Text style={{ color: textPrimary, fontSize: 18, fontFamily: fonts.heading }}>
                 {vehicleDef.display_en}
               </Text>
-              <Text className="text-secondaryTextColor text-sm">
+              <Text style={{ color: textSecondary, fontSize: 14 }}>
                 {displayEstimate.seats} seats
               </Text>
             </View>
-            <View className="items-end">
-              <Text className="text-primaryTextColor text-lg font-JakartaBold">
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={{ color: textPrimary, fontSize: 18, fontFamily: fonts.heading }}>
                 ৳{(displayEstimate.total_bdt / 100).toFixed(0)}
               </Text>
-              <Text className="text-secondaryTextColor text-xs">
+              <Text style={{ color: textSecondary, fontSize: 12 }}>
                 {displayEstimate.eta_minutes} min
               </Text>
             </View>
@@ -293,15 +309,14 @@ const ConfirmRidePage = () => {
         )}
 
         {/* Ride info card */}
-        <View className="rounded-2xl bg-cardBgColor p-4 mb-5">
+        <View style={{ borderRadius: 16, backgroundColor: surface, padding: 16, marginBottom: 20 }}>
           {/* Scheduled time badge */}
           {scheduledAt && (
-            <View className="flex-row items-center py-2 border-b border-borderColor">
+            <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
               <MaterialIcons name="schedule" size={16} color={colors.primary} />
-              <Text className="text-secondaryTextColor ml-2">Pickup at</Text>
+              <Text style={{ color: textSecondary, marginLeft: 8 }}>Pickup at</Text>
               <View
-                className="ml-auto px-2.5 py-0.5 rounded-full"
-                style={{ backgroundColor: colors.primaryLight }}
+                style={{ marginLeft: "auto", paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, backgroundColor: colors.primaryLight }}
               >
                 <Text
                   style={{
@@ -320,22 +335,22 @@ const ConfirmRidePage = () => {
               </View>
             </View>
           )}
-          <View className="flex-row justify-between py-2 border-b border-borderColor">
-            <Text className="text-secondaryTextColor">Distance</Text>
-            <Text className="text-primaryTextColor font-JakartaSemiBold">
+          <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
+            <Text style={{ color: textSecondary }}>Distance</Text>
+            <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
               {rideDistance}
             </Text>
           </View>
-          <View className="flex-row justify-between py-2 border-b border-borderColor">
-            <Text className="text-secondaryTextColor">Duration</Text>
-            <Text className="text-primaryTextColor font-JakartaSemiBold">
+          <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
+            <Text style={{ color: textSecondary }}>Duration</Text>
+            <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
               {rideDuration}
             </Text>
           </View>
         {/* Discount selector */}
         {displayEstimate?.available_discounts && displayEstimate.available_discounts.length > 0 && (
-          <View className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-2xl p-4 mb-5">
-            <Text className="text-primaryTextColor text-sm font-JakartaSemiBold mb-3">Available Discounts</Text>
+          <View style={{ backgroundColor: surface, borderRadius: 16, padding: 16, marginBottom: 20 }}>
+            <Text style={{ color: textPrimary, fontSize: 14, fontFamily: fonts.headingSemi, marginBottom: 12 }}>Available Discounts</Text>
             {displayEstimate.available_discounts.map((discount: DiscountOption) => {
               const isSelected =
                 selectedDiscount?.type === discount.type &&
@@ -350,20 +365,26 @@ const ConfirmRidePage = () => {
                         : { type: discount.type as DiscountType, amount_bdt: discount.amount_bdt },
                     )
                   }
-                  className="flex-row items-center py-2 border-b border-borderColor"
+                  style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}
                 >
                   <View
-                    className={`w-5 h-5 rounded-full border-2 items-center justify-center mr-3 ${
-                      isSelected
-                        ? "bg-goPrimary border-goPrimary"
-                        : "border-goBorderLight dark:border-goBorderDark"
-                    }`}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      borderWidth: 2,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 12,
+                      backgroundColor: isSelected ? colors.primary : "transparent",
+                      borderColor: isSelected ? colors.primary : border,
+                    }}
                   >
-                    {isSelected && <Text className="text-[10px] text-goWhite">✓</Text>}
+                    {isSelected && <Text style={{ fontSize: 10, color: colors.white }}>✓</Text>}
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-primaryTextColor font-JakartaSemiBold">{discount.description}</Text>
-                    <Text className="text-secondaryTextColor text-xs">{discount.percent ? `${discount.percent}% off` : `৳${(discount.amount_bdt / 100).toFixed(0)} off`}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>{discount.description}</Text>
+                    <Text style={{ color: textSecondary, fontSize: 12 }}>{discount.percent ? `${discount.percent}% off` : `৳${(discount.amount_bdt / 100).toFixed(0)} off`}</Text>
                   </View>
                   <Text
                     style={{
@@ -380,23 +401,23 @@ const ConfirmRidePage = () => {
             })}
           </View>
         )}
-          <View className="flex-row justify-between py-2 border-b border-borderColor">
-            <Text className="text-secondaryTextColor">Base fare</Text>
-            <Text className="text-primaryTextColor font-JakartaSemiBold">
+          <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
+            <Text style={{ color: textSecondary }}>Base fare</Text>
+            <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
               ৳{displayEstimate ? (displayEstimate.total_bdt / 100).toFixed(0) : "—"}
             </Text>
            </View>
            {pendingFeeDeduction && (
-             <View className="flex-row justify-between py-2 border-b border-borderColor">
-               <Text className="text-secondaryTextColor">Pending cancellation fee</Text>
-               <Text className="text-goDanger font-JakartaSemiBold">
+             <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
+               <Text style={{ color: textSecondary }}>Pending cancellation fee</Text>
+               <Text style={{ color: colors.danger, fontFamily: fonts.headingSemi }}>
                  ৳{(pendingFeeDeduction.remaining / 100).toFixed(0)} (from cashback)
                </Text>
              </View>
            )}
             {selectedDiscount && (
-             <View className="flex-row justify-between py-2 border-b border-borderColor">
-               <Text className="text-secondaryTextColor">
+             <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
+               <Text style={{ color: textSecondary }}>
                  {selectedDiscount.type === "intro"
                    ? "Intro bonus"
                    : selectedDiscount.type === "promo"
@@ -405,50 +426,50 @@ const ConfirmRidePage = () => {
                    ? "Pass discount"
                    : "Wallet credit"}
                </Text>
-               <Text className="text-goPrimary font-JakartaSemiBold">
+               <Text style={{ color: colors.primary, fontFamily: fonts.headingSemi }}>
                  −৳{(selectedDiscount.amount_bdt / 100).toFixed(0)}
                </Text>
              </View>
            )}
           {upfrontTip > 0 && (
-            <View className="flex-row justify-between py-2 border-b border-borderColor">
-              <Text className="text-secondaryTextColor">Tip</Text>
-              <Text className="text-primaryTextColor font-JakartaSemiBold">
+            <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
+              <Text style={{ color: textSecondary }}>Tip</Text>
+              <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
                 ৳{upfrontTip.toFixed(0)}
               </Text>
             </View>
           )}
-          <View className="flex-row justify-between py-2">
-            <Text className="text-goAccent text-lg font-JakartaBold">Total</Text>
-            <Text className="text-goAccent text-lg font-JakartaBold">
+          <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8 }}>
+            <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>Total</Text>
+            <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>
                ৳{displayEstimate ? ((displayEstimate.total_bdt / 100) - (selectedDiscount?.amount_bdt ?? 0) / 100 + upfrontTip).toFixed(0) : "—"}
             </Text>
           </View>
         </View>
 
         {/* Pickup / Dropoff */}
-        <View className="rounded-2xl bg-cardBgColor p-4 mb-5">
-          <View className="flex-row items-center py-2 border-b border-borderColor">
+        <View style={{ borderRadius: 16, backgroundColor: surface, padding: 16, marginBottom: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
             <Image
               source={icons.marker}
-              className="w-5 h-5 tint-goAccent"
+              style={{ width: 20, height: 20, tintColor: colors.accent }}
               resizeMode="contain"
             />
             <Text
-              className="text-primaryTextColor ml-3 flex-1"
+              style={{ color: textPrimary, marginLeft: 12, flex: 1 }}
               numberOfLines={2}
             >
               {userAddress || "Pickup"}
             </Text>
           </View>
-          <View className="flex-row items-center py-2">
+          <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8 }}>
             <Image
               source={icons.pin}
-              className="w-5 h-5 tint-danger-500"
+              style={{ width: 20, height: 20, tintColor: colors.danger }}
               resizeMode="contain"
             />
             <Text
-              className="text-primaryTextColor ml-3 flex-1"
+              style={{ color: textPrimary, marginLeft: 12, flex: 1 }}
               numberOfLines={2}
             >
               {destinationAddress || "Dropoff"}
@@ -458,11 +479,11 @@ const ConfirmRidePage = () => {
 
         {/* Surge notice */}
         {(displayEstimate as any)?.fare_breakdown?.surge_multiplier > 1.0 && (
-          <View className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-[10px] px-[16px] py-[12px] mb-4">
-            <Text className="text-[14px] font-JakartaBold text-yellow-700 dark:text-yellow-400">
+          <View style={{ backgroundColor: surgeBg, borderWidth: 1, borderColor: surgeBorder, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 16 }}>
+            <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: surgeTitle }}>
               ⚡ High Demand — {(displayEstimate as any).fare_breakdown.surge_multiplier}× pricing active
             </Text>
-            <Text className="text-[13px] font-Jakarta text-yellow-600 dark:text-yellow-500">
+            <Text style={{ fontSize: 13, fontFamily: fonts.body, color: surgeBody }}>
               Includes ৳{(((displayEstimate as any)?.fare_breakdown?.surge_fee_bdt ?? 0) / 100).toFixed(0)} surge fee
             </Text>
           </View>
@@ -471,41 +492,41 @@ const ConfirmRidePage = () => {
         {/* Book for someone else */}
         <TouchableOpacity
           onPress={() => setBookForOther(!bookForOther)}
-          className="flex-row items-center mb-3"
+          style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}
         >
-          <View className={`w-5 h-5 rounded border-2 items-center justify-center mr-2 ${bookForOther ? "bg-goPrimary border-goPrimary" : "border-goBorderLight dark:border-goBorderDark"}`}>
-            {bookForOther && <Text className="text-[12px] text-goWhite">✓</Text>}
+          <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: bookForOther ? colors.primary : "transparent", borderColor: bookForOther ? colors.primary : border }}>
+            {bookForOther && <Text style={{ fontSize: 12, color: colors.white }}>✓</Text>}
           </View>
-          <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Book for someone else</Text>
+          <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>Book for someone else</Text>
         </TouchableOpacity>
         {bookForOther && (
-          <View className="mb-4">
-            <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[12px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-3"
-              placeholder="Passenger name" placeholderTextColor="#9CA3AF" value={otherName} onChangeText={setOtherName} />
-            <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[12px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark"
-              placeholder="01XXXXXXXXX" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={otherPhone} onChangeText={setOtherPhone} />
+          <View style={{ marginBottom: 16 }}>
+            <TextInput style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, fontFamily: fonts.body, color: textPrimary, marginBottom: 12 }}
+              placeholder="Passenger name" placeholderTextColor={colors.textSecondaryDark} value={otherName} onChangeText={setOtherName} />
+            <TextInput style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, fontFamily: fonts.body, color: textPrimary }}
+              placeholder="01XXXXXXXXX" placeholderTextColor={colors.textSecondaryDark} keyboardType="numeric" value={otherPhone} onChangeText={setOtherPhone} />
           </View>
         )}
 
         <UpfrontTipSlider value={upfrontTip} onChange={setUpfrontTip} />
 
         {/* Female driver preference */}
-        <TouchableOpacity onPress={() => setPreferFemale(!preferFemale)} className="flex-row items-center mb-3">
-          <View className={`w-5 h-5 rounded border-2 items-center justify-center mr-2 ${preferFemale ? "bg-goPrimary border-goPrimary" : "border-goBorderLight dark:border-goBorderDark"}`}>
-            {preferFemale && <Text className="text-[12px] text-goWhite">✓</Text>}
+        <TouchableOpacity onPress={() => setPreferFemale(!preferFemale)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+          <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: preferFemale ? colors.primary : "transparent", borderColor: preferFemale ? colors.primary : border }}>
+            {preferFemale && <Text style={{ fontSize: 12, color: colors.white }}>✓</Text>}
           </View>
-          <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Prefer female driver</Text>
+          <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>Prefer female driver</Text>
         </TouchableOpacity>
 
         {stops.length < 2 && (
-          <TouchableOpacity onPress={() => setShowStopModal(true)} className="flex-row items-center py-3 mb-2">
-            <Text className="text-goPrimary font-Jakarta text-[15px]">➕ Add Stop</Text>
+          <TouchableOpacity onPress={() => setShowStopModal(true)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, marginBottom: 8 }}>
+            <Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 15 }}>➕ Add Stop</Text>
           </TouchableOpacity>
         )}
         {stops.map((stop, i) => (
-          <View key={i} className="flex-row items-center bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-lg px-4 py-3 mb-2">
-            <Text className="flex-1 text-[14px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Stop {i + 1}: {stop.address}</Text>
-            <TouchableOpacity onPress={() => setStops(stops.filter((_, j) => j !== i))}><Text className="text-goDanger text-[14px]">✕</Text></TouchableOpacity>
+          <View key={i} style={{ flexDirection: "row", alignItems: "center", backgroundColor: surface, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 8 }}>
+            <Text style={{ flex: 1, fontSize: 14, fontFamily: fonts.body, color: textPrimary }}>Stop {i + 1}: {stop.address}</Text>
+            <TouchableOpacity onPress={() => setStops(stops.filter((_, j) => j !== i))}><Text style={{ color: colors.danger, fontSize: 14 }}>✕</Text></TouchableOpacity>
           </View>
         ))}
 
@@ -518,16 +539,16 @@ const ConfirmRidePage = () => {
       </View>
     </RideLayout>
       <Modal visible={showStopModal} transparent animationType="slide" onRequestClose={() => setShowStopModal(false)}>
-      <View className="flex-1 bg-goBgLight dark:bg-goBgDark pt-20 px-6">
-        <View className="flex-row items-center mb-4">
-          <TouchableOpacity onPress={() => setShowStopModal(false)}><Text className="text-goPrimary font-Jakarta text-base">Cancel</Text></TouchableOpacity>
-          <Text className="flex-1 text-center text-lg font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Add Stop</Text>
-          <View className="w-12" />
+      <View style={{ flex: 1, backgroundColor: bg, paddingTop: 80, paddingHorizontal: 24 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+          <TouchableOpacity onPress={() => setShowStopModal(false)}><Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 16 }}>Cancel</Text></TouchableOpacity>
+          <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>Add Stop</Text>
+          <View style={{ width: 48 }} />
         </View>
         <BarikoiAutocomplete
           icon={undefined}
           initialLocation=""
-          textInputBackgroundColor="#F8FAFC"
+          textInputBackgroundColor={colors.bgLight}
           handlePress={(location: any) => {
             if (stops.length < 2) {
               setStops([...stops, { lat: location.latitude, lng: location.longitude, address: location.address }]);

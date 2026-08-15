@@ -5,12 +5,12 @@ export async function POST(request: Request) {
   const authHeader = request.headers.get('Authorization') ?? '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
   if (!token) {
-    return Response.json({ error: 'missing_token' }, { status: 401 });
+    return Response.json({ error: 'missing_token', message: 'Authentication token missing' }, { status: 401 });
   }
 
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user) {
-    return Response.json({ error: 'invalid_token' }, { status: 401 });
+    return Response.json({ error: 'invalid_token', message: 'Invalid authentication token' }, { status: 401 });
   }
 
   const { data: dbUser } = await supabaseAdmin

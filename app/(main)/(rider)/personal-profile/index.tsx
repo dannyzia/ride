@@ -7,14 +7,24 @@ import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { uploadImage } from "@/lib/imageToURL";
 import { logger } from "@/lib/logger";
+import { colors, fonts, radii } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 export default function DriverPersonalProfile() {
+  const isDark = useIsDark();
+
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const surface = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const border = isDark ? colors.borderDark : colors.borderLight;
+  const bg = isDark ? colors.bgDark : colors.bgLight;
 
   const pickImage = async () => {
     try {
@@ -65,7 +75,7 @@ export default function DriverPersonalProfile() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Failed to save"); return; }
-      router.push("/(main)/(rider)/onboarding/documents");
+      router.push("/(main)/(rider)/onboarding");
     } catch (err: any) {
       setError(err?.message || "Network error");
       logger.error("Driver profile save failed", err);
@@ -77,54 +87,54 @@ export default function DriverPersonalProfile() {
   const isBusy = uploading || saving;
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+          <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Complete Driver Profile</Text>
-        <View className="w-[50px]" />
+        <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>Complete Driver Profile</Text>
+        <View style={{ width: 50 }} />
       </View>
-      <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 40 }}>
-        <TouchableOpacity onPress={pickImage} className="items-center mb-6 mt-4" disabled={isBusy}>
+      <ScrollView style={{ flex: 1, paddingHorizontal: 24 }} contentContainerStyle={{ paddingBottom: 40 }}>
+        <TouchableOpacity onPress={pickImage} style={{ alignItems: "center", marginBottom: 24, marginTop: 16 }} disabled={isBusy}>
           {photo ? (
-            <Image source={{ uri: photo }} className="w-24 h-24 rounded-full" />
+            <Image source={{ uri: photo }} style={{ width: 96, height: 96, borderRadius: 48 }} />
           ) : (
-            <View className="w-24 h-24 rounded-full bg-goAccentLight items-center justify-center">
-              <Text className="text-[14px] font-Jakarta text-goPrimary">Upload Photo</Text>
+            <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: colors.accentLight, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontSize: 14, fontFamily: fonts.body, color: colors.primary }}>Upload Photo</Text>
             </View>
           )}
         </TouchableOpacity>
-        {uploading && <Text className="text-center text-[12px] font-Jakarta text-goTextSecondaryLight mb-2">Uploading photo...</Text>}
+        {uploading && <Text style={{ textAlign: "center", fontSize: 12, fontFamily: fonts.body, color: textSecondary, marginBottom: 8 }}>Uploading photo...</Text>}
 
-        <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-2">Name</Text>
+        <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary, marginBottom: 8 }}>Name</Text>
         <TextInput
-          className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4"
+          style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontFamily: fonts.body, color: textPrimary, marginBottom: 16 }}
           placeholder="Enter your full name"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.textDisabledDark}
           value={name}
           onChangeText={setName}
         />
-        <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-2">City</Text>
+        <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary, marginBottom: 8 }}>City</Text>
         <TextInput
-          className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4"
+          style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontFamily: fonts.body, color: textPrimary, marginBottom: 16 }}
           placeholder="Select your operating city"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.textDisabledDark}
           value={city}
           onChangeText={setCity}
         />
         {error ? (
-          <Text className="text-[14px] font-Jakarta text-goDanger mb-3">{error}</Text>
+          <Text style={{ fontSize: 14, fontFamily: fonts.body, color: colors.danger, marginBottom: 12 }}>{error}</Text>
         ) : null}
         <TouchableOpacity
-          className={`rounded-full py-[16px] items-center ${isBusy ? "bg-goBorderDark" : "bg-goPrimary"}`}
+          style={{ borderRadius: radii.pill, paddingVertical: 16, alignItems: "center", backgroundColor: isBusy ? colors.borderDark : colors.primary }}
           onPress={handleSave}
           disabled={isBusy}
         >
           {isBusy ? (
-            <ActivityIndicator size={20} color="#FFFFFF" />
+            <ActivityIndicator size={20} color={colors.white} />
           ) : (
-            <Text className="text-[18px] font-JakartaBold text-goWhite">Continue</Text>
+            <Text style={{ fontSize: 18, fontFamily: fonts.heading, color: colors.white }}>Continue</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

@@ -4,23 +4,25 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  Switch,
   ActivityIndicator,
   Alert,
   StyleSheet,
   TextInput,
+  StatusBar,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
 import Map from "@/components/Map";
 import { useCustomer } from "@/store";
+import { useRiderStore } from "@/store/useRiderStore";
+import { supabase } from "@/lib/supabase";
 import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
+import { getVehicleTypesByCategory, getVehicleType, VEHICLE_CATEGORIES, VEHICLE_TYPES, VehicleTypeEnum, VehicleIconName, VehicleCategoryDef } from "@/lib/vehicleTypes";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { FloatingNavMenu } from "@/components/FloatingNavMenu";
 import FareBreakdownSheet from "@/components/FareBreakdownSheet";
 import CustomButton from "@/components/CustomButton";
@@ -41,7 +43,7 @@ interface VehicleOption {
   fare: number;
   seats: number;
   hasAc: boolean | null;
-  icon: any;
+  icon: VehicleIconName;
 }
 
 interface SavedPlace {
@@ -52,25 +54,7 @@ interface SavedPlace {
   lng: number;
 }
 
-const VEHICLE_NAMES: Record<string, string> = {
-  bike_basic: "Bike Basic",
-  bike_standard: "Bike Standard",
-  bike_plus: "Bike Plus",
-  cng: "CNG",
-  car_economy: "Economy",
-  car_comfort: "Comfort",
-  car_premium: "Premium",
-  car_xl: "XL",
-};
-
-const SUBCATEGORIES: Record<string, string[]> = {
-  bike: ["bike_basic", "bike_standard", "bike_plus"],
-  cng: ["cng"],
-  car: ["car_economy", "car_comfort", "car_premium"],
-  large_car: ["car_xl"],
-};
-
-const VEHICLE_ICONS: Record<string, any> = {
+const VEHICLE_ICONS: Record<VehicleTypeEnum, VehicleIconName> = {
   bike_basic: "bicycle",
   bike_standard: "bicycle",
   bike_plus: "bicycle",
@@ -84,15 +68,33 @@ const VEHICLE_ICONS: Record<string, any> = {
 const TIP_OPTIONS = [0, 20, 50, 100];
 
 export default function HomeScreen() {
-  const { service } = useLocalSearchParams<{ service?: string }>();
+  const {
+    service,
+    rebook_origin,
+    rebook_dest,
+    rebook_origin_lat,
+    rebook_origin_lng,
+    rebook_dest_lat,
+    rebook_dest_lng,
+    vehicle_type: rebookVehicleType,
+  } = useLocalSearchParams<{
+    service?: string;
+    rebook_origin?: string;
+    rebook_dest?: string;
+    rebook_origin_lat?: string;
+    rebook_origin_lng?: string;
+    rebook_dest_lat?: string;
+    rebook_dest_lng?: string;
+    vehicle_type?: string;
+  }>();
   const bottomSheetRef = useRef<BottomSheet>(null);
 
   const [homeState, setHomeState] = useState<HomeState>("idle");
   const [pickup, setPickup] = useState<SavedPlace | null>(null);
   const [destination, setDestination] = useState<SavedPlace | null>(null);
   const [stops, setStops] = useState<Stop[]>([]);
-  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
-  const [recentPlaces, setRecentPlaces] = useState<SavedPlace[]>([]);
+  const [savedPlaces, _setSavedPlaces] = useState<SavedPlace[]>([]);
+  const [recentPlaces, _setRecentPlaces] = useState<SavedPlace[]>([]);
   const [vehicleOptions, setVehicleOptions] = useState<VehicleOption[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const [fareBreakdown, setFareBreakdown] = useState<Record<string, any> | null>(null);
@@ -102,9 +104,8 @@ export default function HomeScreen() {
   const [tip, setTip] = useState(0);
   const [requesting, setRequesting] = useState(false);
 
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
-  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const isDark = useIsDark();
+  const { language, setTheme } = useAppearance();
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -112,6 +113,47 @@ export default function HomeScreen() {
   const textDisabled = isDark ? colors.textDisabledDark : colors.textDisabledLight;
 
   const { userLatitude, userLongitude, userAddress, setDestinationLocation } = useCustomer();
+  const { setPickup: setRiderPickup, setDropoff: setRiderDropoff, setPickupCoords, setDropoffCoords, setSelectedVehicleType, setRideStatus } = useRiderStore();
+
+  // Rebook prefill: rides / show-ride push rebook_* params; home honors them by
+  // prefilling pickup + destination (with real coords) and jumping to pickup confirm.
+  useEffect(() => {
+    if (!rebook_origin || !rebook_dest) return;
+    const parseCoord = (v?: string): number | null => {
+      const n = v ? parseFloat(v) : NaN;
+      return Number.isFinite(n) && n !== 0 ? n : null;
+    };
+    const originLat = parseCoord(rebook_origin_lat);
+    const originLng = parseCoord(rebook_origin_lng);
+    const destLat = parseCoord(rebook_dest_lat);
+    const destLng = parseCoord(rebook_dest_lng);
+    // Stale link without coords — fall through to the normal flow.
+    if (originLat === null || originLng === null || destLat === null || destLng === null) return;
+    setPickup({
+      id: "rebook-pickup",
+      label: "Pickup",
+      address: rebook_origin,
+      lat: originLat,
+      lng: originLng,
+    });
+    setDestination({
+      id: "rebook-dest",
+      label: "Destination",
+      address: rebook_dest,
+      lat: destLat,
+      lng: destLng,
+    });
+    setDestinationLocation({ latitude: destLat, longitude: destLng, address: rebook_dest });
+    setHomeState("pickup");
+  }, [
+    rebook_origin,
+    rebook_dest,
+    rebook_origin_lat,
+    rebook_origin_lng,
+    rebook_dest_lat,
+    rebook_dest_lng,
+    setDestinationLocation,
+  ]);
 
   const snapPoints = useMemo(() => {
     switch (homeState) {
@@ -141,40 +183,54 @@ export default function HomeScreen() {
     if (!pickup || !destination) return;
     setLoadingFare(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       const body = {
-        origin_lat: pickup.lat,
-        origin_lng: pickup.lng,
-        destination_lat: destination.lat,
-        destination_lng: destination.lng,
-        stops: stops.map((s) => ({ lat: s.latitude, lng: s.longitude })),
+        pickup_lat: pickup.lat,
+        pickup_lng: pickup.lng,
+        dropoff_lat: destination.lat,
+        dropoff_lng: destination.lng,
+        stops: stops.map((s) => ({ lat: s.latitude, lng: s.longitude, address: s.address })),
       };
-      const res = await fetch(`${API_URL}/api/estimate`, {
+      const res = await fetch(`${API_URL}/api/ride/estimate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      const categoryKeys = SUBCATEGORIES[service || "car"] || SUBCATEGORIES["car"];
+      const rawService = service ?? "car";
+      const serviceKey = VEHICLE_CATEGORIES.some((c) => c.key === rawService) ? rawService : "car";
+      const categoryKeys = getVehicleTypesByCategory(serviceKey as VehicleCategoryDef["key"]);
+      const estimates: any[] = data.estimates || [];
       const options: VehicleOption[] = categoryKeys
-        .filter((k) => data.fares?.[k])
-        .map((k) => ({
-          key: k,
-          label: VEHICLE_NAMES[k] || k,
-          eta: data.fares[k].eta_minutes || 5,
-          fare: data.fares[k].total_bdt || 0,
-          seats: data.fares[k].seats || 4,
-          hasAc: data.fares[k].has_ac ?? null,
-          icon: VEHICLE_ICONS[k] || "car",
-        }));
+        .map((def) => estimates.find((e) => e.vehicle_type === def.key))
+        .filter((e): e is { vehicle_type: VehicleTypeEnum; display_en: string; display_bn: string; seats: number; total_bdt: number; eta_minutes: number } => !!e)
+        .map((e) => {
+          const def = VEHICLE_TYPES.find((v) => v.key === e.vehicle_type);
+          return {
+            key: e.vehicle_type,
+            label: language === "bn" ? (e.display_bn ?? def?.display_bn ?? e.vehicle_type) : (e.display_en ?? def?.display_en ?? e.vehicle_type),
+            eta: e.eta_minutes || 5,
+            fare: e.total_bdt || 0,
+            seats: e.seats || 4,
+            hasAc: def?.has_ac ?? null,
+            icon: VEHICLE_ICONS[e.vehicle_type],
+          };
+        });
       setVehicleOptions(options);
-      if (options[0]) setSelectedVehicle(options[0].key);
-      if (data.fares?.[options[0]?.key]) setFareBreakdown(data.fares[options[0].key]);
+      // Rebook preselect: honor the original ride's vehicle type when available.
+      const preferred = options.find((o) => o.key === rebookVehicleType) ?? options[0];
+      if (preferred) setSelectedVehicle(preferred.key);
+      if (preferred) setFareBreakdown(preferred);
     } catch (e) {
       logger.error("[home] estimate failed", e);
     } finally {
       setLoadingFare(false);
     }
-  }, [pickup, destination, stops, service]);
+  }, [pickup, destination, stops, service, rebookVehicleType]);
 
   const handleDestinationSelect = (loc: { latitude: number; longitude: number; address: string }) => {
     const place: SavedPlace = {
@@ -205,17 +261,35 @@ export default function HomeScreen() {
 
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
+    if (!pickup || !selectedVehicle) {
+      Alert.alert("Select pickup and vehicle first");
+      return;
+    }
     try {
-      const res = await fetch(`${API_URL}/api/promo/validate`, {
+      const res = await fetch(`${API_URL}/api/promo/redeem`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: promoCode.trim() }),
+        body: JSON.stringify({
+          code: promoCode.trim(),
+          vehicle_type: selectedVehicle,
+          pickup_lat: pickup.lat,
+          pickup_lng: pickup.lng,
+        }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setAppliedPromo({ code: promoCode.trim(), discount: data.discount_bdt || 0 });
+      const data = await res.json();
+      if (res.ok && data.status === "valid") {
+        const discountValue = data.promo?.discount_value || 0;
+        const discountType = data.promo?.discount_type || "flat";
+        const baseFare = fareBreakdown?.total_bdt || 0;
+        let discountPaisa = 0;
+        if (discountType === "percent") {
+          discountPaisa = Math.round(baseFare * discountValue / 100);
+        } else {
+          discountPaisa = Math.round(discountValue * 100);
+        }
+        setAppliedPromo({ code: promoCode.trim(), discount: discountPaisa });
       } else {
-        Alert.alert("Invalid Code", "This promo code is not valid or has expired.");
+        Alert.alert("Invalid Code", data.error || "This promo code is not valid or has expired.");
       }
     } catch {
       Alert.alert("Error", "Could not validate promo code.");
@@ -225,29 +299,22 @@ export default function HomeScreen() {
   const handleBook = async () => {
     if (!pickup || !destination || !selectedVehicle) return;
     setRequesting(true);
-    setHomeState("finding");
     try {
-      const body: any = {
-        origin_lat: pickup.lat,
-        origin_lng: pickup.lng,
-        destination_lat: destination.lat,
-        destination_lng: destination.lng,
-        vehicle_type: selectedVehicle,
-        upfront_tip_bdt: tip,
-      };
-      if (stops.length > 0) {
-        body.stops = stops.map((s) => ({ lat: s.latitude, lng: s.longitude, address: s.address }));
-      }
-      const res = await fetch(`${API_URL}/api/request`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error("Request failed");
+      setRiderPickup(pickup.address, pickup.lat, pickup.lng);
+      setRiderDropoff(destination.address, destination.lat, destination.lng);
+      setPickupCoords({ lat: pickup.lat, lng: pickup.lng });
+      setDropoffCoords({ lat: destination.lat, lng: destination.lng });
+      setSelectedVehicleType(selectedVehicle as any);
+      setRideStatus("finding");
+
+      // TODO(plan-02 follow-up): wire POST /api/ride/request here
+      router.replace("/(main)/(customer)/finding-driver");
     } catch (e) {
       logger.error("[home] book failed", e);
       Alert.alert("Error", "Could not request ride. Please try again.");
       setHomeState("confirm");
+    } finally {
+      setRequesting(false);
     }
   };
 
@@ -274,6 +341,32 @@ export default function HomeScreen() {
         <Ionicons name="search" size={18} color={textSecondary} />
         <Text style={[styles.whereToText, { color: textSecondary }]}>Where to?</Text>
       </TouchableOpacity>
+
+      {/* Category chips with pre-highlight from service param */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+        <View style={styles.chipsRow}>
+          {VEHICLE_CATEGORIES.map((cat) => {
+            const label = language === "bn" ? cat.display_bn : cat.display_en;
+            const isActive = service === cat.key;
+            return (
+              <View
+                key={cat.key}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: isActive ? colors.primaryLight : (isDark ? colors.darkSecondary : colors.gray100),
+                    borderColor: isActive ? colors.primary : borderColor,
+                    borderWidth: isActive ? 1.5 : 0,
+                  },
+                ]}
+              >
+                <Ionicons name={cat.icon} size={16} color={isActive ? colors.primary : textSecondary} />
+                <Text style={[styles.chipText, { color: isActive ? colors.primary : textPrimary }]}>{label}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
 
       {/* Quick chips */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
@@ -487,12 +580,12 @@ export default function HomeScreen() {
         {/* Selected vehicle summary */}
         <View style={[styles.confirmVehicleRow, { borderBottomColor: borderColor }]}>
           <Ionicons
-            name={VEHICLE_ICONS[selectedVehicle || ""] || "car"}
+            name={selectedVehicle ? VEHICLE_ICONS[selectedVehicle as VehicleTypeEnum] : "car"}
             size={24}
             color={colors.primary}
           />
           <Text style={[styles.confirmVehicleText, { color: textPrimary }]}>
-            {VEHICLE_NAMES[selectedVehicle || ""] || selectedVehicle}
+            {selectedVehicle ? (language === "bn" ? getVehicleType(selectedVehicle as VehicleTypeEnum).display_bn : getVehicleType(selectedVehicle as VehicleTypeEnum).display_en) : ""}
           </Text>
           <Text style={[styles.confirmFare, { color: textPrimary }]}>
             ৳{(finalFare / 100).toFixed(0)}
@@ -583,6 +676,7 @@ export default function HomeScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar translucent backgroundColor="transparent" barStyle={isDark ? "light-content" : "dark-content"} />
       {/* Map Layer */}
       <View style={StyleSheet.absoluteFill}>
         <Map />
@@ -594,6 +688,14 @@ export default function HomeScreen() {
         onPress={() => router.push("/(main)/(customer)/emergency-sos")}
       >
         <Ionicons name="alert-circle" size={20} color={colors.white} />
+      </TouchableOpacity>
+
+      {/* Theme toggle */}
+      <TouchableOpacity
+        style={[styles.themeToggleBtn, { backgroundColor: surfaceBg, borderColor: borderColor }]}
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
 
       {/* Hamburger Menu */}
@@ -901,7 +1003,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     zIndex: 100,
-    shadowColor: "#000",
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  themeToggleBtn: {
+    position: "absolute",
+    top: 60,
+    right: 72,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 100,
+    borderWidth: 1,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

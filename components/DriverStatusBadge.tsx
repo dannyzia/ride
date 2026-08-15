@@ -1,14 +1,13 @@
 import { View, Text } from "react-native";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface DriverStatusBadgeProps {
   status: string;
 }
 
 export default function DriverStatusBadge({ status }: DriverStatusBadgeProps) {
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const s = status.toLowerCase();
 

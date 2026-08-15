@@ -28,7 +28,7 @@ export async function GET(request: Request, { id }: { id: string }) {
       .where(eq(documents.id, parsedId.data))
       .limit(1);
     if (!doc)
-      return Response.json({ error: "document_not_found" }, { status: 404 });
+      return Response.json({ error: 'document_not_found', message: 'Document not found' }, { status: 404 });
 
     const storageUrl = doc.storage_url;
 
@@ -77,10 +77,10 @@ export async function GET(request: Request, { id }: { id: string }) {
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
     if (status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
-      return Response.json({ error: "forbidden" }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/document/presigned-url] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

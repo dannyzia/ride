@@ -23,6 +23,7 @@ import { getRouteDistance } from "@/lib/barikoi";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
+import { percentOf } from "@/lib/money";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { getStagedPromo, clearStagedPromo } from "@/lib/promoCache";
 
@@ -59,9 +60,9 @@ export async function POST(request: Request) {
       .where(eq(users.auth_uid, uid))
       .limit(1);
     if (!user)
-      return Response.json({ error: "user_not_found" }, { status: 404 });
+      return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
     if (user.role !== "rider")
-      return Response.json({ error: "forbidden" }, { status: 403 });
+      return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
 
     const parsed = await parseJsonBody(request, requestSchema);
     if (!parsed.ok) return parsed.response;
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
       .from(rides)
       .where(and(eq(rides.user_id, user.id), gte(rides.created_at, hourAgo)));
     if (Number(countResult?.count ?? 0) >= 5) {
-      return Response.json({ error: "rider_rate_limited" }, { status: 429 });
+      return Response.json({ error: 'rider_rate_limited', message: 'Rate limit exceeded for this rider' }, { status: 429 });
     }
 
     // Calculate distance + fare (route-based, with Haversine fallback)
@@ -192,7 +193,7 @@ export async function POST(request: Request) {
       )
       .limit(1);
     if (!activePricing) {
-      return Response.json({ error: "pricing_not_found" }, { status: 422 });
+      return Response.json({ error: 'pricing_not_found', message: 'Pricing configuration not found' }, { status: 422 });
     }
 
     const fareBreakdown = calculateFare(
@@ -238,7 +239,7 @@ export async function POST(request: Request) {
     fareBreakdown.surge_fee_bdt = surge.surgeFeeBdt;
     const commPct = Number(activePricing.platform_commission_percent ?? 0);
     if (commPct > 0) {
-      fareBreakdown.platform_commission_bdt = Math.floor(fareBreakdown.total_bdt * commPct / 100);
+      fareBreakdown.platform_commission_bdt = percentOf(fareBreakdown.total_bdt, commPct);
       fareBreakdown.driver_net_bdt = fareBreakdown.total_bdt - fareBreakdown.platform_commission_bdt;
     }
 
@@ -495,8 +496,8 @@ export async function POST(request: Request) {
     });
   } catch (err: any) {
     if (err.status === 401)
-      return Response.json({ error: "unauthorized" }, { status: 401 });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[ride/request] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

@@ -6,7 +6,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { useIsDark } from "@/lib/useAppearance";
 
 const getBgVariantStyle = (variant: ButtonProps["bgVariant"], isDark: boolean) => {
   switch (variant) {
@@ -63,8 +63,7 @@ const CustomButton = ({
   className,
   ...props
 }: ButtonProps) => {
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const isDark = useIsDark();
 
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({

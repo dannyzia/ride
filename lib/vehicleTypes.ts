@@ -15,6 +15,25 @@ export type VehicleTypeEnum = (typeof VEHICLE_TYPE_VALUES)[number];
 /** Zod enum for vehicle type validation — use this everywhere instead of inlining z.enum([...]) */
 export const VEHICLE_TYPE_ZOD_ENUM = z.enum(VEHICLE_TYPE_VALUES);
 
+export type VehicleIconName = "bicycle" | "car" | "car-sport" | "bus";
+
+export interface VehicleCategoryDef {
+  key: "bike" | "cng" | "car" | "large_car";
+  display_en: string;
+  display_bn: string;
+  icon: VehicleIconName;
+  sort: number;
+  subtitle_en: string;
+  subtitle_bn: string;
+}
+
+export const VEHICLE_CATEGORIES: VehicleCategoryDef[] = [
+  { key: "bike", display_en: "Bike", display_bn: "বাইক", icon: "bicycle", sort: 0, subtitle_en: "Fast & affordable", subtitle_bn: "দ্রুত ও সাশ্রয়ী" },
+  { key: "cng", display_en: "CNG", display_bn: "সিএনজি", icon: "car-sport", sort: 1, subtitle_en: "Auto-rickshaw", subtitle_bn: "অটো রিকশা" },
+  { key: "car", display_en: "Car", display_bn: "গাড়ি", icon: "car", sort: 2, subtitle_en: "Comfortable ride", subtitle_bn: "আরামদায়ক যাত্রা" },
+  { key: "large_car", display_en: "Large Cars", display_bn: "বড় গাড়ি", icon: "bus", sort: 3, subtitle_en: "Groups & luggage", subtitle_bn: "গ্রুপ ও লাগেজ" },
+];
+
 export interface VehicleTypeDefinition {
   key: VehicleTypeEnum;
   display_en: string;
@@ -25,6 +44,7 @@ export interface VehicleTypeDefinition {
   min_age_years: number;
   max_age_years: number | null;
   driver_req: { min_rides?: number; min_rating?: number } | null;
+  category: "bike" | "cng" | "car" | "large_car";
 }
 
 export const VEHICLE_TYPES: VehicleTypeDefinition[] = [
@@ -38,6 +58,7 @@ export const VEHICLE_TYPES: VehicleTypeDefinition[] = [
     min_age_years: 1,
     max_age_years: null,
     driver_req: null,
+    category: "bike",
   },
   {
     key: "bike_standard",
@@ -49,6 +70,7 @@ export const VEHICLE_TYPES: VehicleTypeDefinition[] = [
     min_age_years: 1,
     max_age_years: null,
     driver_req: null,
+    category: "bike",
   },
   {
     key: "bike_plus",
@@ -60,6 +82,7 @@ export const VEHICLE_TYPES: VehicleTypeDefinition[] = [
     min_age_years: 1,
     max_age_years: null,
     driver_req: null,
+    category: "bike",
   },
   {
     key: "cng",
@@ -71,6 +94,7 @@ export const VEHICLE_TYPES: VehicleTypeDefinition[] = [
     min_age_years: 1,
     max_age_years: null,
     driver_req: null,
+    category: "cng",
   },
   {
     key: "car_economy",
@@ -82,6 +106,7 @@ export const VEHICLE_TYPES: VehicleTypeDefinition[] = [
     min_age_years: 1,
     max_age_years: 15,
     driver_req: null,
+    category: "car",
   },
   {
     key: "car_comfort",
@@ -93,6 +118,7 @@ export const VEHICLE_TYPES: VehicleTypeDefinition[] = [
     min_age_years: 1,
     max_age_years: 12,
     driver_req: null,
+    category: "car",
   },
   {
     key: "car_premium",
@@ -104,6 +130,7 @@ export const VEHICLE_TYPES: VehicleTypeDefinition[] = [
     min_age_years: 1,
     max_age_years: 8,
     driver_req: { min_rides: 50, min_rating: 4.5 },
+    category: "car",
   },
   {
     key: "car_xl",
@@ -115,6 +142,7 @@ export const VEHICLE_TYPES: VehicleTypeDefinition[] = [
     min_age_years: 1,
     max_age_years: 12,
     driver_req: { min_rides: 25, min_rating: 4.3 },
+    category: "large_car",
   },
 ];
 
@@ -122,6 +150,10 @@ export function getVehicleType(key: VehicleTypeEnum): VehicleTypeDefinition {
   const t = VEHICLE_TYPES.find((v) => v.key === key);
   if (!t) throw new Error(`Unknown vehicle type: ${key}`);
   return t;
+}
+
+export function getVehicleTypesByCategory(category: VehicleCategoryDef["key"]): VehicleTypeDefinition[] {
+  return VEHICLE_TYPES.filter((v) => v.category === category);
 }
 
 export function checkDriverEligibility(

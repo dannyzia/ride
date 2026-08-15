@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "rea
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/theme/goRide";
 
 interface CanceledRide {
   ride_id: string;
@@ -47,7 +48,14 @@ export default function ActivityCanceled() {
   const formatDate = (iso: string) => {
     try {
       const d = new Date(iso);
-      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+      return new Intl.DateTimeFormat("bn-BD", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        numberingSystem: "latn",
+        timeZone: "Asia/Dhaka",
+      }).format(d);
     } catch { return iso; }
   };
 
@@ -62,7 +70,7 @@ export default function ActivityCanceled() {
       </View>
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#0CC25F" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : error ? (
         <View className="flex-1 items-center justify-center px-[24px]">

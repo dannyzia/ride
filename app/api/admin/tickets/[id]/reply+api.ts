@@ -14,14 +14,14 @@ const replySchema = z.object({
 export async function POST(request: Request, { id }: { id: string }) {
   try {
     const uuidParam = z.string().uuid().safeParse(id);
-    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid' }, { status: 400 });
+    if (!uuidParam.success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
 
     const { dbUser } = await requireRole('admin')(request);
     const parsed = await parseJsonBody(request, replySchema);
     if (!parsed.ok) return parsed.response;
 
     const [ticket] = await db.select({ id: supportTickets.id }).from(supportTickets).where(eq(supportTickets.id, id)).limit(1);
-    if (!ticket) return Response.json({ error: 'ticket_not_found' }, { status: 404 });
+    if (!ticket) return Response.json({ error: 'ticket_not_found', message: 'Support ticket not found' }, { status: 404 });
 
     await db.insert(ticketReplies).values({
       ticket_id: id,
@@ -36,8 +36,8 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     return Response.json({ success: true });
   } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized' }, { status: 401 });
+    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/tickets/reply] error', err);
-    return Response.json({ error: 'internal_error' }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

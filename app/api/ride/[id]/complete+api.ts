@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { sendNotification } from "@/lib/notify";
 import { z } from "zod";
 import { recordRideCompletion, recordTip } from '@/lib/accounting';
+import { percentOf } from '@/lib/money';
 import { evaluateStreaks } from '@/lib/gamification';
 import { earnCashback } from '@/lib/walletCashback';
 import { spendZoneBudget } from '@/lib/zoneBudget';
@@ -19,10 +20,10 @@ export async function POST(request: Request) {
     const segments = url.pathname.split("/");
 const rideId = segments[segments.indexOf("ride") + 1];
      if (!rideId)
-       return Response.json({ error: "missing_ride_id" }, { status: 400 });
+       return Response.json({ error: 'missing_ride_id', message: 'Ride ID is required' }, { status: 400 });
      const uuidParam = z.string().uuid().safeParse(rideId);
      if (!uuidParam.success) {
-       return Response.json({ error: "invalid_uuid" }, { status: 400 });
+       return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
      }
 
      const { dbUser: user } = await requireRole("driver")(request);
@@ -33,7 +34,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
       .where(eq(drivers.user_id, user.id))
       .limit(1);
     if (!driver)
-      return Response.json({ error: "driver_not_found" }, { status: 404 });
+      return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     const [ride] = await db
       .select()
@@ -41,9 +42,9 @@ const rideId = segments[segments.indexOf("ride") + 1];
       .where(eq(rides.id, rideId))
       .limit(1);
     if (!ride)
-      return Response.json({ error: "ride_not_found" }, { status: 404 });
+      return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
     if (ride.driver_id !== driver.id) {
-      return Response.json({ error: "not_your_ride" }, { status: 403 });
+      return Response.json({ error: 'not_your_ride', message: 'This ride does not belong to you' }, { status: 403 });
     }
     if (ride.status !== "in_progress") {
       return Response.json(
@@ -62,7 +63,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
       .where(eq(pricing.id, ride.pricing_id))
       .limit(1);
     if (!pricingRow) {
-      return Response.json({ error: "pricing_not_found" }, { status: 500 });
+      return Response.json({ error: 'pricing_not_found', message: 'Pricing configuration not found' }, { status: 500 });
     }
 
     // Compute ride time using the timer rule:
@@ -147,7 +148,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
       fare.surge_fee_bdt = surge.surgeFeeBdt;
       const commPct = Number(pricingRow.platform_commission_percent ?? 0);
       if (commPct > 0) {
-        fare.platform_commission_bdt = Math.floor(fare.total_bdt * commPct / 100);
+        fare.platform_commission_bdt = percentOf(fare.total_bdt, commPct);
         fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
       }
     }
@@ -159,7 +160,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
       fare.surge_fee_bdt = (fare.surge_fee_bdt ?? 0) + waitFee;
       const commPct = Number(pricingRow.platform_commission_percent ?? 0);
       if (commPct > 0) {
-        fare.platform_commission_bdt = Math.floor(fare.total_bdt * commPct / 100);
+        fare.platform_commission_bdt = percentOf(fare.total_bdt, commPct);
         fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
       }
     }
@@ -347,9 +348,9 @@ const rideId = segments[segments.indexOf("ride") + 1];
     });
   } catch (err: any) {
     if (err.status === 401 || err.status === 403) {
-      return Response.json({ error: "unauthorized" }, { status: err.status });
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: err.status });
     }
     logger.error("[ride/complete] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

@@ -28,6 +28,6 @@ export async function GET(request: Request) {
     return Response.json({ faqs: rows }, { status: 200 });
   } catch (err: any) {
     logger.error("[faqs] error", err);
-    return Response.json({ error: "internal_error" }, { status: 500 });
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-import { colors } from "@/theme/goRide";
-import { useAppearance } from "@/lib/useAppearance";
+import { colors, spacing, radii } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface DocumentUploadCardProps {
   docType: string;
@@ -15,8 +15,8 @@ interface DocumentUploadCardProps {
 
 export default function DocumentUploadCard({ docType, label, onUploadComplete }: DocumentUploadCardProps) {
   const [uploading, setUploading] = useState(false);
-  const { theme } = useAppearance();
-  const isDark = theme === "dark" || theme === "system";
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const isDark = useIsDark();
 
   const bg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
@@ -50,6 +50,7 @@ export default function DocumentUploadCard({ docType, label, onUploadComplete }:
         .from("driver-documents")
         .getPublicUrl(data.path);
 
+      setPreviewUri(file.uri);
       onUploadComplete(data.path, publicUrlData.publicUrl);
       logger.info("[DocumentUploadCard] upload complete", { docType, path: data.path });
     } catch (e: any) {
@@ -63,36 +64,73 @@ export default function DocumentUploadCard({ docType, label, onUploadComplete }:
     <TouchableOpacity
       onPress={handlePick}
       disabled={uploading}
-      className="flex-row items-center justify-between p-4 mb-3 rounded-2xl border border-dashed"
+      accessibilityRole="button"
+      accessibilityLabel={`Upload ${label}`}
       style={{
         backgroundColor: bg,
+        borderWidth: 1,
+        borderStyle: "dashed",
         borderColor: borderColor,
+        borderRadius: radii["2xl"],
+        padding: spacing.lg,
+        marginBottom: spacing.md,
       }}
     >
-      <View className="flex-1 mr-3">
-        <Text
-          className="text-sm font-JakartaBold"
-          style={{ color: textPrimary }}
-        >
-          {label}
-        </Text>
-        <Text
-          className="text-xs font-Jakarta mt-0.5"
-          style={{ color: textSecondary }}
-        >
-          {uploading ? "Uploading..." : "Tap to upload document"}
-        </Text>
-      </View>
-      {uploading ? (
-        <ActivityIndicator size="small" color={colors.primary} />
-      ) : (
-        <View
-          className="w-8 h-8 rounded-full items-center justify-center"
-          style={{ backgroundColor: colors.primary + "15" }}
-        >
-          <Ionicons name="add" size={20} color={colors.primary} />
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <View style={{ flex: 1, marginRight: spacing.md }}>
+          <Text
+            style={{
+              fontFamily: "Jakarta-Bold",
+              fontSize: 14,
+              color: textPrimary,
+            }}
+          >
+            {label}
+          </Text>
+          <Text
+            style={{
+              fontFamily: "Jakarta-Regular",
+              fontSize: 12,
+              color: textSecondary,
+              marginTop: 2,
+            }}
+          >
+            {uploading
+              ? "Uploading..."
+              : previewUri
+                ? "Tap to replace document"
+                : "Tap to upload document"}
+          </Text>
         </View>
-      )}
+        {uploading ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : previewUri ? (
+          <Image
+            source={{ uri: previewUri }}
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: borderColor,
+            }}
+            resizeMode="cover"
+          />
+        ) : (
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: colors.primary + "15",
+            }}
+          >
+            <Ionicons name="add" size={20} color={colors.primary} />
+          </View>
+        )}
+      </View>
     </TouchableOpacity>
   );
 }

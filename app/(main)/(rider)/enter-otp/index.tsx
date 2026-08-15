@@ -1,10 +1,12 @@
 import { colors, spacing } from "@/theme/goRide";
-import { View, Text } from "react-native";
-import React, { useEffect, useState } from "react";
+import { View, Text, Animated } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import CustomButton from "@/components/CustomButton";
 import { useRideOfferStore, useWSStore } from "@/store";
 import { router } from "expo-router";
 import { OtpInput } from "react-native-otp-entry";
+import { useIsDark } from "@/lib/useAppearance";
 
 const EnterOtp = () => {
   const [pinInput, setPinInput] = useState("");
@@ -12,6 +14,24 @@ const EnterOtp = () => {
   const [verifying, setVerifying] = useState(false);
   const { ws } = useWSStore();
   const { activeRideId } = useRideOfferStore();
+  const isDark = useIsDark();
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const pinBorder = isDark ? colors.borderDark : colors.textDisabledLight;
+
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!error) return;
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 1, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -1, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 1, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]).start();
+  }, [error, shakeAnim]);
 
   // The server is the source of truth for the Ride Pin (rides.start_pin).
   // We send what the driver typed and react to the server's verdict — the
@@ -60,82 +80,121 @@ const EnterOtp = () => {
   };
 
   return (
-    <View className="flex-1 justify-center items-center px-6 bg-white">
-      <Text className="text-2xl font-bold text-black mb-4">Ride Pin</Text>
-      <Text className="text-gray-600 text-center mb-8">
-        Enter the 4-digit Ride Pin your rider gave you to start the ride.
-      </Text>
-
-      {/* <TextInput
-                value={riderOTP}
-                onChangeText={setRiderOTP}
-                keyboardType="number-pad"
-                maxLength={6}
-                className="w-full border border-gray-300 rounded-lg text-center py-3 text-lg tracking-widest mb-6"
-                placeholder="Enter OTP"
-            /> */}
-      <OtpInput
-        numberOfDigits={4}
-        onTextChange={setPinInput}
-        focusColor="black"
-        placeholder="*"
-        type="numeric"
-        theme={{
-          containerStyle: {
-            width: "100%",
-            justifyContent: "space-between",
-            flexDirection: "row",
-            marginBottom: spacing["2xl"],
-          },
-          pinCodeContainerStyle: {
-            borderWidth: 1,
-            borderColor: colors.textDisabledLight, // Tailwind: border-gray-300
-            borderRadius: 8,
-            paddingVertical: 12,
-            width: 60,
-            height: 60,
-            justifyContent: "center",
-            alignItems: "center",
-          },
-          pinCodeTextStyle: {
-            fontSize: 18,
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: spacing["2xl"] }}>
+        <Text
+          style={{
+            fontSize: 24,
+            fontFamily: "Jakarta-Bold",
+            color: textPrimary,
+            marginBottom: spacing.md,
+          }}
+        >
+          Ride Pin
+        </Text>
+        <Text
+          style={{
+            fontFamily: "Jakarta-Regular",
+            fontSize: 14,
+            color: textSecondary,
             textAlign: "center",
-            letterSpacing: 6,
-          },
-          focusStickStyle: {
-            backgroundColor: "black",
-            width: 2,
-            height: 24,
-          },
-          focusedPinCodeContainerStyle: {
-            borderColor: "black",
-          },
-          filledPinCodeContainerStyle: {
-            borderColor: colors.gray600, // Tailwind: border-gray-600
-          },
-          disabledPinCodeContainerStyle: {
-            backgroundColor: colors.gray200, // Tailwind: bg-gray-200
-          },
-          placeholderTextStyle: {
-            color: colors.textSecondaryDark, // Tailwind: text-gray-400
-          },
-        }}
-      />
+            marginBottom: spacing["2xl"],
+          }}
+        >
+          Enter the 4-digit Ride Pin your rider gave you to start the ride.
+        </Text>
 
-      {error && (
-        <View className="items-center justify-center">
-          <Text className="font-Jakarta text-lg text-red-600">{error}</Text>
-        </View>
-      )}
+        <Animated.View
+          style={{
+            width: "100%",
+            transform: [
+              {
+                translateX: shakeAnim.interpolate({
+                  inputRange: [-1, 1],
+                  outputRange: [-8, 8],
+                }),
+              },
+            ],
+            borderWidth: error ? 1.5 : 0,
+            borderColor: colors.danger,
+            borderRadius: 12,
+            paddingBottom: spacing.xs,
+          }}
+        >
+          <OtpInput
+            numberOfDigits={4}
+            onTextChange={setPinInput}
+            focusColor={colors.primary}
+            placeholder="*"
+            type="numeric"
+            theme={{
+              containerStyle: {
+                width: "100%",
+                justifyContent: "space-between",
+                flexDirection: "row",
+                marginBottom: spacing["2xl"],
+              },
+              pinCodeContainerStyle: {
+                borderWidth: 1,
+                borderColor: pinBorder,
+                borderRadius: 8,
+                paddingVertical: 12,
+                width: 60,
+                height: 60,
+                justifyContent: "center",
+                alignItems: "center",
+              },
+              pinCodeTextStyle: {
+                fontSize: 18,
+                textAlign: "center",
+                letterSpacing: 6,
+                color: textPrimary,
+              },
+              focusStickStyle: {
+                backgroundColor: colors.primary,
+                width: 2,
+                height: 24,
+              },
+              focusedPinCodeContainerStyle: {
+                borderColor: colors.primary,
+              },
+              filledPinCodeContainerStyle: {
+                borderColor: isDark ? colors.textSecondaryDark : colors.gray600,
+              },
+              disabledPinCodeContainerStyle: {
+                backgroundColor: isDark ? colors.surfaceElevatedDark : colors.gray200,
+              },
+              placeholderTextStyle: {
+                color: textSecondary,
+              },
+            }}
+          />
+        </Animated.View>
 
-      <CustomButton
-        title={verifying ? "Starting..." : "Start Ride"}
-        onPress={handleVerify}
-        bgVariant="primary"
-        textVariant="primary"
-        className="w-full"
-      />
-    </View>
+        {error && (
+          <View style={{ alignItems: "center", justifyContent: "center", marginBottom: spacing.md }}>
+            <Text
+              style={{
+                fontFamily: "Jakarta-Regular",
+                fontSize: 15,
+                color: colors.danger,
+                textAlign: "center",
+              }}
+            >
+              {error}
+            </Text>
+          </View>
+        )}
+
+        <CustomButton
+          title={verifying ? "Starting..." : "Start Ride"}
+          onPress={handleVerify}
+          bgVariant="primary"
+          textVariant="primary"
+          className="w-full"
+        />
+      </View>
+    </SafeAreaView>
   );
 };
 
