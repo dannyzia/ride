@@ -31,8 +31,8 @@ export default function LoginScreen() {
   const placeholderColor = isDark ? colors.textDisabledDark : colors.textDisabledLight;
 
   const handleLogin = async () => {
-    const fullPhone = `+880${phone.replace(/^0+/, "")}`;
-    if (fullPhone.length < 13) {
+    const fullPhone = `+880${phone}`;
+    if (fullPhone.length !== 14) {
       setError("Enter a valid phone number");
       return;
     }
@@ -44,8 +44,6 @@ export default function LoginScreen() {
 
     setLoading(true);
     setError("");
-
-    logger.info("[auth-debug] signIn attempt", { phoneLen: fullPhone.length, passLen: password.length });
 
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -101,7 +99,10 @@ export default function LoginScreen() {
           placeholderTextColor={placeholderColor}
           keyboardType="phone-pad"
           value={phone}
-          onChangeText={setPhone}
+          onChangeText={(text) => {
+            setPhone(text.replace(/\D/g, "").replace(/^0+/, "").slice(0, 10));
+            if (error) setError("");
+          }}
           maxLength={10}
         />
       </View>

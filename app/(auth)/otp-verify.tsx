@@ -92,7 +92,7 @@ export default function OtpVerifyScreen() {
         return;
       }
 
-      router.push(`/(auth)/register?phone=${encodeURIComponent(phone)}&role=${roleParam}`);
+      router.push(`/(auth)/register?phone=${encodeURIComponent(phone)}&role=${roleParam ?? "rider"}`);
     } catch (e: any) {
       setError("Failed to verify OTP. Please try again.");
       logger.error("[auth] verify otp error", e);
@@ -129,7 +129,10 @@ export default function OtpVerifyScreen() {
           placeholderTextColor={placeholderColor}
           keyboardType="number-pad"
           value={otp}
-          onChangeText={setOtp}
+          onChangeText={(text) => {
+            setOtp(text);
+            if (error) setError("");
+          }}
           maxLength={6}
         />
       </View>
@@ -144,7 +147,7 @@ export default function OtpVerifyScreen() {
       ) : null}
 
       <CustomButton
-        title={isLoading ? "Verifying..." : "Verify OTP"}
+        title={loading ? "Verifying..." : "Verify OTP"}
         onPress={handleVerifyOtp}
         disabled={isLoading || !sessionId}
       />

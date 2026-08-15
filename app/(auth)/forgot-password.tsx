@@ -64,8 +64,8 @@ export default function ForgotPasswordScreen() {
   }, []);
 
   const handleSendOtp = async () => {
-    const fPhone = `+880${phoneInput.replace(/^0+/, '')}`;
-    if (fPhone.length < 13) {
+    const fPhone = `+880${phoneInput}`;
+    if (fPhone.length !== 14) {
       setError('Enter a valid phone number');
       return;
     }
@@ -175,7 +175,7 @@ export default function ForgotPasswordScreen() {
                 placeholderTextColor={colors.textDisabledDark}
                 keyboardType="phone-pad"
                 value={phoneInput}
-                onChangeText={setPhoneInput}
+                onChangeText={(text) => setPhoneInput(text.replace(/\D/g, '').replace(/^0+/, '').slice(0, 10))}
                 maxLength={10}
               />
             </View>

@@ -24,8 +24,8 @@ export default function PhoneEntryScreen() {
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   const handleLogin = async () => {
-    const fullPhone = `+880${phone.replace(/^0+/, "")}`;
-    if (fullPhone.length < 13) {
+    const fullPhone = `+880${phone}`;
+    if (fullPhone.length !== 14) {
       setError("Enter a valid phone number");
       return;
     }
@@ -65,8 +65,8 @@ export default function PhoneEntryScreen() {
   };
 
   const handleRegister = async () => {
-    const fullPhone = `+880${phone.replace(/^0+/, "")}`;
-    if (fullPhone.length < 13) {
+    const fullPhone = `+880${phone}`;
+    if (fullPhone.length !== 14) {
       setError("Enter a valid phone number");
       return;
     }
@@ -159,7 +159,10 @@ export default function PhoneEntryScreen() {
           placeholderTextColor={isDark ? colors.textDisabledDark : colors.textDisabledLight}
           keyboardType="phone-pad"
           value={phone}
-          onChangeText={setPhone}
+          onChangeText={(text) => {
+            setPhone(text.replace(/\D/g, "").replace(/^0+/, "").slice(0, 10));
+            if (error) setError("");
+          }}
           maxLength={10}
         />
       </View>
