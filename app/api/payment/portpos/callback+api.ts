@@ -10,11 +10,12 @@ import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
 import { portposClient, isConfigured } from "@/lib/portpos";
 import { db } from "@/src/db";
-import { paymentEvents, compensationQueue, users, drivers, driverWalletTransactions, riderWalletTransactions, riderPasses, riderSubscriptions } from "@/src/db/schema";
+import { paymentEvents, riderPasses, drivers } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { activateSubscription } from "@/lib/activateSubscription";
+import { creditWalletTopup, activateRiderPass, enqueueCompensation } from "@/lib/paymentRepair";
 import { logger } from "@/lib/logger";
-import { recordSubscriptionSale, recordWalletTopup, recordRiderPassPurchase } from '@/lib/accounting';
+import { recordSubscriptionSale } from '@/lib/accounting';
 
 const ipnSchema = z.object({ invoice: z.string().min(1) });
 
@@ -192,97 +193,44 @@ async function processPortposPayment(
   // Rider Pass activation — use purpose + pass_id (no price guessing)
   if (evt.purpose === 'rider_pass' && evt.pass_id) {
     const [pass] = await db.select().from(riderPasses).where(eq(riderPasses.id, evt.pass_id)).limit(1);
-    if (pass) {
-      try {
-        await db.transaction(async (tx) => {
-          const [locked] = await tx.select().from(paymentEvents)
-            .where(eq(paymentEvents.id, evt.id)).for('update').limit(1);
-          if (locked.status === 'paid') {
-            logger.info('[portpos/callback] rider pass already credited (concurrent)', { paymentEventId: evt.id });
-            return;
-          }
-          const [newSub] = await tx.insert(riderSubscriptions).values({
-            rider_id: evt.user_id!,
-            pass_id: pass.id,
-            status: 'active',
-            valid_until: new Date(Date.now() + pass.validity_days * 86400000),
-            payment_event_id: evt.id,
-          }).returning();
-          await tx.update(paymentEvents).set({ status: "paid", confirmed_at: new Date() }).where(eq(paymentEvents.id, evt.id));
-          logger.info('[portpos/callback] rider pass activated', { paymentEventId: evt.id, passId: pass.id });
-          try { await recordRiderPassPurchase({ subscriptionId: newSub.id, amountPaisa: evt.amount_bdt, riderId: evt.user_id!, paymentEventId: evt.id }); }
-          catch (e) { logger.warn('[accounting] rider pass entry failed', e); }
-        });
-        return "success";
-      } catch (passErr: any) {
-        logger.error('[portpos/callback] rider pass activation failed', { paymentEventId: evt.id, error: passErr.message });
-        return "failed";
-      }
+    if (!pass) {
+      // Deleted pass: nothing to repair — fail the event outright instead of
+      // falling through to activateSubscription (guaranteed retry doom-loop).
+      logger.error('[portpos/callback] rider pass not found — failing event', { paymentEventId: evt.id, passId: evt.pass_id });
+      await db.update(paymentEvents).set({ status: 'failed' }).where(eq(paymentEvents.id, evt.id));
+      return "failed";
+    }
+    try {
+      await activateRiderPass(evt, pass);
+      logger.info('[portpos/callback] rider pass activated', { paymentEventId: evt.id, passId: pass.id });
+      return "success";
+    } catch (passErr: any) {
+      // Z-3: unlike wallet topup / package purchase, this path never enqueued
+      // compensation — one transient failure left the paid pass stuck in
+      // callback_pending forever with zero retry machinery.
+      logger.error('[portpos/callback] rider pass activation failed — enqueuing compensation', { paymentEventId: evt.id, error: passErr.message });
+      await enqueueCompensation(evt.id);
+      return "failed";
     }
   }
 
-  // Wallet topup — credit user or driver wallet
+  // Wallet topup — credit user or driver wallet (shared credit transaction so
+  // the compensation worker can repair failed topups the same way, Z-2).
   if ((evt.purpose === 'wallet_topup' || (!evt.purpose && evt.user_id && !evt.subscription_id && !evt.ride_id && !evt.driver_id)) && !evt.pass_id) {
     try {
-      await db.transaction(async (tx) => {
-        const [locked] = await tx.select().from(paymentEvents)
-          .where(eq(paymentEvents.id, evt.id)).for('update').limit(1);
-        if (locked.status === 'paid') {
-          logger.info('[portpos/callback] wallet topup already credited (concurrent)', { paymentEventId: evt.id });
-          return;
-        }
-        if (evt.driver_id) {
-          const [d] = await tx.select({ balance: drivers.driver_wallet_balance_bdt })
-            .from(drivers).where(eq(drivers.id, evt.driver_id!)).limit(1)
-            .for("update");
-          const newBalance = (d?.balance ?? 0) + evt.amount_bdt;
-          await tx.update(drivers)
-            .set({ driver_wallet_balance_bdt: newBalance, updated_at: new Date() })
-            .where(eq(drivers.id, evt.driver_id!));
-          await tx.insert(driverWalletTransactions).values({
-            driver_id: evt.driver_id!,
-            transaction_type: "adjustment",
-            amount_bdt: evt.amount_bdt,
-            balance_after: newBalance,
-          } as any);
-        } else {
-          const [u] = await tx.select({ balance: users.rider_wallet_balance_bdt })
-            .from(users).where(eq(users.id, evt.user_id!)).limit(1)
-            .for("update");
-          const newBalance = (u?.balance ?? 0) + evt.amount_bdt;
-          await tx.update(users)
-            .set({ rider_wallet_balance_bdt: newBalance, updated_at: new Date() })
-            .where(eq(users.id, evt.user_id!));
-          await tx.insert(riderWalletTransactions).values({
-            rider_id: evt.user_id!,
-            transaction_type: "adjustment",
-            amount_bdt: evt.amount_bdt,
-            balance_after: newBalance,
-          } as any);
-        }
-        await tx.update(paymentEvents)
-          .set({ status: "paid", confirmed_at: new Date() })
-          .where(eq(paymentEvents.id, evt.id));
-      });
+      await creditWalletTopup(evt);
       logger.info("[portpos/callback] wallet topup completed", {
         paymentEventId: evt.id,
         userId: evt.user_id,
         amountBdt: evt.amount_bdt,
       });
-      try { await recordWalletTopup({ userId: evt.user_id!, amountPaisa: evt.amount_bdt, isDriver: !!evt.driver_id, paymentEventId: evt.id }); }
-      catch (e) { logger.warn('[accounting] wallet topup entry failed', e); }
       return "success";
     } catch (topupErr: any) {
       logger.error("[portpos/callback] wallet topup failed", {
         paymentEventId: evt.id,
         error: topupErr.message,
       });
-      await db.insert(compensationQueue).values({
-        payment_event_id: evt.id,
-        status: "pending",
-        next_retry_at: new Date(),
-        attempt_count: 0,
-      });
+      await enqueueCompensation(evt.id);
       return "failed";
     }
   }
@@ -315,12 +263,7 @@ async function processPortposPayment(
         error: activationErr.message,
       },
     );
-    await db.insert(compensationQueue).values({
-      payment_event_id: evt.id,
-      status: "pending",
-      next_retry_at: new Date(),
-      attempt_count: 0,
-    });
+    await enqueueCompensation(evt.id);
     return "failed";
   }
 }

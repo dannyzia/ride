@@ -102,7 +102,10 @@ function buildDbMock(initialRows: Row[]) {
   }));
 
   (db.insert as jest.Mock).mockImplementation((table: unknown) => ({
-    values: jest.fn(async (values: Row) => {
+    // Synchronous so callers can chain .onConflictDoNothing() (the shared
+    // enqueueCompensation helper does) — an async values() would return a
+    // Promise and break the chain.
+    values: jest.fn((values: Row) => {
       if (table === compensationQueue) state.compensationQueue.push(values);
       return { onConflictDoNothing: jest.fn(), returning: jest.fn() };
     }),

@@ -1,7 +1,7 @@
 import { db } from '../src/db';
 import { compensationQueue } from '../src/db/schema';
 import { and, eq, lte } from 'drizzle-orm';
-import { activateSubscription } from '../lib/activateSubscription';
+import { repairPaymentEvent } from '../lib/paymentRepair';
 import { logger } from '../lib/logger';
 
 const MAX_ATTEMPTS = 10;
@@ -24,7 +24,11 @@ export function startCompensationWorker(): void {
 
       for (const row of rows) {
         try {
-          await activateSubscription(row.payment_event_id);
+          // Z-2: repair is dispatched by purpose (wallet topup / rider pass /
+          // subscription). Previously every row went through
+          // activateSubscription, which throws for wallet topups and rider
+          // passes — those paid events could never be repaired.
+          await repairPaymentEvent(row.payment_event_id);
           await db.update(compensationQueue).set({ status: 'completed', updated_at: new Date() })
             .where(eq(compensationQueue.id, row.id));
           logger.info('[compensationWorker] success', { id: row.id });
