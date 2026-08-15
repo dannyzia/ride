@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { users, userDevices } from '@/src/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
@@ -24,21 +24,18 @@ export async function POST(request: Request) {
 
     const { push_token, platform, device_id } = parsed.data;
 
-    const existing = await db
-      .select({ id: userDevices.id })
-      .from(userDevices)
-      .where(and(eq(userDevices.user_id, appUser.id), eq(userDevices.device_id, device_id)))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db.update(userDevices)
-        .set({ push_token, platform, last_active_at: new Date(), updated_at: new Date() })
-        .where(eq(userDevices.id, existing[0].id));
-    } else {
-      await db.insert(userDevices).values({
+    // Y-3: atomic upsert — the user_devices_user_id_device_id_key unique index
+    // makes the old check-then-insert/update a race (a double-tap would hit an
+    // integrity error → 500). One statement, no window.
+    await db
+      .insert(userDevices)
+      .values({
         user_id: appUser.id, push_token, platform, device_id, last_active_at: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [userDevices.user_id, userDevices.device_id],
+        set: { push_token, platform, last_active_at: new Date(), updated_at: new Date() },
       });
-    }
 
     return Response.json({ success: true });
   } catch (err: any) {
