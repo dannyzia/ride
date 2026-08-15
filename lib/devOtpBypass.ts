@@ -13,7 +13,10 @@ import { logger } from "@/lib/logger";
  * phone echo. NEVER set DEV_OTP_BYPASS in production.
  */
 const DEV_OTP_CODE = process.env.DEV_OTP ?? "123456";
-const DEV_OTP_BYPASS = process.env.DEV_OTP_BYPASS === "true";
+// Hard stop, not a comment: the bypass is impossible under NODE_ENV=production
+// even if DEV_OTP_BYPASS is accidentally set (copied .env, fat-fingered deploy).
+const DEV_OTP_BYPASS =
+  process.env.DEV_OTP_BYPASS === "true" && process.env.NODE_ENV !== "production";
 const SESSION_TTL_MS = 5 * 60_000; // 5 minutes
 
 interface DevSession {

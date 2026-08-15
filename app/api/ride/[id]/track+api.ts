@@ -35,15 +35,28 @@ export async function GET(request: Request, { id }: { id: string }) {
       if (drv) { driverName = drv.name; driverRating = drv.rating; vehicleType = drv.vehicle_type; }
     }
 
+    // Status gate: this endpoint is unauthenticated (share-link page). Active
+    // rides may show pickup/dropoff + driver info; terminal rides must degrade
+    // to nothing so finished trips stop leaking coordinates (home addresses)
+    // and driver details forever behind a static UUID.
+    const ACTIVE_STATUSES = new Set([
+      "dispatching",
+      "matched",
+      "driver_arriving",
+      "driver_arrived",
+      "in_progress",
+    ]);
+    const isActive = ACTIVE_STATUSES.has(ride.status);
+
     return Response.json({
       status: ride.status,
-      driver_name: driverName,
-      driver_rating: driverRating,
-      vehicle_type: vehicleType,
-      origin_lat: ride.origin_latitude,
-      origin_lng: ride.origin_longitude,
-      destination_lat: ride.destination_latitude,
-      destination_lng: ride.destination_longitude,
+      driver_name: isActive ? driverName : null,
+      driver_rating: isActive ? driverRating : null,
+      vehicle_type: isActive ? vehicleType : null,
+      origin_lat: isActive ? ride.origin_latitude : null,
+      origin_lng: isActive ? ride.origin_longitude : null,
+      destination_lat: isActive ? ride.destination_latitude : null,
+      destination_lng: isActive ? ride.destination_longitude : null,
     });
   } catch (err: any) {
     logger.error('[track] error', err);

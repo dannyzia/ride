@@ -2,6 +2,7 @@ import { db } from '@/src/db';
 import { cityBoundaries } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { clearCityBoundaryCache } from '@/lib/cityBoundary';
+import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
@@ -21,39 +22,9 @@ const updateSchema = z.object({
   is_active: z.boolean().optional(),
 });
 
-async function requireAdmin(request: Request) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw Object.assign(new Error('Unauthorized'), { status: 401 });
-  }
-  const { users } = await import('@/src/db/schema');
-  const token = authHeader.slice(7);
-  const { createClient } = await import('@supabase/supabase-js');
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser(token);
-  if (error || !user)
-    throw Object.assign(new Error('Unauthorized'), { status: 401 });
-
-  const [dbUser] = await db
-    .select()
-    .from(users)
-    .where(eq(users.auth_uid, user.id))
-    .limit(1);
-  if (!dbUser || dbUser.role !== 'admin') {
-    throw Object.assign(new Error('Forbidden'), { status: 403 });
-  }
-  return dbUser;
-}
-
 export async function GET(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireRole('admin')(request);
     const url = new URL(request.url);
     const includeInactive = url.searchParams.get('include_inactive') === 'true';
     const cities = includeInactive
@@ -77,7 +48,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireRole('admin')(request);
     const result = await parseJsonBody(request, createSchema);
     if (!result.ok) return result.response;
 
@@ -114,7 +85,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireRole('admin')(request);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
     if (!id) return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });
@@ -151,7 +122,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireRole('admin')(request);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
     if (!id) return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });

@@ -4,6 +4,7 @@ import { parseJsonBody } from "@/lib/parseBody";
 import { verifyOtp as verifyDpRelayOtp } from "@/lib/dprelay";
 import { markVerified } from "@/lib/verifiedPhones";
 import { isDevOtpBypassEnabled, consumeDevSession } from "@/lib/devOtpBypass";
+import { rateLimitCount, OTP_VERIFY_MAX } from "@/lib/otpRateLimit";
 import { logger } from "@/lib/logger";
 
 const verifyOtpSchema = z
@@ -39,6 +40,18 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Local brute-force cap per challenge session (defense in depth — dpRelay
+    // may also enforce attempts server-side, but nothing in this repo relies
+    // on that). Returns the same invalid_otp shape so the lockout is not
+    // distinguishable from a wrong code.
+    const attempts = await rateLimitCount(`otp:verify:${sessionId}`);
+    if (attempts > OTP_VERIFY_MAX) {
+      return Response.json(
+        { error: "invalid_otp", message: "OTP verification failed" },
+        { status: 400 },
+      );
+    }
+
     const dpResult = await verifyDpRelayOtp(sessionId, otp);
 
     if (!dpResult.verified) {

@@ -7,6 +7,11 @@ import {
   createDevSession,
   devOtpCode,
 } from "@/lib/devOtpBypass";
+import {
+  rateLimitCount,
+  OTP_PHONE_MAX,
+  OTP_IP_MAX,
+} from "@/lib/otpRateLimit";
 import { logger } from "@/lib/logger";
 
 const sendOtpSchema = z
@@ -27,6 +32,29 @@ export async function POST(request: Request) {
     return Response.json(
       { ...session, dev: true, devOtp: devOtpCode() },
       { status: 200 },
+    );
+  }
+
+  // Rate-limit the public SMS cannon: per phone AND per IP (rate_limits table).
+  // The dev bypass above is excluded — it sends no SMS and costs nothing.
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip")?.trim() ??
+    "unknown";
+  const [phoneCount, ipCount] = await Promise.all([
+    rateLimitCount(`otp:phone:${phone}`),
+    rateLimitCount(`otp:ip:${ip}`),
+  ]);
+  if (phoneCount > OTP_PHONE_MAX || ipCount > OTP_IP_MAX) {
+    logger.warn("[send-otp] rate limited", {
+      phone,
+      ip,
+      phoneCount,
+      ipCount,
+    });
+    return Response.json(
+      { error: "rate_limited", message: "Too many OTP requests. Try again later." },
+      { status: 429 },
     );
   }
 
