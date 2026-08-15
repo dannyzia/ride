@@ -1,0 +1,15 @@
+{
+  "extends": "eslint-config-expo",
+  "rules": {
+    "no-console": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["*.js", "scripts/**/*.js", "ridebase-proxy/**/*.js"],
+      "env": {
+        "node": true,
+        "browser": true
+      }
+    }
+  ]
+}

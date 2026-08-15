@@ -49,8 +49,11 @@ yarn-error.*
 # AI / Agent tools
 .claude/
 .kilo/
+.kilocode/
+.remember/
 .serena/
 .code-review-graph/
+.freebuff/
 .mcp.json
 
 # Vercel
@@ -104,7 +107,6 @@ App Design/
 
 # Legacy config
 app-example
-.eslintrc.json
 
 # Code graph output
 graphify-out/
