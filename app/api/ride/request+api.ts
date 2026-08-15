@@ -100,27 +100,6 @@ export async function POST(request: Request) {
     }
     const zoneId = zoneCheck.zone?.id ?? "00000000-0000-0000-0000-000000000000";
 
-    // Rate limit: max 1 active ride per rider
-    const [activeRide] = await db
-      .select()
-      .from(rides)
-      .where(
-        and(
-          eq(rides.user_id, user.id),
-          sql`status IN ('pending','dispatching','matched','in_progress')`,
-        ),
-      )
-      .limit(1);
-    if (activeRide) {
-      return Response.json(
-        {
-          error: "ride_already_active",
-          message: "You already have an active ride",
-        },
-        { status: 409 },
-      );
-    }
-
     // Rate limit: 5 requests per hour
     const hourAgo = new Date(Date.now() - 3600000);
     const [countResult] = await db
@@ -354,9 +333,31 @@ export async function POST(request: Request) {
     }
 
     let rideId = "";
+    let activeRideConflict = false;
     await db.transaction(async (tx) => {
       // M2: Advisory lock prevents concurrent ride creation for the same user
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('ride_request_' || ${user.id}))`);
+
+      // X-1: the "max 1 active ride" guard must run INSIDE the advisory lock.
+      // A pre-tx SELECT lets two concurrent requests both pass the check and
+      // both insert — two dispatch pipelines, two matches, double deductions.
+      // Serialized by the lock, this re-check sees the first request's
+      // committed ride and aborts the second with 409.
+      const [activeRide] = await tx
+        .select()
+        .from(rides)
+        .where(
+          and(
+            eq(rides.user_id, user.id),
+            sql`status IN ('pending','dispatching','matched','in_progress')`,
+          ),
+        )
+        .limit(1);
+      if (activeRide) {
+        activeRideConflict = true;
+        return;
+      }
+
       const [ride] = await tx
         .insert(rides)
         .values({
@@ -430,6 +431,16 @@ export async function POST(request: Request) {
           );
       }
     });
+
+    if (activeRideConflict) {
+      return Response.json(
+        {
+          error: "ride_already_active",
+          message: "You already have an active ride",
+        },
+        { status: 409 },
+      );
+    }
 
     // ── SMS to secondary rider (non-blocking) ────────────────────────
     if (secondary_rider_phone) {
