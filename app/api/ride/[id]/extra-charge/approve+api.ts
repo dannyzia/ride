@@ -1,6 +1,6 @@
 import { verifySupabaseToken } from '@/lib/auth';
 import { db } from '@/src/db';
-import { rideExtraCharges } from '@/src/db/schema';
+import { rideExtraCharges, rides, users } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -11,7 +11,30 @@ export async function POST(request: Request, { id, chargeId }: { id: string; cha
     const uuidCharge = z.string().uuid().safeParse(chargeId);
     if (!uuidId.success || !uuidCharge.success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
 
-    const _supabaseUser = await verifySupabaseToken(request);
+    // Z-1: the ride owner (rider) approves driver-attested charges. Without
+    // this ownership check any authenticated account could approve any
+    // pending charge by UUID — a one-request money injection onto a
+    // stranger's fare (approved charges are folded into the total at
+    // completion).
+    const supabaseUser = await verifySupabaseToken(request);
+    const [appUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.auth_uid, supabaseUser.id))
+      .limit(1);
+    if (!appUser)
+      return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
+
+    const [ride] = await db
+      .select({ user_id: rides.user_id })
+      .from(rides)
+      .where(eq(rides.id, id))
+      .limit(1);
+    if (!ride)
+      return Response.json({ error: 'not_found', message: 'Resource not found' }, { status: 404 });
+    if (ride.user_id !== appUser.id) {
+      return Response.json({ error: 'forbidden', message: 'You are not the rider for this ride' }, { status: 403 });
+    }
 
     const [charge] = await db.select().from(rideExtraCharges).where(eq(rideExtraCharges.id, chargeId)).limit(1);
     if (!charge || charge.ride_id !== id) return Response.json({ error: 'not_found', message: 'Resource not found' }, { status: 404 });
