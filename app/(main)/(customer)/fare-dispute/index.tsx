@@ -19,7 +19,7 @@ import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { formatBDT, formatDateTime } from "@/lib/format";
-import EmptyState from "@/components/plan03/EmptyState";
+import EmptyState from "@/components/EmptyState";
 
 interface RideSummary {
   id: string;

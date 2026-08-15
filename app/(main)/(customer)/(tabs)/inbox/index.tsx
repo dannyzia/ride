@@ -17,9 +17,9 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
-import NotificationCard from "@/components/plan03/NotificationCard";
-import NotificationSkeleton from "@/components/plan03/NotificationSkeleton";
-import EmptyState from "@/components/plan03/EmptyState";
+import NotificationCard from "@/components/NotificationCard";
+import NotificationSkeleton from "@/components/NotificationSkeleton";
+import EmptyState from "@/components/EmptyState";
 
 const READ_IDS_KEY = "@rider_read_notification_ids";
 

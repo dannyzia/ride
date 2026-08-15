@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radii } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 
@@ -54,7 +54,7 @@ export default function SchedulePicker({ selectedIndex = 0, onSelect }: Schedule
     <View style={{ marginBottom: spacing.md }}>
       {/* Header row */}
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: spacing.sm }}>
-        <MaterialIcons name="schedule" size={18} color={colors.primary} />
+        <Ionicons name="time-outline" size={18} color={colors.primary} />
         <Text
           style={{
             fontFamily: "Jakarta-Bold",

@@ -1,7 +1,7 @@
 import { View, Text, Image, TouchableOpacity, Linking } from 'react-native'
 import { useCustomer, useDriverStore } from '@/store'
 import { icons } from '@/constants/data'
-import { MaterialIcons } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons'
 import { logger } from "@/lib/logger";
 
 const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid: (value: boolean) => void, page: string, number?: string }) => {
@@ -60,7 +60,7 @@ const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid:
             <View className='mt-10 w-full'>
                 <View className='flex-row justify-between'>
                     <View className='flex-row '>
-                        <MaterialIcons name="payment" size={30} color="black" />
+                        <Ionicons name="card-outline" size={30} color="black" />
                         <Text className='my-auto ml-2 font-JakartaBold text-lg'>Payment</Text>
                     </View>
                     <Text className='my-auto text-xl font-JakartaBold'>${selectedDriverDetails?.price || '_ _'}</Text>

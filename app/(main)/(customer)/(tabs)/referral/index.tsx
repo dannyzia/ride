@@ -17,7 +17,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { formatBDT, formatRelativeTime } from "@/lib/format";
-import EmptyState from "@/components/plan03/EmptyState";
+import EmptyState from "@/components/EmptyState";
 
 interface ReferralRecent {
   referee_phone: string | null;

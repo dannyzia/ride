@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import ReactNativeModal from "react-native-modal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Location from "expo-location";
 import { colors, spacing, radii } from "@/theme/goRide";
@@ -150,7 +150,7 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
           zIndex: 100,
         }}
       >
-        <MaterialIcons name="shield" size={28} color={colors.white} />
+        <Ionicons name="shield" size={28} color={colors.white} />
       </TouchableOpacity>
 
       <ReactNativeModal
@@ -182,7 +182,7 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
             }}
           />
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: spacing.lg }}>
-            <MaterialIcons name="shield" size={24} color={colors.danger} />
+            <Ionicons name="shield" size={24} color={colors.danger} />
             <Text
               style={{
                 fontFamily: "Jakarta-Bold",
@@ -239,7 +239,7 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
                       marginRight: spacing.md,
                     }}
                   >
-                    <MaterialIcons name="phone" size={20} color={colors.white} />
+                    <Ionicons name="call" size={20} color={colors.white} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text
@@ -264,7 +264,7 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
                   {sending ? (
                     <ActivityIndicator size="small" color={colors.danger} />
                   ) : (
-                    <MaterialIcons name="chevron-right" size={24} color={textSecondary} />
+                    <Ionicons name="chevron-forward" size={24} color={textSecondary} />
                   )}
                 </TouchableOpacity>
               )}

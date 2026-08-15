@@ -2,7 +2,7 @@ import { View, Text, Image, TouchableOpacity, Dimensions } from 'react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import Animated, { FadeInLeft, FadeOutRight } from 'react-native-reanimated';
 import { icons } from '@/constants/data';
-import { AntDesign } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { RideOfferDetails } from '@/types/type';
 import { colors, spacing, radii } from '@/theme/goRide';
 
@@ -55,11 +55,11 @@ const RiderRidesItem = ({ item, removeIt, acceptRide }: {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Image source={icons.cab} style={{ width: 36, height: 36 }} resizeMode="contain" />
-                    <Text style={{ fontSize: 20, fontWeight: '700', color: colors.textPrimaryDark, fontFamily: 'Urbanist' }}>
+                    <Text style={{ fontSize: 20, fontWeight: '700', color: colors.textPrimaryDark, fontFamily: 'Jakarta-Bold' }}>
                         Car
                     </Text>
                 </View>
-                <Text style={{ fontSize: 13, color: colors.textSecondaryDark, fontFamily: 'Urbanist' }}>
+                <Text style={{ fontSize: 13, color: colors.textSecondaryDark, fontFamily: 'Jakarta-Regular' }}>
                     #{item?.id?.slice(0, 10).toUpperCase() ?? 'RID12345'}
                 </Text>
             </View>
@@ -70,10 +70,10 @@ const RiderRidesItem = ({ item, removeIt, acceptRide }: {
                 <View style={{ flexDirection: 'row', gap: 12, marginBottom: spacing.lg }}>
                     <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colors.primary, marginTop: 6 }} />
                     <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 16, color: colors.textPrimaryDark, fontFamily: 'Urbanist', fontWeight: '700' }}>
+                        <Text style={{ fontSize: 16, color: colors.textPrimaryDark, fontFamily: 'Jakarta-Bold', fontWeight: '700' }}>
                             {item.pickupDetails.pickup}
                         </Text>
-                        <Text style={{ fontSize: 13, color: colors.textSecondaryDark, marginTop: 4, fontFamily: 'Urbanist' }}>
+                        <Text style={{ fontSize: 13, color: colors.textSecondaryDark, marginTop: 4, fontFamily: 'Jakarta-Regular' }}>
                             {item.pickupDetails.pickupAddress ?? 'Pickup address'}
                         </Text>
                     </View>
@@ -83,10 +83,10 @@ const RiderRidesItem = ({ item, removeIt, acceptRide }: {
                 <View style={{ flexDirection: 'row', gap: 12 }}>
                     <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colors.danger, marginTop: 6 }} />
                     <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimaryDark, fontFamily: 'Urbanist' }}>
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimaryDark, fontFamily: 'Jakarta-Bold' }}>
                             {item.dropoffDetails.dropoff}
                         </Text>
-                        <Text style={{ fontSize: 13, color: colors.textSecondaryDark, marginTop: 4, fontFamily: 'Urbanist' }}>
+                        <Text style={{ fontSize: 13, color: colors.textSecondaryDark, marginTop: 4, fontFamily: 'Jakarta-Regular' }}>
                             {item.dropoffDetails.dropoffAddress ?? 'Dropoff address'}
                         </Text>
                     </View>
@@ -95,14 +95,14 @@ const RiderRidesItem = ({ item, removeIt, acceptRide }: {
 
             {/* Customer Details */}
             <View style={{ marginTop: spacing['2xl'] }}>
-                <Text style={{ fontFamily: 'Urbanist', fontWeight: '600', color: colors.textSecondaryDark, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: spacing.sm }}>
+                <Text style={{ fontFamily: 'Jakarta-SemiBold', fontWeight: '600', color: colors.textSecondaryDark, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: spacing.sm }}>
                     Customer
                 </Text>
                 <View style={{ backgroundColor: colors.bgDark, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderDark, gap: 4 }}>
-                    <Text style={{ color: colors.textPrimaryDark, fontFamily: 'Urbanist', fontSize: 14 }}>
+                    <Text style={{ color: colors.textPrimaryDark, fontFamily: 'Jakarta-Regular', fontSize: 14 }}>
                         {item.customerDetails.full_name}
                     </Text>
-                    <Text style={{ color: colors.textSecondaryDark, fontFamily: 'Urbanist', fontSize: 13 }}>
+                    <Text style={{ color: colors.textSecondaryDark, fontFamily: 'Jakarta-Regular', fontSize: 13 }}>
                         {item.customerDetails.number}
                     </Text>
                 </View>
@@ -110,21 +110,21 @@ const RiderRidesItem = ({ item, removeIt, acceptRide }: {
 
             {/* Ride Info */}
             <View style={{ marginTop: spacing.lg }}>
-                <Text style={{ fontFamily: 'Urbanist', fontWeight: '600', color: colors.textSecondaryDark, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: spacing.sm }}>
+                <Text style={{ fontFamily: 'Jakarta-SemiBold', fontWeight: '600', color: colors.textSecondaryDark, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: spacing.sm }}>
                     Ride Info
                 </Text>
                 <View style={{ backgroundColor: colors.bgDark, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderDark, gap: 4 }}>
-                    <Text style={{ color: colors.textSecondaryDark, fontFamily: 'Urbanist', fontSize: 13 }}>Duration: {item.duration}</Text>
-                    <Text style={{ color: colors.primary, fontFamily: 'Urbanist', fontWeight: '700', fontSize: 16 }}>৳{item.fare}</Text>
-                    <Text style={{ color: colors.textSecondaryDark, fontFamily: 'Urbanist', fontSize: 13 }}>Status: {item.status}</Text>
+                    <Text style={{ color: colors.textSecondaryDark, fontFamily: 'Jakarta-Regular', fontSize: 13 }}>Duration: {item.duration}</Text>
+                    <Text style={{ color: colors.primary, fontFamily: 'Jakarta-Bold', fontWeight: '700', fontSize: 16 }}>৳{item.fare}</Text>
+                    <Text style={{ color: colors.textSecondaryDark, fontFamily: 'Jakarta-Regular', fontSize: 13 }}>Status: {item.status}</Text>
                 </View>
             </View>
 
             {/* Footer */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing['2xl'] }}>
                 <View>
-                    <Text style={{ fontSize: 13, color: colors.textSecondaryDark, fontFamily: 'Urbanist' }}>Pickup distance</Text>
-                    <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimaryDark, fontFamily: 'Urbanist' }}>
+                    <Text style={{ fontSize: 13, color: colors.textSecondaryDark, fontFamily: 'Jakarta-Regular' }}>Pickup distance</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimaryDark, fontFamily: 'Jakarta-Bold' }}>
                         {item.pickupDetails.pickupDistance} km
                     </Text>
                 </View>
@@ -135,7 +135,7 @@ const RiderRidesItem = ({ item, removeIt, acceptRide }: {
                         onPress={() => removeIt(item.id)}
                         style={{ backgroundColor: colors.danger, borderRadius: radii.pill, padding: spacing.sm }}
                     >
-                        <AntDesign name="close" size={22} color={colors.white} />
+                        <Ionicons name="close" size={22} color={colors.white} />
                     </TouchableOpacity>
 
                     {/* Accept */}
@@ -151,7 +151,7 @@ const RiderRidesItem = ({ item, removeIt, acceptRide }: {
                             gap: 8,
                         }}
                     >
-                        <Text style={{ fontWeight: '700', fontSize: 16, color: colors.white, fontFamily: 'Urbanist' }}>
+                        <Text style={{ fontWeight: '700', fontSize: 16, color: colors.white, fontFamily: 'Jakarta-Bold' }}>
                             Accept
                         </Text>
                         <View style={{
@@ -162,7 +162,7 @@ const RiderRidesItem = ({ item, removeIt, acceptRide }: {
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
-                            <Text style={{ fontWeight: '700', fontSize: 13, color: colors.white, fontFamily: 'Urbanist' }}>
+                            <Text style={{ fontWeight: '700', fontSize: 13, color: colors.white, fontFamily: 'Jakarta-Bold' }}>
                                 {timer}
                             </Text>
                         </View>

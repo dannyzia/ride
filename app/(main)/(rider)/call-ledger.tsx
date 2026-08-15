@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { AntDesign, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import ReactNativeModal from "react-native-modal";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -82,23 +82,23 @@ const EVENT_CONFIG: Record<
 > = {
   deduction: {
     label: "Ride Deduction",
-    icon: "minuscircleo",
+    icon: "remove-circle-outline",
     color: colors.danger,
   },
-  credit: { label: "Credit Added", icon: "pluscircleo", color: colors.primary },
+  credit: { label: "Credit Added", icon: "add-circle-outline", color: colors.primary },
   initial_load: {
     label: "Subscription Activated",
-    icon: "arrowdown",
+    icon: "arrow-down",
     color: colors.primary,
   },
   expiry_writeoff: {
     label: "Expired Credits",
-    icon: "clockcircleo",
+    icon: "time-outline",
     color: colors.grayMedium,
   },
   pro_rata_credit: {
     label: "Pro-rata Compensation",
-    icon: "gift",
+    icon: "gift-outline",
     color: colors.adminAccent,
   },
 };
@@ -304,7 +304,7 @@ export default function CallLedgerScreen() {
         >
           <Text
             style={{
-              fontFamily: "Urbanist",
+              fontFamily: "Jakarta-Regular",
               fontWeight: "700",
               fontSize: 15,
               color: colors.white,
@@ -319,7 +319,7 @@ export default function CallLedgerScreen() {
             <View style={{ alignItems: "center" }}>
               <Text
                 style={{
-                  fontFamily: "Urbanist",
+                  fontFamily: "Jakarta-Regular",
                   fontWeight: "700",
                   fontSize: 22,
                   color: colors.white,
@@ -340,7 +340,7 @@ export default function CallLedgerScreen() {
             <View style={{ alignItems: "center" }}>
               <Text
                 style={{
-                  fontFamily: "Urbanist",
+                  fontFamily: "Jakarta-Regular",
                   fontWeight: "700",
                   fontSize: 22,
                   color: colors.white,
@@ -361,7 +361,7 @@ export default function CallLedgerScreen() {
             <View style={{ alignItems: "center" }}>
               <Text
                 style={{
-                  fontFamily: "Urbanist",
+                  fontFamily: "Jakarta-Regular",
                   fontWeight: "700",
                   fontSize: 22,
                   color: colors.white,
@@ -382,7 +382,7 @@ export default function CallLedgerScreen() {
             <View style={{ alignItems: "center" }}>
               <Text
                 style={{
-                  fontFamily: "Urbanist",
+                  fontFamily: "Jakarta-Regular",
                   fontWeight: "700",
                   fontSize: 22,
                   color: colors.white,
@@ -433,8 +433,8 @@ export default function CallLedgerScreen() {
             activeFilterCount > 0 ? colors.primaryLight : colors.surfaceLight,
         }}
       >
-        <MaterialIcons
-          name="tune"
+        <Ionicons
+          name="options-outline"
           size={16}
           color={
             activeFilterCount > 0 ? colors.primary : colors.textSecondaryLight
@@ -505,7 +505,7 @@ export default function CallLedgerScreen() {
           >
             {OUTCOME_OPTIONS.find((o) => o.key === outcomeFilter)?.label}
           </Text>
-          <AntDesign
+          <Ionicons
             name="close"
             size={12}
             color={colors.primary}
@@ -540,7 +540,7 @@ export default function CallLedgerScreen() {
                 ?.label
             }
           </Text>
-          <AntDesign
+          <Ionicons
             name="close"
             size={12}
             color={colors.primary}
@@ -585,7 +585,7 @@ export default function CallLedgerScreen() {
 
         <Text
           style={{
-            fontFamily: "Urbanist",
+            fontFamily: "Jakarta-Regular",
             fontWeight: "700",
             fontSize: 18,
             color: colors.textPrimaryLight,
@@ -598,7 +598,7 @@ export default function CallLedgerScreen() {
         {/* Outcome */}
         <Text
           style={{
-            fontFamily: "Urbanist",
+            fontFamily: "Jakarta-Regular",
             fontWeight: "600",
             fontSize: 14,
             color: colors.textSecondaryLight,
@@ -654,7 +654,7 @@ export default function CallLedgerScreen() {
         {/* Vehicle Type */}
         <Text
           style={{
-            fontFamily: "Urbanist",
+            fontFamily: "Jakarta-Regular",
             fontWeight: "600",
             fontSize: 14,
             color: colors.textSecondaryLight,
@@ -710,7 +710,7 @@ export default function CallLedgerScreen() {
         {/* Date Range */}
         <Text
           style={{
-            fontFamily: "Urbanist",
+            fontFamily: "Jakarta-Regular",
             fontWeight: "600",
             fontSize: 14,
             color: colors.textSecondaryLight,
@@ -774,7 +774,7 @@ export default function CallLedgerScreen() {
         >
           <Text
             style={{
-              fontFamily: "Urbanist",
+              fontFamily: "Jakarta-Regular",
               fontWeight: "700",
               fontSize: 15,
               color: colors.white,
@@ -964,7 +964,7 @@ export default function CallLedgerScreen() {
     <View style={{ marginBottom: spacing.lg }}>
       <Text
         style={{
-          fontFamily: "Urbanist",
+          fontFamily: "Jakarta-Regular",
           fontWeight: "600",
           fontSize: 13,
           color: colors.textSecondaryLight,
@@ -1002,7 +1002,7 @@ export default function CallLedgerScreen() {
                 marginRight: spacing.sm,
               }}
             >
-              <AntDesign
+              <Ionicons
                 name={config.icon as any}
                 size={16}
                 color={config.color}
@@ -1028,7 +1028,7 @@ export default function CallLedgerScreen() {
                 </Text>
                 <Text
                   style={{
-                    fontFamily: "Urbanist",
+                    fontFamily: "Jakarta-Regular",
                     fontWeight: "700",
                     fontSize: 13,
                     color: entry.delta > 0 ? colors.primary : colors.danger,
@@ -1070,15 +1070,15 @@ export default function CallLedgerScreen() {
         }}
       >
         <TouchableOpacity onPress={() => router.back()}>
-          <AntDesign
-            name="arrowleft"
+          <Ionicons
+            name="arrow-back"
             size={24}
             color={colors.textPrimaryLight}
           />
         </TouchableOpacity>
         <Text
           style={{
-            fontFamily: "Urbanist",
+            fontFamily: "Jakarta-Regular",
             fontWeight: "700",
             fontSize: 17,
             color: colors.textPrimaryLight,
@@ -1113,7 +1113,7 @@ export default function CallLedgerScreen() {
         >
           <Text
             style={{
-              fontFamily: "Urbanist",
+              fontFamily: "Jakarta-Regular",
               fontWeight: "600",
               fontSize: 13,
               color:
@@ -1138,7 +1138,7 @@ export default function CallLedgerScreen() {
         >
           <Text
             style={{
-              fontFamily: "Urbanist",
+              fontFamily: "Jakarta-Regular",
               fontWeight: "600",
               fontSize: 13,
               color:
@@ -1174,7 +1174,7 @@ export default function CallLedgerScreen() {
         </Text>
         <Text
           style={{
-            fontFamily: "Urbanist",
+            fontFamily: "Jakarta-Regular",
             fontWeight: "700",
             fontSize: 28,
             color: colors.textPrimaryLight,
@@ -1209,14 +1209,14 @@ export default function CallLedgerScreen() {
                 paddingHorizontal: spacing["3xl"],
               }}
             >
-              <AntDesign
-                name="inbox"
+              <Ionicons
+                name="mail-outline"
                 size={48}
                 color={colors.textDisabledLight}
               />
               <Text
                 style={{
-                  fontFamily: "Urbanist",
+                  fontFamily: "Jakarta-Regular",
                   fontWeight: "600",
                   fontSize: 16,
                   color: colors.textSecondaryLight,
@@ -1277,8 +1277,8 @@ export default function CallLedgerScreen() {
               paddingHorizontal: spacing["3xl"],
             }}
           >
-            <AntDesign
-              name="clockcircleo"
+            <Ionicons
+              name="time-outline"
               size={48}
               color={colors.textDisabledLight}
             />

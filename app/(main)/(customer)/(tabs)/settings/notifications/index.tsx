@@ -17,7 +17,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
-import SettingsRow from "@/components/plan03/SettingsRow";
+import SettingsRow from "@/components/SettingsRow";
 
 interface Prefs {
   ride_updates: boolean;

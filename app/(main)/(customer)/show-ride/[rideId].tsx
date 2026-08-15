@@ -17,8 +17,8 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { formatBDT, formatDateTime } from "@/lib/format";
-import StatusBadge from "@/components/plan03/StatusBadge";
-import RideCardSkeleton from "@/components/plan03/RideCardSkeleton";
+import StatusBadge from "@/components/StatusBadge";
+import RideCardSkeleton from "@/components/RideCardSkeleton";
 
 type BadgeStatus = "completed" | "cancelled" | "in_progress" | "scheduled";
 

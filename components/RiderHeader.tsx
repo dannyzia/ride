@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, Image } from 'react-native'
 import React from 'react'
-import { MaterialIcons } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons'
 import { icons } from '@/constants/data'
 import { useSignOut } from '@/lib/session'
 import { router } from 'expo-router'
@@ -40,8 +40,8 @@ const RiderHeader = ({ hasPermissions: _hasPermissions, todayEarnings }: { hasPe
                 borderBottomWidth: 1,
                 borderBottomColor: colors.borderDark,
             }}>
-                <MaterialIcons
-                    name='logout'
+                <Ionicons
+                    name='log-out-outline'
                     color={colors.textSecondaryDark}
                     size={22}
                     onPress={handleSignOut}
@@ -63,7 +63,7 @@ const RiderHeader = ({ hasPermissions: _hasPermissions, todayEarnings }: { hasPe
                     onPress={() => { setOnDuty(!onDuty) }}
                 >
                     <Text style={{
-                        fontFamily: 'Urbanist',
+                        fontFamily: 'Jakarta-Regular',
                         fontWeight: '700',
                         fontSize: 13,
                         color: colors.textPrimaryDark,
@@ -77,7 +77,7 @@ const RiderHeader = ({ hasPermissions: _hasPermissions, todayEarnings }: { hasPe
                         <Image source={icons.dutyOff} style={{ width: 32, height: 32 }} resizeMode='contain' />
                     )}
                 </TouchableOpacity>
-                <MaterialIcons name='notifications' size={22} color={colors.textSecondaryDark} />
+                <Ionicons name='notifications-outline' size={22} color={colors.textSecondaryDark} />
             </View>
             <View style={{
                 height: 52,
@@ -90,7 +90,7 @@ const RiderHeader = ({ hasPermissions: _hasPermissions, todayEarnings }: { hasPe
                 borderBottomColor: colors.borderDark,
             }}>
                 <Text style={{
-                    fontFamily: 'Urbanist',
+                    fontFamily: 'Jakarta-Regular',
                     fontWeight: '500',
                     fontSize: 15,
                     color: colors.textSecondaryDark,
@@ -98,7 +98,7 @@ const RiderHeader = ({ hasPermissions: _hasPermissions, todayEarnings }: { hasPe
                     Today&apos;s Earning
                 </Text>
                 <Text style={{
-                    fontFamily: 'Urbanist',
+                    fontFamily: 'Jakarta-Regular',
                     fontWeight: '700',
                     fontSize: 16,
                     color: isVerified ? colors.primary : colors.textSecondaryDark,

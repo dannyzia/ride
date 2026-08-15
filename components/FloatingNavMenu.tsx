@@ -9,7 +9,7 @@ import {
   Platform,
   Dimensions,
 } from "react-native";
-import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -24,7 +24,7 @@ import { colors } from "@/theme/goRide";
 import { router, usePathname } from "expo-router";
 import { useIsDark } from "@/lib/useAppearance";
 
-type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
+type IconName = keyof typeof Ionicons.glyphMap;
 
 interface NavItem {
   route: string;
@@ -36,29 +36,29 @@ interface NavItem {
 const CUSTOMER_ITEMS: NavItem[] = [
   { route: "/(main)/(customer)/(tabs)/home/index", label: "Home", icon: "home", group: "Ride" },
   { route: "/(main)/(customer)/find-ride", label: "Book Ride", icon: "car", group: "Ride" },
-  { route: "/(main)/(customer)/schedule-ride", label: "Schedule Ride", icon: "calendar-clock", group: "Ride" },
-  { route: "/(main)/(customer)/(tabs)/rides/index", label: "Activity / Rides", icon: "history", group: "Activity" },
-  { route: "/(main)/(customer)/(tabs)/wallet/index", label: "Wallet", icon: "wallet", group: "Activity" },
-  { route: "/(main)/(customer)/(tabs)/chat/index", label: "Chat", icon: "message-text", group: "Activity" },
-  { route: "/(main)/(customer)/(tabs)/profile/index", label: "Account / Profile", icon: "account", group: "Account" },
-  { route: "/(main)/(customer)/(tabs)/settings/index", label: "Settings", icon: "cog", group: "Account" },
-  { route: "/(main)/(customer)/apply-promos", label: "Apply Promos", icon: "ticket-percent", group: "Account" },
-  { route: "/(main)/(customer)/add-tip", label: "Add Tip", icon: "hand-coin", group: "Account" },
-  { route: "/(main)/(customer)/emergency-sos", label: "Emergency SOS", icon: "alert-circle", group: "Safety" },
+  { route: "/(main)/(customer)/schedule-ride", label: "Schedule Ride", icon: "calendar-outline", group: "Ride" },
+  { route: "/(main)/(customer)/(tabs)/rides/index", label: "Activity / Rides", icon: "time-outline", group: "Activity" },
+  { route: "/(main)/(customer)/(tabs)/wallet/index", label: "Wallet", icon: "wallet-outline", group: "Activity" },
+  { route: "/(main)/(customer)/(tabs)/chat/index", label: "Chat", icon: "chatbubble-outline", group: "Activity" },
+  { route: "/(main)/(customer)/(tabs)/profile/index", label: "Account / Profile", icon: "person-outline", group: "Account" },
+  { route: "/(main)/(customer)/(tabs)/settings/index", label: "Settings", icon: "settings-outline", group: "Account" },
+  { route: "/(main)/(customer)/apply-promos", label: "Apply Promos", icon: "pricetag-outline", group: "Account" },
+  { route: "/(main)/(customer)/add-tip", label: "Add Tip", icon: "cash-outline", group: "Account" },
+  { route: "/(main)/(customer)/emergency-sos", label: "Emergency SOS", icon: "alert-circle-outline", group: "Safety" },
 ];
 
 const DRIVER_ITEMS: NavItem[] = [
   { route: "/(main)/(rider)/(tabs)/index", label: "Home (Go Online/Offline)", icon: "home", group: "Main" },
-  { route: "/(main)/(rider)/(tabs)/earning/index", label: "Earning", icon: "cash", group: "Main" },
-  { route: "/(main)/(rider)/(tabs)/activity/index", label: "Activity", icon: "history", group: "Main" },
-  { route: "/(main)/(rider)/(tabs)/wallet/index", label: "Wallet", icon: "wallet", group: "Main" },
-  { route: "/(main)/(rider)/(tabs)/profile/index", label: "Profile", icon: "account", group: "Account" },
-  { route: "/(main)/(rider)/(tabs)/settings/index", label: "Settings", icon: "cog", group: "Account" },
-  { route: "/(main)/(rider)/packages", label: "Packages", icon: "package-variant-closed", group: "Programs" },
-  { route: "/(main)/(rider)/incentives", label: "Incentives", icon: "trophy", group: "Programs" },
-  { route: "/(main)/(rider)/call-ledger", label: "Call Ledger", icon: "clipboard-text", group: "Programs" },
-  { route: "/(main)/(rider)/documents", label: "Documents", icon: "file-document", group: "Compliance" },
-  { route: "/(main)/(rider)/verification", label: "Verification", icon: "check-decagram", group: "Compliance" },
+  { route: "/(main)/(rider)/(tabs)/earning/index", label: "Earning", icon: "cash-outline", group: "Main" },
+  { route: "/(main)/(rider)/(tabs)/activity/index", label: "Activity", icon: "time-outline", group: "Main" },
+  { route: "/(main)/(rider)/(tabs)/wallet/index", label: "Wallet", icon: "wallet-outline", group: "Main" },
+  { route: "/(main)/(rider)/(tabs)/profile/index", label: "Profile", icon: "person-outline", group: "Account" },
+  { route: "/(main)/(rider)/(tabs)/settings/index", label: "Settings", icon: "settings-outline", group: "Account" },
+  { route: "/(main)/(rider)/packages", label: "Packages", icon: "cube-outline", group: "Programs" },
+  { route: "/(main)/(rider)/incentives", label: "Incentives", icon: "trophy-outline", group: "Programs" },
+  { route: "/(main)/(rider)/call-ledger", label: "Call Ledger", icon: "clipboard-outline", group: "Programs" },
+  { route: "/(main)/(rider)/documents", label: "Documents", icon: "document-text-outline", group: "Compliance" },
+  { route: "/(main)/(rider)/verification", label: "Verification", icon: "checkmark-circle-outline", group: "Compliance" },
 ];
 
 const GROUP_ORDER_CUSTOMER = ["Ride", "Activity", "Account", "Safety"];
@@ -157,7 +157,7 @@ export function FloatingNavMenu({ variant }: FloatingNavMenuProps) {
             style={[styles.fab, { backgroundColor: fabBg, borderColor: fabBorder }]}
             hitSlop={12}
           >
-            <AntDesign name="bars" size={20} color={textPrimary} />
+            <Ionicons name="menu" size={20} color={textPrimary} />
           </Pressable>
         </Animated.View>
       </GestureDetector>
@@ -182,7 +182,7 @@ export function FloatingNavMenu({ variant }: FloatingNavMenuProps) {
                 Navigation
               </Text>
               <Pressable onPress={() => setIsOpen(false)} hitSlop={8}>
-                <AntDesign name="close" size={20} color={textSecondary} />
+                <Ionicons name="close" size={20} color={textSecondary} />
               </Pressable>
             </View>
 
@@ -210,7 +210,7 @@ export function FloatingNavMenu({ variant }: FloatingNavMenuProps) {
                             isActive && { backgroundColor: activeBg },
                           ]}
                         >
-                          <MaterialCommunityIcons
+                          <Ionicons
                             name={item.icon}
                             size={20}
                             color={isActive ? activeText : textSecondary}

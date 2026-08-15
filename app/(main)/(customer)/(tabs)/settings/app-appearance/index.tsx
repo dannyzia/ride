@@ -11,7 +11,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
-import SettingsRow from "@/components/plan03/SettingsRow";
+import SettingsRow from "@/components/SettingsRow";
 
 type ThemeMode = "light" | "dark" | "system";
 

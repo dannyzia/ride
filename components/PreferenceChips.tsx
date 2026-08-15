@@ -77,7 +77,7 @@ export default function PreferenceChips({
     <View style={{ marginBottom: spacing.md }}>
       <Text
         style={{
-          fontFamily: "Urbanist",
+          fontFamily: "Jakarta-Regular",
           fontWeight: "600",
           fontSize: 13,
           color: colors.textSecondaryDark,

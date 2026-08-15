@@ -71,10 +71,11 @@ export default function NotificationsPermission() {
   const allow = async () => {
     setBusy(true);
     await registerPushToken();
-    router.replace("/(main)/(customer)/(tabs)/home");
+    // L12: after auth, riders land on the Services Hub (2x2 grid), not home.
+    router.replace("/(main)/(customer)/services-hub");
   };
 
-  const skip = () => router.replace("/(main)/(customer)/(tabs)/home");
+  const skip = () => router.replace("/(main)/(customer)/services-hub");
 
   return (
     <SafeAreaView className="flex-1 px-6" style={{ backgroundColor: bg }}>

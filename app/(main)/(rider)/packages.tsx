@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { AntDesign } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useIsDark } from "@/lib/useAppearance";
 import PaymentWebView from "@/components/PaymentWebView";
 
@@ -254,7 +254,7 @@ export default function PackagesScreen() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <View className="flex-row items-center justify-between px-5 py-4">
         <TouchableOpacity onPress={() => router.back()}>
-          <AntDesign name="arrowleft" size={24} color={textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
           className="text-lg font-JakartaBold"
@@ -271,7 +271,7 @@ export default function PackagesScreen() {
         </View>
       ) : packages.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <AntDesign name="database" size={64} color={textDisabled} />
+          <Ionicons name="server-outline" size={64} color={textDisabled} />
           <Text
             className="text-base mt-4 text-center font-Jakarta"
             style={{ color: textSecondary }}

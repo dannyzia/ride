@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { AntDesign, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 
 interface ActiveIncentive {
   incentive_id: string;
@@ -134,7 +134,7 @@ export default function IncentivesScreen() {
           <View style={{ flex: 1, marginRight: spacing.sm }}>
             <Text
               style={{
-                fontFamily: "Urbanist",
+                fontFamily: "Jakarta-Regular",
                 fontWeight: "700",
                 fontSize: 16,
                 color: colors.textPrimaryLight,
@@ -249,8 +249,8 @@ export default function IncentivesScreen() {
           </Text>
           {pct >= 100 && (
             <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <MaterialIcons
-                name="check-circle"
+              <Ionicons
+                name="checkmark-circle"
                 size={14}
                 color={colors.primary}
               />
@@ -295,12 +295,12 @@ export default function IncentivesScreen() {
           marginRight: spacing.sm,
         }}
       >
-        <MaterialIcons name="check" size={18} color={colors.primary} />
+        <Ionicons name="checkmark" size={18} color={colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
         <Text
           style={{
-            fontFamily: "Urbanist",
+            fontFamily: "Jakarta-Regular",
             fontWeight: "600",
             fontSize: 14,
             color: colors.textPrimaryLight,
@@ -346,15 +346,15 @@ export default function IncentivesScreen() {
         }}
       >
         <TouchableOpacity onPress={() => router.back()}>
-          <AntDesign
-            name="arrowleft"
+          <Ionicons
+            name="arrow-back"
             size={24}
             color={colors.textPrimaryLight}
           />
         </TouchableOpacity>
         <Text
           style={{
-            fontFamily: "Urbanist",
+            fontFamily: "Jakarta-Regular",
             fontWeight: "700",
             fontSize: 17,
             color: colors.textPrimaryLight,
@@ -430,7 +430,7 @@ export default function IncentivesScreen() {
                 >
                   <Text
                     style={{
-                      fontFamily: "Urbanist",
+                      fontFamily: "Jakarta-Regular",
                       fontWeight: "700",
                       fontSize: 15,
                       color: colors.white,
@@ -441,7 +441,7 @@ export default function IncentivesScreen() {
                   </Text>
                   <Text
                     style={{
-                      fontFamily: "Urbanist",
+                      fontFamily: "Jakarta-Regular",
                       fontWeight: "700",
                       fontSize: 32,
                       color: colors.white,
@@ -456,7 +456,7 @@ export default function IncentivesScreen() {
               return (
                 <Text
                   style={{
-                    fontFamily: "Urbanist",
+                    fontFamily: "Jakarta-Regular",
                     fontWeight: "700",
                     fontSize: 15,
                     color: colors.textSecondaryLight,
@@ -480,14 +480,14 @@ export default function IncentivesScreen() {
             <View
               style={{ alignItems: "center", paddingVertical: spacing["3xl"] }}
             >
-              <AntDesign
-                name="gift"
+              <Ionicons
+                name="gift-outline"
                 size={48}
                 color={colors.textDisabledLight}
               />
               <Text
                 style={{
-                  fontFamily: "Urbanist",
+                  fontFamily: "Jakarta-Regular",
                   fontWeight: "600",
                   fontSize: 16,
                   color: colors.textSecondaryLight,

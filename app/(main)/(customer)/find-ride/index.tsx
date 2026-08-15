@@ -25,7 +25,7 @@ import {
 } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 
@@ -35,9 +35,9 @@ const MAX_STOPS = 2;
 // ── Vehicle category grouping ────────────────────────────────────
 type Category = "bike" | "cng" | "car";
 const CATEGORY_META: Record<Category, { label: string; icon: string; prefix: string }> = {
-  bike: { label: "Bike", icon: "two-wheeler", prefix: "bike_" },
-  cng: { label: "CNG", icon: "local-taxi", prefix: "cng" },
-  car: { label: "Car", icon: "directions-car", prefix: "car_" },
+  bike: { label: "Bike", icon: "bicycle", prefix: "bike_" },
+  cng: { label: "CNG", icon: "car", prefix: "cng" },
+  car: { label: "Car", icon: "car-sport", prefix: "car_" },
 };
 const CATEGORY_ORDER: Category[] = ["bike", "cng", "car"];
 
@@ -319,7 +319,7 @@ const PlanRidePage = () => {
               {locating ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <MaterialIcons name="my-location" size={16} color={colors.primary} />
+                <Ionicons name="locate-outline" size={16} color={colors.primary} />
               )}
               <Text style={styles.currentLocationText}>
                 {locating
@@ -359,7 +359,7 @@ const PlanRidePage = () => {
 
             {stops.length < MAX_STOPS && (
               <TouchableOpacity onPress={addStop} style={styles.addStopBtn}>
-                <MaterialIcons name="add" size={18} color={colors.primary} />
+                <Ionicons name="add" size={18} color={colors.primary} />
                 <Text style={styles.addStopText}>Add Stop</Text>
               </TouchableOpacity>
             )}
@@ -432,7 +432,7 @@ const PlanRidePage = () => {
                           },
                         ]}
                       >
-                        <MaterialIcons
+                        <Ionicons
                           name={meta.icon as any}
                           size={24}
                           color={active ? colors.primary : colors.textPrimaryDark}

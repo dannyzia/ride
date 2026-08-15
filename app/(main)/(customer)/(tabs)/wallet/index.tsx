@@ -17,9 +17,9 @@ import { colors, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { formatBDT, formatDate } from "@/lib/format";
-import TransactionRow from "@/components/plan03/TransactionRow";
-import EmptyState from "@/components/plan03/EmptyState";
-import WalletSkeleton from "@/components/plan03/WalletSkeleton";
+import TransactionRow from "@/components/TransactionRow";
+import EmptyState from "@/components/EmptyState";
+import WalletSkeleton from "@/components/WalletSkeleton";
 
 // ── API contracts (app/api/rider/wallet+api.ts) ────────────────────────────
 // GET /api/rider/wallet → { balance_bdt, recent_transactions: [...] }

@@ -17,7 +17,7 @@ import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-import EmptyState from "@/components/plan03/EmptyState";
+import EmptyState from "@/components/EmptyState";
 
 interface AddressItem {
   id: string;
