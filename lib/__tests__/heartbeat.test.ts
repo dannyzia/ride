@@ -57,10 +57,14 @@ function buildDbMock(initial: Partial<FakeState>) {
       from: jest.fn((table: unknown) => ({
         where: jest.fn(() => {
           const rows = rowsFor(table);
-          return {
+          // Supports .for("update") now used by recordCallDeduction/Refund
+          // (the subscription read is locked): where → for → (then | limit).
+          const chain: any = {
+            for: jest.fn(() => chain),
             limit: jest.fn(async (n: number) => rows.slice(0, n)),
             then: (resolve: (v: unknown) => void) => resolve(rows),
           };
+          return chain;
         }),
       })),
     })),

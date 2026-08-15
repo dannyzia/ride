@@ -14,10 +14,16 @@ export async function recordCallDeduction(
   ctx: HeartbeatContext,
 ): Promise<{ deducted: boolean }> {
   return db.transaction(async (tx) => {
+    // Z-4: lock the subscription row. Two concurrent confirmations for
+    // DIFFERENT rides on the same subscription (the one case the
+    // (ride_id, driver_id) unique index does not serialize) both read the
+    // unlocked balance, both pass the JS checks, both deduct → negative
+    // balance / exceeded daily cap. FOR UPDATE serializes check-then-act.
     const [sub] = await tx
       .select()
       .from(subscriptions)
-      .where(eq(subscriptions.id, ctx.subscriptionId));
+      .where(eq(subscriptions.id, ctx.subscriptionId))
+      .for("update");
     if (!sub || sub.status !== "active") {
       logger.warn(
         "[heartbeat] deduction skipped — no active subscription",
@@ -116,10 +122,15 @@ export async function recordCallRefund(ctx: {
       return { refunded: false };
     }
 
+    // Z-5: lock the subscription read AND write the balance relatively. Two
+    // concurrent refunds for different (ride, driver) pairs on one subscription
+    // would otherwise both read X, both write X+1 — one increment lost and the
+    // ledger disagreeing with reality by exactly the lost refund.
     const [sub] = await tx
       .select({ calls_remaining: subscriptions.calls_remaining })
       .from(subscriptions)
       .where(eq(subscriptions.id, ctx.subscriptionId))
+      .for("update")
       .limit(1);
     if (!sub) {
       logger.warn("[heartbeat] refund skipped — subscription not found", ctx);
@@ -131,7 +142,10 @@ export async function recordCallRefund(ctx: {
 
     await tx.update(subscriptions)
       .set({
-        calls_remaining: restoredBalance,
+        // Relative increment; the -1 unlimited sentinel is preserved by CASE.
+        calls_remaining: isUnlimited
+          ? -1
+          : sql`CASE WHEN ${subscriptions.calls_remaining} = -1 THEN -1 ELSE ${subscriptions.calls_remaining} + 1 END`,
         // Reverse the daily-cap usage the deduction consumed (floor at 0).
         daily_calls_used: sql`GREATEST(${subscriptions.daily_calls_used} - 1, 0)`,
       })
