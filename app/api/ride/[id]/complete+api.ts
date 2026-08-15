@@ -201,7 +201,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
       let tipApplied = false;
       if (upfrontTip > 0) {
         const [rider] = await tx.select({ wallet: users.rider_wallet_balance_bdt })
-          .from(users).where(eq(users.id, ride.user_id)).limit(1);
+          .from(users).where(eq(users.id, ride.user_id)).for("update").limit(1);
         if (rider.wallet < upfrontTip) {
           upfrontTipForfeitedBdt = upfrontTip;
           logger.warn('[complete] rider insufficient balance for upfront tip', { rideId, tip: upfrontTip, balance: rider.wallet, forfeited: true });
@@ -224,7 +224,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
 
       if (ride.applied_discount_type === 'wallet' && appliedDiscountBdt > 0) {
         const [rider] = await tx.select({ wallet: users.rider_wallet_balance_bdt })
-          .from(users).where(eq(users.id, ride.user_id)).limit(1);
+          .from(users).where(eq(users.id, ride.user_id)).for("update").limit(1);
         if (rider.wallet >= appliedDiscountBdt) {
           await tx.update(users).set({
             rider_wallet_balance_bdt: sql`${users.rider_wallet_balance_bdt} - ${appliedDiscountBdt}`

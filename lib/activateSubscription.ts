@@ -47,11 +47,20 @@ export async function activateSubscription(paymentEventId: string): Promise<{ su
       .where(and(eq(creditVouchers.driver_id, evt.driver_id), eq(creditVouchers.status, 'active')));
     let balanceAfter = isUnlimited ? -1 : pkg.call_count;
     for (const v of vouchers) {
+      // Redeem with a status guard: two concurrent activations for the same
+      // driver must not double-credit a voucher. Only the first tx wins the
+      // status flip (the loser's UPDATE matches zero rows after the row lock
+      // re-evaluates the WHERE) and writes the ledger credit.
+      const [redeemed] = await tx.update(creditVouchers)
+        .set({ status: 'redeemed', redeemed_subscription_id: sub.id })
+        .where(and(eq(creditVouchers.id, v.id), eq(creditVouchers.status, 'active')))
+        .returning();
+      if (!redeemed) continue;
+
       if (!isUnlimited) {
         await tx.update(subscriptions).set({ calls_remaining: sql`${subscriptions.calls_remaining} + ${v.calls}` }).where(eq(subscriptions.id, sub.id));
         balanceAfter += v.calls;
       }
-      await tx.update(creditVouchers).set({ status: 'redeemed', redeemed_subscription_id: sub.id }).where(eq(creditVouchers.id, v.id));
       await tx.insert(callLedger).values({
         subscription_id: sub.id, driver_id: evt.driver_id,
         event_type: 'credit', delta: v.calls, balance_after: balanceAfter,
