@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
 import { db } from "../../../src/db";
-import { chatMessages, rides, users } from "../../../src/db/schema";
+import { chatMessages, rides, users, drivers } from "../../../src/db/schema";
 import { eq } from "drizzle-orm";
 import { verifySupabaseToken } from "../../../lib/auth";
 
@@ -34,7 +34,21 @@ export async function POST(request: Request) {
       .limit(1);
     if (!ride)
       return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
-    if (ride.user_id !== sender.id && ride.driver_id !== sender.id) {
+
+    // The ride stores the driver's drivers.id; resolve it to their users.id so
+    // both participants are compared in the same ID space. (Mirrors the WS
+    // chat:typing guard in utils-server/index.ts — without this, a driver can
+    // never send chat: driver_id (drivers.id) never equals sender.id (users.id).)
+    const [driverUser] = ride.driver_id
+      ? await db
+          .select({ user_id: drivers.user_id })
+          .from(drivers)
+          .where(eq(drivers.id, ride.driver_id))
+          .limit(1)
+      : [];
+    const participants = new Set<string>([ride.user_id]);
+    if (driverUser?.user_id) participants.add(driverUser.user_id);
+    if (!participants.has(sender.id)) {
       return Response.json({ error: 'not_ride_participant', message: 'You are not a participant in this ride' }, { status: 403 });
     }
 
@@ -47,9 +61,11 @@ export async function POST(request: Request) {
       })
       .returning();
 
-    // Push real-time notification to recipient via WebSocket
+    // Push real-time notification to recipient via WebSocket. The recipient is
+    // the OTHER party, identified by users.id — never ride.driver_id, which is
+    // a drivers.id that matches no connected user (delivery would vanish).
     const recipientUserId =
-      ride.user_id === sender.id ? ride.driver_id : ride.user_id;
+      ride.user_id === sender.id ? (driverUser?.user_id ?? null) : ride.user_id;
     if (recipientUserId) {
       const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
       const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
