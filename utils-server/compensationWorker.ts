@@ -11,7 +11,12 @@ function backoffMs(attempt: number): number {
 }
 
 export function startCompensationWorker(): void {
+  // Overlap guard: a tick slower than 30s must not pick up the same
+  // `status='pending'` rows twice and double-call activateSubscription.
+  let tickRunning = false;
   setInterval(async () => {
+    if (tickRunning) return;
+    tickRunning = true;
     try {
       const rows = await db.select().from(compensationQueue)
         .where(and(eq(compensationQueue.status, 'pending'), lte(compensationQueue.next_retry_at, new Date())))
@@ -38,5 +43,6 @@ export function startCompensationWorker(): void {
         }
       }
     } catch (e) { logger.error('[compensationWorker] tick error', e); }
+    finally { tickRunning = false; }
   }, 30_000);
 }

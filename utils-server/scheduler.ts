@@ -72,7 +72,12 @@ async function sendPushFromScheduler(
 export function startScheduler(): void {
 
   // ── (1) Scheduled ride dispatch — every 30s ─────────────────────────
+  // Overlap guard: a tick slower than 30s must not start a second dispatch
+  // sweep on the same `scheduled_dispatched_at IS NULL` rows.
+  let scheduledDispatchRunning = false;
   setInterval(async () => {
+    if (scheduledDispatchRunning) return;
+    scheduledDispatchRunning = true;
     try {
       const now = new Date();
       const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
@@ -123,6 +128,8 @@ export function startScheduler(): void {
       }
     } catch (e) {
       logger.error("[scheduler] scheduled dispatch error", e);
+    } finally {
+      scheduledDispatchRunning = false;
     }
   }, 30_000);
 
@@ -303,7 +310,11 @@ export function startScheduler(): void {
   }, 3600_000);
 
   // ── (12) Callback_pending recovery — every 30s ──────────────────────
+  // Overlap guard: an enqueue must not run twice for the same orphaned event.
+  let callbackRecoveryRunning = false;
   setInterval(async () => {
+    if (callbackRecoveryRunning) return;
+    callbackRecoveryRunning = true;
     try {
       const staleThreshold = new Date(Date.now() - 10 * 60_000); // 10 min
       const stalled = await db
@@ -332,6 +343,8 @@ export function startScheduler(): void {
       }
     } catch (e) {
       logger.error("[scheduler] callback recovery error", e);
+    } finally {
+      callbackRecoveryRunning = false;
     }
   }, 30_000);
 
@@ -364,7 +377,11 @@ export function startScheduler(): void {
   }, 300_000);
 
   // ── (15) Stale pending ride recovery — every 30s ────────────────────
+  // Overlap guard: re-dispatches must not double-fire for the same stalled ride.
+  let stalePendingRunning = false;
   setInterval(async () => {
+    if (stalePendingRunning) return;
+    stalePendingRunning = true;
     try {
       const staleThreshold = new Date(Date.now() - 30_000);
       const stalled = await db
@@ -406,6 +423,8 @@ export function startScheduler(): void {
       }
     } catch (e) {
       logger.error("[scheduler] stale pending recovery error", e);
+    } finally {
+      stalePendingRunning = false;
     }
   }, 30_000);
 
@@ -687,7 +706,12 @@ export function startScheduler(): void {
   }, 10_000);
 
   // ── (20) Stale dispatch offer expiry + AC-7 refund — every 10s ────
+  // Overlap guard: refund/deduction pairs must be processed by one tick at a
+  // time (recordCallRefund is idempotent, but the read-then-act must not race).
+  let offerExpiryRunning = false;
   setInterval(async () => {
+    if (offerExpiryRunning) return;
+    offerExpiryRunning = true;
     try {
       // AC-7 (01-PRD.md:313): a CONFIRMED offer the driver never responded to
       // within the offer window gets the call refunded (append-only refund row
@@ -751,6 +775,8 @@ export function startScheduler(): void {
       }
     } catch (e) {
       logger.error("[scheduler] offer expiry error", e);
+    } finally {
+      offerExpiryRunning = false;
     }
   }, 10_000);
 
