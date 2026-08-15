@@ -51,6 +51,11 @@ async function createJournalEntryInTx(client: DbOrTx, params: JournalEntryParams
     throw new Error(`Journal unbalanced: Dr ${totalDebit} ≠ Cr ${totalCredit}`);
 
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  // V-3: serialize same-day journal numbering. entry_number is unique and the
+  // old count-then-insert collided under concurrency — the loser's insert
+  // threw, rolling back its entire journal transaction, silently dropping
+  // double-entry records (only warning-log evidence survived).
+  await client.execute(sql`SELECT pg_advisory_xact_lock(hashtext('journal_seq_' || ${today}))`);
   const [last] = await client.select({ count: sql<number>`count(*)` })
     .from(accountingEntries).where(sql`entry_number LIKE ${`JV-${today}-%`}`);
   const entryNumber = `JV-${today}-${((last?.count || 0) + 1).toString().padStart(4, '0')}`;
@@ -201,7 +206,9 @@ export async function recordCancellationFee(ride: { id: string; feePaisa: number
     description: `Cancellation fee — ৳${ride.feePaisa/100}`,
     zoneId: ride.zoneId,
     lines: [
-      { accountCode: ACCOUNT_CODES.CASH_BANK, debit: ride.feePaisa },
+      // V-4: the fee is collected from the rider's FUTURE cashback (rider fee
+      // deductions), not cash — debit the receivable, not the bank account.
+      { accountCode: ACCOUNT_CODES.AR_RIDERS, debit: ride.feePaisa },
       { accountCode: ACCOUNT_CODES.RIDE_FARE_INCOME, credit: ride.feePaisa },
     ],
   });
@@ -214,7 +221,9 @@ export async function recordTip(ride: { id: string; tipPaisa: number; driverId: 
     description: `Tip — ৳${ride.tipPaisa/100}`,
     zoneId: ride.zoneId,
     lines: [
-      { accountCode: ACCOUNT_CODES.CASH_BANK, debit: ride.tipPaisa },
+      // V-4: tips are settled from the rider's wallet (tip+api debits
+      // RIDER_WALLET_LIABILITY), not cash — debit the liability, not the bank.
+      { accountCode: ACCOUNT_CODES.RIDER_WALLET_LIABILITY, debit: ride.tipPaisa },
       { accountCode: ACCOUNT_CODES.DRIVER_PAYOUTS_PAYABLE, credit: ride.tipPaisa },
     ],
   });

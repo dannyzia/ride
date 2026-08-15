@@ -64,6 +64,7 @@ jest.mock('@/src/db', () => {
   const dbMock = {
     select: jest.fn(),
     insert: jest.fn(),
+    execute: jest.fn(),
     transaction: jest.fn(),
   };
   // db.transaction(cb) → cb(db) so the same mock methods work inside the tx
