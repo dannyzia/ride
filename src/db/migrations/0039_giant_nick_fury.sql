@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "driver_achievements_driver_key_idx" ON "driver_achievements" USING btree ("driver_id","achievement_key");

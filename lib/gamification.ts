@@ -2,11 +2,13 @@ import { db } from '@/src/db';
 import { drivers, rides, driverStreaks, driverAchievements, driverTiers } from '@/src/db/schema';
 import { eq, and, sql, gte, asc } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
+import { prevBdtMidnightUtc } from '@/lib/time';
 
 export async function evaluateStreaks(driverId: string): Promise<void> {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // V-5: the money stack counts days on BDT boundaries; server-local
+    // midnight reset streaks at the wrong hour.
+    const today = prevBdtMidnightUtc();
 
     const [daily] = await db.select().from(driverStreaks)
       .where(and(eq(driverStreaks.driver_id, driverId), eq(driverStreaks.streak_type, 'daily_rides'))).limit(1);
@@ -35,13 +37,13 @@ export async function evaluateStreaks(driverId: string): Promise<void> {
 
 export async function grantAchievement(driverId: string, key: string, title: string, rewardBdt = 0): Promise<void> {
   try {
-    const existing = await db.select().from(driverAchievements)
-      .where(and(eq(driverAchievements.driver_id, driverId), eq(driverAchievements.achievement_key, key))).limit(1);
-    if (existing.length > 0) return;
-
-    await db.insert(driverAchievements).values({
+    // V-5: atomic grant — the (driver_id, achievement_key) unique index + the
+    // onConflictDoNothing insert mean a concurrent grant can't double-credit
+    // the reward; only the insert that actually wins the row credits it.
+    const [achievement] = await db.insert(driverAchievements).values({
       driver_id: driverId, achievement_key: key, title, reward_bdt: rewardBdt,
-    });
+    }).onConflictDoNothing().returning();
+    if (!achievement) return; // concurrent grant already won
 
     if (rewardBdt > 0) {
       await db.update(drivers)

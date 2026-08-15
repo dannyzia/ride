@@ -1855,7 +1855,10 @@ export const driverAchievements = pgTable("driver_achievements", {
   reward_bdt: integer("reward_bdt").default(0),
   unlocked_at: timestamptz("unlocked_at").notNull().defaultNow(),
   created_at: timestamptz("created_at").notNull().defaultNow(),
-});
+}, (t) => [
+  // V-5: unique so grantAchievement's atomic insert can never double-grant.
+  uniqueIndex("driver_achievements_driver_key_idx").on(t.driver_id, t.achievement_key),
+]);
 
 // Gamification: Mystery Bonuses
 export const driverMysteryBonuses = pgTable("driver_mystery_bonuses", {
