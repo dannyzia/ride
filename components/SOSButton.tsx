@@ -81,30 +81,8 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
           // Location unavailable
         }
 
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) {
-          Alert.alert("Error", "Not authenticated. Please log in again.");
-          return;
-        }
-
-        const res = await fetch(`${SOS_API_URL}/api/driver/sos-alert`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ lat, lng }),
-        });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          Alert.alert("Error", err.message ?? "Failed to send SOS alert.");
-          return;
-        }
-
-        logger.info("[SOS] alert sent", { lat, lng, contact: contact.number });
-        setVisible(false);
+        // DIAL FIRST (T-1): the emergency call must never depend on a network
+        // round-trip. The alert below is best-effort and must not block it.
         const phoneUrl = `tel:${contact.number}`;
         const canOpen = await Linking.canOpenURL(phoneUrl);
         if (canOpen) {
@@ -112,9 +90,30 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
         } else {
           Alert.alert("SOS", `Call ${contact.label}: ${contact.number}`);
         }
+        setVisible(false);
+
+        // Fire the alert best-effort in the background — the sos_alerts row
+        // feeds the admin SOS dashboard, but a failed fetch here must never
+        // fail the call the user just made.
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token;
+          if (token) {
+            await fetch(`${SOS_API_URL}/api/sos/alert`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ lat, lng }),
+            }).catch(() => {});
+          }
+        } catch {
+          // Non-blocking
+        }
+        logger.info("[SOS] alert fired", { lat, lng, contact: contact.number });
       } catch (err) {
         logger.error("[SOS] error", err);
-        Alert.alert("Error", "Failed to send SOS. Please try again.");
       } finally {
         setSending(false);
       }

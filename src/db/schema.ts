@@ -1061,6 +1061,9 @@ export const sosAlerts = pgTable(
     latitude: numeric("latitude", { precision: 10, scale: 7 }).notNull(),
     longitude: numeric("longitude", { precision: 10, scale: 7 }).notNull(),
     message: text("message"),
+    // T-1/T-3: ride context on the alert — lets the admin dashboard tie an SOS
+    // to its ride and lets the auto-SOS dedupe to one open alert per ride.
+    ride_id: uuid("ride_id").references(() => rides.id),
     contacts_notified: jsonb("contacts_notified").notNull(),
     status: varchar("status", { length: 20 }).notNull().default("open"),
     acknowledged_by: uuid("acknowledged_by").references(() => users.id),
@@ -1070,6 +1073,7 @@ export const sosAlerts = pgTable(
   (t) => [
     index("sos_alerts_user_created_idx").on(t.user_id, t.created_at),
     index("sos_alerts_role_idx").on(t.role),
+    index("sos_alerts_ride_idx").on(t.ride_id),
   ],
 );
 
