@@ -12,15 +12,26 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import Map from "@/components/Map";
+import AlternativesSheet from "@/components/AlternativesSheet";
 import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
-import { useRiderStore } from "@/store/useRiderStore";
+import { useRiderStore, type VehicleType } from "@/store/useRiderStore";
+import { useWSStore } from "@/store";
 import { supabase } from "@/lib/supabase";
 
 const POLL_INTERVAL_MS = 5000;
 const MAX_EMPTY_POLLS = 12;
+
+interface Alternative {
+  vehicle_type: VehicleType;
+  fare_breakdown: { total_bdt: number };
+  available_drivers: number;
+}
+
+// Statuses at which the ride is committed and the rider should move to tracking.
+const COMMITTED_STATUSES = ["matched", "driver_arriving", "driver_arrived"];
 
 export default function FindingDriver() {
   const isDark = useIsDark();
@@ -36,7 +47,66 @@ export default function FindingDriver() {
   const [eta, setEta] = useState<number | null>(null);
   const [error, setError] = useState(false);
   const [prolongedEmpty, setProlongedEmpty] = useState(false);
+  const [alternatives, setAlternatives] = useState<Alternative[] | null>(null);
   const emptyPollCount = useRef(0);
+
+  const goToTracking = useCallback((rideId: string) => {
+    router.replace(`/(main)/(customer)/ride-tracking/${rideId}`);
+  }, []);
+
+  const handleSelectAlternative = useCallback(
+    (vehicleType: string) => {
+      setAlternatives(null);
+      // The server only proposes values from VEHICLE_TYPE_VALUES, so the cast
+      // is a runtime-safe narrowing of the wire string to the store union.
+      setSelectedVehicleType(vehicleType as VehicleType);
+      // Back to confirm-ride, which re-estimates for the new vehicle type
+      // (its effect deps include selectedVehicleType) — the rider confirms and
+      // a new ride request goes out with the alternative type.
+      router.back();
+    },
+    [setSelectedVehicleType],
+  );
+
+  const handleAlternativesCancel = useCallback(() => {
+    setAlternatives(null);
+    // The ride is already terminal (no_drivers server-side) — send the rider
+    // to the no-drivers screen instead of letting the pulse run on a dead ride.
+    router.replace("/(main)/(customer)/no-drivers-available");
+  }, []);
+
+  // X-1: the WebSocket path is the PRIMARY transition out of this screen. The
+  // push banner tap (root layout) is only the fallback — a rider whose banner
+  // auto-dismissed, or whose OEM suppresses heads-up banners (the TD-01 class),
+  // would otherwise pulse forever while the driver waits at the pickup for the
+  // PIN. The server delivers ride:status / ride:expired / ride:alternatives to
+  // the live rider socket via sendToRider (no subscription needed); depends on
+  // the store socket so a self-healing reconnect re-attaches.
+  const ws = useWSStore((s) => s.ws);
+  useEffect(() => {
+    if (!ws) return;
+    const handler = (event: MessageEvent) => {
+      let msg: Record<string, any>;
+      try {
+        msg = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      if (
+        msg.type === "ride:status" &&
+        msg.ride_id &&
+        COMMITTED_STATUSES.includes(msg.status)
+      ) {
+        goToTracking(msg.ride_id);
+      } else if (msg.type === "ride:expired" && msg.ride_id) {
+        router.replace("/(main)/(customer)/no-drivers-available");
+      } else if (msg.type === "ride:alternatives" && Array.isArray(msg.alternatives)) {
+        setAlternatives(msg.alternatives as Alternative[]);
+      }
+    };
+    ws.addEventListener("message", handler);
+    return () => ws.removeEventListener("message", handler);
+  }, [ws, goToTracking]);
 
   const pulse1 = useSharedValue(0);
   const pulse2 = useSharedValue(0);
@@ -237,6 +307,16 @@ export default function FindingDriver() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* X-2a: vehicle-downgrade offers from the server (ride:alternatives) */}
+      {alternatives && alternatives.length > 0 && (
+        <AlternativesSheet
+          visible
+          alternatives={alternatives}
+          onSelect={handleSelectAlternative}
+          onCancel={handleAlternativesCancel}
+        />
+      )}
     </SafeAreaView>
   );
 }

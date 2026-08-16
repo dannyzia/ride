@@ -291,7 +291,10 @@ export default function DriverHome() {
             expires_at: msg.expires_at,
             upfront_tip_bdt: msg.upfront_tip_bdt ?? 0,
           });
-        } else if (type === "offer:lost" || type === "offer:expired") {
+        } else if (type === "offer:lost") {
+          // X-2c: the server never emits offer:expired — offer expiry is the
+          // client's own countdown, which already removes the offer locally.
+          // Only the race loser's offer:lost arrives over the wire.
           if (msg.ride_id) removeRideOffer(msg.ride_id);
           setActiveOffer(null);
           showToast("Offer expired", "info");
