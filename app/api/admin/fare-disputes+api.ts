@@ -1,8 +1,9 @@
 import { db } from '@/src/db';
-import { fareDisputes, users } from '@/src/db/schema';
+import { fareDisputes, users, riderWalletTransactions } from '@/src/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
+import { recordAdminRefund } from '@/lib/accounting';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -25,10 +26,15 @@ export async function GET(request: Request) {
   }
 }
 
+// T-6: bounded like the wallet topup / admin refund routes (৳50,000) — a
+// fat-fingered ৳500k must not credit silently. Positive-only: the route only
+// ever credits the rider's wallet (negative adjustments aren't applied).
+const MAX_ADJUSTMENT_BDT = 5_000_000;
+
 const resolveSchema = z.object({
   dispute_id: z.string().uuid(),
   action: z.enum(['admin_approved', 'admin_rejected']),
-  adjustment_bdt: z.number().int().optional(),
+  adjustment_bdt: z.number().int().positive().max(MAX_ADJUSTMENT_BDT).optional(),
 });
 
 export async function PATCH(request: Request) {
@@ -47,6 +53,14 @@ export async function PATCH(request: Request) {
         await tx.update(users)
           .set({ rider_wallet_balance_bdt: sql`${users.rider_wallet_balance_bdt} + ${refundBdt}` })
           .where(eq(users.id, dispute.rider_id));
+        // T-6: wallet ledger row — the refund must appear in the rider's own
+        // history like every other wallet mutation.
+        await tx.insert(riderWalletTransactions).values({
+          rider_id: dispute.rider_id,
+          transaction_type: 'adjustment',
+          amount_bdt: refundBdt,
+          balance_after: sql`(SELECT rider_wallet_balance_bdt FROM users WHERE id = ${dispute.rider_id})`,
+        });
       }
       await tx.update(fareDisputes)
         .set({
@@ -57,6 +71,21 @@ export async function PATCH(request: Request) {
         })
         .where(eq(fareDisputes.id, parsed.data.dispute_id));
     });
+
+    // T-6: double-entry (Dr 4004 / Cr 2004) so trial balances reconcile.
+    // Non-blocking like every other accounting call — a failed journal entry
+    // must never undo the wallet credit.
+    if (refundBdt > 0) {
+      try {
+        await recordAdminRefund({
+          riderId: dispute.rider_id,
+          amountPaisa: refundBdt,
+          reason: `Fare dispute ${dispute.id} (${parsed.data.action})`,
+        });
+      } catch (e: any) {
+        logger.warn('[admin/fare-disputes] refund journal entry failed', { dispute_id: dispute.id, refund_bdt: refundBdt, error: e.message });
+      }
+    }
 
     return Response.json({ success: true, resolution: parsed.data.action, refund_bdt: refundBdt });
   } catch (err: any) {

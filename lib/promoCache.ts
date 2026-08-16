@@ -2,7 +2,13 @@
  * In-memory staged promo cache.
  * When a rider validates a promo via POST /api/promo/redeem, the promo is "staged"
  * here with a TTL. The actual promo_redemptions row is written when the ride is created.
- * Since INSTANCE_COUNT=1, an in-memory Map is sufficient (no Redis needed).
+ *
+ * ⚠️ SINGLE-INSTANCE REQUIREMENT (audit T-7): staging lives in process memory, so
+ * correctness depends on the Expo API server running as ONE instance. INSTANCE_COUNT=1
+ * is hard-enforced only for utils-server (it exits at boot otherwise); the API server's
+ * equivalent is by convention — do NOT horizontally scale the API server without
+ * replacing this Map with a shared store. Same caveat applies to the global promo cap
+ * (check-then-consume on promo_redemptions).
  */
 
 interface StagedPromo {
