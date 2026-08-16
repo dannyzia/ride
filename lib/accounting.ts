@@ -18,6 +18,7 @@ const ACCOUNT_CODES = {
   DRIVER_PAYOUTS_PAYABLE: '2005',
   COMMISSION_INCOME: '3001', SUBSCRIPTION_INCOME: '3002', RIDE_FARE_INCOME: '3003',
   DRIVER_PAYOUT_EXPENSE: '4001', PAYMENT_GATEWAY_FEES: '4002', SOURCE_TAX_EXPENSE: '4003',
+  ADMIN_ADJUSTMENT_EXPENSE: '4004',
 } as const;
 
 let accountCache: Map<string, string> | null = null;
@@ -225,6 +226,24 @@ export async function recordTip(ride: { id: string; tipPaisa: number; driverId: 
       // RIDER_WALLET_LIABILITY), not cash — debit the liability, not the bank.
       { accountCode: ACCOUNT_CODES.RIDER_WALLET_LIABILITY, debit: ride.tipPaisa },
       { accountCode: ACCOUNT_CODES.DRIVER_PAYOUTS_PAYABLE, credit: ride.tipPaisa },
+    ],
+  });
+}
+
+export async function recordAdminRefund(params: {
+  riderId: string; amountPaisa: number; reason: string;
+}) {
+  await createJournalEntry({
+    referenceType: 'admin_refund', referenceId: params.riderId, entryDate: new Date(),
+    description: `Admin refund — ৳${params.amountPaisa/100} (${params.reason})`,
+    lines: [
+      // U-3: an admin refund credits the rider's wallet (Cr wallet liability)
+      // with no cash movement — the balancing debit is an expense, not the
+      // bank account. Requires account 4004 (ADMIN_ADJUSTMENT_EXPENSE) to be
+      // seeded in accounting_accounts; missing it degrades to a warn log
+      // exactly like every other non-blocking accounting call here.
+      { accountCode: ACCOUNT_CODES.ADMIN_ADJUSTMENT_EXPENSE, debit: params.amountPaisa },
+      { accountCode: ACCOUNT_CODES.RIDER_WALLET_LIABILITY, credit: params.amountPaisa },
     ],
   });
 }

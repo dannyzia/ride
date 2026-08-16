@@ -3,11 +3,16 @@ import { users, riderWalletTransactions } from '@/src/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
+import { recordAdminRefund } from '@/lib/accounting';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
+// U-3: ceiling matches the wallet topup limit (৳50,000) — an admin typo of
+// ৳10M must not pass `positive()` into a wallet credit.
+const MAX_REFUND_BDT = 5_000_000;
+
 const refundSchema = z.object({
-  amount_bdt: z.number().int().positive(),
+  amount_bdt: z.number().int().positive().max(MAX_REFUND_BDT),
   reason: z.string().min(1).max(500),
 });
 
@@ -36,6 +41,16 @@ export async function POST(request: Request, { id }: { id: string }) {
         balance_after: sql`(SELECT rider_wallet_balance_bdt FROM users WHERE id = ${id})`,
       });
     });
+
+    // U-3: book the double-entry (Dr 4004 admin adjustment / Cr 2004 rider
+    // wallet liability) so trial balances reconcile against wallet liability.
+    // Non-blocking by design — a missing journal entry must never undo the
+    // wallet credit itself (same pattern as every other accounting call).
+    try {
+      await recordAdminRefund({ riderId: id, amountPaisa: amount_bdt, reason });
+    } catch (e: any) {
+      logger.warn('[admin] refund journal entry failed', { rider_id: id, amount_bdt, error: e.message });
+    }
 
     logger.info('[admin] rider refund', { rider_id: id, amount_bdt, reason });
     return Response.json({ success: true });

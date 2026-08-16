@@ -789,7 +789,8 @@ INSERT INTO accounting_accounts (code, name, type, sub_type, description) VALUES
   ('3003', 'Ride Fare Income', 'income', 'operating_income', 'Gross ride fares'),
   ('4001', 'Driver Payout Expense', 'expense', 'operating_expense', 'Payments to drivers'),
   ('4002', 'Payment Gateway Fees', 'expense', 'operating_expense', 'PortPos fees'),
-  ('4003', 'Source Tax Expense', 'expense', 'tax_expense', 'Non-recoverable tax')
+  ('4003', 'Source Tax Expense', 'expense', 'tax_expense', 'Non-recoverable tax'),
+  ('4004', 'Admin Adjustment Expense', 'expense', 'operating_expense', 'Manual admin refunds/adjustments to rider wallets')
 ON CONFLICT (code) DO NOTHING;
 
 -- GRANT statements (TD-31: required after Oct 30 2026 for PostgREST)

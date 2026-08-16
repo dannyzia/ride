@@ -20,6 +20,20 @@ export async function activateSubscription(paymentEventId: string): Promise<{ su
     if (!pkg) throw new Error(`package not found: ${evt.package_id}`);
     if (evt.amount_bdt !== pkg.price_bdt) throw new Error('amount_mismatch');
 
+    // U-4: exactly one active subscription per driver. The partial unique
+    // index subs_one_active_per_driver already prevents two active rows — but
+    // a concurrent second activation (two purchases raced past the initiation
+    // gate, or purchase + compensation-repair overlap) would hit that index
+    // and THROW, rolling back the whole activation and dooming the payment
+    // into the compensation retry loop (the Z-2/Z-3 failure class). Serialize
+    // activations per driver with an advisory lock, then expire any existing
+    // active sub so the later purchase supersedes the earlier one instead of
+    // exploding.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('activate_sub_' || ${evt.driver_id}))`);
+    await tx.update(subscriptions)
+      .set({ status: 'expired', updated_at: new Date() })
+      .where(and(eq(subscriptions.driver_id, evt.driver_id), eq(subscriptions.status, 'active')));
+
     const isUnlimited = pkg.call_count === -1;
     const expiresAt = new Date(Date.now() + pkg.duration_days * 86400_000);
 
