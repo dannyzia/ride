@@ -84,6 +84,14 @@ export default function PackagesScreen() {
       });
       if (res.ok) {
         const data = await res.json();
+        // M-2: ৳0 trial packages activate server-side — no checkout page, no
+        // WebView. Run the same success path as a confirmed payment.
+        if (data.activated) {
+          handlePaymentSuccess();
+          setPurchasing(false);
+          setPendingPkgId(null);
+          return;
+        }
         setPaymentURL(data.payment_url);
         setPaymentID(data.payment_event_id);
       } else {

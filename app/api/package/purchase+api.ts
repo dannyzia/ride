@@ -15,7 +15,8 @@ import {
 import { eq, and } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { isConfigured } from "@/lib/portpos";
-import { initiatePortposPayment } from "@/lib/paymentEvents";
+import { initiatePortposPayment, createZeroAmountPaymentEvent } from "@/lib/paymentEvents";
+import { activateSubscription } from "@/lib/activateSubscription";
 import { logger } from "@/lib/logger";
 
 const purchaseSchema = z
@@ -156,6 +157,27 @@ export async function POST(request: Request) {
           },
           { status: 409 },
         );
+      }
+
+      // M-2: a trial is ৳0 — do NOT route it through the hosted gateway
+      // (most gateways reject zero invoices; redirecting a new driver to a
+      // checkout to "pay" nothing is a funnel wall). Create the payment_event
+      // via the write owner (lib/paymentEvents.ts) and activate directly —
+      // activateSubscription validates amount == price (0 == 0), creates the
+      // subscription + initial_load ledger, and marks the event paid.
+      if (pkg.price_bdt === 0) {
+        const evt = await createZeroAmountPaymentEvent({
+          driver_id: driver.id,
+          package_id: pkg.id,
+          idempotency_key: idempotencyKey,
+          purpose: "driver_package",
+        });
+        await activateSubscription(evt.id);
+        return Response.json({
+          payment_url: null,
+          payment_event_id: evt.id,
+          activated: true,
+        });
       }
     }
 

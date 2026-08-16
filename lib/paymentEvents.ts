@@ -47,6 +47,38 @@ export interface PaymentInitiationResult {
  * of creating a second invoice — the caller is expected to fetch and return
  * the existing payment_event.
  */
+/**
+ * Create a payment_events row WITHOUT a gateway round-trip (M-2).
+ *
+ * Used for ৳0 trial packages: redirecting a new driver to a hosted checkout
+ * to "pay" nothing is a funnel wall (most gateways reject zero invoices
+ * outright). The row is created here — the write owner — as 'initiated' with
+ * amount 0; the caller then runs activateSubscription(), which validates
+ * amount == price, creates the subscription + initial_load ledger, and marks
+ * the event paid.
+ */
+export async function createZeroAmountPaymentEvent(params: {
+  driver_id?: string;
+  user_id?: string;
+  pass_id?: string;
+  package_id?: string;
+  idempotency_key: string;
+  purpose: 'wallet_topup' | 'rider_pass' | 'driver_package';
+}): Promise<{ id: string }> {
+  const [evt] = await db.insert(paymentEvents).values({
+    user_id: params.user_id,
+    driver_id: params.driver_id,
+    package_id: params.package_id,
+    pass_id: params.pass_id,
+    provider: 'portpos',
+    status: 'initiated',
+    idempotency_key: params.idempotency_key,
+    amount_bdt: 0,
+    purpose: params.purpose,
+  }).returning({ id: paymentEvents.id });
+  return { id: evt.id };
+}
+
 export async function initiatePortposPayment(
   params: PortposPaymentInitiation,
   opts?: { onConflictDoNothing?: boolean },
