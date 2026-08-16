@@ -1,7 +1,7 @@
 // Auth: verifySupabaseToken via requireRole
 import { db } from '@/src/db';
 import { rides, drivers } from '@/src/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
@@ -27,13 +27,6 @@ export async function POST(request: Request) {
     if (ride.driver_id !== driver.id) {
       return Response.json({ error: 'not_your_ride', message: 'This ride does not belong to you' }, { status: 403 });
     }
-    if (!['driver_arrived', 'driver_arriving'].includes(ride.status)) {
-      return Response.json({
-        error: 'invalid_status',
-        message: `Cannot start ride in status: ${ride.status}`,
-      }, { status: 409 });
-    }
-
     // PIN verification
     const pinParsed = await parseJsonBody(request, z.object({ pin: z.string() }));
     if (!pinParsed.ok) return pinParsed.response;
@@ -41,10 +34,21 @@ export async function POST(request: Request) {
       return Response.json({ error: 'invalid_pin', message: 'Invalid PIN' }, { status: 403 });
     }
 
+    // M-1: atomic claim (mirror the WS start handler). A rider cancel landing
+    // between the read and an unguarded write would flip a CANCELLED ride to
+    // in_progress — and complete+api only checks in_progress, so a cancelled
+    // ride could finish for full fare on top of the cancellation fee.
     const now = new Date();
-    await db.update(rides)
+    const [claimed] = await db.update(rides)
       .set({ status: 'in_progress', started_at: now, updated_at: now })
-      .where(eq(rides.id, rideId));
+      .where(and(eq(rides.id, rideId), inArray(rides.status, ['driver_arrived', 'driver_arriving'])))
+      .returning({ id: rides.id });
+    if (!claimed) {
+      return Response.json({
+        error: 'invalid_status',
+        message: `Cannot start ride in status: ${ride.status}`,
+      }, { status: 409 });
+    }
 
     logger.info('[ride/start] ride started', { rideId, driverId: driver.id });
     return Response.json({ ok: true, status: 'in_progress', started_at: now.toISOString() });

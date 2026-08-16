@@ -1,7 +1,7 @@
 // Auth: verifySupabaseToken via requireRole
 import { db } from "@/src/db";
 import { rides, drivers } from "@/src/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
@@ -34,7 +34,18 @@ export async function POST(request: Request, { id }: { id: string }) {
     if (ride.driver_id !== driver.id) {
       return Response.json({ error: 'not_your_ride', message: 'This ride does not belong to you' }, { status: 403 });
     }
-    if (!["matched", "driver_arriving"].includes(ride.status)) {
+
+    // M-1: atomic claim (mirror the WS arrived handler). A rider cancel
+    // landing between the read and an unguarded write would resurrect a
+    // cancelled ride to driver_arrived — cancellable again, so a second fee
+    // and a second compensation credit.
+    const now = new Date();
+    const [claimed] = await db
+      .update(rides)
+      .set({ status: "driver_arrived", arrived_at: now, updated_at: now })
+      .where(and(eq(rides.id, rideId), inArray(rides.status, ["matched", "driver_arriving"])))
+      .returning({ id: rides.id });
+    if (!claimed) {
       return Response.json(
         {
           error: "invalid_status",
@@ -43,12 +54,6 @@ export async function POST(request: Request, { id }: { id: string }) {
         { status: 409 },
       );
     }
-
-    const now = new Date();
-    await db
-      .update(rides)
-      .set({ status: "driver_arrived", arrived_at: now, updated_at: now })
-      .where(eq(rides.id, rideId));
 
     // Emit WebSocket event to rider
     const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
