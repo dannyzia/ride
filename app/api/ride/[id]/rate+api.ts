@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { rides, users, drivers } from '@/src/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
@@ -41,7 +41,14 @@ export async function POST(request: Request, { id }: { id: string }) {
       }
 
       await db.transaction(async (tx) => {
-        await tx.update(rides).set({ rider_rating: rating }).where(eq(rides.id, id));
+        // M-4: atomic claim — concurrent double-rates both pass the JS check
+        // above; only one wins the rider_rating IS NULL claim, so rating_sum /
+        // rating_count can't double-increment for one ride.
+        const [claimed] = await tx.update(rides)
+          .set({ rider_rating: rating })
+          .where(and(eq(rides.id, id), isNull(rides.rider_rating)))
+          .returning({ id: rides.id });
+        if (!claimed) throw Object.assign(new Error('already_rated'), { status: 409 });
         if (ride.driver_id) {
           await tx.update(drivers).set({
             rating_sum: sql`${drivers.rating_sum} + ${rating}`,
@@ -63,7 +70,11 @@ export async function POST(request: Request, { id }: { id: string }) {
       }
 
       await db.transaction(async (tx) => {
-        await tx.update(rides).set({ driver_rating: rating }).where(eq(rides.id, id));
+        const [claimed] = await tx.update(rides)
+          .set({ driver_rating: rating })
+          .where(and(eq(rides.id, id), isNull(rides.driver_rating)))
+          .returning({ id: rides.id });
+        if (!claimed) throw Object.assign(new Error('already_rated'), { status: 409 });
         await tx.update(users).set({
           rating_sum: sql`${users.rating_sum} + ${rating}`,
           rating_count: sql`${users.rating_count} + 1`,
@@ -76,6 +87,7 @@ export async function POST(request: Request, { id }: { id: string }) {
     return Response.json({ success: true });
   } catch (err: any) {
     if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (err.status === 409) return Response.json({ error: 'already_rated', message: 'Ride already rated' }, { status: 409 });
     logger.error('[ride/rate] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

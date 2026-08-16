@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { rides, users, drivers, riderWalletTransactions, driverWalletTransactions } from '@/src/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
@@ -46,6 +46,18 @@ export async function POST(request: Request, { id }: { id: string }) {
     if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     await db.transaction(async (tx) => {
+      // M-3: atomic claim FIRST — two concurrent tips (double-tap) both pass
+      // the JS pre-check above; only one wins the tip_bdt IS NULL claim and
+      // the loser's transaction rolls back before any wallet movement. Without
+      // this, both debited the rider, both credited the driver, both booked.
+      const [claimedTip] = await tx.update(rides)
+        .set({ tip_bdt: amount_bdt })
+        .where(and(eq(rides.id, id), isNull(rides.tip_bdt)))
+        .returning({ id: rides.id });
+      if (!claimedTip) {
+        throw Object.assign(new Error('already_tipped'), { status: 409 });
+      }
+
       // Debit rider wallet
       const [rider] = await tx.select({ wallet: users.rider_wallet_balance_bdt })
         .from(users).where(eq(users.id, ride.user_id)).limit(1).for('update');
@@ -76,8 +88,6 @@ export async function POST(request: Request, { id }: { id: string }) {
         balance_after: sql`(SELECT driver_wallet_balance_bdt FROM drivers WHERE id = ${driver.id}) + ${amount_bdt}`,
       });
 
-      // Mark ride as tipped
-      await tx.update(rides).set({ tip_bdt: amount_bdt }).where(eq(rides.id, id));
     });
 
     // Accounting entry (non-blocking)
@@ -89,6 +99,7 @@ export async function POST(request: Request, { id }: { id: string }) {
     return Response.json({ success: true, tip_bdt: amount_bdt });
   } catch (err: any) {
     if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (err.status === 409) return Response.json({ error: 'already_tipped', message: 'Tip already added' }, { status: 409 });
     if (err.status === 422) return Response.json({ error: 'insufficient_balance', message: 'Insufficient account balance' }, { status: 422 });
     logger.error('[ride/tip] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

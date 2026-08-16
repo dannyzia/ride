@@ -1,7 +1,7 @@
 import { verifySupabaseToken } from '@/lib/auth';
 import { db } from '@/src/db';
 import { users, drivers, rides } from '@/src/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -20,7 +20,17 @@ export async function POST(request: Request, { id }: { id: string }) {
     if (!ride) return Response.json({ error: 'not_found', message: 'Resource not found' }, { status: 404 });
     if (ride.driver_id !== driver.id) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
 
-    await db.update(rides).set({ wait_start_at: new Date() }).where(eq(rides.id, id));
+    // M-5: only stamp wait_start_at while the ride is actually waitable
+    // (driver at pickup or en route). The old code stamped it on ANY ride —
+    // including terminal ones — and wait-end would compute a fee against a
+    // stamp completion would never consume.
+    const [claimed] = await db.update(rides)
+      .set({ wait_start_at: new Date(), updated_at: new Date() })
+      .where(and(eq(rides.id, id), inArray(rides.status, ['driver_arrived', 'in_progress'])))
+      .returning({ id: rides.id });
+    if (!claimed) {
+      return Response.json({ error: 'invalid_status', message: 'Cannot start waiting for this ride in its current status' }, { status: 409 });
+    }
     return Response.json({ success: true, wait_started_at: new Date().toISOString() });
   } catch (err: any) {
     if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
