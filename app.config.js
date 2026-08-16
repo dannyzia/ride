@@ -11,7 +11,10 @@ export default {
     orientation: "portrait",
     icon: "./assets/logo/logo.png",
     userInterfaceStyle: "automatic",
-    scheme: "myapp",
+    // W-4: real deep-link scheme (was the "myapp" tutorial placeholder, which
+    // collides with any other default-configured Expo app). Used by the
+    // /payment/success|failure web screens to return users into the app.
+    scheme: "ride",
     splash: {
       image: "./assets/splash/Splash_Screen_2.png",
       resizeMode: "contain",
