@@ -32,8 +32,6 @@ import {
   subscriptions,
   callLedger,
   pricing,
-  userDevices,
-  notifications as notifTable,
   zones,
   rideStops,
 } from "../src/db/schema";
@@ -43,6 +41,7 @@ import { getH3Cell, getH3Ring } from "../lib/h3";
 import { calculateFare, haversineKm } from "../lib/fareCalc";
 import { VEHICLE_TYPE_VALUES } from "../lib/vehicleTypes";
 import { detectRouteDeviation } from "../lib/safety";
+import { sendNotification } from "../lib/notify";
 
 validateUtilsServerEnv();
 
@@ -954,12 +953,16 @@ wss.on("connection", (ws: WebSocket) => {
               },
             });
 
-            // Push notification to rider (in case app is backgrounded)
-            sendPushToUser(ride.user_id, {
-              title: "Driver Found",
-              body: `${driverRow?.name ?? "Your driver"} is on the way!`,
-              data: { ride_id: rideId, type: "ride:matched" },
-            }).catch(() => {});
+            // Push notification to rider (in case app is backgrounded). Uses
+            // the shared lib/notify module so dedupe, the notifications audit
+            // row, and dead-token pruning stay in one place (audit U-2).
+            sendNotification(
+              ride.user_id,
+              "ride:matched",
+              "Driver Found",
+              `${driverRow?.name ?? "Your driver"} is on the way!`,
+              { ride_id: rideId },
+            );
           }
 
           // Confirm acceptance to the driver. The PIN is NOT sent here — the
@@ -1271,54 +1274,6 @@ async function handleDriverDisconnect(driverId: string) {
       .update(drivers)
       .set({ is_online: false, updated_at: new Date() })
       .where(eq(drivers.id, driverId));
-  }
-}
-
-// ── Push Notification Helper (Expo Push API — no SDK needed) ───────────────
-const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
-
-async function sendPushToUser(
-  userId: string,
-  notification: { title: string; body: string; data?: Record<string, string> },
-): Promise<void> {
-  try {
-    const devices = await db
-      .select({ push_token: userDevices.push_token })
-      .from(userDevices)
-      .where(eq(userDevices.user_id, userId));
-
-    if (devices.length === 0) return;
-
-    const results = await Promise.allSettled(
-      devices.map((d) =>
-        fetch(EXPO_PUSH_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: d.push_token,
-            title: notification.title,
-            body: notification.body,
-            data: notification.data ?? {},
-            sound: "default",
-            priority: "high",
-          }),
-        }),
-      ),
-    );
-
-    const failed = results.filter((r) => r.status === "rejected").length;
-
-    await db.insert(notifTable).values({
-      user_id: userId,
-      type: notification.data?.type ?? "push",
-      title: notification.title,
-      body: notification.body,
-      data: (notification.data ?? {}) as any,
-      sent_at: new Date(),
-      failed_reason: failed > 0 ? `${failed}/${devices.length} failed` : null,
-    });
-  } catch (e: any) {
-    logger.error("[push] sendPushToUser failed", { userId, error: e.message });
   }
 }
 

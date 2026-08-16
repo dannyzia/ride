@@ -12,7 +12,6 @@ import {
   surgeCurrent,
   surgeHistory,
   riderSubscriptions,
-  userDevices,
   dispatchOffers,
   callLedger,
   rateLimits,
@@ -36,38 +35,7 @@ import { evaluateGraduation } from "../lib/zoneLifecycle";
 import { expireCredits, expireRiderFeeDeductions } from "../lib/walletCashback";
 import { runFraudDetection } from "../lib/fraudDetection";
 import { expireCancellationCredits } from "../lib/cancellationCompensation";
-
-const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
-
-async function sendPushFromScheduler(
-  userId: string,
-  notification: { title: string; body: string; data?: Record<string, string> },
-): Promise<void> {
-  try {
-    const devices = await db
-      .select({ push_token: userDevices.push_token })
-      .from(userDevices)
-      .where(eq(userDevices.user_id, userId));
-    await Promise.allSettled(
-      devices.map((d) =>
-        fetch(EXPO_PUSH_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: d.push_token,
-            title: notification.title,
-            body: notification.body,
-            data: notification.data ?? {},
-            sound: "default",
-            priority: "high",
-          }),
-        }),
-      ),
-    );
-  } catch (e: any) {
-    logger.error("[scheduler] push failed", { userId, error: e.message });
-  }
-}
+import { sendNotification } from "../lib/notify";
 
 export function startScheduler(): void {
 
@@ -926,11 +894,13 @@ export function startScheduler(): void {
         );
       for (const ride of due) {
         try {
-          await sendPushFromScheduler(ride.user_id, {
-            title: "Ride Coming Up",
-            body: "Your scheduled ride is in 15 minutes. Please be ready.",
-            data: { ride_id: ride.id, type: "reminder" },
-          });
+          await sendNotification(
+            ride.user_id,
+            "reminder",
+            "Ride Coming Up",
+            "Your scheduled ride is in 15 minutes. Please be ready.",
+            { ride_id: ride.id },
+          );
           await db.update(rides).set({ reminder_sent: true }).where(eq(rides.id, ride.id));
         } catch (e) {
           logger.error("[scheduler] reminder push failed, will retry", { rideId: ride.id, error: e });
