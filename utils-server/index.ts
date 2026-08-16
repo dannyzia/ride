@@ -1534,6 +1534,7 @@ async function handleNoDrivers(
     );
     const alternatives: {
       vehicle_type: string;
+      available_drivers: number;
       fare_breakdown: Record<string, unknown>;
     }[] = [];
     for (const vt of VEHICLE_TYPE_VALUES) {
@@ -1548,8 +1549,11 @@ async function handleNoDrivers(
         )
         .limit(1);
       if (!pricingRow) continue;
+      // available_drivers feeds the client's AlternativesSheet (X-2a) — the
+      // sheet renders "N drivers nearby" per alternative.
       alternatives.push({
         vehicle_type: vt,
+        available_drivers: candidateIds.length,
         fare_breakdown: calculateFare(
           {
             base_fare_bdt: pricingRow.base_fare_bdt,
