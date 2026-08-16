@@ -4,7 +4,7 @@ import {
   riderSubscriptions,
   riderPasses,
 } from "../src/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, asc } from "drizzle-orm";
 import { getStagedPromo } from "@/lib/promoCache";
 import { getIntroDiscount, type DiscountOption } from "./introIncentive";
 
@@ -81,6 +81,10 @@ async function getPassOption(
   riderId: string,
   surgedTotalBdt: number,
 ): Promise<DiscountOption | null> {
+  // W-2: pick deterministically — the EARLIEST-expiring active pass supplies
+  // the discount (burn the quota closest to expiry first). An un-ordered
+  // limit(1) over two stacked passes was arbitrary, and completion needs the
+  // same sub the request picked to burn its quota.
   const [sub] = await db
     .select()
     .from(riderSubscriptions)
@@ -91,6 +95,7 @@ async function getPassOption(
         sql`${riderSubscriptions.valid_until} > now()`,
       ),
     )
+    .orderBy(asc(riderSubscriptions.valid_until))
     .limit(1);
   if (!sub) return null;
 
@@ -112,6 +117,7 @@ async function getPassOption(
     percent: pass.discount_percent,
     amount_bdt: Math.min(discountBdt, surgedTotalBdt),
     description: `${pass.name} pass`,
+    subscription_id: sub.id,
   };
 }
 

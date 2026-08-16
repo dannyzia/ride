@@ -44,6 +44,18 @@ export async function POST(request: Request) {
     const [pass] = await db.select().from(riderPasses).where(and(eq(riderPasses.id, parsed.data.pass_id), eq(riderPasses.is_active, true))).limit(1);
     if (!pass) return Response.json({ error: 'pass_not_found', message: 'Pass not found' }, { status: 404 });
 
+    // W-2: mirror package/purchase — block stacking while a pass is live.
+    // Without this, a rider could buy pass #2 while #1 was active, and every
+    // discounted ride burned quota from both. (The race past this gate leaves
+    // two actives, but the ride now snapshots which pass supplied the
+    // discount, so each pass's quota burns only when it actually discounts.)
+    const [activeSub] = await db.select({ id: riderSubscriptions.id }).from(riderSubscriptions)
+      .where(and(eq(riderSubscriptions.rider_id, user.id), eq(riderSubscriptions.status, 'active'), gt(riderSubscriptions.valid_until, new Date())))
+      .limit(1);
+    if (activeSub) {
+      return Response.json({ error: 'active_subscription_exists', message: 'Rider already has an active pass' }, { status: 409 });
+    }
+
     if (!isConfigured()) return Response.json({ error: 'payment_not_configured', message: 'Payment provider not configured' }, { status: 503 });
 
     const reference = crypto.randomUUID();

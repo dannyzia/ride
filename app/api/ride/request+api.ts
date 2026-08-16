@@ -259,6 +259,10 @@ export async function POST(request: Request) {
     let walletRedeemedBdt = 0;
     let platformSubsidyBdt = 0;
     let promoCodeId: string | null = null;
+    // W-2: the rider_subscriptions row that supplied a 'pass' discount —
+    // snapshotted so completion burns exactly that pass's quota, never every
+    // active subscription the rider holds.
+    let passSubscriptionId: string | null = null;
 
     if (discountType !== "none" && discountAmount > 0) {
       const match = availableDiscounts.find(
@@ -279,6 +283,9 @@ export async function POST(request: Request) {
 
       appliedDiscountType = discountType;
       appliedDiscountBdt = discountAmount;
+      if (discountType === "pass") {
+        passSubscriptionId = match.subscription_id ?? null;
+      }
 
       if (discountType === "wallet") {
         walletRedeemedBdt = discountAmount;
@@ -380,6 +387,7 @@ export async function POST(request: Request) {
            promo_discount_bdt: appliedDiscountBdt,
            applied_discount_type: appliedDiscountType,
            applied_discount_bdt: appliedDiscountBdt,
+           pass_subscription_id: passSubscriptionId,
            wallet_redeemed_bdt: walletRedeemedBdt,
            driver_fare_bdt: driverFareBdt,
           rider_payable_bdt: riderPayableBdt,

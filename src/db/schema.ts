@@ -656,6 +656,15 @@ export const rides = pgTable(
       .notNull()
       .default("none"),
     applied_discount_bdt: integer("applied_discount_bdt").notNull().default(0),
+    // W-2: which active rider subscription supplied the 'pass' discount.
+    // Snapshotted at request (like promo_code_id / surge_multiplier) so the
+    // completion path increments rides_used on exactly that pass — never on
+    // every active subscription the rider happens to hold.
+    // `(): any =>` breaks the type-level cycle rides → rider_subscriptions →
+    // payment_events → rides (AGENTS.md: FKs that complete a reference cycle).
+    pass_subscription_id: uuid("pass_subscription_id").references(
+      (): any => riderSubscriptions.id,
+    ),
     wallet_redeemed_bdt: integer("wallet_redeemed_bdt").notNull().default(0),
     driver_fare_bdt: integer("driver_fare_bdt"),
     rider_payable_bdt: integer("rider_payable_bdt"),

@@ -296,11 +296,23 @@ const rideId = segments[segments.indexOf("ride") + 1];
     });
 
     // ── Rider pass usage increment (only if pass discount was used) ─────
+    // W-2: burn the quota of exactly the pass that supplied the discount
+    // (snapshotted at request as rides.pass_subscription_id). The old code
+    // incremented EVERY active subscription — with two stacked passes each
+    // discounted ride burned quota on both. Legacy rides without the snapshot
+    // fall back to the old behavior.
     if (ride.applied_discount_type === 'pass') {
       try {
         await db.update(riderSubscriptions)
           .set({ rides_used: sql`${riderSubscriptions.rides_used} + 1` })
-          .where(and(eq(riderSubscriptions.rider_id, ride.user_id), eq(riderSubscriptions.status, 'active')));
+          .where(
+            ride.pass_subscription_id
+              ? eq(riderSubscriptions.id, ride.pass_subscription_id)
+              : and(
+                  eq(riderSubscriptions.rider_id, ride.user_id),
+                  eq(riderSubscriptions.status, 'active'),
+                ),
+          );
       } catch { /* non-blocking */ }
     }
 

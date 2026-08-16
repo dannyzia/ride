@@ -8,6 +8,10 @@ export interface DiscountOption {
   percent?: number;
   amount_bdt: number;
   description: string;
+  // W-2: set only by the pass option — the rider_subscriptions row that
+  // supplied the discount, so the ride records it and completion burns the
+  // right pass's quota.
+  subscription_id?: string;
 }
 
 export async function getIntroConfig(zoneId: string) {

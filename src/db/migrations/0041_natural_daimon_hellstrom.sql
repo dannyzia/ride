@@ -1,0 +1,2 @@
+ALTER TABLE "rides" ADD COLUMN "pass_subscription_id" uuid;--> statement-breakpoint
+ALTER TABLE "rides" ADD CONSTRAINT "rides_pass_subscription_id_rider_subscriptions_id_fk" FOREIGN KEY ("pass_subscription_id") REFERENCES "public"."rider_subscriptions"("id") ON DELETE no action ON UPDATE no action;
