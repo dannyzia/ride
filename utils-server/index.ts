@@ -648,21 +648,32 @@ wss.on("connection", (ws: WebSocket) => {
                 });
               }
             }
-            // Detect route deviation (non-blocking)
+            // Detect route deviation (non-blocking). T-2: the deviation is
+            // measured against the pickup→dropoff corridor (origin + dest),
+            // and lib/safety dedupes to once per ride per cooldown window.
             try {
               const [ride] = await db
                 .select({
+                  origin_latitude: rides.origin_latitude,
+                  origin_longitude: rides.origin_longitude,
                   destination_latitude: rides.destination_latitude,
                   destination_longitude: rides.destination_longitude,
                 })
                 .from(rides)
                 .where(eq(rides.id, rideId))
                 .limit(1);
-              if (ride?.destination_latitude != null && ride?.destination_longitude != null) {
+              if (
+                ride?.origin_latitude != null &&
+                ride?.origin_longitude != null &&
+                ride?.destination_latitude != null &&
+                ride?.destination_longitude != null
+              ) {
                 await detectRouteDeviation(
                   rideId,
                   msg.lat as number,
                   msg.lng as number,
+                  Number(ride.origin_latitude),
+                  Number(ride.origin_longitude),
                   Number(ride.destination_latitude),
                   Number(ride.destination_longitude),
                 );
