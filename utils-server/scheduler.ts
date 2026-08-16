@@ -163,7 +163,10 @@ export function startScheduler(): void {
   setInterval(async () => {
     try {
       const staleThreshold = new Date(Date.now() - 30 * 60_000);
-      await db
+      // W-5: returning() the affected rows so the riders get notified — the
+      // old code cancelled silently and the rider watched "driver arriving"
+      // forever.
+      const cancelled = await db
         .update(rides)
         .set({
           status: "cancelled",
@@ -175,7 +178,23 @@ export function startScheduler(): void {
             eq(rides.status, "matched"),
             lt(rides.matched_at, staleThreshold),
           ),
-        );
+        )
+        .returning({ id: rides.id, user_id: rides.user_id });
+
+      for (const ride of cancelled) {
+        if (!ride.user_id) continue;
+        try {
+          await sendNotification(
+            ride.user_id,
+            "ride:cancelled",
+            "Ride Cancelled",
+            "Your driver didn't arrive. We've cancelled the ride and are finding you a new driver.",
+            { ride_id: ride.id },
+          );
+        } catch (e) {
+          logger.error("[scheduler] stale-cancel push failed", { rideId: ride.id, error: e });
+        }
+      }
     } catch (e) {
       logger.error("[scheduler] stale rides error", e);
     }

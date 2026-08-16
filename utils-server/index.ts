@@ -999,6 +999,10 @@ wss.on("connection", (ws: WebSocket) => {
           // Release the offer lock — the driver has declined the offer.
           offerLocks.delete(`${rideId}:${client.driverId}`);
 
+          // W-3: only flip the row if it is still in-flight ('delivered'). A
+          // queued/duplicate reject arriving after the accept path stamped
+          // outcome='accepted' must not overwrite the terminal state — that
+          // corrupted acceptance analytics and the acceptance-rate feed.
           await db
             .update(dispatchOffers)
             .set({
@@ -1010,6 +1014,7 @@ wss.on("connection", (ws: WebSocket) => {
               and(
                 eq(dispatchOffers.ride_id, rideId),
                 eq(dispatchOffers.driver_id, client.driverId),
+                eq(dispatchOffers.outcome, "delivered"),
               ),
             );
 
