@@ -6,6 +6,8 @@ import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useRiderStore } from "@/store/useRiderStore";
+import { colors } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface Promo {
   promo_id: string;
@@ -21,6 +23,7 @@ interface Promo {
 }
 
 export default function ApplyPromos() {
+  const isDark = useIsDark();
   const [promoCode, setPromoCode] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
@@ -28,6 +31,13 @@ export default function ApplyPromos() {
   const [promos, setPromos] = useState<Promo[]>([]);
   const [promosLoading, setPromosLoading] = useState(true);
   const { applyPromo } = useRiderStore();
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const disabledBg = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   useEffect(() => {
     let cancelled = false;
@@ -83,21 +93,22 @@ export default function ApplyPromos() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Apply Promo</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Apply Promo</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
         <View className="mb-6">
-          <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">
+          <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>
             Enter Promo Code
           </Text>
           <TextInput
-            className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark"
+            className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta"
+            style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
             placeholder="Enter promo code"
             placeholderTextColor="#9CA3AF"
             value={promoCode}
@@ -105,14 +116,21 @@ export default function ApplyPromos() {
           />
         </View>
         {message ? (
-          <View className={`mb-4 p-[12px] rounded-[8px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border ${messageType === "success" ? "border-goPrimary" : "border-goDanger"}`}>
-            <Text className={`text-[14px] font-Jakarta ${messageType === "success" ? "text-goPrimary" : "text-goDanger"}`}>
+          <View
+            className="mb-4 p-[12px] rounded-[8px] border"
+            style={{
+              backgroundColor: surfaceBg,
+              borderColor: messageType === "success" ? colors.primary : colors.danger,
+            }}
+          >
+            <Text className="text-[14px] font-Jakarta" style={{ color: messageType === "success" ? colors.primary : colors.danger }}>
               {message}
             </Text>
           </View>
         ) : null}
         <TouchableOpacity
-          className={`rounded-full py-[14px] items-center mb-6 ${loading || !promoCode.trim() ? "bg-goBorderDark" : "bg-goPrimary"}`}
+          className="rounded-full py-[14px] items-center mb-6"
+          style={{ backgroundColor: loading || !promoCode.trim() ? disabledBg : colors.primary }}
           onPress={handleApply}
           disabled={loading || !promoCode.trim()}
         >
@@ -123,28 +141,32 @@ export default function ApplyPromos() {
           )}
         </TouchableOpacity>
         <View>
-          <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">
+          <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>
             Available Promos
           </Text>
           {promosLoading ? (
-            <ActivityIndicator size="small" color="#0CC25F" className="py-4" />
+            <ActivityIndicator size="small" color={colors.primary} className="py-4" />
           ) : promos.length === 0 ? (
-            <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark py-4">
+            <Text className="text-[14px] font-Jakarta py-4" style={{ color: textSecondary }}>
               No promos available right now.
             </Text>
           ) : (
             promos.map((promo) => (
               <TouchableOpacity
                 key={promo.promo_id}
-                className="flex-row items-center p-[12px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2"
+                className="flex-row items-center p-[12px] border rounded-[8px] mb-2"
+                style={{ backgroundColor: surfaceBg, borderColor }}
                 onPress={() => { setPromoCode(promo.code); }}
               >
-                <View className={`w-5 h-5 rounded-full mr-3 ${promo.is_eligible ? "bg-goPrimary" : "bg-goBorderDark"}`} />
+                <View
+                  className="w-5 h-5 rounded-full mr-3"
+                  style={{ backgroundColor: promo.is_eligible ? colors.primary : disabledBg }}
+                />
                 <View className="flex-1">
-                  <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{promo.code}</Text>
-                  <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{promo.title}</Text>
+                  <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{promo.code}</Text>
+                  <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{promo.title}</Text>
                   {!promo.is_eligible && promo.ineligible_reason ? (
-                    <Text className="text-[11px] font-Jakarta text-goDanger">{promo.ineligible_reason}</Text>
+                    <Text className="text-[11px] font-Jakarta" style={{ color: colors.danger }}>{promo.ineligible_reason}</Text>
                   ) : null}
                 </View>
               </TouchableOpacity>

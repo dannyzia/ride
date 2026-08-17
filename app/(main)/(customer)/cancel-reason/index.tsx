@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useRiderStore } from "@/store/useRiderStore";
 import { useTranslation } from "react-i18next";
+import { colors } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 const REASONS = [
   { key: "Waiting too long", labelKey: "ride.waiting_too_long" },
@@ -18,6 +20,7 @@ const REASONS = [
 
 export default function CancelReason() {
   const { t } = useTranslation();
+  const isDark = useIsDark();
   const params = useLocalSearchParams<{ rideId?: string }>();
   const [selected, setSelected] = useState("");
   const [note, setNote] = useState("");
@@ -30,6 +33,13 @@ export default function CancelReason() {
   const rideCreatedAt = activeRide?.created_at
     ? new Date(activeRide.created_at).getTime()
     : Date.now();
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const disabledBg = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -92,52 +102,62 @@ export default function CancelReason() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
-        <Text className="text-[16px] font-Jakarta text-goPrimary" onPress={() => router.back()}>{t('common.back')}</Text>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{t('ride.cancel_ride')}</Text>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
+        <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }} onPress={() => router.back()}>{t('common.back')}</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('ride.cancel_ride')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16, gap: 8 }}>
-        <View className="bg-goAccentLight dark:bg-goAccent/10 rounded-[10px] px-4 py-3 mb-2">
-          <Text className="text-[13px] font-Jakarta text-goAmber text-center">
+        <View
+          className="rounded-[10px] px-4 py-3 mb-2"
+          style={{ backgroundColor: isDark ? "rgba(12, 194, 95, 0.1)" : colors.accentLight }}
+        >
+          <Text className="text-[13px] font-Jakarta text-center" style={{ color: colors.amber }}>
             {getFreeCancellationText()}
           </Text>
-          <Text className="text-[11px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mt-0.5">
+          <Text className="text-[11px] font-Jakarta text-center mt-0.5" style={{ color: textSecondary }}>
             {getGraceNote()}
           </Text>
         </View>
 
-        {REASONS.map((reason) => (
-          <TouchableOpacity
-            key={reason.key}
-            className={`flex-row items-center p-[16px] rounded-[10px] border ${
-              selected === reason.key
-                ? "border-goPrimary bg-goAccentLight"
-                : "border-goBorderLight dark:border-goBorderDark bg-goSurfaceLight dark:bg-goSurfaceElevatedDark"
-            }`}
-            onPress={() => setSelected(reason.key)}
-          >
-            <View className={`w-5 h-5 rounded-full border-2 mr-[12px] items-center justify-center ${
-              selected === reason.key ? "border-goPrimary" : "border-goBorderLight dark:border-goBorderDark"
-            }`}>
-              {selected === reason.key && <View className="w-2.5 h-2.5 rounded-full bg-goPrimary" />}
-            </View>
-            <Text className="text-[16px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">{t(reason.labelKey)}</Text>
-          </TouchableOpacity>
-        ))}
+        {REASONS.map((reason) => {
+          const isSelected = selected === reason.key;
+          return (
+            <TouchableOpacity
+              key={reason.key}
+              className="flex-row items-center p-[16px] rounded-[10px] border"
+              style={
+                isSelected
+                  ? { borderColor: colors.primary, backgroundColor: colors.accentLight }
+                  : { borderColor, backgroundColor: surfaceBg }
+              }
+              onPress={() => setSelected(reason.key)}
+            >
+              <View
+                className="w-5 h-5 rounded-full border-2 mr-[12px] items-center justify-center"
+                style={{ borderColor: isSelected ? colors.primary : borderColor }}
+              >
+                {isSelected && <View className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors.primary }} />}
+              </View>
+              <Text className="text-[16px] font-Jakarta" style={{ color: textPrimary }}>{t(reason.labelKey)}</Text>
+            </TouchableOpacity>
+          );
+        })}
         <TextInput
-          className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mt-4"
+          className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mt-4"
+          style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
           placeholder={t('ride.optional_note')}
           placeholderTextColor="#9CA3AF"
           value={note}
           onChangeText={setNote}
         />
         {error ? (
-          <Text className="text-[14px] font-Jakarta text-goDanger text-center mt-3">{error}</Text>
+          <Text className="text-[14px] font-Jakarta text-center mt-3" style={{ color: colors.danger }}>{error}</Text>
         ) : null}
         <TouchableOpacity
-          className={`rounded-full py-[16px] items-center mt-8 ${loading || !selected ? "bg-goBorderDark" : "bg-goDanger"}`}
+          className="rounded-full py-[16px] items-center mt-8"
+          style={{ backgroundColor: loading || !selected ? disabledBg : colors.danger }}
           onPress={confirmCancel}
           disabled={loading || !selected}
         >

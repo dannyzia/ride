@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import PaymentWebView from "@/components/PaymentWebView";
 import AnimatedCard from "@/components/AnimatedCard";
+import { colors } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface RidePass {
   id: string; name: string; description: string | null; price_bdt: number;
@@ -18,12 +20,20 @@ interface ActiveSubscription {
 }
 
 export default function RidePassPurchase() {
+  const isDark = useIsDark();
   const [passes, setPasses] = useState<RidePass[]>([]);
   const [activeSub, setActiveSub] = useState<ActiveSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentUrl, setPaymentUrl] = useState("");
   const [paymentEventId, setPaymentEventId] = useState("");
   const [purchasing, setPurchasing] = useState<string | null>(null);
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const disabledBg = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   const fetchPasses = useCallback(async () => {
     try {
@@ -88,40 +98,44 @@ export default function RidePassPurchase() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-6 py-4 border-b border-goBorderLight dark:border-goBorderDark">
-        <TouchableOpacity onPress={() => router.back()}><Text className="text-goPrimary font-Jakarta text-base">Back</Text></TouchableOpacity>
-        <Text className="flex-1 text-center text-lg font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Ride Pass</Text>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <View className="flex-row items-center px-6 py-4 border-b" style={{ borderColor }}>
+        <TouchableOpacity onPress={() => router.back()}><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>Back</Text></TouchableOpacity>
+        <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>Ride Pass</Text>
         <View className="w-12" />
       </View>
       {loading ? (
-        <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color="#0A9B4C" /></View>
+        <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
         <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingVertical: 16 }}>
           {activeSub && (
-            <View className="bg-goAccentLight dark:bg-goAccent/10 rounded-xl p-4 mb-6 border border-goAccent/30">
-              <Text className="text-sm font-JakartaBold text-goAccent mb-1">Active Pass</Text>
-              <Text className="text-lg font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{activeSub.pass_name}</Text>
-              <Text className="text-sm font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">
+            <View
+              className="rounded-xl p-4 mb-6 border"
+              style={{ backgroundColor: isDark ? "rgba(12, 194, 95, 0.1)" : colors.accentLight, borderColor: colors.accent + "4D" }}
+            >
+              <Text className="text-sm font-JakartaBold mb-1" style={{ color: colors.accent }}>Active Pass</Text>
+              <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>{activeSub.pass_name}</Text>
+              <Text className="text-sm font-Jakarta mt-1" style={{ color: textSecondary }}>
                 Rides: {activeSub.rides_used}{activeSub.max_rides ? ` / ${activeSub.max_rides}` : " (unlimited)"}
               </Text>
-              <Text className="text-sm font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+              <Text className="text-sm font-Jakarta" style={{ color: textSecondary }}>
                 Expires: {new Date(activeSub.valid_until).toLocaleDateString()}
               </Text>
             </View>
           )}
           {passes.map((p, i) => (
             <AnimatedCard key={p.id} index={i} className="mb-3">
-              <View className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-xl shadow-go-sm p-4">
-              <Text className="text-base font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{p.name}</Text>
-              {p.description ? <Text className="text-sm font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">{p.description}</Text> : null}
+              <View className="border rounded-xl shadow-go-sm p-4" style={{ backgroundColor: surfaceBg, borderColor }}>
+              <Text className="text-base font-JakartaBold" style={{ color: textPrimary }}>{p.name}</Text>
+              {p.description ? <Text className="text-sm font-Jakarta mt-1" style={{ color: textSecondary }}>{p.description}</Text> : null}
               <View className="flex-row items-center justify-between mt-3">
                 <View>
-                  <Text className="text-lg font-JakartaBold text-goPrimary">৳{(p.price_bdt / 100).toFixed(0)}</Text>
-                  <Text className="text-xs font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">{p.discount_percent}% off · {p.validity_days} days{p.max_rides ? ` · ${p.max_rides} rides` : ""}</Text>
+                  <Text className="text-lg font-JakartaBold" style={{ color: colors.primary }}>৳{(p.price_bdt / 100).toFixed(0)}</Text>
+                  <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>{p.discount_percent}% off · {p.validity_days} days{p.max_rides ? ` · ${p.max_rides} rides` : ""}</Text>
                 </View>
                 <TouchableOpacity onPress={() => buyPass(p.id)} disabled={purchasing === p.id}
-                  className={`py-2 px-4 rounded-full ${purchasing === p.id ? "bg-goBorderDark" : "bg-goPrimary"}`}>
+                  className="py-2 px-4 rounded-full"
+                  style={{ backgroundColor: purchasing === p.id ? disabledBg : colors.primary }}>
                   <Text className="text-goWhite font-JakartaBold text-sm">{purchasing === p.id ? "..." : "Buy"}</Text>
                 </TouchableOpacity>
               </View>
