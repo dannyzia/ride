@@ -259,6 +259,11 @@ export async function POST(request: Request) {
     let walletRedeemedBdt = 0;
     let platformSubsidyBdt = 0;
     let promoCodeId: string | null = null;
+    // M-29: the staged promo's discount shape is captured here so the
+    // promoRedemptions row can be inserted INSIDE the ride transaction
+    // (with the real ride_id) instead of as a pre-tx placeholder row.
+    let stagedDiscountType: string | null = null;
+    let stagedDiscountValue: number | null = null;
     // W-2: the rider_subscriptions row that supplied a 'pass' discount —
     // snapshotted so completion burns exactly that pass's quota, never every
     // active subscription the rider holds.
@@ -293,7 +298,12 @@ export async function POST(request: Request) {
         platformSubsidyBdt = discountAmount;
       }
 
-      // Consume staged promo if the rider selected the promo option
+      // Consume staged promo if the rider selected the promo option.
+      // M-29: only validate + capture the promo id here. The promoRedemptions
+      // row is inserted INSIDE the ride-request transaction with the real
+      // ride_id — the old pre-tx insert used a zero-UUID placeholder and left
+      // an orphaned redemption (already consuming promo quota) if the ride
+      // insert rolled back.
       if (discountType === "promo") {
         const staged = getStagedPromo(user.id);
         if (staged) {
@@ -308,22 +318,8 @@ export async function POST(request: Request) {
             promoRow.expires_at > new Date()
           ) {
             promoCodeId = staged.promoCodeId;
-            await db.insert(promoRedemptions).values({
-              promo_code_id: promoCodeId,
-              rider_id: user.id,
-              ride_id: "00000000-0000-0000-0000-000000000000",
-              discount_type: staged.discountType as any,
-              discount_value: staged.discountValue,
-              discounted_amount_bdt: appliedDiscountBdt,
-              driver_fare_bdt: fareBreakdown.total_bdt + preferenceSurchargeBdt,
-              rider_payable_bdt: fareBreakdown.total_bdt + preferenceSurchargeBdt - appliedDiscountBdt,
-              platform_subsidy_bdt: platformSubsidyBdt,
-            });
-            clearStagedPromo(user.id);
-            logger.info("[ride/request] promo applied", {
-              promoId: promoCodeId,
-              discount: appliedDiscountBdt,
-            });
+            stagedDiscountType = staged.discountType;
+            stagedDiscountValue = staged.discountValue;
           }
         }
       }
@@ -424,19 +420,17 @@ export async function POST(request: Request) {
       }
 
       if (promoCodeId) {
-        await tx
-          .update(promoRedemptions)
-          .set({ ride_id: ride.id })
-          .where(
-            and(
-              eq(promoRedemptions.promo_code_id, promoCodeId),
-              eq(promoRedemptions.rider_id, user.id),
-              eq(
-                promoRedemptions.ride_id,
-                "00000000-0000-0000-0000-000000000000",
-              ),
-            ),
-          );
+        await tx.insert(promoRedemptions).values({
+          promo_code_id: promoCodeId,
+          rider_id: user.id,
+          ride_id: ride.id,
+          discount_type: (stagedDiscountType ?? "promo") as any,
+          discount_value: stagedDiscountValue ?? appliedDiscountBdt,
+          discounted_amount_bdt: appliedDiscountBdt,
+          driver_fare_bdt: fareBreakdown.total_bdt + preferenceSurchargeBdt,
+          rider_payable_bdt: fareBreakdown.total_bdt + preferenceSurchargeBdt - appliedDiscountBdt,
+          platform_subsidy_bdt: platformSubsidyBdt,
+        });
       }
     });
 
@@ -448,6 +442,17 @@ export async function POST(request: Request) {
         },
         { status: 409 },
       );
+    }
+
+    // The redemption row only exists once the ride committed — clear the
+    // staged cache in the success path so a failed request keeps the stage
+    // for a retry without re-redeeming.
+    if (promoCodeId) {
+      clearStagedPromo(user.id);
+      logger.info("[ride/request] promo applied", {
+        promoId: promoCodeId,
+        discount: appliedDiscountBdt,
+      });
     }
 
     // ── SMS to secondary rider (non-blocking) ────────────────────────
