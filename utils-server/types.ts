@@ -50,11 +50,6 @@ export interface RideStartMessage {
   pin: string;
 }
 
-export interface RideCompleteLegacyMessage {
-  type: "ride:complete";
-  ride_id: string;
-}
-
 export interface OfferAcceptMessage {
   type: "offer:accept";
   ride_id: string;
@@ -84,7 +79,6 @@ export type InboundMessage =
   | FetchConfirmMessage
   | RideArrivedMessage
   | RideStartMessage
-  | RideCompleteLegacyMessage
   | OfferAcceptMessage
   | OfferRejectMessage
   | ChatTypingMessage

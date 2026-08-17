@@ -358,7 +358,7 @@ const server = http.createServer(async (req, res) => {
           return;
         }
         sendToRider(rider_user_id, {
-          type: "ride:complete",
+          type: "ride:completed",
           ride_id,
           total_bdt,
           driver_net_bdt,
@@ -1124,42 +1124,12 @@ wss.on("connection", (ws: WebSocket) => {
             status: "in_progress",
           });
           send(ws, { type: "ride:started", ride_id: rideId });
-        } else if (
-          action === "complete" &&
-          client.role === "driver" &&
-          client.driverId
-        ) {
-          // Driver reached the dropoff -> mark the ride completed and notify
-          // the rider so their screen shows "Ride Complete".
-          const rideId = msg.ride_id as string;
-          if (!rideId) {
-            send(ws, { type: "error", message: "missing_ride_id" });
-            break;
-          }
-
-          const [ride] = await db.select({ driver_id: rides.driver_id, status: rides.status })
-            .from(rides).where(eq(rides.id, rideId)).limit(1);
-          if (!ride || ride.driver_id !== client.driverId) {
-            send(ws, { type: "error", message: "not_your_ride" });
-            break;
-          }
-
-          const [updatedRide] = await db
-            .update(rides)
-            .set({ status: "completed", completed_at: new Date() })
-            .where(and(eq(rides.id, rideId), eq(rides.status, 'in_progress')))
-            .returning({ id: rides.id, user_id: rides.user_id });
-          if (!updatedRide) {
-            send(ws, { type: "error", message: "invalid_state_transition" });
-            break;
-          }
-          sendToRider(updatedRide.user_id, {
-            type: "ride:status",
-            ride_id: rideId,
-            status: "completed",
-          });
-          send(ws, { type: "ride:completed", ride_id: rideId });
         }
+        // NOTE: there is deliberately NO WS "complete" action. Completing a
+        // ride must go through POST /api/ride/[id]/complete, which settles
+        // the fare, wallets, ledger, and accounting in one place. The old
+        // legacy ride:complete WS handler flipped status with no settlement
+        // and was removed (pass 20). finish-ride calls the HTTP endpoint.
         break;
       }
 
