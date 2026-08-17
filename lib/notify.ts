@@ -2,6 +2,7 @@ import { db } from '@/src/db';
 import { eq, and, inArray, desc } from 'drizzle-orm';
 import { userDevices, notifications } from '@/src/db/schema';
 import { logger } from '@/lib/logger';
+import * as errors from '@/lib/errors';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -58,8 +59,8 @@ export async function sendNotification(
             return { token, success: false, error: result.data.message };
           }
           return { token, success: true };
-        } catch (err: any) {
-          return { token, success: false, error: err.message };
+        } catch (err: unknown) {
+          return { token, success: false, error: errors.getErrorMessage(err) };
         }
       }),
     );
@@ -102,8 +103,8 @@ export async function sendNotification(
       sent_at: new Date(),
       failed_reason: failed > 0 ? `${failed}/${uniqueTokens.length} failed` : null,
     });
-  } catch (err: any) {
-    logger.error('[notify] sendNotification error', { userId, type, error: err.message });
+  } catch (err: unknown) {
+    logger.error('[notify] sendNotification error', { userId, type, error: errors.getErrorMessage(err) });
   }
 
   return { sent, failed };

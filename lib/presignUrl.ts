@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './supabaseServer';
 import { logger } from '@/lib/logger';
+import * as errors from '@/lib/errors';
 
 export async function generatePresignedUrl(
   bucket: string,
@@ -15,8 +16,8 @@ export async function generatePresignedUrl(
       return null;
     }
     return data.signedUrl;
-  } catch (e: any) {
-    logger.error('[presignUrl] exception', { bucket, path, error: e.message });
+  } catch (e: unknown) {
+    logger.error('[presignUrl] exception', { bucket, path, error: errors.getErrorMessage(e) });
     return null;
   }
 }

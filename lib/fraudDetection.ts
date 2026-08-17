@@ -6,6 +6,7 @@ import {
 } from "../src/db/schema";
 import { eq, and, sql, gt, isNotNull } from "drizzle-orm";
 import { logger } from "./logger";
+import * as errors from "@/lib/errors";
 
 const ONE_DAY_AGO = new Date(Date.now() - 24 * 60 * 60 * 1000);
 const TODAY_MIDNIGHT = new Date();
@@ -29,8 +30,8 @@ export async function detectCancellationAbuse(riderId: string): Promise<number> 
       return 10 * (total - 5);
     }
     return 0;
-  } catch (e: any) {
-    logger.error("[fraud] detectCancellationAbuse error", { riderId, error: e.message });
+  } catch (e: unknown) {
+    logger.error("[fraud] detectCancellationAbuse error", { riderId, error: errors.getErrorMessage(e) });
     return 0;
   }
 }
@@ -45,8 +46,8 @@ export async function detectReferralRing(riderId: string): Promise<number> {
       LIMIT 1
     `);
     return result.length > 0 ? 50 : 0;
-  } catch (e: any) {
-    logger.error("[fraud] detectReferralRing error", { riderId, error: e.message });
+  } catch (e: unknown) {
+    logger.error("[fraud] detectReferralRing error", { riderId, error: errors.getErrorMessage(e) });
     return 0;
   }
 }
@@ -68,8 +69,8 @@ export async function detectRepeatedPairing(riderId: string): Promise<number> {
       .groupBy(rides.driver_id)
       .having(sql`count(*) > 3`);
     return pairs.length > 0 ? 30 : 0;
-  } catch (e: any) {
-    logger.error("[fraud] detectRepeatedPairing error", { riderId, error: e.message });
+  } catch (e: unknown) {
+    logger.error("[fraud] detectRepeatedPairing error", { riderId, error: errors.getErrorMessage(e) });
     return 0;
   }
 }
@@ -94,8 +95,8 @@ export async function checkDeviceDuplicates(userId: string): Promise<number> {
       );
     const others = Number(count ?? 0);
     return others > 0 ? 100 : 0;
-  } catch (e: any) {
-    logger.error("[fraud] checkDeviceDuplicates error", { userId, error: e.message });
+  } catch (e: unknown) {
+    logger.error("[fraud] checkDeviceDuplicates error", { userId, error: errors.getErrorMessage(e) });
     return 0;
   }
 }
@@ -158,7 +159,7 @@ export async function runFraudDetection(): Promise<void> {
         }
       }
     }
-  } catch (e: any) {
-    logger.error("[fraud] runFraudDetection error", { error: e.message });
+  } catch (e: unknown) {
+    logger.error("[fraud] runFraudDetection error", { error: errors.getErrorMessage(e) });
   }
 }
