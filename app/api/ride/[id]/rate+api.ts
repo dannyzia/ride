@@ -5,6 +5,7 @@ import { verifySupabaseToken } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const rateSchema = z.object({
   rating: z.number().int().min(1).max(5),
@@ -85,9 +86,9 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     logger.info('[ride/rate] rating submitted', { rideId: id, role, rating });
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 409) return Response.json({ error: 'already_rated', message: 'Ride already rated' }, { status: 409 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (errors.getErrorStatus(err) === 409) return Response.json({ error: 'already_rated', message: 'Ride already rated' }, { status: 409 });
     logger.error('[ride/rate] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

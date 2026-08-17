@@ -3,6 +3,7 @@ import { chatMessages, rides, users } from '../../../../src/db/schema';
 import { eq, and, lt, desc } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '../../../../lib/logger';
+import * as errors from '@/lib/errors';
 
 const PAGE_SIZE = 50;
 
@@ -45,9 +46,9 @@ export async function GET(req: Request) {
       messages: messages.reverse(),
       has_more: hasMore,
     });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (errors.getErrorStatus(err) === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[ride/messages] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

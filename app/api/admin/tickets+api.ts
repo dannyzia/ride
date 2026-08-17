@@ -4,6 +4,7 @@ import { eq, desc, and, sql } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const listSchema = z.object({
   status: z.string().optional(),
@@ -52,8 +53,8 @@ export async function GET(request: Request) {
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
     return Response.json({ tickets: rows, total: Number(countResult?.count ?? 0) });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/tickets] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

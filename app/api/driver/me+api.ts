@@ -7,6 +7,7 @@ import { isAllowedStorageUrl } from '@/lib/storageUrl';
 import { parseJsonBody } from '@/lib/parseBody';
 import { validateMinPerKm } from '@/lib/validateMinPerKm';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 // NOTE: `vehicle_type` is intentionally NOT part of the PATCH schema. The
 // driver's dispatch-facing type is owned by POST /api/driver/vehicles (B-2,
@@ -60,8 +61,8 @@ export async function GET(request: Request) {
       },
     });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/me] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -146,8 +147,8 @@ export async function PATCH(request: Request) {
     const [updated] = await db.select().from(drivers).where(eq(drivers.id, driver.id)).limit(1);
     return Response.json({ driver: updated });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/me] PATCH error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

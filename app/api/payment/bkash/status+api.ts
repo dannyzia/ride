@@ -3,6 +3,7 @@ import { paymentEvents } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import * as errors from '@/lib/errors';
 
 /**
  * GET /api/payment/bkash/status?paymentID=...
@@ -49,8 +50,8 @@ export async function GET(request: Request) {
       status: evt.status,
       subscription_id: evt.subscription_id,
     });
-  } catch (e: any) {
-    if (e.status === 401) {
+  } catch (e: unknown) {
+    if (errors.getErrorStatus(e) === 401) {
       return Response.json({ error: 'unauthorized', message: 'Invalid or missing token' }, { status: 401 });
     }
     logger.error('[payment/bkash/status] error', e);

@@ -4,6 +4,7 @@ import { eq, and } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { VEHICLE_TYPE_ZOD_ENUM } from '@/lib/vehicleTypes';
+import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
@@ -48,8 +49,8 @@ export async function GET(request: Request) {
 
     return Response.json({ models: rows }, { status: 200 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/vehicle-models] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

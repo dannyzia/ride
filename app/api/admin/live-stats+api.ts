@@ -3,6 +3,7 @@ import { rides, drivers } from '@/src/db/schema';
 import { eq, and, sql, gte } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
@@ -41,8 +42,8 @@ export async function GET(request: Request) {
       in_progress: Number(inProgressRides?.count ?? 0),
       recent_completed: Number(recentCompleted?.count ?? 0),
     });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/live-stats] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

@@ -16,6 +16,7 @@ import { activateSubscription } from "@/lib/activateSubscription";
 import { creditWalletTopup, activateRiderPass, enqueueCompensation } from "@/lib/paymentRepair";
 import { logger } from "@/lib/logger";
 import { recordSubscriptionSale } from '@/lib/accounting';
+import * as errors from '@/lib/errors';
 
 const ipnSchema = z.object({ invoice: z.string().min(1) });
 
@@ -204,11 +205,11 @@ async function processPortposPayment(
       await activateRiderPass(evt, pass);
       logger.info('[portpos/callback] rider pass activated', { paymentEventId: evt.id, passId: pass.id });
       return "success";
-    } catch (passErr: any) {
+    } catch (passErr: unknown) {
       // Z-3: unlike wallet topup / package purchase, this path never enqueued
       // compensation — one transient failure left the paid pass stuck in
       // callback_pending forever with zero retry machinery.
-      logger.error('[portpos/callback] rider pass activation failed — enqueuing compensation', { paymentEventId: evt.id, error: passErr.message });
+      logger.error('[portpos/callback] rider pass activation failed — enqueuing compensation', { paymentEventId: evt.id, error: errors.getErrorMessage(passErr) });
       await enqueueCompensation(evt.id);
       return "failed";
     }
@@ -225,10 +226,10 @@ async function processPortposPayment(
         amountBdt: evt.amount_bdt,
       });
       return "success";
-    } catch (topupErr: any) {
+    } catch (topupErr: unknown) {
       logger.error("[portpos/callback] wallet topup failed", {
         paymentEventId: evt.id,
-        error: topupErr.message,
+        error: errors.getErrorMessage(topupErr),
       });
       await enqueueCompensation(evt.id);
       return "failed";
@@ -255,12 +256,12 @@ async function processPortposPayment(
       catch (e) { logger.warn('[accounting] subscription entry failed', e); }
     }
     return "success";
-  } catch (activationErr: any) {
+  } catch (activationErr: unknown) {
     logger.error(
       "[portpos/callback] activateSubscription failed, enqueuing compensation",
       {
         paymentEventId: evt.id,
-        error: activationErr.message,
+        error: errors.getErrorMessage(activationErr),
       },
     );
     await enqueueCompensation(evt.id);
@@ -293,10 +294,10 @@ export async function GET(request: Request) {
       result === "success" ? successUrl : `${failureUrl}?reason=payment_failed`,
       302,
     );
-  } catch (e: any) {
+  } catch (e: unknown) {
     logger.error("[portpos/callback] GET error", {
       invoiceId,
-      error: e.message,
+      error: errors.getErrorMessage(e),
     });
     return Response.redirect(`${failureUrl}?reason=internal_error`, 302);
   }
@@ -328,8 +329,8 @@ export async function POST(request: Request) {
     return Response.json({
       result: result === "success" ? "success" : "error",
     });
-  } catch (e: any) {
-    logger.error("[portpos/callback] POST error", { error: e.message });
+  } catch (e: unknown) {
+    logger.error("[portpos/callback] POST error", { error: errors.getErrorMessage(e) });
     return Response.json(
       { result: "error", message: "internal_error" },
       { status: 500 },

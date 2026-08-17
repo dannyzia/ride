@@ -4,6 +4,7 @@ import { db } from "../../../src/db";
 import { chatMessages, rides, users, drivers } from "../../../src/db/schema";
 import { eq } from "drizzle-orm";
 import { verifySupabaseToken } from "../../../lib/auth";
+import * as errors from "@/lib/errors";
 
 const sendSchema = z.object({
   ride_id: z.string().uuid(),
@@ -91,11 +92,11 @@ export async function POST(request: Request) {
     }
 
     return Response.json({ message: msg }, { status: 201 });
-  } catch (e: any) {
-    if (e.name === "ZodError")
-      return Response.json({ error: e.issues }, { status: 400 });
+  } catch (e: unknown) {
+    if (errors.getErrorName(e) === "ZodError")
+      return Response.json({ error: errors.getErrorIssues(e) }, { status: 400 });
     return Response.json(
-      { error: e.message ?? "chat_failed" },
+      { error: errors.getErrorMessage(e, "chat_failed") },
       { status: 401 },
     );
   }
@@ -117,7 +118,7 @@ export async function GET(request: Request) {
       .limit(100);
 
     return Response.json({ messages });
-  } catch (_e: any) {
+  } catch (_e: unknown) {
     return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
   }
 }

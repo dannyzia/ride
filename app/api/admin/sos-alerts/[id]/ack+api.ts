@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
@@ -25,8 +26,8 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     logger.info('[admin] SOS alert acknowledged', { id, by: dbUser.id });
     return Response.json({ success: true, alert: updated });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/sos-alerts/ack] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

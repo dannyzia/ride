@@ -2,6 +2,7 @@ import { db } from '@/src/db';
 import { accountingAccounts } from '@/src/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
+import * as errors from '@/lib/errors';
 
 const API_KEY = process.env.ACCOUNTING_API_KEY;
 
@@ -28,8 +29,8 @@ export async function GET(request: Request) {
     const totalBalance = accounts.reduce((s, a) => s + a.current_balance_bdt, 0);
 
     return Response.json({ accounts, total_balance_bdt: totalBalance, total_balance_taka: totalBalance / 100 });
-  } catch (err: any) {
-    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[accounting/balance] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

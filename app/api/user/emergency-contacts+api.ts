@@ -5,6 +5,7 @@ import { verifySupabaseToken } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import * as errors from "@/lib/errors";
 
 const contactSchema = z.object({
   name: z.string().min(1).max(100),
@@ -32,8 +33,8 @@ export async function GET(request: Request) {
 
     return Response.json({ contacts }, { status: 200 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/emergency-contacts] GET error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -64,8 +65,8 @@ export async function POST(request: Request) {
 
     return Response.json({ contact: contact! }, { status: 201 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/emergency-contacts] POST error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -92,8 +93,8 @@ export async function DELETE(request: Request) {
 
     return Response.json({ success: true }, { status: 200 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/emergency-contacts] DELETE error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

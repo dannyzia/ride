@@ -3,6 +3,7 @@ import { rides, users, drivers } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 export async function GET(request: Request, { id: rawId }: { id: string }) {
   try {
@@ -87,8 +88,8 @@ export async function GET(request: Request, { id: rawId }: { id: string }) {
       : null;
 
     return Response.json({ ride: ridePayload, driver: driverPayload });
-  } catch (e: any) {
-    if (e.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (e: unknown) {
+    if (errors.getErrorStatus(e) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

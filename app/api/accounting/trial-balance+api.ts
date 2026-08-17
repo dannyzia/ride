@@ -1,6 +1,7 @@
 import { db } from '@/src/db';
 import { sql } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
+import * as errors from '@/lib/errors';
 
 const API_KEY = process.env.ACCOUNTING_API_KEY;
 
@@ -37,8 +38,8 @@ export async function GET(request: Request) {
       total_cr_taka: totalCr / 100,
       is_balanced: Math.abs(totalDr - totalCr) < 1,
     });
-  } catch (err: any) {
-    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[accounting/trial-balance] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

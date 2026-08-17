@@ -6,6 +6,7 @@ import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { recordTip } from '@/lib/accounting';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const tipSchema = z.object({
   amount_bdt: z.number().int().min(1),
@@ -97,10 +98,10 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     logger.info('[ride/tip] tip submitted', { rideId: id, amount_bdt });
     return Response.json({ success: true, tip_bdt: amount_bdt });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 409) return Response.json({ error: 'already_tipped', message: 'Tip already added' }, { status: 409 });
-    if (err.status === 422) return Response.json({ error: 'insufficient_balance', message: 'Insufficient account balance' }, { status: 422 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (errors.getErrorStatus(err) === 409) return Response.json({ error: 'already_tipped', message: 'Tip already added' }, { status: 409 });
+    if (errors.getErrorStatus(err) === 422) return Response.json({ error: 'insufficient_balance', message: 'Insufficient account balance' }, { status: 422 });
     logger.error('[ride/tip] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

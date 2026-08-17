@@ -15,6 +15,7 @@ import { parseJsonBody } from '@/lib/parseBody';
 import { percentOf } from '@/lib/money';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 let etaTableCache: EtaSpeedTable | null = null;
 let etaTableExpiry = 0;
@@ -252,8 +253,8 @@ export async function POST(request: Request) {
 
     return Response.json({ estimates, distance_km: totalDistanceKm, preferences_applied: preference_ids ?? [] });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[ride/estimate] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

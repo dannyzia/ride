@@ -8,6 +8,7 @@ import { parseJsonBody } from '@/lib/parseBody';
 import { evaluateCancellation } from '@/lib/cancellation';
 import { recordCancellationFee } from '@/lib/accounting';
 import { createCancellationCreditInTx } from '@/lib/cancellationCompensation';
+import * as errors from '@/lib/errors';
 
 const CANCELLABLE_STATUSES = [
   'pending',
@@ -159,14 +160,14 @@ export async function POST(request: Request, { id }: { id: string }) {
             cancelled_by,
           }),
         }).catch((e: any) =>
-          logger.error("[ride/cancel] WS ride:cancelled broadcast failed", { rideId, driverId: ride.driver_id, error: e.message }),
+          logger.error("[ride/cancel] WS ride:cancelled broadcast failed", { rideId, driverId: ride.driver_id, error: errors.getErrorMessage(e) }),
         );
       }
     }
 
     return Response.json({ ok: true, status: 'cancelled' });
-  } catch (e: any) {
-    if (e.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (e: unknown) {
+    if (errors.getErrorStatus(e) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[ride/cancel] error', e);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

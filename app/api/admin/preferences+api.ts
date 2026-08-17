@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
+import * as errors from "@/lib/errors";
 
 const createSchema = z.object({
   name: z.string().min(1).max(50),
@@ -33,10 +34,10 @@ export async function GET(req: Request) {
       .orderBy(preferences.created_at);
 
     return Response.json({ preferences: rows });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403)
+    if (errors.getErrorStatus(err) === 403)
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/preferences] list error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
@@ -69,8 +70,8 @@ export async function POST(req: Request) {
       name: pref.name,
     });
     return Response.json({ preference_id: pref.id }, { status: 201 });
-  } catch (err: any) {
-    if (err.code === "23505") {
+  } catch (err: unknown) {
+    if (errors.getErrorCode(err) === "23505") {
       return Response.json(
         { error: "preference_name_exists" },
         { status: 409 },

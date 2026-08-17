@@ -6,6 +6,7 @@ import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { VEHICLE_TYPE_ZOD_ENUM, checkDriverEligibility } from '@/lib/vehicleTypes';
+import * as errors from '@/lib/errors';
 
 class EligibilityError extends Error {
   constructor(message: string) {
@@ -51,8 +52,8 @@ export async function GET(request: Request) {
 
     return Response.json({ vehicles: result }, { status: 200 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/vehicles] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -205,8 +206,8 @@ export async function POST(request: Request) {
 
     return Response.json({ vehicle, model_created }, { status: 201 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (err instanceof EligibilityError) {
       return Response.json({ error: 'eligibility_not_met', message: err.message }, { status: 422 });
     }

@@ -5,6 +5,7 @@ import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
+import * as errors from '@/lib/errors';
 
 const updateSchema = z.object({
   preference_ids: z.array(z.string().uuid()).max(20),
@@ -37,8 +38,8 @@ export async function GET(request: Request) {
       ));
 
     return Response.json({ preferences: rows });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/preferences] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -88,8 +89,8 @@ export async function POST(request: Request) {
     logger.info('[driver/preferences] updated', { driverId: driver.id, count: preference_ids.length });
 
     return Response.json({ updated: true, preference_ids });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/preferences] POST error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

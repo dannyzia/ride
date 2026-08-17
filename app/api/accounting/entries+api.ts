@@ -3,6 +3,7 @@ import { accountingEntries, accountingEntryLines } from '@/src/db/schema';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import * as errors from '@/lib/errors';
 
 const API_KEY = process.env.ACCOUNTING_API_KEY;
 
@@ -41,8 +42,8 @@ const start = url.searchParams.get('start');
     }));
 
     return Response.json({ entries: entriesWithLines, limit, offset });
-  } catch (err: any) {
-    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[accounting/entries] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

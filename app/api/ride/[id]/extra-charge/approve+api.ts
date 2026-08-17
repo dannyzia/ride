@@ -4,6 +4,7 @@ import { rideExtraCharges, rides, users } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 export async function POST(request: Request, { id, chargeId }: { id: string; chargeId: string }) {
   try {
@@ -44,8 +45,8 @@ export async function POST(request: Request, { id, chargeId }: { id: string; cha
 
     logger.info('[extra-charge/approve] approved', { charge_id: chargeId, ride_id: id, amount_bdt: charge.amount_bdt });
     return Response.json({ success: true, amount_bdt: charge.amount_bdt });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[extra-charge/approve] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

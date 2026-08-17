@@ -3,6 +3,7 @@ import { drivers, users } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import * as errors from "@/lib/errors";
 
 export async function POST(request: Request) {
   try {
@@ -23,8 +24,8 @@ export async function POST(request: Request) {
 
     return Response.json({ on_break: true, break_started_at: now.toISOString() }, { status: 200 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[driver/break/start] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

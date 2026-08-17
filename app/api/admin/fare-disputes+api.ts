@@ -6,6 +6,7 @@ import { parseJsonBody } from '@/lib/parseBody';
 import { recordAdminRefund } from '@/lib/accounting';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
@@ -19,8 +20,8 @@ export async function GET(request: Request) {
     }
     const disputes = await db.select().from(fareDisputes).orderBy(desc(fareDisputes.created_at));
     return Response.json({ disputes });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/fare-disputes] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -82,14 +83,14 @@ export async function PATCH(request: Request) {
           amountPaisa: refundBdt,
           reason: `Fare dispute ${dispute.id} (${parsed.data.action})`,
         });
-      } catch (e: any) {
-        logger.warn('[admin/fare-disputes] refund journal entry failed', { dispute_id: dispute.id, refund_bdt: refundBdt, error: e.message });
+      } catch (e: unknown) {
+        logger.warn('[admin/fare-disputes] refund journal entry failed', { dispute_id: dispute.id, refund_bdt: refundBdt, error: errors.getErrorMessage(e) });
       }
     }
 
     return Response.json({ success: true, resolution: parsed.data.action, refund_bdt: refundBdt });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/fare-disputes] PATCH error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

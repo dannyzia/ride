@@ -3,6 +3,7 @@ import { users, riderFeeDeductions } from "@/src/db/schema";
 import { eq, and, sql, asc } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import * as errors from "@/lib/errors";
 
 export async function GET(request: Request) {
   try {
@@ -51,8 +52,8 @@ export async function GET(request: Request) {
       })),
       total_owed_bdt: totalOwed,
     });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[rider/fee-deductions] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

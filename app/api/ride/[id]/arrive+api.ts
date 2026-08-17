@@ -5,6 +5,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import * as errors from "@/lib/errors";
 
 export async function POST(request: Request, { id }: { id: string }) {
   const parsed = z.string().uuid().safeParse(id);
@@ -72,7 +73,7 @@ export async function POST(request: Request, { id }: { id: string }) {
           arrived_at: now.toISOString(),
         }),
       }).catch((e) =>
-        logger.warn("[ride/arrive] WS emit failed", { error: e.message }),
+        logger.warn("[ride/arrive] WS emit failed", { error: errors.getErrorMessage(e) }),
       );
     }
 
@@ -85,9 +86,9 @@ export async function POST(request: Request, { id }: { id: string }) {
       status: "driver_arrived",
       arrived_at: now.toISOString(),
     });
-  } catch (err: any) {
-    if (err.status === 401 || err.status === 403) {
-      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: err.status });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) {
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: errors.getErrorStatus(err) ?? 500 });
     }
     logger.error("[ride/arrive] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

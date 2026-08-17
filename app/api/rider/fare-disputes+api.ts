@@ -6,6 +6,7 @@ import { parseJsonBody } from '@/lib/parseBody';
 import { autoArbitrateDispute } from '@/lib/fareArbitration';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const disputeSchema = z.object({
   ride_id: z.string().uuid(),
@@ -75,8 +76,8 @@ export async function POST(request: Request) {
     }
 
     return Response.json({ dispute_id: disputeId, resolution, refund_bdt: refundBdt });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[rider/fare-disputes] POST error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -93,8 +94,8 @@ export async function GET(request: Request) {
       .orderBy(desc(fareDisputes.created_at));
 
     return Response.json({ disputes });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[rider/fare-disputes] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

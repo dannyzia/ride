@@ -5,6 +5,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const blockSchema = z.object({
   driver_id: z.string().uuid(),
@@ -30,8 +31,8 @@ export async function POST(request: Request) {
     }).onConflictDoNothing();
 
     return Response.json({ success: true, blocked: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[rider/block] POST error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -53,8 +54,8 @@ const driverId = url.searchParams.get('driver_id');
       .where(and(eq(driverBlocklists.rider_id, rider.id), eq(driverBlocklists.driver_id, driverId)));
 
     return Response.json({ success: true, blocked: false });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[rider/block] DELETE error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -71,8 +72,8 @@ export async function GET(request: Request) {
       .orderBy(desc(driverBlocklists.created_at));
 
     return Response.json({ blocked_drivers: blocks });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[rider/block] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

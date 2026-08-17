@@ -7,6 +7,7 @@ import { logger } from '../../../../lib/logger';
 import { parseJsonBody } from '../../../../lib/parseBody';
 import { z } from 'zod';
 import { VEHICLE_TYPE_VALUES } from '../../../../lib/vehicleTypes';
+import * as errors from '@/lib/errors';
 
 const VEHICLE_TIER: Record<string, number> = {
   bike_basic:     0,
@@ -82,9 +83,9 @@ export async function POST(request: Request) {
       old_vehicle_type: driver.vehicle_type,
       new_vehicle_type,
     });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (errors.getErrorStatus(err) === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/driver/downgrade] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

@@ -6,6 +6,7 @@ import { evaluateCancellation } from '@/lib/cancellation';
 import { createCancellationCredit } from '@/lib/cancellationCompensation';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const CANCELLABLE_STATUSES = ['matched', 'driver_arriving', 'driver_arrived'] as const;
 
@@ -77,7 +78,7 @@ export async function POST(request: Request, { id }: { id: string }) {
           cancellationRideId: id,
           amountBdt: feeBdt,
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         logger.warn('[no-show] cancellation credit creation failed', e);
       }
     }
@@ -95,15 +96,15 @@ export async function POST(request: Request, { id }: { id: string }) {
           expires_at: expiresAt,
         });
         logger.info('[no-show] rider fee deduction created', { rideId: id, feeBdt });
-      } catch (e: any) {
+      } catch (e: unknown) {
         logger.warn('[no-show] rider fee deduction creation failed', e);
       }
     }
 
     logger.info('[no-show] driver marked rider no-show', { ride_id: id, driver_id: driverId, fee_bdt: feeBdt });
     return Response.json({ success: true, fee_bdt: feeBdt });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[no-show] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

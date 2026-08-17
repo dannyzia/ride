@@ -7,6 +7,7 @@ import { VEHICLE_TYPE_VALUES } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { safeRequestJson } from "@/lib/parseBody";
+import * as errors from "@/lib/errors";
 
 const zoneSchema = z.object({
   name: z.string().min(1).max(100),
@@ -44,10 +45,10 @@ export async function GET(request: Request) {
       result.push({ ...zone, pricing: pricings });
     }
     return Response.json({ zones: result });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403)
+    if (errors.getErrorStatus(err) === 403)
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/zones] list error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
@@ -102,10 +103,10 @@ export async function POST(request: Request) {
     }
 
     return Response.json({ error: 'invalid_payload', message: 'Invalid request payload' }, { status: 400 });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403)
+    if (errors.getErrorStatus(err) === 403)
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/zones] create error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
@@ -183,10 +184,10 @@ export async function PUT(request: Request) {
     }
 
     return Response.json({ error: 'invalid_payload', message: 'Invalid request payload' }, { status: 400 });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403)
+    if (errors.getErrorStatus(err) === 403)
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/zones] update error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
@@ -210,10 +211,10 @@ export async function DELETE(request: Request) {
       .set({ is_active: false, updated_at: new Date() })
       .where(eq(pricing.zone_id, id));
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403)
+    if (errors.getErrorStatus(err) === 403)
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/zones] delete error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

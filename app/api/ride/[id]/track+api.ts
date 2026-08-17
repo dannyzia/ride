@@ -58,7 +58,7 @@ export async function GET(request: Request, { id }: { id: string }) {
       destination_lat: isActive ? ride.destination_latitude : null,
       destination_lng: isActive ? ride.destination_longitude : null,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.error('[track] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

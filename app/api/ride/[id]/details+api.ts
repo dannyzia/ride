@@ -3,6 +3,7 @@ import { rides, users } from '../../../../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '../../../../lib/logger';
+import * as errors from '@/lib/errors';
 
 const CHAT_ACTIVE_STATUSES = ['matched', 'driver_arriving', 'in_progress'];
 
@@ -47,9 +48,9 @@ export async function GET(req: Request) {
       ride_active: CHAT_ACTIVE_STATUSES.includes(ride.status),
       ride_status: ride.status,
     });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (errors.getErrorStatus(err) === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[ride/details] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

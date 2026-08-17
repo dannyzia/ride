@@ -5,6 +5,7 @@ import { users, rides } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 export async function GET(request: Request, { id }: { id: string }) {
   try {
@@ -33,8 +34,8 @@ export async function GET(request: Request, { id }: { id: string }) {
 
     const { feeBdt, reason } = await evaluateCancellation(id, 'rider');
     return Response.json({ fee_bdt: feeBdt, reason });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[cancel-preview] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

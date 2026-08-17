@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
 import { stagePromo } from "@/lib/promoCache";
+import * as errors from "@/lib/errors";
 
 const redeemSchema = z.object({
   code: z.string().min(1).max(30),
@@ -125,8 +126,8 @@ export async function POST(request: Request) {
         min_spend_bdt: promo.min_spend_bdt,
       },
     });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[promo/redeem] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

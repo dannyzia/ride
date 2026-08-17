@@ -4,6 +4,7 @@ import { eq, and, desc, gte, lte } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const querySchema = z.object({
   event_type: z.enum(['deduction', 'credit', 'initial_load', 'expiry_writeoff']).optional(),
@@ -63,8 +64,8 @@ export async function GET(request: Request) {
       subscription_name: null, // resolved on frontend if needed
     });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/call-ledger] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

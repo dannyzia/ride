@@ -5,6 +5,7 @@ import { eq, desc } from 'drizzle-orm';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const chargeSchema = z.object({
   type: z.enum(['toll', 'parking']),
@@ -36,8 +37,8 @@ const user = await verifySupabaseToken(request);
       .where(eq(rideExtraCharges.ride_id, id))
       .orderBy(desc(rideExtraCharges.created_at));
     return Response.json({ charges });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[extra-charge] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -70,8 +71,8 @@ export async function POST(request: Request, { id }: { id: string }) {
     });
 
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[extra-charge] POST error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -118,8 +119,8 @@ export async function PATCH(request: Request, { id }: { id: string }) {
 
     logger.info('[extra-charge] resolved', { charge_id: charge.id, status: newStatus });
     return Response.json({ success: true, status: newStatus });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[extra-charge] PATCH error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

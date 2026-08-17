@@ -13,6 +13,7 @@ import { percentOf } from '@/lib/money';
 import { evaluateStreaks } from '@/lib/gamification';
 import { earnCashback } from '@/lib/walletCashback';
 import { spendZoneBudget } from '@/lib/zoneBudget';
+import * as errors from '@/lib/errors';
 
 export async function POST(request: Request) {
   try {
@@ -366,7 +367,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
           fare_breakdown: fare,
         }),
       }).catch((e) =>
-        logger.warn("[ride/complete] WS emit failed", { error: e.message }),
+        logger.warn("[ride/complete] WS emit failed", { error: errors.getErrorMessage(e) }),
       );
     }
 
@@ -389,9 +390,9 @@ const rideId = segments[segments.indexOf("ride") + 1];
       wallet_debit_bdt: walletDebitBdt,
       cash_to_collect_bdt: fare.total_bdt + storedPrefSurcharge - appliedDiscountBdt,
     });
-  } catch (err: any) {
-    if (err.status === 401 || err.status === 403) {
-      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: err.status });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) {
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: errors.getErrorStatus(err) ?? 500 });
     }
     logger.error("[ride/complete] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

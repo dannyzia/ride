@@ -5,6 +5,7 @@ import { verifySupabaseToken } from "../../../lib/auth";
 import { logger } from "../../../lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
+import * as errors from "@/lib/errors";
 
 // T-1: this endpoint serves BOTH riders and drivers (the plan's canonical
 // POST /api/sos/alert — the previous driver/sos-alert route 403'd riders, so
@@ -87,8 +88,8 @@ export async function POST(request: Request) {
     logger.info("[sos/alert] recorded", { user_id: dbUser.id, role: dbUser.role, lat, lng, ride_id });
 
     return Response.json({ ok: true });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: "unauthorized", message: "Authentication required" }, { status: 401 });
     logger.error("[sos/alert] error", err);
     return Response.json({ error: "internal_error", message: "An internal server error occurred" }, { status: 500 });

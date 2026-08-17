@@ -4,6 +4,7 @@ import { chatMessages, rides, users } from '../../../../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '../../../../lib/logger';
+import * as errors from '@/lib/errors';
 
 const schema = z.object({
   content: z.string().min(1).max(1000),
@@ -78,9 +79,9 @@ export async function POST(req: Request) {
       content: msg.content,
       created_at: msg.created_at,
     }, { status: 201 });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (errors.getErrorStatus(err) === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[ride/message] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

@@ -3,6 +3,7 @@ import { subscriptions, packages, drivers, users } from "@/src/db/schema";
 import { eq, and } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import * as errors from "@/lib/errors";
 
 export async function GET(request: Request) {
   try {
@@ -50,8 +51,8 @@ export async function GET(request: Request) {
         package_vehicle_type: pkg?.vehicle_type ?? null,
       },
     });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[package/active] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

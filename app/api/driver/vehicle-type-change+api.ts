@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
 import { VEHICLE_TYPE_VALUES, checkDriverEligibility } from '@/lib/vehicleTypes';
+import * as errors from '@/lib/errors';
 
 const schema = z.object({
   new_vehicle_type: z.enum(VEHICLE_TYPE_VALUES),
@@ -57,9 +58,9 @@ export async function POST(request: Request) {
     });
 
     return Response.json({ success: true, vehicle_type: new_vehicle_type });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (errors.getErrorStatus(err) === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[driver/vehicle-type-change] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

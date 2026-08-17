@@ -5,6 +5,7 @@ import { requireRole } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const policySchema = z.object({
   name: z.string().min(1).max(100),
@@ -22,7 +23,7 @@ export async function GET() {
   try {
     const rows = await db.select().from(cancellationPolicies).orderBy(desc(cancellationPolicies.priority));
     return Response.json({ policies: rows });
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.error('[admin/cancellation-policies] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -35,8 +36,8 @@ export async function POST(request: Request) {
     if (!parsed.ok) return parsed.response;
     const [policy] = await db.insert(cancellationPolicies).values(parsed.data).returning();
     return Response.json({ policy });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/cancellation-policies] POST error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

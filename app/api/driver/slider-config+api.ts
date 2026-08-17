@@ -3,6 +3,7 @@ import { db } from '@/src/db';
 import { drivers, pricing, platformConfig, users } from '@/src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
+import * as errors from '@/lib/errors';
 
 export async function GET(req: Request) {
   try {
@@ -37,8 +38,8 @@ export async function GET(req: Request) {
       lower_bound:      Math.floor(systemPerKmBdt * minRatio),
       upper_bound:      Math.ceil(systemPerKmBdt * maxRatio),
     });
-  } catch (err: any) {
-    if (err.status === 401 || err.status === 403) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: err.status });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: errors.getErrorStatus(err) ?? 500 });
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

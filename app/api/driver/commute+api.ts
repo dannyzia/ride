@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const schema = z.object({
   destination_lat: z.number(),
@@ -44,8 +45,8 @@ export async function POST(request: Request) {
     }
 
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/commute] POST error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -62,8 +63,8 @@ export async function GET(request: Request) {
     const [pref] = await db.select().from(driverCommutePreferences)
       .where(eq(driverCommutePreferences.driver_id, driver.id)).limit(1);
     return Response.json({ commute: pref || null });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/commute] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -80,8 +81,8 @@ export async function DELETE(request: Request) {
     await db.delete(driverCommutePreferences)
       .where(eq(driverCommutePreferences.driver_id, driver.id));
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/commute] DELETE error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

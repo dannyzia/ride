@@ -4,6 +4,7 @@ import { users, drivers, rides } from '@/src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
@@ -32,8 +33,8 @@ export async function POST(request: Request, { id }: { id: string }) {
       return Response.json({ error: 'invalid_status', message: 'Cannot start waiting for this ride in its current status' }, { status: 409 });
     }
     return Response.json({ success: true, wait_started_at: new Date().toISOString() });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[wait-start] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

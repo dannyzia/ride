@@ -5,6 +5,7 @@ import { requireRole } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const passSchema = z.object({
   name: z.string().min(1).max(200),
@@ -32,8 +33,8 @@ export async function GET(request: Request) {
     await requireRole('admin')(request);
     const rows = await db.select().from(riderPasses).orderBy(desc(riderPasses.created_at));
     return Response.json({ passes: rows });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/rider-passes] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -46,8 +47,8 @@ export async function POST(request: Request) {
     if (!parsed.ok) return parsed.response;
     const [pass] = await db.insert(riderPasses).values(parsed.data).returning();
     return Response.json({ pass });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/rider-passes] POST error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -61,8 +62,8 @@ export async function PATCH(request: Request) {
     const { id, ...data } = parsed.data;
     await db.update(riderPasses).set({ ...data, updated_at: new Date() }).where(eq(riderPasses.id, id));
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/rider-passes] PATCH error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -78,8 +79,8 @@ const id = searchParams.get('id');
      if (!uuidParam.success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
      await db.update(riderPasses).set({ is_active: false, updated_at: new Date() }).where(eq(riderPasses.id, id));
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/rider-passes] DELETE error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

@@ -5,6 +5,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const respondSchema = z.object({
   item_id: z.string().uuid(),
@@ -27,8 +28,8 @@ export async function GET(request: Request) {
       .orderBy(desc(lostItems.reported_at));
 
     return Response.json({ items });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/lost-items] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -55,8 +56,8 @@ export async function PATCH(request: Request) {
 
     await db.update(lostItems).set(update).where(eq(lostItems.id, parsed.data.item_id));
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/lost-items] PATCH error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

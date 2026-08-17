@@ -3,6 +3,7 @@ import { incentiveDefinitions, driverIncentives, drivers, users, creditVouchers 
 import { eq, and, sql, gte, lte, sum } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import * as errors from '@/lib/errors';
 
 /**
  * GET /api/driver/incentives
@@ -91,8 +92,8 @@ export async function GET(request: Request) {
       completed,
       total_bonus_calls_earned: Number(totalBonus ?? 0),
     });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/incentives] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

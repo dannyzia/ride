@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger';
 import { getH3Cell } from '@/lib/h3';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const statusSchema = z.object({
   is_online: z.boolean(),
@@ -61,8 +62,8 @@ export async function POST(request: Request) {
     logger.info('[driver/status] updated', { userId: user.id, is_online, hasGps: lat != null });
     return Response.json({ success: true, is_online });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/status] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

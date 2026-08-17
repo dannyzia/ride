@@ -3,6 +3,7 @@ import { db } from '@/src/db';
 import { demandForecasts } from '@/src/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
+import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
@@ -16,8 +17,8 @@ export async function GET(request: Request) {
       : await query.orderBy(desc(demandForecasts.forecast_hour)).limit(24);
 
     return Response.json({ forecasts: rows });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/heatmap] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

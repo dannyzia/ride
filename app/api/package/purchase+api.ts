@@ -18,6 +18,7 @@ import { isConfigured } from "@/lib/portpos";
 import { initiatePortposPayment, createZeroAmountPaymentEvent } from "@/lib/paymentEvents";
 import { activateSubscription } from "@/lib/activateSubscription";
 import { logger } from "@/lib/logger";
+import * as errors from "@/lib/errors";
 
 const purchaseSchema = z
   .object({
@@ -214,8 +215,8 @@ export async function POST(request: Request) {
     }
 
     return Response.json({ payment_url: initiated!.payment_url, payment_event_id: initiated!.payment_event_id });
-  } catch (e: any) {
-    if (e.status === 401) {
+  } catch (e: unknown) {
+    if (errors.getErrorStatus(e) === 401) {
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     }
     logger.error("[package/purchase] error", e);

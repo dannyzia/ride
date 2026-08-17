@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
+import * as errors from "@/lib/errors";
 
 const createSchema = z.object({
   code: z.string().min(1).max(30),
@@ -62,8 +63,8 @@ export async function POST(req: Request) {
       { promo_id: promo.id, code: promo.code },
       { status: 201 },
     );
-  } catch (err: any) {
-    if (err.code === "23505") {
+  } catch (err: unknown) {
+    if (errors.getErrorCode(err) === "23505") {
       return Response.json({ error: 'promo_code_exists', message: 'Promo code already in use' }, { status: 409 });
     }
     logger.error("[admin/promos] create error", err);
@@ -122,8 +123,8 @@ export async function PATCH(req: Request) {
 
     logger.info("[admin/promos] updated", { promoId: promo.id });
     return Response.json({ promo });
-  } catch (err: any) {
-    if (err.code === "23505") {
+  } catch (err: unknown) {
+    if (errors.getErrorCode(err) === "23505") {
       return Response.json({ error: 'promo_code_exists', message: 'Promo code already in use' }, { status: 409 });
     }
     logger.error("[admin/promos] update error", err);
@@ -235,10 +236,10 @@ export async function GET(req: Request) {
       total: totalResult[0]?.count ?? rows.length,
       has_more: offset + rows.length < (totalResult[0]?.count ?? rows.length),
     });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403)
+    if (errors.getErrorStatus(err) === 403)
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/promos] GET error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

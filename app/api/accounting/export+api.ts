@@ -2,6 +2,7 @@ import { db } from '@/src/db';
 import { accountingEntries } from '@/src/db/schema';
 import { gte, lte, sql, and } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
+import * as errors from '@/lib/errors';
 
 const API_KEY = process.env.ACCOUNTING_API_KEY;
 
@@ -46,8 +47,8 @@ export async function GET(request: Request) {
     }
 
     return Response.json({ rows: data });
-  } catch (err: any) {
-    if (err.status === 401 || err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[accounting/export] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

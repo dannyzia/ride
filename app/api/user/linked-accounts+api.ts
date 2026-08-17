@@ -3,6 +3,7 @@ import { users } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import * as errors from "@/lib/errors";
 
 export async function GET(request: Request) {
   try {
@@ -13,8 +14,8 @@ export async function GET(request: Request) {
 
     const stored = (dbUser.linked_accounts as { provider: string; label: string; connected: boolean; connected_at: string | null }[] | null) ?? [];
     return Response.json({ linked_accounts: stored }, { status: 200 });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/linked-accounts] GET error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -32,8 +33,8 @@ export async function PATCH(request: Request) {
       error: "coming_soon",
       message: "Social account linking is not available yet.",
     }, { status: 501 });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/linked-accounts] PATCH error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

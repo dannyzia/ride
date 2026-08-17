@@ -6,6 +6,7 @@ import { parseJsonBody } from '@/lib/parseBody';
 import { getTaxReportRange } from '@/lib/tax';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const markSchema = z.object({
   transaction_ids: z.array(z.string().uuid()),
@@ -36,8 +37,8 @@ export async function GET(request: Request) {
     }
 
     return Response.json(report);
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/tax/report] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -52,8 +53,8 @@ export async function POST(request: Request) {
       .set({ is_reported: true, reported_at: new Date() })
       .where(inArray(taxLedgers.id, parsed.data.transaction_ids));
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/tax/report] POST error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

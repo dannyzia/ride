@@ -5,6 +5,7 @@ import { verifySupabaseToken } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import * as errors from "@/lib/errors";
 
 const slotSchema = z.object({
   day_of_week: z.number().int().min(0).max(6),
@@ -41,8 +42,8 @@ export async function GET(request: Request) {
 
     return Response.json({ schedule: rows }, { status: 200 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[driver/schedule] GET error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -82,8 +83,8 @@ export async function PUT(request: Request) {
 
     return Response.json({ success: true }, { status: 200 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[driver/schedule] PUT error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

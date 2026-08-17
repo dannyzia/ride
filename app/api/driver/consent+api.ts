@@ -5,6 +5,7 @@ import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
+import * as errors from '@/lib/errors';
 
 const consentSchema = z.object({
   accepted: z.literal(true),
@@ -31,8 +32,8 @@ export async function POST(request: Request) {
     }).where(eq(drivers.id, driver.id));
 
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/consent] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

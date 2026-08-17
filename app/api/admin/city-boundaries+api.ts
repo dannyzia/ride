@@ -6,6 +6,7 @@ import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
+import * as errors from '@/lib/errors';
 
 const createSchema = z.object({
   name: z.string().min(2).max(100),
@@ -35,8 +36,8 @@ export async function GET(request: Request) {
           .where(eq(cityBoundaries.is_active, true))
           .orderBy(cityBoundaries.name);
     return Response.json({ cities });
-  } catch (err: any) {
-    const status = err.status ?? 500;
+  } catch (err: unknown) {
+    const status = errors.getErrorStatus(err) ?? 500;
     if (status === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
@@ -72,8 +73,8 @@ export async function POST(request: Request) {
 
     clearCityBoundaryCache();
     return Response.json({ city_boundary_id: city.id }, { status: 201 });
-  } catch (err: any) {
-    const status = err.status ?? 500;
+  } catch (err: unknown) {
+    const status = errors.getErrorStatus(err) ?? 500;
     if (status === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
@@ -109,8 +110,8 @@ export async function PATCH(request: Request) {
 
     clearCityBoundaryCache();
     return Response.json({ city_boundary_id: updated.id, updated: true });
-  } catch (err: any) {
-    const status = err.status ?? 500;
+  } catch (err: unknown) {
+    const status = errors.getErrorStatus(err) ?? 500;
     if (status === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)
@@ -136,8 +137,8 @@ export async function DELETE(request: Request) {
 
     clearCityBoundaryCache();
     return Response.json({ city_boundary_id: updated.id, is_active: false });
-  } catch (err: any) {
-    const status = err.status ?? 500;
+  } catch (err: unknown) {
+    const status = errors.getErrorStatus(err) ?? 500;
     if (status === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (status === 403)

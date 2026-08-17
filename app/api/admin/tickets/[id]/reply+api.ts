@@ -5,6 +5,7 @@ import { requireRole } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const replySchema = z.object({
   message: z.string().min(1).max(5000),
@@ -35,8 +36,8 @@ export async function POST(request: Request, { id }: { id: string }) {
       .where(eq(supportTickets.id, id));
 
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/tickets/reply] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

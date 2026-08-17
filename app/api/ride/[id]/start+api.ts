@@ -6,6 +6,7 @@ import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 export async function POST(request: Request) {
   try {
@@ -53,9 +54,9 @@ export async function POST(request: Request) {
     logger.info('[ride/start] ride started', { rideId, driverId: driver.id });
     return Response.json({ ok: true, status: 'in_progress', started_at: now.toISOString() });
 
-  } catch (err: any) {
-    if (err.status === 401 || err.status === 403) {
-      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: err.status });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) {
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: errors.getErrorStatus(err) ?? 500 });
     }
     logger.error('[ride/start] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

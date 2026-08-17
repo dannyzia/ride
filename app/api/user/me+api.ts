@@ -5,6 +5,7 @@ import { verifySupabaseToken } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import * as errors from "@/lib/errors";
 
 // NOTE: `phone` is intentionally NOT patchable here — it is the Supabase-auth
 // credential and must only change through the OTP-verified auth flows.
@@ -47,8 +48,8 @@ export async function GET(request: Request) {
       },
     }, { status: 200 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/me] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -98,8 +99,8 @@ export async function PATCH(request: Request) {
       },
     }, { status: 200 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/me] PATCH error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

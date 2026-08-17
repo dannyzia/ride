@@ -4,6 +4,7 @@ import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const querySchema = z.object({
   outcome: z.enum(['accepted', 'expired', 'refunded', 'filtered', 'delivered']).optional(),
@@ -148,8 +149,8 @@ export async function GET(request: Request) {
       },
     });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[driver/missed-requests] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

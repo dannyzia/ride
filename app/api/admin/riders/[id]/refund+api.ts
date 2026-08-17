@@ -6,6 +6,7 @@ import { parseJsonBody } from '@/lib/parseBody';
 import { recordAdminRefund } from '@/lib/accounting';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 // U-3: ceiling matches the wallet topup limit (৳50,000) — an admin typo of
 // ৳10M must not pass `positive()` into a wallet credit.
@@ -48,14 +49,14 @@ export async function POST(request: Request, { id }: { id: string }) {
     // wallet credit itself (same pattern as every other accounting call).
     try {
       await recordAdminRefund({ riderId: id, amountPaisa: amount_bdt, reason });
-    } catch (e: any) {
-      logger.warn('[admin] refund journal entry failed', { rider_id: id, amount_bdt, error: e.message });
+    } catch (e: unknown) {
+      logger.warn('[admin] refund journal entry failed', { rider_id: id, amount_bdt, error: errors.getErrorMessage(e) });
     }
 
     logger.info('[admin] rider refund', { rider_id: id, amount_bdt, reason });
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[admin/riders/refund] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

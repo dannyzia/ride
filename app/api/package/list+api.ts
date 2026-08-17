@@ -3,6 +3,7 @@ import { packages, drivers, users } from "@/src/db/schema";
 import { eq, and, or, isNull, asc } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import * as errors from "@/lib/errors";
 
 // GET /api/package/list
 // Returns active packages visible to the calling driver.
@@ -57,8 +58,8 @@ export async function GET(request: Request) {
       .orderBy(asc(packages.price_bdt));
 
     return Response.json({ packages: pkgList });
-  } catch (e: any) {
-    if (e.status === 401) {
+  } catch (e: unknown) {
+    if (errors.getErrorStatus(e) === 401) {
       return Response.json(
         { error: "unauthorized", message: "Invalid or missing token" },
         { status: 401 },

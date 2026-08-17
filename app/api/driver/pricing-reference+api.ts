@@ -4,6 +4,7 @@ import { drivers, pricing, platformConfig, users } from '@/src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
@@ -54,9 +55,9 @@ export async function GET(request: Request) {
       min_per_km_floor_bdt: Math.floor(activePricing.per_km_bdt * minRatio),
       min_per_km_ceiling_bdt: Math.ceil(activePricing.per_km_bdt * maxRatio),
     });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (errors.getErrorStatus(err) === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[driver/pricing-reference] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

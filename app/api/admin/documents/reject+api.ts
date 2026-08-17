@@ -6,6 +6,7 @@ import { requireRole } from '../../../../lib/auth';
 import { logger } from '../../../../lib/logger';
 import { parseJsonBody } from '../../../../lib/parseBody';
 import { z } from 'zod';
+import * as errors from '@/lib/errors';
 
 const schema = z.object({
   documentId: z.string().uuid(),
@@ -35,9 +36,9 @@ export async function POST(request: Request) {
       .where(eq(documents.id, documentId));
 
     return Response.json({ success: true });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (errors.getErrorStatus(err) === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error('[admin/documents/reject] error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

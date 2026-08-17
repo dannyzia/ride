@@ -26,6 +26,7 @@ import { parseJsonBody } from "@/lib/parseBody";
 import { percentOf } from "@/lib/money";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { getStagedPromo, clearStagedPromo } from "@/lib/promoCache";
+import * as errors from "@/lib/errors";
 
 const requestSchema = z.object({
   pickup_lat: z.number().min(-90).max(90),
@@ -518,8 +519,8 @@ export async function POST(request: Request) {
       fare_breakdown: fareBreakdown,
       status: "pending",
     });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[ride/request] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

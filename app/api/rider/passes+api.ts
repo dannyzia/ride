@@ -8,6 +8,7 @@ import { initiatePortposPayment } from '@/lib/paymentEvents';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 import crypto from 'crypto';
+import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
@@ -22,8 +23,8 @@ export async function GET(request: Request) {
       .limit(1);
 
     return Response.json({ passes, active_subscription: activeSub || null });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[rider/passes] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -81,8 +82,8 @@ export async function POST(request: Request) {
     }
 
     return Response.json({ payment_url: initiated.payment_url, payment_event_id: initiated.payment_event_id });
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[rider/passes] POST error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

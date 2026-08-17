@@ -6,6 +6,7 @@ import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import { initiatePortposPayment } from "@/lib/paymentEvents";
 import { z } from "zod";
+import * as errors from "@/lib/errors";
 
 const topupSchema = z.object({
   amount_bdt: z.number().int().min(10000),
@@ -49,8 +50,8 @@ export async function POST(request: Request) {
 
     return Response.json({ payment_url: initiated.payment_url, payment_event_id: initiated.payment_event_id }, { status: 200 });
 
-  } catch (err: any) {
-    if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[driver/wallet/topup] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

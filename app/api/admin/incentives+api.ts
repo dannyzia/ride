@@ -10,6 +10,7 @@ import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
+import * as errors from "@/lib/errors";
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
@@ -47,10 +48,10 @@ export async function GET(req: Request) {
       .orderBy(incentiveDefinitions.created_at);
 
     return Response.json({ incentives: rows });
-  } catch (err: any) {
-    if (err.status === 401)
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    if (err.status === 403)
+    if (errors.getErrorStatus(err) === 403)
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     logger.error("[admin/incentives] list error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

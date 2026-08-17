@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       .orderBy(faqs.sort_order);
 
     return Response.json({ faqs: rows }, { status: 200 });
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.error("[faqs] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

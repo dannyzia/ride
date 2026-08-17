@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { parseJsonBody } from "@/lib/parseBody";
 import { z } from "zod";
+import * as errors from "@/lib/errors";
 
 const updateSchema = z.object({
   id: z.string().uuid(),
@@ -33,9 +34,9 @@ export async function GET(request: Request) {
       .from(pricing)
       .orderBy(desc(pricing.updated_at));
     return Response.json({ pricing: all });
-  } catch (err: any) {
-    if (err.status === 401 || err.status === 403) {
-      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: err.status });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) {
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: errors.getErrorStatus(err) ?? 500 });
     }
     logger.error("[admin/pricing] list error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
@@ -67,9 +68,9 @@ export async function PATCH(request: Request) {
     if (!row)
       return Response.json({ error: 'pricing_not_found', message: 'Pricing configuration not found' }, { status: 404 });
     return Response.json({ pricing: row });
-  } catch (err: any) {
-    if (err.status === 401 || err.status === 403) {
-      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: err.status });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) {
+      return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: errors.getErrorStatus(err) ?? 500 });
     }
     logger.error("[admin/pricing] update error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
