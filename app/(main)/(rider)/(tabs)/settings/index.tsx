@@ -2,6 +2,8 @@ import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import ThemeToggle from "@/components/ThemeToggle";
+import { colors } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface SettingsItem {
   label: string;
@@ -23,10 +25,17 @@ const items: SettingsItem[] = [
 ];
 
 export default function DriverSettings() {
+  const isDark = useIsDark();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
-        <Text className="text-[20px] font-JakartaBold tracking-tight text-goTextPrimaryLight dark:text-goTextPrimaryDark">Settings</Text>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <View className="px-[24px] py-[16px] border-b" style={{ borderColor }}>
+        <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>Settings</Text>
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
         <View className="mb-4">
@@ -35,11 +44,12 @@ export default function DriverSettings() {
         {items.map((it) => (
           <TouchableOpacity
             key={it.route}
-            className="flex-row justify-between items-center p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-3"
+            className="flex-row justify-between items-center p-[14px] border rounded-[12px] mb-3"
+            style={{ backgroundColor: surfaceBg, borderColor }}
             onPress={() => router.push(it.route)}
           >
-            <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{it.label}</Text>
-            <Text className="text-[18px] text-goTextSecondaryLight dark:text-goTextSecondaryDark">›</Text>
+            <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{it.label}</Text>
+            <Text className="text-[18px]" style={{ color: textSecondary }}>›</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>

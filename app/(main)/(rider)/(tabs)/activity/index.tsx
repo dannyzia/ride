@@ -1,23 +1,38 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { colors } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 export default function ActivityScreen() {
+  const isDark = useIsDark();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+
+  const menu = [
+    { label: "Call Ledger", route: "/(main)/(rider)/call-ledger" },
+    { label: "Due Amounts", route: "/(main)/(rider)/due-amounts" },
+    { label: "Schedule", route: "/(main)/(rider)/schedule" },
+  ] as const;
+
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
-        <Text className="text-[20px] font-JakartaBold tracking-tight text-goTextPrimaryLight dark:text-goTextPrimaryDark">Activity</Text>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <View className="px-[24px] py-[16px] border-b" style={{ borderColor }}>
+        <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>Activity</Text>
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16, gap: 12 }}>
-        <TouchableOpacity className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]" onPress={() => router.push("/(main)/(rider)/call-ledger")}>
-          <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Call Ledger</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]" onPress={() => router.push("/(main)/(rider)/due-amounts")}>
-          <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Due Amounts</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]" onPress={() => router.push("/(main)/(rider)/schedule")}>
-          <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Schedule</Text>
-        </TouchableOpacity>
+        {menu.map((item) => (
+          <TouchableOpacity
+            key={item.route}
+            className="p-[14px] border rounded-[12px]"
+            style={{ backgroundColor: surfaceBg, borderColor }}
+            onPress={() => router.push(item.route)}
+          >
+            <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );

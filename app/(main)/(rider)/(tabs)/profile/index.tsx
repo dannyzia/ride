@@ -7,9 +7,12 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useDriverStore } from "@/store/useDriverStore";
 import ThemeToggle from "@/components/ThemeToggle";
+import { colors } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 export default function ProfileScreen() {
   const { driver } = useDriverStore();
+  const isDark = useIsDark();
   const [profileData, setProfileData] = useState<{
     full_name: string;
     phone: string;
@@ -19,6 +22,12 @@ export default function ProfileScreen() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -48,21 +57,32 @@ export default function ProfileScreen() {
   const displayRating = profileData?.rating ?? driver?.rating ?? 0;
   const displayRides = profileData?.completed_rides ?? 0;
 
+  const menu = [
+    { label: "Edit Profile", route: "/(main)/(rider)/edit-profile" },
+    { label: "My Vehicles", route: "/(main)/(rider)/vehicle-management" },
+    { label: "Documents", route: "/(main)/(rider)/documents" },
+    { label: "Insurance", route: "/(main)/(rider)/insurance" },
+    { label: "Ratings & Reviews", route: "/(main)/(rider)/ratings" },
+  ] as const;
+
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
-        <View className="items-center px-[24px] py-[32px] border-b border-goBorderLight dark:border-goBorderDark">
-          <View className="w-20 h-20 rounded-full bg-goAccentLight dark:bg-goPrimary/20 items-center justify-center mb-3">
-            <Text className="text-[32px] font-JakartaBold tracking-tight text-goPrimary">{(displayName || "D")[0].toUpperCase()}</Text>
+        <View className="items-center px-[24px] py-[32px] border-b" style={{ borderColor }}>
+          <View
+            className="w-20 h-20 rounded-full items-center justify-center mb-3"
+            style={{ backgroundColor: isDark ? "rgba(12, 194, 95, 0.2)" : colors.accentLight }}
+          >
+            <Text className="text-[32px] font-JakartaBold tracking-tight" style={{ color: colors.primary }}>{(displayName || "D")[0].toUpperCase()}</Text>
           </View>
           {loading ? (
-            <ActivityIndicator size="small" color="#0CC25F" />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : error ? (
-            <Text className="text-[14px] font-Jakarta text-goDanger">{error}</Text>
+            <Text className="text-[14px] font-Jakarta" style={{ color: colors.danger }}>{error}</Text>
           ) : (
             <>
-              <Text className="text-[20px] font-JakartaBold tracking-tight text-goTextPrimaryLight dark:text-goTextPrimaryDark">{displayName}</Text>
-              <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">
+              <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>{displayName}</Text>
+              <Text className="text-[14px] font-Jakarta mt-1" style={{ color: textSecondary }}>
                 {displayVehicle.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())} · ★{displayRating.toFixed(1)} · {displayRides} rides
               </Text>
             </>
@@ -70,21 +90,16 @@ export default function ProfileScreen() {
         </View>
         <View className="px-[24px] pt-[16px] gap-3">
           <ThemeToggle />
-          <TouchableOpacity className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]" onPress={() => router.push("/(main)/(rider)/edit-profile")}>
-            <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Edit Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]" onPress={() => router.push("/(main)/(rider)/vehicle-management")}>
-            <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">My Vehicles</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]" onPress={() => router.push("/(main)/(rider)/documents")}>
-            <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Documents</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]" onPress={() => router.push("/(main)/(rider)/insurance")}>
-            <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Insurance</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]" onPress={() => router.push("/(main)/(rider)/ratings")}>
-            <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Ratings & Reviews</Text>
-          </TouchableOpacity>
+          {menu.map((item) => (
+            <TouchableOpacity
+              key={item.route}
+              className="p-[14px] border rounded-[12px]"
+              style={{ backgroundColor: surfaceBg, borderColor }}
+              onPress={() => router.push(item.route)}
+            >
+              <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>

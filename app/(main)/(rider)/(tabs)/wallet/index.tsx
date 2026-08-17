@@ -4,13 +4,22 @@ import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { colors } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 export default function WalletScreen() {
+  const isDark = useIsDark();
   const [balancePaisa, setBalancePaisa] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [credits, setCredits] = useState<any[]>([]);
   const [creditsLoading, setCreditsLoading] = useState(false);
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   const fetchWallet = useCallback(async () => {
     setLoading(true);
@@ -61,74 +70,76 @@ export default function WalletScreen() {
     .reduce((sum, c) => sum + c.amount_bdt, 0);
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
-        <Text className="text-[20px] font-JakartaBold tracking-tight text-goTextPrimaryLight dark:text-goTextPrimaryDark">Wallet</Text>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <View className="px-[24px] py-[16px] border-b" style={{ borderColor }}>
+        <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>Wallet</Text>
         {loading ? (
-          <ActivityIndicator size="small" color="#0CC25F" className="mt-3" />
+          <ActivityIndicator size="small" color={colors.primary} className="mt-3" />
         ) : error ? (
-          <Text className="text-[14px] font-Jakarta text-goDanger mt-2">{error}</Text>
+          <Text className="text-[14px] font-Jakarta mt-2" style={{ color: colors.danger }}>{error}</Text>
         ) : (
           <>
-            <Text className="text-[32px] font-JakartaBold tracking-tight text-goPrimary mt-1">৳{(balancePaisa / 100).toFixed(0)}</Text>
-            <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+            <Text className="text-[32px] font-JakartaBold tracking-tight mt-1" style={{ color: colors.primary }}>৳{(balancePaisa / 100).toFixed(0)}</Text>
+            <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
               Total earnings tracker
             </Text>
           </>
         )}
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16, gap: 12 }}>
-        <View className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] p-[14px]">
-          <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+        <View className="border rounded-[12px] p-[14px]" style={{ backgroundColor: surfaceBg, borderColor }}>
+          <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
             Total earnings are credited here at ride completion and from gamification rewards. No withdrawals are available yet.
           </Text>
         </View>
 
         {/* Cancellation Compensation Section */}
-        <View className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] p-[14px]">
+        <View className="border rounded-[12px] p-[14px]" style={{ backgroundColor: surfaceBg, borderColor }}>
           <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-[14px] font-JakartaSemiBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
+            <Text className="text-[14px] font-JakartaSemiBold" style={{ color: textPrimary }}>
               Cancellation Compensation
             </Text>
-            <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+            <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
               {pendingCount} pending
             </Text>
           </View>
           {creditsLoading ? (
-            <ActivityIndicator size="small" color="#0CC25F" />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : credits.length === 0 ? (
-            <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+            <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
               No cancellation compensations yet.
             </Text>
           ) : (
             <View style={{ gap: 8 }}>
-              {credits.map((credit) => (
-                <View key={credit.id} className="flex-row justify-between items-center py-2 border-b border-goBorderLight dark:border-goBorderDark last:border-0">
-                  <View>
-                    <Text className="text-[13px] font-JakartaSemiBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
-                      ৳{(credit.amount_bdt / 100).toFixed(0)} bonus
-                    </Text>
-                    <Text className="text-[11px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
-                      {credit.created_at ? new Date(credit.created_at).toLocaleDateString("en-BD") : ""}
+              {credits.map((credit) => {
+                const statusColor =
+                  credit.status === "pending"
+                    ? colors.accent
+                    : credit.status === "applied"
+                    ? colors.primary
+                    : textSecondary;
+                return (
+                  <View key={credit.id} className="flex-row justify-between items-center py-2 border-b last:border-0" style={{ borderColor }}>
+                    <View>
+                      <Text className="text-[13px] font-JakartaSemiBold" style={{ color: textPrimary }}>
+                        ৳{(credit.amount_bdt / 100).toFixed(0)} bonus
+                      </Text>
+                      <Text className="text-[11px] font-Jakarta" style={{ color: textSecondary }}>
+                        {credit.created_at ? new Date(credit.created_at).toLocaleDateString("en-BD") : ""}
+                      </Text>
+                    </View>
+                    <Text className="text-[12px] font-JakartaSemiBold" style={{ color: statusColor }}>
+                      {credit.status.toUpperCase()}
                     </Text>
                   </View>
-                  <Text className={`text-[12px] font-Jakarta font-JakartaSemiBold ${
-                    credit.status === "pending"
-                      ? "text-goAccent"
-                      : credit.status === "applied"
-                      ? "text-goPrimary"
-                      : "text-goTextSecondaryLight dark:text-goTextSecondaryDark"
-                  }`}>
-                    {credit.status.toUpperCase()}
-                  </Text>
-                </View>
-              ))}
+                );
+              })}
               {totalPendingBdt > 0 && (
-                <View className="flex-row justify-between items-center pt-2 border-t border-goBorderLight dark:border-goBorderDark">
-                  <Text className="text-[13px] font-JakartaSemiBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
+                <View className="flex-row justify-between items-center pt-2 border-t" style={{ borderColor }}>
+                  <Text className="text-[13px] font-JakartaSemiBold" style={{ color: textPrimary }}>
                     Total pending credits
                   </Text>
-                  <Text className="text-[14px] font-JakartaBold text-goPrimary">
+                  <Text className="text-[14px] font-JakartaBold" style={{ color: colors.primary }}>
                     ৳{(totalPendingBdt / 100).toFixed(0)}
                   </Text>
                 </View>

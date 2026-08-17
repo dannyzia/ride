@@ -1,16 +1,24 @@
 import { Tabs } from "expo-router";
 import { View, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { FloatingNavMenu } from "@/components/FloatingNavMenu";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { colors } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Home: "🏠", Earning: "💰", Activity: "📋", Wallet: "👛", Profile: "👤",
+  const isDark = useIsDark();
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+    Home: "home", Earning: "cash", Activity: "list", Wallet: "wallet", Profile: "person",
   };
   return (
     <View className="items-center justify-center">
-      <Text style={{ fontSize: 20 }}>{icons[label] ?? "●"}</Text>
-      <Text className={`text-[10px] mt-0.5 ${focused ? "font-JakartaBold text-goPrimary" : "font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark"}`}>
+      <Ionicons name={icons[label] ?? "ellipse"} size={20} color={focused ? colors.primary : textSecondary} />
+      <Text
+        className={`text-[10px] mt-0.5 ${focused ? "font-JakartaBold" : "font-Jakarta"}`}
+        style={{ color: focused ? colors.primary : textSecondary }}
+      >
         {label}
       </Text>
     </View>
