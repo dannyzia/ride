@@ -115,7 +115,7 @@ export default function HomeScreen() {
   const { userLatitude, userLongitude, userAddress, setUserLocation, setDestinationLocation } = useCustomer();
   const { setPickup: setRiderPickup, setDropoff: setRiderDropoff, setPickupCoords, setDropoffCoords, setSelectedVehicleType } = useRiderStore();
 
-  // Rebook prefill: rides / show-ride push rebook_* params; home honors them by
+  // Rebook prefill: rides / ride-detail push rebook_* params; home honors them by
   // prefilling pickup + destination (with real coords) and jumping to pickup confirm.
   useEffect(() => {
     if (!rebook_origin || !rebook_dest) return;

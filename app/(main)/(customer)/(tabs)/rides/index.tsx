@@ -515,6 +515,19 @@ export default function RidesScreen() {
 
               <View style={styles.modalActions}>
                 <TouchableOpacity
+                  style={[styles.modalActionBtnSecondary, { borderColor: borderColor }]}
+                  onPress={() => {
+                    setDetailModalVisible(false);
+                    router.push(`/(main)/(customer)/ride-detail/${selectedRide.id}`);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="View full ride detail"
+                >
+                  <Text style={[styles.modalActionTextSecondary, { color: textPrimary }]}>
+                    View Full Details
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[styles.modalActionBtn, { backgroundColor: colors.primary }]}
                   onPress={() => {
                     setDetailModalVisible(false);

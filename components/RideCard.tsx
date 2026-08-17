@@ -26,7 +26,7 @@ const RideCard = ({ ride }: { ride: RideData }) => {
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   return (
-    <TouchableOpacity onPress={() => router.push(`/(main)/(customer)/show-ride/${ride_id}`)}>
+    <TouchableOpacity onPress={() => router.push(`/(main)/(customer)/ride-detail/${ride_id}`)}>
       <View
         className="rounded-2xl mb-6 p-[1.5px]"
         style={{

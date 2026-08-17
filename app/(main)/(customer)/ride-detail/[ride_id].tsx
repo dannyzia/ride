@@ -78,8 +78,8 @@ const DISPUTE_WINDOW_MS = 172800000;
 const canDisputeRide = (completedAt: string | null): boolean =>
   !!completedAt && Date.now() - new Date(completedAt).getTime() <= DISPUTE_WINDOW_MS;
 
-const ShowRide = () => {
-  const { rideId } = useLocalSearchParams<{ rideId: string }>();
+const RideDetailScreen = () => {
+  const { ride_id } = useLocalSearchParams<{ ride_id: string }>();
   const [ride, setRide] = useState<RideDetail | null>(null);
   const [driver, setDriver] = useState<DriverDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,7 +96,7 @@ const ShowRide = () => {
   const textDisabled = isDark ? colors.textDisabledDark : colors.textDisabledLight;
 
   const fetchRide = useCallback(async () => {
-    if (typeof rideId !== "string" || !rideId) return;
+    if (typeof ride_id !== "string" || !ride_id) return;
     setLoading(true);
     setError(false);
     try {
@@ -105,7 +105,7 @@ const ShowRide = () => {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) throw new Error("Not authenticated");
-      const res = await fetch(`${API_URL}/api/ride/${rideId}`, {
+      const res = await fetch(`${API_URL}/api/ride/${ride_id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -114,14 +114,14 @@ const ShowRide = () => {
       setRide(json.ride);
       setDriver(json.driver ?? null);
     } catch (e) {
-      logger.error("[show-ride] fetch failed", e);
+      logger.error("[ride-detail] fetch failed", e);
       setError(true);
       setRide(null);
       setDriver(null);
     } finally {
       setLoading(false);
     }
-  }, [rideId]);
+  }, [ride_id]);
 
   useEffect(() => {
     fetchRide();
@@ -227,14 +227,8 @@ const ShowRide = () => {
           </Text>
         </View>
 
+        {/* Map snapshot: 180px height, 16px radius, route green dot → red dot */}
         <View style={[styles.mapCard, { backgroundColor: surfaceBg, borderColor }]}>
-          <Ionicons name="location" size={32} color={colors.primary} />
-          <Text style={[styles.mapRoute, { color: textSecondary }]} numberOfLines={1}>
-            {ride.origin_address ?? "—"} → {ride.destination_address ?? "—"}
-          </Text>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: surfaceBg, borderColor }]}>
           <View style={styles.routeRow}>
             <View style={styles.routeLine}>
               <View style={[styles.routeDot, { backgroundColor: colors.primary }]} />
@@ -243,13 +237,13 @@ const ShowRide = () => {
             </View>
             <View style={styles.routeTextCol}>
               <Text style={[styles.addrLabel, { color: textSecondary }]}>Pickup</Text>
-              <Text style={[styles.addrText, { color: textPrimary }]}>
+              <Text style={[styles.addrText, { color: textPrimary }]} numberOfLines={2}>
                 {ride.origin_address ?? "—"}
               </Text>
               <Text style={[styles.addrLabel, styles.addrLabelGap, { color: textSecondary }]}>
                 Destination
               </Text>
-              <Text style={[styles.addrText, { color: textPrimary }]}>
+              <Text style={[styles.addrText, { color: textPrimary }]} numberOfLines={2}>
                 {ride.destination_address ?? "—"}
               </Text>
             </View>
@@ -440,23 +434,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   mapCard: {
-    height: 170,
+    height: 180,
     borderRadius: radii.lg,
     borderWidth: 1,
-    alignItems: "center",
     justifyContent: "center",
-    gap: 8,
     paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  mapRoute: {
-    fontFamily: "Jakarta-Regular",
-    fontSize: 13,
-  },
-  card: {
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    padding: 16,
     marginBottom: 16,
   },
   routeRow: {
@@ -492,6 +474,12 @@ const styles = StyleSheet.create({
   addrText: {
     fontFamily: "Jakarta-Medium",
     fontSize: 15,
+  },
+  card: {
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 16,
   },
   reasonRow: {
     flexDirection: "row",
@@ -630,4 +618,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ShowRide;
+export default RideDetailScreen;

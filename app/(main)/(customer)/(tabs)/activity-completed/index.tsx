@@ -86,7 +86,7 @@ export default function ActivityCompleted() {
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <TouchableOpacity
                   style={{ flex: 1, backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: "center" }}
-                  onPress={() => router.push(`/(main)/(customer)/show-ride/${ride.id}`)}
+                  onPress={() => router.push(`/(main)/(customer)/ride-detail/${ride.id}`)}
                 >
                   <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: textPrimary }}>View Receipt</Text>
                 </TouchableOpacity>
