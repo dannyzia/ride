@@ -39,8 +39,6 @@ export async function POST(request: Request) {
     if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
     if (user.role !== 'rider') return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
 
-    await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext('ride_schedule_' || ${user.id}))`);
-
     const parsed = await parseJsonBody(request, scheduleSchema);
     if (!parsed.ok) return parsed.response;
 
@@ -55,29 +53,6 @@ export async function POST(request: Request) {
     }
     if (scheduledDate.getTime() - now.getTime() > maxLead) {
       return Response.json({ error: 'too_far', message: 'Cannot schedule more than 7 days ahead' }, { status: 422 });
-    }
-
-    // Active scheduled ride guard — one active scheduled ride per rider
-    const [activeScheduled] = await db
-      .select({ id: rides.id })
-      .from(rides)
-      .where(and(
-        eq(rides.user_id, user.id),
-        eq(rides.status, 'scheduled'),
-      ))
-      .limit(1);
-    if (activeScheduled) {
-      return Response.json({ error: 'ride_already_scheduled', message: 'You already have an active scheduled ride' }, { status: 409 });
-    }
-
-    // Hourly rate limit: max 3 scheduled rides per hour
-    const hourAgo = new Date(Date.now() - 3600000);
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(rides)
-      .where(and(eq(rides.user_id, user.id), eq(rides.status, 'scheduled'), gte(rides.created_at, hourAgo)));
-    if (Number(countResult?.count ?? 0) >= 3) {
-      return Response.json({ error: 'rider_rate_limited', message: 'Rate limit exceeded for this rider' }, { status: 429 });
     }
 
     const zoneCheck = await validatePickupZone(pickup_lat, pickup_lng);
@@ -150,7 +125,41 @@ export async function POST(request: Request) {
     }
 
     let rideId = "";
+    let alreadyScheduledConflict = false;
+    let rateLimited = false;
     await db.transaction(async (tx) => {
+      // C-3: the advisory lock and the "one active scheduled ride" guard must
+      // run INSIDE the transaction. A pre-tx lock in autocommit releases
+      // immediately, and a pre-tx SELECT lets two concurrent requests both
+      // pass the check and both insert — two scheduler jobs, two dispatches.
+      // Serialized by the lock, this re-check sees the first request's
+      // committed ride and aborts the second with 409/429.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('ride_schedule_' || ${user.id}))`);
+
+      const [activeScheduled] = await tx
+        .select({ id: rides.id })
+        .from(rides)
+        .where(and(
+          eq(rides.user_id, user.id),
+          eq(rides.status, 'scheduled'),
+        ))
+        .limit(1);
+      if (activeScheduled) {
+        alreadyScheduledConflict = true;
+        return;
+      }
+
+      // Hourly rate limit: max 3 scheduled rides per hour
+      const hourAgo = new Date(Date.now() - 3600000);
+      const [countResult] = await tx
+        .select({ count: sql<number>`count(*)` })
+        .from(rides)
+        .where(and(eq(rides.user_id, user.id), eq(rides.status, 'scheduled'), gte(rides.created_at, hourAgo)));
+      if (Number(countResult?.count ?? 0) >= 3) {
+        rateLimited = true;
+        return;
+      }
+
       const [ride] = await tx.insert(rides).values({
         user_id: user.id,
         driver_id: null,
@@ -184,10 +193,6 @@ export async function POST(request: Request) {
       }
       rideId = ride.id;
 
-      if (!ride) {
-        throw new Error('ride_insert_failed');
-      }
-
       if (stops && stops.length > 0) {
         await tx.insert(rideStops).values(
           stops.map((stop: { lat: number; lng: number; address: string }, i: number) => ({
@@ -200,6 +205,13 @@ export async function POST(request: Request) {
         );
       }
     });
+
+    if (alreadyScheduledConflict) {
+      return Response.json({ error: 'ride_already_scheduled', message: 'You already have an active scheduled ride' }, { status: 409 });
+    }
+    if (rateLimited) {
+      return Response.json({ error: 'rider_rate_limited', message: 'Rate limit exceeded for this rider' }, { status: 429 });
+    }
 
     // ── SMS to secondary rider (non-blocking) ────────────────────────
     if (secondary_rider_phone) {
