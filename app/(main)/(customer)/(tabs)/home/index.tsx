@@ -112,8 +112,8 @@ export default function HomeScreen() {
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
   const textDisabled = isDark ? colors.textDisabledDark : colors.textDisabledLight;
 
-  const { userLatitude, userLongitude, userAddress, setDestinationLocation } = useCustomer();
-  const { setPickup: setRiderPickup, setDropoff: setRiderDropoff, setPickupCoords, setDropoffCoords, setSelectedVehicleType, setRideStatus } = useRiderStore();
+  const { userLatitude, userLongitude, userAddress, setUserLocation, setDestinationLocation } = useCustomer();
+  const { setPickup: setRiderPickup, setDropoff: setRiderDropoff, setPickupCoords, setDropoffCoords, setSelectedVehicleType } = useRiderStore();
 
   // Rebook prefill: rides / show-ride push rebook_* params; home honors them by
   // prefilling pickup + destination (with real coords) and jumping to pickup confirm.
@@ -305,10 +305,18 @@ export default function HomeScreen() {
       setPickupCoords({ lat: pickup.lat, lng: pickup.lng });
       setDropoffCoords({ lat: destination.lat, lng: destination.lng });
       setSelectedVehicleType(selectedVehicle as any);
-      setRideStatus("finding");
-
-      // TODO(plan-02 follow-up): wire POST /api/ride/request here
-      router.replace("/(main)/(customer)/finding-driver");
+      // Seed the coords confirm-ride reads (useCustomer) and hand off to the
+      // real booking pipeline: confirm-ride POSTs /api/ride/request and
+      // navigates to finding-driver itself on success. Previously this jumped
+      // straight to finding-driver with no ride ever created — the fake-search
+      // CTA that told riders "Drivers are busy" forever.
+      setUserLocation({ latitude: pickup.lat, longitude: pickup.lng, address: pickup.address });
+      setDestinationLocation({
+        latitude: destination.lat,
+        longitude: destination.lng,
+        address: destination.address,
+      });
+      router.replace("/(main)/(customer)/confirm-ride");
     } catch (e) {
       logger.error("[home] book failed", e);
       Alert.alert("Error", "Could not request ride. Please try again.");
