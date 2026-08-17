@@ -359,8 +359,11 @@ export const useRiderStore = create<RiderState>((set, get) => ({
           destination_address: r.destination_address,
           fare_bdt: r.fare_breakdown?.total_bdt ?? 0,
         }));
+      // A booked-ahead ride sits in status 'scheduled' until the scheduler
+      // promotes it to 'pending' for dispatch at ride time — filtering on
+      // 'pending' matched nothing, so the scheduled list was always empty.
       const scheduled = (data ?? [])
-        .filter((r: any) => r.scheduled_at && r.status === "pending")
+        .filter((r: any) => r.scheduled_at && r.status === "scheduled")
         .map((r: any) => ({
           id: r.ride_id,
           vehicle_type: r.vehicle_type,
