@@ -15,12 +15,32 @@ const MARKER_DESTINATION = require("@/assets/icons/marker-goride-Marker Navigati
 let MapViewLib: any = MapLibreGL.MapView ?? MapLibreGL.default ?? null;
 let PointAnnotation: any = MapLibreGL.PointAnnotation ?? null;
 let Camera: any = MapLibreGL.Camera ?? null;
+let ShapeSource: any = MapLibreGL.ShapeSource ?? null;
+let LineLayer: any = MapLibreGL.LineLayer ?? null;
 
-const Map = () => {
+export interface MapRoutePoint {
+  lat: number;
+  lng: number;
+}
+
+interface MapProps {
+  /** Static snapshot mode: when `origin` is provided, the map renders
+   *  origin/destination markers (+ optional route line) instead of the live
+   *  user-location map. Used by read-only screens (ride detail). */
+  origin?: MapRoutePoint;
+  destination?: MapRoutePoint;
+  /** Decoded route polyline ([lat, lng] pairs) — drawn as a primary-color
+   *  line via ShapeSource + LineLayer, and used to fit the camera. */
+  route?: [number, number][];
+}
+
+const Map = ({ origin, destination, route }: MapProps = {}) => {
   const cameraRef = useRef<any>(null);
 
   const isDark = useIsDark();
   const mapStyleURL = useBarikoiMapStyle(isDark);
+
+  const isStatic = !!origin;
 
   const {
     userLongitude,
@@ -34,17 +54,17 @@ const Map = () => {
   }, []);
 
   useEffect(() => {
-    if (userLatitude && userLongitude && cameraRef.current) {
+    if (!isStatic && userLatitude && userLongitude && cameraRef.current) {
       cameraRef.current.flyTo([userLongitude, userLatitude], 1200);
     }
-  }, [userLatitude, userLongitude]);
+  }, [isStatic, userLatitude, userLongitude]);
 
   const handleMapInteraction = () => {
     Keyboard.dismiss();
   };
 
-  const displayLat = userLatitude;
-  const displayLng = userLongitude;
+  const displayLat = origin?.lat ?? userLatitude;
+  const displayLng = origin?.lng ?? userLongitude;
 
   if (displayLat == null || displayLng == null) {
     return (
@@ -69,27 +89,76 @@ const Map = () => {
     );
   }
 
+  // Route bounding box for camera fit (static snapshot with polyline).
+  const routeBounds =
+    isStatic && route && route.length >= 2
+      ? (() => {
+          let minLat = Infinity;
+          let maxLat = -Infinity;
+          let minLng = Infinity;
+          let maxLng = -Infinity;
+          for (const [lat, lng] of route) {
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+            if (lng < minLng) minLng = lng;
+            if (lng > maxLng) maxLng = lng;
+          }
+          return { ne: [maxLng, maxLat], sw: [minLng, minLat] };
+        })()
+      : null;
+
+  const centerLng = routeBounds
+    ? (routeBounds.ne[0] + routeBounds.sw[0]) / 2
+    : displayLng;
+  const centerLat = routeBounds
+    ? (routeBounds.ne[1] + routeBounds.sw[1]) / 2
+    : displayLat;
+
+  // Static mode: markers from props. Live mode: store locations (existing behavior).
+  const originMarkerCoord = isStatic
+    ? [origin.lng, origin.lat]
+    : userLatitude && userLongitude
+      ? [userLongitude, userLatitude]
+      : null;
+  const destinationMarkerCoord = isStatic
+    ? destination
+      ? [destination.lng, destination.lat]
+      : null
+    : destinationLatitude && destinationLongitude
+      ? [destinationLongitude, destinationLatitude]
+      : null;
+
   return (
     <View style={{ flex: 1 }}>
       {MapViewLib ? (
         <MapViewLib
           style={{ width: "100%", height: "100%", borderRadius: 16 }}
           styleURL={mapStyleURL}
-          centerCoordinate={[displayLng, displayLat]}
-          zoomLevel={userLatitude && userLongitude ? 15 : 13}
+          centerCoordinate={[centerLng, centerLat]}
+          zoomLevel={routeBounds ? 12 : 15}
           onPress={handleMapInteraction}
         >
           {Camera && (
             <Camera
               ref={cameraRef}
-              zoomLevel={15}
-              centerCoordinate={[displayLng, displayLat]}
+              {...(routeBounds
+                ? {
+                    bounds: {
+                      ...routeBounds,
+                      paddingLeft: 28,
+                      paddingRight: 28,
+                      paddingTop: 28,
+                      paddingBottom: 28,
+                    },
+                    animationDuration: 500,
+                  }
+                : { zoomLevel: 15, centerCoordinate: [centerLng, centerLat] })}
             />
           )}
-          {userLatitude && userLongitude && (
+          {originMarkerCoord && (
             <PointAnnotation
-              id="user-location"
-              coordinate={[userLongitude, userLatitude]}
+              id={isStatic ? "origin" : "user-location"}
+              coordinate={originMarkerCoord}
             >
               <Image
                 source={MARKER_USER}
@@ -98,10 +167,29 @@ const Map = () => {
               />
             </PointAnnotation>
           )}
-          {destinationLatitude && destinationLongitude && (
+          {route && route.length >= 2 && ShapeSource && LineLayer && (
+            <ShapeSource
+              id="route-source"
+              shape={{
+                type: "LineString",
+                coordinates: route.map(([lat, lng]) => [lng, lat]),
+              }}
+            >
+              <LineLayer
+                id="route-line"
+                style={{
+                  lineColor: colors.primary,
+                  lineWidth: 4,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              />
+            </ShapeSource>
+          )}
+          {destinationMarkerCoord && (
             <PointAnnotation
               id="destination"
-              coordinate={[destinationLongitude, destinationLatitude]}
+              coordinate={destinationMarkerCoord}
             >
               <Image
                 source={MARKER_DESTINATION}
@@ -130,11 +218,9 @@ const Map = () => {
               marginBottom: spacing.xs,
             }}
           >
-            {userLatitude && userLongitude
-              ? `${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}`
-              : "Map"}
+            {`${displayLat.toFixed(4)}, ${displayLng.toFixed(4)}`}
           </Text>
-          {destinationLatitude && destinationLongitude && (
+          {destinationMarkerCoord && (
             <Text
               style={{
                 color: isDark ? colors.textSecondaryDark : colors.textSecondaryLight,
@@ -142,8 +228,8 @@ const Map = () => {
                 fontFamily: "Jakarta-Regular",
               }}
             >
-              → {destinationLatitude.toFixed(4)},{" "}
-              {destinationLongitude.toFixed(4)}
+              → {destinationMarkerCoord[1].toFixed(4)},{" "}
+              {destinationMarkerCoord[0].toFixed(4)}
             </Text>
           )}
         </View>

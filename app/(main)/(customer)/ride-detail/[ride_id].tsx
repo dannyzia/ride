@@ -17,8 +17,10 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { formatBDT, formatDateTime } from "@/lib/format";
+import { fetchRouteGeometry } from "@/lib/routeGeometry";
 import StatusBadge from "@/components/StatusBadge";
 import RideCardSkeleton from "@/components/RideCardSkeleton";
+import Map, { MapRoutePoint } from "@/components/Map";
 
 type BadgeStatus = "completed" | "cancelled" | "in_progress" | "scheduled";
 
@@ -78,10 +80,30 @@ const DISPUTE_WINDOW_MS = 172800000;
 const canDisputeRide = (completedAt: string | null): boolean =>
   !!completedAt && Date.now() - new Date(completedAt).getTime() <= DISPUTE_WINDOW_MS;
 
+// Both endpoints must be real, non-zero coordinates (the API serializes missing
+// lat/lng as 0) — otherwise fall back to the stylized address card.
+const getRideCoords = (
+  ride: RideDetail,
+): { origin: MapRoutePoint; destination: MapRoutePoint } | null => {
+  const oLat = ride.origin_latitude;
+  const oLng = ride.origin_longitude;
+  const dLat = ride.destination_latitude;
+  const dLng = ride.destination_longitude;
+  const valid = [oLat, oLng, dLat, dLng].every(
+    (v) => typeof v === "number" && Number.isFinite(v) && v !== 0,
+  );
+  if (!valid) return null;
+  return {
+    origin: { lat: oLat as number, lng: oLng as number },
+    destination: { lat: dLat as number, lng: dLng as number },
+  };
+};
+
 const RideDetailScreen = () => {
   const { ride_id } = useLocalSearchParams<{ ride_id: string }>();
   const [ride, setRide] = useState<RideDetail | null>(null);
   const [driver, setDriver] = useState<DriverDetail | null>(null);
+  const [route, setRoute] = useState<[number, number][] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -127,6 +149,29 @@ const RideDetailScreen = () => {
     fetchRide();
   }, [fetchRide]);
 
+  // Best-effort route polyline for the map snapshot — non-blocking, null on
+  // failure (markers render without the line). Keyed on the loaded ride.
+  useEffect(() => {
+    const coords = ride ? getRideCoords(ride) : null;
+    if (!coords) {
+      setRoute(null);
+      return;
+    }
+    let cancelled = false;
+    setRoute(null);
+    fetchRouteGeometry(
+      coords.origin.lat,
+      coords.origin.lng,
+      coords.destination.lat,
+      coords.destination.lng,
+    ).then((r) => {
+      if (!cancelled) setRoute(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ride]);
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
@@ -166,6 +211,8 @@ const RideDetailScreen = () => {
   }
 
   const isCancelled = ride.status === "cancelled";
+
+  const mapCoords = getRideCoords(ride);
 
   const fb: FareBreakdown = ride.fare_breakdown ?? {};
   const base = toPaisa(fb.base_fare_bdt);
@@ -227,28 +274,39 @@ const RideDetailScreen = () => {
           </Text>
         </View>
 
-        {/* Map snapshot: 180px height, 16px radius, route green dot → red dot */}
-        <View style={[styles.mapCard, { backgroundColor: surfaceBg, borderColor }]}>
-          <View style={styles.routeRow}>
-            <View style={styles.routeLine}>
-              <View style={[styles.routeDot, { backgroundColor: colors.primary }]} />
-              <View style={[styles.routeConnector, { backgroundColor: borderColor }]} />
-              <View style={[styles.routeDot, { backgroundColor: colors.danger }]} />
-            </View>
-            <View style={styles.routeTextCol}>
-              <Text style={[styles.addrLabel, { color: textSecondary }]}>Pickup</Text>
-              <Text style={[styles.addrText, { color: textPrimary }]} numberOfLines={2}>
-                {ride.origin_address ?? "—"}
-              </Text>
-              <Text style={[styles.addrLabel, styles.addrLabelGap, { color: textSecondary }]}>
-                Destination
-              </Text>
-              <Text style={[styles.addrText, { color: textPrimary }]} numberOfLines={2}>
-                {ride.destination_address ?? "—"}
-              </Text>
+        {/* Map snapshot: 180px height, 16px radius. Real map + route polyline
+            when both endpoints have coordinates; stylized address card otherwise. */}
+        {mapCoords ? (
+          <View style={[styles.mapCard, styles.mapCardMap, { backgroundColor: surfaceBg, borderColor }]}>
+            <Map
+              origin={mapCoords.origin}
+              destination={mapCoords.destination}
+              route={route ?? undefined}
+            />
+          </View>
+        ) : (
+          <View style={[styles.mapCard, { backgroundColor: surfaceBg, borderColor }]}>
+            <View style={styles.routeRow}>
+              <View style={styles.routeLine}>
+                <View style={[styles.routeDot, { backgroundColor: colors.primary }]} />
+                <View style={[styles.routeConnector, { backgroundColor: borderColor }]} />
+                <View style={[styles.routeDot, { backgroundColor: colors.danger }]} />
+              </View>
+              <View style={styles.routeTextCol}>
+                <Text style={[styles.addrLabel, { color: textSecondary }]}>Pickup</Text>
+                <Text style={[styles.addrText, { color: textPrimary }]} numberOfLines={2}>
+                  {ride.origin_address ?? "—"}
+                </Text>
+                <Text style={[styles.addrLabel, styles.addrLabelGap, { color: textSecondary }]}>
+                  Destination
+                </Text>
+                <Text style={[styles.addrText, { color: textPrimary }]} numberOfLines={2}>
+                  {ride.destination_address ?? "—"}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {isCancelled && ride.cancel_reason ? (
           <View style={[styles.card, { backgroundColor: surfaceBg, borderColor }]}>
@@ -440,6 +498,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
     marginBottom: 16,
+  },
+  mapCardMap: {
+    paddingHorizontal: 0,
+    overflow: "hidden",
   },
   routeRow: {
     flexDirection: "row",
