@@ -1,33 +1,194 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, StatusBar, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, radii } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { formatDateTime } from "@/lib/format";
 
 export default function RideScheduled() {
+  const { ride_id, scheduled_at } = useLocalSearchParams<{
+    ride_id?: string;
+    scheduled_at?: string;
+  }>();
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
+  const scheduledLabel =
+    typeof scheduled_at === "string" && scheduled_at
+      ? formatDateTime(scheduled_at)
+      : null;
+  const reference =
+    typeof ride_id === "string" && ride_id
+      ? `#${ride_id.slice(0, 8).toUpperCase()}`
+      : null;
+
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
-      <View className="items-center mb-8">
-        <View className="w-24 h-24 rounded-full bg-goAccentLight dark:bg-goAccentLight items-center justify-center mb-4">
-          <Text className="text-[40px] text-goPrimary">✓</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={bg}
+      />
+      <View style={styles.body}>
+        <TouchableOpacity
+          onPress={() => setTheme(isDark ? "light" : "dark")}
+          style={styles.toggle}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Toggle theme"
+        >
+          <Ionicons
+            name={isDark ? "sunny-outline" : "moon-outline"}
+            size={22}
+            color={textPrimary}
+          />
+        </TouchableOpacity>
+
+        <View style={[styles.iconWrap, { backgroundColor: colors.accentLight }]}>
+          <Ionicons name="checkmark-circle" size={56} color={colors.primary} />
         </View>
-        <Text className="text-[24px] font-JakartaBold tracking-tight text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Ride Scheduled</Text>
-        <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-6">
+        <Text style={[styles.title, { color: textPrimary }]}>Ride Scheduled</Text>
+        <Text style={[styles.subtitle, { color: textSecondary }]}>
           Your ride has been scheduled successfully.
         </Text>
-      </View>
-      <View className="w-full gap-3">
-        <TouchableOpacity
-          className="bg-goPrimary rounded-full w-full py-[16px] items-center"
-          onPress={() => router.replace("/(main)/(customer)/(tabs)/activity")}
-        >
-          <Text className="text-[18px] font-JakartaBold text-goWhite">View Schedule</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center"
-          onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
-        >
-          <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Back to Home</Text>
-        </TouchableOpacity>
+
+        {scheduledLabel && (
+          <View style={[styles.detailCard, { backgroundColor: surfaceBg, borderColor }]}>
+            <Ionicons name="time-outline" size={18} color={colors.primary} />
+            <View style={styles.detailTextCol}>
+              <Text style={[styles.detailLabel, { color: textSecondary }]}>
+                Pickup at
+              </Text>
+              <Text style={[styles.detailValue, { color: textPrimary }]}>
+                {scheduledLabel}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {reference && (
+          <Text style={[styles.reference, { color: textSecondary }]}>
+            Reference {reference}
+          </Text>
+        )}
+
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
+            onPress={() =>
+              router.replace("/(main)/(customer)/(tabs)/activity")
+            }
+            accessibilityRole="button"
+            accessibilityLabel="View schedule"
+          >
+            <Text style={styles.primaryBtnText}>View Schedule</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.secondaryBtn, { borderColor, backgroundColor: surfaceBg }]}
+            onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
+            accessibilityRole="button"
+            accessibilityLabel="Back to home"
+          >
+            <Text style={[styles.secondaryBtnText, { color: textPrimary }]}>
+              Back to Home
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  body: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  toggle: {
+    position: "absolute",
+    top: 16,
+    right: 24,
+  },
+  iconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  title: {
+    fontFamily: "Jakarta-Bold",
+    fontSize: 28,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  detailCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    alignSelf: "stretch",
+  },
+  detailTextCol: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 12,
+  },
+  detailValue: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 15,
+    marginTop: 2,
+  },
+  reference: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 12,
+    marginTop: 10,
+  },
+  actions: {
+    width: "100%",
+    gap: 12,
+    marginTop: 32,
+  },
+  primaryBtn: {
+    borderRadius: radii.pill,
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryBtnText: {
+    fontFamily: "Jakarta-Bold",
+    fontSize: 18,
+    color: colors.white,
+  },
+  secondaryBtn: {
+    borderRadius: radii.pill,
+    height: 56,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryBtnText: {
+    fontFamily: "Jakarta-Bold",
+    fontSize: 18,
+  },
+});
