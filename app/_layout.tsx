@@ -94,21 +94,25 @@ export default function RootLayout() {
             // Allow admin routes through — the admin layout has its own
             // auth guard (role === "admin"). Do NOT redirect admin here.
             const isAdminRoute = segmentsRef.current[0] === "admin";
+            // /track is a public share link — logged-out friends must be able
+            // to see the ride without signing in (its endpoint is public).
+            const isPublicRoute = isAdminRoute || segmentsRef.current[0] === "track";
             // Register push token after successful auth (fire-and-forget)
             registerPushForUser(session.access_token).catch(() => {});
 
-            if (data.exists && inAuthGroup && !isAdminRoute) {
+            if (data.exists && inAuthGroup && !isPublicRoute) {
               router.replace(
                 data.role === "driver"
                   ? "/(main)/(rider)"
                   : "/(main)/(customer)/services-hub",
               );
-            } else if (!data.exists && !isAdminRoute) {
+            } else if (!data.exists && !isPublicRoute) {
               router.replace("/(auth)/phone-entry");
             }
           } else if (res.status === 401 || res.status === 403) {
-            // Actual auth failure — sign out and redirect
-            if (segmentsRef.current[0] !== "admin") {
+            // Actual auth failure — sign out and redirect (never from the
+            // public /track share page).
+            if (segmentsRef.current[0] !== "admin" && segmentsRef.current[0] !== "track") {
               router.replace("/(auth)/phone-entry");
             }
           } else {
@@ -125,8 +129,9 @@ export default function RootLayout() {
         const inAuthGroup = segmentsRef.current[0] === "(auth)";
         const isAdminRoute = segmentsRef.current[0] === "admin";
         // Only redirect to auth for non-auth, non-admin routes.
-        // Admin routes handle their own authentication.
-        if (!inAuthGroup && !isAdminRoute) {
+        // Admin routes handle their own authentication; /track is public.
+        const isPublicRoute = isAdminRoute || segmentsRef.current[0] === "track";
+        if (!inAuthGroup && !isPublicRoute) {
           router.replace("/(auth)/phone-entry");
         }
       }
