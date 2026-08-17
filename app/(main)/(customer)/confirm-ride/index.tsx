@@ -442,7 +442,7 @@ const ConfirmRidePage = () => {
           <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8 }}>
             <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>Total</Text>
             <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>
-               ৳{displayEstimate ? ((displayEstimate.total_bdt / 100) - (selectedDiscount?.amount_bdt ?? 0) / 100 + upfrontTip).toFixed(0) : "—"}
+               ৳{displayEstimate ? (Math.round(displayEstimate.total_bdt - (selectedDiscount?.amount_bdt ?? 0) + upfrontTip * 100) / 100).toFixed(0) : "—"}
             </Text>
           </View>
         </View>

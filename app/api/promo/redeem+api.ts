@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       );
     if (riderUses >= (promo.max_uses_per_rider ?? 1)) {
       return Response.json(
-        { error: "promo_max_uses_reached" },
+        { error: "promo_max_uses_reached", message: "You have already used this promo code" },
         { status: 429 },
       );
     }
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
         .where(eq(promoRedemptions.promo_code_id, promo.id));
       if (globalUses >= promo.max_uses) {
         return Response.json(
-          { error: "promo_max_uses_reached" },
+          { error: "promo_max_uses_reached", message: "This promo code is no longer available" },
           { status: 429 },
         );
       }

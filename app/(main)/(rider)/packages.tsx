@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useIsDark } from "@/lib/useAppearance";
+import { supabase } from "@/lib/supabase";
 import PaymentWebView from "@/components/PaymentWebView";
 
 interface CallPackage {
@@ -52,7 +53,14 @@ export default function PackagesScreen() {
 
   const fetchPackages = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/package/list`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      // M-25: the list is vehicle-type scoped — it needs the driver identity.
+      // Without the Authorization header every request 401'd and the package
+      // list (and the trial CTA) never rendered.
+      const res = await fetch(`${API_URL}/api/package/list`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       if (res.ok) {
         const data = await res.json();
         setPackages(data.packages ?? []);
