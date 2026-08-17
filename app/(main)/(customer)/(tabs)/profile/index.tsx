@@ -20,9 +20,7 @@ import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import SettingsRow from "@/components/SettingsRow";
 import EmptyState from "@/components/EmptyState";
-import { useDriverStore } from "@/store/useDriverStore";
-import { useRiderStore } from "@/store/useRiderStore";
-import { useChatStore } from "@/store/useChatStore";
+import { authCleanup } from "@/lib/authCleanup";
 
 interface UserProfile {
   id: string;
@@ -109,12 +107,7 @@ const Profile = () => {
   const handleSignOut = useCallback(async () => {
     try {
       await supabase.auth.signOut();
-      const driverReset = useDriverStore.getState().reset;
-      if (driverReset) driverReset();
-      const riderReset = useRiderStore.getState().reset;
-      if (riderReset) riderReset();
-      const chatClear = useChatStore.getState().clearChat;
-      if (chatClear) chatClear();
+      authCleanup();
     } catch (err) {
       logger.error("[profile] sign out failed", err);
       Alert.alert("Sign Out Failed", "Please try again.");

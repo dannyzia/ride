@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { logger } from '@/lib/logger';
 import { colors } from '@/theme/goRide';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useIsDark } from '@/lib/useAppearance';
 
 export default function ForgotPasswordScreen() {
   const [phoneInput, setPhoneInput] = useState('');
@@ -16,6 +17,16 @@ export default function ForgotPasswordScreen() {
   const [error, setError] = useState('');
   const [step, setStep] = useState<'phone' | 'otp' | 'password'>('phone');
   const [sessionId, setSessionId] = useState<string | null>(null);
+
+  const isDark = useIsDark();
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const placeholderColor = isDark ? colors.textDisabledDark : colors.textDisabledLight;
+  const disabledBg = isDark ? colors.darkSecondary : colors.gray100;
 
   const sendOtp = useCallback(async (phone: string) => {
     setLoading(true);
@@ -148,14 +159,14 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgDark">
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-1 px-6 justify-center">
 
-        <Text className="text-[28px] font-JakartaBold font-bold text-goTextPrimaryDark mb-1">
+        <Text className="text-[28px] font-JakartaBold font-bold mb-1" style={{ color: textPrimary }}>
           {step === 'phone' ? 'Forgot Password' : step === 'otp' ? 'Verify OTP' : 'Reset Password'}
         </Text>
-        <Text className="text-[14px] font-JakartaBold text-goTextSecondaryDark mb-6">
+        <Text className="text-[14px] font-JakartaBold mb-6" style={{ color: textSecondary }}>
           {step === 'phone'
             ? 'Enter your phone number to receive OTP'
             : step === 'otp'
@@ -165,14 +176,18 @@ export default function ForgotPasswordScreen() {
 
         {step === 'phone' && (
           <>
-            <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
-              <Text className="text-[15px] font-JakartaBold text-goTextSecondaryDark mr-2">
+            <View
+              className="flex-row items-center rounded-lg border px-4 mb-4"
+              style={{ backgroundColor: surfaceBg, borderColor }}
+            >
+              <Text className="text-[15px] font-JakartaBold mr-2" style={{ color: textSecondary }}>
                 +880
               </Text>
               <TextInput
-                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
+                className="flex-1 py-4 text-[15px] font-JakartaBold"
+                style={{ color: textPrimary }}
                 placeholder="1XXXXXXXXX"
-                placeholderTextColor={colors.textDisabledDark}
+                placeholderTextColor={placeholderColor}
                 keyboardType="phone-pad"
                 value={phoneInput}
                 onChangeText={(text) => setPhoneInput(text.replace(/\D/g, '').replace(/^0+/, '').slice(0, 10))}
@@ -181,9 +196,12 @@ export default function ForgotPasswordScreen() {
             </View>
 
             <TouchableOpacity
-              className={`py-4 rounded-lg items-center justify-center ${loading ? 'bg-goBorderDark' : 'bg-goPrimary'}`}
+              className="py-4 rounded-lg items-center justify-center"
+              style={{ backgroundColor: loading ? disabledBg : colors.primary }}
               onPress={handleSendOtp}
               disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Send OTP"
             >
               {loading ? (
                 <ActivityIndicator size={20} color={colors.white} />
@@ -196,11 +214,15 @@ export default function ForgotPasswordScreen() {
 
         {step === 'otp' && (
           <>
-            <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
+            <View
+              className="flex-row items-center rounded-lg border px-4 mb-4"
+              style={{ backgroundColor: surfaceBg, borderColor }}
+            >
               <TextInput
-                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
+                className="flex-1 py-4 text-[15px] font-JakartaBold"
+                style={{ color: textPrimary }}
                 placeholder="Enter 6-digit OTP"
-                placeholderTextColor={colors.textDisabledDark}
+                placeholderTextColor={placeholderColor}
                 keyboardType="number-pad"
                 value={otp}
                 onChangeText={setOtp}
@@ -209,9 +231,12 @@ export default function ForgotPasswordScreen() {
             </View>
 
             <TouchableOpacity
-              className={`py-4 rounded-lg items-center justify-center mb-2 ${loading ? 'bg-goBorderDark' : 'bg-goPrimary'}`}
+              className="py-4 rounded-lg items-center justify-center mb-2"
+              style={{ backgroundColor: loading ? disabledBg : colors.primary }}
               onPress={handleVerifyOtp}
               disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Verify OTP"
             >
               {loading ? (
                 <ActivityIndicator size={20} color={colors.white} />
@@ -220,30 +245,40 @@ export default function ForgotPasswordScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => setStep('phone')} className="items-center">
-              <Text className="text-[14px] font-JakartaBold text-goPrimary">Change Phone Number</Text>
+            <TouchableOpacity onPress={() => setStep('phone')} className="items-center" accessibilityRole="button">
+              <Text className="text-[14px] font-JakartaBold" style={{ color: colors.primary }}>
+                Change Phone Number
+              </Text>
             </TouchableOpacity>
           </>
         )}
 
         {step === 'password' && (
           <>
-            <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
+            <View
+              className="flex-row items-center rounded-lg border px-4 mb-4"
+              style={{ backgroundColor: surfaceBg, borderColor }}
+            >
               <TextInput
-                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
+                className="flex-1 py-4 text-[15px] font-JakartaBold"
+                style={{ color: textPrimary }}
                 placeholder="New Password"
-                placeholderTextColor={colors.textDisabledDark}
+                placeholderTextColor={placeholderColor}
                 secureTextEntry
                 value={newPassword}
                 onChangeText={setNewPassword}
               />
             </View>
 
-            <View className="flex-row items-center bg-goSurfaceElevatedDark rounded-lg border border-goBorderDark px-4 mb-4">
+            <View
+              className="flex-row items-center rounded-lg border px-4 mb-4"
+              style={{ backgroundColor: surfaceBg, borderColor }}
+            >
               <TextInput
-                className="flex-1 py-4 text-goTextPrimaryDark text-[15px] font-JakartaBold"
+                className="flex-1 py-4 text-[15px] font-JakartaBold"
+                style={{ color: textPrimary }}
                 placeholder="Confirm New Password"
-                placeholderTextColor={colors.textDisabledDark}
+                placeholderTextColor={placeholderColor}
                 secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -251,9 +286,12 @@ export default function ForgotPasswordScreen() {
             </View>
 
             <TouchableOpacity
-              className={`py-4 rounded-lg items-center justify-center ${loading ? 'bg-goBorderDark' : 'bg-goPrimary'}`}
+              className="py-4 rounded-lg items-center justify-center"
+              style={{ backgroundColor: loading ? disabledBg : colors.primary }}
               onPress={handleResetPassword}
               disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Reset password"
             >
               {loading ? (
                 <ActivityIndicator size={20} color={colors.white} />
@@ -265,7 +303,7 @@ export default function ForgotPasswordScreen() {
         )}
 
         {error ? (
-          <Text className="text-[14px] font-JakartaBold text-goDanger text-center mt-3">
+          <Text className="text-[14px] font-JakartaBold text-center mt-3" style={{ color: colors.danger }}>
             {error}
           </Text>
         ) : null}
