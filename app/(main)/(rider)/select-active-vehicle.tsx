@@ -25,20 +25,34 @@ export default function SelectActiveVehicle() {
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   const confirm = async () => {
+    // Nothing to change — already that vehicle type.
+    if (selected === driver?.vehicle_type) {
+      router.replace("/(main)/(rider)/");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) { setError("Not authenticated"); return; }
-      const res = await fetch(`${API_URL}/api/driver/me`, {
-        method: "PATCH",
+      // PATCH /api/driver/me strips vehicle_type by design — the real
+      // endpoint is vehicle-type-change, which gates eligibility server-side
+      // and syncs drivers.vehicle_type + vehicles in one transaction.
+      const res = await fetch(`${API_URL}/api/driver/vehicle-type-change`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ vehicle_type: selected }),
+        body: JSON.stringify({ new_vehicle_type: selected }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setError(err.error || "Failed to save vehicle type");
+        // Stale store vs server — the change is already in effect; treat as success.
+        if (err.error === "already_current_type") {
+          if (driver) setDriver({ ...driver, vehicle_type: selected as any });
+          router.replace("/(main)/(rider)/");
+          return;
+        }
+        setError(err.message || err.error || "Failed to change vehicle type");
         return;
       }
       if (driver) setDriver({ ...driver, vehicle_type: selected as any });

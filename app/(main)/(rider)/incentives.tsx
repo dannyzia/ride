@@ -1,5 +1,6 @@
 import { colors, spacing, radii } from "@/theme/goRide";
 import { API_URL } from "@/lib/config";
+import { supabase } from "@/lib/supabase";
 import { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -81,15 +82,19 @@ export default function IncentivesScreen() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const res = await fetch(
-        `${API_URL}/api/driver/incentives`,
-      );
+      // This endpoint is JWT-gated — without the Authorization header every
+      // request 401'd and the screen stayed null forever.
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch(`${API_URL}/api/driver/incentives`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       if (res.ok) {
         const json = await res.json();
         setData(json);
       }
     } catch {
-      // silently fail
+      // Network failure — data stays null and the empty state offers retry
     } finally {
       setLoading(false);
       setRefreshing(false);

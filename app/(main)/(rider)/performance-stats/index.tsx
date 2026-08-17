@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, type ComponentProps } from "react";
 import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+
+type IconName = ComponentProps<typeof Ionicons>["name"];
 
 interface Performance {
   acceptance_rate: number;
@@ -20,36 +23,40 @@ export default function PerformanceStats() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) { setError("Not authenticated"); return; }
-        const res = await fetch(`${API_URL}/api/driver/performance`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (!res.ok) { setError(data.error || "Failed"); return; }
-        if (!cancelled) setStats(data);
-      } catch (err: any) {
-        if (!cancelled) setError(err?.message || "Network error");
-        logger.error("PerformanceStats fetch failed", err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+  // Shared fetch so the Retry button re-runs the same path the initial load
+  // uses — previously the retry only set loading=true and nothing re-fetched.
+  const fetchStats = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { setError("Not authenticated"); return; }
+      const res = await fetch(`${API_URL}/api/driver/performance`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Failed"); return; }
+      setStats(data);
+    } catch (err: any) {
+      setError(err?.message || "Network error");
+      logger.error("PerformanceStats fetch failed", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const cards = stats ? [
-    { label: "Acceptance rate", value: `${stats.acceptance_rate.toFixed(1)}%`, icon: "📈" },
-    { label: "Cancellation rate", value: `${stats.cancellation_rate.toFixed(1)}%`, icon: "🚫" },
-    { label: "Driver rating", value: stats.rating.toFixed(2), icon: "⭐" },
-    { label: "Trips this week", value: String(stats.trips_this_week), icon: "🏁" },
-    { label: "Trips this month", value: String(stats.trips_this_month), icon: "📅" },
-    { label: "Online hours", value: `${stats.online_hours}h`, icon: "⏱️" },
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  const cards: { label: string; value: string; icon: IconName }[] = stats ? [
+    { label: "Acceptance rate", value: `${stats.acceptance_rate.toFixed(1)}%`, icon: "trending-up" },
+    { label: "Cancellation rate", value: `${stats.cancellation_rate.toFixed(1)}%`, icon: "close-circle" },
+    { label: "Driver rating", value: stats.rating.toFixed(2), icon: "star" },
+    { label: "Trips this week", value: String(stats.trips_this_week), icon: "flag" },
+    { label: "Trips this month", value: String(stats.trips_this_month), icon: "calendar" },
+    { label: "Online hours", value: `${stats.online_hours}h`, icon: "time" },
   ] : [];
 
   return (
@@ -68,7 +75,7 @@ export default function PerformanceStats() {
       ) : error ? (
         <View className="flex-1 items-center justify-center px-[24px]">
           <Text className="text-[14px] font-Jakarta text-goDanger text-center mb-4">{error}</Text>
-          <TouchableOpacity className="bg-goPrimary rounded-full px-[24px] py-[12px]" onPress={() => { setLoading(true); setError(""); }}>
+          <TouchableOpacity className="bg-goPrimary rounded-full px-[24px] py-[12px]" onPress={fetchStats}>
             <Text className="text-[16px] font-JakartaBold text-goWhite">Retry</Text>
           </TouchableOpacity>
         </View>
@@ -77,7 +84,7 @@ export default function PerformanceStats() {
           <View className="flex-row flex-wrap gap-3">
             {cards.map((s, i) => (
               <View key={i} className="w-[47%] p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]">
-                <Text className="text-[28px]">{s.icon}</Text>
+                <Ionicons name={s.icon} size={26} color="#0CC25F" />
                 <Text className="text-[24px] font-JakartaBold tracking-tight text-goTextPrimaryLight dark:text-goTextPrimaryDark mt-1">{s.value}</Text>
                 <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">{s.label}</Text>
               </View>
