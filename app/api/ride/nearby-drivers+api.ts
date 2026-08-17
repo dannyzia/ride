@@ -9,6 +9,13 @@ import { haversineDistance } from "@/utils/mapUtils";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
 
+// K deliberately mirrors DISPATCH_H3_RING_K so the rider-facing count matches
+// what the dispatch pool can actually find (doc 02 rejected a smaller K on
+// parity grounds). Cost accepted knowingly: at K=60 the ring is ~11k cells
+// shipped as an inArray against drivers.h3_cell_res9 — index-backed by
+// drivers_h3_cell_idx (live since migration 0000), so each 5s poll is a
+// bounded index scan, not a seq scan. Revisit only if per-poll latency or DB
+// load shows up in monitoring.
 const NEARBY_RING_K = parseInt(process.env.DISPATCH_H3_RING_K ?? "60", 10);
 
 const bodySchema = z.object({
@@ -46,7 +53,11 @@ export async function POST(request: Request) {
             eq(drivers.status, "active"),
             eq(drivers.vehicle_type, vehicle_type as any),
             inArray(drivers.h3_cell_res9, cells),
-            sql`NOT EXISTS (SELECT 1 FROM rides WHERE rides.driver_id = drivers.id AND rides.status IN ('matched','driver_arrived','in_progress') AND rides.updated_at > now() - interval '3 hours')`
+            // Busy filter — must mirror utils-server/dispatch.ts exactly
+            // (including 'driver_arriving': en route to pickup is busy). See
+            // the comment there for why the status is in the list even though
+            // nothing sets it yet.
+            sql`NOT EXISTS (SELECT 1 FROM rides WHERE rides.driver_id = drivers.id AND rides.status IN ('matched','driver_arriving','driver_arrived','in_progress') AND rides.updated_at > now() - interval '3 hours')`
           )
         );
 

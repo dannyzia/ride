@@ -163,10 +163,17 @@ export async function scoreAndBatchDrivers(
       eq(drivers.status, 'active'),
       eq(drivers.vehicle_type, vehicleType as any),
       inArray(drivers.id, candidateIds),
+      // Busy filter: a driver serving a ride is never a candidate. This must
+      // cover EVERY in-ride status — including 'driver_arriving' (en route to
+      // pickup). Nothing sets that status today (accept stamps 'matched'), but
+      // the documented state machine (docs/Plan/06-API.md § state machine)
+      // auto-advances matched → driver_arriving on match; the day that lands,
+      // a missing status here would re-offer every en-route driver (double-ride
+      // failure). Add it now, before the transition exists.
       sql`NOT EXISTS (
         SELECT 1 FROM rides
         WHERE rides.driver_id = drivers.id
-        AND rides.status IN ('matched', 'driver_arrived', 'in_progress')
+        AND rides.status IN ('matched', 'driver_arriving', 'driver_arrived', 'in_progress')
         AND rides.updated_at > now() - interval '3 hours'
       )`,
     ),
