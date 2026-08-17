@@ -1,5 +1,5 @@
 import { db } from "../../../src/db";
-import { users, sosAlerts } from "../../../src/db/schema";
+import { users, rides, sosAlerts } from "../../../src/db/schema";
 import { eq, and } from "drizzle-orm";
 import { verifySupabaseToken } from "../../../lib/auth";
 import { logger } from "../../../lib/logger";
@@ -38,6 +38,26 @@ export async function POST(request: Request) {
     if (!parsed.ok) return parsed.response;
 
     const { lat, lng, ride_id, message } = parsed.data;
+
+    // C-4: ride ownership — an SOS may only be attached to a ride the caller
+    // is actually part of (as rider or as driver). Without this, any user
+    // could attach alerts to arbitrary ride ids, and the per-ride dedupe
+    // below would let them suppress someone else's open alert.
+    if (ride_id) {
+      const [ride] = await db
+        .select({ user_id: rides.user_id, driver_id: rides.driver_id })
+        .from(rides)
+        .where(eq(rides.id, ride_id))
+        .limit(1);
+      if (!ride) {
+        return Response.json({ error: "ride_not_found", message: "Ride not found" }, { status: 404 });
+      }
+      const isRider = ride.user_id === dbUser.id;
+      const isDriver = ride.driver_id === dbUser.id;
+      if (!isRider && !isDriver) {
+        return Response.json({ error: "not_your_ride", message: "You can only send an SOS for your own ride" }, { status: 403 });
+      }
+    }
 
     // One open alert per ride: if the ride already has an open SOS (e.g. the
     // auto-SOS fired, or the user double-tapped), keep the existing row — the
