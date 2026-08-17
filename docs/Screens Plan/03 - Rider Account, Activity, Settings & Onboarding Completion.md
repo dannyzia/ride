@@ -188,7 +188,7 @@ The tree shows an inconsistency with plan sequencing:
 
 ### R2.4 — Components (verified)
 - `components/FareBreakdownSheet.tsx` EXISTS (body claim correct). `components/RideCard.tsx` EXISTS.
-- **CONFIRMED 2026-08-15:** `components/plan03/` EXISTS with all 8 members (`SettingsRow, StatusBadge, EmptyState, TransactionRow, NotificationCard, RideCardSkeleton, NotificationSkeleton, WalletSkeleton`) and `lib/format.ts` EXISTS (`formatBDT, formatDate, formatDateTime, formatRelativeTime` — invalid-safe). Reuse all — creation tasks are CANCELLED. NOTE: `EmptyState` is icon-based (no `useIllustration` prop).
+- **CORRECTED 2026-08-16 (code-skeptic audit):** `components/plan03/` does **NOT** exist — `components/` holds only `admin/` and `auth/`. All 8 members are **flat in `components/`** (`SettingsRow, StatusBadge, EmptyState, TransactionRow, NotificationCard, RideCardSkeleton, NotificationSkeleton, WalletSkeleton`). Import from `@/components/…`, NEVER `@/components/plan03/…`. `lib/format.ts` EXISTS (`formatBDT, formatDate, formatDateTime, formatRelativeTime` — invalid-safe). Reuse all — creation tasks are CANCELLED. NOTE: `EmptyState` is icon-based (no `useIllustration` prop).
 
 ### R2.5 — Design decisions RESOLVED by orchestrator (binding)
 1. **Rides Tab:** keep the richer build (search bar, date grouping, receipt bottom-modal, rebook + dispute actions). Filter chips: `All / Completed / Cancelled` minimum; adding `Scheduled` is allowed (real enum value). Do NOT add Inbox/Referral nav chips — those screens are already reachable via bottom tabs + FloatingNavMenu; duplicate nav paths are noise.
@@ -196,8 +196,8 @@ The tree shows an inconsistency with plan sequencing:
 3. **Wallet top-up** routes to the existing `(tabs)/settings/top-up` flow — never `payment-webview` (no route).
 4. **Sign-out:** `supabase.auth.signOut()` → guarded resets (R2.1 #2) → auth gate redirects. No manual `router.replace`.
 
-### R2.6 — `components/plan03/` folder note
-AGENTS.md says components are flat; the `plan03/` subfolder is an accepted, deliberate exception (mirrors `admin/`, `auth/`). Do not "fix" it away.
+### R2.6 — `components/plan03/` folder note (VOIDED 2026-08-16)
+The `plan03/` subfolder **does not exist** — the 8 Plan-03 components are flat in `components/` (see R2.4). The "accepted exception" is moot; AGENTS.md's flat rule holds. Do NOT create the folder or move the components.
 
 ### R2.7 — Inbox fallback (supersedes body §6-resolved-decision-6)
 API failure → standard error state + pull-to-retry. **NO sample/demo notifications** (the "Using sample data" idea is void).
@@ -258,14 +258,14 @@ These are **high-traffic, high-trust screens** that users access repeatedly via 
 
 | # | Screen | File Path | Current State | Work Type |
 |---|--------|-----------|---------------|-----------|
-| 1 | **Rides Tab / Activity** | `app/(main)/(customer)/(tabs)/rides/index.tsx` | EXISTS (landed after R2). Hardcoded dark (`colors.bgDark`, `colors.textPrimaryDark`). No `useIsDark()`. | rewrite |
+| 1 | **Rides Tab / Activity** | `app/(main)/(customer)/(tabs)/rides/index.tsx` | EXISTS. Swept to `useIsDark()` (verified 2026-08-16). | no-change |
 | 2 | **Ride Detail** | `app/(main)/(customer)/show-ride/[rideId].tsx` | EXISTS. | rewrite |
-| 3 | **Wallet** | `app/(main)/(customer)/(tabs)/wallet/index.tsx` | EXISTS (landed after R2). NativeWind `dark:` mixed. | refactor |
-| 4 | **Profile** | `app/(main)/(customer)/(tabs)/profile/index.tsx` | NativeWind `dark:` mixed. | refactor |
+| 3 | **Wallet** | `app/(main)/(customer)/(tabs)/wallet/index.tsx` | EXISTS. Swept to `useIsDark()` (verified 2026-08-16). | no-change |
+| 4 | **Profile** | `app/(main)/(customer)/(tabs)/profile/index.tsx` | EXISTS. Swept to `useIsDark()` (verified 2026-08-16). Sign-out now uses `lib/authCleanup.ts`. | no-change |
 | 5 | **Settings Hub** | `app/(main)/(customer)/(tabs)/settings/index.tsx` | EXISTS — canonical hub with 24 sub-screens (banner §1). Audit only. | audit |
-| 6 | **Enable Location** | `app/(auth)/enable-location.tsx` | ⚠️ Explicitly deferred. Still dark-first. | refactor |
-| 7 | **Notifications Permission** | `app/(auth)/notifications-permission.tsx` | ⚠️ Explicitly deferred. Still dark-first. | refactor |
-| 8 | **Inbox / Notifications** | `app/(main)/(customer)/(tabs)/inbox/index.tsx` | NativeWind `dark:` present. Needs `useIsDark()` audit. | refactor |
+| 6 | **Enable Location** | `app/(auth)/enable-location.tsx` | EXISTS. Swept to `useIsDark()` (verified 2026-08-16 — the "still dark-first" note was stale). | no-change |
+| 7 | **Notifications Permission** | `app/(auth)/notifications-permission.tsx` | EXISTS. Swept to `useIsDark()` (verified 2026-08-16 — the "still dark-first" note was stale). | no-change |
+| 8 | **Inbox / Notifications** | `app/(main)/(customer)/(tabs)/inbox/index.tsx` | EXISTS. Swept to `useIsDark()` (verified 2026-08-16). | no-change |
 
 **Work types (standardized):** `new` = build from scratch · `rewrite` = replace existing implementation · `refactor` = restyle/unify theming + wiring, keep structure · `audit` = verify existing, fix only if broken · `no-change` = leave alone.
 
@@ -281,10 +281,10 @@ These are **high-traffic, high-trust screens** that users access repeatedly via 
 - Color tokens: `bgLight/bgDark`, `surfaceLight/surfaceElevatedDark`, `borderLight/borderDark`, `textPrimaryLight/textPrimaryDark`, `textSecondaryLight/textSecondaryDark`, `primary`, `danger`, `amber`.
 - Typography: 28px Bold (Jakarta-Bold), 18px SemiBold, 15px Medium, 13px Regular, 11px Regular.
 - Touch targets: min 48x48dp. Cards: 16px radius. Inputs: 12px radius.
-- StatusBar: each screen owns it. Light = `dark-content` on `bgLight`. Dark = `light-content` on `bgDark`. Build ONE shared `components/plan03/ScreenStatusBar.tsx` (wraps RN `StatusBar`, derives `barStyle` + `backgroundColor` from `useIsDark()`) and use it on every Plan 03 screen — no screen sets `StatusBar` inline.
+- StatusBar: each screen owns it. Light = `dark-content` on `bgLight`. Dark = `light-content` on `bgDark`. (The shared `components/plan03/ScreenStatusBar.tsx` mandate was **never implemented** — screens set `StatusBar` inline. Creating the wrapper is optional polish, not a blocker; if built, it goes in `components/` flat, not `plan03/`.)
 - Map screens (if any): `useBarikoiMapStyle(isDark)`.
 - Every screen gets a theme toggle (top-right `Ionicons` sun/moon) EXCEPT `SplashAnimation`.
-- **Error boundaries:** create ONE `components/ErrorBoundary.tsx` (class component; fallback = error state with retry) and wrap every Plan 03 screen's root. A single API failure or null reference must never crash the tab.
+- **Error boundaries:** the `components/ErrorBoundary.tsx` mandate was **never implemented** and is dropped — no Plan-03 screen has an error boundary (tracked as a known gap). If error boundaries are ever added, they belong in `components/` (flat).
 
 ---
 
@@ -647,7 +647,7 @@ const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLi
 
 ### Current State
 - `app/(auth)/enable-location.tsx`
-- ⚠️ Still dark-first (from master plan)
+- Swept to `useIsDark()` (2026-08-16 — the "still dark-first" note was stale)
 - Linked from `register.tsx` for riders, but auth gate may bypass it
 
 ### Rethink
@@ -702,7 +702,7 @@ const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLi
 
 ### Current State
 - `app/(auth)/notifications-permission.tsx`
-- ⚠️ Still dark-first
+- Swept to `useIsDark()` (2026-08-16 — the "still dark-first" note was stale)
 - Orphaned in rider flow (gate bypasses it)
 
 ### Rethink
@@ -946,7 +946,7 @@ Services Hub
 - **Rides Tab filter chips:** All / Completed / Cancelled (+ Scheduled optional) — ALL are client-side filters over the `useRiderStore` rides. No Inbox/Referral chips (R2.5 #1).
 - **Ride Detail null driver:** If `driver` is null in API response, hide the driver card entirely, do not crash.
 - **Wallet error:** If `/api/rider/wallet` fails, show error banner with retry. Never show fake balance.
-- **Profile sign-out:** After `supabase.auth.signOut()`, call `authCleanup()` from `lib/authCleanup.ts` (CREATE it — single source of truth): `useRiderStore.getState().reset()` (exists) → `useDriverStore.getState().reset()` (import from `@/store/useDriverStore`, NEVER `@/store`) → `useChatStore.getState().clearChat()` (no `reset()`). Guard each: `if (S.getState().reset)`. Never touch barrel stores.
+- **Profile sign-out:** After `supabase.auth.signOut()`, call `authCleanup()` from `lib/authCleanup.ts` (**CREATED 2026-08-16** — single source of truth; used by both `(tabs)/profile/index.tsx` and `(tabs)/settings/logout-confirmation/index.tsx`): `useRiderStore.getState().reset()` (exists) → `useDriverStore.getState().reset()` (import from `@/store/useDriverStore`, NEVER `@/store`) → `useChatStore.getState().clearChat()` (no `reset()`). Guard each: `if (S.getState().reset)`. Never touch barrel stores. No manual `router.replace` after sign-out — the auth gate redirects.
 - **Enable Location skip:** "Not Now" must NOT block the user. Route to `services-hub`. Permission can be requested again later.
 - **Notifications skip:** Same — "Maybe Later" routes to `services-hub`.
 - **Inbox fallback:** If `GET /api/rider/notifications` fails, show the standard error state (`Ionicons "warning-outline"` + "Could not load notifications" + "Pull down to retry"). No fallback data.
@@ -2052,7 +2052,7 @@ Services Hub
 - **Rides Tab filter chips:** "All", "Completed", "Scheduled", "Canceled" filter client-side. "Inbox" and "Referral" are navigation chips with `Ionicons "arrow-forward"` — do NOT try to filter the rides array by these.
 - **Ride Detail null driver:** If `driver` is null in API response, hide the driver card entirely, show "Driver info unavailable" placeholder. Do not crash.
 - **Wallet error:** If `/api/rider/wallet` fails or returns 404, show error banner with retry. NEVER show fake balance or transactions.
-- **Profile sign-out:** After `supabase.auth.signOut()`, call `authCleanup()` from `lib/authCleanup.ts` (CREATE it — single source of truth): `useRiderStore.getState().reset()` (exists) → `useDriverStore.getState().reset()` (import from `@/store/useDriverStore`, NEVER `@/store`) → `useChatStore.getState().clearChat()` (no `reset()`). Guard each: `if (S.getState().reset)`. Never touch barrel stores. Use `.getState().reset()` pattern if available, otherwise set to initial state. Let auth gate handle redirect.
+- **Profile sign-out:** After `supabase.auth.signOut()`, call `authCleanup()` from `lib/authCleanup.ts` (**CREATED 2026-08-16** — single source of truth; used by both `(tabs)/profile/index.tsx` and `(tabs)/settings/logout-confirmation/index.tsx`): `useRiderStore.getState().reset()` (exists) → `useDriverStore.getState().reset()` (import from `@/store/useDriverStore`, NEVER `@/store`) → `useChatStore.getState().clearChat()` (no `reset()`). Guard each: `if (S.getState().reset)`. Never touch barrel stores. No manual `router.replace` after sign-out — the auth gate redirects. Use `.getState().reset()` pattern if available, otherwise set to initial state. Let auth gate handle redirect.
 - **Enable Location skip:** "Not Now" must NOT block the user. Route to `services-hub`. Permission can be requested again later via system settings.
 - **Notifications skip:** "Maybe Later" routes to `services-hub". Do not block.
 - **Inbox fallback:** If `GET /api/rider/notifications` fails, show the standard error state (`Ionicons "warning-outline"` + "Could not load notifications" + "Pull down to retry"). No fallback data.
