@@ -20,9 +20,10 @@ import { API_URL } from "@/lib/config";
 import { ensureRiderSocket, subscribeRiderSocket, unsubscribeRiderSocket } from "@/lib/riderSocket";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
-import { colors } from "@/theme/goRide";
+import { colors, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import SOSButton from "@/components/SOSButton";
+import PinInput from "@/components/PinInput";
 
 let MapViewLib: any = MapLibreGL.MapView ?? MapLibreGL.default ?? null;
 let PointAnnotation: any = MapLibreGL.PointAnnotation ?? null;
@@ -70,7 +71,10 @@ export default function RideTrackingScreen() {
   const [etaMinutes, setEtaMinutes] = useState(5);
   const [tripSeconds, setTripSeconds] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [pinValue, setPinValue] = useState("");
+  const [pinCopied, setPinCopied] = useState(false);
   const tripTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const ws = useWSStore((s) => s.ws);
   const isDark = useIsDark();
@@ -110,6 +114,48 @@ export default function RideTrackingScreen() {
   useEffect(() => {
     fetchRideDetails();
   }, [fetchRideDetails]);
+
+  // Cleanup the copy-feedback timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  // §6.5 PIN_ENTRY: the rider's start_pin is display-first (the driver types it
+  // on their own device via enter-otp → WS ride:start). Pre-fill the boxes from
+  // ride.otp — the only place the rider ever sees it — so the flow keeps
+  // working; the boxes stay backed by the hidden input for focus/editing.
+  useEffect(() => {
+    if (ride?.otp && pinValue === "") setPinValue(ride.otp);
+  }, [ride]);
+
+  const pinMatches = !!ride?.otp && pinValue === ride.otp;
+  const pinError = pinValue.length === 4 && !!ride?.otp && !pinMatches;
+
+  const handlePinChange = (t: string) => {
+    setPinCopied(false);
+    setPinValue(t);
+    // A 4-digit entry that doesn't match is an accidental edit of a fixed
+    // value — flash the mismatch, then restore so the rider never shows the
+    // driver a wrong PIN.
+    if (t.length === 4 && ride?.otp && t !== ride.otp) {
+      setTimeout(() => setPinValue(ride.otp ?? ""), 900);
+    }
+  };
+
+  const handleCopyPin = async () => {
+    if (!ride?.otp) return;
+    try {
+      const Clipboard = await import("expo-clipboard");
+      await Clipboard.setStringAsync(ride.otp);
+      setPinCopied(true);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setPinCopied(false), 2000);
+    } catch (e) {
+      logger.error("[tracking] copy PIN failed", e);
+    }
+  };
 
   const mapStatusToTracking = (status: string): TrackingState => {
     switch (status) {
@@ -473,13 +519,43 @@ export default function RideTrackingScreen() {
           </>
         )}
 
-        {/* ── ARRIVED: OTP HINT ── */}
-        {trackingState === "arrived" && (
-          <View style={[styles.otpBanner, { backgroundColor: colors.primaryLight }]}>
-            <Ionicons name="lock-closed" size={18} color={colors.primary} />
-            <Text style={[styles.otpText, { color: colors.primary }]}>
-              Share PIN <Text style={{ fontFamily: "Jakarta-Bold" }}>{ride.otp}</Text> with driver
-            </Text>
+        {/* ── ARRIVED: PIN_ENTRY (4-digit boxes, hidden auto-focused input) ── */}
+        {trackingState === "arrived" && ride.otp && (
+          <View style={[styles.pinCard, { backgroundColor: surfaceBg, borderColor }]}>
+            <View style={styles.pinHeaderRow}>
+              <Ionicons name="lock-closed" size={18} color={colors.primary} />
+              <Text style={[styles.pinTitle, { color: textPrimary }]}>Your Ride PIN</Text>
+            </View>
+            <PinInput
+              value={pinValue}
+              onChange={handlePinChange}
+              error={pinError}
+              accessibilityLabel="Ride PIN"
+            />
+            {pinError ? (
+              <Text style={[styles.pinError, { color: colors.danger }]}>
+                That doesn&apos;t match your ride PIN — restoring…
+              </Text>
+            ) : (
+              <Text style={[styles.pinHint, { color: textSecondary }]}>
+                Share this PIN with your driver to start the ride.
+              </Text>
+            )}
+            <TouchableOpacity
+              style={[styles.copyBtn, { backgroundColor: colors.primaryLight }]}
+              onPress={handleCopyPin}
+              accessibilityRole="button"
+              accessibilityLabel="Copy PIN"
+            >
+              <Ionicons
+                name={pinCopied ? "checkmark" : "copy-outline"}
+                size={16}
+                color={colors.primary}
+              />
+              <Text style={[styles.copyBtnText, { color: colors.primary }]}>
+                {pinCopied ? "Copied" : "Copy PIN"}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -630,6 +706,8 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
+    borderWidth: 2,
+    borderColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
@@ -672,16 +750,42 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtnText: { fontFamily: "Jakarta-SemiBold", fontSize: 13 },
-  otpBanner: {
+  pinCard: {
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
+    alignItems: "center",
+  },
+  pinHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginTop: 12,
     gap: 8,
+    marginBottom: 14,
   },
-  otpText: { fontFamily: "Jakarta-SemiBold", fontSize: 14 },
+  pinTitle: { fontFamily: "Jakarta-Bold", fontSize: 16 },
+  pinHint: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 13,
+    textAlign: "center",
+    marginTop: 12,
+  },
+  pinError: {
+    fontFamily: "Jakarta-Medium",
+    fontSize: 13,
+    textAlign: "center",
+    marginTop: 12,
+  },
+  copyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: radii.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginTop: 12,
+  },
+  copyBtnText: { fontFamily: "Jakarta-Bold", fontSize: 13 },
   tripHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
