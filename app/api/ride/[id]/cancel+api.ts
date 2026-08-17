@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
 import { evaluateCancellation } from '@/lib/cancellation';
 import { recordCancellationFee } from '@/lib/accounting';
-import { createCancellationCredit } from '@/lib/cancellationCompensation';
+import { createCancellationCreditInTx } from '@/lib/cancellationCompensation';
 
 const CANCELLABLE_STATUSES = [
   'pending',
@@ -54,75 +54,69 @@ export async function POST(request: Request, { id }: { id: string }) {
     // Derive cancelled_by server-side from role
     const cancelled_by = dbUser.role === 'driver' ? 'driver' : 'rider';
 
-    // Atomic claim: a single conditional UPDATE is the exactly-once guard.
-    // Two concurrent cancels both pass the pre-check above; only one wins the
-    // status transition — the loser gets 409 and writes nothing (no double
-    // fee deductions / compensation credits).
-    const [claimed] = await db.update(rides)
-      .set({
-        status: 'cancelled',
-        cancelled_by,
-        cancel_reason: reason ?? null,
-        updated_at: new Date(),
-      })
-      .where(and(eq(rides.id, rideId), inArray(rides.status, [...CANCELLABLE_STATUSES])))
-      .returning({ id: rides.id });
-
-    if (!claimed) {
-      return Response.json({ error: 'ride_not_cancellable', message: `Cannot cancel ride in status: ${ride.status}` }, { status: 409 });
-    }
-
     // Evaluate cancellation fee against the PRE-cancel snapshot (no wallet
     // debit — collected from future cashback). Never re-read the ride here:
-    // the claim above already flipped it to 'cancelled'.
+    // the claim below flips it to 'cancelled', and re-reading would match no
+    // policy and silently drop the fee.
     const { feeBdt } = await evaluateCancellation(
       { status: ride.status, created_at: ride.created_at },
       cancelled_by as 'rider' | 'driver',
     );
 
-    // ── Accounting entry (non-blocking) ──────────────────────────────────
-    if (feeBdt > 0) {
-      try { await recordCancellationFee({ id: rideId, feePaisa: feeBdt, riderId: ride.user_id, zoneId: ride.zone_id }); }
-      catch (e) { logger.warn('[accounting] cancellation fee entry failed', e); }
-    }
+    // M-28: every state write is ONE transaction. The atomic claim is the
+    // exactly-once guard (two concurrent cancels both pass the pre-check;
+    // only one wins the conditional UPDATE — the loser 409s and writes
+    // nothing). The fee stamp, driver-free, compensation credit, and rider
+    // fee deduction commit or roll back together — a crash mid-sequence can
+    // no longer cancel a ride with fee fields missing, a driver stuck
+    // offline, or a compensation credit without its deduction.
+    let claimed = false;
+    await db.transaction(async (tx) => {
+      const [claimedRide] = await tx.update(rides)
+        .set({
+          status: 'cancelled',
+          cancelled_by,
+          cancel_reason: reason ?? null,
+          updated_at: new Date(),
+        })
+        .where(and(eq(rides.id, rideId), inArray(rides.status, [...CANCELLABLE_STATUSES])))
+        .returning({ id: rides.id });
 
-    // ── Wallet reversal if wallet was redeemed at request time ──────────────
-    // Wallet redemption is debited at completion, not request time. Pre-completion
-    // cancellation has nothing to reverse.
+      if (!claimedRide) {
+        claimed = false;
+        return;
+      }
+      claimed = true;
 
-    // Second (unconditional) update to stamp the fee fields, computed after
-    // the atomic claim. Safe: we already own the status transition.
-    await db.update(rides).set({
-      cancellation_fee_bdt: feeBdt > 0 ? feeBdt : undefined,
-      cancellation_compensation_driver_id: feeBdt > 0 ? ride.driver_id : undefined,
-      cancellation_fee_pending: feeBdt > 0 ? true : undefined,
-    }).where(eq(rides.id, rideId));
+      // Fee stamp (we own the status transition now)
+      if (feeBdt > 0) {
+        await tx.update(rides).set({
+          cancellation_fee_bdt: feeBdt,
+          cancellation_compensation_driver_id: ride.driver_id,
+          cancellation_fee_pending: true,
+        }).where(eq(rides.id, rideId));
+      }
 
-    // Free the assigned driver if this cancelled ride had one
-    if (ride.driver_id) {
-      await db.update(drivers)
-        .set({ is_online: true, updated_at: new Date() })
-        .where(eq(drivers.id, ride.driver_id));
-    }
+      // Free the assigned driver if this cancelled ride had one
+      if (ride.driver_id) {
+        await tx.update(drivers)
+          .set({ is_online: true, updated_at: new Date() })
+          .where(eq(drivers.id, ride.driver_id));
+      }
 
-    // Create compensation credit for the original driver (platform-funded)
-    if (feeBdt > 0 && ride.driver_id) {
-      try {
-        await createCancellationCredit({
+      // Create compensation credit for the original driver (platform-funded)
+      if (feeBdt > 0 && ride.driver_id) {
+        await createCancellationCreditInTx(tx, {
           originalDriverId: ride.driver_id,
           cancellationRideId: rideId,
           amountBdt: feeBdt,
         });
-      } catch (e: any) {
-        logger.warn('[ride/cancel] cancellation credit creation failed', e);
       }
-    }
 
-    // Create rider fee deduction (collected from future cashback)
-    if (feeBdt > 0) {
-      try {
+      // Create rider fee deduction (collected from future cashback)
+      if (feeBdt > 0) {
         const expiresAt = new Date(Date.now() + 90 * 86400_000);
-        await db.insert(riderFeeDeductions).values({
+        await tx.insert(riderFeeDeductions).values({
           rider_id: ride.user_id,
           ride_id: rideId,
           total_amount_bdt: feeBdt,
@@ -130,13 +124,21 @@ export async function POST(request: Request, { id }: { id: string }) {
           status: 'pending',
           expires_at: expiresAt,
         });
-        logger.info('[ride/cancel] rider fee deduction created', { rideId, feeBdt });
-      } catch (e: any) {
-        logger.warn('[ride/cancel] rider fee deduction creation failed', e);
       }
+    });
+
+    if (!claimed) {
+      return Response.json({ error: 'ride_not_cancellable', message: `Cannot cancel ride in status: ${ride.status}` }, { status: 409 });
     }
 
-    logger.info('[ride/cancel] ride cancelled', { rideId, cancelled_by, reason });
+    // ── Accounting entry (non-blocking side ledger — outside the tx by
+    // design, matching every other money route in the codebase) ──────────
+    if (feeBdt > 0) {
+      try { await recordCancellationFee({ id: rideId, feePaisa: feeBdt, riderId: ride.user_id, zoneId: ride.zone_id }); }
+      catch (e) { logger.warn('[accounting] cancellation fee entry failed', e); }
+    }
+
+    logger.info('[ride/cancel] ride cancelled', { rideId, cancelled_by, reason, feeBdt });
 
     // Notify the assigned driver's WebSocket — fire-and-forget, must never
     // fail the cancellation itself if utils-server is down.

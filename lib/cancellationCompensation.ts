@@ -1,15 +1,27 @@
 import { db } from '../src/db';
+import * as schema from '../src/db/schema';
 import {
   drivers,
   driverWalletTransactions,
   cancellationCredits,
 } from '../src/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
+import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 import { logger } from './logger';
+
+type Tx = PgTransaction<PostgresJsQueryResultHKT, typeof schema, any>;
 
 const CREDIT_EXPIRY_DAYS = 30;
 
-export async function createCancellationCredit(
+/**
+ * Create a cancellation compensation credit inside an EXISTING transaction.
+ * The cancel/no-show flows need the credit atomic with the ride's status
+ * claim — a crash between the claim and the credit would cancel the ride
+ * without compensating the driver (or vice versa).
+ */
+export async function createCancellationCreditInTx(
+  tx: Tx,
   params: {
     originalDriverId: string;
     cancellationRideId: string;
@@ -18,8 +30,7 @@ export async function createCancellationCredit(
 ): Promise<string> {
   const expiresAt = new Date(Date.now() + CREDIT_EXPIRY_DAYS * 86400_000);
 
-  const creditId = await db.transaction(async (tx) => {
-    const [credit] = await tx
+  const [credit] = await tx
       .insert(cancellationCredits)
       .values({
         original_driver_id: params.originalDriverId,
@@ -57,9 +68,18 @@ export async function createCancellationCredit(
     });
 
     return credit.id;
-  });
+}
 
-  return creditId;
+export async function createCancellationCredit(
+  params: {
+    originalDriverId: string;
+    cancellationRideId: string;
+    amountBdt: number;
+  },
+): Promise<string> {
+  return db.transaction(async (tx) => {
+    return createCancellationCreditInTx(tx, params);
+  });
 }
 
 export async function expireCancellationCredits(): Promise<number> {
