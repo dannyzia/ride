@@ -1,7 +1,7 @@
 import { verifySupabaseToken } from '@/lib/auth';
 import { db } from '@/src/db';
 import { users, fareDisputes, rides } from '@/src/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { parseJsonBody } from '@/lib/parseBody';
 import { autoArbitrateDispute } from '@/lib/fareArbitration';
 import { logger } from '@/lib/logger';
@@ -30,28 +30,51 @@ export async function POST(request: Request) {
       return Response.json({ error: 'dispute_window_expired', message: 'Fares can only be disputed within 48 hours' }, { status: 422 });
     }
 
-    // One dispute per ride — closes the duplicate-dispute / future double-refund vector.
-    const [existing] = await db.select({ id: fareDisputes.id }).from(fareDisputes)
-      .where(eq(fareDisputes.ride_id, parsed.data.ride_id)).limit(1);
-    if (existing) return Response.json({ error: 'duplicate_dispute', message: 'A dispute already exists for this ride' }, { status: 409 });
-
     // fare_disputes.driver_id is NOT NULL — a completed ride must have a driver on record.
     if (!ride.driver_id) return Response.json({ error: 'ride_not_disputable', message: 'No driver on record for this ride' }, { status: 422 });
+    // Narrowed outside the tx closure (TS resets property narrowing inside callbacks)
+    const driverId = ride.driver_id;
 
-    const [dispute] = await db.insert(fareDisputes).values({
-      ride_id: parsed.data.ride_id,
-      rider_id: rider.id,
-      driver_id: ride.driver_id,
-      claimed_fare_bdt: parsed.data.claimed_fare_bdt,
-      charged_fare_bdt: ride.rider_payable_bdt ?? ride.driver_fare_bdt ?? 0,
-      dispute_reason: parsed.data.dispute_reason,
-      rider_note: parsed.data.rider_note,
-      // actual/estimated distance stay NULL — no real tracking exists (see lib/fareArbitration.ts).
-    }).returning();
+    // M-30: insert + auto-arbitration are ONE transaction — a failure during
+    // arbitration can no longer leave a stuck 'pending' dispute behind. The
+    // advisory lock serializes concurrent submissions for the same ride so
+    // the duplicate check can't be passed twice (double-refund vector).
+    let disputeId = "";
+    let resolution = "pending";
+    let refundBdt = 0;
+    let duplicate = false;
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('fare_dispute_' || ${parsed.data.ride_id}))`);
 
-    const result = await autoArbitrateDispute(dispute.id);
+      const [existing] = await tx.select({ id: fareDisputes.id }).from(fareDisputes)
+        .where(eq(fareDisputes.ride_id, parsed.data.ride_id)).limit(1);
+      if (existing) {
+        duplicate = true;
+        return;
+      }
 
-    return Response.json({ dispute_id: dispute.id, resolution: result.resolution, refund_bdt: result.refund_bdt });
+      const [dispute] = await tx.insert(fareDisputes).values({
+        ride_id: parsed.data.ride_id,
+        rider_id: rider.id,
+        driver_id: driverId,
+        claimed_fare_bdt: parsed.data.claimed_fare_bdt,
+        charged_fare_bdt: ride.rider_payable_bdt ?? ride.driver_fare_bdt ?? 0,
+        dispute_reason: parsed.data.dispute_reason,
+        rider_note: parsed.data.rider_note,
+        // actual/estimated distance stay NULL — no real tracking exists (see lib/fareArbitration.ts).
+      }).returning();
+
+      const result = await autoArbitrateDispute(dispute.id, tx);
+      disputeId = dispute.id;
+      resolution = result.resolution;
+      refundBdt = result.refund_bdt;
+    });
+
+    if (duplicate) {
+      return Response.json({ error: 'duplicate_dispute', message: 'A dispute already exists for this ride' }, { status: 409 });
+    }
+
+    return Response.json({ dispute_id: disputeId, resolution, refund_bdt: refundBdt });
   } catch (err: any) {
     if (err.status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[rider/fare-disputes] POST error', err);

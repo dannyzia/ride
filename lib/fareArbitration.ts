@@ -9,8 +9,12 @@ import { logger } from '@/lib/logger';
  * estimated vs actual distance at dispute time. Admin reviews via the admin
  * fare-disputes screen.
  */
-export async function autoArbitrateDispute(disputeId: string): Promise<{ resolution: string; refund_bdt: number }> {
-  const [dispute] = await db.select().from(fareDisputes).where(eq(fareDisputes.id, disputeId)).limit(1);
+export async function autoArbitrateDispute(
+  disputeId: string,
+  tx?: typeof db | any,
+): Promise<{ resolution: string; refund_bdt: number }> {
+  const client = tx ?? db;
+  const [dispute] = await client.select().from(fareDisputes).where(eq(fareDisputes.id, disputeId)).limit(1);
   if (!dispute) throw new Error('Dispute not found');
 
   // Non-open disputes already have a resolution
@@ -19,7 +23,7 @@ export async function autoArbitrateDispute(disputeId: string): Promise<{ resolut
   }
 
   // MVP: send all disputes to manual review (no estimated distance tracking exists)
-  await db.update(fareDisputes)
+  await client.update(fareDisputes)
     .set({
       status: 'under_review',
       final_resolution: 'pending',
