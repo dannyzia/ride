@@ -3,8 +3,56 @@ import { drivers, driverOnlineSessions, rides, users } from '@/src/db/schema';
 import { eq, and, gte, lt, or, isNull, sql } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
-import { nextBdtMidnightUtc, prevBdtMidnightUtc } from '@/lib/time';
+import { nextBdtMidnightUtc, prevBdtMidnightUtc, bdtDayBoundariesUtc } from '@/lib/time';
 import * as errors from '@/lib/errors';
+
+interface DayAggregate {
+  earnings_bdt: number;
+  trips: number;
+  online_hours: number;
+}
+
+/**
+ * Aggregate a driver's earnings/trips/online hours over one Dhaka-day window
+ * [windowStart, windowEnd). Shared by the today endpoint and the
+ * earnings-detail day drilldown (?date=YYYY-MM-DD).
+ */
+async function getDriverDailyStats(
+  driverId: string,
+  windowStart: Date,
+  windowEnd: Date,
+): Promise<DayAggregate> {
+  const [rideAgg] = await db.select({
+    // Driver take = fare + tips (tip_bdt is recorded separately on the ride).
+    earnings_bdt: sql<number | null>`COALESCE(SUM(${rides.driver_fare_bdt}), 0) + COALESCE(SUM(${rides.tip_bdt}), 0)`,
+    trips: sql<number>`COUNT(*)`,
+  })
+    .from(rides)
+    .where(and(
+      eq(rides.driver_id, driverId),
+      eq(rides.status, 'completed'),
+      gte(rides.completed_at, windowStart),
+      lt(rides.completed_at, windowEnd),
+    ));
+
+  // Sum of online-session durations clipped to the window.
+  // Active sessions (went_offline_at NULL) count up to now().
+  const [sessionAgg] = await db.select({
+    online_hours: sql<string | null>`COALESCE(SUM(GREATEST(0, EXTRACT(EPOCH FROM (LEAST(COALESCE(${driverOnlineSessions.went_offline_at}, NOW()), ${windowEnd}) - GREATEST(${driverOnlineSessions.went_online_at}, ${windowStart})))) / 3600.0), 0)`,
+  })
+    .from(driverOnlineSessions)
+    .where(and(
+      eq(driverOnlineSessions.driver_id, driverId),
+      lt(driverOnlineSessions.went_online_at, windowEnd),
+      or(isNull(driverOnlineSessions.went_offline_at), gte(driverOnlineSessions.went_offline_at, windowStart)),
+    ));
+
+  return {
+    earnings_bdt: Number(rideAgg?.earnings_bdt ?? 0),
+    trips: Number(rideAgg?.trips ?? 0),
+    online_hours: Math.round(Number(sessionAgg?.online_hours ?? 0) * 100) / 100,
+  };
+}
 
 export async function GET(request: Request) {
   try {
@@ -20,43 +68,36 @@ export async function GET(request: Request) {
     }).from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
-    // Today in Dhaka time: [previous BDT midnight UTC, next BDT midnight UTC).
-    // Computing the previous boundary from the calendar (not windowEnd − 24h)
-    // keeps the math correct even if a zone ever adopts DST.
-    const windowEnd = nextBdtMidnightUtc();
-    const windowStart = prevBdtMidnightUtc();
+    // Optional ?date=YYYY-MM-DD (Asia/Dhaka day) — used by the earnings-detail
+    // drilldown. Absent = today in Dhaka time: [previous BDT midnight, next BDT
+    // midnight). Computing the previous boundary from the calendar (not
+    // windowEnd − 24h) keeps the math correct even if a zone ever adopts DST.
+    const url = new URL(request.url);
+    const dateParam = url.searchParams.get('date');
 
-    const [rideAgg] = await db.select({
-      // Driver take = fare + tips (tip_bdt is recorded separately on the ride).
-      earnings_bdt: sql<number | null>`COALESCE(SUM(${rides.driver_fare_bdt}), 0) + COALESCE(SUM(${rides.tip_bdt}), 0)`,
-      trips: sql<number>`COUNT(*)`,
-    })
-      .from(rides)
-      .where(and(
-        eq(rides.driver_id, driver.id),
-        eq(rides.status, 'completed'),
-        gte(rides.completed_at, windowStart),
-        lt(rides.completed_at, windowEnd),
-      ));
+    let windowStart: Date;
+    let windowEnd: Date;
+    if (dateParam) {
+      const boundaries = bdtDayBoundariesUtc(dateParam);
+      if (!boundaries) {
+        return Response.json({ error: 'invalid_date', message: 'Date must be YYYY-MM-DD' }, { status: 400 });
+      }
+      windowStart = boundaries.start;
+      windowEnd = boundaries.end;
+    } else {
+      windowStart = prevBdtMidnightUtc();
+      windowEnd = nextBdtMidnightUtc();
+    }
 
-    // Sum of online-session durations clipped to today's window.
-    // Active sessions (went_offline_at NULL) count up to now().
-    const [sessionAgg] = await db.select({
-      online_hours: sql<string | null>`COALESCE(SUM(GREATEST(0, EXTRACT(EPOCH FROM (LEAST(COALESCE(${driverOnlineSessions.went_offline_at}, NOW()), ${windowEnd}) - GREATEST(${driverOnlineSessions.went_online_at}, ${windowStart})))) / 3600.0), 0)`,
-    })
-      .from(driverOnlineSessions)
-      .where(and(
-        eq(driverOnlineSessions.driver_id, driver.id),
-        lt(driverOnlineSessions.went_online_at, windowEnd),
-        or(isNull(driverOnlineSessions.went_offline_at), gte(driverOnlineSessions.went_offline_at, windowStart)),
-      ));
+    const stats = await getDriverDailyStats(driver.id, windowStart, windowEnd);
 
     return Response.json({
-      earnings_bdt: Number(rideAgg?.earnings_bdt ?? 0),
-      trips: Number(rideAgg?.trips ?? 0),
-      online_hours: Math.round(Number(sessionAgg?.online_hours ?? 0) * 100) / 100,
+      earnings_bdt: stats.earnings_bdt,
+      trips: stats.trips,
+      online_hours: stats.online_hours,
       rating: driver.rating != null ? Number(driver.rating) : null,
       acceptance_rate: driver.acceptance_rate != null ? Number(driver.acceptance_rate) : null,
+      date: dateParam ?? undefined,
     }, { status: 200 });
 
   } catch (err: unknown) {

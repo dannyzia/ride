@@ -1,9 +1,16 @@
 import { db } from "@/src/db";
 import { rides, users, drivers } from "@/src/db/schema";
-import { eq, and, gte, sql } from "drizzle-orm";
+import { eq, and, gte, lt, sql } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import {
+  bdtDayBoundariesUtc,
+  bdtMonthStartUtc,
+  prevBdtMidnightUtc,
+} from "@/lib/time";
 import * as errors from "@/lib/errors";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function GET(request: Request) {
   try {
@@ -18,16 +25,30 @@ export async function GET(request: Request) {
     if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     const url = new URL(request.url);
+    const dateParam = url.searchParams.get("date");
     const range = url.searchParams.get("range") ?? "week";
 
-    const now = new Date();
+    // All periods are Asia/Dhaka calendar windows — a UTC-midnight "today"
+    // would show the wrong day for 6 hours every day (previously a latent bug).
     let periodStart: Date;
-    if (range === "today") {
-      periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let periodEnd: Date = new Date();
+    let dateKey: string | null = null;
+
+    if (dateParam) {
+      const boundaries = bdtDayBoundariesUtc(dateParam);
+      if (!boundaries) {
+        return Response.json({ error: 'invalid_date', message: 'Date must be YYYY-MM-DD' }, { status: 400 });
+      }
+      periodStart = boundaries.start;
+      periodEnd = boundaries.end;
+      dateKey = dateParam;
+    } else if (range === "today") {
+      periodStart = prevBdtMidnightUtc();
     } else if (range === "month") {
-      periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      periodStart = bdtMonthStartUtc();
     } else {
-      periodStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      // "week": the last 7 Dhaka days, today included.
+      periodStart = new Date(prevBdtMidnightUtc().getTime() - 6 * DAY_MS);
     }
 
     const tripRows = await db.select({
@@ -42,11 +63,18 @@ export async function GET(request: Request) {
     })
       .from(rides)
       .where(
-        and(
-          eq(rides.driver_id, driver.id),
-          eq(rides.status, "completed"),
-          gte(rides.completed_at, periodStart),
-        )
+        dateKey
+          ? and(
+              eq(rides.driver_id, driver.id),
+              eq(rides.status, "completed"),
+              gte(rides.completed_at, periodStart),
+              lt(rides.completed_at, periodEnd),
+            )
+          : and(
+              eq(rides.driver_id, driver.id),
+              eq(rides.status, "completed"),
+              gte(rides.completed_at, periodStart),
+            )
       )
       .orderBy(sql`completed_at DESC`)
       .limit(200);
@@ -68,9 +96,10 @@ export async function GET(request: Request) {
     const totalEarningsBdt = trips.reduce((acc, t) => acc + t.driver_fare_bdt, 0);
 
     return Response.json({
-      range,
+      range: dateKey ? "date" : range,
+      date: dateKey,
       period_start: periodStart.toISOString(),
-      period_end: now.toISOString(),
+      period_end: periodEnd.toISOString(),
       total_earnings_bdt: totalEarningsBdt,
       total_trips: trips.length,
       trips,
