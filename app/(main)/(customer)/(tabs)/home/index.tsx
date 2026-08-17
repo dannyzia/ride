@@ -266,9 +266,16 @@ export default function HomeScreen() {
       return;
     }
     try {
+      // /api/promo/redeem requires a session token — without the header every
+      // apply attempt 401'd and showed "not valid or expired".
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       const res = await fetch(`${API_URL}/api/promo/redeem`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           code: promoCode.trim(),
           vehicle_type: selectedVehicle,
