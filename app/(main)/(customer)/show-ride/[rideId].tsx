@@ -72,6 +72,12 @@ const toBadgeStatus = (status: string): BadgeStatus => {
   return "in_progress";
 };
 
+// 48h dispute window — mirrors the server gate in rider/fare-disputes+api.ts
+// (172800000 ms). Hide, don't disable (doc 03 R2.5 #2, binding).
+const DISPUTE_WINDOW_MS = 172800000;
+const canDisputeRide = (completedAt: string | null): boolean =>
+  !!completedAt && Date.now() - new Date(completedAt).getTime() <= DISPUTE_WINDOW_MS;
+
 const ShowRide = () => {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const [ride, setRide] = useState<RideDetail | null>(null);
@@ -348,7 +354,7 @@ const ShowRide = () => {
           <Text style={styles.rebookBtnText}>Rebook Ride</Text>
         </TouchableOpacity>
 
-        {ride.status === "completed" && (
+        {ride.status === "completed" && canDisputeRide(ride.completed_at) && (
           <TouchableOpacity
             style={[styles.disputeBtn, { backgroundColor: `${colors.amber}1A` }]}
             onPress={() =>

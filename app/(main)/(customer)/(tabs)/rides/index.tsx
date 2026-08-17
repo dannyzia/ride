@@ -126,6 +126,13 @@ const toBadgeStatus = (status: string): BadgeStatus => {
   return "in_progress";
 };
 
+// 48h dispute window — mirrors the server gate in rider/fare-disputes+api.ts
+// (172800000 ms). Hide, don't disable (doc 03 R2.5 #2, binding): an expired
+// ride must not even show the button, so the rider never hits the 422 dead-end.
+const DISPUTE_WINDOW_MS = 172800000;
+const canDisputeRide = (completedAt: string | null): boolean =>
+  !!completedAt && Date.now() - new Date(completedAt).getTime() <= DISPUTE_WINDOW_MS;
+
 const mapRideRow = (row: RideApiRow): RideItem => ({
   id: row.ride_id,
   created_at: row.created_at ?? null,
@@ -359,15 +366,17 @@ export default function RidesScreen() {
               <Ionicons name="refresh" size={16} color={colors.primary} />
               <Text style={[styles.actionBtnText, { color: textPrimary }]}>Rebook</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
-              onPress={() => handleDispute(item)}
-              accessibilityRole="button"
-              accessibilityLabel="Dispute fare"
-            >
-              <Ionicons name="flag" size={16} color={colors.danger} />
-              <Text style={[styles.actionBtnText, { color: colors.danger }]}>Dispute</Text>
-            </TouchableOpacity>
+            {canDisputeRide(item.completed_at) && (
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
+                onPress={() => handleDispute(item)}
+                accessibilityRole="button"
+                accessibilityLabel="Dispute fare"
+              >
+                <Ionicons name="flag" size={16} color={colors.danger} />
+                <Text style={[styles.actionBtnText, { color: colors.danger }]}>Dispute</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </TouchableOpacity>
@@ -516,7 +525,7 @@ export default function RidesScreen() {
                 >
                   <Text style={styles.modalActionText}>Rebook This Route</Text>
                 </TouchableOpacity>
-                {selectedRide.status === "completed" && (
+                {selectedRide.status === "completed" && canDisputeRide(selectedRide.completed_at) && (
                   <TouchableOpacity
                     style={[styles.modalActionBtnSecondary, { borderColor: borderColor }]}
                     onPress={() => handleDispute(selectedRide)}
