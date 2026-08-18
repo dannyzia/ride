@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ReactNativeModal from "react-native-modal";
 import { API_URL } from "@/lib/config";
+import { relativeTime } from "@/lib/time";
 import { colors, radii, spacing } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
@@ -30,14 +31,6 @@ interface HotspotRow {
   supply_count: number;
   updated_at: string;
 }
-
-const relativeTime = (d: Date): string => {
-  const minutes = Math.floor(Math.max(0, Date.now() - d.getTime()) / 60000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.floor(minutes / 60);
-  return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
-};
 
 export default function HotspotMapScreen() {
   const isDark = useIsDark();

@@ -1,4 +1,4 @@
-import { bdtDayBoundariesUtc, prevBdtMidnightUtc, nextBdtMidnightUtc } from "@/lib/time";
+import { bdtDayBoundariesUtc, prevBdtMidnightUtc, nextBdtMidnightUtc, relativeTime } from "@/lib/time";
 
 describe("bdtDayBoundariesUtc", () => {
   it("returns UTC boundaries for a Dhaka calendar day (UTC+6)", () => {
@@ -36,5 +36,27 @@ describe("Dhaka midnight helpers", () => {
     const prev = prevBdtMidnightUtc();
     const next = nextBdtMidnightUtc();
     expect(next.getTime() - prev.getTime()).toBe(24 * 60 * 60 * 1000);
+  });
+});
+
+describe("relativeTime", () => {
+  const NOW = new Date("2026-08-17T12:00:00Z");
+
+  it("renders \"Just now\" for recent and future timestamps", () => {
+    expect(relativeTime(new Date("2026-08-17T11:59:30Z"), NOW)).toBe("Just now");
+    // Future timestamps clamp to "Just now" rather than "negative ago".
+    expect(relativeTime(new Date("2026-08-17T12:05:00Z"), NOW)).toBe("Just now");
+  });
+
+  it("renders minutes", () => {
+    expect(relativeTime(new Date("2026-08-17T11:58:00Z"), NOW)).toBe("2 min ago");
+    expect(relativeTime(new Date("2026-08-17T11:01:00Z"), NOW)).toBe("59 min ago");
+  });
+
+  it("renders hours with singular/plural and flooring", () => {
+    expect(relativeTime(new Date("2026-08-17T11:00:00Z"), NOW)).toBe("1 hour ago");
+    // 90 minutes floors to 1 hour, not 1.5.
+    expect(relativeTime(new Date("2026-08-17T10:30:00Z"), NOW)).toBe("1 hour ago");
+    expect(relativeTime(new Date("2026-08-17T09:00:00Z"), NOW)).toBe("3 hours ago");
   });
 });

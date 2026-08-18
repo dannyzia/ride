@@ -24,6 +24,7 @@ import { colors, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import SOSButton from "@/components/SOSButton";
 import PinInput from "@/components/PinInput";
+import { isPinMismatch, PIN_REVERT_DELAY_MS } from "@/lib/pin";
 
 let MapViewLib: any = MapLibreGL.MapView ?? MapLibreGL.default ?? null;
 let PointAnnotation: any = MapLibreGL.PointAnnotation ?? null;
@@ -130,8 +131,7 @@ export default function RideTrackingScreen() {
     if (ride?.otp && pinValue === "") setPinValue(ride.otp);
   }, [ride]);
 
-  const pinMatches = !!ride?.otp && pinValue === ride.otp;
-  const pinError = pinValue.length === 4 && !!ride?.otp && !pinMatches;
+  const pinError = isPinMismatch(pinValue, ride?.otp);
 
   const handlePinChange = (t: string) => {
     setPinCopied(false);
@@ -139,8 +139,8 @@ export default function RideTrackingScreen() {
     // A 4-digit entry that doesn't match is an accidental edit of a fixed
     // value — flash the mismatch, then restore so the rider never shows the
     // driver a wrong PIN.
-    if (t.length === 4 && ride?.otp && t !== ride.otp) {
-      setTimeout(() => setPinValue(ride.otp ?? ""), 900);
+    if (isPinMismatch(t, ride?.otp)) {
+      setTimeout(() => setPinValue(ride?.otp ?? ""), PIN_REVERT_DELAY_MS);
     }
   };
 

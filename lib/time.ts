@@ -1,5 +1,20 @@
 const BDT_OFFSET_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * Humanized "time ago" for the hotspot map's last-updated label:
+ * "Just now" / "N min ago" / "1 hour ago" / "N hours ago".
+ * Future timestamps clamp to "Just now".
+ *
+ * @param now — injectable clock for deterministic tests; defaults to Date.now().
+ */
+export function relativeTime(d: Date, now: Date = new Date()): string {
+  const minutes = Math.floor(Math.max(0, now.getTime() - d.getTime()) / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+}
+
 /** Next 00:00 Asia/Dhaka as a UTC timestamp. */
 export function nextBdtMidnightUtc(): Date {
   const now = new Date();
