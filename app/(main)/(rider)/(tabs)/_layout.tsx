@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { FloatingNavMenu } from "@/components/FloatingNavMenu";
+import OfflineIndicator from "@/components/OfflineIndicator";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
@@ -29,6 +30,7 @@ export default function DriverTabLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
+      <OfflineIndicator />
       <Tabs screenOptions={{
         headerShown: false,
         tabBarStyle: {

@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { icons } from "@/constants/data";
 import { FloatingNavMenu } from "@/components/FloatingNavMenu";
+import OfflineIndicator from "@/components/OfflineIndicator";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const TabIcon = ({
@@ -54,6 +55,7 @@ export default function TabsLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
+      <OfflineIndicator />
       <Tabs
         initialRouteName="home/index"
         screenOptions={{

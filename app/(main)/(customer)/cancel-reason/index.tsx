@@ -5,6 +5,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import RadioGroup from "@/components/RadioGroup";
+import ErrorBanner from "@/components/ErrorBanner";
 import { useRiderStore } from "@/store/useRiderStore";
 import { useTranslation } from "react-i18next";
 import { colors } from "@/theme/goRide";
@@ -121,29 +123,11 @@ export default function CancelReason() {
           </Text>
         </View>
 
-        {REASONS.map((reason) => {
-          const isSelected = selected === reason.key;
-          return (
-            <TouchableOpacity
-              key={reason.key}
-              className="flex-row items-center p-[16px] rounded-[10px] border"
-              style={
-                isSelected
-                  ? { borderColor: colors.primary, backgroundColor: colors.accentLight }
-                  : { borderColor, backgroundColor: surfaceBg }
-              }
-              onPress={() => setSelected(reason.key)}
-            >
-              <View
-                className="w-5 h-5 rounded-full border-2 mr-[12px] items-center justify-center"
-                style={{ borderColor: isSelected ? colors.primary : borderColor }}
-              >
-                {isSelected && <View className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors.primary }} />}
-              </View>
-              <Text className="text-[16px] font-Jakarta" style={{ color: textPrimary }}>{t(reason.labelKey)}</Text>
-            </TouchableOpacity>
-          );
-        })}
+        <RadioGroup
+          options={REASONS.map((reason) => ({ key: reason.key, label: t(reason.labelKey) }))}
+          value={selected}
+          onChange={setSelected}
+        />
         <TextInput
           className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mt-4"
           style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
@@ -152,9 +136,7 @@ export default function CancelReason() {
           value={note}
           onChangeText={setNote}
         />
-        {error ? (
-          <Text className="text-[14px] font-Jakarta text-center mt-3" style={{ color: colors.danger }}>{error}</Text>
-        ) : null}
+        {error ? <ErrorBanner message={error} /> : null}
         <TouchableOpacity
           className="rounded-full py-[16px] items-center mt-8"
           style={{ backgroundColor: loading || !selected ? disabledBg : colors.danger }}
