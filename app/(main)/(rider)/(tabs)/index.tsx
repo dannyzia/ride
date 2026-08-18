@@ -24,6 +24,13 @@ import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { logger } from "@/lib/logger";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { relativeTime } from "@/lib/time";
+import {
+  nearestHotspot,
+  haversineKm,
+  demandLevel,
+  type DemandLevel,
+  type HotspotPoint,
+} from "@/lib/hotspots";
 
 // LOW-13: drivers.vehicle_type is a machine key (e.g. bike_standard); show the
 // human label ("Bike Standard") in the header.
@@ -42,6 +49,19 @@ interface DailyStats {
 const RADAR_RING_COUNT = 3;
 const RADAR_RING_SIZE = 120;
 const GO_CIRCLE_SIZE = 80;
+
+// Hotspot card: demand tier → label and dot color (green → amber → red,
+// the same ramp as the hotspot-map heat overlay).
+const DEMAND_LABEL: Record<DemandLevel, string> = {
+  low: "Low demand",
+  medium: "Moderate demand",
+  high: "High demand",
+};
+const DEMAND_COLOR: Record<DemandLevel, string> = {
+  low: colors.success,
+  medium: colors.amber,
+  high: colors.danger,
+};
 
 export default function DriverHome() {
   const {
@@ -72,6 +92,9 @@ export default function DriverHome() {
     null,
   );
   const [locationLoading, setLocationLoading] = useState(true);
+  // Live hotspot zones for the "Hotspot near you" card — refreshed every 60s.
+  const [hotspotZones, setHotspotZones] = useState<HotspotPoint[] | null>(null);
+
   // When the WS last dropped — drives the "Last connected: X ago" caption
   // under the offline button. Null until the first drop.
   const [lastOnlineAt, setLastOnlineAt] = useState<Date | null>(null);
@@ -225,6 +248,40 @@ export default function DriverHome() {
     } catch {
       // Network error — keep last known stats
     }
+  }, []);
+
+  // Live demand card: fetch hotspot zones on mount and refresh every 60s.
+  // Non-blocking — a failure just leaves the card hidden.
+  useEffect(() => {
+    let active = true;
+    const loadHotspots = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const res = await fetch(`${API_URL}/api/driver/hotspots`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data: {
+          hotspots?: Array<{ name: string; lat: number; lng: number; intensity: number }>;
+        } = await res.json();
+        if (!active) return;
+        setHotspotZones(
+          (data.hotspots ?? []).filter((h) => h.name && h.lat && h.lng),
+        );
+      } catch {
+        // Network error — card stays hidden until the next tick
+      }
+    };
+    loadHotspots();
+    const id = setInterval(loadHotspots, 60_000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
   }, []);
 
   // Keep the "Last connected" caption fresh (30s tick) while the WS is down.
@@ -505,6 +562,17 @@ export default function DriverHome() {
   // Map dimming: OFFLINE = 30%, RIDE_OFFER = 40%, ONLINE = none
   const dimOpacity = activeOffer ? 0.4 : isOnline ? 0 : 0.3;
   const showReconnectBanner = isOnline && !wsConnected;
+
+  // Nearest live hotspot to the driver's current position (recomputed on
+  // every render — the 60s fetch drives updates).
+  const nearestZone =
+    location && hotspotZones
+      ? nearestHotspot(hotspotZones, location.lat, location.lng)
+      : null;
+  const nearestDistanceKm =
+    location && nearestZone
+      ? haversineKm(location.lat, location.lng, nearestZone.lat, nearestZone.lng)
+      : null;
 
   // ── Render ───────────────────────────────────────────────────────
   return (
@@ -982,6 +1050,78 @@ export default function DriverHome() {
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 14, color: colors.primary }}>
                 Buy a Package to Start
               </Text>
+            </TouchableOpacity>
+          )}
+
+          {nearestZone && (
+            <TouchableOpacity
+              onPress={() => router.push("/(main)/(rider)/hotspot-map")}
+              accessibilityRole="button"
+              accessibilityLabel={`Hotspot near you: ${nearestZone.name}`}
+              style={{
+                backgroundColor: surfaceBg,
+                borderWidth: 1,
+                borderColor: borderColor,
+                borderRadius: radii.lg,
+                paddingHorizontal: spacing.lg,
+                paddingVertical: spacing.sm + 4,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: spacing.sm,
+                  flex: 1,
+                }}
+              >
+                <View
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: DEMAND_COLOR[demandLevel(nearestZone.intensity)],
+                  }}
+                />
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontFamily: "Jakarta-SemiBold",
+                    fontSize: 14,
+                    color: textPrimary,
+                  }}
+                >
+                  {nearestZone.name}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "Jakarta-Regular",
+                    fontSize: 13,
+                    color: textSecondary,
+                  }}
+                >
+                  {DEMAND_LABEL[demandLevel(nearestZone.intensity)]}
+                </Text>
+              </View>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <Text
+                  style={{
+                    fontFamily: "Jakarta-Regular",
+                    fontSize: 12,
+                    color: textSecondary,
+                  }}
+                >
+                  {nearestDistanceKm !== null
+                    ? `${nearestDistanceKm.toFixed(1)} km`
+                    : ""}
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={textSecondary} />
+              </View>
             </TouchableOpacity>
           )}
 
