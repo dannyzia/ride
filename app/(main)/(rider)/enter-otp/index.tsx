@@ -4,9 +4,9 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomButton from "@/components/CustomButton";
+import PinInput from "@/components/PinInput";
 import { useRideOfferStore, useWSStore } from "@/store";
 import { router } from "expo-router";
-import { OtpInput } from "react-native-otp-entry";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 const EnterOtp = () => {
@@ -21,7 +21,6 @@ const EnterOtp = () => {
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
-  const pinBorder = isDark ? colors.borderDark : colors.textDisabledLight;
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
   // N4: guard against a half-open socket swallowing ride:started — without a
@@ -169,55 +168,15 @@ const EnterOtp = () => {
             borderColor: colors.danger,
             borderRadius: 12,
             paddingBottom: spacing.xs,
+            marginBottom: spacing["2xl"],
           }}
         >
-          <OtpInput
-            numberOfDigits={4}
-            onTextChange={setPinInput}
-            focusColor={colors.primary}
-            placeholder="*"
-            type="numeric"
-            theme={{
-              containerStyle: {
-                width: "100%",
-                justifyContent: "space-between",
-                flexDirection: "row",
-                marginBottom: spacing["2xl"],
-              },
-              pinCodeContainerStyle: {
-                borderWidth: 1,
-                borderColor: pinBorder,
-                borderRadius: 8,
-                paddingVertical: 12,
-                width: 60,
-                height: 60,
-                justifyContent: "center",
-                alignItems: "center",
-              },
-              pinCodeTextStyle: {
-                fontSize: 18,
-                textAlign: "center",
-                letterSpacing: 6,
-                color: textPrimary,
-              },
-              focusStickStyle: {
-                backgroundColor: colors.primary,
-                width: 2,
-                height: 24,
-              },
-              focusedPinCodeContainerStyle: {
-                borderColor: colors.primary,
-              },
-              filledPinCodeContainerStyle: {
-                borderColor: isDark ? colors.textSecondaryDark : colors.gray600,
-              },
-              disabledPinCodeContainerStyle: {
-                backgroundColor: isDark ? colors.surfaceElevatedDark : colors.gray200,
-              },
-              placeholderTextStyle: {
-                color: textSecondary,
-              },
-            }}
+          <PinInput
+            value={pinInput}
+            onChange={setPinInput}
+            length={4}
+            error={!!error}
+            accessibilityLabel="Ride PIN"
           />
         </Animated.View>
 
