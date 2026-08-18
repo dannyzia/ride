@@ -251,9 +251,12 @@ export default function DriverHome() {
     }
   }, []);
 
-  // Live demand card: fetch hotspot zones on mount and refresh every 60s.
-  // Non-blocking — a failure just leaves the card hidden.
+  // Live demand card: fetch hotspot zones while ONLINE only — the 60s
+  // interval pauses when the driver goes offline (battery), and the
+  // offline→online transition refetches immediately (mirrors the
+  // daily-stats fetch). Non-blocking — a failure leaves the card hidden.
   useEffect(() => {
+    if (!isOnline) return;
     let active = true;
     const loadHotspots = async () => {
       try {
@@ -291,7 +294,7 @@ export default function DriverHome() {
       active = false;
       clearInterval(id);
     };
-  }, []);
+  }, [isOnline]);
 
   // Keep the "Last connected" caption fresh (30s tick) while the WS is down.
   useEffect(() => {
