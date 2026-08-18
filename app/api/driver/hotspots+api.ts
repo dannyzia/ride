@@ -5,11 +5,7 @@ import { eq } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
 import { normalizePolygon, polygonCentroid } from '@/lib/polygon';
-
-// Demand pressure per zone: demand / (demand + supply). 0.5 = balanced,
-// higher = demand-heavy (hot). Zones with no recent activity stay at 0.
-const pressure = (demand: number, supply: number): number =>
-  demand + supply === 0 ? 0 : demand / (demand + supply);
+import { demandPressure, normalizeIntensities } from '@/lib/hotspots';
 
 export async function GET(request: Request) {
   try {
@@ -38,7 +34,7 @@ export async function GET(request: Request) {
           name: row.name,
           lat: center.lat,
           lng: center.lng,
-          intensity: pressure(row.demand_count, row.supply_count),
+          intensity: demandPressure(row.demand_count, row.supply_count),
           multiplier: Number(row.multiplier),
           demand_count: row.demand_count,
           supply_count: row.supply_count,
@@ -50,16 +46,11 @@ export async function GET(request: Request) {
     // Normalize intensity to 0..1 across zones with activity so the hottest
     // zone renders red and the map stays comparative. Zones with no activity
     // keep intensity 0 (deep green). All-equal sets keep the raw pressure.
-    const active = hotspots.filter((h) => h.intensity > 0);
-    if (active.length > 0) {
-      const values = active.map((h) => h.intensity);
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      const span = max - min;
-      for (const h of active) {
-        if (span > 0) h.intensity = (h.intensity - min) / span;
-      }
-    }
+    // (Pure helper — see lib/hotspots.ts.)
+    const normalized = normalizeIntensities(hotspots.map((h) => h.intensity));
+    hotspots.forEach((h, i) => {
+      h.intensity = normalized[i];
+    });
 
     return Response.json({ hotspots });
   } catch (err: unknown) {
