@@ -150,9 +150,9 @@ describe('haversineKm', () => {
 
 describe('nearestHotspot', () => {
   const zones: HotspotPoint[] = [
-    { name: 'far', lat: 23.9, lng: 90.5, intensity: 0.9 },
-    { name: 'near', lat: 23.82, lng: 90.41, intensity: 0.6 },
-    { name: 'middle', lat: 23.85, lng: 90.43, intensity: 0.4 },
+    { name: 'far', lat: 23.9, lng: 90.5, intensity: 0.9, intensity_raw: 0.9 },
+    { name: 'near', lat: 23.82, lng: 90.41, intensity: 0.6, intensity_raw: 0.6 },
+    { name: 'middle', lat: 23.85, lng: 90.43, intensity: 0.4, intensity_raw: 0.4 },
   ];
 
   it('picks the closest zone to the coordinate', () => {
@@ -183,5 +183,14 @@ describe('demandLevel', () => {
   it('is high at 0.66 and above', () => {
     expect(demandLevel(0.66)).toBe('high');
     expect(demandLevel(1)).toBe('high');
+  });
+
+  it('is anchored to absolute demand/supply ratios, not relative rank', () => {
+    // 2:1 demand/supply → 2/3 pressure → 'high'; 1:1 → 0.5 → 'medium';
+    // 1:2 → 1/3 → 'medium'; 1:3 → 0.25 → 'low'.
+    expect(demandLevel(2 / 3)).toBe('high');
+    expect(demandLevel(0.5)).toBe('medium');
+    expect(demandLevel(1 / 3)).toBe('medium');
+    expect(demandLevel(0.25)).toBe('low');
   });
 });

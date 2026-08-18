@@ -266,7 +266,13 @@ export default function DriverHome() {
         });
         if (!res.ok) return;
         const data: {
-          hotspots?: Array<{ name: string; lat: number; lng: number; intensity: number }>;
+          hotspots?: Array<{
+            name: string;
+            lat: number;
+            lng: number;
+            intensity: number;
+            intensity_raw: number;
+          }>;
         } = await res.json();
         if (!active) return;
         setHotspotZones(
@@ -1129,7 +1135,7 @@ export default function DriverHome() {
                     width: 10,
                     height: 10,
                     borderRadius: 5,
-                    backgroundColor: DEMAND_COLOR[demandLevel(nearestZone.intensity)],
+                    backgroundColor: DEMAND_COLOR[demandLevel(nearestZone.intensity_raw)],
                   }}
                 />
                 <Text
@@ -1149,7 +1155,7 @@ export default function DriverHome() {
                     color: textSecondary,
                   }}
                 >
-                  {DEMAND_LABEL[demandLevel(nearestZone.intensity)]}
+                  {DEMAND_LABEL[demandLevel(nearestZone.intensity_raw)]}
                 </Text>
               </View>
               <View

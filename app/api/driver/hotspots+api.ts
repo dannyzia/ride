@@ -29,12 +29,17 @@ export async function GET(request: Request) {
         const polygon = normalizePolygon(row.polygon);
         const center = polygon ? polygonCentroid(polygon) : null;
         if (!center) return null;
+        // Raw demand/supply pressure — the ABSOLUTE intensity. The same value
+        // feeds the comparative `intensity` (normalized below) and is exposed
+        // as intensity_raw so clients can label demand in absolute terms.
+        const pressure = demandPressure(row.demand_count, row.supply_count);
         return {
           zone_id: row.zone_id,
           name: row.name,
           lat: center.lat,
           lng: center.lng,
-          intensity: demandPressure(row.demand_count, row.supply_count),
+          intensity: pressure,
+          intensity_raw: pressure,
           multiplier: Number(row.multiplier),
           demand_count: row.demand_count,
           supply_count: row.supply_count,
@@ -43,10 +48,11 @@ export async function GET(request: Request) {
       })
       .filter((h): h is NonNullable<typeof h> => h !== null);
 
-    // Normalize intensity to 0..1 across zones with activity so the hottest
-    // zone renders red and the map stays comparative. Zones with no activity
-    // keep intensity 0 (deep green). All-equal sets keep the raw pressure.
-    // (Pure helper — see lib/hotspots.ts.)
+    // Normalize `intensity` (comparative, for the heat map) to 0..1 across
+    // zones with activity so the hottest zone renders red. Zones with no
+    // activity keep 0 (deep green); all-equal sets keep the raw pressure.
+    // `intensity_raw` is deliberately NOT normalized. (Pure helper — see
+    // lib/hotspots.ts.)
     const normalized = normalizeIntensities(hotspots.map((h) => h.intensity));
     hotspots.forEach((h, i) => {
       h.intensity = normalized[i];
