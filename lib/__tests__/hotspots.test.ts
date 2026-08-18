@@ -7,6 +7,7 @@ import {
   haversineKm,
   nearestHotspot,
   demandLevel,
+  hotspotSurgeMultiplier,
   type HotspotPoint,
 } from '../hotspots';
 
@@ -150,9 +151,9 @@ describe('haversineKm', () => {
 
 describe('nearestHotspot', () => {
   const zones: HotspotPoint[] = [
-    { name: 'far', lat: 23.9, lng: 90.5, intensity: 0.9, intensity_raw: 0.9 },
-    { name: 'near', lat: 23.82, lng: 90.41, intensity: 0.6, intensity_raw: 0.6 },
-    { name: 'middle', lat: 23.85, lng: 90.43, intensity: 0.4, intensity_raw: 0.4 },
+    { name: 'far', lat: 23.9, lng: 90.5, intensity: 0.9, intensity_raw: 0.9, demand_count: 9, supply_count: 3 },
+    { name: 'near', lat: 23.82, lng: 90.41, intensity: 0.6, intensity_raw: 0.6, demand_count: 6, supply_count: 4 },
+    { name: 'middle', lat: 23.85, lng: 90.43, intensity: 0.4, intensity_raw: 0.4, demand_count: 4, supply_count: 6 },
   ];
 
   it('picks the closest zone to the coordinate', () => {
@@ -192,5 +193,25 @@ describe('demandLevel', () => {
     expect(demandLevel(0.5)).toBe('medium');
     expect(demandLevel(1 / 3)).toBe('medium');
     expect(demandLevel(0.25)).toBe('low');
+  });
+});
+
+describe('hotspotSurgeMultiplier', () => {
+  it('composes the tested ratio → pick chain for a zone\'s counts', () => {
+    // 9 demand / 3 supply → ratio 3 → 1.5 tier.
+    expect(hotspotSurgeMultiplier(9, 3)).toBe(1.5);
+    // 5 demand / 0 supply → ratio 5 → top tier.
+    expect(hotspotSurgeMultiplier(5, 0)).toBe(2.0);
+    // Supply-heavy and balanced zones get no surge.
+    expect(hotspotSurgeMultiplier(2, 10)).toBe(1.0);
+    expect(hotspotSurgeMultiplier(10, 10)).toBe(1.0);
+  });
+
+  it('respects a custom threshold table (strict > boundary included)', () => {
+    const custom = [{ ratio: 1, multiplier: 1.1 }];
+    // Ratio 1.2 clears the 1.0 threshold; ratio 1.0 (exactly equal) does not.
+    expect(hotspotSurgeMultiplier(6, 5, custom)).toBe(1.1);
+    expect(hotspotSurgeMultiplier(5, 5, custom)).toBe(1.0);
+    expect(hotspotSurgeMultiplier(1, 5, custom)).toBe(1.0);
   });
 });

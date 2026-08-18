@@ -28,6 +28,7 @@ import {
   nearestHotspot,
   haversineKm,
   demandLevel,
+  hotspotSurgeMultiplier,
   type DemandLevel,
   type HotspotPoint,
 } from "@/lib/hotspots";
@@ -272,6 +273,8 @@ export default function DriverHome() {
             lng: number;
             intensity: number;
             intensity_raw: number;
+            demand_count: number;
+            supply_count: number;
           }>;
         } = await res.json();
         if (!active) return;
@@ -579,6 +582,11 @@ export default function DriverHome() {
     location && nearestZone
       ? haversineKm(location.lat, location.lng, nearestZone.lat, nearestZone.lng)
       : null;
+  // Surge for the nearest zone, computed client-side from the live counts
+  // via the tested ratio → threshold chain (>1 = surge active).
+  const nearestSurgeMultiplier = nearestZone
+    ? hotspotSurgeMultiplier(nearestZone.demand_count, nearestZone.supply_count)
+    : 1;
 
   // ── Render ───────────────────────────────────────────────────────
   return (
@@ -1157,6 +1165,26 @@ export default function DriverHome() {
                 >
                   {DEMAND_LABEL[demandLevel(nearestZone.intensity_raw)]}
                 </Text>
+                {nearestSurgeMultiplier > 1 && (
+                  <View
+                    style={{
+                      backgroundColor: "rgba(227, 29, 28, 0.12)",
+                      borderRadius: 6,
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: "Jakarta-Bold",
+                        fontSize: 11,
+                        color: colors.danger,
+                      }}
+                    >
+                      {Number(nearestSurgeMultiplier.toFixed(2))}× surge
+                    </Text>
+                  </View>
+                )}
               </View>
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
