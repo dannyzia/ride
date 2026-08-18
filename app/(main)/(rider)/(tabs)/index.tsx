@@ -846,6 +846,52 @@ export default function DriverHome() {
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+            {/* WS state chip — live connected/reconnecting indicator. The
+                drop is visible here immediately, before/regardless of the
+                offline overlay's "Last connected" caption. */}
+            <View
+              accessibilityLabel={
+                wsConnected ? "Connected to server" : "Reconnecting to server"
+              }
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+                borderRadius: radii.pill,
+                paddingHorizontal: spacing.sm + 2,
+                paddingVertical: 5,
+                backgroundColor: wsConnected
+                  ? "rgba(56, 161, 105, 0.12)"
+                  : "rgba(245, 158, 11, 0.14)",
+              }}
+            >
+              {wsConnected ? (
+                <View
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: colors.success,
+                  }}
+                />
+              ) : (
+                <Ionicons
+                  name="cloud-offline-outline"
+                  size={12}
+                  color={colors.amber}
+                />
+              )}
+              <Text
+                style={{
+                  fontFamily: "Jakarta-SemiBold",
+                  fontSize: 11,
+                  color: wsConnected ? colors.success : colors.amber,
+                }}
+              >
+                {wsConnected ? "Connected" : "Reconnecting…"}
+              </Text>
+            </View>
+
             <TouchableOpacity
               onPress={() => setThemeModalVisible(true)}
               accessibilityRole="button"
