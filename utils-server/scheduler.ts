@@ -1,4 +1,5 @@
 import { db } from "../src/db";
+import { DEFAULT_SURGE_THRESHOLDS, surgeRatio, pickSurgeMultiplier } from "../lib/hotspots";
 import {
   rides,
   subscriptions,
@@ -781,7 +782,7 @@ export function startScheduler(): void {
         .where(eq(systemConfig.key, "surge_thresholds")).limit(1);
       const thresholds = cfg
         ? JSON.parse(cfg.value)
-        : [{ ratio: 3, multiplier: 2.0 }, { ratio: 2, multiplier: 1.5 }, { ratio: 1.2, multiplier: 1.25 }];
+        : DEFAULT_SURGE_THRESHOLDS;
       if (!cfg) {
         await db.insert(systemConfig).values({
           key: "surge_thresholds",
@@ -805,11 +806,8 @@ export function startScheduler(): void {
           .from(drivers)
           .where(and(eq(drivers.zone_id, zone.id), eq(drivers.is_online, true)));
 
-        const ratio = (demand?.count ?? 0) / Math.max(supply?.count ?? 1, 1);
-        let multiplier = 1.0;
-        for (const t of thresholds.sort((a: any, b: any) => b.ratio - a.ratio)) {
-          if (ratio > t.ratio) { multiplier = t.multiplier; break; }
-        }
+        const ratio = surgeRatio(demand?.count ?? 0, supply?.count ?? 0);
+        const multiplier = pickSurgeMultiplier(ratio, thresholds);
 
         // Write audit row when multiplier changes
         const prev = prevMultipliers.get(zone.id) ?? 1.0;
