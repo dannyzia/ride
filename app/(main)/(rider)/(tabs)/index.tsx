@@ -23,6 +23,7 @@ import MapLibreGL from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { logger } from "@/lib/logger";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
+import { relativeTime } from "@/lib/time";
 
 // LOW-13: drivers.vehicle_type is a machine key (e.g. bike_standard); show the
 // human label ("Bike Standard") in the header.
@@ -71,6 +72,10 @@ export default function DriverHome() {
     null,
   );
   const [locationLoading, setLocationLoading] = useState(true);
+  // When the WS last dropped — drives the "Last connected: X ago" caption
+  // under the offline button. Null until the first drop.
+  const [lastOnlineAt, setLastOnlineAt] = useState<Date | null>(null);
+  const [, setNowTick] = useState(0);
   const [stats, setStats] = useState<DailyStats>({
     earnings_bdt: 0,
     trips: 0,
@@ -222,6 +227,13 @@ export default function DriverHome() {
     }
   }, []);
 
+  // Keep the "Last connected" caption fresh (30s tick) while the WS is down.
+  useEffect(() => {
+    if (wsConnected || !lastOnlineAt) return;
+    const id = setInterval(() => setNowTick((t) => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, [wsConnected, lastOnlineAt]);
+
   // Fetch on mount and whenever we come back ONLINE (offline→online transition)
   useEffect(() => {
     fetchDailyStats();
@@ -361,6 +373,7 @@ export default function DriverHome() {
 
       ws.onclose = () => {
         setWsConnected(false);
+        setLastOnlineAt(new Date());
         // Exponential backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s
         const delay =
           Math.min(1000 * Math.pow(2, reconnectAttempts), 30_000) +
@@ -696,6 +709,19 @@ export default function DriverHome() {
                 </Text>
               </View>
             </TouchableOpacity>
+            {lastOnlineAt && !wsConnected ? (
+              <Text
+                style={{
+                  fontFamily: "Jakarta-Regular",
+                  fontSize: 13,
+                  color: textSecondary,
+                  marginTop: spacing.md,
+                  textAlign: "center",
+                }}
+              >
+                Last connected: {relativeTime(lastOnlineAt)}
+              </Text>
+            ) : null}
           </View>
         )}
 
