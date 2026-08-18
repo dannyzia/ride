@@ -11,6 +11,7 @@ import { useRiderStore } from "@/store/useRiderStore";
 import { useTranslation } from "react-i18next";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { countdownRemaining } from "@/lib/time";
 
 const REASONS = [
   { key: "Waiting too long", labelKey: "ride.waiting_too_long" },
@@ -89,10 +90,9 @@ export default function CancelReason() {
   };
 
   const getFreeCancellationText = () => {
-    if (elapsed < 120) {
-      const minutes = Math.floor((120 - elapsed) / 60);
-      const seconds = (120 - elapsed) % 60;
-      return t('ride.free_cancellation', { minutes, seconds: String(seconds).padStart(2, '0') });
+    const cd = countdownRemaining(elapsed);
+    if (cd) {
+      return t('ride.free_cancellation', { minutes: cd.minutes, seconds: cd.seconds });
     }
     return t('ride.cancellation_fee', { fee: ((feeBdt ?? 0) / 100).toFixed(0) });
   };

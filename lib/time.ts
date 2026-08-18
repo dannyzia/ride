@@ -15,6 +15,59 @@ export function relativeTime(d: Date, now: Date = new Date()): string {
   return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
 }
 
+export interface CountdownParts {
+  minutes: number;
+  /** Zero-padded to 2 digits ("05") for M:SS display. */
+  seconds: string;
+}
+
+/**
+ * Countdown to a deadline from elapsed seconds; null once the deadline has
+ * passed. Powers cancel-reason's free-cancellation window (2 minutes from
+ * ride creation): inside the window the screen shows "free cancellation in
+ * M:SS", past it the fee applies. Negative elapsed clamps to zero.
+ */
+export function countdownRemaining(
+  elapsedSeconds: number,
+  windowSeconds = 120,
+): CountdownParts | null {
+  const elapsed = Math.max(0, elapsedSeconds);
+  if (elapsed >= windowSeconds) return null;
+  const remaining = windowSeconds - elapsed;
+  return {
+    minutes: Math.floor(remaining / 60),
+    seconds: String(remaining % 60).padStart(2, "0"),
+  };
+}
+
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * "Mon, 17 Aug" label for a "YYYY-MM-DD" string (Asia/Dhaka calendar day,
+ * interpreted from date parts only — no timezone drift). Malformed input is
+ * returned unchanged rather than producing "NaN, NaN NaN".
+ */
+export function dayLabel(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (!y || !m || !d || m < 1 || m > 12 || d < 1 || d > 31) return dateStr;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return `${WEEKDAY_SHORT[dt.getUTCDay()]}, ${d} ${MONTH_SHORT[m - 1]}`;
+}
+
+/** YYYY-MM-DD of "now" in Asia/Dhaka (en-CA yields ISO order). */
+export function todayDhaka(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 /** Next 00:00 Asia/Dhaka as a UTC timestamp. */
 export function nextBdtMidnightUtc(): Date {
   const now = new Date();

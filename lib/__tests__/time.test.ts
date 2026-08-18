@@ -1,4 +1,11 @@
-import { bdtDayBoundariesUtc, prevBdtMidnightUtc, nextBdtMidnightUtc, relativeTime } from "@/lib/time";
+import {
+  bdtDayBoundariesUtc,
+  prevBdtMidnightUtc,
+  nextBdtMidnightUtc,
+  relativeTime,
+  countdownRemaining,
+  dayLabel,
+} from "@/lib/time";
 
 describe("bdtDayBoundariesUtc", () => {
   it("returns UTC boundaries for a Dhaka calendar day (UTC+6)", () => {
@@ -58,5 +65,50 @@ describe("relativeTime", () => {
     // 90 minutes floors to 1 hour, not 1.5.
     expect(relativeTime(new Date("2026-08-17T10:30:00Z"), NOW)).toBe("1 hour ago");
     expect(relativeTime(new Date("2026-08-17T09:00:00Z"), NOW)).toBe("3 hours ago");
+  });
+});
+
+describe("countdownRemaining", () => {
+  it("counts down from the full window at t=0", () => {
+    expect(countdownRemaining(0)).toEqual({ minutes: 2, seconds: "00" });
+  });
+
+  it("zero-pads seconds to two digits", () => {
+    expect(countdownRemaining(61)).toEqual({ minutes: 0, seconds: "59" });
+    expect(countdownRemaining(119)).toEqual({ minutes: 0, seconds: "01" });
+    expect(countdownRemaining(60)).toEqual({ minutes: 1, seconds: "00" });
+  });
+
+  it("returns null once the window has passed", () => {
+    expect(countdownRemaining(120)).toBeNull();
+    expect(countdownRemaining(121)).toBeNull();
+  });
+
+  it("honors a custom window", () => {
+    expect(countdownRemaining(30, 60)).toEqual({ minutes: 0, seconds: "30" });
+    expect(countdownRemaining(60, 60)).toBeNull();
+  });
+
+  it("clamps negative elapsed to zero", () => {
+    expect(countdownRemaining(-5)).toEqual({ minutes: 2, seconds: "00" });
+  });
+});
+
+describe("dayLabel", () => {
+  it("renders weekday and date from a YYYY-MM-DD string", () => {
+    expect(dayLabel("2026-08-17")).toBe("Mon, 17 Aug");
+    expect(dayLabel("2026-08-18")).toBe("Tue, 18 Aug");
+    expect(dayLabel("2026-12-31")).toBe("Thu, 31 Dec");
+  });
+
+  it("handles month and year boundaries", () => {
+    expect(dayLabel("2026-01-01")).toBe("Thu, 1 Jan");
+    expect(dayLabel("2026-02-28")).toBe("Sat, 28 Feb");
+  });
+
+  it("returns malformed input unchanged instead of NaN garbage", () => {
+    expect(dayLabel("abc")).toBe("abc");
+    expect(dayLabel("2026-13-01")).toBe("2026-13-01");
+    expect(dayLabel("")).toBe("");
   });
 });

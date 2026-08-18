@@ -16,6 +16,7 @@ import { useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { formatBDT } from "@/lib/format";
+import { todayDhaka, dayLabel } from "@/lib/time";
 import DriverStatsBar from "@/components/DriverStatsBar";
 
 interface DailyStats {
@@ -33,28 +34,6 @@ interface WeekDay {
 interface WeekResponse {
   days: WeekDay[];
 }
-
-const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTH = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-// YYYY-MM-DD of "now" in Asia/Dhaka (en-CA yields ISO order). Matches the
-// server's bdtDayBoundariesUtc bucketing.
-const todayDhaka = () =>
-  new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-
-const dayLabel = (date: string) => {
-  const [y, m, d] = date.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d)); // UTC — date parts only, no tz drift
-  return `${WEEKDAY[dt.getUTCDay()]}, ${d} ${MONTH[m - 1]}`;
-};
 
 export default function EarningScreen() {
   const isDark = useIsDark();
