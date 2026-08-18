@@ -92,6 +92,43 @@ export function normalizePolygon(raw: unknown): LatLng[] {
 }
 
 /** Standard even-odd ray-casting point-in-polygon. `polygon` must be {lat,lng}[]. */
+/**
+ * Area-weighted centroid of a polygon ring (lat/lng vertices).
+ * Falls back to the vertex average for degenerate rings (collinear,
+ * self-intersecting, single point). Returns null for empty input.
+ * Used to place zone markers (hotspot map) — zones in this codebase are
+ * small city areas, so the shoelace centroid is a fine center.
+ */
+export function polygonCentroid(poly: LatLng[]): LatLng | null {
+  if (!poly || poly.length === 0) return null;
+  if (poly.length === 1) return { lat: poly[0].lat, lng: poly[0].lng };
+
+  let area2 = 0;
+  let cx = 0;
+  let cy = 0;
+  const n = poly.length;
+  for (let i = 0; i < n; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % n];
+    const cross = a.lng * b.lat - b.lng * a.lat;
+    area2 += cross;
+    cx += (a.lng + b.lng) * cross;
+    cy += (a.lat + b.lat) * cross;
+  }
+
+  if (Math.abs(area2) < 1e-12) {
+    let lat = 0;
+    let lng = 0;
+    for (const p of poly) {
+      lat += p.lat;
+      lng += p.lng;
+    }
+    return { lat: lat / n, lng: lng / n };
+  }
+
+  return { lat: cy / (3 * area2), lng: cx / (3 * area2) };
+}
+
 export function pointInPolygon(lat: number, lng: number, polygon: LatLng[]): boolean {
   if (!polygon || polygon.length < 3) return false;
   let inside = false;

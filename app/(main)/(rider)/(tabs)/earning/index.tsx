@@ -109,6 +109,7 @@ export default function EarningScreen() {
     { label: "Earnings Breakdown", route: "/(main)/(rider)/earnings-breakdown" },
     { label: "Commission Statement", route: "/(main)/(rider)/commission-statement" },
     { label: "Performance Stats", route: "/(main)/(rider)/performance-stats" },
+    { label: "Hotspot Map", route: "/(main)/(rider)/hotspot-map" },
   ] as const;
 
   const today = todayDhaka();

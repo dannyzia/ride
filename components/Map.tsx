@@ -17,10 +17,18 @@ let PointAnnotation: any = MapLibreGL.PointAnnotation ?? null;
 let Camera: any = MapLibreGL.Camera ?? null;
 let ShapeSource: any = MapLibreGL.ShapeSource ?? null;
 let LineLayer: any = MapLibreGL.LineLayer ?? null;
+let CircleLayer: any = MapLibreGL.CircleLayer ?? null;
 
 export interface MapRoutePoint {
   lat: number;
   lng: number;
+}
+
+export interface MapHotspot {
+  lat: number;
+  lng: number;
+  /** 0..1 demand intensity — drives the green→amber→red heat color. */
+  intensity: number;
 }
 
 interface MapProps {
@@ -32,15 +40,36 @@ interface MapProps {
   /** Decoded route polyline ([lat, lng] pairs) — drawn as a primary-color
    *  line via ShapeSource + LineLayer, and used to fit the camera. */
   route?: [number, number][];
+  /** Hotspot overlay mode: when `hotspots` is provided (and `origin` is not),
+   *  the map renders a demand-heat circle per zone and fits the camera to
+   *  their bounding box. Used by the driver hotspot map. */
+  hotspots?: MapHotspot[];
 }
 
-const Map = ({ origin, destination, route }: MapProps = {}) => {
+/** Linear interpolation between two #RRGGBB colors. */
+function lerpHex(from: string, to: string, t: number): string {
+  const f = [1, 3, 5].map((i) => parseInt(from.slice(i, i + 2), 16));
+  const g = [1, 3, 5].map((i) => parseInt(to.slice(i, i + 2), 16));
+  const ch = f.map((v, i) =>
+    Math.round(v + (g[i] - v) * Math.max(0, Math.min(1, t))),
+  );
+  return `#${ch.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** Heat ramp: green (low) → amber → red (high). */
+function heatColor(intensity: number): string {
+  const t = Math.max(0, Math.min(1, intensity));
+  if (t < 0.5) return lerpHex(colors.success, colors.amber, t * 2);
+  return lerpHex(colors.amber, colors.danger, (t - 0.5) * 2);
+}
+
+const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
   const cameraRef = useRef<any>(null);
 
   const isDark = useIsDark();
   const mapStyleURL = useBarikoiMapStyle(isDark);
 
-  const isStatic = !!origin;
+  const isStatic = !!origin || !!hotspots;
 
   const {
     userLongitude,
@@ -63,8 +92,50 @@ const Map = ({ origin, destination, route }: MapProps = {}) => {
     Keyboard.dismiss();
   };
 
-  const displayLat = origin?.lat ?? userLatitude;
-  const displayLng = origin?.lng ?? userLongitude;
+  // Hotspot mode drives the camera from the zone bounding box, not GPS.
+  const hotspotBounds =
+    hotspots && hotspots.length >= 1
+      ? (() => {
+          let minLat = Infinity;
+          let maxLat = -Infinity;
+          let minLng = Infinity;
+          let maxLng = -Infinity;
+          for (const h of hotspots) {
+            if (h.lat < minLat) minLat = h.lat;
+            if (h.lat > maxLat) maxLat = h.lat;
+            if (h.lng < minLng) minLng = h.lng;
+            if (h.lng > maxLng) maxLng = h.lng;
+          }
+          return { ne: [maxLng, maxLat], sw: [minLng, minLat] };
+        })()
+      : null;
+
+  // Route bounding box for camera fit (static snapshot with polyline).
+  const routeBounds =
+    isStatic && !hotspotBounds && route && route.length >= 2
+      ? (() => {
+          let minLat = Infinity;
+          let maxLat = -Infinity;
+          let minLng = Infinity;
+          let maxLng = -Infinity;
+          for (const [lat, lng] of route) {
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+            if (lng < minLng) minLng = lng;
+            if (lng > maxLng) maxLng = lng;
+          }
+          return { ne: [maxLng, maxLat], sw: [minLng, minLat] };
+        })()
+      : null;
+
+  const bounds = hotspotBounds ?? routeBounds;
+
+  const displayLat =
+    origin?.lat ??
+    (hotspotBounds ? (hotspotBounds.ne[1] + hotspotBounds.sw[1]) / 2 : userLatitude);
+  const displayLng =
+    origin?.lng ??
+    (hotspotBounds ? (hotspotBounds.ne[0] + hotspotBounds.sw[0]) / 2 : userLongitude);
 
   if (displayLat == null || displayLng == null) {
     return (
@@ -89,43 +160,35 @@ const Map = ({ origin, destination, route }: MapProps = {}) => {
     );
   }
 
-  // Route bounding box for camera fit (static snapshot with polyline).
-  const routeBounds =
-    isStatic && route && route.length >= 2
-      ? (() => {
-          let minLat = Infinity;
-          let maxLat = -Infinity;
-          let minLng = Infinity;
-          let maxLng = -Infinity;
-          for (const [lat, lng] of route) {
-            if (lat < minLat) minLat = lat;
-            if (lat > maxLat) maxLat = lat;
-            if (lng < minLng) minLng = lng;
-            if (lng > maxLng) maxLng = lng;
-          }
-          return { ne: [maxLng, maxLat], sw: [minLng, minLat] };
-        })()
-      : null;
-
-  const centerLng = routeBounds
-    ? (routeBounds.ne[0] + routeBounds.sw[0]) / 2
-    : displayLng;
-  const centerLat = routeBounds
-    ? (routeBounds.ne[1] + routeBounds.sw[1]) / 2
-    : displayLat;
+  const centerLng = bounds ? (bounds.ne[0] + bounds.sw[0]) / 2 : displayLng;
+  const centerLat = bounds ? (bounds.ne[1] + bounds.sw[1]) / 2 : displayLat;
 
   // Static mode: markers from props. Live mode: store locations (existing behavior).
-  const originMarkerCoord = isStatic
-    ? [origin.lng, origin.lat]
+  const originMarkerCoord = isStatic && !hotspots
+    ? origin
+      ? [origin.lng, origin.lat]
+      : null
     : userLatitude && userLongitude
       ? [userLongitude, userLatitude]
       : null;
-  const destinationMarkerCoord = isStatic
+  const destinationMarkerCoord = isStatic && !hotspots
     ? destination
       ? [destination.lng, destination.lat]
       : null
     : destinationLatitude && destinationLongitude
       ? [destinationLongitude, destinationLatitude]
+      : null;
+
+  const hotspotFeatures =
+    hotspots && hotspots.length >= 1
+      ? hotspots.map((h) => ({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [h.lng, h.lat] },
+          properties: {
+            color: heatColor(h.intensity),
+            opacity: 0.35 + 0.45 * h.intensity,
+          },
+        }))
       : null;
 
   return (
@@ -135,16 +198,16 @@ const Map = ({ origin, destination, route }: MapProps = {}) => {
           style={{ width: "100%", height: "100%", borderRadius: 16 }}
           styleURL={mapStyleURL}
           centerCoordinate={[centerLng, centerLat]}
-          zoomLevel={routeBounds ? 12 : 15}
+          zoomLevel={bounds ? 12 : 15}
           onPress={handleMapInteraction}
         >
           {Camera && (
             <Camera
               ref={cameraRef}
-              {...(routeBounds
+              {...(bounds
                 ? {
                     bounds: {
-                      ...routeBounds,
+                      ...bounds,
                       paddingLeft: 28,
                       paddingRight: 28,
                       paddingTop: 28,
@@ -182,6 +245,22 @@ const Map = ({ origin, destination, route }: MapProps = {}) => {
                   lineWidth: 4,
                   lineCap: "round",
                   lineJoin: "round",
+                }}
+              />
+            </ShapeSource>
+          )}
+          {hotspotFeatures && hotspotFeatures.length > 0 && ShapeSource && CircleLayer && (
+            <ShapeSource
+              id="hotspots-source"
+              shape={{ type: "FeatureCollection", features: hotspotFeatures }}
+            >
+              <CircleLayer
+                id="hotspots-layer"
+                style={{
+                  circleColor: ["get", "color"],
+                  circleOpacity: ["get", "opacity"],
+                  circleRadius: 26,
+                  circleBlur: 0.45,
                 }}
               />
             </ShapeSource>
