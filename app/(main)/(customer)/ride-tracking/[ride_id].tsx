@@ -25,6 +25,7 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import SOSButton from "@/components/SOSButton";
 import PinInput from "@/components/PinInput";
 import { isPinMismatch, PIN_REVERT_DELAY_MS } from "@/lib/pin";
+import { relativeTime } from "@/lib/time";
 
 let MapViewLib: any = MapLibreGL.MapView ?? MapLibreGL.default ?? null;
 let PointAnnotation: any = MapLibreGL.PointAnnotation ?? null;
@@ -74,6 +75,13 @@ export default function RideTrackingScreen() {
   const [loading, setLoading] = useState(true);
   const [pinValue, setPinValue] = useState("");
   const [pinCopied, setPinCopied] = useState(false);
+  // Socket liveness + last-live-update for the "Reconnecting" banner — mirrors
+  // the driver-home treatment. lastUpdateAt stamps whenever a ride message
+  // arrives; socketLive tracks open/close on the store socket, which is
+  // replaced on reconnect so the liveness effect re-runs and re-attaches.
+  const [socketLive, setSocketLive] = useState(false);
+  const [lastUpdateAt, setLastUpdateAt] = useState<Date | null>(null);
+  const [, setNowTick] = useState(0);
   const tripTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -175,12 +183,38 @@ export default function RideTrackingScreen() {
     }
   };
 
+  // Socket liveness: the store socket is replaced on reconnect, so this
+  // effect re-runs and re-attaches open/close listeners to the new object.
+  useEffect(() => {
+    if (!ws) {
+      setSocketLive(false);
+      return;
+    }
+    setSocketLive(ws.readyState === WebSocket.OPEN);
+    const onOpen = () => setSocketLive(true);
+    const onClose = () => setSocketLive(false);
+    ws.addEventListener("open", onOpen);
+    ws.addEventListener("close", onClose);
+    return () => {
+      ws.removeEventListener("open", onOpen);
+      ws.removeEventListener("close", onClose);
+    };
+  }, [ws]);
+
+  // Keep the "last update" label fresh (30s tick) while the socket is down.
+  useEffect(() => {
+    if (socketLive || !lastUpdateAt) return;
+    const id = setInterval(() => setNowTick((t) => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, [socketLive, lastUpdateAt]);
+
   useEffect(() => {
     if (!ws) return;
     const handler = (event: MessageEvent) => {
       try {
         const msg = JSON.parse(event.data);
         if (msg.ride_id !== ride_id) return;
+        setLastUpdateAt(new Date());
         switch (msg.type) {
           // Server protocol (utils-server/types.ts): riders receive
           // location:driver, ride:status, ride:arrived, ride:complete.
@@ -358,6 +392,18 @@ export default function RideTrackingScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
       <StatusBar translucent backgroundColor="transparent" barStyle={isDark ? "light-content" : "dark-content"} />
+
+      {/* Reconnecting banner — socket dropped mid-ride; tracking is frozen
+          until the background reconnect (lib/riderSocket.ts) restores it. */}
+      {!socketLive && lastUpdateAt && (
+        <View pointerEvents="none" style={styles.reconnectBanner}>
+          <Ionicons name="cloud-offline-outline" size={16} color={colors.black} />
+          <Text style={styles.reconnectText}>
+            Reconnecting — last update {relativeTime(lastUpdateAt)}
+          </Text>
+        </View>
+      )}
+
       {/* Map Layer */}
       <View style={StyleSheet.absoluteFill}>
         {MapViewLib ? (
@@ -750,6 +796,27 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtnText: { fontFamily: "Jakarta-SemiBold", fontSize: 13 },
+  reconnectBanner: {
+    position: "absolute",
+    top: 8,
+    left: 16,
+    right: 16,
+    zIndex: 10,
+    elevation: 5,
+    backgroundColor: colors.amber,
+    borderRadius: radii.md,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  reconnectText: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 13,
+    color: colors.black,
+  },
   pinCard: {
     borderRadius: radii.lg,
     borderWidth: 1,
