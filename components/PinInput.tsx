@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { View, Text, TextInput, StyleSheet } from "react-native";
 import { colors, radii } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { sanitizePin } from "@/lib/pin";
 
 interface PinInputProps {
   /** Current PIN string (digits only, up to `length`). */
@@ -80,7 +81,7 @@ export default function PinInput({
       <TextInput
         ref={inputRef}
         value={value}
-        onChangeText={(t) => onChange(t.replace(/[^0-9]/g, "").slice(0, length))}
+        onChangeText={(t) => onChange(sanitizePin(t, length))}
         keyboardType="number-pad"
         maxLength={length}
         autoFocus={autoFocus}
