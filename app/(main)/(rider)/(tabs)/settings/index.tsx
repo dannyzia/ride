@@ -1,6 +1,7 @@
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import ThemeToggle from "@/components/ThemeToggle";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
@@ -34,6 +35,7 @@ export default function DriverSettings() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>Settings</Text>
       </View>
@@ -49,7 +51,7 @@ export default function DriverSettings() {
             onPress={() => router.push(it.route)}
           >
             <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{it.label}</Text>
-            <Text className="text-[18px]" style={{ color: textSecondary }}>›</Text>
+            <Ionicons name="chevron-forward" size={16} color={textSecondary} />
           </TouchableOpacity>
         ))}
       </ScrollView>

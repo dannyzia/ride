@@ -1,4 +1,5 @@
 import { View, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { colors } from "@/theme/goRide";
@@ -23,7 +24,7 @@ export default function Walkthrough1() {
           className="w-56 h-56 rounded-full items-center justify-center"
           style={{ backgroundColor: colors.primary + "15" }}
         >
-          <Text className="text-[80px]">🚗</Text>
+          <Ionicons name="car" size={80} color={colors.primary} />
         </View>
       </View>
 

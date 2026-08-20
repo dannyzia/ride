@@ -275,7 +275,7 @@ See AGENTS.md for the complete rules reference. Key rules:
 - **Vehicle types**: 8 lowercase: `bike_basic`, `bike_standard`, `bike_plus`, `cng`, `car_economy`, `car_comfort`, `car_premium`, `car_xl`
 - **call_ledger writes**: `utils-server/heartbeat.ts` (deductions + AC-7 refund rows via `recordCallRefund`) and `lib/activateSubscription.ts` (initial_load, credit, expiry_writeoff)
 - **dispatch_offers writes**: `utils-server/dispatch.ts` (scoring/filter/auto-accept rows), `utils-server/index.ts` (dispatchRidePipeline `delivered` rows), `utils-server/heartbeat.ts` (`fetch_confirmed_at` stamps)
-- **payment_events writes**: row creation + PortPos invoice initiation ONLY via `lib/paymentEvents.ts` (`initiatePortposPayment` — used by rider/wallet/topup, rider/passes, driver/wallet/topup, package/purchase); status transitions (`paid`/`failed`) ONLY in `lib/activateSubscription.ts` and `app/api/payment/portpos/callback+api.ts`
+- **payment_events writes**: row creation + PortPos invoice initiation ONLY via `lib/paymentEvents.ts` (`initiatePortposPayment` — used by rider/wallet/topup, rider/passes, driver/wallet/topup, package/purchase); status transitions (`paid`/`failed`) in `lib/activateSubscription.ts`, `app/api/payment/portpos/callback+api.ts`, and `lib/paymentRepair.ts` (`repairPaymentEvent` — shared transactional repair invoked by the callback and `utils-server/compensationWorker.ts`)
 - **PortPos callback security**: the public callback must call `portposClient.verifyIPN()` (secret-bearing) and Zod-validate the invoice response before crediting wallets / activating subscriptions
 - **Single instance**: `INSTANCE_COUNT=1` required for WebSocket dispatch (no split-brain)
 - **No client secrets**: Payment credentials never in `EXPO_PUBLIC_*` vars

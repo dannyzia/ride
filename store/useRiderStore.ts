@@ -349,12 +349,24 @@ export const useRiderStore = create<RiderState>((set, get) => ({
       });
       if (!res.ok) return;
       const { data } = await res.json();
-      const completed = (data ?? [])
-        .filter((r: any) => r.status === "completed")
-        .map((r: any) => ({
+      interface RideHistoryRow {
+        ride_id: string;
+        vehicle_type: string;
+        status: string;
+        scheduled_at: string | null;
+        created_at: string | null;
+        completed_at: string | null;
+        origin_address: string;
+        destination_address: string;
+        fare_breakdown: { total_bdt?: number } | null;
+      }
+      const rows: RideHistoryRow[] = data ?? [];
+      const completed = rows
+        .filter((r) => r.status === "completed")
+        .map((r) => ({
           id: r.ride_id,
           vehicle_type: r.vehicle_type,
-          date: r.completed_at ?? r.created_at,
+          date: r.completed_at ?? r.created_at ?? undefined,
           pickup_address: r.origin_address,
           destination_address: r.destination_address,
           fare_bdt: r.fare_breakdown?.total_bdt ?? 0,
@@ -362,12 +374,12 @@ export const useRiderStore = create<RiderState>((set, get) => ({
       // A booked-ahead ride sits in status 'scheduled' until the scheduler
       // promotes it to 'pending' for dispatch at ride time — filtering on
       // 'pending' matched nothing, so the scheduled list was always empty.
-      const scheduled = (data ?? [])
-        .filter((r: any) => r.scheduled_at && r.status === "scheduled")
-        .map((r: any) => ({
+      const scheduled = rows
+        .filter((r) => r.scheduled_at && r.status === "scheduled")
+        .map((r) => ({
           id: r.ride_id,
           vehicle_type: r.vehicle_type,
-          date: r.scheduled_at,
+          date: r.scheduled_at ?? undefined,
           pickup_address: r.origin_address,
           destination_address: r.destination_address,
           fare_bdt: r.fare_breakdown?.total_bdt ?? 0,

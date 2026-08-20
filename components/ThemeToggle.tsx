@@ -12,7 +12,7 @@ export default function ThemeToggle() {
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
-  const options: Array<{ key: typeof theme; label: string; icon: any }> = [
+  const options: { key: typeof theme; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
     { key: "light", label: "Light", icon: "sunny-outline" },
     { key: "dark", label: "Dark", icon: "moon-outline" },
     { key: "system", label: "System", icon: "phone-portrait-outline" },

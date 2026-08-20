@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, Switch, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, Switch, TouchableOpacity, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 interface Prefs {
   ride_updates: boolean;
@@ -23,6 +26,13 @@ const DEFAULT_PREFS: Prefs = {
 };
 
 export default function DriverSettingsNotifications() {
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
 
@@ -70,8 +80,17 @@ export default function DriverSettingsNotifications() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center">
+      <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: bg }}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
         <ActivityIndicator size="large" color="#0CC25F" />
+        <TouchableOpacity
+          onPress={() => setTheme(isDark ? "light" : "dark")}
+          className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+          style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
@@ -85,18 +104,19 @@ export default function DriverSettingsNotifications() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Notifications</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Notifications</Text>
         <View className="w-[50px]" />
       </View>
       <View className="flex-1 px-[24px] py-4">
         {rows.map((row) => (
-          <View key={row.key} className="flex-row justify-between items-center p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-3">
-            <Text className="text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">{row.label}</Text>
+          <View key={row.key} className="flex-row justify-between items-center p-[14px] border rounded-[12px] mb-3" style={{ backgroundColor: surfaceBg, borderColor }}>
+            <Text className="text-[15px] font-Jakarta flex-1" style={{ color: textPrimary }}>{row.label}</Text>
             <Switch
               value={prefs[row.key]}
               onValueChange={(v) => updatePref(row.key, v)}
@@ -106,6 +126,14 @@ export default function DriverSettingsNotifications() {
           </View>
         ))}
       </View>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

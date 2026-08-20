@@ -49,7 +49,7 @@ export default function OtpVerifyScreen() {
       }
 
       setSessionId(data.sessionId);
-    } catch (e: any) {
+    } catch (e) {
       setError("Failed to send OTP. Please try again.");
       logger.error("[auth] send otp error", e);
     } finally {
@@ -93,7 +93,7 @@ export default function OtpVerifyScreen() {
       }
 
       router.push(`/(auth)/register?phone=${encodeURIComponent(phone)}&role=${roleParam ?? "rider"}`);
-    } catch (e: any) {
+    } catch (e) {
       setError("Failed to verify OTP. Please try again.");
       logger.error("[auth] verify otp error", e);
     } finally {

@@ -66,7 +66,7 @@ export default function ForgotPasswordScreen() {
 
       setSessionId(otpData.sessionId);
       setStep('otp');
-    } catch (e: any) {
+    } catch (e) {
       setError('Failed to send OTP. Please try again.');
       logger.error('[auth] forgot-password send-otp error', e);
     } finally {
@@ -113,7 +113,7 @@ export default function ForgotPasswordScreen() {
       }
 
       setStep('password');
-    } catch (e: any) {
+    } catch (e) {
       setError('Failed to verify OTP. Please try again.');
       logger.error('[auth] forgot-password verify-otp error', e);
     } finally {
@@ -150,7 +150,7 @@ export default function ForgotPasswordScreen() {
       }
 
       router.replace(`/(auth)/login?phone=${encodeURIComponent(fullPhone)}`);
-    } catch (e: any) {
+    } catch (e) {
       setError('Failed to reset password. Please try again.');
       logger.error('[auth] reset password error', e);
     } finally {

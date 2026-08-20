@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
-import { Text } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
+import { colors } from '@/theme/goRide';
+import { useIsDark } from '@/lib/useAppearance';
 
 export function SuccessCheckmark({ size = 80 }: { size?: number }) {
+  const isDark = useIsDark();
   const checkScale = useSharedValue(0);
 
   useEffect(() => {
@@ -18,10 +21,10 @@ export function SuccessCheckmark({ size = 80 }: { size?: number }) {
 
   return (
     <Animated.View
-      style={[checkStyle, { width: size, height: size, borderRadius: size / 2 }]}
-      className="bg-goAccent/10 dark:bg-goAccent/15 items-center justify-center mb-4"
+      style={[checkStyle, { width: size, height: size, borderRadius: size / 2, backgroundColor: isDark ? colors.primary + '26' : colors.primary + '1A' }]}
+      className="items-center justify-center mb-4"
     >
-      <Text className="text-goAccent dark:text-goAccent" style={{ fontSize: size * 0.45 }}>✓</Text>
+      <Ionicons name="checkmark" size={size * 0.45} color={colors.primary} />
     </Animated.View>
   );
 }

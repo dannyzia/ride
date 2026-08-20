@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentProps } from "react";
 import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
-import MapLibreGL from "@/utils/maplibreLoader";
+import MapLibreGL, { type MapLibreModule } from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
@@ -18,7 +18,7 @@ interface NavigationProps {
 }
 
 interface RouteData {
-  geometry: any;
+  geometry: ComponentProps<MapLibreModule["ShapeSource"]>["shape"];
   durationSeconds: number;
   distanceMeters: number;
   steps: { instruction: string; distance: number }[];
@@ -86,8 +86,11 @@ export default function DriverNavigation({ pickupLat, pickupLng, dropoffLat, dro
       {/* Map */}
       <View className="flex-1">
         {MapLibreGL && MapLibreGL.MapView ? (
-          <MapLibreGL.MapView style={{ flex: 1 }} styleURL={mapStyleUrl}
-            centerCoordinate={[(pickupLng + dropoffLng) / 2, (pickupLat + dropoffLat) / 2]} zoomLevel={13}>
+          <MapLibreGL.MapView style={{ flex: 1 }} mapStyle={mapStyleUrl}>
+            <MapLibreGL.Camera
+              centerCoordinate={[(pickupLng + dropoffLng) / 2, (pickupLat + dropoffLat) / 2]}
+              zoomLevel={13}
+            />
             {route?.geometry && MapLibreGL.ShapeSource && MapLibreGL.LineLayer && (
               <MapLibreGL.ShapeSource id="routeSource" shape={route.geometry}>
                 <MapLibreGL.LineLayer id="routeLine" style={{ lineColor: colors.primary, lineWidth: 4, lineCap: "round", lineJoin: "round" }} />

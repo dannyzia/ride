@@ -1,6 +1,7 @@
 import { setConfig } from "barikoiapis";
 import { Platform } from "react-native";
 import { logger } from "@/lib/logger";
+import type { MapLibreModule } from "./maplibreLoader";
 
 // ── Barikoi client initialiser (client-side) ───────────────
 
@@ -69,32 +70,42 @@ export function haversineDistance(
 // SINGLE SOURCE OF TRUTH: All MapLibre imports go through this module.
 // Module-level cache prevents duplicate native view registration.
 
-let _mapLibreCache:
-  | {
-      MapView: any;
-      PointAnnotation: any;
-      Camera: any;
-    }
-  | null
-  | undefined = undefined;
+type MapLibreSubset = Pick<MapLibreModule, "MapView" | "PointAnnotation" | "Camera">;
 
-export function loadMapLibre(): {
-  MapView: any;
-  PointAnnotation: any;
-  Camera: any;
-} | null {
+let _mapLibreCache: MapLibreSubset | null | undefined = undefined;
+
+export function loadMapLibre(): MapLibreSubset | null {
   if (_mapLibreCache !== undefined) return _mapLibreCache;
   if (Platform.OS === "web") {
     _mapLibreCache = null;
     return null;
   }
   try {
-    const ML = require("@maplibre/maplibre-react-native");
-    _mapLibreCache = {
-      MapView: ML.MapView || ML.default,
-      PointAnnotation: ML.PointAnnotation,
-      Camera: ML.Camera,
-    };
+    const ML: unknown = require("@maplibre/maplibre-react-native");
+    if (ML && typeof ML === "object" && "MapView" in ML) {
+      const m = ML as MapLibreModule;
+      _mapLibreCache = {
+        MapView: m.MapView,
+        PointAnnotation: m.PointAnnotation,
+        Camera: m.Camera,
+      };
+    } else if (
+      ML &&
+      typeof ML === "object" &&
+      "default" in ML &&
+      (ML as { default: unknown }).default &&
+      typeof (ML as { default: unknown }).default === "object" &&
+      "MapView" in (ML as { default: Record<string, unknown> }).default
+    ) {
+      const m = (ML as { default: MapLibreModule }).default;
+      _mapLibreCache = {
+        MapView: m.MapView,
+        PointAnnotation: m.PointAnnotation,
+        Camera: m.Camera,
+      };
+    } else {
+      _mapLibreCache = null;
+    }
     return _mapLibreCache;
   } catch {
     _mapLibreCache = null;

@@ -548,7 +548,7 @@ export default function PlatformConfigScreen() {
             <Text style={styles.dispatchBannerText}>
               {dispatchLoaded
                 ? dispatchPaused
-                  ? "⚠ DISPATCH PAUSED — no new rides being matched"
+                  ? "DISPATCH PAUSED — no new rides being matched"
                   : "● Dispatch RUNNING"
                 : "Loading dispatch state…"}
             </Text>

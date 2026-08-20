@@ -1,18 +1,20 @@
 import { useState } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useRiderStore } from "@/store/useRiderStore";
 import { colors, fonts, radii } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 const PRESET_TIPS_BDT = [0, 20, 50, 100]; // in BDT (not paisa)
 
 export default function AddTip() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
   const { activeRide } = useRiderStore();
   const [tipAmount, setTipAmount] = useState(0);
@@ -51,8 +53,8 @@ export default function AddTip() {
       }
       setSubmitting(false);
       router.replace("/(main)/(customer)/services-hub");
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error");
       setSubmitting(false);
       logger.error("Tip submission error", err);
     }
@@ -60,6 +62,7 @@ export default function AddTip() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>Back</Text>
@@ -111,7 +114,7 @@ export default function AddTip() {
           <TextInput
             style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontFamily: fonts.body, color: textPrimary }}
             placeholder="Or enter custom amount (BDT)"
-            placeholderTextColor={colors.textSecondaryDark}
+            placeholderTextColor={isDark ? colors.textSecondaryDark : colors.textSecondaryLight}
             value={customTip}
             onChangeText={(text) => {
               setCustomTip(text);
@@ -135,6 +138,14 @@ export default function AddTip() {
           )}
         </TouchableOpacity>
       </View>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surface, borderWidth: 1, borderColor: border }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

@@ -9,20 +9,52 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { icons } from "@/constants/data";
 import { useCustomer } from "@/store";
 import { router } from "expo-router";
 import { getBarikoiAutocompleteUrl } from "@/lib/useBarikoiMapStyle";
 import { logger } from "@/lib/logger";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
+
+interface PlaceSuggestion {
+  place_id?: string | number;
+  id?: string | number;
+  latitude?: number | string;
+  longitude?: number | string;
+  lat?: number | string;
+  lng?: number | string;
+  lon?: number | string;
+  address?: string;
+  place_name?: string;
+  description?: string;
+  name?: string;
+  display_name?: string;
+}
+
+interface NominatimItem {
+  lat: string;
+  lon: string;
+  display_name: string;
+  name?: string;
+}
 
 const AutocompletePage = () => {
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const { userLatitude, userLongitude, setDestinationLocation } = useCustomer();
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   const handleDestinationPress = (location: {
     latitude: number;
@@ -65,7 +97,7 @@ const AutocompletePage = () => {
         });
         if (nomRes.ok) {
           const nomData = await nomRes.json();
-          const places = nomData.map((item: any) => ({
+          const places = nomData.map((item: NominatimItem) => ({
             latitude: item.lat,
             longitude: item.lon,
             address: item.display_name,
@@ -87,10 +119,10 @@ const AutocompletePage = () => {
     return () => clearTimeout(timeoutId);
   }, [query]);
 
-  const handlePlaceSelect = (place: any) => {
+  const handlePlaceSelect = (place: PlaceSuggestion) => {
     // Barikoi autocomplete already returns lat/lng — no detail fetch needed.
-    const lat = parseFloat(place.latitude || place.lat || 0);
-    const lng = parseFloat(place.longitude || place.lng || place.lon || 0);
+    const lat = parseFloat(String(place.latitude || place.lat || 0));
+    const lng = parseFloat(String(place.longitude || place.lng || place.lon || 0));
     const address =
       place.address ||
       place.place_name ||
@@ -104,10 +136,20 @@ const AutocompletePage = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight px-5">
+    <SafeAreaView className="flex-1 px-5" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
       <TouchableOpacity
         onPress={() => router.back()}
-        className="flex justify-center items-center w-10 h-10 rounded-full bg-goSurfaceLight"
+        className="flex justify-center items-center w-10 h-10 rounded-full"
+        style={{ backgroundColor: surfaceBg }}
       >
         <Image source={icons.backArrow} className="w-5 h-5" />
       </TouchableOpacity>
@@ -117,30 +159,31 @@ const AutocompletePage = () => {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View className="mt-10 mb-6 items-center">
-          <Text className="text-goTextPrimaryLight text-3xl font-bold text-center">
+          <Text className="text-3xl font-bold text-center" style={{ color: textPrimary }}>
             Where do you want to go?
           </Text>
         </View>
 
-        <View className="flex-row items-center bg-goSurfaceLight rounded-full px-4 py-3 mb-5">
+        <View className="flex-row items-center rounded-full px-4 py-3 mb-5" style={{ backgroundColor: surfaceBg }}>
           <Image
             source={icons.search}
             className="w-6 h-6"
-            style={{ tintColor: colors.textSecondaryLight }}
+            style={{ tintColor: textSecondary }}
           />
           <TextInput
             placeholder="Search destination..."
-            placeholderTextColor={colors.textSecondaryLight}
+            placeholderTextColor={textSecondary}
             value={query}
             onChangeText={setQuery}
-            className="flex-1 text-goTextPrimaryLight text-base ml-3"
+            className="flex-1 text-base ml-3"
+            style={{ color: textPrimary }}
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery("")}>
               <Image
                 source={icons.close}
                 className="w-5 h-5 ml-2"
-                style={{ tintColor: colors.textSecondaryLight }}
+                style={{ tintColor: textSecondary }}
               />
             </TouchableOpacity>
           )}
@@ -156,7 +199,7 @@ const AutocompletePage = () => {
 
         <FlatList
           data={suggestions}
-          keyExtractor={(item, idx) => item.place_id || item.id || String(idx)}
+          keyExtractor={(item, idx) => String(item.place_id || item.id || idx)}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 50 }}
           showsVerticalScrollIndicator={false}
@@ -164,9 +207,10 @@ const AutocompletePage = () => {
           renderItem={({ item }) => (
             <TouchableOpacity
               onPress={() => handlePlaceSelect(item)}
-              className="p-4 border-b border-goBorderLight"
+              className="p-4 border-b"
+              style={{ borderBottomColor: borderColor }}
             >
-              <Text className="text-goTextPrimaryLight text-xl">
+              <Text className="text-xl" style={{ color: textPrimary }}>
                 {item.address ||
                   item.place_name ||
                   item.display_name ||

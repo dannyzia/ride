@@ -1,12 +1,23 @@
 import { useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, Switch, ActivityIndicator, TextInput } from "react-native";
+import { View, Text, TouchableOpacity, Switch, ActivityIndicator, TextInput, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 export default function AutoAcceptSettings() {
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   const [enabled, setEnabled] = useState(false);
   const [radius, setRadius] = useState("500");
   const [loading, setLoading] = useState(true);
@@ -46,27 +57,37 @@ export default function AutoAcceptSettings() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-6 py-4 border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <View className="flex-row items-center px-6 py-4 border-b" style={{ borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.back()}><Text className="text-base font-Jakarta text-goPrimary">Back</Text></TouchableOpacity>
-        <Text className="flex-1 text-center text-lg font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Auto-Accept Rides</Text>
+        <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>Auto-Accept Rides</Text>
         <View className="w-12" />
       </View>
-      {loading ? <ActivityIndicator size="large" color="#0A9B4C" className="mt-10" /> : (
+      {loading ? <ActivityIndicator size="large" color={colors.primary} className="mt-10" /> : (
         <View className="flex-1 px-6 pt-8">
           <View className="flex-row items-center justify-between mb-6">
-            <Text className="text-base font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Auto-accept nearby rides</Text>
-            <Switch value={enabled} onValueChange={setEnabled} trackColor={{ false: "#2E3038", true: "#0A9B4C" }} thumbColor="#FFF" />
+            <Text className="text-base font-Jakarta flex-1" style={{ color: textPrimary }}>Auto-accept nearby rides</Text>
+            <Switch value={enabled} onValueChange={setEnabled} trackColor={{ false: "#2E3038", true: colors.primary }} thumbColor="#FFF" />
           </View>
-          <Text className="text-sm font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-2">Max distance (meters)</Text>
-          <TextInput className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-lg px-4 py-3 text-goTextPrimaryLight dark:text-goTextPrimaryDark font-Jakarta text-base mb-2"
-            keyboardType="numeric" value={radius} onChangeText={setRadius} placeholder="100-5000" />
-          <Text className="text-xs font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-6">Minimum 100m, maximum 5000m. Auto-accept only works with 4.8+ rating.</Text>
+          <Text className="text-sm font-Jakarta mb-2" style={{ color: textSecondary }}>Max distance (meters)</Text>
+          <TextInput className="border rounded-lg px-4 py-3 font-Jakarta text-base mb-2"
+            style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
+            keyboardType="numeric" value={radius} onChangeText={setRadius} placeholder="100-5000" placeholderTextColor={textSecondary} />
+          <Text className="text-xs font-Jakarta mb-6" style={{ color: textSecondary }}>Minimum 100m, maximum 5000m. Auto-accept only works with 4.8+ rating.</Text>
           <TouchableOpacity onPress={save} disabled={saving} className={`py-4 rounded-full items-center ${saving ? "bg-goBorderDark" : "bg-goPrimary"}`}>
             <Text className="text-goWhite font-JakartaBold text-base">{saving ? "Saving..." : "Save Settings"}</Text>
           </TouchableOpacity>
         </View>
       )}
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

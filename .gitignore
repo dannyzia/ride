@@ -117,6 +117,7 @@ admin-test-results.zip
 
 # ── Local manual/QA test artifacts (NOT app code) ────────────────────────────
 # Throwaway DB/API probe + simulation scripts used during manual testing
+# Root-level patterns (legacy, files moved to scripts/debug/)
 /check-*.js
 /simulate-full-flow.js
 /trigger-ride.js
@@ -124,6 +125,7 @@ admin-test-results.zip
 /setup-zone.js
 /_*.cjs
 /_*.js
+/scripts/debug/
 # Local emulator/server helper batch scripts (machine-specific paths)
 /*.bat
 /*.cmd

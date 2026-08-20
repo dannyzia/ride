@@ -30,9 +30,9 @@ export default function AdminDocumentViewer({ documentId }: AdminDocumentViewerP
         } else {
           setError('Failed to generate document URL');
         }
-      } catch (e: any) {
+      } catch (e) {
         if (!cancelled) {
-          setError(e.message);
+          setError(e instanceof Error ? e.message : String(e));
           logger.error('[AdminDocumentViewer] error', e);
         }
       } finally {

@@ -311,7 +311,7 @@ Start: POST /api/driver/break/start; End: /break/end
 Resume-from-kill: GET /api/driver/me → if on_break, restore timer
 7.6 Enter OTP (app/(main)/(rider)/enter-otp/index.tsx) ✅
 Theme: bg, focus primary, error danger + shake
-Keep react-native-otp-entry
+AMENDED (M-22, 2026-08-21): react-native-otp-entry dep removed — screen uses custom components/PinInput.tsx (also used by ride-tracking)
 addEventListener for ride:started / ride:start_failed
 7.7 Cancellation Reasons (app/(main)/(rider)/cancellation-reasons/index.tsx) ✅
 Ionicons radio list
@@ -491,11 +491,15 @@ POST /api/promo/redeem	Apply promo	Action
 POST /api/sos/alert	Emergency alert	Action
 10.2 WebSocket Protocol (Real — from utils-server/index.ts)
 Inbound (client→server):
-auth:hello, heartbeat, location:update, fetch:confirm, offer:accept, offer:reject, ride:arrived, ride:start, ride:complete, chat:typing
+auth:hello, heartbeat, location:update, fetch:confirm, offer:accept, offer:reject, ride:arrived, ride:start, chat:typing, ride:subscribe, ride:unsubscribe
 Outbound (server→client):
-auth:ok, auth:error, ride:offer, fetch:confirmed, fetch:error, offer:accepted, offer:rejected, offer:lost, ride:arrived, ride:started, ride:start_failed, ride:completed, ride:cancelled, location:driver, chat:message, chat:typing, error
+auth:ok, auth:error, admin:suspended, error,
+ride:offer, offer:accepted, offer:rejected, offer:lost,
+fetch:confirmed, fetch:error,
+ride:status, ride:started, ride:start_failed, ride:completed, ride:arrived, ride:cancelled, ride:expired, ride:alternatives,
+location:driver, chat:message, chat:typing
 Never emitted (do NOT handle):
-ride:offer_expired, ride:offer_cancelled, ride:status_update, subscription:expired
+ride:offer_expired, ride:offer_cancelled, ride:status_update (the real event is ride:status), subscription:expired
 10.3 Backend File Placement
 Table
 Type	Location	Example

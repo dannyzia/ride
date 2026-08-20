@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { View, Text, Pressable, TextInput, ActivityIndicator, Alert, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
 import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface IntroConfig {
   id: string;
@@ -27,6 +29,7 @@ interface ZoneOption {
 
 const IntroConfigAdmin = () => {
   const toast = useAdminToast();
+  const isDark = useIsDark();
   const [configs, setConfigs] = useState<IntroConfig[]>([]);
   const [zones, setZones] = useState<ZoneOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,7 +160,7 @@ const IntroConfigAdmin = () => {
       width: 80,
       render: (r) => `${(r.daily_cap_bdt / 100).toFixed(0)}`,
     },
-    { key: "is_active", header: "Active", render: (r) => r.is_active ? "✅" : "⬜", width: 60 },
+    { key: "is_active", header: "Active", render: (r) => <Ionicons name={r.is_active ? "checkmark-circle" : "ellipse"} size={16} color={r.is_active ? colors.primary : colors.grayMedium} />, width: 60 },
     {
       key: "id",
       header: "Actions",
@@ -181,7 +184,7 @@ const IntroConfigAdmin = () => {
         <View className="gap-[10px]">
           <View>
             <Text className="text-goTextSecondaryDark font-Jakarta text-[12px] mb-1">Zone</Text>
-            <View className="border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[10px] py-[8px]">
+            <View className="border rounded-[8px] px-[10px] py-[8px]" style={{ borderColor: isDark ? colors.borderDark : colors.borderLight }}>
               {zones.map((z) => (
                 <Pressable
                   key={z.id}
@@ -224,8 +227,14 @@ const IntroConfigAdmin = () => {
               value={form.effective_to} onChangeText={(v) => setForm({ ...form, effective_to: v })} placeholder="Leave blank for no expiry" placeholderTextColor="#6B7280" />
           </View>
           <Pressable onPress={() => setForm({ ...form, is_active: !form.is_active })} className="flex-row items-center py-2">
-            <View className={`w-5 h-5 rounded border-2 items-center justify-center mr-2 ${form.is_active ? 'bg-goPrimary border-goPrimary' : 'border-goBorderLight dark:border-goBorderDark'}`}>
-              {form.is_active && <Text className="text-[10px] text-goWhite">✓</Text>}
+            <View
+              className="w-5 h-5 rounded border-2 items-center justify-center mr-2"
+              style={{
+                borderColor: form.is_active ? colors.primary : isDark ? colors.borderDark : colors.borderLight,
+                ...(form.is_active ? { backgroundColor: colors.primary } : {}),
+              }}
+            >
+              {form.is_active && <Ionicons name="checkmark" size={10} color="#FFFFFF" />}
             </View>
             <Text className="text-goTextPrimaryDark font-Jakarta text-[14px]">Active</Text>
           </Pressable>
@@ -240,13 +249,13 @@ const IntroConfigAdmin = () => {
 
 const styles = StyleSheet.create({
   editBtn: { paddingHorizontal: 8, paddingVertical: 4, backgroundColor: colors.primary, borderRadius: 4 },
-  editText: { color: colors.bgLight, fontFamily: "Inter-Bold", fontSize: 11 },
+  editText: { color: colors.bgLight, fontFamily: "Jakarta-Bold", fontSize: 11 },
   delBtn: { paddingHorizontal: 8, paddingVertical: 4, backgroundColor: colors.danger, borderRadius: 4 },
-  delText: { color: colors.bgLight, fontFamily: "Inter-Bold", fontSize: 11 },
+  delText: { color: colors.bgLight, fontFamily: "Jakarta-Bold", fontSize: 11 },
   addBtn: { padding: 12, backgroundColor: colors.primary, borderRadius: 8, alignSelf: "flex-start", marginBottom: 12 },
-  addText: { color: colors.bgLight, fontFamily: "Inter-Bold", fontSize: 13 },
+  addText: { color: colors.bgLight, fontFamily: "Jakarta-Bold", fontSize: 13 },
   saveBtn: { padding: 12, backgroundColor: colors.primary, borderRadius: 8, alignItems: "center" },
-  saveText: { color: colors.bgLight, fontFamily: "Inter-Bold", fontSize: 14 },
+  saveText: { color: colors.bgLight, fontFamily: "Jakarta-Bold", fontSize: 14 },
 });
 
 export default IntroConfigAdmin;

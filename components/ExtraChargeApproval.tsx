@@ -3,6 +3,9 @@ import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
 
 interface Props {
   rideId: string | null;
@@ -17,6 +20,9 @@ interface PendingCharge {
 }
 
 export default function ExtraChargeApproval({ rideId }: Props) {
+  const isDark = useIsDark();
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
   const [charges, setCharges] = useState<PendingCharge[]>([]);
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -56,7 +62,7 @@ export default function ExtraChargeApproval({ rideId }: Props) {
       });
       if (res.ok) { Alert.alert(action === "approve" ? "Approved" : "Disputed", action === "approve" ? "Charge will be added to your fare." : "A support ticket has been created."); fetchCharges(); }
       else { const d = await res.json(); Alert.alert("Error", d.error ?? "Failed"); }
-    } catch (err: any) { logger.error("Charge action failed", err); Alert.alert("Error", "Network error"); }
+    } catch (err) { logger.error("Charge action failed", err); Alert.alert("Error", "Network error"); }
   };
 
   if (loading) return null;
@@ -65,13 +71,16 @@ export default function ExtraChargeApproval({ rideId }: Props) {
   return (
     <View className="mx-4 mb-3">
       {charges.map((c) => (
-        <View key={c.id} className="bg-goWarningLight dark:bg-goAmber/10 border border-goAmber/30 rounded-xl p-4 mb-2">
+        <View key={c.id} className="border rounded-xl p-4 mb-2" style={{ backgroundColor: isDark ? "#F59E0B1F" : colors.amber + "1A", borderColor: colors.amber + "4D" }}>
           <View className="flex-row justify-between items-start mb-2">
             <View className="flex-1">
-              <Text className="text-sm font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
-                {c.type === "toll" ? "🛣️ Toll Charge" : "🅿️ Parking Charge"}
-              </Text>
-              {c.description ? <Text className="text-xs font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-0.5">{c.description}</Text> : null}
+              <View className="flex-row items-center gap-[6px]">
+                <Ionicons name={c.type === "toll" ? "cash" : "car-sport"} size={14} color={textPrimary} />
+                <Text className="text-sm font-JakartaBold" style={{ color: textPrimary }}>
+                  {c.type === "toll" ? "Toll Charge" : "Parking Charge"}
+                </Text>
+              </View>
+              {c.description ? <Text className="text-xs font-Jakarta mt-0.5" style={{ color: textSecondary }}>{c.description}</Text> : null}
             </View>
             <Text className="text-base font-JakartaBold text-goDanger">৳{(c.amount_bdt / 100).toFixed(0)}</Text>
           </View>

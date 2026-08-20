@@ -17,6 +17,20 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 
+interface BarikoiPlaceSuggestion {
+  latitude?: string;
+  longitude?: string;
+  lat?: string;
+  lng?: string;
+  lon?: string;
+  address?: string;
+  place_name?: string;
+  description?: string;
+  name?: string;
+  place_id?: string;
+  id?: string;
+}
+
 const BarikoiAutocomplete = ({
   icon,
   containerStyle,
@@ -26,7 +40,7 @@ const BarikoiAutocomplete = ({
 }: BarikoiInputProps) => {
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<BarikoiPlaceSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -71,9 +85,9 @@ const BarikoiAutocomplete = ({
     fetchSuggestions();
   }, [query]);
 
-  const handleSelect = (place: any) => {
-    const lat = parseFloat(place.latitude || place.lat || 0);
-    const lng = parseFloat(place.longitude || place.lng || place.lon || 0);
+  const handleSelect = (place: BarikoiPlaceSuggestion) => {
+    const lat = parseFloat(String(place.latitude || place.lat || 0));
+    const lng = parseFloat(String(place.longitude || place.lng || place.lon || 0));
     const address =
       place.address ||
       place.place_name ||

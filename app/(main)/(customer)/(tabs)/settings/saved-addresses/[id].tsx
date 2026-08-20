@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 interface AddressItem {
   id: string;
@@ -16,6 +19,14 @@ interface AddressItem {
 }
 
 export default function AddressDetail() {
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const [address, setAddress] = useState<AddressItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,8 +48,8 @@ export default function AddressDetail() {
         const data = await res.json();
         if (!res.ok) { setError(data.error || "Failed to load"); return; }
         if (!cancelled) setAddress(data.addresses?.[0] ?? null);
-      } catch (err: any) {
-        if (!cancelled) setError(err?.message || "Network error");
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error && err.message ? err.message : "Network error");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -67,8 +78,8 @@ export default function AddressDetail() {
                });
               if (!res.ok) { setError("Failed to delete"); setDeleting(false); return; }
               router.replace("/(main)/(customer)/(tabs)/settings/saved-addresses");
-            } catch (err: any) {
-              setError(err?.message || "Network error");
+            } catch (err) {
+              setError(err instanceof Error && err.message ? err.message : "Network error");
               logger.error("Delete address failed", err);
               setDeleting(false);
             }
@@ -79,62 +90,72 @@ export default function AddressDetail() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Address Details</Text>
-        <TouchableOpacity onPress={() => setShowMore(!showMore)}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">⋯</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Address Details</Text>
+        <TouchableOpacity onPress={() => setShowMore(!showMore)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="ellipsis-horizontal" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
       {showMore && (
-        <View className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border-b border-goBorderLight dark:border-goBorderDark px-[24px] py-3">
+        <View className="border-b px-[24px] py-3" style={{ backgroundColor: surfaceBg, borderColor }}>
           <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }}>
-            <Text className="text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Set as pickup</Text>
+            <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>Set as pickup</Text>
           </TouchableOpacity>
           <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }}>
-            <Text className="text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Set as destination</Text>
+            <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>Set as destination</Text>
           </TouchableOpacity>
           <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }}>
-            <Text className="text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark">Edit address</Text>
+            <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>Edit address</Text>
           </TouchableOpacity>
           <TouchableOpacity className="py-2" onPress={handleDelete}>
-            <Text className="text-[15px] font-Jakarta text-goDanger">Delete address</Text>
+            <Text className="text-[15px] font-Jakarta" style={{ color: colors.danger }}>Delete address</Text>
           </TouchableOpacity>
         </View>
       )}
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#0CC25F" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : error ? (
         <View className="flex-1 items-center justify-center px-[24px]">
-          <Text className="text-[16px] font-Jakarta text-goDanger text-center">{error}</Text>
+          <Text className="text-[16px] font-Jakarta text-center" style={{ color: colors.danger }}>{error}</Text>
         </View>
       ) : address ? (
         <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
-          <View className="p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]">
-            <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{address.label}</Text>
-            <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-2">{address.address}</Text>
+          <View className="p-[16px] border rounded-[12px]" style={{ backgroundColor: surfaceBg, borderColor }}>
+            <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>{address.label}</Text>
+            <Text className="text-[14px] font-Jakarta mt-2" style={{ color: textSecondary }}>{address.address}</Text>
             {deleting ? (
-              <ActivityIndicator size="small" color="#0CC25F" className="mt-4" />
+              <ActivityIndicator size="small" color={colors.primary} className="mt-4" />
             ) : (
               <TouchableOpacity
-                className="mt-4 py-[12px] border border-goDanger rounded-full items-center"
+                className="mt-4 py-[12px] border rounded-full items-center"
+                style={{ borderColor: colors.danger }}
                 onPress={handleDelete}
               >
-                <Text className="text-[16px] font-JakartaBold text-goDanger">Delete Address</Text>
+                <Text className="text-[16px] font-JakartaBold" style={{ color: colors.danger }}>Delete Address</Text>
               </TouchableOpacity>
             )}
           </View>
         </ScrollView>
       ) : (
         <View className="flex-1 items-center justify-center px-[24px]">
-          <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Address not found</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: textSecondary }}>Address not found</Text>
         </View>
       )}
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

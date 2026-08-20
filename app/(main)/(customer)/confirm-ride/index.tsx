@@ -1,4 +1,4 @@
-import { Image, Text, View, TextInput, TouchableOpacity, Alert , Modal } from "react-native";
+import { Image, Text, View, TextInput, TouchableOpacity, Alert, Modal, StatusBar } from "react-native";
 import { API_URL } from "@/lib/config";
 import { Ionicons } from "@expo/vector-icons";
 import RideLayout from "@/components/RideLayout";
@@ -13,13 +13,14 @@ import { useRiderStore, FareEstimate, DiscountOption, DiscountType } from "@/sto
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts, surge } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
 
 const ConfirmRidePage = () => {
   const router = useRouter();
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
@@ -268,8 +269,8 @@ const ConfirmRidePage = () => {
           data.message || data.error || "Could not find a driver",
         );
       }
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Network error");
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Network error");
     } finally {
       setRequesting(false);
     }
@@ -277,6 +278,7 @@ const ConfirmRidePage = () => {
 
   return (
     <Fragment>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <RideLayout title="Confirm Ride" disabled={false}>
       <View style={{ flex: 1 }}>
         {/* Selected vehicle info */}
@@ -320,9 +322,8 @@ const ConfirmRidePage = () => {
               >
                 <Text
                   style={{
-                    fontFamily: "Inter",
+                    fontFamily: fonts.headingSemi,
                     fontSize: 13,
-                    fontWeight: "600",
                     color: colors.primary,
                   }}
                 >
@@ -380,7 +381,7 @@ const ConfirmRidePage = () => {
                       borderColor: isSelected ? colors.primary : border,
                     }}
                   >
-                    {isSelected && <Text style={{ fontSize: 10, color: colors.white }}>✓</Text>}
+                    {isSelected && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>{discount.description}</Text>
@@ -388,9 +389,8 @@ const ConfirmRidePage = () => {
                   </View>
                   <Text
                     style={{
-                      fontFamily: "Inter",
+                      fontFamily: fonts.headingSemi,
                       fontSize: 14,
-                      fontWeight: "600",
                       color: isSelected ? colors.primary : colors.textSecondaryLight,
                     }}
                   >
@@ -496,7 +496,7 @@ const ConfirmRidePage = () => {
           style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}
         >
           <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: bookForOther ? colors.primary : "transparent", borderColor: bookForOther ? colors.primary : border }}>
-            {bookForOther && <Text style={{ fontSize: 12, color: colors.white }}>✓</Text>}
+            {bookForOther && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
           </View>
           <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>Book for someone else</Text>
         </TouchableOpacity>
@@ -514,20 +514,21 @@ const ConfirmRidePage = () => {
         {/* Female driver preference */}
         <TouchableOpacity onPress={() => setPreferFemale(!preferFemale)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
           <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: preferFemale ? colors.primary : "transparent", borderColor: preferFemale ? colors.primary : border }}>
-            {preferFemale && <Text style={{ fontSize: 12, color: colors.white }}>✓</Text>}
+            {preferFemale && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
           </View>
           <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>Prefer female driver</Text>
         </TouchableOpacity>
 
         {stops.length < 2 && (
           <TouchableOpacity onPress={() => setShowStopModal(true)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, marginBottom: 8 }}>
-            <Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 15 }}>➕ Add Stop</Text>
+            <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 15, marginLeft: 6 }}>Add Stop</Text>
           </TouchableOpacity>
         )}
         {stops.map((stop, i) => (
           <View key={i} style={{ flexDirection: "row", alignItems: "center", backgroundColor: surface, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 8 }}>
             <Text style={{ flex: 1, fontSize: 14, fontFamily: fonts.body, color: textPrimary }}>Stop {i + 1}: {stop.address}</Text>
-            <TouchableOpacity onPress={() => setStops(stops.filter((_, j) => j !== i))}><Text style={{ color: colors.danger, fontSize: 14 }}>✕</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setStops(stops.filter((_, j) => j !== i))}><Ionicons name="close" size={16} color={colors.danger} /></TouchableOpacity>
           </View>
         ))}
 
@@ -550,7 +551,7 @@ const ConfirmRidePage = () => {
           icon={undefined}
           initialLocation=""
           textInputBackgroundColor={colors.bgLight}
-          handlePress={(location: any) => {
+          handlePress={(location: { latitude: number; longitude: number; address: string }) => {
             if (stops.length < 2) {
               setStops([...stops, { lat: location.latitude, lng: location.longitude, address: location.address }]);
               setShowStopModal(false);
@@ -559,6 +560,14 @@ const ConfirmRidePage = () => {
         />
       </View>
       </Modal>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surface, borderWidth: 1, borderColor: border }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </Fragment>
   );
 };

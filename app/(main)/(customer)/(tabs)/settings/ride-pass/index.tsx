@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import PaymentWebView from "@/components/PaymentWebView";
 import AnimatedCard from "@/components/AnimatedCard";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 interface RidePass {
   id: string; name: string; description: string | null; price_bdt: number;
@@ -21,6 +22,7 @@ interface ActiveSubscription {
 
 export default function RidePassPurchase() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
   const [passes, setPasses] = useState<RidePass[]>([]);
   const [activeSub, setActiveSub] = useState<ActiveSubscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,7 @@ export default function RidePassPurchase() {
         Alert.alert("Success", "Pass activated!");
         fetchPasses();
       }
-    } catch (err: any) { Alert.alert("Error", err.message); }
+    } catch (err) { Alert.alert("Error", err instanceof Error ? err.message : String(err)); }
     finally { setPurchasing(null); }
   };
 
@@ -91,6 +93,7 @@ export default function RidePassPurchase() {
       <PaymentWebView
         bkashURL={paymentUrl}
         paymentID={paymentEventId}
+        purpose="rider_pass"
         onSuccess={() => { setPaymentUrl(""); Alert.alert("Success", "Pass activated!"); fetchPasses(); }}
         onError={(err) => { setPaymentUrl(""); Alert.alert("Payment Failed", err ?? "Failed"); }}
       />
@@ -99,6 +102,7 @@ export default function RidePassPurchase() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-6 py-4 border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>Back</Text></TouchableOpacity>
         <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>Ride Pass</Text>
@@ -115,9 +119,29 @@ export default function RidePassPurchase() {
             >
               <Text className="text-sm font-JakartaBold mb-1" style={{ color: colors.accent }}>Active Pass</Text>
               <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>{activeSub.pass_name}</Text>
-              <Text className="text-sm font-Jakarta mt-1" style={{ color: textSecondary }}>
-                Rides: {activeSub.rides_used}{activeSub.max_rides ? ` / ${activeSub.max_rides}` : " (unlimited)"}
-              </Text>
+              {activeSub.max_rides ? (
+                <View className="mt-2 mb-1">
+                  <View
+                    className="h-2 rounded w-full"
+                    style={{ backgroundColor: isDark ? colors.primaryLightDark : colors.primaryLight }}
+                  >
+                    <View
+                      className="h-2 rounded"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, (activeSub.rides_used / activeSub.max_rides) * 100))}%`,
+                        backgroundColor: colors.primary,
+                      }}
+                    />
+                  </View>
+                  <Text className="font-Jakarta mt-1" style={{ color: textSecondary, fontSize: 13 }}>
+                    {activeSub.rides_used} of {activeSub.max_rides} rides
+                  </Text>
+                </View>
+              ) : (
+                <Text className="text-sm font-Jakarta mt-1" style={{ color: textSecondary }}>
+                  Rides: {activeSub.rides_used} (unlimited)
+                </Text>
+              )}
               <Text className="text-sm font-Jakarta" style={{ color: textSecondary }}>
                 Expires: {new Date(activeSub.valid_until).toLocaleDateString()}
               </Text>
@@ -144,6 +168,14 @@ export default function RidePassPurchase() {
           ))}
         </ScrollView>
       )}
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

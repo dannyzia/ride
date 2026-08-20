@@ -42,6 +42,7 @@ import { calculateFare, haversineKm } from "../lib/fareCalc";
 import { VEHICLE_TYPE_VALUES } from "../lib/vehicleTypes";
 import { detectRouteDeviation } from "../lib/safety";
 import { sendNotification } from "../lib/notify";
+import type { SosAlertPayload } from "./types";
 
 validateUtilsServerEnv();
 
@@ -71,7 +72,7 @@ interface WSClient {
   ws: WebSocket;
   userId?: string;
   supabaseUid?: string;
-  role?: "driver" | "rider";
+  role?: "driver" | "rider" | "admin";
   driverId?: string;
   subscribedRideId?: string; // rider: which ride they are tracking
   lastSeen?: number; // epoch ms of last heartbeat (for stale-connection cleanup)
@@ -80,6 +81,7 @@ interface WSClient {
 // ── Connection Maps ────────────────────────────────────────────────────────
 const connectedDrivers = new Map<string, WSClient>(); // driverId → client
 const connectedRiders = new Map<string, WSClient>(); // userId → client (rider)
+const connectedAdmins = new Map<string, WSClient>(); // userId → client (admin)
 const allClients = new Map<WebSocket, WSClient>();
 
 // ── Offer Locks (double-deduction prevention) ─────────────────────────────
@@ -172,6 +174,7 @@ const server = http.createServer(async (req, res) => {
         connected_clients: allClients.size,
         connected_drivers: connectedDrivers.size,
         connected_riders: connectedRiders.size,
+        connected_admins: connectedAdmins.size,
       },
       database: {
         status: dbStatus,
@@ -313,6 +316,35 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.url === "/internal/sos/alert" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", async () => {
+      try {
+        const { alert } = JSON.parse(body) as { alert?: SosAlertPayload };
+        if (!alert || !alert.id) {
+          writeJson(400, { error: "missing_alert" });
+          return;
+        }
+        // Broadcast-only (F-15): utils-server never writes sos_alerts — the
+        // Expo API route owns that insert; here we only fan out to admins.
+        let delivered = 0;
+        for (const adminClient of connectedAdmins.values()) {
+          if (adminClient.ws.readyState === WebSocket.OPEN) {
+            send(adminClient.ws, { type: "admin:sos", alert });
+            delivered++;
+          }
+        }
+        writeJson(200, { ok: true, delivered });
+      } catch {
+        writeJson(400, { error: "invalid_body" });
+      }
+    });
+    return;
+  }
+
   if (req.url === "/internal/ride/driver-arrived" && req.method === "POST") {
     let body = "";
     req.on("data", (chunk) => {
@@ -432,7 +464,7 @@ wss.on("connection", (ws: WebSocket) => {
       case "auth": {
         if (action === "hello") {
           const supabaseAccessToken = msg.access_token as string;
-          const role = msg.role as "driver" | "rider";
+          const role = msg.role as "driver" | "rider" | "admin";
           if (!supabaseAccessToken || !role) {
             send(ws, { type: "auth:error", message: "missing_credentials" });
             return;
@@ -459,7 +491,8 @@ wss.on("connection", (ws: WebSocket) => {
             }
             if (
               (role === "driver" && user.role !== "driver") ||
-              (role === "rider" && user.role !== "rider")
+              (role === "rider" && user.role !== "rider") ||
+              (role === "admin" && user.role !== "admin")
             ) {
               send(ws, { type: "auth:error", message: "role_mismatch" });
               return;
@@ -534,12 +567,21 @@ wss.on("connection", (ws: WebSocket) => {
                   hasGps: driver.last_location_lat != null,
                 });
               }
-            } else {
+            } else if (role === "rider") {
               const prevRider = connectedRiders.get(user.id);
               if (prevRider && prevRider.ws !== ws) {
                 prevRider.ws.close();
               }
               connectedRiders.set(user.id, client);
+            } else {
+              // Admin dashboard socket (F-15): receive-only SOS broadcasts.
+              // No driver lookup, no H3 indexing, no online flag — admins are
+              // never dispatchable. One admin, one live socket, same as riders.
+              const prevAdmin = connectedAdmins.get(user.id);
+              if (prevAdmin && prevAdmin.ws !== ws) {
+                prevAdmin.ws.close();
+              }
+              connectedAdmins.set(user.id, client);
             }
 
             send(ws, { type: "auth:ok", user_id: user.id, role });
@@ -1230,6 +1272,13 @@ async function handleDisconnect(client: WSClient) {
             eq(rides.status, "dispatching"),
           ),
         );
+    }
+  }
+  if (client.role === "admin" && client.userId) {
+    // Same guard for admins (F-15): only tear down if THIS socket is still
+    // the registered one — a newer reconnect must not be wiped.
+    if (connectedAdmins.get(client.userId) === client) {
+      connectedAdmins.delete(client.userId);
     }
   }
   logger.info("[ws] connection closed", {

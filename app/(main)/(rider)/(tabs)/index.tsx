@@ -229,7 +229,7 @@ export default function DriverHome() {
     } catch {
       // Network error
     }
-  }, []);
+  }, [setDriver, setActiveSubscription]);
 
   // ── Daily stats (real endpoint — paisa integers from server) ──────
   const fetchDailyStats = useCallback(async () => {
@@ -270,7 +270,7 @@ export default function DriverHome() {
         });
         if (!res.ok) return;
         const data: {
-          hotspots?: Array<{
+          hotspots?: {
             name: string;
             lat: number;
             lng: number;
@@ -278,7 +278,7 @@ export default function DriverHome() {
             intensity_raw: number;
             demand_count: number;
             supply_count: number;
-          }>;
+          }[];
         } = await res.json();
         if (!active) return;
         setHotspotZones(
@@ -398,7 +398,7 @@ export default function DriverHome() {
           setActiveOffer(null);
           setIsOnline(true);
         }
-      } catch (_e) {
+      } catch {
         // ignore parse errors
       }
     };
@@ -470,7 +470,15 @@ export default function DriverHome() {
       // re-bind their addEventListener to the new socket.
       if (ws) ws.onmessage = null;
     };
-  }, []);
+  }, [
+    addRideOffer,
+    loadDriverProfile,
+    removeRideOffer,
+    setActiveOffer,
+    setActiveRideId,
+    setIsOnline,
+    setWsConnected,
+  ]);
 
   // ── Heartbeat (every 10s when online) ────────────────────────────
   useEffect(() => {
@@ -616,7 +624,7 @@ export default function DriverHome() {
             <Text
               style={{
                 fontFamily: "Jakarta-Regular",
-                fontSize: 14,
+                fontSize: 16,
                 color: textSecondary,
                 marginTop: spacing.sm,
               }}
@@ -627,10 +635,12 @@ export default function DriverHome() {
         ) : MapLibreGL && MapLibreGL.MapView ? (
           <MapLibreGL.MapView
             style={{ flex: 1 }}
-            styleURL={mapStyleUrl}
-            centerCoordinate={[location.lng, location.lat]}
-            zoomLevel={16}
+            mapStyle={mapStyleUrl}
           >
+            <MapLibreGL.Camera
+              centerCoordinate={[location.lng, location.lat]}
+              zoomLevel={16}
+            />
             {MapLibreGL.PointAnnotation && (
               <MapLibreGL.PointAnnotation
                 id="driver-location"
@@ -661,7 +671,7 @@ export default function DriverHome() {
               justifyContent: "center",
             }}
           >
-            <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary }}>
+            <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 16, color: textSecondary }}>
               Map View
             </Text>
           </View>
@@ -785,7 +795,7 @@ export default function DriverHome() {
                 <Text
                   style={{
                     fontFamily: "Jakarta-Bold",
-                    fontSize: 10,
+                    fontSize: 12,
                     color: colors.white,
                     marginTop: 2,
                   }}
@@ -798,7 +808,7 @@ export default function DriverHome() {
               <Text
                 style={{
                   fontFamily: "Jakarta-Regular",
-                  fontSize: 13,
+                  fontSize: 14,
                   color: textSecondary,
                   marginTop: spacing.md,
                   textAlign: "center",
@@ -848,7 +858,7 @@ export default function DriverHome() {
             <Text
               style={{
                 fontFamily: "Jakarta-SemiBold",
-                fontSize: 14,
+                fontSize: 16,
                 color: textPrimary,
               }}
               numberOfLines={1}
@@ -856,7 +866,7 @@ export default function DriverHome() {
               {driver?.name ?? "Driver"}
             </Text>
             {driver?.vehicle_type ? (
-              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: textSecondary }}>
+              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary }}>
                 · {vehicleTypeDisplay[driver.vehicle_type] ?? driver.vehicle_type}
               </Text>
             ) : null}
@@ -901,7 +911,7 @@ export default function DriverHome() {
               <Text
                 style={{
                   fontFamily: "Jakarta-SemiBold",
-                  fontSize: 11,
+                  fontSize: 12,
                   color: wsConnected ? colors.success : colors.amber,
                 }}
               >
@@ -948,7 +958,7 @@ export default function DriverHome() {
                 <Text
                   style={{
                     fontFamily: "Jakarta-Bold",
-                    fontSize: 13,
+                    fontSize: 14,
                     color: colors.danger,
                   }}
                 >
@@ -972,7 +982,7 @@ export default function DriverHome() {
                 <Text
                   style={{
                     fontFamily: "Jakarta-Bold",
-                    fontSize: 13,
+                    fontSize: 14,
                     color: textPrimary,
                   }}
                 >
@@ -1006,7 +1016,7 @@ export default function DriverHome() {
             <Text
               style={{
                 fontFamily: "Jakarta-SemiBold",
-                fontSize: 14,
+                fontSize: 16,
                 color: colors.black,
               }}
             >
@@ -1079,13 +1089,13 @@ export default function DriverHome() {
                 paddingVertical: spacing.sm,
               }}
             >
-              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 13, color: textSecondary }}>
+              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary }}>
                 Calls Remaining
               </Text>
               <Text
                 style={{
                   fontFamily: "Jakarta-Bold",
-                  fontSize: 15,
+                  fontSize: 18,
                   color: textPrimary,
                   fontVariant: ["tabular-nums"],
                 }}
@@ -1110,7 +1120,7 @@ export default function DriverHome() {
                 alignItems: "center",
               }}
             >
-              <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 14, color: colors.primary }}>
+              <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: colors.primary }}>
                 Buy a Package to Start
               </Text>
             </TouchableOpacity>
@@ -1153,7 +1163,7 @@ export default function DriverHome() {
                   numberOfLines={1}
                   style={{
                     fontFamily: "Jakarta-SemiBold",
-                    fontSize: 14,
+                    fontSize: 16,
                     color: textPrimary,
                   }}
                 >
@@ -1162,7 +1172,7 @@ export default function DriverHome() {
                 <Text
                   style={{
                     fontFamily: "Jakarta-Regular",
-                    fontSize: 13,
+                    fontSize: 14,
                     color: textSecondary,
                   }}
                 >
@@ -1180,7 +1190,7 @@ export default function DriverHome() {
                     <Text
                       style={{
                         fontFamily: "Jakarta-Bold",
-                        fontSize: 11,
+                        fontSize: 12,
                         color: colors.danger,
                       }}
                     >
@@ -1195,7 +1205,7 @@ export default function DriverHome() {
                 <Text
                   style={{
                     fontFamily: "Jakarta-Regular",
-                    fontSize: 12,
+                    fontSize: 14,
                     color: textSecondary,
                   }}
                 >

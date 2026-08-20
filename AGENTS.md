@@ -145,9 +145,9 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 - `call_ledger` deduction rows (`event_type='deduction'`) → ONLY `utils-server/heartbeat.ts`
 - `call_ledger` refund rows (`event_type='refund'`, AC-7 accept-race refunds) → ONLY `utils-server/heartbeat.ts` (`recordCallRefund`)
 - `call_ledger` all other event types (`initial_load`, `credit`, `expiry_writeoff`) → ONLY `lib/activateSubscription.ts`
-- `dispatch_offers` → `utils-server/dispatch.ts` (scoring/filter/auto-accept rows), `utils-server/index.ts` (`dispatchRidePipeline` `delivered` rows), and `utils-server/heartbeat.ts` (`fetch_confirmed_at` stamps)
-- `payment_events` row creation + PortPos invoice initiation → ONLY `lib/paymentEvents.ts` (`initiatePortposPayment`), called by `app/api/rider/wallet/topup+api.ts`, `app/api/rider/passes+api.ts`, `app/api/driver/wallet/topup+api.ts`, `app/api/package/purchase+api.ts`
-- `payment_events` status transitions (`paid`/`failed`, `confirmed_at`, `subscription_id`) → ONLY `lib/activateSubscription.ts` and `app/api/payment/portpos/callback+api.ts`
+- `dispatch_offers` → `utils-server/dispatch.ts` (scoring/filter/auto-accept rows), `utils-server/index.ts` (`dispatchRidePipeline` `delivered` rows), `utils-server/heartbeat.ts` (`fetch_confirmed_at` stamps), and `utils-server/scheduler.ts` (scheduled-ride promotion job — `pending` rows for scheduler-created dispatch)
+- `payment_events` row creation + PortPos invoice initiation → ONLY `lib/paymentEvents.ts` (`initiatePortposPayment`, `createZeroAmountPaymentEvent`), called by `app/api/rider/wallet/topup+api.ts`, `app/api/rider/passes+api.ts`, `app/api/driver/wallet/topup+api.ts`, `app/api/package/purchase+api.ts`
+- `payment_events` status transitions (`paid`/`failed`, `confirmed_at`, `subscription_id`) → `lib/activateSubscription.ts`, `app/api/payment/portpos/callback+api.ts`, and `lib/paymentRepair.ts` (`repairPaymentEvent` — shared transactional repair invoked by the callback itself and by `utils-server/compensationWorker.ts`; audited Z-2/Z-3)
 - No other file writes these tables directly.
 
 ### Payments (PortPos callback security)
@@ -215,7 +215,7 @@ No `console.log`. Use `lib/logger.ts` (`logger.info`, `logger.error`, etc.).
 - Driver `min_per_km_bdt` validation: use `validateDriverMinKm()` from `lib/validateMinPerKm.ts` — never inline.
 - **NULL checks**: use `isNull(col)` / `isNotNull(col)`. NEVER `eq(col, null)` — it compiles to `col = NULL` which is always false in SQL (NULL is not equality-comparable). This caused the critical BUG-3 (packages GET returned `[]` despite rows existing).
 - **Money columns**: ALL `*_bdt` columns are `integer` (paisa). The ONLY exception is `rate_percent` columns (e.g., `tax_rates.rate_percent`) which are `numeric(5,2)` because they store a percentage (5.00), not money.
-- **Self-referencing FKs**: use the `(): any => tableName.id` pattern to avoid TypeScript circular reference errors (e.g., `accountingAccounts.parentId`).
+- **Self-referencing FKs**: use the `(): any => tableName.id` pattern to avoid TypeScript circular reference errors. (Historical example: `accountingAccounts.parentId` — the column has since been made snake_case; the pattern rule stands.)
 
 ### Dispatch Logic
 - Daily cap check belongs in dispatch candidate pool construction (`dispatch.ts`), NOT in heartbeat deduction path.

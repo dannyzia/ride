@@ -68,6 +68,7 @@ interface DriverFlowState {
   fetchSubscription: () => Promise<void>;
   setOnline: (online: boolean) => void;
   setActiveOffer: (offer: RideOffer | null) => void;
+  reset: () => void;
 }
 
 export const useDriverFlowStore = create<DriverFlowState>((set, _get) => ({
@@ -129,4 +130,6 @@ export const useDriverFlowStore = create<DriverFlowState>((set, _get) => ({
   },
 
   setActiveOffer: (offer) => set({ activeOffer: offer }),
+
+  reset: () => set({ driver: null, activeSubscription: null, isOnline: false, activeOffer: null }),
 }));

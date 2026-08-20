@@ -5,10 +5,18 @@ import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
+interface SurgeHistoryEntry {
+  id: string;
+  multiplier: string;
+  demand_count: number;
+  supply_count: number;
+  triggered_at: string;
+}
+
 export default function SurgeConfig() {
   const toast = useAdminToast();
   const [thresholds, setThresholds] = useState<{ ratio: number; multiplier: number }[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<SurgeHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState("");
   const [fetchError, setFetchError] = useState("");
@@ -40,7 +48,7 @@ export default function SurgeConfig() {
     } else {
       setThresholds([{ ratio: 3, multiplier: 2.0 }, { ratio: 2, multiplier: 1.5 }, { ratio: 1.2, multiplier: 1.25 }]);
     }
-    const hist = await adminFetch<{ history: any[] }>("/api/admin/surge-history");
+    const hist = await adminFetch<{ history: SurgeHistoryEntry[] }>("/api/admin/surge-history");
     if (hist.data) setHistory(hist.data.history ?? []);
     setLoading(false);
   }, []);
@@ -53,7 +61,7 @@ export default function SurgeConfig() {
       if (t.ratio <= 0) { setSaveError("All ratios must be > 0"); return; }
       if (t.multiplier < 1.0) { setSaveError("All multipliers must be >= 1.0"); return; }
     }
-    const res = await adminFetch<{ config: any[] }>("/api/admin/system-config", {
+    const res = await adminFetch<{ config: { key: string; value: string }[] }>("/api/admin/system-config", {
       method: "PATCH", body: JSON.stringify({ updates: [{ key: "surge_thresholds", value: JSON.stringify(thresholds) }] }), headers: { "Content-Type": "application/json" },
     });
     if (res.data?.config) toast.show("Saved", "success");
@@ -103,7 +111,7 @@ export default function SurgeConfig() {
             <Text style={{ color: "#000", fontFamily: "Jakarta-Bold", fontSize: 13 }}>Save</Text>
           </Pressable>
           <Text style={{ color: colors.textSecondaryDark, fontFamily: "Jakarta-Bold", fontSize: 14, marginBottom: 8 }}>Surge History</Text>
-          {history.map((h: any) => (
+          {history.map((h) => (
             <View key={h.id} style={{ flexDirection: "row", padding: 8, backgroundColor: colors.darkSecondary, borderRadius: 6, marginBottom: 4 }}>
               <Text style={{ color: colors.textPrimaryDark, fontFamily: "Jakarta-Regular", fontSize: 11, flex: 1 }}>{new Date(h.triggered_at).toLocaleString()}</Text>
               <Text style={{ color: colors.amber, fontFamily: "Jakarta-Bold", fontSize: 11, marginRight: 8 }}>×{h.multiplier}</Text>

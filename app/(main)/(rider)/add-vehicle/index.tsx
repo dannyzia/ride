@@ -18,7 +18,7 @@ import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors, radii, spacing } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { VEHICLE_TYPES, type VehicleTypeEnum } from "@/lib/vehicleTypes";
 
 class ApiError extends Error {
@@ -193,8 +193,10 @@ function OptionPickerModal({
 
 export default function AddVehicle() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark
@@ -340,7 +342,7 @@ export default function AddVehicle() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View
         style={{
           flexDirection: "row",
@@ -669,6 +671,14 @@ export default function AddVehicle() {
         onSelect={(v) => setRegYear(parseInt(v, 10))}
         onClose={() => setPickerModal(null)}
       />
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

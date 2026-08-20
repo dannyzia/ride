@@ -65,18 +65,21 @@ export async function createZeroAmountPaymentEvent(params: {
   idempotency_key: string;
   purpose: 'wallet_topup' | 'rider_pass' | 'driver_package';
 }): Promise<{ id: string }> {
-  const [evt] = await db.insert(paymentEvents).values({
-    user_id: params.user_id,
-    driver_id: params.driver_id,
-    package_id: params.package_id,
-    pass_id: params.pass_id,
-    provider: 'portpos',
-    status: 'initiated',
-    idempotency_key: params.idempotency_key,
-    amount_bdt: 0,
-    purpose: params.purpose,
-  }).returning({ id: paymentEvents.id });
-  return { id: evt.id };
+  const result = await db.transaction(async (tx) => {
+    const [evt] = await tx.insert(paymentEvents).values({
+      user_id: params.user_id,
+      driver_id: params.driver_id,
+      package_id: params.package_id,
+      pass_id: params.pass_id,
+      provider: 'portpos',
+      status: 'initiated',
+      idempotency_key: params.idempotency_key,
+      amount_bdt: 0,
+      purpose: params.purpose,
+    }).returning({ id: paymentEvents.id });
+    return { id: evt.id };
+  });
+  return result;
 }
 
 export async function initiatePortposPayment(

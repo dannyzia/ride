@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 interface LinkedAccount {
   provider: string;
@@ -14,6 +17,14 @@ interface LinkedAccount {
 }
 
 export default function SettingsLinkedAccounts() {
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   const [accounts, setAccounts] = useState<LinkedAccount[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,46 +52,56 @@ export default function SettingsLinkedAccounts() {
   }, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Linked Accounts</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Linked Accounts</Text>
         <View className="w-[50px]" />
       </View>
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#0CC25F" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
           <View className="mt-4 mb-4">
-            <Text className="text-[16px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Connected Services</Text>
+            <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>Connected Services</Text>
             {accounts.length === 0 ? (
-              <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark py-4">
+              <Text className="text-[14px] font-Jakarta py-4" style={{ color: textSecondary }}>
                 No linked accounts. Connect a service below.
               </Text>
             ) : (
               accounts.map((acc) => (
-                <View key={acc.provider} className="flex-row items-center px-[12px] py-[8px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] mb-2">
-                  <View className="w-8 h-8 rounded-full mr-3 items-center justify-center"><Text className="text-[16px]">{acc.provider === "google" ? "📱" : "🏦"}</Text></View>
-                  <View className="flex-1"><Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{acc.label}</Text></View>
-                  <View className="bg-goPrimary/10 rounded-full px-[8px] py-[2px]"><Text className="text-[11px] font-JakartaBold text-goPrimary">Connected</Text></View>
+                <View key={acc.provider} className="flex-row items-center px-[12px] py-[8px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }}>
+                  <View className="w-8 h-8 rounded-full mr-3 items-center justify-center"><Ionicons name={acc.provider === "google" ? "phone-portrait" : "business"} size={16} color={textSecondary} /></View>
+                  <View className="flex-1"><Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{acc.label}</Text></View>
+                  <View className="rounded-full px-[8px] py-[2px]" style={{ backgroundColor: colors.primary + "1A" }}><Text className="text-[11px] font-JakartaBold" style={{ color: colors.primary }}>Connected</Text></View>
                 </View>
               ))
             )}
             <View className="mt-4">
               <TouchableOpacity
-                className="w-full bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[8px] px-[12px] py-[10px]"
+                className="w-full border rounded-[8px] px-[12px] py-[10px]"
+                style={{ backgroundColor: surfaceBg, borderColor }}
                 disabled
               >
-                <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Add Account — Coming soon</Text>
+                <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>Add Account — Coming soon</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       )}
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

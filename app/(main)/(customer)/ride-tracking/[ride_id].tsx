@@ -9,6 +9,7 @@ import {
   Alert,
   Share,
   StatusBar,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -27,11 +28,11 @@ import PinInput from "@/components/PinInput";
 import { isPinMismatch, PIN_REVERT_DELAY_MS } from "@/lib/pin";
 import { relativeTime } from "@/lib/time";
 
-let MapViewLib: any = MapLibreGL.MapView ?? MapLibreGL.default ?? null;
-let PointAnnotation: any = MapLibreGL.PointAnnotation ?? null;
-let Camera: any = MapLibreGL.Camera ?? null;
-let ShapeSource: any = MapLibreGL.ShapeSource ?? null;
-let LineLayer: any = MapLibreGL.LineLayer ?? null;
+const MapViewLib = MapLibreGL?.MapView ?? null;
+const PointAnnotation = MapLibreGL?.PointAnnotation ?? null;
+const Camera = MapLibreGL?.Camera ?? null;
+const ShapeSource = MapLibreGL?.ShapeSource ?? null;
+const LineLayer = MapLibreGL?.LineLayer ?? null;
 
 type TrackingState = "en_route" | "arrived" | "in_progress" | "complete";
 
@@ -409,9 +410,7 @@ export default function RideTrackingScreen() {
         {MapViewLib ? (
           <MapViewLib
             style={{ width: "100%", height: "100%" }}
-            styleURL={mapStyleURL}
-            centerCoordinate={mapCenter}
-            zoomLevel={14}
+            mapStyle={mapStyleURL}
           >
             {Camera && <Camera zoomLevel={14} centerCoordinate={mapCenter} />}
             {PointAnnotation && (
@@ -549,7 +548,7 @@ export default function RideTrackingScreen() {
             </View>
 
             <View style={styles.actionRow}>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => {}}>
+              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => { if (driver?.phone) Linking.openURL(`tel:${driver.phone}`); }}>
                 <Ionicons name="call" size={20} color={colors.primary} />
                 <Text style={[styles.actionBtnText, { color: textPrimary }]}>Call</Text>
               </TouchableOpacity>
@@ -625,7 +624,7 @@ export default function RideTrackingScreen() {
             </View>
 
             <View style={styles.actionRow}>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => {}}>
+              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => { if (driver?.phone) Linking.openURL(`tel:${driver.phone}`); }}>
                 <Ionicons name="call" size={20} color={colors.primary} />
                 <Text style={[styles.actionBtnText, { color: textPrimary }]}>Call</Text>
               </TouchableOpacity>

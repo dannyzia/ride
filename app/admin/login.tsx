@@ -10,8 +10,10 @@ import {
   Platform,
 } from "react-native";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { colors } from "@/theme/goRide";
 
 /**
  * Dedicated admin login page.
@@ -72,7 +74,7 @@ export default function AdminLoginScreen() {
       >
         {/* Lock icon */}
         <View style={styles.iconWrap}>
-          <Text style={styles.iconText}>🔒</Text>
+          <Ionicons name="lock-closed" size={28} color={colors.primary} />
         </View>
 
         <Text style={styles.title}>Admin Panel</Text>

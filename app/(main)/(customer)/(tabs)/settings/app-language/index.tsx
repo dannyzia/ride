@@ -15,8 +15,8 @@ import { useAppearance, useIsDark } from "@/lib/useAppearance";
 type LanguageCode = "en" | "bn";
 
 const LANGUAGES: { code: LanguageCode; flag: string; label: string }[] = [
-  { code: "en", flag: "🇬🇧", label: "English" },
-  { code: "bn", flag: "🇧🇩", label: "বাংলা" },
+  { code: "en", flag: "EN", label: "English" },
+  { code: "bn", flag: "BN", label: "বাংলা" },
 ];
 
 export default function SettingsAppLanguage() {

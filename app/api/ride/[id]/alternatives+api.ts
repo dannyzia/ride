@@ -1,31 +1,32 @@
 // Auth: verifySupabaseToken via requireRole
-import { db } from '../../../../src/db';
-import { rides, pricing } from '../../../../src/db/schema';
+import { db } from '@/src/db';
+import { rides, pricing } from '@/src/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { requireRole } from '../../../../lib/auth';
-import { getH3Ring } from '../../../../lib/h3';
+import { requireRole } from '@/lib/auth';
+import { getH3Ring } from '@/lib/h3';
+import { z } from 'zod';
 
-import { getDriversInCells } from '../../../../utils-server/h3Index';
-import { calculateFare } from '../../../../lib/fareCalc';
-import { VEHICLE_TYPE_VALUES } from '../../../../lib/vehicleTypes';
-import { logger } from '../../../../lib/logger';
+import { getDriversInCells } from '@/utils-server/h3Index';
+import { calculateFare } from '@/lib/fareCalc';
+import { VEHICLE_TYPE_VALUES } from '@/lib/vehicleTypes';
+import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
 
-export async function GET(req: Request) {
+export async function GET(request: Request, { id }: { id: string }) {
   try {
-    const url = new URL(req.url);
-    const segments = url.pathname.split('/');
-    const rideId = segments[segments.indexOf('ride') + 1];
-    if (!rideId) return Response.json({ error: 'missing_ride_id', message: 'Ride ID is required' }, { status: 400 });
+    if (!z.string().uuid().safeParse(id).success) {
+      return Response.json({ error: 'invalid_uuid', message: 'Invalid ride ID' }, { status: 400 });
+    }
+    const rideId = id;
 
-    const { dbUser: user } = await requireRole('rider')(req);
+    const { dbUser: user } = await requireRole('rider')(request);
 
     const [ride] = await db.select().from(rides)
       .where(and(eq(rides.id, rideId), eq(rides.user_id, user.id)))
       .limit(1);
-    if (!ride) return Response.json({ error: 'Ride not found', message: 'Ride not found' }, { status: 404 });
+    if (!ride) return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
     if (ride.status !== 'no_drivers' && ride.status !== 'pending') {
-      return Response.json({ error: 'Ride not in no_drivers state', message: 'Ride is not in a no-drivers state' }, { status: 409 });
+      return Response.json({ error: 'ride_not_eligible', message: 'Ride is not in a no-drivers state' }, { status: 409 });
     }
 
     const cells = getH3Ring(

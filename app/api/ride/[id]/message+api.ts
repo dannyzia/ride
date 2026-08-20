@@ -1,29 +1,29 @@
 import { z } from 'zod';
-import { db } from '../../../../src/db';
-import { chatMessages, rides, users } from '../../../../src/db/schema';
+import { db } from '@/src/db';
+import { chatMessages, rides, users } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
-import { logger } from '../../../../lib/logger';
+import { logger } from '@/lib/logger';
+import { parseJsonBody } from '@/lib/parseBody';
 import * as errors from '@/lib/errors';
 
-const schema = z.object({
+const messageSchema = z.object({
   content: z.string().min(1).max(1000),
 });
 
 const CHAT_ENABLED_STATUSES = ['matched', 'driver_arriving', 'in_progress'] as const;
 
-export async function POST(req: Request) {
+export async function POST(request: Request, { id }: { id: string }) {
   try {
-    const url = new URL(req.url);
-    const segments = url.pathname.split('/');
-    const rideId = segments[segments.indexOf('ride') + 1];
-    if (!rideId) return Response.json({ error: 'missing_ride_id', message: 'Ride ID is required' }, { status: 400 });
+    if (!z.string().uuid().safeParse(id).success) {
+      return Response.json({ error: 'invalid_uuid', message: 'Invalid ride ID' }, { status: 400 });
+    }
+    const rideId = id;
 
-    const supabaseUser = await verifySupabaseToken(req);
+    const supabaseUser = await verifySupabaseToken(request);
 
-    const body = await req.json();
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) return Response.json({ error: 'invalid_body', message: 'Invalid request body' }, { status: 400 });
+    const parsed = await parseJsonBody(request, messageSchema);
+    if (!parsed.ok) return parsed.response;
 
     const { content } = parsed.data;
 
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       const otherUserId = ride.user_id === user.id ? ride.driver_id : ride.user_id;
       fetch(`http://127.0.0.1:${wsPort}/internal/chat/send`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${internalSecret}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${internalSecret}` },
         signal: AbortSignal.timeout(5_000),
         body: JSON.stringify({
           ride_id: rideId,
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
             created_at: msg.created_at,
           },
         }),
-      }).catch(err => logger.error('[ride/message] chat relay failed', err));
+      }).catch((err) => logger.error('[ride/message] chat relay failed', err));
     }
 
     return Response.json({

@@ -115,7 +115,7 @@ export default function PreferenceChips({
             >
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Medium",
                   fontSize: 12,
                   fontWeight: "500",
                   color: isSelected ? colors.primary : colors.textSecondaryDark,
@@ -126,7 +126,7 @@ export default function PreferenceChips({
               {pref.charge_bdt > 0 && (
                 <Text
                   style={{
-                    fontFamily: "Inter",
+                    fontFamily: "Jakarta-Medium",
                     fontSize: 10,
                     color: colors.textDisabledDark,
                     marginLeft: 4,
@@ -147,7 +147,7 @@ export default function PreferenceChips({
                 >
                   <Text
                     style={{
-                      fontFamily: "Inter",
+                      fontFamily: "Jakarta-Medium",
                       fontSize: 9,
                       color: colors.info,
                     }}

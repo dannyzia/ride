@@ -1,26 +1,49 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 export default function AddPaymentMethod() {
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Add Payment Method</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Add Payment Method</Text>
         <View className="w-[50px]" />
       </View>
       <View className="flex-1 items-center justify-center px-[24px]">
-        <View className="w-24 h-24 rounded-full bg-goAccentLight items-center justify-center mb-6">
-          <Text className="text-[48px]">💳</Text>
+        <View
+          className="w-24 h-24 rounded-full items-center justify-center mb-6"
+          style={{ backgroundColor: isDark ? colors.primaryLightDark : colors.primaryLight }}
+        >
+          <Ionicons name="card" size={48} color={colors.primary} />
         </View>
-        <Text className="text-[22px] font-JakartaBold tracking-tight text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Coming Soon</Text>
-        <Text className="text-[15px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center">
+        <Text className="text-[22px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>Coming Soon</Text>
+        <Text className="text-[15px] font-Jakarta text-center" style={{ color: textSecondary }}>
           Secure card payment via PortPos hosted checkout will be available soon. Your card details are never stored in the app.
         </Text>
       </View>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

@@ -27,6 +27,12 @@ import { recordCallDeduction, recordCallRefund } from "../../utils-server/heartb
 
 type Row = Record<string, unknown>;
 
+interface WhereChain {
+  for: () => WhereChain;
+  limit: (n: number) => Promise<Row[]>;
+  then: (resolve: (v: unknown) => void) => void;
+}
+
 interface FakeState {
   subscriptions: Row[];
   packages: Row[];
@@ -59,7 +65,7 @@ function buildDbMock(initial: Partial<FakeState>) {
           const rows = rowsFor(table);
           // Supports .for("update") now used by recordCallDeduction/Refund
           // (the subscription read is locked): where → for → (then | limit).
-          const chain: any = {
+          const chain: WhereChain = {
             for: jest.fn(() => chain),
             limit: jest.fn(async (n: number) => rows.slice(0, n)),
             then: (resolve: (v: unknown) => void) => resolve(rows),

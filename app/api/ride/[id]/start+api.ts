@@ -8,12 +8,12 @@ import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 import * as errors from '@/lib/errors';
 
-export async function POST(request: Request) {
+export async function POST(request: Request, { id }: { id: string }) {
   try {
-    const url = new URL(request.url);
-    const segments = url.pathname.split('/');
-    const rideId = segments[segments.indexOf('ride') + 1];
-    if (!rideId) return Response.json({ error: 'missing_ride_id', message: 'Ride ID is required' }, { status: 400 });
+    if (!z.string().uuid().safeParse(id).success) {
+      return Response.json({ error: 'invalid_uuid', message: 'Invalid ride ID' }, { status: 400 });
+    }
+    const rideId = id;
 
     const { dbUser: user } = await requireRole('driver')(request);
 

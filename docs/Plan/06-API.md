@@ -2895,7 +2895,7 @@ Uses `supabase.storage.from('driver-documents').createSignedUrl(...)` to generat
 
 | Event | Direction | Payload | Notes |
 |-------|-----------|---------|-------|
-| `auth:hello` | client → server | `{supabase_jwt, role:'driver'\|'rider'}` | Bind socket |
+| `auth:hello` | client → server | `{supabase_jwt, role:'driver'\|'rider'\|'admin'}` | Bind socket. `role:'admin'` (F-15) registers the socket in the admin registry for SOS broadcasts — no driver lookup, no H3 indexing, no online flag. |
 | `auth:refresh` | client → server | `{supabase_jwt}` | Every 50m |
 | `auth:ok`/`error` | server → client | `{user_id, role}` | — |
 | `ride:offer` | server → driver | `{ride_id, pickup: {lat,lng,address}, dropoff: {lat,lng,address}, fare_breakdown, driver_fare_bdt, vehicle_type (8-value enum), rider_first_name, rider_rating, distance_km, pickup_distance_km, pickup_eta_minutes, is_scheduled, is_intercity, origin_city, preferences: [{name, display_label_en, icon}], expires_in_ms: 15000, expires_at: ISO-8601}` | Client drives countdown from `expires_at`. Offer timeout is configurable (default 15s). `pickup_distance_km` and `pickup_eta_minutes` are estimated from driver's current location. `rider_rating` is the rider's average rating. `is_scheduled` is true for scheduled rides. `preferences` lists any rider-selected add-ons. **`driver_fare_bdt` is the amount the driver will earn** (fare_breakdown.total_bdt + preference_surcharge_bdt). The offer card MUST display `driver_fare_bdt`, NOT `fare_breakdown.total_bdt`. `fare_breakdown` contains the base fare components for potential future detailed view. `is_intercity` and `origin_city` are included for driver information — `is_intercity=true` means the dropoff is outside the origin city polygon and the outside-city per-km rate applies to the outside segment. |
@@ -2918,6 +2918,7 @@ Uses `supabase.storage.from('driver-documents').createSignedUrl(...)` to generat
 | `admin:vehicle-downgrade` | server → driver | `{driver_id, old_vehicle_type, new_vehicle_type, reason}` | Push notification + in-app modal on next launch when admin downgrades driver's vehicle type. |
 | `vehicle-type:change-applied` | server → driver | `{old_type, new_type, effective_at, min_per_km_bdt_reset: true}` | Sent when a driver-initiated type change cooling-off completes and the new type takes effect (covers both upgrades and lateral changes — not downgrade-only). |
 | `admin:suspended` | server → driver | `{driver_id, reason}` | Sent when admin suspends a driver. Driver app should show a blocking modal. |
+| `admin:sos` | server → admin | `{alert: {id, user_id, role, latitude, longitude, message, ride_id, created_at}}` | Broadcast to all connected admin dashboards after a NEW `POST /api/sos/alert` insert (not on per-ride dedupe). `latitude`/`longitude` are strings (numeric columns), `created_at` is ISO-8601. |
 
 ---
 
@@ -2942,6 +2943,17 @@ Uses `supabase.storage.from('driver-documents').createSignedUrl(...)` to generat
 **Purpose:** Called by the Expo API after updating the DB on driver suspension or downgrade. Forces the driver offline: closes the WebSocket connection, updates `driver_online_sessions` (sets `went_offline_at=now()`), and sets `drivers.is_online = false`.
 
 **Success:** 200 `{ "ok": true }`
+
+---
+
+### POST /internal/sos/alert
+**Auth:** `WEBSOCKET_INTERNAL_SECRET` (shared secret between Expo API and utils-server)
+
+**Body:** `{ "alert": { id, user_id, role, latitude, longitude, message, ride_id, created_at } }`
+
+**Purpose:** Called by `POST /api/sos/alert` (Expo API route) after a NEW `sos_alerts` insert. Broadcasts a WebSocket `admin:sos` event to every connected admin dashboard. utils-server only broadcasts — it never writes `sos_alerts`.
+
+**Success:** 200 `{ "ok": true, "delivered": number }`
 
 ---
 

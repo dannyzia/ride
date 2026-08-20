@@ -32,7 +32,13 @@ const isConfigured = supabaseUrl.length > 0 && supabaseAnonKey.length > 0;
 // adapter, persistSession:true silently fails and sessions are lost on every
 // reload — the auth gate then redirects to login and the user never reaches
 // the home screen.  AsyncStorage fills this gap.
-let storageAdapter: any = undefined;
+interface AsyncStorageAdapter {
+  getItem: (key: string) => Promise<string | null>;
+  setItem: (key: string, value: string) => Promise<void>;
+  removeItem: (key: string) => Promise<void>;
+}
+
+let storageAdapter: AsyncStorageAdapter | undefined = undefined;
 if (!isServer && Platform.OS !== "web") {
   try {
     const AsyncStorage = require("@react-native-async-storage/async-storage").default;

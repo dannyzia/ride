@@ -21,7 +21,7 @@ import { useRiderStore, type VehicleType } from "@/store/useRiderStore";
 import { useWSStore } from "@/store";
 import { supabase } from "@/lib/supabase";
 
-const POLL_INTERVAL_MS = 5000;
+const POLL_INTERVAL_MS = 10000;
 const MAX_EMPTY_POLLS = 12;
 
 interface Alternative {
@@ -86,7 +86,7 @@ export default function FindingDriver() {
   useEffect(() => {
     if (!ws) return;
     const handler = (event: MessageEvent) => {
-      let msg: Record<string, any>;
+      let msg: { type?: string; ride_id?: string; status?: string; alternatives?: unknown };
       try {
         msg = JSON.parse(event.data);
       } catch {
@@ -95,7 +95,7 @@ export default function FindingDriver() {
       if (
         msg.type === "ride:status" &&
         msg.ride_id &&
-        COMMITTED_STATUSES.includes(msg.status)
+        COMMITTED_STATUSES.includes(msg.status ?? "")
       ) {
         goToTracking(msg.ride_id);
       } else if (msg.type === "ride:expired" && msg.ride_id) {
@@ -180,8 +180,8 @@ export default function FindingDriver() {
         }
       }
       setError(false);
-    } catch (e: any) {
-      if (e.name !== "AbortError") {
+    } catch (e) {
+      if (!(e instanceof Error) || e.name !== "AbortError") {
         logger.error("[finding-driver] nearby fetch failed", e);
         setError(true);
       }

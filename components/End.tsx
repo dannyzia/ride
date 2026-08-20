@@ -13,7 +13,7 @@ const End = () => {
             </View>
             <View className='flex-1 justify-center'>
                 <Text className='font-Jakarta text-base text-gray-600'>You’ve reached your destination</Text>
-                <Text className='font-JakartaSemiBold text-xl text-black'>Congrats! 🎉</Text>
+                <Text className='font-JakartaSemiBold text-xl text-black'>Congrats!</Text>
             </View>
         </View>
     )

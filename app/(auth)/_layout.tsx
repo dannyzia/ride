@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { View, TouchableOpacity } from "react-native";
 import { colors } from '@/theme/goRide';
 import { useIsDark, useAppearance } from '@/lib/useAppearance';
@@ -36,6 +36,9 @@ function ThemeToggle() {
 
 export default function AuthLayout() {
   const isDark = useIsDark();
+  const segments = useSegments();
+  // L3: splash screens get NO theme toggle — they follow system only.
+  const isSplash = segments[segments.length - 1] === 'driver-splash';
   return (
     <View style={{ flex: 1 }}>
       <Stack
@@ -45,7 +48,7 @@ export default function AuthLayout() {
           animation: 'slide_from_right',
         }}
       />
-      <ThemeToggle />
+      {!isSplash && <ThemeToggle />}
     </View>
   );
 }

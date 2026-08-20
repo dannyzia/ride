@@ -1,11 +1,15 @@
 import { useRiderStore } from "@/store/useRiderStore";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useChatStore } from "@/store/useChatStore";
+import { useDriverStatusStore } from "@/store/useDriverStatusStore";
+import { usePackageStore } from "@/store/usePackageStore";
+import { useCallLedgerStore } from "@/store/useCallLedgerStore";
+import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 
 /**
- * Single source of truth for sign-out state cleanup (doc 03 R2.5 #4 / §7).
+ * Single source of truth for sign-out state cleanup (§6.10 / §7).
  *
- * Order: rider reset → driver reset → chat clear. Every call is guarded
+ * Resets ALL 7 Zustand stores. Every call is guarded
  * (`if (S.getState().reset)`) so the helper survives store refactors.
  *
  * Two rules the doc makes binding:
@@ -23,4 +27,12 @@ export function authCleanup(): void {
   if (driverReset) driverReset();
   const chatClear = useChatStore.getState().clearChat;
   if (chatClear) chatClear();
+  const driverStatusClear = useDriverStatusStore.getState().clear;
+  if (driverStatusClear) driverStatusClear();
+  const packageClear = usePackageStore.getState().clear;
+  if (packageClear) packageClear();
+  const callLedgerClear = useCallLedgerStore.getState().clear;
+  if (callLedgerClear) callLedgerClear();
+  const driverFlowReset = useDriverFlowStore.getState().reset;
+  if (driverFlowReset) driverFlowReset();
 }

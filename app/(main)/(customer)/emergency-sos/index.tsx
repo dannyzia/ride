@@ -14,7 +14,7 @@ import ReactNativeModal from "react-native-modal";
 import * as Location from "expo-location";
 import { API_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useRiderStore } from "@/store/useRiderStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
@@ -26,6 +26,7 @@ import { logger } from "@/lib/logger";
 // must never depend on a network round-trip.
 export default function EmergencySOS() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
   const activeRideId = useRiderStore((s) => s.activeRide?.id);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [sending, setSending] = useState(false);
@@ -216,6 +217,15 @@ export default function EmergencySOS() {
           </TouchableOpacity>
         </View>
       </ReactNativeModal>
+
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

@@ -39,7 +39,7 @@ const requestSchema = z.object({
   scheduled_at: z.string().datetime().optional(),
   allow_downgrade: z.boolean().optional().default(false),
   selected_discount_type: z
-    .enum(["intro", "promo", "pass", "wallet", "none"])
+    .enum(["intro", "promo", "pass", "none"])
     .optional(),
   selected_discount_amount_bdt: z.number().int().nonnegative().optional(),
   preference_ids: z.array(z.string().uuid()).max(10).optional(),
@@ -255,9 +255,8 @@ export async function POST(request: Request) {
     // ── Validate and lock selected discount ──────────────────────────────
     const discountType = selected_discount_type ?? "none";
     const discountAmount = selected_discount_amount_bdt ?? 0;
-    let appliedDiscountType: "intro" | "promo" | "pass" | "wallet" | "none" = "none";
+    let appliedDiscountType: "intro" | "promo" | "pass" | "none" = "none";
     let appliedDiscountBdt = 0;
-    let walletRedeemedBdt = 0;
     let platformSubsidyBdt = 0;
     let promoCodeId: string | null = null;
     // M-29: the staged promo's discount shape is captured here so the
@@ -293,11 +292,9 @@ export async function POST(request: Request) {
         passSubscriptionId = match.subscription_id ?? null;
       }
 
-      if (discountType === "wallet") {
-        walletRedeemedBdt = discountAmount;
-      } else {
-        platformSubsidyBdt = discountAmount;
-      }
+      // L13: Wallet cannot pay for rides — wallet exists for passes/packages only.
+      // All non-pass discounts are platform-subsidized (intro, promo).
+      platformSubsidyBdt = discountAmount;
 
       // Consume staged promo if the rider selected the promo option.
       // M-29: only validate + capture the promo id here. The promoRedemptions
@@ -385,7 +382,6 @@ export async function POST(request: Request) {
            applied_discount_type: appliedDiscountType,
            applied_discount_bdt: appliedDiscountBdt,
            pass_subscription_id: passSubscriptionId,
-           wallet_redeemed_bdt: walletRedeemedBdt,
            driver_fare_bdt: driverFareBdt,
           rider_payable_bdt: riderPayableBdt,
           platform_subsidy_bdt:

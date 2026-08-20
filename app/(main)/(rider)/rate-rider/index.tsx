@@ -126,8 +126,8 @@ export default function RateRider() {
       submitted.current = true;
       showToast("Rating submitted — thank you!");
       goHomeDelayed();
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : String(err)) || "Network error");
       logger.error("Rate rider failed", err);
     } finally {
       setLoading(false);

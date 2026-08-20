@@ -9,10 +9,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 interface ActiveIncentive {
   incentive_id: string;
@@ -37,6 +39,12 @@ interface IncentiveData {
   completed: CompletedIncentive[];
   total_bonus_calls_earned: number;
 }
+
+type IncentiveRow =
+  | { key: "summary" }
+  | { key: "completed-header" }
+  | ({ key: "active" } & ActiveIncentive)
+  | ({ key: "completed" } & CompletedIncentive);
 
 function formatMetric(metric: string): string {
   switch (metric) {
@@ -74,6 +82,20 @@ function getProgressPercent(current: number, target: number): number {
 }
 
 export default function IncentivesScreen() {
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark
+    ? colors.textSecondaryDark
+    : colors.textSecondaryLight;
+  const textDisabled = isDark
+    ? colors.textDisabledDark
+    : colors.textDisabledLight;
+
   const [data, setData] = useState<IncentiveData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -119,7 +141,7 @@ export default function IncentivesScreen() {
     return (
       <View
         style={{
-          backgroundColor: colors.surfaceLight,
+          backgroundColor: surfaceBg,
           borderRadius: radii.xl,
           padding: spacing.lg,
           marginBottom: spacing.md,
@@ -142,7 +164,7 @@ export default function IncentivesScreen() {
                 fontFamily: "Jakarta-Regular",
                 fontWeight: "700",
                 fontSize: 16,
-                color: colors.textPrimaryLight,
+                color: textPrimary,
               }}
             >
               {item.name}
@@ -150,9 +172,9 @@ export default function IncentivesScreen() {
             {item.description && (
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 12,
-                  color: colors.textSecondaryLight,
+                  color: textSecondary,
                   marginTop: 2,
                 }}
               >
@@ -162,7 +184,9 @@ export default function IncentivesScreen() {
           </View>
           <View
             style={{
-              backgroundColor: colors.primaryLight,
+              backgroundColor: isDark
+                ? colors.primaryLightDark
+                : colors.primaryLight,
               borderRadius: radii.pill,
               paddingHorizontal: spacing.sm,
               paddingVertical: 4,
@@ -171,7 +195,7 @@ export default function IncentivesScreen() {
           >
             <Text
               style={{
-                fontFamily: "Inter",
+                fontFamily: "Jakarta-Bold",
                 fontSize: 11,
                 fontWeight: "700",
                 color: colors.primary,
@@ -193,19 +217,19 @@ export default function IncentivesScreen() {
           >
             <Text
               style={{
-                fontFamily: "Inter",
+                fontFamily: "Jakarta-Regular",
                 fontSize: 12,
-                color: colors.textSecondaryLight,
+                color: textSecondary,
               }}
             >
               {formatMetricLabel(item.target_metric)}
             </Text>
             <Text
               style={{
-                fontFamily: "Inter",
+                fontFamily: "Jakarta-SemiBold",
                 fontSize: 12,
                 fontWeight: "600",
-                color: colors.textPrimaryLight,
+                color: textPrimary,
               }}
             >
               <Text style={{ color: colors.primary }}>
@@ -219,7 +243,7 @@ export default function IncentivesScreen() {
           <View
             style={{
               height: 8,
-              backgroundColor: colors.borderLight,
+              backgroundColor: borderColor,
               borderRadius: 4,
               overflow: "hidden",
             }}
@@ -245,9 +269,9 @@ export default function IncentivesScreen() {
         >
           <Text
             style={{
-              fontFamily: "Inter",
+              fontFamily: "Jakarta-Regular",
               fontSize: 11,
-              color: colors.textDisabledLight,
+              color: textDisabled,
             }}
           >
             {daysLeft > 0 ? `${daysLeft} days left` : "Ending soon"}
@@ -261,7 +285,7 @@ export default function IncentivesScreen() {
               />
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-SemiBold",
                   fontSize: 11,
                   fontWeight: "600",
                   color: colors.primary,
@@ -280,7 +304,7 @@ export default function IncentivesScreen() {
   const renderCompletedIncentive = ({ item }: { item: CompletedIncentive }) => (
     <View
       style={{
-        backgroundColor: colors.surfaceLight,
+        backgroundColor: surfaceBg,
         borderRadius: radii.lg,
         padding: spacing.md,
         marginBottom: spacing.sm,
@@ -308,16 +332,16 @@ export default function IncentivesScreen() {
             fontFamily: "Jakarta-Regular",
             fontWeight: "600",
             fontSize: 14,
-            color: colors.textPrimaryLight,
+            color: textPrimary,
           }}
         >
           {item.name}
         </Text>
         <Text
           style={{
-            fontFamily: "Inter",
+            fontFamily: "Jakarta-Regular",
             fontSize: 11,
-            color: colors.textSecondaryLight,
+            color: textSecondary,
           }}
         >
           {item.completed_at
@@ -327,7 +351,7 @@ export default function IncentivesScreen() {
       </View>
       <Text
         style={{
-          fontFamily: "Inter",
+          fontFamily: "Jakarta-Bold",
           fontSize: 13,
           fontWeight: "700",
           color: colors.primary,
@@ -339,7 +363,8 @@ export default function IncentivesScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgLight }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       {/* Header */}
       <View
         style={{
@@ -351,18 +376,14 @@ export default function IncentivesScreen() {
         }}
       >
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={colors.textPrimaryLight}
-          />
+          <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
           style={{
             fontFamily: "Jakarta-Regular",
             fontWeight: "700",
             fontSize: 17,
-            color: colors.textPrimaryLight,
+            color: textPrimary,
           }}
         >
           Incentives
@@ -387,9 +408,9 @@ export default function IncentivesScreen() {
         >
           <Text
             style={{
-              fontFamily: "Inter",
+              fontFamily: "Jakarta-Regular",
               fontSize: 14,
-              color: colors.textSecondaryLight,
+              color: textSecondary,
               textAlign: "center",
             }}
           >
@@ -400,11 +421,13 @@ export default function IncentivesScreen() {
         <FlatList
           data={[
             { key: "summary" },
-            ...data.active.map((a) => ({ key: "active", ...a })),
-            ...(data.completed.length > 0 ? [{ key: "completed-header" }] : []),
-            ...data.completed.map((c) => ({ key: "completed", ...c })),
-          ]}
-          keyExtractor={(item: any) =>
+            ...data.active.map((a) => ({ key: "active" as const, ...a })),
+            ...(data.completed.length > 0
+              ? [{ key: "completed-header" as const }]
+              : []),
+            ...data.completed.map((c) => ({ key: "completed" as const, ...c })),
+          ] as IncentiveRow[]}
+          keyExtractor={(item) =>
             item.key === "active"
               ? `active-${item.incentive_id}`
               : item.key === "completed"
@@ -422,7 +445,7 @@ export default function IncentivesScreen() {
             paddingHorizontal: spacing.lg,
             paddingBottom: spacing["3xl"],
           }}
-          renderItem={({ item }: { item: any }) => {
+          renderItem={({ item }: { item: IncentiveRow }) => {
             if (item.key === "summary") {
               return (
                 <View
@@ -460,16 +483,16 @@ export default function IncentivesScreen() {
             if (item.key === "completed-header") {
               return (
                 <Text
-                  style={{
-                    fontFamily: "Jakarta-Regular",
-                    fontWeight: "700",
-                    fontSize: 15,
-                    color: colors.textSecondaryLight,
-                    marginTop: spacing.md,
-                    marginBottom: spacing.sm,
-                  }}
+                style={{
+                fontFamily: "Jakarta-Regular",
+                fontWeight: "700",
+                fontSize: 15,
+                color: textSecondary,
+                marginTop: spacing.md,
+                marginBottom: spacing.sm,
+                }}
                 >
-                  Completed
+                Completed
                 </Text>
               );
             }
@@ -488,14 +511,14 @@ export default function IncentivesScreen() {
               <Ionicons
                 name="gift-outline"
                 size={48}
-                color={colors.textDisabledLight}
+                color={textDisabled}
               />
               <Text
                 style={{
                   fontFamily: "Jakarta-Regular",
                   fontWeight: "600",
                   fontSize: 16,
-                  color: colors.textSecondaryLight,
+                  color: textSecondary,
                   marginTop: spacing.md,
                 }}
               >
@@ -503,9 +526,9 @@ export default function IncentivesScreen() {
               </Text>
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 13,
-                  color: colors.textDisabledLight,
+                  color: textDisabled,
                   marginTop: spacing.sm,
                   textAlign: "center",
                 }}
@@ -517,6 +540,15 @@ export default function IncentivesScreen() {
           }
         />
       )}
+
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

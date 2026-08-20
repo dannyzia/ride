@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useRiderStore } from "@/store/useRiderStore";
 import { colors } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 interface Promo {
   promo_id: string;
@@ -24,6 +25,7 @@ interface Promo {
 
 export default function ApplyPromos() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
   const [promoCode, setPromoCode] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
@@ -83,8 +85,8 @@ export default function ApplyPromos() {
       setMessage("Promo applied successfully!");
       setMessageType("success");
       if (applyPromo) await applyPromo(data.promo);
-    } catch (err: any) {
-      setMessage(err?.message || "Failed to apply promo");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to apply promo");
       setMessageType("error");
       logger.error("Apply promo failed", err);
     } finally {
@@ -94,6 +96,7 @@ export default function ApplyPromos() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
@@ -110,7 +113,7 @@ export default function ApplyPromos() {
             className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta"
             style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
             placeholder="Enter promo code"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={textSecondary}
             value={promoCode}
             onChangeText={setPromoCode}
           />
@@ -135,7 +138,7 @@ export default function ApplyPromos() {
           disabled={loading || !promoCode.trim()}
         >
           {loading ? (
-            <ActivityIndicator size={20} color="#FFFFFF" />
+            <ActivityIndicator size={20} color={colors.white} />
           ) : (
             <Text className="text-[16px] font-JakartaBold text-goWhite">Apply</Text>
           )}
@@ -174,6 +177,14 @@ export default function ApplyPromos() {
           )}
         </View>
       </ScrollView>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

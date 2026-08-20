@@ -64,8 +64,8 @@ export default function DocumentUploadCard({ docType, label, onUploadComplete }:
       setPreviewUri(file.uri);
       onUploadComplete(data.path, publicUrlData.publicUrl);
       logger.info("[DocumentUploadCard] upload complete", { docType, path: data.path });
-    } catch (e: any) {
-      logger.error("[DocumentUploadCard] upload failed", { docType, error: e.message });
+    } catch (e) {
+      logger.error("[DocumentUploadCard] upload failed", { docType, error: e instanceof Error ? e.message : String(e) });
       setUploadError("Upload failed — tap to try again");
     } finally {
       setUploading(false);

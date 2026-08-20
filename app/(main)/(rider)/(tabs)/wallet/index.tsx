@@ -1,18 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
+
+interface CancellationCredit {
+  id: string;
+  amount_bdt: number;
+  status: string;
+  created_at: string | null;
+}
 
 export default function WalletScreen() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
   const [balancePaisa, setBalancePaisa] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [credits, setCredits] = useState<any[]>([]);
+  const [credits, setCredits] = useState<CancellationCredit[]>([]);
   const [creditsLoading, setCreditsLoading] = useState(false);
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -34,8 +43,8 @@ export default function WalletScreen() {
       if (!res.ok) { setError("Failed to load wallet"); return; }
       const data = await res.json();
       setBalancePaisa(data.balance_bdt ?? 0);
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error");
       logger.error("Wallet fetch failed", err);
     } finally {
       setLoading(false);
@@ -54,7 +63,7 @@ export default function WalletScreen() {
       if (!res.ok) return;
       const data = await res.json();
       setCredits(data.credits ?? []);
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Cancellation credits fetch failed", err);
     } finally {
       setCreditsLoading(false);
@@ -71,6 +80,7 @@ export default function WalletScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>Wallet</Text>
         {loading ? (
@@ -148,6 +158,14 @@ export default function WalletScreen() {
           )}
         </View>
       </ScrollView>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

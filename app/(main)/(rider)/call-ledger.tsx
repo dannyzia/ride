@@ -8,11 +8,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ReactNativeModal from "react-native-modal";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -78,7 +80,7 @@ const DATE_RANGE_OPTIONS = [
 
 const EVENT_CONFIG: Record<
   string,
-  { label: string; icon: string; color: string }
+  { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }
 > = {
   deduction: {
     label: "Ride Deduction",
@@ -103,13 +105,15 @@ const EVENT_CONFIG: Record<
   },
 };
 
-const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
+const OUTCOME_CONFIG = (
+  textSecondary: string,
+): Record<string, { label: string; color: string }> => ({
   accepted: { label: "Accepted", color: colors.primary },
   expired: { label: "No Response", color: colors.amber },
   refunded: { label: "Refunded", color: colors.info },
   filtered: { label: "Rate Filtered", color: colors.grayMedium },
-  delivered: { label: "Pending", color: colors.textSecondaryLight },
-};
+  delivered: { label: "Pending", color: textSecondary },
+});
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -149,6 +153,20 @@ function formatShortDate(dateStr: string): string {
 type TabKey = "ledger" | "missed";
 
 export default function CallLedgerScreen() {
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark
+    ? colors.textSecondaryDark
+    : colors.textSecondaryLight;
+  const textDisabled = isDark
+    ? colors.textDisabledDark
+    : colors.textDisabledLight;
+
   // Tab state
   const [activeTab, setActiveTab] = useState<TabKey>("missed");
 
@@ -165,7 +183,7 @@ export default function CallLedgerScreen() {
   );
   const [missedLoading, setMissedLoading] = useState(true);
   const [missedRefreshing, setMissedRefreshing] = useState(false);
-  const [_missedHasMore, setMissedHasMore] = useState(false);
+  const [, setMissedHasMore] = useState(false);
 
   // Filters
   const [outcomeFilter, setOutcomeFilter] = useState("all");
@@ -329,7 +347,7 @@ export default function CallLedgerScreen() {
               </Text>
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 11,
                   color: "rgba(255,255,255,0.7)",
                 }}
@@ -350,7 +368,7 @@ export default function CallLedgerScreen() {
               </Text>
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 11,
                   color: "rgba(255,255,255,0.7)",
                 }}
@@ -371,7 +389,7 @@ export default function CallLedgerScreen() {
               </Text>
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 11,
                   color: "rgba(255,255,255,0.7)",
                 }}
@@ -392,7 +410,7 @@ export default function CallLedgerScreen() {
               </Text>
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 11,
                   color: "rgba(255,255,255,0.7)",
                 }}
@@ -428,27 +446,26 @@ export default function CallLedgerScreen() {
           borderRadius: radii.pill,
           borderWidth: 1,
           borderColor:
-            activeFilterCount > 0 ? colors.primary : colors.borderLight,
+            activeFilterCount > 0 ? colors.primary : borderColor,
           backgroundColor:
-            activeFilterCount > 0 ? colors.primaryLight : colors.surfaceLight,
+            activeFilterCount > 0
+              ? isDark
+                ? colors.primaryLightDark
+                : colors.primaryLight
+              : surfaceBg,
         }}
       >
         <Ionicons
           name="options-outline"
           size={16}
-          color={
-            activeFilterCount > 0 ? colors.primary : colors.textSecondaryLight
-          }
+          color={activeFilterCount > 0 ? colors.primary : textSecondary}
         />
         <Text
           style={{
-            fontFamily: "Inter",
+            fontFamily: "Jakarta-SemiBold",
             fontSize: 13,
             fontWeight: "600",
-            color:
-              activeFilterCount > 0
-                ? colors.primary
-                : colors.textSecondaryLight,
+            color: activeFilterCount > 0 ? colors.primary : textSecondary,
             marginLeft: 4,
           }}
         >
@@ -468,7 +485,7 @@ export default function CallLedgerScreen() {
           >
             <Text
               style={{
-                fontFamily: "Inter",
+                fontFamily: "Jakarta-Bold",
                 fontSize: 10,
                 fontWeight: "700",
                 color: colors.white,
@@ -492,12 +509,14 @@ export default function CallLedgerScreen() {
             paddingHorizontal: spacing.sm,
             paddingVertical: 4,
             borderRadius: radii.pill,
-            backgroundColor: colors.primaryLight,
+            backgroundColor: isDark
+              ? colors.primaryLightDark
+              : colors.primaryLight,
           }}
         >
           <Text
             style={{
-              fontFamily: "Inter",
+              fontFamily: "Jakarta-SemiBold",
               fontSize: 11,
               color: colors.primary,
               fontWeight: "600",
@@ -524,12 +543,14 @@ export default function CallLedgerScreen() {
             paddingHorizontal: spacing.sm,
             paddingVertical: 4,
             borderRadius: radii.pill,
-            backgroundColor: colors.primaryLight,
+            backgroundColor: isDark
+              ? colors.primaryLightDark
+              : colors.primaryLight,
           }}
         >
           <Text
             style={{
-              fontFamily: "Inter",
+              fontFamily: "Jakarta-SemiBold",
               fontSize: 11,
               color: colors.primary,
               fontWeight: "600",
@@ -563,7 +584,7 @@ export default function CallLedgerScreen() {
     >
       <View
         style={{
-          backgroundColor: colors.surfaceLight,
+          backgroundColor: surfaceBg,
           borderTopLeftRadius: radii.xl,
           borderTopRightRadius: radii.xl,
           paddingHorizontal: spacing.lg,
@@ -577,7 +598,7 @@ export default function CallLedgerScreen() {
             width: 40,
             height: 4,
             borderRadius: 2,
-            backgroundColor: colors.borderLight,
+            backgroundColor: borderColor,
             alignSelf: "center",
             marginBottom: spacing.lg,
           }}
@@ -588,7 +609,7 @@ export default function CallLedgerScreen() {
             fontFamily: "Jakarta-Regular",
             fontWeight: "700",
             fontSize: 18,
-            color: colors.textPrimaryLight,
+            color: textPrimary,
             marginBottom: spacing.lg,
           }}
         >
@@ -601,7 +622,7 @@ export default function CallLedgerScreen() {
             fontFamily: "Jakarta-Regular",
             fontWeight: "600",
             fontSize: 14,
-            color: colors.textSecondaryLight,
+            color: textSecondary,
             marginBottom: spacing.sm,
           }}
         >
@@ -627,22 +648,20 @@ export default function CallLedgerScreen() {
                 borderColor:
                   outcomeFilter === opt.key
                     ? colors.primary
-                    : colors.borderLight,
+                    : borderColor,
                 backgroundColor:
-                  outcomeFilter === opt.key
-                    ? colors.primary
-                    : colors.surfaceLight,
+                  outcomeFilter === opt.key ? colors.primary : surfaceBg,
               }}
             >
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Medium",
                   fontSize: 13,
                   fontWeight: "500",
                   color:
                     outcomeFilter === opt.key
                       ? colors.white
-                      : colors.textSecondaryLight,
+                      : textSecondary,
                 }}
               >
                 {opt.label}
@@ -657,7 +676,7 @@ export default function CallLedgerScreen() {
             fontFamily: "Jakarta-Regular",
             fontWeight: "600",
             fontSize: 14,
-            color: colors.textSecondaryLight,
+            color: textSecondary,
             marginBottom: spacing.sm,
           }}
         >
@@ -683,22 +702,20 @@ export default function CallLedgerScreen() {
                 borderColor:
                   vehicleTypeFilter === opt.key
                     ? colors.primary
-                    : colors.borderLight,
+                    : borderColor,
                 backgroundColor:
-                  vehicleTypeFilter === opt.key
-                    ? colors.primary
-                    : colors.surfaceLight,
+                  vehicleTypeFilter === opt.key ? colors.primary : surfaceBg,
               }}
             >
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Medium",
                   fontSize: 13,
                   fontWeight: "500",
                   color:
                     vehicleTypeFilter === opt.key
                       ? colors.white
-                      : colors.textSecondaryLight,
+                      : textSecondary,
                 }}
               >
                 {opt.label}
@@ -713,7 +730,7 @@ export default function CallLedgerScreen() {
             fontFamily: "Jakarta-Regular",
             fontWeight: "600",
             fontSize: 14,
-            color: colors.textSecondaryLight,
+            color: textSecondary,
             marginBottom: spacing.sm,
           }}
         >
@@ -738,22 +755,20 @@ export default function CallLedgerScreen() {
                 borderColor:
                   dateRangeFilter === opt.key
                     ? colors.primary
-                    : colors.borderLight,
+                    : borderColor,
                 backgroundColor:
-                  dateRangeFilter === opt.key
-                    ? colors.primary
-                    : colors.surfaceLight,
+                  dateRangeFilter === opt.key ? colors.primary : surfaceBg,
               }}
             >
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Medium",
                   fontSize: 13,
                   fontWeight: "500",
                   color:
                     dateRangeFilter === opt.key
                       ? colors.white
-                      : colors.textSecondaryLight,
+                      : textSecondary,
                 }}
               >
                 {opt.label}
@@ -790,14 +805,15 @@ export default function CallLedgerScreen() {
   // ── Render: Missed Request Item ──────────────────────────────────────────
 
   const renderMissedItem = ({ item }: { item: MissedOffer }) => {
-    const config = OUTCOME_CONFIG[item.outcome] ?? {
-      label: item.outcome,
-      color: colors.grayMedium,
-    };
+    const config =
+      OUTCOME_CONFIG(textSecondary)[item.outcome] ?? {
+        label: item.outcome,
+        color: colors.grayMedium,
+      };
     return (
       <View
         style={{
-          backgroundColor: colors.surfaceLight,
+          backgroundColor: surfaceBg,
           borderRadius: radii.lg,
           padding: spacing.md,
           marginBottom: spacing.sm,
@@ -823,7 +839,7 @@ export default function CallLedgerScreen() {
           >
             <Text
               style={{
-                fontFamily: "Inter",
+                fontFamily: "Jakarta-SemiBold",
                 fontSize: 11,
                 fontWeight: "600",
                 color: config.color,
@@ -834,9 +850,9 @@ export default function CallLedgerScreen() {
           </View>
           <Text
             style={{
-              fontFamily: "Inter",
+              fontFamily: "Jakarta-Regular",
               fontSize: 11,
-              color: colors.textDisabledLight,
+              color: textDisabled,
             }}
           >
             {formatShortDate(item.sent_at)} {formatTime(item.sent_at)}
@@ -864,9 +880,9 @@ export default function CallLedgerScreen() {
             </View>
             <Text
               style={{
-                fontFamily: "Inter",
+                fontFamily: "Jakarta-Regular",
                 fontSize: 13,
-                color: colors.textPrimaryLight,
+                color: textPrimary,
                 flex: 1,
               }}
               numberOfLines={1}
@@ -890,9 +906,9 @@ export default function CallLedgerScreen() {
             </View>
             <Text
               style={{
-                fontFamily: "Inter",
+                fontFamily: "Jakarta-Regular",
                 fontSize: 13,
-                color: colors.textSecondaryLight,
+                color: textSecondary,
                 flex: 1,
               }}
               numberOfLines={1}
@@ -910,16 +926,16 @@ export default function CallLedgerScreen() {
             marginTop: 6,
             paddingTop: 6,
             borderTopWidth: 1,
-            borderTopColor: colors.borderLight,
+            borderTopColor: borderColor,
           }}
         >
           <View style={{ flexDirection: "row", gap: spacing.sm }}>
             {item.vehicle_type && (
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 11,
-                  color: colors.textSecondaryLight,
+                  color: textSecondary,
                 }}
               >
                 {item.vehicle_type.replace("_", " ")}
@@ -928,9 +944,9 @@ export default function CallLedgerScreen() {
             {item.distance_km != null && (
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 11,
-                  color: colors.textSecondaryLight,
+                  color: textSecondary,
                 }}
               >
                 {item.distance_km.toFixed(1)} km
@@ -940,7 +956,7 @@ export default function CallLedgerScreen() {
           {item.filtered_reason === "min_per_km" && (
             <Text
               style={{
-                fontFamily: "Inter",
+                fontFamily: "Jakarta-Regular",
                 fontSize: 11,
                 fontStyle: "italic",
                 color: colors.amber,
@@ -967,7 +983,7 @@ export default function CallLedgerScreen() {
           fontFamily: "Jakarta-Regular",
           fontWeight: "600",
           fontSize: 13,
-          color: colors.textSecondaryLight,
+          color: textSecondary,
           marginBottom: spacing.sm,
         }}
       >
@@ -983,7 +999,7 @@ export default function CallLedgerScreen() {
           <View
             key={entry.id}
             style={{
-              backgroundColor: colors.surfaceLight,
+              backgroundColor: surfaceBg,
               borderRadius: radii.lg,
               padding: spacing.md,
               marginBottom: spacing.sm,
@@ -1002,11 +1018,7 @@ export default function CallLedgerScreen() {
                 marginRight: spacing.sm,
               }}
             >
-              <Ionicons
-                name={config.icon as any}
-                size={16}
-                color={config.color}
-              />
+              <Ionicons name={config.icon} size={16} color={config.color} />
             </View>
             <View style={{ flex: 1 }}>
               <View
@@ -1018,10 +1030,10 @@ export default function CallLedgerScreen() {
               >
                 <Text
                   style={{
-                    fontFamily: "Inter",
+                    fontFamily: "Jakarta-Medium",
                     fontWeight: "500",
                     fontSize: 13,
-                    color: colors.textPrimaryLight,
+                    color: textPrimary,
                   }}
                 >
                   {config.label}
@@ -1040,9 +1052,9 @@ export default function CallLedgerScreen() {
               </View>
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 11,
-                  color: colors.textSecondaryLight,
+                  color: textSecondary,
                   marginTop: 2,
                 }}
               >
@@ -1058,7 +1070,8 @@ export default function CallLedgerScreen() {
   // ── Main Render ───────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgLight }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       {/* Header */}
       <View
         style={{
@@ -1070,18 +1083,14 @@ export default function CallLedgerScreen() {
         }}
       >
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={colors.textPrimaryLight}
-          />
+          <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
           style={{
             fontFamily: "Jakarta-Regular",
             fontWeight: "700",
             fontSize: 17,
-            color: colors.textPrimaryLight,
+            color: textPrimary,
           }}
         >
           Call Ledger
@@ -1095,7 +1104,7 @@ export default function CallLedgerScreen() {
           flexDirection: "row",
           marginHorizontal: spacing.lg,
           marginBottom: spacing.sm,
-          backgroundColor: colors.borderLight + "40",
+          backgroundColor: borderColor + "40",
           borderRadius: radii.lg,
           padding: 3,
         }}
@@ -1119,7 +1128,7 @@ export default function CallLedgerScreen() {
               color:
                 activeTab === "missed"
                   ? colors.white
-                  : colors.textSecondaryLight,
+                  : textSecondary,
             }}
           >
             Missed Requests
@@ -1144,7 +1153,7 @@ export default function CallLedgerScreen() {
               color:
                 activeTab === "ledger"
                   ? colors.white
-                  : colors.textSecondaryLight,
+                  : textSecondary,
             }}
           >
             Call History
@@ -1157,16 +1166,16 @@ export default function CallLedgerScreen() {
         style={{
           marginHorizontal: spacing.lg,
           marginBottom: spacing.sm,
-          backgroundColor: colors.surfaceLight,
+          backgroundColor: surfaceBg,
           borderRadius: radii.xl,
           padding: spacing.lg,
         }}
       >
         <Text
           style={{
-            fontFamily: "Inter",
+            fontFamily: "Jakarta-Regular",
             fontSize: 13,
-            color: colors.textSecondaryLight,
+            color: textSecondary,
             marginBottom: spacing.xs,
           }}
         >
@@ -1177,7 +1186,7 @@ export default function CallLedgerScreen() {
             fontFamily: "Jakarta-Regular",
             fontWeight: "700",
             fontSize: 28,
-            color: colors.textPrimaryLight,
+            color: textPrimary,
           }}
         >
           {balance ?? 0} calls
@@ -1209,17 +1218,13 @@ export default function CallLedgerScreen() {
                 paddingHorizontal: spacing["3xl"],
               }}
             >
-              <Ionicons
-                name="mail-outline"
-                size={48}
-                color={colors.textDisabledLight}
-              />
+              <Ionicons name="mail-outline" size={48} color={textDisabled} />
               <Text
                 style={{
                   fontFamily: "Jakarta-Regular",
                   fontWeight: "600",
                   fontSize: 16,
-                  color: colors.textSecondaryLight,
+                  color: textSecondary,
                   marginTop: spacing.md,
                   textAlign: "center",
                 }}
@@ -1228,9 +1233,9 @@ export default function CallLedgerScreen() {
               </Text>
               <Text
                 style={{
-                  fontFamily: "Inter",
+                  fontFamily: "Jakarta-Regular",
                   fontSize: 13,
-                  color: colors.textDisabledLight,
+                  color: textDisabled,
                   marginTop: spacing.sm,
                   textAlign: "center",
                 }}
@@ -1277,16 +1282,12 @@ export default function CallLedgerScreen() {
               paddingHorizontal: spacing["3xl"],
             }}
           >
-            <Ionicons
-              name="time-outline"
-              size={48}
-              color={colors.textDisabledLight}
-            />
+            <Ionicons name="time-outline" size={48} color={textDisabled} />
             <Text
               style={{
-                fontFamily: "Inter",
+                fontFamily: "Jakarta-Regular",
                 fontSize: 14,
-                color: colors.textSecondaryLight,
+                color: textSecondary,
                 marginTop: spacing.md,
                 textAlign: "center",
               }}
@@ -1316,6 +1317,15 @@ export default function CallLedgerScreen() {
 
       {/* Filter Sheet */}
       {renderFilterSheet()}
+
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

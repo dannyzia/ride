@@ -198,7 +198,9 @@ async function processPortposPayment(
       // Deleted pass: nothing to repair — fail the event outright instead of
       // falling through to activateSubscription (guaranteed retry doom-loop).
       logger.error('[portpos/callback] rider pass not found — failing event', { paymentEventId: evt.id, passId: evt.pass_id });
-      await db.update(paymentEvents).set({ status: 'failed' }).where(eq(paymentEvents.id, evt.id));
+      await db.transaction(async (tx) => {
+        await tx.update(paymentEvents).set({ status: 'failed' }).where(eq(paymentEvents.id, evt.id));
+      });
       return "failed";
     }
     try {

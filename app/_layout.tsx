@@ -7,6 +7,7 @@ import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import * as Application from "expo-application";
 import SplashAnimation from "@/components/SplashAnimation";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { ToastHost } from "@/components/Toast";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
@@ -80,6 +81,25 @@ export default function RootLayout() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // ── INITIAL_SESSION gate ─────────────────────────────────────────
+      // INITIAL_SESSION is the first event Supabase fires (0-2 s after
+      // mount) when it restores the local session.  The splash screen
+      // (app/index.tsx) owns initial routing per §9.3:
+      //   SPLASH → No auth → WELCOME → Get Started → PHONE_ENTRY
+      // Redirecting here would bypass welcome.tsx for first-time users and
+      // send them straight to phone-entry.  We also skip the verify-token
+      // round-trip (unnecessary — the splash does its own check after
+      // 1.5 s).  Only subsequent events (SIGNED_IN, SIGNED_OUT, etc.)
+      // represent real mid-session auth changes that need a redirect.
+      if (!event || event === "INITIAL_SESSION") {
+        if (session?.user) {
+          registerPushForUser(session.access_token).catch(() => {});
+        }
+        setInitializing(false);
+        return;
+      }
+
+      // ── Mid-session auth changes ─────────────────────────────────────
       if (session?.user) {
         try {
           const token = session.access_token;
@@ -126,10 +146,10 @@ export default function RootLayout() {
           logger.warn("[auth] verify-token network error — keeping session");
         }
       } else {
+        // Session lost mid-session (e.g. sign-out from another device,
+        // token revocation).  Redirect to auth unless already there.
         const inAuthGroup = segmentsRef.current[0] === "(auth)";
         const isAdminRoute = segmentsRef.current[0] === "admin";
-        // Only redirect to auth for non-auth, non-admin routes.
-        // Admin routes handle their own authentication; /track is public.
         const isPublicRoute = isAdminRoute || segmentsRef.current[0] === "track";
         if (!inAuthGroup && !isPublicRoute) {
           router.replace("/(auth)/phone-entry");
@@ -142,8 +162,7 @@ export default function RootLayout() {
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
-     
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (fontsLoaded && !isWeb) SplashScreen.hideAsync().catch(() => {});
@@ -187,7 +206,7 @@ export default function RootLayout() {
     });
 
     return () => sub.remove();
-  }, []);
+  }, [router]);
 
   // On web: skip the Reanimated splash animation (it can hang in production
   // web builds and leave a blank screen). Show a simple loading indicator
@@ -218,9 +237,9 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <Slot />
       <ToastHost />
-    </>
+    </ErrorBoundary>
   );
 }

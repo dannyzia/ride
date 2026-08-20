@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { useDriverFlowStore } from '@/store/useDriverFlowStore';
 import { colors } from '@/theme/goRide';
+import { useIsDark } from '@/lib/useAppearance';
 
 interface Props {
   children: React.ReactNode;
@@ -11,10 +12,15 @@ interface Props {
 export default function DriverStatusGuard({ children }: Props) {
   const { driver, fetchDriver } = useDriverFlowStore();
   const pathname = usePathname();
+  const isDark = useIsDark();
+
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   useEffect(() => {
     if (!driver) fetchDriver();
-  }, []);
+  }, [driver, fetchDriver]);
 
   // Non-active drivers may only view the onboarding wizard and the
   // verification screen — the two screens that complete or track their
@@ -29,9 +35,9 @@ export default function DriverStatusGuard({ children }: Props) {
 
   if (!driver) {
     return (
-      <View className="flex-1 items-center justify-center bg-goBgLight dark:bg-goBgDark">
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: bg }}>
         <ActivityIndicator size="large" color={colors.textDisabledDark} />
-        <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark mt-4 text-[14px] font-Jakarta">Loading profile...</Text>
+        <Text className="mt-4 text-[14px] font-Jakarta" style={{ color: textPrimary }}>Loading profile...</Text>
       </View>
     );
   }
@@ -40,9 +46,9 @@ export default function DriverStatusGuard({ children }: Props) {
     case 'pending':
       if (onApplicationRoute) return <>{children}</>;
       return (
-        <View className="flex-1 items-center justify-center bg-goBgLight dark:bg-goBgDark px-[24px]">
-          <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-[22px] font-JakartaBold mb-4">Welcome!</Text>
-          <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-center text-[14px] font-Jakarta mb-8">
+        <View className="flex-1 items-center justify-center px-[24px]" style={{ backgroundColor: bg }}>
+          <Text className="text-[22px] font-JakartaBold mb-4" style={{ color: textPrimary }}>Welcome!</Text>
+          <Text className="text-center text-[14px] font-Jakarta mb-8" style={{ color: textPrimary }}>
             Your account is pending verification. Please upload the required documents to start receiving ride offers.
           </Text>
           <TouchableOpacity
@@ -56,9 +62,9 @@ export default function DriverStatusGuard({ children }: Props) {
 
     case 'suspended':
       return (
-        <View className="flex-1 items-center justify-center bg-goBgLight dark:bg-goBgDark px-[24px]">
+        <View className="flex-1 items-center justify-center px-[24px]" style={{ backgroundColor: bg }}>
           <Text className="text-goDanger text-[22px] font-JakartaBold mb-4">Account Suspended</Text>
-          <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-center text-[14px] font-Jakarta mb-8">
+          <Text className="text-center text-[14px] font-Jakarta mb-8" style={{ color: textPrimary }}>
             Your account has been suspended. Please contact support for assistance.
           </Text>
           <TouchableOpacity
@@ -73,9 +79,9 @@ export default function DriverStatusGuard({ children }: Props) {
     case 'rejected':
       if (onApplicationRoute) return <>{children}</>;
       return (
-        <View className="flex-1 items-center justify-center bg-goBgLight dark:bg-goBgDark px-[24px]">
+        <View className="flex-1 items-center justify-center px-[24px]" style={{ backgroundColor: bg }}>
           <Text className="text-goDanger text-[22px] font-JakartaBold mb-4">Documents Rejected</Text>
-          <Text className="text-goTextPrimaryLight dark:text-goTextPrimaryDark text-center text-[14px] font-Jakarta mb-4">
+          <Text className="text-center text-[14px] font-Jakarta mb-4" style={{ color: textPrimary }}>
             Your submitted documents were not approved. Please re-submit with correct documents.
           </Text>
           <TouchableOpacity
@@ -85,10 +91,11 @@ export default function DriverStatusGuard({ children }: Props) {
             <Text className="text-[18px] font-JakartaBold text-goWhite">Re-upload Documents</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center mt-3"
+            className="border rounded-full w-full py-[16px] items-center mt-3"
+            style={{ borderColor }}
             onPress={() => router.push("/(main)/(rider)/contact-support")}
           >
-            <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Contact Support</Text>
+            <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Contact Support</Text>
           </TouchableOpacity>
         </View>
       );

@@ -84,7 +84,7 @@ interface RideItem {
   driver_rating: number | null;
 }
 
-type FilterTab = "all" | "completed" | "cancelled";
+type FilterTab = "all" | "completed" | "cancelled" | "scheduled";
 
 interface DateGroup {
   title: string;
@@ -95,6 +95,7 @@ const FILTER_LABELS: Record<FilterTab, string> = {
   all: "All",
   completed: "Completed",
   cancelled: "Cancelled",
+  scheduled: "Scheduled",
 };
 
 const toPaisa = (value: number | null | undefined): number | null =>
@@ -214,6 +215,7 @@ export default function RidesScreen() {
         if (activeFilter === "completed") return r.status === "completed";
         if (activeFilter === "cancelled")
           return r.status === "cancelled" || r.status === "expired" || r.status === "no_drivers";
+        if (activeFilter === "scheduled") return r.status === "scheduled";
         return true;
       });
     }
@@ -636,7 +638,11 @@ export default function RidesScreen() {
         )}
       </View>
 
-      <View style={styles.filterRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+      >
         {(Object.keys(FILTER_LABELS) as FilterTab[]).map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -662,7 +668,25 @@ export default function RidesScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+        <TouchableOpacity
+          style={[styles.navChip, { backgroundColor: surfaceBg, borderColor: borderColor }]}
+          onPress={() => router.push("/(main)/(customer)/(tabs)/inbox")}
+          accessibilityRole="button"
+          accessibilityLabel="Go to inbox"
+        >
+          <Text style={[styles.navChipText, { color: textSecondary }]}>Inbox</Text>
+          <Ionicons name="arrow-forward" size={14} color={textSecondary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.navChip, { backgroundColor: surfaceBg, borderColor: borderColor }]}
+          onPress={() => router.push("/(main)/(customer)/(tabs)/referral")}
+          accessibilityRole="button"
+          accessibilityLabel="Go to referral"
+        >
+          <Text style={[styles.navChipText, { color: textSecondary }]}>Referral</Text>
+          <Ionicons name="arrow-forward" size={14} color={textSecondary} />
+        </TouchableOpacity>
+      </ScrollView>
 
       {loading ? (
         <View style={styles.skeletonList}>
@@ -737,6 +761,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radii.pill,
     borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  navChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    minHeight: 48,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  navChipText: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 13,
   },
   skeletonList: {
     paddingHorizontal: 16,

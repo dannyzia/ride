@@ -1,11 +1,22 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 export default function ChangePassword() {
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -37,8 +48,8 @@ export default function ChangePassword() {
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
       if (updateError) { setError(updateError.message); return; }
       setSuccess(true);
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error");
       logger.error("Password change failed", err);
     } finally {
       setLoading(false);
@@ -47,56 +58,69 @@ export default function ChangePassword() {
 
   if (success) {
     return (
-      <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark items-center justify-center px-[24px]">
+      <SafeAreaView className="flex-1 items-center justify-center px-[24px]" style={{ backgroundColor: bg }}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
         <Text className="text-[22px] font-JakartaBold tracking-tight text-goPrimary mb-4">Password Updated</Text>
-        <Text className="text-[15px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-8">
+        <Text className="text-[15px] font-Jakarta text-center mb-8" style={{ color: textSecondary }}>
           Your password has been changed successfully.
         </Text>
         <TouchableOpacity className="bg-goPrimary rounded-full px-[24px] py-[12px]" onPress={() => router.back()}>
           <Text className="text-[16px] font-JakartaBold text-goWhite">Done</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setTheme(isDark ? "light" : "dark")}
+          className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+          style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Change Password</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Change Password</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 24 }}>
-        <View className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] p-[16px] mb-6">
-          <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark leading-5">
+        <View className="border rounded-[12px] p-[16px] mb-6" style={{ backgroundColor: surfaceBg, borderColor }}>
+          <Text className="text-[14px] font-Jakarta leading-5" style={{ color: textSecondary }}>
             You set a password during registration. You can change it here. If you use phone OTP login exclusively, you don&apos;t need a password.
           </Text>
         </View>
-        <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4">Current Password</Text>
+        <Text className="text-[15px] font-JakartaBold mb-4" style={{ color: textPrimary }}>Current Password</Text>
         <TextInput
-          className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4"
+          className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mb-4"
+          style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
           placeholder="Enter current password"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={textSecondary}
           secureTextEntry
           value={currentPassword}
           onChangeText={setCurrentPassword}
         />
-        <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4">New Password</Text>
+        <Text className="text-[15px] font-JakartaBold mb-4" style={{ color: textPrimary }}>New Password</Text>
         <TextInput
-          className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4"
+          className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mb-4"
+          style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
           placeholder="Min 6 characters"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={textSecondary}
           secureTextEntry
           value={newPassword}
           onChangeText={setNewPassword}
         />
-        <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4">Confirm New Password</Text>
+        <Text className="text-[15px] font-JakartaBold mb-4" style={{ color: textPrimary }}>Confirm New Password</Text>
         <TextInput
-          className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4"
+          className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mb-4"
+          style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
           placeholder="Re-enter new password"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={textSecondary}
           secureTextEntry
           value={confirmPassword}
           onChangeText={setConfirmPassword}
@@ -116,6 +140,14 @@ export default function ChangePassword() {
           )}
         </TouchableOpacity>
       </ScrollView>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

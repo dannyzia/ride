@@ -1,12 +1,23 @@
 import { useState } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 export default function DriverSettingsAccount() {
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
@@ -26,47 +37,50 @@ export default function DriverSettingsAccount() {
       if (!res.ok) { setError(data.error || "Failed to delete account"); setDeleting(false); return; }
       await supabase.auth.signOut();
       router.replace("/(auth)/phone-entry");
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error");
       logger.error("Account delete failed", err);
       setDeleting(false);
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Account & Security</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Account & Security</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
         <TouchableOpacity
-          className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-3"
+          className="p-[14px] border rounded-[12px] mb-3"
+          style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/settings/change-password")}
         >
-          <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Security & Login Info</Text>
-          <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">Phone number & login method</Text>
+          <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Security & Login Info</Text>
+          <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Phone number & login method</Text>
         </TouchableOpacity>
-        <View className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-3">
-          <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Two-factor authentication</Text>
-          <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">Not configured</Text>
+        <View className="p-[14px] border rounded-[12px] mb-3" style={{ backgroundColor: surfaceBg, borderColor }}>
+          <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Two-factor authentication</Text>
+          <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Not configured</Text>
         </View>
         <TouchableOpacity
-          className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-3"
+          className="p-[14px] border rounded-[12px] mb-3"
+          style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => setShowDeleteConfirm(true)}
         >
           <Text className="text-[15px] font-JakartaBold text-goDanger">Delete account</Text>
-          <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">Permanently remove your account and all data</Text>
+          <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Permanently remove your account and all data</Text>
         </TouchableOpacity>
       </ScrollView>
       <Modal visible={showDeleteConfirm} transparent animationType="fade">
         <View className="flex-1 bg-black/50 items-center justify-center px-[24px]">
-          <View className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark rounded-[16px] p-[24px] w-full">
-            <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">Delete Account?</Text>
-            <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-6">This action cannot be undone. All your data will be permanently removed.</Text>
+          <View className="rounded-[16px] p-[24px] w-full" style={{ backgroundColor: surfaceBg }}>
+            <Text className="text-[18px] font-JakartaBold mb-2" style={{ color: textPrimary }}>Delete Account?</Text>
+            <Text className="text-[14px] font-Jakarta mb-6" style={{ color: textSecondary }}>This action cannot be undone. All your data will be permanently removed.</Text>
             {error ? <Text className="text-[14px] font-Jakarta text-goDanger mb-3">{error}</Text> : null}
             <TouchableOpacity
               className="bg-goDanger rounded-full w-full py-[16px] items-center mb-3"
@@ -80,15 +94,24 @@ export default function DriverSettingsAccount() {
               )}
             </TouchableOpacity>
             <TouchableOpacity
-              className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center"
+              className="border rounded-full w-full py-[16px] items-center"
+              style={{ borderColor }}
               onPress={() => { setShowDeleteConfirm(false); setError(""); }}
               disabled={deleting}
             >
-              <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Cancel</Text>
+              <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

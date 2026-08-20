@@ -1,6 +1,7 @@
 import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import CustomButton from "@/components/CustomButton";
@@ -23,7 +24,7 @@ export default function DriverWalkthrough2() {
           className="w-56 h-56 rounded-full items-center justify-center"
           style={{ backgroundColor: colors.primary + "15" }}
         >
-          <Text className="text-[80px]">⏰</Text>
+          <Ionicons name="time-outline" size={80} color={colors.primary} />
         </View>
       </View>
 

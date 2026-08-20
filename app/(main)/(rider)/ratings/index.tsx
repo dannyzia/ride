@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 interface Review {
   id: string;
@@ -24,6 +27,14 @@ export default function Ratings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   const fetchRatings = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -37,8 +48,8 @@ export default function Ratings() {
       if (!res.ok) { setError("Failed to load ratings"); return; }
       const json = await res.json();
       setData(json);
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error");
       logger.error("Ratings fetch failed", err);
     } finally {
       setLoading(false);
@@ -57,24 +68,34 @@ export default function Ratings() {
     const half = count - full >= 0.5;
     const empty = 5 - full - (half ? 1 : 0);
     return (
-      <Text className="text-[16px] text-goPrimary">
-        {"★".repeat(full)}{half ? "½" : ""}{"☆".repeat(empty)}
-      </Text>
+      <View className="flex-row items-center">
+        {Array.from({ length: full }).map((_, i) => (
+          <Ionicons key={`f${i}`} name="star" size={16} color={colors.amber} />
+        ))}
+        {half ? <Ionicons name="star-half" size={16} color={colors.amber} /> : null}
+        {Array.from({ length: empty }).map((_, i) => (
+          <Ionicons key={`e${i}`} name="star-outline" size={16} color={colors.amber} />
+        ))}
+      </View>
     );
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
-        <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Ratings & Reviews</Text>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <View className="px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
+        <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Ratings & Reviews</Text>
         {loading ? (
           <ActivityIndicator size="small" color="#0CC25F" className="mt-3" />
         ) : error ? (
-          <Text className="text-[14px] font-Jakarta text-goDanger mt-1">{error}</Text>
+          <Text className="text-[14px] font-Jakarta mt-1" style={{ color: colors.danger }}>{error}</Text>
         ) : data ? (
           <View className="flex-row items-center gap-3 mt-1">
-            <Text className="text-[32px] font-JakartaBold tracking-tight text-goPrimary">★ {data.average_rating.toFixed(1)}</Text>
-            <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+            <View className="flex-row items-center">
+              <Ionicons name="star" size={32} color={colors.amber} />
+              <Text className="text-[32px] font-JakartaBold tracking-tight" style={{ color: colors.primary }}>{data.average_rating.toFixed(1)}</Text>
+            </View>
+            <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
               {data.total_reviews} review{data.total_reviews !== 1 ? "s" : ""}
             </Text>
           </View>
@@ -84,24 +105,32 @@ export default function Ratings() {
         {loading ? (
           <ActivityIndicator size="small" color="#0CC25F" />
         ) : error ? (
-          <Text className="text-[14px] font-Jakarta text-goDanger">{error}</Text>
+          <Text className="text-[14px] font-Jakarta" style={{ color: colors.danger }}>{error}</Text>
         ) : !data || data.reviews.length === 0 ? (
-          <Text className="text-[15px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mt-8">No reviews yet.</Text>
+          <Text className="text-[15px] font-Jakarta text-center mt-8" style={{ color: textSecondary }}>No reviews yet.</Text>
         ) : (
           data.reviews.map((r) => (
-            <View key={r.id} className="p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px]">
+            <View key={r.id} className="p-[14px] border rounded-[12px]" style={{ backgroundColor: surfaceBg, borderColor }}>
               <View className="flex-row justify-between items-center">
-                <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{r.rider_name}</Text>
+                <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{r.rider_name}</Text>
                 {renderStars(r.rating)}
               </View>
               {r.comment ? (
-                <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1 leading-5">{r.comment}</Text>
+                <Text className="text-[14px] font-Jakarta mt-1 leading-5" style={{ color: textSecondary }}>{r.comment}</Text>
               ) : null}
-              <Text className="text-[12px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-2">{formatDate(r.created_at)}</Text>
+              <Text className="text-[12px] font-Jakarta mt-2" style={{ color: textSecondary }}>{formatDate(r.created_at)}</Text>
             </View>
           ))
         )}
       </ScrollView>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

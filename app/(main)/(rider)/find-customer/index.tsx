@@ -13,10 +13,41 @@ import * as Location from "expo-location";
 import { LocationObject } from "expo-location";
 import { supabase } from "@/lib/supabase";
 import RideLayout from "@/components/RideLayout";
+import Map from "@/components/Map";
+import { fetchRouteGeometry } from "@/lib/routeGeometry";
 import TollParkingModal from "@/components/TollParkingModal";
 import { useIsDark } from "@/lib/useAppearance";
 import { Ionicons } from "@expo/vector-icons";
 import ReactNativeModal from "react-native-modal";
+
+// Route-line refetch policy for the pickup map (master plan §7.2): the
+// location watch ticks every 10s, so the Barikoi route fetch is throttled to
+// one attempt per ROUTE_REFETCH_MS and only when the driver moved materially.
+const ROUTE_REFETCH_MS = 30_000;
+// ~0.00025 degrees latitude is roughly 25m — the "moved materially" bar.
+const ROUTE_MOVE_THRESHOLD_DEG = 0.00025;
+
+const calculateDistance = (
+  location1: LocationObject,
+  location2: LocationObject,
+) => {
+  const lat1 = location1.coords.latitude;
+  const lon1 = location1.coords.longitude;
+  const lat2 = location2.coords.latitude;
+  const lon2 = location2.coords.longitude;
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c * 1000;
+};
 
 const ReachCustomer = () => {
   const router = useRouter();
@@ -27,6 +58,8 @@ const ReachCustomer = () => {
 
   const {
     userAddress: _userAddress,
+    userLatitude: driverLatitude,
+    userLongitude: driverLongitude,
     setUserLocation: setDriverLocation,
     setId: _setDriverId,
     setRole: _setDriverRole,
@@ -45,8 +78,12 @@ const ReachCustomer = () => {
   const waitIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showTollModal, setShowTollModal] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
-  const [stops, setStops] = useState<any[]>([]);
+  const [stops, setStops] = useState<{ id: string; address: string }[]>([]);
   const [currentStopIdx, setCurrentStopIdx] = useState(0);
+  // Decoded driver-to-pickup polyline for the map route line ([lat, lng] pairs).
+  const [routePoints, setRoutePoints] = useState<[number, number][] | null>(null);
+  const lastRouteFetchAtRef = useRef(0);
+  const lastRouteOriginRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const toggleWait = async () => {
     if (!activeRideId) return;
@@ -143,28 +180,6 @@ const ReachCustomer = () => {
     })();
   }, [activeRideId]);
 
-  const calculateDistance = (
-    location1: LocationObject,
-    location2: LocationObject,
-  ) => {
-    const lat1 = location1.coords.latitude;
-    const lon1 = location1.coords.longitude;
-    const lat2 = location2.coords.latitude;
-    const lon2 = location2.coords.longitude;
-    const toRad = (value: number) => (value * Math.PI) / 180;
-    const R = 6371;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) *
-        Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c * 1000;
-  };
-
   useEffect(() => {
     let locationSubscription: Location.LocationSubscription | null = null;
 
@@ -232,7 +247,7 @@ const ReachCustomer = () => {
         locationSubscription = null;
       }
     };
-  }, [user]);
+  }, [user, activeRideId, ws, setDriverLocation]);
 
   const handleSlideComplete = () => {
     // Tell the server the driver reached the pickup -> ride becomes driver_arrived,
@@ -261,6 +276,49 @@ const ReachCustomer = () => {
     rideDetails?.pickupDetails?.pickupAddress || "Pickup location";
   const destinationAddress =
     rideDetails?.dropoffDetails?.dropoffAddress || "Destination not set";
+  const pickupLatitude = rideDetails?.pickupDetails?.pickupLatitude;
+  const pickupLongitude = rideDetails?.pickupDetails?.pickupLongitude;
+
+  // ── Route line to pickup (master plan §7.2) ─────────────────────────────
+  // fetchRouteGeometry (lib/routeGeometry.ts) hits the Barikoi v2 route API
+  // and returns decoded [lat, lng] pairs — the exact shape Map's route prop
+  // wants — with its own timeout and null-on-failure contract, so a failed
+  // fetch just leaves the map on origin/destination markers. Throttled to
+  // ~30s and to material driver movement so the 10s location watch cannot
+  // loop fetches.
+  useEffect(() => {
+    if (
+      driverLatitude == null ||
+      driverLongitude == null ||
+      pickupLatitude == null ||
+      pickupLongitude == null
+    ) {
+      return;
+    }
+    const now = Date.now();
+    if (now - lastRouteFetchAtRef.current < ROUTE_REFETCH_MS) return;
+    const lastOrigin = lastRouteOriginRef.current;
+    const movedEnough =
+      !lastOrigin ||
+      Math.abs(driverLatitude - lastOrigin.lat) >= ROUTE_MOVE_THRESHOLD_DEG ||
+      Math.abs(driverLongitude - lastOrigin.lng) >= ROUTE_MOVE_THRESHOLD_DEG;
+    if (!movedEnough) return;
+    lastRouteFetchAtRef.current = now;
+    lastRouteOriginRef.current = { lat: driverLatitude, lng: driverLongitude };
+    let cancelled = false;
+    (async () => {
+      const points = await fetchRouteGeometry(
+        driverLatitude,
+        driverLongitude,
+        pickupLatitude,
+        pickupLongitude,
+      );
+      if (!cancelled && points) setRoutePoints(points);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [driverLatitude, driverLongitude, pickupLatitude, pickupLongitude]);
 
   const callCustomer = () => {
     if (customerPhone) {
@@ -316,7 +374,7 @@ const ReachCustomer = () => {
             >
               Stops ({currentStopIdx + 1}/{stops.length + 1})
             </Text>
-            {stops.map((stop: any, i: number) => {
+            {stops.map((stop: { id: string; address: string }, i: number) => {
               const completed = i < currentStopIdx;
               const current = i === currentStopIdx;
               return (
@@ -508,6 +566,35 @@ const ReachCustomer = () => {
         </View>
       </View>
     </RideLayout>
+
+      {/* Route map to pickup (§7.2): overlays RideLayout's background map,
+          which is GPS-keyed to the rider store and stays blank on driver
+          screens. Static mode — origin = driver, destination = pickup,
+          route = decoded polyline. Sheet max snap is 50% from the bottom, so
+          the map's top-half band never covers it. */}
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "50%",
+        }}
+      >
+        <Map
+          origin={
+            driverLatitude != null && driverLongitude != null
+              ? { lat: driverLatitude, lng: driverLongitude }
+              : undefined
+          }
+          destination={
+            pickupLatitude != null && pickupLongitude != null
+              ? { lat: pickupLatitude, lng: pickupLongitude }
+              : undefined
+          }
+          route={routePoints ?? undefined}
+        />
+      </View>
 
       {/* Appearance toggle (top-right, beside RideLayout's back button) */}
       <TouchableOpacity

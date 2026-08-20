@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ActivityIndicator, Pressable, Text } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
 import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
+import { ensureAdminSocket } from "@/lib/adminSocket";
 import { colors } from "@/theme/goRide";
 
 interface SOSAlert {
@@ -30,6 +31,31 @@ export default function SOSAlertsScreen() {
   }, []);
 
   useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
+
+  // F-15: live SOS stream. The initial HTTP fetch above still provides
+  // history; this subscription only prepends NEW alerts as they arrive.
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+  useEffect(() => {
+    const unsubscribe = ensureAdminSocket((alert) => {
+      setAlerts((prev) => {
+        if (prev.some((a) => a.id === alert.id)) return prev;
+        const incoming: SOSAlert = {
+          id: alert.id,
+          user_id: alert.user_id,
+          role: alert.role,
+          latitude: alert.latitude,
+          longitude: alert.longitude,
+          message: alert.message,
+          status: "open",
+          created_at: alert.created_at,
+        };
+        return [incoming, ...prev];
+      });
+      toastRef.current.show("New SOS alert", "error");
+    });
+    return unsubscribe;
+  }, []);
 
   const ackAlert = async (alertId: string) => {
     const res = await adminFetch<{ success: boolean }>(`/api/admin/sos-alerts/${alertId}/ack`, {

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useDriverStore } from "@/store/useDriverStore";
@@ -42,8 +43,8 @@ export default function ProfileScreen() {
       if (!res.ok) { setError("Failed to load profile"); return; }
       const data = await res.json();
       setProfileData(data.driver ?? data);
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error");
       logger.error("Profile fetch failed", err);
     } finally {
       setLoading(false);
@@ -67,6 +68,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
         <View className="items-center px-[24px] py-[32px] border-b" style={{ borderColor }}>
           <View
@@ -83,7 +85,7 @@ export default function ProfileScreen() {
             <>
               <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>{displayName}</Text>
               <Text className="text-[14px] font-Jakarta mt-1" style={{ color: textSecondary }}>
-                {displayVehicle.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())} · ★{displayRating.toFixed(1)} · {displayRides} rides
+                {displayVehicle.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())} · <Ionicons name="star" size={12} color={colors.amber} /> {displayRating.toFixed(1)} · {displayRides} rides
               </Text>
             </>
           )}

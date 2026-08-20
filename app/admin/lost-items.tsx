@@ -8,15 +8,26 @@ import { colors } from "@/theme/goRide";
 
 const STATUS_COLORS: Record<string, string> = { reported: colors.amber, driver_confirmed: colors.primary, arranged_return: colors.greenVariant, resolved: colors.checkGreen, unresolved: colors.danger };
 
+interface LostItemRow {
+  id: string;
+  rider_id: string;
+  driver_id: string;
+  item_description: string;
+  status: string;
+  driver_response: string | null;
+  return_fee_bdt: number | null;
+  admin_mediation: boolean | null;
+}
+
 export default function AdminLostItems() {
   const toast = useAdminToast();
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<LostItemRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState<LostItemRow | null>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
-    const res = await adminFetch<{ items: any[] }>("/api/admin/lost-items");
+    const res = await adminFetch<{ items: LostItemRow[] }>("/api/admin/lost-items");
     if (res.data) setItems(res.data.items ?? []);
     setLoading(false);
   }, []);
@@ -34,7 +45,7 @@ export default function AdminLostItems() {
   return (
     <AdminShell title="Lost Items" subtitle="All rider lost item reports">
       {loading ? <ActivityIndicator size="large" color={colors.adminAccent} style={{ marginTop: 40 }} /> : (
-        <FlatList data={items} keyExtractor={(r: any) => r.id}
+        <FlatList data={items} keyExtractor={(r) => r.id}
           ListEmptyComponent={<Text style={{ color: colors.textSecondaryDark, fontFamily: "Jakarta-Regular", textAlign: "center", marginTop: 40 }}>No lost item reports</Text>}
           renderItem={({ item }) => (
             <Pressable onPress={() => setSelected(item)} style={styles.card}>
@@ -43,7 +54,7 @@ export default function AdminLostItems() {
                 <Text style={[styles.status, { color: STATUS_COLORS[item.status] ?? colors.textSecondaryDark }]}>{item.status.replace(/_/g, " ")}</Text>
               </View>
               <Text style={styles.meta}>Rider: {item.rider_id?.slice(0, 8)} | Driver: {item.driver_id?.slice(0, 8)}</Text>
-              {item.admin_mediation && <Text style={styles.mediation}>⚖️ Mediated</Text>}
+              {item.admin_mediation && <Text style={styles.mediation}>Mediated</Text>}
             </Pressable>
           )}
         />
@@ -53,9 +64,9 @@ export default function AdminLostItems() {
         <Text style={styles.label}>Rider ID: {selected?.rider_id}</Text>
         <Text style={styles.label}>Driver ID: {selected?.driver_id}</Text>
         {selected?.driver_response && <Text style={styles.label}>Driver: {selected.driver_response}</Text>}
-        {selected?.return_fee_bdt > 0 && <Text style={styles.label}>Fee: ৳{((selected?.return_fee_bdt ?? 0) / 100).toFixed(0)}</Text>}
-        {!selected?.admin_mediation && (
-          <Pressable onPress={() => mediate(selected.id)} style={styles.actionBtn}><Text style={styles.actionText}>⚖️ Mark Mediated</Text></Pressable>
+        {selected && selected.return_fee_bdt !== null && selected.return_fee_bdt > 0 && <Text style={styles.label}>Fee: ৳{((selected.return_fee_bdt) / 100).toFixed(0)}</Text>}
+        {selected && !selected.admin_mediation && (
+          <Pressable onPress={() => mediate(selected.id)} style={styles.actionBtn}><Text style={styles.actionText}>Mark Mediated</Text></Pressable>
         )}
       </AdminModal>
     </AdminShell>

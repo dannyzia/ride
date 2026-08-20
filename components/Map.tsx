@@ -7,17 +7,18 @@ import {
   useBarikoiMapStyle,
   createBarikoiClient,
 } from "@/utils/mapUtils";
-import MapLibreGL from "@/utils/maplibreLoader";
+import MapLibreGL, { type MapLibreModule } from "@/utils/maplibreLoader";
+import type { ComponentRef } from "react";
 
 const MARKER_USER = require("@/assets/icons/marker-goride-Marker Navigation.png");
 const MARKER_DESTINATION = require("@/assets/icons/marker-goride-Marker Navigation-1.png");
 
-let MapViewLib: any = MapLibreGL.MapView ?? MapLibreGL.default ?? null;
-let PointAnnotation: any = MapLibreGL.PointAnnotation ?? null;
-let Camera: any = MapLibreGL.Camera ?? null;
-let ShapeSource: any = MapLibreGL.ShapeSource ?? null;
-let LineLayer: any = MapLibreGL.LineLayer ?? null;
-let CircleLayer: any = MapLibreGL.CircleLayer ?? null;
+const MapViewLib = MapLibreGL?.MapView ?? null;
+const PointAnnotation = MapLibreGL?.PointAnnotation ?? null;
+const Camera = MapLibreGL?.Camera ?? null;
+const ShapeSource = MapLibreGL?.ShapeSource ?? null;
+const LineLayer = MapLibreGL?.LineLayer ?? null;
+const CircleLayer = MapLibreGL?.CircleLayer ?? null;
 
 export interface MapRoutePoint {
   lat: number;
@@ -64,7 +65,7 @@ function heatColor(intensity: number): string {
 }
 
 const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
-  const cameraRef = useRef<any>(null);
+  const cameraRef = useRef<ComponentRef<MapLibreModule["Camera"]>>(null);
 
   const isDark = useIsDark();
   const mapStyleURL = useBarikoiMapStyle(isDark);
@@ -182,8 +183,8 @@ const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
   const hotspotFeatures =
     hotspots && hotspots.length >= 1
       ? hotspots.map((h) => ({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [h.lng, h.lat] },
+          type: "Feature" as const,
+          geometry: { type: "Point" as const, coordinates: [h.lng, h.lat] },
           properties: {
             color: heatColor(h.intensity),
             opacity: 0.35 + 0.45 * h.intensity,
@@ -196,9 +197,7 @@ const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
       {MapViewLib ? (
         <MapViewLib
           style={{ width: "100%", height: "100%", borderRadius: 16 }}
-          styleURL={mapStyleURL}
-          centerCoordinate={[centerLng, centerLat]}
-          zoomLevel={bounds ? 12 : 15}
+          mapStyle={mapStyleURL}
           onPress={handleMapInteraction}
         >
           {Camera && (
@@ -218,7 +217,7 @@ const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
                 : { zoomLevel: 15, centerCoordinate: [centerLng, centerLat] })}
             />
           )}
-          {originMarkerCoord && (
+          {PointAnnotation && originMarkerCoord && (
             <PointAnnotation
               id={isStatic ? "origin" : "user-location"}
               coordinate={originMarkerCoord}
@@ -265,7 +264,7 @@ const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
               />
             </ShapeSource>
           )}
-          {destinationMarkerCoord && (
+          {PointAnnotation && destinationMarkerCoord && (
             <PointAnnotation
               id="destination"
               coordinate={destinationMarkerCoord}

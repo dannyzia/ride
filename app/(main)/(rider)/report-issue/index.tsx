@@ -1,24 +1,29 @@
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
+
+type IconName = ComponentProps<typeof Ionicons>["name"];
 
 interface Reason {
   label: string;
-  icon: string;
+  icon: IconName;
   category: string;
 }
 
 const reasons: Reason[] = [
-  { label: "App bug or crash", icon: "🐛", category: "app_bug" },
-  { label: "Payment problem", icon: "💳", category: "payment" },
-  { label: "Rider issue", icon: "👤", category: "rider" },
-  { label: "Safety concern", icon: "🛡️", category: "safety" },
-  { label: "Map or navigation", icon: "🗺️", category: "map" },
-  { label: "Other", icon: "📋", category: "other" },
+  { label: "App bug or crash", icon: "bug-outline", category: "app_bug" },
+  { label: "Payment problem", icon: "card", category: "payment" },
+  { label: "Rider issue", icon: "person-outline", category: "rider" },
+  { label: "Safety concern", icon: "shield", category: "safety" },
+  { label: "Map or navigation", icon: "map", category: "map" },
+  { label: "Other", icon: "clipboard-outline", category: "other" },
 ];
 
 export default function ReportIssue() {
@@ -26,6 +31,14 @@ export default function ReportIssue() {
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   const handleSubmit = async () => {
     if (!selected) return;
@@ -45,8 +58,8 @@ export default function ReportIssue() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Failed to submit"); return; }
       router.replace("/(main)/(rider)/home");
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error");
       logger.error("ReportIssue submit failed", err);
     } finally {
       setSubmitting(false);
@@ -54,55 +67,68 @@ export default function ReportIssue() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Report Issue</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Report Issue</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
-        <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-3">Select issue type</Text>
+        <Text className="text-[14px] font-Jakarta mb-3" style={{ color: textSecondary }}>Select issue type</Text>
         <View className="flex-row flex-wrap gap-2 mb-4">
           {reasons.map((r) => (
             <TouchableOpacity
               key={r.category}
-              className={`px-[16px] py-[10px] rounded-[8px] border ${
-                selected?.category === r.category
-                  ? "border-goPrimary bg-goAccentLight"
-                  : "border-goBorderLight dark:border-goBorderDark bg-goSurfaceLight dark:bg-goSurfaceElevatedDark"
-              }`}
+              className="px-[16px] py-[10px] rounded-[8px] border"
+              style={selected?.category === r.category
+                ? { borderColor: colors.primary, backgroundColor: isDark ? colors.primaryLightDark : colors.primaryLight }
+                : { borderColor, backgroundColor: surfaceBg }}
               onPress={() => setSelected(r)}
             >
-              <Text className="text-[14px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{r.icon} {r.label}</Text>
+              <View className="flex-row items-center">
+                <Ionicons name={r.icon} size={18} color={textSecondary} />
+                <Text className="text-[14px] font-JakartaBold ml-[6px]" style={{ color: textPrimary }}>{r.label}</Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
-        <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mb-2">Description (optional)</Text>
+        <Text className="text-[14px] font-Jakarta mb-2" style={{ color: textSecondary }}>Description (optional)</Text>
         <TextInput
-          className="bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-4"
+          className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mb-4"
+          style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
           placeholder="Tell us more about the issue..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={textSecondary}
           multiline
           numberOfLines={4}
           textAlignVertical="top"
           value={description}
           onChangeText={setDescription}
         />
-        {error ? <Text className="text-[14px] font-Jakarta text-goDanger mb-3">{error}</Text> : null}
+        {error ? <Text className="text-[14px] font-Jakarta mb-3" style={{ color: colors.danger }}>{error}</Text> : null}
         <TouchableOpacity
-          className={`rounded-full w-full py-[16px] items-center ${submitting || !selected ? "bg-goBorderDark" : "bg-goPrimary"}`}
+          className="rounded-full w-full py-[16px] items-center"
+          style={{ backgroundColor: submitting || !selected ? colors.borderDark : colors.primary }}
           onPress={handleSubmit}
           disabled={submitting || !selected}
         >
           {submitting ? (
             <ActivityIndicator size={20} color="#FFFFFF" />
           ) : (
-            <Text className="text-[18px] font-JakartaBold text-goWhite">Submit Report</Text>
+            <Text className="text-[18px] font-JakartaBold" style={{ color: colors.white }}>Submit Report</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

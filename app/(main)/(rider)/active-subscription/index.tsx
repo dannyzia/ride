@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { logger } from "@/lib/logger";
+import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 function daysBetween(fromIso: string, toIso: string): number {
   const diff = new Date(toIso).getTime() - new Date(fromIso).getTime();
@@ -11,6 +14,15 @@ function daysBetween(fromIso: string, toIso: string): number {
 }
 
 export default function ActiveSubscription() {
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const accentLight = isDark ? colors.primaryLightDark : colors.primaryLight;
+
   const { activeSubscription, fetchSubscription } = useDriverFlowStore();
   const [loading, setLoading] = useState(true);
 
@@ -36,12 +48,13 @@ export default function ActiveSubscription() {
     : 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">My Subscription</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>My Subscription</Text>
         <View className="w-[50px]" />
       </View>
       {loading ? (
@@ -50,8 +63,8 @@ export default function ActiveSubscription() {
         </View>
       ) : !activeSubscription ? (
         <View className="flex-1 items-center justify-center px-[24px]">
-          <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark mb-2">No active subscription</Text>
-          <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark text-center mb-6">
+          <Text className="text-[18px] font-JakartaBold mb-2" style={{ color: textPrimary }}>No active subscription</Text>
+          <Text className="text-[14px] font-Jakarta text-center mb-6" style={{ color: textSecondary }}>
             Purchase a call package to start receiving ride requests.
           </Text>
           <TouchableOpacity
@@ -63,22 +76,22 @@ export default function ActiveSubscription() {
         </View>
       ) : (
         <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
-          <View className="p-[16px] bg-goAccentLight border border-goPrimary rounded-[12px] mb-4">
+          <View className="p-[16px] border rounded-[12px] mb-4" style={{ backgroundColor: accentLight, borderColor: colors.primary }}>
             <View className="flex-row justify-between items-center">
-              <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">{activeSubscription.package_name ?? "Active Plan"}</Text>
+              <Text className="text-[18px] font-JakartaBold flex-1" style={{ color: textPrimary }}>{activeSubscription.package_name ?? "Active Plan"}</Text>
               <View className="bg-goPrimary rounded-full px-[10px] py-[4px]">
                 <Text className="text-[12px] font-JakartaBold text-goWhite">{activeSubscription.status === "active" ? "Active" : activeSubscription.status}</Text>
               </View>
             </View>
-            <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark mt-1">Activated: {formatDate(activeSubscription.purchased_at)}</Text>
-            <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Expires: {formatDate(activeSubscription.expires_at)} · {daysLeft} days left</Text>
+            <Text className="text-[14px] font-Jakarta mt-1" style={{ color: textSecondary }}>Activated: {formatDate(activeSubscription.purchased_at)}</Text>
+            <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>Expires: {formatDate(activeSubscription.expires_at)} · {daysLeft} days left</Text>
             {activeSubscription.is_trial ? (
-              <Text className="text-[14px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Trial plan</Text>
+              <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>Trial plan</Text>
             ) : null}
           </View>
-          <View className="p-[16px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-4">
-            <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">Calls remaining</Text>
-            <Text className="text-[28px] font-JakartaBold tracking-tight text-goTextPrimaryLight dark:text-goTextPrimaryDark">{activeSubscription.calls_remaining}</Text>
+          <View className="p-[16px] border rounded-[12px] mb-4" style={{ backgroundColor: surfaceBg, borderColor }}>
+            <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>Calls remaining</Text>
+            <Text className="text-[28px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>{activeSubscription.calls_remaining}</Text>
           </View>
           <TouchableOpacity
             className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3"
@@ -87,13 +100,22 @@ export default function ActiveSubscription() {
             <Text className="text-[18px] font-JakartaBold text-goWhite">Renew early</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="border border-goBorderLight dark:border-goBorderDark rounded-full w-full py-[16px] items-center"
+            className="border rounded-full w-full py-[16px] items-center"
+            style={{ borderColor }}
             onPress={() => router.push("/(main)/(rider)/subscription-plans")}
           >
-            <Text className="text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">Change plan</Text>
+            <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Change plan</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

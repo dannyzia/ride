@@ -9,18 +9,33 @@ import {
 import { WebView } from "react-native-webview";
 import { colors } from "@/theme/goRide";
 import { API_URL } from "@/lib/config";
+import { logger } from "@/lib/logger";
 import { useIsDark } from "@/lib/useAppearance";
 
 interface PaymentWebViewProps {
   bkashURL: string;
   paymentID: string;
+  purpose?: string;
   onSuccess: () => void;
   onError: (error: string) => void;
+}
+
+// Format a purpose slug for display: "rider_pass" -> "Rider Pass",
+// "wallet_topup" -> "Wallet Top-up".
+function formatPurpose(slug: string): string {
+  return slug
+    .split("_")
+    .map((word) => {
+      if (word === "topup") return "Top-up";
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
 }
 
 export default function PaymentWebView({
   bkashURL,
   paymentID,
+  purpose,
   onSuccess,
   onError,
 }: PaymentWebViewProps) {
@@ -59,9 +74,12 @@ export default function PaymentWebView({
   }, [paymentID, onSuccess, onError]);
 
   const startPolling = useCallback(() => {
+    if (purpose) {
+      logger.info("[PaymentWebView] start purpose=" + purpose);
+    }
     setPolling(true);
     intervalRef.current = setInterval(checkStatus, 2000);
-  }, [checkStatus]);
+  }, [checkStatus, purpose]);
 
   const stopPolling = useCallback(() => {
     if (intervalRef.current) {
@@ -112,6 +130,21 @@ export default function PaymentWebView({
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Purpose label (e.g. "Rider Pass", "Wallet Top-up") */}
+        {purpose ? (
+          <View
+            className="px-4 py-2 border-b"
+            style={{ backgroundColor: surfaceBg, borderBottomColor: borderColor }}
+          >
+            <Text
+              className="text-sm font-JakartaSemiBold"
+              style={{ color: textPrimary }}
+            >
+              {formatPurpose(purpose)}
+            </Text>
+          </View>
+        ) : null}
 
         {/* Polling status overlay */}
         {polling && (

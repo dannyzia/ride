@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,10 +9,16 @@ import {
   StyleSheet,
   TextInput,
   StatusBar,
+  useWindowDimensions,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  runOnJS,
+} from "react-native-reanimated";
+import { GestureHandlerRootView, Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
 import Map from "@/components/Map";
 import { useCustomer } from "@/store";
@@ -21,13 +27,31 @@ import { supabase } from "@/lib/supabase";
 import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { getVehicleTypesByCategory, getVehicleType, VEHICLE_CATEGORIES, VEHICLE_TYPES, VehicleTypeEnum, VehicleIconName, VehicleCategoryDef } from "@/lib/vehicleTypes";
-import { colors } from "@/theme/goRide";
+import { colors, shadows } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { FloatingNavMenu } from "@/components/FloatingNavMenu";
 import FareBreakdownSheet from "@/components/FareBreakdownSheet";
 import CustomButton from "@/components/CustomButton";
 
 type HomeState = "idle" | "destination" | "pickup" | "vehicle" | "confirm" | "finding";
+
+type SheetSnap = "peek" | "half" | "full";
+
+interface SheetSnapDef {
+  snaps: SheetSnap[];
+  percent: Partial<Record<SheetSnap, number>>;
+}
+
+// Custom sheet snap table (percent of window height). snaps[0] is the resting
+// snap for the state, mirroring the previous BottomSheet index={0} behavior.
+const SHEET_SNAPS: Record<HomeState, SheetSnapDef> = {
+  idle: { snaps: ["peek", "half"], percent: { peek: 18, half: 30 } },
+  destination: { snaps: ["full"], percent: { full: 92 } },
+  pickup: { snaps: ["half"], percent: { half: 35 } },
+  vehicle: { snaps: ["half", "full"], percent: { half: 50, full: 80 } },
+  confirm: { snaps: ["half", "full"], percent: { half: 70, full: 90 } },
+  finding: { snaps: ["full"], percent: { full: 100 } },
+};
 
 interface Stop {
   id: string;
@@ -44,6 +68,15 @@ interface VehicleOption {
   seats: number;
   hasAc: boolean | null;
   icon: VehicleIconName;
+}
+
+interface EstimateOption {
+  vehicle_type: VehicleTypeEnum;
+  display_en: string;
+  display_bn: string;
+  seats: number;
+  total_bdt: number;
+  eta_minutes: number;
 }
 
 interface SavedPlace {
@@ -87,7 +120,6 @@ export default function HomeScreen() {
     rebook_dest_lng?: string;
     vehicle_type?: string;
   }>();
-  const bottomSheetRef = useRef<BottomSheet>(null);
 
   const [homeState, setHomeState] = useState<HomeState>("idle");
   const [pickup, setPickup] = useState<SavedPlace | null>(null);
@@ -97,7 +129,7 @@ export default function HomeScreen() {
   const [recentPlaces, _setRecentPlaces] = useState<SavedPlace[]>([]);
   const [vehicleOptions, setVehicleOptions] = useState<VehicleOption[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
-  const [fareBreakdown, setFareBreakdown] = useState<Record<string, any> | null>(null);
+  const [fareBreakdown, setFareBreakdown] = useState<{ key: string; label: string; eta: number; fare: number; seats: number; hasAc: boolean | null; icon: VehicleIconName; total_bdt?: number } | null>(null);
   const [loadingFare, setLoadingFare] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
@@ -155,17 +187,65 @@ export default function HomeScreen() {
     setDestinationLocation,
   ]);
 
-  const snapPoints = useMemo(() => {
-    switch (homeState) {
-      case "idle": return ["18%", "30%"];
-      case "destination": return ["92%"];
-      case "pickup": return ["35%"];
-      case "vehicle": return ["50%", "80%"];
-      case "confirm": return ["70%", "90%"];
-      case "finding": return ["100%"];
-      default: return ["18%"];
-    }
+  const { height: windowHeight } = useWindowDimensions();
+  const [sheetSnap, setSheetSnap] = useState<SheetSnap>("peek");
+  const sheetHeight = useSharedValue(0);
+  const sheetTranslateY = useSharedValue(0);
+  const dragStartTranslateY = useSharedValue(0);
+
+  const snapDef = SHEET_SNAPS[homeState];
+  const sheetMaxHeight = (Math.max(...snapDef.snaps.map((s) => snapDef.percent[s] ?? 0)) / 100) * windowHeight;
+  const snapTranslateYs = snapDef.snaps.map(
+    (s) => sheetMaxHeight - ((snapDef.percent[s] ?? 0) / 100) * windowHeight
+  );
+
+  const snapTo = useCallback((snap: SheetSnap) => {
+    setSheetSnap(snap);
+  }, []);
+
+  // Entering a booking state rests the sheet at that state's first snap,
+  // matching the previous declarative snapPoints + index={0} behavior.
+  useEffect(() => {
+    setSheetSnap(SHEET_SNAPS[homeState].snaps[0]);
   }, [homeState]);
+
+  useEffect(() => {
+    const def = SHEET_SNAPS[homeState];
+    const maxHeight = (Math.max(...def.snaps.map((s) => def.percent[s] ?? 0)) / 100) * windowHeight;
+    const percent = def.percent[sheetSnap] ?? def.percent[def.snaps[0]] ?? 0;
+    sheetHeight.value = withTiming(maxHeight, { duration: 250 });
+    sheetTranslateY.value = withTiming(maxHeight - (percent / 100) * windowHeight, { duration: 250 });
+  }, [homeState, sheetSnap, windowHeight, sheetHeight, sheetTranslateY]);
+
+  const sheetAnimatedStyle = useAnimatedStyle(() => ({
+    height: sheetHeight.value,
+    transform: [{ translateY: sheetTranslateY.value }],
+  }));
+
+  const sheetPanGesture = Gesture.Pan()
+    .minDistance(4)
+    .onStart(() => {
+      dragStartTranslateY.value = sheetTranslateY.value;
+    })
+    .onUpdate((event) => {
+      const minTranslateY = Math.min(...snapTranslateYs);
+      const maxTranslateY = Math.max(...snapTranslateYs);
+      const next = dragStartTranslateY.value + event.translationY;
+      sheetTranslateY.value = Math.min(Math.max(next, minTranslateY), maxTranslateY);
+    })
+    .onEnd(() => {
+      let nearest = snapTranslateYs[0];
+      for (const target of snapTranslateYs) {
+        if (Math.abs(target - sheetTranslateY.value) < Math.abs(nearest - sheetTranslateY.value)) {
+          nearest = target;
+        }
+      }
+      sheetTranslateY.value = withTiming(nearest, { duration: 200 });
+      const snapIndex = snapTranslateYs.indexOf(nearest);
+      if (snapIndex >= 0) {
+        runOnJS(snapTo)(snapDef.snaps[snapIndex]);
+      }
+    });
 
   useEffect(() => {
     if (userLatitude && userLongitude && !pickup) {
@@ -204,7 +284,7 @@ export default function HomeScreen() {
       const rawService = service ?? "car";
       const serviceKey = VEHICLE_CATEGORIES.some((c) => c.key === rawService) ? rawService : "car";
       const categoryKeys = getVehicleTypesByCategory(serviceKey as VehicleCategoryDef["key"]);
-      const estimates: any[] = data.estimates || [];
+      const estimates: EstimateOption[] = data.estimates || [];
       const options: VehicleOption[] = categoryKeys
         .map((def) => estimates.find((e) => e.vehicle_type === def.key))
         .filter((e): e is { vehicle_type: VehicleTypeEnum; display_en: string; display_bn: string; seats: number; total_bdt: number; eta_minutes: number } => !!e)
@@ -347,7 +427,7 @@ export default function HomeScreen() {
 
   // ── RENDER: IDLE STATE ──
   const renderIdle = () => (
-    <BottomSheetView style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
+    <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
       <View style={[styles.handle, { backgroundColor: borderColor }]} />
       <TouchableOpacity
         style={[styles.whereToButton, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
@@ -406,12 +486,12 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </BottomSheetView>
+    </View>
   );
 
   // ── RENDER: DESTINATION SELECTOR ──
   const renderDestination = () => (
-    <BottomSheetView style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
+    <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
       <View style={styles.destHeader}>
         <TouchableOpacity onPress={() => setHomeState("idle")}>
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
@@ -497,12 +577,12 @@ export default function HomeScreen() {
           <Text style={[styles.emptyText, { color: textSecondary }]}>No recent destinations</Text>
         )}
       </ScrollView>
-    </BottomSheetView>
+    </View>
   );
 
   // ── RENDER: PICKUP CONFIRM ──
   const renderPickup = () => (
-    <BottomSheetView style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
+    <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
       <View style={styles.destHeader}>
         <TouchableOpacity onPress={() => setHomeState("destination")}>
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
@@ -520,12 +600,12 @@ export default function HomeScreen() {
           setHomeState("vehicle");
         }}
       />
-    </BottomSheetView>
+    </View>
   );
 
   // ── RENDER: VEHICLE SELECT ──
   const renderVehicle = () => (
-    <BottomSheetView style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
+    <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
       <View style={styles.destHeader}>
         <TouchableOpacity onPress={() => setHomeState("pickup")}>
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
@@ -577,12 +657,12 @@ export default function HomeScreen() {
         onPress={() => setHomeState("confirm")}
         disabled={!selectedVehicle}
       />
-    </BottomSheetView>
+    </View>
   );
 
   // ── RENDER: CONFIRM ──
   const renderConfirm = () => (
-    <BottomSheetView style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
+    <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
       <View style={styles.destHeader}>
         <TouchableOpacity onPress={() => setHomeState("vehicle")}>
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
@@ -626,7 +706,7 @@ export default function HomeScreen() {
         </View>
         {appliedPromo && (
           <Text style={[styles.promoApplied, { color: colors.greenVariant }]}>
-            ✓ {appliedPromo.code} applied (-৳{(appliedPromo.discount / 100).toFixed(0)})
+            {appliedPromo.code} applied (-৳{(appliedPromo.discount / 100).toFixed(0)})
           </Text>
         )}
 
@@ -667,12 +747,12 @@ export default function HomeScreen() {
           className="mt-4"
         />
       </ScrollView>
-    </BottomSheetView>
+    </View>
   );
 
   // ── RENDER: FINDING ──
   const renderFinding = () => (
-    <BottomSheetView style={[styles.sheetContent, { backgroundColor: surfaceBg, justifyContent: "center", alignItems: "center" }]}>
+    <View style={[styles.sheetContent, { backgroundColor: surfaceBg, justifyContent: "center", alignItems: "center" }]}>
       <View style={[styles.pulseRing, { borderColor: colors.primary + "30" }]} />
       <View style={[styles.pulseRingInner, { borderColor: colors.primary + "50" }]} />
       <ActivityIndicator size="large" color={colors.primary} style={{ marginBottom: 24 }} />
@@ -686,7 +766,7 @@ export default function HomeScreen() {
       >
         <Text style={[styles.cancelText, { color: colors.danger }]}>Cancel Ride</Text>
       </TouchableOpacity>
-    </BottomSheetView>
+    </View>
   );
 
   return (
@@ -716,27 +796,52 @@ export default function HomeScreen() {
       {/* Hamburger Menu */}
       <FloatingNavMenu variant="customer" />
 
-      {/* Bottom Sheet */}
-      <BottomSheet
-        ref={bottomSheetRef}
-        snapPoints={snapPoints}
-        index={0}
-        enablePanDownToClose={homeState === "idle"}
-        backgroundStyle={{ backgroundColor: surfaceBg }}
-        handleIndicatorStyle={{ backgroundColor: borderColor, width: 40, height: 4, borderRadius: 2 }}
+      {/* Bottom Sheet (custom absolute-positioned sheet, no third-party sheet lib) */}
+      <Animated.View
+        style={[
+          styles.sheetContainer,
+          sheetAnimatedStyle,
+          { backgroundColor: surfaceBg, borderTopColor: borderColor },
+          shadows.bottomSheet,
+        ]}
       >
+        <GestureDetector gesture={sheetPanGesture}>
+          <View style={styles.dragHandleHit}>
+            <View style={[styles.dragHandleBar, { backgroundColor: textDisabled }]} />
+          </View>
+        </GestureDetector>
         {homeState === "idle" && renderIdle()}
         {homeState === "destination" && renderDestination()}
         {homeState === "pickup" && renderPickup()}
         {homeState === "vehicle" && renderVehicle()}
         {homeState === "confirm" && renderConfirm()}
         {homeState === "finding" && renderFinding()}
-      </BottomSheet>
+      </Animated.View>
     </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  sheetContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopWidth: 1,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: "hidden",
+  },
+  dragHandleHit: {
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dragHandleBar: {
+    width: 36,
+    height: 5,
+    borderRadius: 2.5,
+  },
   sheetContent: {
     flex: 1,
     paddingHorizontal: 20,

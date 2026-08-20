@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { colors } from "@/theme/goRide";
 import { Tabs } from "expo-router";
 import {
@@ -6,6 +7,7 @@ import {
   View,
   TouchableWithoutFeedback,
 } from "react-native";
+import type { GestureResponderEvent } from "react-native";
 import { icons } from "@/constants/data";
 import { FloatingNavMenu } from "@/components/FloatingNavMenu";
 import OfflineIndicator from "@/components/OfflineIndicator";
@@ -21,7 +23,7 @@ const TabIcon = ({
   return (
     <View className="flex-row justify-center items-center rounded-full">
       <View
-        className={`rounded-full items-center justify-center ${focused ? "bg-goAccent" : "bg-goBgLight"}`}
+        className={`rounded-full items-center justify-center ${focused ? "bg-goPrimary" : "bg-goBgLight"}`}
         style={{
           width: 48,
           height: 48,
@@ -43,7 +45,13 @@ const TabIcon = ({
   );
 };
 
-const TabBarButton = ({ children, onPress }: any) => {
+const TabBarButton = ({
+  children,
+  onPress,
+}: {
+  children: ReactNode;
+  onPress?: (event: GestureResponderEvent) => void;
+}) => {
   return (
     <TouchableWithoutFeedback onPress={onPress}>
       <View className="flex-1 items-center justify-center">{children}</View>

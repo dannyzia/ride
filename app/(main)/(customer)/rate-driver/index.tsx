@@ -62,7 +62,7 @@ export default function RateDriver() {
       }
       const data = await res.json();
       setDriver(data.driver ?? null);
-    } catch (e: any) {
+    } catch (e) {
       setDriverError(true);
       logger.error("[rate-driver] fetch driver failed", e);
     } finally {
@@ -87,7 +87,7 @@ export default function RateDriver() {
         });
         if (res.ok) {
           const data = await res.json();
-          const blocked = (data.blocked_drivers ?? []).some((b: any) => b.driver_id === driverId);
+          const blocked = (data.blocked_drivers ?? []).some((b: { driver_id: string }) => b.driver_id === driverId);
           setIsBlocked(blocked);
         }
       } catch {
@@ -154,8 +154,8 @@ export default function RateDriver() {
       }
 
       router.replace("/(main)/(customer)/services-hub");
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : String(err)) || "Network error");
       logger.error("Rate driver failed", err);
     } finally {
       setLoading(false);

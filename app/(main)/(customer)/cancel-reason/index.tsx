@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import RadioGroup from "@/components/RadioGroup";
@@ -10,7 +11,7 @@ import ErrorBanner from "@/components/ErrorBanner";
 import { useRiderStore } from "@/store/useRiderStore";
 import { useTranslation } from "react-i18next";
 import { colors } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { countdownRemaining } from "@/lib/time";
 
 const REASONS = [
@@ -24,6 +25,7 @@ const REASONS = [
 export default function CancelReason() {
   const { t } = useTranslation();
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
   const params = useLocalSearchParams<{ rideId?: string }>();
   const [selected, setSelected] = useState("");
   const [note, setNote] = useState("");
@@ -81,8 +83,8 @@ export default function CancelReason() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || t('common.error')); return; }
       router.replace("/(main)/(customer)/canceled");
-    } catch (err: any) {
-      setError(err?.message || t('common.error'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('common.error'));
       logger.error("Cancel ride failed", err);
     } finally {
       setLoading(false);
@@ -105,6 +107,7 @@ export default function CancelReason() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }} onPress={() => router.back()}>{t('common.back')}</Text>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('ride.cancel_ride')}</Text>
@@ -132,7 +135,7 @@ export default function CancelReason() {
           className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mt-4"
           style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
           placeholder={t('ride.optional_note')}
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={textSecondary}
           value={note}
           onChangeText={setNote}
         />
@@ -144,12 +147,20 @@ export default function CancelReason() {
           disabled={loading || !selected}
         >
           {loading ? (
-            <ActivityIndicator size={20} color="#FFFFFF" />
+            <ActivityIndicator size={20} color={colors.white} />
           ) : (
             <Text className="text-[18px] font-JakartaBold text-goWhite">{t('ride.confirm_cancel')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

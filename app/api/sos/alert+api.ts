@@ -75,17 +75,56 @@ export async function POST(request: Request) {
       }
     }
 
-    await db.insert(sosAlerts).values({
-      user_id: dbUser.id,
-      role: dbUser.role as "rider" | "driver",
-      latitude: lat.toString(),
-      longitude: lng.toString(),
-      ride_id: ride_id ?? null,
-      message: message ?? (dbUser.role === "driver" ? "Driver SOS alert" : "Rider SOS alert"),
-      contacts_notified: [],
-    });
+    const [inserted] = await db
+      .insert(sosAlerts)
+      .values({
+        user_id: dbUser.id,
+        role: dbUser.role as "rider" | "driver",
+        latitude: lat.toString(),
+        longitude: lng.toString(),
+        ride_id: ride_id ?? null,
+        message: message ?? (dbUser.role === "driver" ? "Driver SOS alert" : "Rider SOS alert"),
+        contacts_notified: [],
+      })
+      .returning();
 
     logger.info("[sos/alert] recorded", { user_id: dbUser.id, role: dbUser.role, lat, lng, ride_id });
+
+    // F-15: push the new alert to admin dashboards in real time via
+    // utils-server. NEW inserts only — the dedupe short-circuit above means
+    // the alert is already on the dashboard. The WS server only broadcasts;
+    // it never writes sos_alerts.
+    if (inserted) {
+      const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
+      const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
+      if (internalSecret) {
+        try {
+          await fetch(`http://127.0.0.1:${wsPort}/internal/sos/alert`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${internalSecret}`,
+            },
+            body: JSON.stringify({
+              alert: {
+                id: inserted.id,
+                user_id: inserted.user_id,
+                role: inserted.role,
+                latitude: String(inserted.latitude),
+                longitude: String(inserted.longitude),
+                message: inserted.message,
+                ride_id: inserted.ride_id,
+                created_at: inserted.created_at.toISOString(),
+              },
+            }),
+            signal: AbortSignal.timeout(3_000),
+          });
+        } catch {
+          // WS push failure is non-fatal — the alert is already persisted.
+          // Never let a dispatch-server outage fail the user's SOS request.
+        }
+      }
+    }
 
     return Response.json({ ok: true });
   } catch (err: unknown) {

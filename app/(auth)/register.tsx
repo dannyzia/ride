@@ -83,7 +83,7 @@ export default function RegisterScreen() {
       } else {
         router.replace("/(auth)/enable-location");
       }
-    } catch (e: any) {
+    } catch (e) {
       setError("Registration failed. Please try again.");
       logger.error("[auth] register error", e);
       setLoading(false);

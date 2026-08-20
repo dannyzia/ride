@@ -60,6 +60,11 @@ const FinishRide = () => {
   // LOW-8: last reverse-geocoded address, reused while the position barely
   // moves instead of re-geocoding on every watch tick.
   const lastAddressRef = useRef("");
+  // Refs for the location-watch callback to avoid stale closures (exhaustive-deps).
+  const activeRideIdRef = useRef(activeRideId);
+  activeRideIdRef.current = activeRideId;
+  const wsRef = useRef(ws);
+  wsRef.current = ws;
 
   // Only the driver Home screen creates the WebSocket. If we got here without
   // one the connection is dead — the ride can still complete over HTTP, but
@@ -151,12 +156,13 @@ const FinishRide = () => {
               longitude: location.coords.longitude,
             });
             lastAddressRef.current = address[0]?.formattedAddress ?? "";
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(
+            const sock = wsRef.current;
+            if (sock && sock.readyState === WebSocket.OPEN) {
+              sock.send(
                 JSON.stringify({
                   type: "location:update",
                   role: "driver",
-                  ride_id: activeRideId,
+                  ride_id: activeRideIdRef.current,
                   lat: location.coords.latitude,
                   lng: location.coords.longitude,
                 }),
@@ -185,7 +191,9 @@ const FinishRide = () => {
         locationSubscription.remove();
       }
     };
-  }, [user]);
+  // ws/activeRideId read via refs above to avoid stale closures.
+  // setDriverLocation is a stable Zustand setter.
+  }, [user, setDriverLocation]);
 
   const rideDetails = giveRideDetails(activeRideId!);
   const customerPhone = rideDetails?.customerDetails?.number || "";

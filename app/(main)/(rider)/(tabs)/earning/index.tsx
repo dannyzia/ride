@@ -6,13 +6,14 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "@/lib/config";
 import { colors, radii } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { formatBDT } from "@/lib/format";
@@ -37,6 +38,7 @@ interface WeekResponse {
 
 export default function EarningScreen() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
   const [stats, setStats] = useState<DailyStats | null>(null);
   const [week, setWeek] = useState<WeekDay[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,6 +97,7 @@ export default function EarningScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>
           Earnings
@@ -181,6 +184,14 @@ export default function EarningScreen() {
           </>
         )}
       </ScrollView>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

@@ -56,7 +56,7 @@ export default function PhoneEntryScreen() {
       } else {
         setError("No account found with this phone number. Tap Register to create one.");
       }
-    } catch (e: any) {
+    } catch (e) {
       setError("Network error. Please try again.");
       logger.error("[auth] login check error", e);
     } finally {
@@ -97,7 +97,7 @@ export default function PhoneEntryScreen() {
       } else {
         router.push(`/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}`);
       }
-    } catch (e: any) {
+    } catch (e) {
       setError("Network error. Please try again.");
       logger.error("[auth] register check error", e);
     } finally {

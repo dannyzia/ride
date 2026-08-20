@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import CountdownRing from "./CountdownRing";
+import SlideButton from "@/components/SlideButton";
 
 const FETCH_ERROR_MESSAGES: Record<string, string> = {
   offer_expired: "Offer expired",
@@ -532,51 +533,37 @@ export default function RideOfferSheet() {
         </View>
       </View>
 
-      {/* Action Buttons */}
-      <View style={{ flexDirection: "row", gap: spacing.md }}>
-        <TouchableOpacity
-          onPress={handleReject}
+      {/* Action: slide to accept + decline tap (≥56dp touch target) */}
+      <SlideButton
+        title="Slide to Accept"
+        onComplete={handleAccept}
+        bgColor={colors.primary}
+        textColor={colors.white}
+      />
+      <TouchableOpacity
+        onPress={handleReject}
+        style={{
+          backgroundColor: "transparent",
+          borderWidth: 1.5,
+          borderColor: borderColor,
+          borderRadius: radii.pill,
+          paddingVertical: spacing.md,
+          minHeight: 56,
+          justifyContent: "center",
+          alignItems: "center",
+          marginTop: spacing.md,
+        }}
+      >
+        <Text
           style={{
-            flex: 1,
-            backgroundColor: "transparent",
-            borderWidth: 1.5,
-            borderColor: borderColor,
-            borderRadius: radii.pill,
-            paddingVertical: spacing.md,
-            alignItems: "center",
+            fontFamily: "Jakarta-Bold",
+            fontSize: 15,
+            color: textSecondary,
           }}
         >
-          <Text
-            style={{
-              fontFamily: "Jakarta-Bold",
-              fontSize: 15,
-              color: textSecondary,
-            }}
-          >
-            Decline
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleAccept}
-          style={{
-            flex: 1,
-            backgroundColor: colors.primary,
-            borderRadius: radii.pill,
-            paddingVertical: spacing.md,
-            alignItems: "center",
-          }}
-        >
-          <Text
-            style={{
-              fontFamily: "Jakarta-Bold",
-              fontSize: 15,
-              color: colors.white,
-            }}
-          >
-            Accept
-          </Text>
-        </TouchableOpacity>
-      </View>
+          Decline
+        </Text>
+      </TouchableOpacity>
     </Animated.View>
   );
 }

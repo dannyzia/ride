@@ -1,15 +1,16 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { authCleanup } from "@/lib/authCleanup";
 
 export default function SettingsLogoutConfirmation() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -30,6 +31,7 @@ export default function SettingsLogoutConfirmation() {
 
   return (
     <SafeAreaView className="flex-1 items-center justify-center px-[24px]" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="items-center mb-8">
         <View
           className="w-24 h-24 rounded-full items-center justify-center mb-4"
@@ -66,6 +68,14 @@ export default function SettingsLogoutConfirmation() {
           </Text>
         </TouchableOpacity>
       </View>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

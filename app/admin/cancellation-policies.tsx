@@ -44,7 +44,7 @@ export default function CancellationPolicies() {
     { key: "ride_status", header: "Ride Status", width: 100 },
     { key: "fee_amount_bdt", header: "Fee (BDT)", render: (r) => `৳${(r.fee_amount_bdt / 100).toFixed(0)}`, width: 80 },
     { key: "time_threshold_seconds", header: "Grace (s)", width: 70 },
-    { key: "is_active", header: "Active", render: (r) => r.is_active ? "✅" : "⬜", width: 60 },
+    { key: "is_active", header: "Active", render: (r) => r.is_active ? "Yes" : "No", width: 60 },
   ];
 
   return (
@@ -61,7 +61,7 @@ export default function CancellationPolicies() {
             <View key={f}>
               <Text style={{ color: colors.textSecondaryDark, fontSize: 12, fontFamily: "Jakarta-Regular" }}>{f}</Text>
               <View style={{ backgroundColor: colors.darkSecondary, borderRadius: 8, padding: 8 }}>
-                <input type="text" value={(form as any)[f]} onChange={(e: any) => setForm({ ...form, [f]: e.target.value })}
+                <input type="text" value={(form as any)[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })}
                   style={{ background: "transparent", color: colors.textPrimaryDark, border: "none", outline: "none", width: "100%", fontFamily: "Jakarta-Regular", fontSize: 14 }} />
               </View>
             </View>

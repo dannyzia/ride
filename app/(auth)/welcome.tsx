@@ -1,4 +1,5 @@
 import { View, Text, Image } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import CustomButton from "@/components/CustomButton";
@@ -51,7 +52,7 @@ export default function WelcomeScreen() {
             backgroundColor: isDark ? colors.primary + "1A" : colors.primary + "14",
           }}
         >
-          <Text className="text-[64px]">🚗</Text>
+          <Ionicons name="car" size={64} color={colors.primary} />
         </View>
       </View>
 

@@ -9,7 +9,7 @@ import type { FareBreakdown } from "../lib/fareCalc";
 export interface AuthHelloMessage {
   type: "auth:hello";
   access_token: string;
-  role: "driver" | "rider";
+  role: "driver" | "rider" | "admin";
 }
 
 export interface AuthRefreshMessage {
@@ -105,10 +105,24 @@ export interface RideOfferMessage {
   preference_ids: string[];
   expires_in_ms: number;
   expires_at: string;
+  upfront_tip_bdt: number;
+}
+
+// F-15: SOS alert broadcast to connected admin dashboards. Mirrors a
+// sos_alerts row (numeric lat/lng as strings, ISO-8601 created_at).
+export interface SosAlertPayload {
+  id: string;
+  user_id: string;
+  role: string;
+  latitude: string;
+  longitude: string;
+  message: string | null;
+  ride_id: string | null;
+  created_at: string;
 }
 
 export type OutboundMessage =
-  | { type: "auth:ok"; user_id: string; role: "driver" | "rider" }
+  | { type: "auth:ok"; user_id: string; role: "driver" | "rider" | "admin" }
   | { type: "auth:error"; message: string }
   | { type: "admin:suspended"; message?: string }
   | { type: "error"; message: string }
@@ -135,4 +149,5 @@ export type OutboundMessage =
   | { type: "ride:alternatives"; ride_id: string; alternatives: { vehicle_type: string; fare_breakdown: Record<string, unknown> }[] }
   | { type: "chat:message"; ride_id: string; message: string; sender: string }
   | { type: "chat:typing"; ride_id: string }
-  | { type: "location:driver"; ride_id: string; lat: number; lng: number };
+  | { type: "location:driver"; ride_id: string; lat: number; lng: number }
+  | { type: "admin:sos"; alert: SosAlertPayload };

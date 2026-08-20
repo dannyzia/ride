@@ -2,6 +2,7 @@ export const colors = {
   primary: "#0CC25F",
   primaryPressed: "#0AA84E",
   primaryLight: "#E6F7EE",
+  primaryLightDark: "#1A3A2A",
 
   danger: "#E31D1C",
   dangerPressed: "#C41A19",
@@ -41,9 +42,10 @@ export const colors = {
   gray200: "#E5E7EB",
   gray600: "#4B5563",
 
-  accent: "#0CC25F",
-  accentPressed: "#0AA84E",
-  accentLight: "#E6F7EE",
+  accent: "#0EA5E9",
+  accentPressed: "#0284C7",
+  accentLight: "#E0F2FE",
+  accentDark: "#38BDF8",
   surfaceElevated: "#1C1E23",
   borderDefault: "#35383F",
   blue: "#0286FF",

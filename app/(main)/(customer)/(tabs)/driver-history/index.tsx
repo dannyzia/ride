@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 interface Trip {
   ride_id: string;
@@ -12,11 +14,19 @@ interface Trip {
   destination_address: string;
   status: string;
   vehicle_type: string;
-  fare_breakdown: any;
+  fare_breakdown: { total_bdt?: number } | null;
   created_at: string;
 }
 
 export default function DriverTripHistory() {
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -35,8 +45,8 @@ export default function DriverTripHistory() {
         const json = await res.json();
         if (!res.ok) { setError(json.error || "Failed to load trips"); return; }
         if (!cancelled) setTrips(json.data || []);
-      } catch (err: any) {
-        if (!cancelled) setError(err?.message || "Network error");
+      } catch (err) {
+        if (!cancelled) setError((err instanceof Error ? err.message : String(err)) || "Network error");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -57,12 +67,13 @@ export default function DriverTripHistory() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-goBgLight dark:bg-goBgDark">
-      <View className="flex-row items-center px-[24px] py-[16px] border-b border-goBorderLight dark:border-goBorderDark">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+      <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">My Trips</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>My Trips</Text>
         <View className="w-[50px]" />
       </View>
       {loading ? (
@@ -71,35 +82,44 @@ export default function DriverTripHistory() {
         </View>
       ) : error ? (
         <View className="flex-1 items-center justify-center px-[24px]">
-          <Text className="text-[16px] font-Jakarta text-goDanger text-center">{error}</Text>
+          <Text className="text-[16px] font-Jakarta text-center" style={{ color: colors.danger }}>{error}</Text>
         </View>
       ) : trips.length === 0 ? (
         <View className="flex-1 items-center justify-center px-[24px]">
-          <Text className="text-[16px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">No trips yet</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: textSecondary }}>No trips yet</Text>
         </View>
       ) : (
         <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
           {trips.map((t) => (
             <TouchableOpacity
               key={t.ride_id}
-              className="flex-row justify-between items-center p-[14px] bg-goSurfaceLight dark:bg-goSurfaceElevatedDark border border-goBorderLight dark:border-goBorderDark rounded-[12px] mb-3"
+              className="flex-row justify-between items-center p-[14px] border rounded-[12px] mb-3"
+              style={{ backgroundColor: surfaceBg, borderColor }}
               onPress={() => router.push(`/(main)/(customer)/(tabs)/driver-history/${t.ride_id}`)}
             >
               <View>
-                <Text className="text-[15px] font-JakartaBold text-goTextPrimaryLight dark:text-goTextPrimaryDark">
+                <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>
                   {t.destination_address ?? "Destination"}
                 </Text>
-                <Text className="text-[13px] font-Jakarta text-goTextSecondaryLight dark:text-goTextSecondaryDark">
+                <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
                   {formatDate(t.created_at)} · {t.vehicle_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                 </Text>
               </View>
-              <Text className="text-[15px] font-JakartaBold text-goPrimary">
+              <Text className="text-[15px] font-JakartaBold" style={{ color: colors.primary }}>
                 ৳{((t.fare_breakdown?.total_bdt ?? 0) / 100).toFixed(0)}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       )}
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

@@ -47,7 +47,7 @@ export default function AlternativesSheet({ visible, alternatives, onSelect, onC
                 </Text>
               </View>
               <View className="items-end">
-                <Text className="text-base font-JakartaBold text-goAccent">
+                <Text className="text-base font-JakartaBold text-goPrimary">
                   ৳{(item.fare_breakdown.total_bdt / 100).toFixed(0)}
                 </Text>
                 <Text className="text-xs font-Jakarta text-general-400 font-semibold mt-1">

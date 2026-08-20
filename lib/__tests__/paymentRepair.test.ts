@@ -33,6 +33,12 @@ import { repairPaymentEvent } from "../paymentRepair";
 
 type Row = Record<string, unknown>;
 
+interface SelectChain {
+  for: () => SelectChain;
+  limit: () => SelectChain;
+  then: (resolve: (v: unknown) => void) => void;
+}
+
 const BY_TABLE = new Map<unknown, Row[]>();
 
 function baseEvent(overrides: Row = {}): Row {
@@ -61,7 +67,7 @@ beforeEach(() => {
       where: jest.fn(() => {
         // Chain supports .for("update") and .limit(1) in either order; the
         // awaited result is the (single) row set.
-        const chain: any = {
+        const chain: SelectChain = {
           for: jest.fn(() => chain),
           limit: jest.fn(() => chain),
           then: (resolve: (v: unknown) => void) => resolve(rows().slice(0, 1)),

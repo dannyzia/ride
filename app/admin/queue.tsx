@@ -429,9 +429,9 @@ export default function QueueScreen() {
         const s = docSummary(row.documents);
         return (
           <Text style={styles.cellText}>
-            <Text style={{ color: colors.primary }}>{s.ok}✓ </Text>
-            <Text style={{ color: colors.danger }}>{s.bad}✗ </Text>
-            <Text style={{ color: colors.amber }}>{s.wait}⏳</Text>
+            <Text style={{ color: colors.primary }}>{s.ok} </Text>
+            <Text style={{ color: colors.danger }}>{s.bad}</Text>
+            <Text style={{ color: colors.amber }}> {s.wait}</Text>
           </Text>
         );
       },
@@ -459,7 +459,7 @@ export default function QueueScreen() {
             },
           ]}
         >
-          {row.sla_hours.toFixed(1)}h{row.sla_breach ? " ⚠" : ""}
+          {row.sla_hours.toFixed(1)}h{row.sla_breach ? " (!)" : ""}
         </Text>
       ),
     },
@@ -675,7 +675,7 @@ export default function QueueScreen() {
                           : ""
                       }${
                         pendingAction.driver.face_match_warning
-                          ? " ⚠ below threshold"
+                          ? " (!) below threshold"
                           : ""
                       }`
                     : "—"
@@ -863,7 +863,7 @@ export default function QueueScreen() {
                 label="SLA"
                 value={`${detailDriver.sla_hours.toFixed(1)}h / ${
                   detailDriver.sla_threshold_hours
-                }h${detailDriver.sla_breach ? " ⚠ breach" : ""}`}
+                }h${detailDriver.sla_breach ? " (!) breach" : ""}`}
               />
             </View>
 

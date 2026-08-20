@@ -36,7 +36,7 @@ All items below were audited against the real tree on 2026-08-15. **These are fa
 | `app/(main)/(rider)/index.tsx` is driver home | TWO homes exist: flat `index.tsx` (477 lines, 6-state machine, no WS creation) and `(tabs)/index.tsx` (owns `new WebSocket`, `ride:offer` handling, reconnect backoff). Both resolve to the same route | **`(tabs)/index.tsx` wins.** Flat `index.tsx` is DELETED. Its legacy sends (`ride:arrived`/`ride:started`/`ride:completed`) are already covered by find-customer / enter-otp / HTTP-complete. Home renders **3 states + offer modal** |
 | `reach-customer.tsx` exists | Does NOT exist. Real screen: **`find-customer/index.tsx`** (component literally named `ReachCustomer`, 461 lines). `customer-navigation/[rideId].tsx` (47 lines) renders `DriverNavigation` full-screen nav | Refactor **`find-customer/index.tsx`**. Keep `customer-navigation` as the full-screen nav it is |
 | Theming = NativeWind `dark:` classes | Plans 01–02 locked **`useIsDark()` from `lib/useAppearance.ts` + inline `colors.*` ternaries** (Pattern A). Used in 100+ files. AGENTS.md is stale on this. Tailwind `go*` palette has **conflicting hex values** vs `goRide.ts colors` (e.g. `goPrimary` #0A9B4C vs `colors.primary` #0CC25F) | **Pattern A only** for all Plan 04 screens. Never `dark:` classes in driver screens. Palette source of truth = `theme/goRide.ts` |
-| `OtpInput` component exists | No local component. `enter-otp` uses `react-native-otp-entry`, hardcoded light-only | Theme the existing usage in place (props/inline styles from theme object). Do not vendor a new component |
+| `OtpInput` component exists | AMENDED (M-22): `react-native-otp-entry` dep removed — `enter-otp` and `ride-tracking` use custom `components/PinInput.tsx` | Custom PinInput is the decision: lighter, themed, already tested. Do not restore the dep |
 | WS messages `ride:offer_expired`, `ride:offer_cancelled`, `ride:status_update` | None exist on the wire. Real protocol (`utils-server/index.ts`): **`offer:lost`**, **`ride:status`**, **`fetch:confirmed`/`fetch:error`**, **`offer:accepted`**, **`ride:started`/`ride:start_failed`**, **`ride:arrived`** | Use ONLY the real message names (§6). `offer:expired` is declared in types.ts but never sent — treat `offer:lost` as expiry |
 | Rider cancellation resets driver to ONLINE | **`ride:cancelled` / `rider:cancelled` is NEVER sent by the server.** Driver currently listens for a message that never arrives | Backend task **B-7** adds the broadcast. Client keeps listening for `rider:cancelled` AND `ride:cancelled` (both spellings) |
 | Cancel button on finish-ride | `/api/ride/[id]/cancel` 409s for `in_progress` rides | **Cancel affordance lives in find-customer only** (statuses `pending…driver_arrived` are cancellable). Removed from finish-ride |
@@ -296,7 +296,7 @@ Refactor:
 
 ## 4.6 Enter OTP — `enter-otp/index.tsx`
 
-- Theme in place: `theme.bg`, focus color `colors.primary`, error `border colors.danger` + shake. Keep `react-native-otp-entry`.
+- Theme in place: `theme.bg`, focus color `colors.primary`, error `border colors.danger` + shake. AMENDED (M-22): custom `components/PinInput.tsx` (dep removed).
 - Keeps `addEventListener` for `ride:started` / `ride:start_failed` (correct pattern).
 
 ## 4.7 Cancellation Reasons — `cancellation-reasons/index.tsx`

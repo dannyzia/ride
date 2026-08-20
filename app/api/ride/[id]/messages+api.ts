@@ -1,20 +1,21 @@
-import { db } from '../../../../src/db';
-import { chatMessages, rides, users } from '../../../../src/db/schema';
+import { db } from '@/src/db';
+import { chatMessages, rides, users } from '@/src/db/schema';
 import { eq, and, lt, desc } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
-import { logger } from '../../../../lib/logger';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
 import * as errors from '@/lib/errors';
 
 const PAGE_SIZE = 50;
 
-export async function GET(req: Request) {
+export async function GET(request: Request, { id }: { id: string }) {
   try {
-    const url = new URL(req.url);
-    const segments = url.pathname.split('/');
-    const rideId = segments[segments.indexOf('ride') + 1];
-    if (!rideId) return Response.json({ error: 'missing_ride_id', message: 'Ride ID is required' }, { status: 400 });
+    if (!z.string().uuid().safeParse(id).success) {
+      return Response.json({ error: 'invalid_uuid', message: 'Invalid ride ID' }, { status: 400 });
+    }
+    const rideId = id;
 
-    const supabaseUser = await verifySupabaseToken(req);
+    const supabaseUser = await verifySupabaseToken(request);
 
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
@@ -26,6 +27,7 @@ export async function GET(req: Request) {
       return Response.json({ error: 'not_ride_participant', message: 'You are not a participant in this ride' }, { status: 403 });
     }
 
+    const url = new URL(request.url);
     const before = url.searchParams.get('before');
 
     const conditions = [eq(chatMessages.ride_id, rideId)];

@@ -64,6 +64,45 @@ function extractDeepLink(data: Record<string, unknown> | null): string | null {
   return null;
 }
 
+const SAMPLE_NOTIFICATIONS: NotificationRow[] = [
+  {
+    id: "sample-promo",
+    type: "promo",
+    title: "Weekend discount inside",
+    body: "Enjoy 20% off your next three rides, this weekend only.",
+    data: null,
+    sent_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "sample-trip",
+    type: "trip",
+    title: "Trip reminder",
+    body: "You have a scheduled ride coming up tomorrow morning.",
+    data: null,
+    sent_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "sample-payment",
+    type: "payment",
+    title: "Payment received",
+    body: "Your wallet top-up of BDT 200 was successful.",
+    data: null,
+    sent_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "sample-system",
+    type: "system",
+    title: "Keep your app updated",
+    body: "Update to the latest version for the best experience.",
+    data: null,
+    sent_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  },
+];
+
 export default function Inbox() {
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
@@ -166,28 +205,34 @@ export default function Inbox() {
     [markRead],
   );
 
-  const listEmpty = useMemo(() => {
-    if (error) {
-      return (
-        <View style={styles.stateWrap}>
-          <Ionicons name="warning-outline" size={48} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.danger }]}>
-            Could not load notifications
-          </Text>
-          <Text style={[styles.stateSubtitle, { color: textSecondary }]}>
-            Pull down to retry
-          </Text>
-        </View>
-      );
-    }
+  const errorListHeader = useMemo(() => {
+    if (!error) return null;
     return (
+      <View style={styles.stateWrap}>
+        <Ionicons name="warning-outline" size={48} color={colors.danger} />
+        <Text style={[styles.errorTitle, { color: colors.danger }]}>
+          Could not load notifications
+        </Text>
+        <Text style={[styles.stateSubtitle, { color: textSecondary }]}>
+          Pull down to retry
+        </Text>
+        <Text style={[styles.sampleCaption, { color: textSecondary }]}>
+          Using sample data
+        </Text>
+      </View>
+    );
+  }, [error, textSecondary]);
+
+  const listEmpty = useMemo(
+    () => (
       <EmptyState
         icon="notifications-off-outline"
         title="No notifications yet"
         subtitle="We'll notify you about rides, promos, and updates"
       />
-    );
-  }, [error, textSecondary]);
+    ),
+    [],
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bg }]} edges={["top", "left", "right"]}>
@@ -220,7 +265,7 @@ export default function Inbox() {
         </View>
       ) : (
         <FlatList
-          data={notifications}
+          data={error ? SAMPLE_NOTIFICATIONS : notifications}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
@@ -231,15 +276,16 @@ export default function Inbox() {
               colors={[colors.primary]}
             />
           }
+          ListHeaderComponent={errorListHeader}
           ListEmptyComponent={listEmpty}
           renderItem={({ item }) => (
             <NotificationCard
               type={toCardType(item.type)}
               title={item.title}
               body={item.body ?? ""}
-              isRead={readIds.has(item.id)}
+              isRead={error ? true : readIds.has(item.id)}
               createdAt={item.sent_at}
-              onPress={() => handlePress(item)}
+              onPress={error ? undefined : () => handlePress(item)}
             />
           )}
         />
@@ -285,7 +331,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
-    paddingTop: 80,
+    paddingTop: 32,
+    paddingBottom: 4,
   },
   errorTitle: {
     fontFamily: "Jakarta-SemiBold",
@@ -297,6 +344,12 @@ const styles = StyleSheet.create({
     fontFamily: "Jakarta-Regular",
     fontSize: 13,
     marginTop: 8,
+    textAlign: "center",
+  },
+  sampleCaption: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 11,
+    marginTop: 16,
     textAlign: "center",
   },
 });

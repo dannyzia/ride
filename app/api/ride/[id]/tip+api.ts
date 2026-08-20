@@ -16,7 +16,7 @@ export async function POST(request: Request, { id }: { id: string }) {
   try {
     const user = await verifySupabaseToken(request);
 
-    if (!z.string().uuid().safeParse(id).success) return Response.json({ error: 'invalid_ride_id', message: 'Invalid ride ID' }, { status: 400 });
+    if (!z.string().uuid().safeParse(id).success) return Response.json({ error: 'invalid_uuid', message: 'Invalid ride ID' }, { status: 400 });
 
     const body = await parseJsonBody(request, tipSchema);
     if (!body.ok) return body.response;

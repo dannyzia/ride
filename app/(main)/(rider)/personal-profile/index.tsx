@@ -1,17 +1,25 @@
 import { useState } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { uploadImage } from "@/lib/imageToURL";
 import { logger } from "@/lib/logger";
 import { colors, fonts, radii } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
+
+interface DriverProfilePatch {
+  name: string;
+  profile_image_url?: string;
+  city?: string;
+}
 
 export default function DriverPersonalProfile() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
@@ -51,7 +59,7 @@ export default function DriverPersonalProfile() {
       setUploading(true);
       try {
         profileImageUrl = await uploadImage(photo, `profiles/${Date.now()}_${name.trim().replace(/\s+/g, "_")}.jpg`);
-    } catch (_err: any) {
+    } catch {
         setError("Failed to upload photo. Please try again.");
         setUploading(false);
         return;
@@ -64,7 +72,7 @@ export default function DriverPersonalProfile() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) { setError("Not authenticated"); return; }
-      const body: Record<string, any> = { name: name.trim() };
+      const body: DriverProfilePatch = { name: name.trim() };
       if (profileImageUrl) body.profile_image_url = profileImageUrl;
       if (city.trim()) body.city = city.trim();
 
@@ -76,8 +84,8 @@ export default function DriverPersonalProfile() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Failed to save"); return; }
       router.push("/(main)/(rider)/onboarding");
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error");
       logger.error("Driver profile save failed", err);
     } finally {
       setSaving(false);
@@ -88,6 +96,7 @@ export default function DriverPersonalProfile() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>Back</Text>
@@ -111,7 +120,7 @@ export default function DriverPersonalProfile() {
         <TextInput
           style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontFamily: fonts.body, color: textPrimary, marginBottom: 16 }}
           placeholder="Enter your full name"
-          placeholderTextColor={colors.textDisabledDark}
+          placeholderTextColor={textSecondary}
           value={name}
           onChangeText={setName}
         />
@@ -119,7 +128,7 @@ export default function DriverPersonalProfile() {
         <TextInput
           style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontFamily: fonts.body, color: textPrimary, marginBottom: 16 }}
           placeholder="Select your operating city"
-          placeholderTextColor={colors.textDisabledDark}
+          placeholderTextColor={textSecondary}
           value={city}
           onChangeText={setCity}
         />
@@ -138,6 +147,14 @@ export default function DriverPersonalProfile() {
           )}
         </TouchableOpacity>
       </ScrollView>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surface, borderWidth: 1, borderColor: border }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

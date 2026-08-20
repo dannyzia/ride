@@ -1600,6 +1600,8 @@ An agent following these paths will create duplicate routes in the wrong place. 
 ### 4. Scheduled rides are never dispatched (functional gap)
 The spec inserts a `rides` row with `status='scheduled'` and stops. **Nothing ever turns it into an active, dispatchable ride.** `utils-server/scheduler.ts` exists for exactly this. The plan must specify the scheduler hook that promotes `scheduled → finding` at the right time and triggers dispatch — otherwise "Schedule a Ride" books a ride that never arrives. This is a P0 hole, not a polish item. (Related: `scheduling-user-ride`, `schedule-ride-after-promo`, `ride-details-scheduled` screens already exist — reconcile, don't rebuild.)
 
+> **CORRECTION (verified 2026-08-16):** This P0 is STALE — scheduled rides ARE dispatched. `utils-server/scheduler.ts` job 1 promotes `scheduled` → `pending` for dispatch with an overlap guard. Do NOT let anyone "fix" this claim; it would add a second promotion path.
+
 ### 5. Shared components are built last but used first (ordering bug)
 Wave 5 creates `EmptyState`, `ErrorBanner`, `OfflineIndicator` — but Waves 1–4 screens consume them. Plan 04 correctly put components in "Phase A: Foundation (do first)." Plan 05 reverses it, so every screen gets built without the components it's specced to use. Move component creation to Wave 0/1. Same problem with i18n: Waves 1–4 hardcode strings, then Wave 5 "extracts ALL hardcoded strings" — that's write-then-rewrite, and "extract ALL strings from every screen" is app-wide scope dumped into the final wave.
 
@@ -1950,3 +1952,1341 @@ The driver screens (hotspot-map, performance-stats, rider-no-show, etc.) are use
 ---
 
 **End of changes list.**
+
+---
+
+# FINAL — Orchestrator-Locked Implementation Plan (2026-08-16)
+
+> **Authority:** This section supersedes everything above it. Where earlier sections conflict with this one, this one wins. All claims below were verified against the working tree on 2026-08-16.
+> **Role split:** UI/UX specs come from Kimi (incorporated below with corrections). Backend, database, and wiring are orchestrator-owned and locked here.
+>
+> **⚠ Wave completion status (audit-verified 2026-08-16):** The tree is a *cherry-pick* of this plan, not "not started" — do NOT re-build shipped items. **Shipped:** `POST /api/sos/alert`, `POST /api/driver/vehicle-type-change`, `GET /api/driver/slider-config`, no-show, pass-purchase guard + per-pass quota, payment-result screens (`/payment/success|failure`, scheme `ride`), finding-driver WS wiring (`ride:status`/`ride:alternatives`/`ride:expired`), HTTP arrive/start atomic claims, tip/rate/wait-start guards, trial-package direct activation, Home "Book Now" → real pipeline, 48h dispute hide-gate, `lib/authCleanup.ts`, Pattern-A auth sweep, track auth exemption. **NOT shipped (Wave 0/1):** `ErrorBanner`/`OfflineIndicator`/`amberLight` + deps, `ScheduleRideSheet`, `ride-scheduled` rebuild, cancel-reason rebind. **NOT shipped (Zone gate Z-1…Z-8, §8):** `zones_one_active` constraint, `getZoneForLocation`, nil-UUID sentinel removal, heartbeat zone stamping, admin zone deactivate, **`demand_forecasts` has NO writer — the heatmap reads a permanently empty table until Z-6 lands**. **NOT shipped (Wave 4):** `daily_totals` earnings/breakdown, hotspot map. Execute §3 below as the live ticket list — it is accurate.
+
+## 1. Kimi's Decisions (incorporated)
+
+- **Q1(a)** Scheduling = "Schedule for later" toggle in `confirm-ride`; date+time picker appears when ON. **Q1(b)** Delete `scheduling-user-ride`, `schedule-ride-after-promo`, `no-drivers-available`; `ride-scheduled` becomes the real confirmation screen (rideId param + live data). The picker itself is implemented as `components/ScheduleRideSheet.tsx` (bottom sheet inside confirm-ride) — the orphaned `schedule-ride/index.tsx` route is deleted.
+- **Q2** Hotspot map = MapLibre circles at zone centroids. Circle size = predicted demand; color = demand/supply ratio (green `primary` / yellow `amber` / red `danger`); zone name label (13px, white outline); manual refresh only; "Last updated" timestamp; legend bar; **mandatory EmptyState** (see §6 risks).
+- **Q3** `instant-pay` and `payout-history` REMOVED from Plan 05 (no withdrawal backend exists — separate epic). Wallet keeps "No withdrawals are available yet."
+- **Q5** Call Ledger "missed" tab is canonical; the dedicated `missed-requests` screen is **not built** (it never existed — the addendum's plan to "delete" it means don't create it).
+- **Q9** Checklist item corrected to: "No raw `theme === 'dark'` comparisons — use `useIsDark()`. NativeWind `dark:` classes are allowed per AGENTS.md."
+- **Q10** Cancel screen binds 100% to server: `fee_bdt` (paisa→taka at display) + `free_until` countdown. No hardcoded fees or windows.
+- **Q11** Entries: hotspot pill in driver home stats bar (`(tabs)/index.tsx` ~line 896); Incentives row in earning tab; "Rider not here?" link in find-customer — **appears immediately on `driver_arrived`, hides when status changes** (NOT after 5 min — see §2 override).
+
+## 2. Kimi Overrides (backend facts — final)
+
+1. **Vehicle screen data:** rows = Registration date, `fitness_expires_at`, `tax_token_expires_at`. NO insurance column, NO vehicle photo (use vehicle-type icon). Badges: valid `successLight`, <30d `amberLight`, expired `dangerLight`.
+2. **Vehicle type change:** `POST /api/driver/vehicle-type-change { new_vehicle_type }` (NOT `PATCH /api/driver/vehicle-type`). Radio list = the 8 enum values from `lib/vehicleTypes.ts` (bike_basic, bike_standard, bike_plus, cng, car_economy, car_comfort, car_premium, car_xl). Eligibility gated server-side (`eligibility_not_met` 422). If `is_online` → warning modal → auto-offline → selector.
+3. **No-show window:** `max_free_wait_seconds` (system_config, default **60s**) auto-starts arrived rides (`scheduler.ts:644–678`). The "Rider not here?" link must be visible from the moment of arrival. Longer windows = ops config change, not code.
+4. **Referral deep link CUT** (journey 3): register API/screen have no referral support. Kept journeys: push→ride-tracking (already works), promo link→apply-promos with code pre-filled. Web `/track/{id}` stays primary for share.
+5. **SOS banner hex:** use `infoLight` token (`#EAECF6`), not `#EEF2FF`. "Contact Booker" = `tel:` call (booker's number; primary call button = secondary passenger).
+
+## 3. Final Scope
+
+| Item | Disposition |
+|---|---|
+| confirm-ride schedule toggle + `ScheduleRideSheet` | Build (client only — server branch exists; sends `scheduled_at` UTC ISO, validates 30min–7d, displays Asia/Dhaka) |
+| `ride-scheduled` | Rebuild (rideId param, `GET /api/ride/[id]`) |
+| `schedule-ride`, `scheduling-user-ride`, `schedule-ride-after-promo`, `no-drivers-available` routes | **DO NOT delete blindly (corrected 2026-08-16).** `no-drivers-available` and `schedule-ride` are LIVE routes: finding-driver navigates to `no-drivers-available` on `ride:expired`/alternatives-cancel; FloatingNavMenu links `schedule-ride`; no-drivers-available links back to `schedule-ride`. Re-home those links before any deletion. `scheduling-user-ride`/`schedule-ride-after-promo` remain the only orphan candidates (re-run the §5 grep gate first). |
+| `cancel-reason` | Fix: bind to `free_until`+`fee_bdt` from extended cancel-preview; remove hardcoded 120s window |
+| `canceled` | Light wire-up (server values) |
+| `apply-promos` | Fix: staged-promo → confirm-ride discount-selector handoff; fix home's unauthorized redeem call; replace no-op `applyPromo` store action |
+| `emergency-sos` | Rebuild: location acquisition → confirm modal → `POST /api/sos/alert`; offline/permission-failure fallbacks still dial 999 |
+| `SOSButton` (rider) | **BUG FIX**: repoint from driver-only `/api/driver/sos-alert` (403s today) to `/api/sos/alert` |
+| `lost-items` | Fix statuses to real enum (`reported→driver_confirmed→photo_provided→arranged_return→resolved\|unresolved`); ride picker filtered to rides completed ≤24h; no photo upload |
+| `fare-dispute` | Verify only (complete, correct reasons/units) |
+| `ride-pass`, share-trip, book-for-someone-else (rider side) | Verify only (complete) |
+| find-customer | Add: "Booked for [Name/Phone]" banner from `ride:offer` payload (`secondary_rider_*` already on the wire); primary call→passenger, "Contact Booker"→booker; "Rider not here?" link on arrival |
+| `rider-no-show` | Verify + entry wiring (existing endpoint correct: `cancelled` + `cancel_reason='rider_no_show'`, NO enum change) |
+| `hotspot-map` | Build (see Q2; data from extended heatmap API) |
+| `performance-stats` | Fix retry bug; add daily-earnings bars from new `daily_totals` (svg, ≤30 pts, memoized, tabular fallback) |
+| `incentives` | Fix missing auth header (permanent 401); restyle; rewards = call credits |
+| earning tab | Add Incentives row + Earnings Goal modal (AsyncStorage `@driver_earnings_goal`) |
+| `vehicle-management` | Rebuild per §2.1/§2.2 (one vehicle; docs badges; type-change flow) |
+| `select-active-vehicle` | **BUG FIX**: currently PATCHes `vehicle_type` to `/api/driver/me` which strips it (silent no-op) → use `vehicle-type-change`; fold into vehicle screen flow |
+| `min-rate` | Build: `components/MinRateSlider` + `GET /api/driver/slider-config` + `PATCH /api/driver/me { min_per_km_bdt }` + `validateMinPerKm` |
+| `payout-methods` | Build: bKash CRUD (`GET` added server-side; `POST` exists); entry = SettingsRow in driver settings |
+| subscription screens | Content fix only: call packages (N calls + validity days, PortPos) |
+| Terms/Privacy ×4 | Fill from `lib/legalContent.ts` placeholders — **BLOCKED on owner-supplied legal text** |
+| `ErrorBanner`, `OfflineIndicator` | Build (Wave 0). `EmptyState` exists flat in `components/` — reuse. NetInfo dep already declared. |
+| i18n | Plan-05 screens only: keys in `i18n/locales/{en,bn}/common.json`, react-i18next, language via `useAppearance` |
+| `insurance/index.tsx` | Out of plan scope; leave as static info screen (linked from profile) |
+
+## 4. Backend & Wiring Work (orchestrator-owned)
+
+1. Extend `GET /api/ride/[id]/cancel-preview` → add `free_until` alongside `fee_bdt`/`reason`.
+2. New `POST /api/sos/alert` — rider+driver; `parseJsonBody` `{lat, lng, ride_id?}`; insert `sos_alerts` (`ride_id` column EXISTS — schema:1066; earlier "migration needed" claims were wrong); push via `lib/notify`; SMS `user_emergency_contacts` via `lib/dprelay`; admin visibility = existing REST dashboard. NO WS broadcast (no admin WS channel exists).
+3. Add `GET` to `app/api/driver/payout-method+api.ts` (POST already exists, `^01\d{9}$` validation).
+4. Extend `GET /api/driver/heatmap`: join `zones`, compute centroid from `polygon` jsonb, return `{zone_id, name, lat, lng, predicted_demand, predicted_supply, confidence_score}`.
+5. Add `daily_totals` to `GET /api/driver/earnings/breakdown` (server-side group-by).
+6. Root `_layout.tsx`: exempt `track` segment from auth redirect (share links currently bounce logged-out recipients to login — live bug).
+7. Push-handler deep links via expo-linking (root layout); scheme is `ride` (app.config.js — corrected 2026-08-16; was the `myapp` tutorial placeholder).
+8. Store fixes: `scheduledRides` filter `'scheduled'` not `'pending'`; `ride-details-scheduled` missing rideId params; retry-button refetch bug (4 driver screens).
+9. Dependencies: `expo install @react-native-community/datetimepicker @react-native-community/slider` — **requires a new dev build**. Add `amberLight` token to `theme/goRide.ts`.
+
+## 5. Database Plan
+
+**ZERO migrations.** Everything needed exists: `scheduled` + `cancelled` statuses, `secondary_rider_*`, wait columns, `sos_alerts.ride_id`, `lost_items`, `fare_disputes`, `rider_passes`/`rider_subscriptions`, `driver_payout_methods`, `demand_forecasts`+`zones`, `cancellation_policies`. Column-name canon for UI work: `cancel_reason`, `cancelled_by` (double-L), `arrived_at`, `valid_until`, `max_rides`, `min_per_km_bdt`.
+
+## 6. Implementation Order
+
+- **Wave 0 (foundation):** deps + dev build, `amberLight`, ErrorBanner, OfflineIndicator, i18n keys, track auth exemption.
+- **Wave 1 (rider booking):** schedule toggle + sheet, ride-scheduled rebuild, route deletions, cancel-reason/canceled/apply-promos fixes (cancel-preview extension lands first).
+- **Wave 2 (rider safety):** sos/alert endpoint, emergency-sos rebuild, SOSButton repoint, lost-items fixes, fare-dispute verify.
+- **Wave 3 (verify-only):** ride-pass, share-trip, book-for-someone-else rider side.
+- **Zone gate (Z-1…Z-8, §8):** backend-only; runs in parallel with Waves 1–3, MUST complete before Wave 4 (hotspot-map in Wave 4 consumes the Z-6 forecast data + §4.4 heatmap extension).
+- **Wave 4 (driver):** find-customer banner + no-show link, vehicle rebuild + select-active-vehicle fix, heatmap extension + hotspot map, performance + incentives + earning-tab additions, min-rate, payout-methods, subscription content fixes.
+- **Wave 5:** deep links, legal placeholders, i18n sweep, full verification (tsc, lint, checklist).
+
+## 7. Risks / Expectations
+
+- **Hotspot data is not populated by anything in this repo** (`demand_forecasts` has no writer). Screen ships with EmptyState; data comes later via admin/AI pipeline. Also `zones_one_active` index = at most one active zone today; map renders ≤1 circle until multi-zone goes live.
+- Dev build required (two native modules). Legal text blocked on owner. Referral deep link cut (no backend). Instant-pay/payout-history deferred to withdrawal epic.
+
+## 8. Zone Foundation: Multi-Zone Unlock (merged 2026-08-16)
+
+> **Status:** APPROVED — Z-1…Z-8 run in parallel with Waves 1–3, MUST complete before Wave 4.
+> **Owner:** Orchestrator (backend/DB/wiring). No Kimi/UI work in Phase 1.
+> **Source:** An external "multi-zone architecture" proposal (ChatGPT) was audited line-by-line against the working tree. This section is the authoritative ruling — the external proposal is NOT a spec.
+
+### 8.0 Ruling summary
+
+The external proposal assumed a single-active-zone hardcoded app. Reality: **the data model is already multi-zone; the deployment is locked single-zone by one DB index and five code paths.** Phase 1 unlocks multi-zone with ~6 focused changes and **zero new tables**. The rest of the proposal (PostGIS, zone-pair pricing, zone hierarchy, client zone events) is deferred or rejected with reasons in §8.4–§8.5.
+
+**The screen scope of this plan is unchanged by this section** — no screen in §3 depends on zone count, dispatch is already zone-agnostic, and the apps have zero zone awareness (which the proposal itself recommends keeping). The hotspot screen spec (Q2) stands; the heatmap API extension (§4 item 4) is compatible with and benefits from Z-6 below.
+
+### 8.1 What already exists (do not rebuild — verified 2026-08-16)
+
+| Capability | Where | Notes |
+|---|---|---|
+| Zones table w/ polygon | `zones` (jsonb polygon, `is_active`, `lifecycle_stage`) | schema.ts:891–909 |
+| Zone lifecycle + graduation | `zone_lifecycle_stage` enum; Job 27 (`scheduler.ts:1010–1025`) → `lib/zoneLifecycle.ts` | Data-driven via `zone_graduation_rules`; promotes stage only, never `is_active` |
+| Zone budgets | `zone_budgets`/`zone_budget_logs`, Job 26 daily reset, `lib/zoneBudget.ts` | Per-zone, already multi-zone |
+| Per-zone pricing | `pricing (zone_id, vehicle_type) WHERE is_active` unique idx | Resolved by **pickup zone** in estimate/request/schedule |
+| Per-zone surge | Job 19 (`scheduler.ts:755–835`) — **already loops ALL zones** | Broken only by bad zone stamps (§8.2.3) |
+| Zone P&L | `lib/zoneEconomics.ts` over accounting entries | Admin `zone-pnl+api.ts` |
+| Zone versions (audit) | `zone_versions` table (schema + migration 0032) | **Never written** — deferred (§8.4) |
+| Admin zone CRUD | `app/api/admin/zones+api.ts` + `app/admin/zones.tsx` | Polygon edited as JSON textarea; no map |
+| Intercity/destination pricing | `city_boundaries` + `lib/cityBoundary.ts` + `lib/routeSplit.ts` + `intercity_per_km_bdt` | Migration `0009_intercity_geo_fencing.sql` — exists, do not duplicate |
+| H3 dispatch | `utils-server/h3Index.ts` res 9 | **Zone-agnostic.** Zone enters scoring ONLY as pricing lookup key (`dispatch.ts:115–124`). Multi-zone needs NO dispatch rewrite. |
+| Historical ride geography | `rides.zone_id` stamped once at creation, never recomputed | Satisfies "don't re-derive history" — already correct |
+
+### 8.2 The actual single-zone locks (the real defects)
+
+1. **DB constraint:** partial unique index `zones_one_active` (`src/db/migrations/0000_…sql:388`, schema.ts:904–908) — at most one `is_active=true` row, ever.
+2. **Resolution model:** `lib/zone.ts:56–123` — `getActiveZone()` fetches *the* active zone (+ 60s cache + Bangladesh fallback polygon); `validatePickupZone` answers "inside THE zone?", not "which zone?". No multi-zone lookup exists.
+3. **Driver zone stamp is fake:** heartbeat backfill stamps `drivers.zone_id` with whichever zone is *globally active* (`utils-server/index.ts:609–625`) — not derived from driver coordinates. Under multi-zone this corrupts surge `supply_count` (Job 19) and graduation utilization.
+4. **Sentinel writes:** ride routes write `zone_id = '00000000-0000-0000-0000-000000000000'` (or `'fallback'`) when resolution fails (`ride/request+api.ts:90–101`, `ride/schedule+api.ts:83–87`, `estimate+api.ts:55–59`). `rides.zone_id` has no FK, so garbage persists.
+5. **Admin exclusive-activation sweep:** `admin/zones+api.ts:74–80, 134–139` deactivates all other zones on any activation.
+6. **`demand_forecasts` has no writer** (repo-wide verified): the heatmap API and this plan's hotspot screen read a permanently empty table. Multi-zone does NOT fix hotspots — Z-6 does.
+
+### 8.3 Phase 1 — build now (Z-1 … Z-8)
+
+Backend-only; no UI work, no Kimi dependency. Runs parallel to Waves 1–3, gates Wave 4.
+
+- **Z-1 Migration — unlock concurrency.** `DROP INDEX zones_one_active;` + plain `zones_active_idx ON (is_active)`. Schema.ts edit → `drizzle-kit generate` → push. **No new tables → no TD-31 GRANT exposure.**
+- **Z-2 Multi-zone resolution.** `lib/zone.ts`: new `getZoneForLocation(lat, lng)` — load all active zones (60s cache), `normalizePolygon` once per zone, first-match point-in-polygon ordered by vertex count ASC (smaller polygon = more specific zone wins overlaps). `validatePickupZone` switches to it. Keep the Bangladesh fallback ONLY for the zero-active-zones boot state, and in that case reject with `503 zones_not_configured` instead of writing sentinel ids.
+- **Z-3 Kill sentinel writes.** All three call sites (estimate/request/schedule): unresolvable pickup → `422 outside_zone` (or Z-2's 503). Never write nil-UUID/`'fallback'`.
+- **Z-4 Truthful driver zones.** Heartbeat backfill resolves `drivers.zone_id` from the driver's own coordinates via the Z-2 lookup (cache active zones in utils-server memory, 60s TTL; re-resolve only on H3 cell change). Fixes surge supply + graduation utilization automatically — Job 19 needs no change.
+- **Z-5 Admin API multi-activation.** Remove both deactivate-others sweeps; allow N active zones. UI (JSON textarea) unchanged this phase.
+- **Z-6 `demand_forecasts` writer (unblocks hotspots).** New hourly scheduler job: per active zone — `predicted_demand` = mean of rides created in the same hour-of-day over the trailing 7 days (source: `rides.zone_id` + `created_at`); `predicted_supply` = current online drivers in zone (post-Z-4 stamps); `confidence_score = 0.5` (v1 constant); upsert row for next `forecast_hour`. Prune rows older than 14 days. This lights up the existing heatmap API and this plan's hotspot screen with real data.
+- **Z-7 Data hygiene.** `UPDATE rides/drivers SET zone_id = NULL` where `zone_id` is the nil-UUID or otherwise invalid (one-off script in `scripts/`). FK constraints on `zone_id` columns: **deferred** (historic fallback rows make an FK risky; revisit after one clean quarter).
+- **Z-8 Ops note.** `scripts/seed-pricing.js` seeds one `ACTIVE_ZONE_ID` per invocation — run per zone when onboarding a new city; document in script header.
+
+**Deploy order (per AGENTS.md):** drizzle push → utils-server → EAS. Job Z-6 lives in utils-server; Z-2/Z-3 are API-route side.
+
+### 8.4 Deferred (with trigger conditions — do not build speculatively)
+
+| Item | Trigger |
+|---|---|
+| `zone_h3_cells` coverage table (H3→zone fast path) | >50 zones or polygon lookup measurably >10ms |
+| PostGIS (`geometry(MultiPolygon,4326)` + DB-side containment) | Polygon complexity/counts demand DB-side spatial queries; Supabase supports the extension but drizzle push won't enable it — manual migration required |
+| Admin map-based polygon drawing UI (Kimi design task) | Ops pain with JSON textarea becomes real |
+| Client zone context (`currentZone`, `ZONE_ENTERED/EXITED` events) | First actual consumer (zone announcements, hotspot auto-switch on travel) |
+| `zone.code` / `type` / `priority` / `parent_zone_id` columns | First actual consumer (deep links, division hierarchy, overlap priority beyond vertex-count rule) |
+| `zone_versions` writes on boundary edit | Boundary-change audit requirement |
+| FK on `rides.zone_id` / `drivers.zone_id` | After Z-7 + one clean quarter of data |
+
+### 8.5 Rejected (with reasons)
+
+| Proposal item | Verdict | Reason |
+|---|---|---|
+| Zone-pair directional pricing rules (`zone_pricing_rules`) | **REJECT** | Third geo-pricing system alongside per-zone pricing AND existing `city_boundaries` intercity fencing (migration 0009). No consumer. Revisit only if zone-based intercity economics diverge from city-based. |
+| `pickup_zone_id` + `destination_zone_id` on rides | **REJECT (dest side)** | Pickup zone already stamped immutably at creation; destination context already captured via city-boundary route split for intercity rates. No consumer for a destination zone id. |
+| Zone hierarchy / ZoneType enum (CITY/METRO/…) | **DEFER→likely reject** | `lifecycle_stage` already provides the operational vocabulary in use (graduation rules, P&L). No consumer. |
+| Client `src/features/zones/*` restructure | **REJECT** | Codebase convention is flat `lib/`, `store/`, `components/` (AGENTS.md). A client zone module appears only with the deferred client-zone-context work. |
+| "Don't rewrite the H3 dispatch engine" | **Confirmed non-issue** | Verified: dispatch is already zone-agnostic; zone only keys the pricing row in scoring. |
+| Rider/driver apps download all zones | **Non-issue** | Apps have zero zone awareness today (verified — only `timeZone` matches). Keep it that way until a consumer exists. |
+
+### 8.6 Expectation update
+
+Once Z-6 ships, the §7 hotspot EmptyState note is superseded — the hotspot screen gets live per-zone demand/supply data (still subject to at least one active zone existing). Until then the §7 note stands.
+
+### 8.7 Verification (Phase 1 exit)
+
+- [ ] Two zones active simultaneously; pickup inside each resolves correctly; outside both → `422 outside_zone`
+- [ ] Zero-active-zones boot state → `503 zones_not_configured` (no sentinel rows written)
+- [ ] `rides.zone_id` / `drivers.zone_id` contain only real zone UUIDs after Z-7
+- [ ] Driver heartbeat: `zone_id` changes only when crossing a boundary (cell-change throttle)
+- [ ] Job 19 surge: per-zone `demand_count`/`supply_count` non-zero for zones with traffic
+- [ ] Z-6 job: `demand_forecasts` rows exist for next hour; `GET /api/driver/heatmap` returns them
+- [ ] Zone P&L + graduation unaffected for the incumbent zone (regression check)
+- [ ] `npx tsc --noEmit`, `npm run lint`, utils-server tsc all pass
+
+**End of FINAL locked plan.**
+
+
+#### DeepSeek's Take: 
+
+## Remaining areas of improvement in the FINAL locked Plan 05
+
+The final orchestrator-locked plan resolves many earlier issues, but several real gaps and internal contradictions remain. These are grounded in the final plan text itself, not speculative.
+
+---
+
+### 🔴 P0 — Blocking contradictions / missing backend specifications
+
+1. **Database Plan says “ZERO migrations,” but Zone Z-1 is a migration**  
+   §5 states “**ZERO migrations.** Everything needed exists…”  
+   §8.3 Z-1 requires:  
+   `DROP INDEX zones_one_active;` + create `zones_active_idx ON (is_active)`.  
+   That is a schema change requiring `drizzle-kit generate` + push.  
+   **Fix:** Reconcile §5 and §8. Either state “one migration (Z-1 only)” or explicitly separate the Zone foundation from the Plan 05 database plan.
+
+2. **Backend work list omits two endpoints required by final scope**  
+   Final scope requires:
+   - `POST /api/driver/vehicle-type-change` (§2 override 2)
+   - `GET /api/driver/slider-config` (§3 min-rate build)
+
+   But §4 Backend & Wiring Work does not include either. The plan says backend is orchestrator-owned and locked, yet these endpoints are not scheduled.  
+   **Fix:** Add both to §4 with auth, Zod, and response specs. Also add `PATCH /api/driver/me` verification for min-rate if not already present.
+
+3. **SOS endpoint lacks auth/rate-limiting spec**  
+   §4 item 2 says:  
+   `POST /api/sos/alert — rider+driver; parseJsonBody {lat, lng, ride_id?}; insert sos_alerts…`  
+   It does not state:
+   - `verifySupabaseToken` required for rider/driver auth
+   - `requireRole` for driver vs rider
+   - Rate limiting / duplicate alert prevention
+   - What happens if `ride_id` is null or invalid
+
+   **Fix:** Add explicit auth, validation, and abuse-prevention rules to the SOS endpoint spec.
+
+4. **Vehicle-type-change eligibility is referenced but not specified**  
+   §2 override 2 says:  
+   `Eligibility gated server-side (eligibility_not_met 422)`.  
+   But no criteria are defined. Which eligibility? Vehicle documents? Package type? Active ride status?  
+   **Fix:** Define the exact eligibility checks and error shape for `vehicle-type-change`.
+
+---
+
+### 🟠 P1 — Navigation / entry-point gaps for new screens
+
+5. **Several new driver secondary screens have no entry point**  
+   Final scope builds:
+   - `vehicle-management`
+   - `payout-methods`
+   - `min-rate`
+   - `performance-stats`
+
+   But the plan does not specify where these screens are linked from. Existing driver settings/home/earning tabs were built in Plan 04; adding new screens without wiring entries leaves them orphaned.  
+   **Fix:** Add explicit navigation entries:
+   - Vehicle Management → driver settings row
+   - Payout Methods → driver settings or wallet row
+   - Min Rate → driver settings row
+   - Performance Stats → earning tab or driver home stats bar
+
+6. **`find-customer` path is not verified**  
+   The final plan repeatedly references `find-customer`, but earlier Plan 04 established the active navigation screen is `customer-navigation/[rideId].tsx` — not `find-customer`.  
+   **Fix:** Confirm the actual file path and use it consistently. Do not let the coding agent guess.
+
+7. **`store fixes` list is too vague**  
+   §4 item 8:  
+   `retry-button refetch bug (4 driver screens)`.  
+   Which four screens? Without names, the coding agent cannot target the fix.  
+   **Fix:** List the exact files/screens and the expected behavior for each retry fix.
+
+---
+
+### 🟡 P2 — Zone foundation ordering and logic gaps
+
+8. **Z-6 depends on Z-7 but order is not specified**  
+   Z-6 aggregates rides by `rides.zone_id`. If Z-7 (data hygiene) has not run first, Z-6 will include sentinel/invalid zone_ids in forecasts.  
+   **Fix:** Specify execution order: Z-1 → Z-2 → Z-3 → Z-4 → Z-5 → Z-7 → Z-6. Or make Z-6 filter out NULL/invalid zone_ids explicitly.
+
+9. **Z-4 driver zone stamp may miss boundary crossings**  
+   Z-4 says:  
+   `re-resolve only on H3 cell change`.  
+   H3 res 9 cells are small, but zone boundaries do not necessarily align with H3 cells. A driver could cross a zone boundary while remaining in the same H3 cell, leaving `drivers.zone_id` stale.  
+   **Fix:** Add a secondary re-resolution trigger (e.g., coordinate delta threshold or periodic re-check every N heartbeats) or document why H3 cell change alone is sufficient.
+
+10. **`zones_one_active` drop may affect existing admin flows**  
+    After Z-1, multiple zones can be active. But admin UI still edits zones via JSON textarea with no multi-zone awareness. The plan defers UI changes, but does not flag that admin operations may now be confusing or dangerous.  
+    **Fix:** Add a short-term admin guardrail or warning until UI catches up.
+
+---
+
+### 🟡 P3 — Deep linking, doc hygiene, and verification
+
+11. **Deep linking is still underspecified**  
+    The final plan keeps only:
+    - push→ride-tracking (already works)
+    - promo link→apply-promos with code pre-filled
+    - web `/track/{id}` primary for share
+
+    It does not define:
+    - Cold-start handling
+    - Warm-start handling
+    - Route mapping for `ride://track/{rideId}`, `ride://promo/{code}`
+    - Auth redirect behavior for deep links
+
+    **Fix:** Add a short deep-link contract in §4 or a dedicated subsection.
+
+12. **Document contains superseded sections**  
+    The file still contains the original Plan 05 draft, addendum, DeepSeek/Qwen/Kimi corrections, and then the FINAL locked plan. A coding agent reading top-to-bottom may follow outdated instructions.  
+    **Fix:** Move all superseded content to a clearly marked appendix or delete it. Keep only the FINAL locked plan as the source of truth.
+
+13. **Final plan has no explicit verification checklist**  
+    Earlier sections had checklists, but the FINAL locked plan only mentions “Wave 5: full verification (tsc, lint, checklist)” without providing the checklist.  
+    **Fix:** Include a final checklist matching the final scope: exact screen list, backend endpoints, migrations, `grep` checks, and money/paissa rules.
+
+14. **`EmptyState` path inconsistency**  
+    §3 says:  
+    `EmptyState exists flat in components/ — reuse.`  
+    Earlier Plan 03 created `components/plan03/EmptyState.tsx`. If the actual file is under `components/plan03/`, the coding agent may import the wrong path.  
+    **Fix:** Verify and state the exact import path.
+
+15. **Wave 0 i18n keys vs Wave 5 i18n sweep**  
+    Wave 0 includes “i18n keys,” and Wave 5 includes “i18n sweep.” If Wave 0 creates only foundation keys and Wave 5 extracts all strings, the intermediate screens will hardcode English, then need rewriting.  
+    **Fix:** Decide whether i18n extraction happens up front or is explicitly deferred to Wave 5 with screens using placeholder keys. Avoid double work.
+
+---
+
+## Summary of highest-priority fixes
+
+| Priority | Action |
+|----------|--------|
+| P0 | Reconcile ZERO migrations vs Z-1 |
+| P0 | Add `vehicle-type-change` and `slider-config` to backend work list |
+| P0 | Specify SOS auth/rate limiting |
+| P0 | Define vehicle-type-change eligibility |
+| P1 | Add entry points for vehicle-management, payout-methods, min-rate, performance-stats |
+| P1 | Verify `find-customer` actual path |
+| P1 | Name the four driver screens in store fixes |
+| P2 | Fix Z-6/Z-7 order and Z-4 boundary detection |
+| P2 | Expand deep linking spec |
+| P2 | Clean superseded sections and add final verification checklist |
+
+
+Here are **59 additional areas of improvement** in the FINAL locked Plan 05 that were not covered in the previous 15-point response. They are grouped by category for clarity. Each is grounded in the plan text or the codebase constraints it references.
+
+---
+
+## A. Scope & Screen Inventory
+
+1. **Final scope has no explicit total screen count** — §3 lists items, but no authoritative number. This repeats the earlier scope ambiguity.
+2. **`select-active-vehicle` bug fix is listed in §3 but not in the Implementation Order** — Wave 4 says “vehicle rebuild + select-active-vehicle fix,” but not broken out with details.
+3. **`SOSButton` rider-side bug fix is in §3 but missing from Wave 2 schedule** — Wave 2 says “sos/alert endpoint, emergency-sos rebuild, SOSButton repoint” but SOSButton repoint is not itemized with implementation notes.
+4. **`find-customer` banner work is in Wave 4 but no file path is given** — it says “find-customer” but earlier Plan 04 may have a different active nav file. Ambiguous.
+5. **`ride-completed` deletion from Plan 03 is not mentioned in final locked plan** — if still present, it may conflict with rate-driver flow.
+6. **No decision on `book-ride`, `final-page`, `ride-details-completed`** — earlier consolidation decisions from Plan 03 are not carried into final locked plan; the agent may not know they are to be deleted or ignored.
+7. **`schedule-ride/index.tsx` deletion is specified, but not its route references** — plan says delete route, but no `grep` gate for `schedule-ride` string before deletion.
+8. **`no-drivers-available` deletion is mentioned in Q1(b), but not in final scope table** — should be in §3 scope with deletion disposition.
+9. **`schedule-ride-after-promo` deletion is mentioned but not in Wave 1 order** — Wave 1 says route deletions but not enumerated exactly.
+10. **`scheduling-user-ride` deletion not in final Implementation Order** — same as above; multiple deletion items not itemized.
+11. **`ride-scheduled` rebuild is listed, but no entry point from `confirm-ride` schedule flow** — after scheduling, how does user reach ride-scheduled? Not specified.
+12. **`apply-promos` fix says “staged-promo → confirm-ride discount-selector handoff” but confirm-ride path is ambiguous** — if confirm-ride is orphaned, handoff fails.
+13. **`book-for-someone-else` is verify-only, but rider side no spec for edge cases** — what if secondary rider phone invalid, same as primary, etc.
+14. **`share-trip` verify-only, but no confirmation that public tracking link expiry was actually implemented** — earlier issue not resolved in final plan.
+15. **`insurance/index.tsx` static info screen is mentioned “linked from profile” but no link spec** — where is entry point? Profile row? Driver settings?
+16. **`earning tab` additions (Incentives row + Earnings Goal modal) not in scope table** — listed in Wave 4 but not in §3 itemized list.
+17. **`missed-requests` screen is not built, but earlier addendum proposed it; final plan must explicitly state not building** — already in §3 but might be missed by agent reading earlier sections.
+18. **`payout-history` removed but earlier addendum proposed it; no note in final scope** — must ensure coding agent doesn’t build it from earlier sections.
+19. **`instant-pay` removed from Plan 05; earlier addendum still in doc** — doc contains conflict; final says removed, but earlier sections still mention it. Cleanup needed.
+20. **`subscription screens` content fix not broken down per screen** — says “subscription screens content fix only” but which files? `subscription-plans`, `checkout`, `confirmation`, etc.
+
+---
+
+## B. Backend & API Contracts
+
+21. **`POST /api/sos/alert` response shape not defined** — what returns after insert? `{ alert_id }`? `{ success }`?
+22. **SOS endpoint `ride_id` validation not specified** — does it check ride belongs to caller? Not stated.
+23. **SOS endpoint SMS failure handling not specified** — if SMS to emergency contacts fails, is alert still successful? No.
+24. **`POST /api/driver/vehicle-type-change` request body Zod schema not defined** — only `{ new_vehicle_type }`; no enum validation details.
+25. **`GET /api/driver/slider-config` response shape missing** — what fields? min, max, step, current?
+26. **`PATCH /api/driver/me` for min-rate not in backend list; response/error unspecified** — what error if invalid min? What if driver not eligible?
+27. **`GET /api/ride/[id]/cancel-preview` extension: `free_until` format not specified** — ISO 8601? Unix? Must be explicit.
+28. **`cancel-reason` screen uses `fee_bdt` from server, but final plan doesn’t state whether client converts paisa to taka at display** — earlier issue partially addressed but not in final.
+29. **`POST /api/ride/[id]/cancel` endpoint not mentioned in backend work list** — final scope says cancel-reason fix, but backend cancel endpoint may already exist; need verify. Missing from §4.
+30. **`GET /api/promo/list` not mentioned in final backend work** — apply-promos fix references it, but §4 doesn’t list it.
+31. **`POST /api/promo/redeem` referenced but not in final backend work** — final scope says fix apply-promos, but no backend item for redeem.
+32. **`POST /api/rider/lost-items` status enum fix not in backend work** — final scope says fix statuses, but backend may need update to accept new status values; not listed.
+33. **`GET /api/rider/lost-items` response shape not specified** — what fields? Status enum values? No.
+34. **`GET /api/rider/passes` (active pass) not in backend work** — ride-pass verify-only, but active pass endpoint not confirmed.
+35. **`POST /api/ride/[id]/no-show` exists, but final scope says verify only; no contract** — what response? Compensation amount? Error cases?
+36. **`GET /api/driver/heatmap` extension: response shape missing confidence_score usage** — where is confidence_score shown? Not specified.
+37. **`GET /api/driver/earnings/breakdown` daily_totals shape not defined** — what keys? array of `{date, total_bdt}`?
+38. **`GET /api/driver/payout-method` (new GET) response shape not specified** — list shape? masked number? etc.
+39. **`POST /api/driver/payout-method` exists but no error contract** — duplicate bKash number? Invalid format? Not stated.
+40. **`GET /api/driver/performance` bug fix scope not detailed** — “retry bug” not enough; which screens? What caused it? No.
+
+---
+
+## C. Theming, Tokens & Components
+
+41. **`amberLight` token addition is in §4 dependencies but not in a dedicated theme task** — Wave 0 includes deps, but no explicit token addition task with hex value.
+42. **`successLight` token still not confirmed** — earlier issue; final plan doesn’t mention it. Used in lost-items, status badges, etc.
+43. **`ErrorBanner` component spec not final** — final scope says build, but no interface definition in final locked plan. Agent may use earlier spec which may be outdated.
+44. **`OfflineIndicator` final spec missing** — same; netinfo dependency confirmed, but no exact visual/behavior spec in final.
+45. **`EmptyState` reuse path not verified** — final says “exists flat in components/”, but earlier Plan 03 created `components/plan03/EmptyState.tsx`. Contradiction.
+46. **`MinRateSlider` reuse spec incomplete** — final says use existing component + validate, but no mention of styling/theme for dark mode.
+47. **`StatusBadge` reuse from Plan 03 not mentioned** — final lost-items, vehicle-management, etc. should reuse but not specified.
+48. **`SettingsRow` reuse not mentioned** — payout-methods entry should use SettingsRow; not specified.
+49. **`TransactionRow` not used** — payout-history removed, but maybe wallet still needs transaction row; not in final.
+50. **`DriverStatsBar` or similar from Plan 04 not referenced for hotspot entry pill** — final says “hotspot pill in driver home stats bar” but no component name.
+
+---
+
+## D. State Management & Wiring
+
+51. **`scheduledRides` store filter fix is listed but no exact store file** — `scheduledRides` may be in `useRiderStore` or `useRidesStore`; not specified.
+52. **`ride-details-scheduled` missing rideId params bug not detailed** — which file? No.
+53. **Retry-button refetch bug “4 driver screens” not enumerated** — which four? Need exact list.
+54. **`useRideOfferStore`/`useWSStore` interactions for new screens not specified** — driver secondary screens may need store access; not defined.
+55. **Earnings goal AsyncStorage key `@driver_earnings_goal` not specified elsewhere** — should be in constants.
+56. **Deep linking store/handler wiring not specified** — final says push-handler deep links via expo-linking, but no root layout code snippet.
+
+---
+
+## E. Errors, Loading & Edge Cases
+
+57. **SOS offline queue “if possible” is vague** — how to queue? Where store? Not defined.
+58. **Vehicle switch while online warning modal behavior not fully specified** — auto-offline confirmation? Exact flow missing.
+59. **`payment_events` transaction requirement for no-show/cancel not explicit in final backend work** — AGENTS.md rule referenced earlier but final backend list doesn’t enforce.
+
+---
+
+## How to use this list
+
+This provides 59 concrete improvements, but many are continuations of existing gaps. The highest-priority ones are the **backend omissions** (#21–#40) and **scope contradictions** (#1–#20). I recommend adding an appendix to the final locked plan containing a detailed backend contract table and an authoritative file/path table with true status.
+
+
+#### Qwen's Take: 
+
+Below are **additional areas of improvement** for the final locked Plan 05. I intentionally avoided repeating the issues already listed in DeepSeek’s original take, the follow-up P0–P3 take, and the 59-item list.
+
+These are mostly **product lifecycle, operational, reliability, privacy, QA, and implementation-completeness gaps** that the final plan still leaves open.
+
+---
+
+## A. Rider product lifecycle gaps
+
+### 1. Scheduled rides have no post-booking management flow
+The plan rebuilds `ride-scheduled`, but does not define what a rider can do afterward.
+
+Missing:
+- view scheduled ride in “My Rides”
+- reschedule
+- change pickup/destination
+- cancel scheduled ride
+- see assigned driver once dispatch begins
+
+**Improvement:** add a scheduled-ride management state and screens/actions before implementation.
+
+**Priority:** P0
+
+---
+
+### 2. Scheduled ride notification plan is missing
+The plan does not specify notifications for scheduled rides.
+
+Missing:
+- booking confirmation
+- reminder 60/30/15 minutes before pickup
+- driver assigned
+- driver arriving
+- driver cancellation
+- system failure/no driver available
+
+**Improvement:** define a notification matrix for scheduled rides, including push/SMS fallback.
+
+**Priority:** P0
+
+---
+
+### 3. Scheduled ride conflict rules are undefined
+There is no rule for what happens if a rider tries to schedule overlapping rides.
+
+Missing:
+- max active scheduled rides per rider
+- overlapping time window validation
+- duplicate pickup/destination validation
+- vehicle availability check at schedule time
+
+**Improvement:** add server-side guards and user-facing error states.
+
+**Priority:** P1
+
+---
+
+### 4. Scheduled dispatch timing is not product-defined
+The plan assumes scheduled rides eventually become dispatchable, but does not define the operational behavior.
+
+Missing:
+- how early before pickup matching starts
+- whether drivers can accept scheduled rides in advance
+- whether a driver is locked to the ride
+- what happens if no driver is found close to pickup time
+
+**Improvement:** define the dispatch pre-window and fallback behavior.
+
+**Priority:** P0
+
+---
+
+### 5. Cancellation race conditions are not handled
+The cancel flow is server-bound, but the plan does not address state races.
+
+Examples:
+- rider cancels after driver already accepted
+- rider cancels after driver already arrived
+- two cancellation attempts from two devices
+- scheduled ride canceled while dispatcher is assigning
+
+**Improvement:** define transactional status checks and user-facing errors such as “Driver already accepted.”
+
+**Priority:** P0
+
+---
+
+### 6. Fare dispute has no post-submission lifecycle
+The plan only covers submitting a dispute.
+
+Missing:
+- dispute status tracking
+- admin review outcome
+- rider notification
+- refund/credit mechanism
+- SLA and escalation path
+
+**Improvement:** define dispute lifecycle states and rider-facing status UI.
+
+**Priority:** P1
+
+---
+
+### 7. Fare dispute lacks evidence and review tooling
+The dispute screen collects reason and claimed fare, but not enough context for operations.
+
+Missing:
+- optional rider note
+- route comparison summary
+- estimate vs charged fare delta
+- admin decision notes
+- approve/reject action
+
+**Improvement:** add support/admin review fields and a resolution flow.
+
+**Priority:** P2
+
+---
+
+### 8. Lost items status enum conflicts with “no photo upload”
+Final scope fixes lost-item statuses but also says no photo upload.
+
+Potential conflict:
+- status includes `photo_provided`
+- but upload is not in scope
+
+**Improvement:** either remove `photo_provided` from the visible status model or define how a photo is provided outside the app.
+
+**Priority:** P1
+
+---
+
+### 9. Lost item contact and privacy flow is undefined
+The plan does not define how rider and driver communicate after a lost-item report.
+
+Missing:
+- masked contact rules
+- time-limited contact window
+- driver response expectations
+- support mediation if driver is unresponsive
+
+**Improvement:** define lost-item communication policy and privacy rules.
+
+**Priority:** P1
+
+---
+
+### 10. Promo business rules are incomplete
+The plan covers redeeming promos, but not how they behave in real operations.
+
+Missing:
+- stacking with passes
+- stacking with other promos
+- maximum discount cap behavior
+- “first ride” definition
+- promo behavior after cancellation
+- refund/credit restoration rules
+
+**Improvement:** define promo policy centrally and wire it into fare estimation/discount engine.
+
+**Priority:** P0
+
+---
+
+### 11. Ride pass usage rules are incomplete
+Ride passes are verify-only, but the plan does not define edge behavior.
+
+Missing:
+- when pass activation starts
+- whether canceled rides consume pass rides
+- pass refund behavior
+- pass expiry timezone
+- pass + promo interaction
+- usage race conditions for concurrent ride requests
+
+**Improvement:** define pass lifecycle and accounting rules.
+
+**Priority:** P1
+
+---
+
+### 12. Book-for-someone-else needs consent and anti-abuse rules
+The feature is verify-only, but it creates SMS and privacy implications.
+
+Missing:
+- passenger consent copy
+- booker responsibility copy
+- SMS rate limiting
+- abuse prevention for arbitrary phone numbers
+- whether passenger can see trip details before ride
+
+**Improvement:** add consent microcopy, rate limits, and phone validation policy.
+
+**Priority:** P1
+
+---
+
+### 13. Public trip tracking page needs hardening
+The plan keeps public tracking as the primary share mechanism.
+
+Missing:
+- noindex/no-cache headers
+- rate limiting
+- bot protection
+- minimal PII exposure rules
+- behavior when ride is completed/canceled
+- map performance on low-end browsers
+
+**Improvement:** add web tracking hardening requirements.
+
+**Priority:** P1
+
+---
+
+## B. Safety, SOS, and emergency flows
+
+### 14. SOS alert lifecycle after trigger is undefined
+The plan defines triggering SOS, but not what happens afterward.
+
+Missing:
+- user sees “alert sent”
+- alert acknowledged by support
+- alert resolved
+- false alarm handling
+- whether location sharing stops automatically
+
+**Improvement:** define SOS lifecycle states and rider-facing status UI.
+
+**Priority:** P0
+
+---
+
+### 15. Emergency contact management is not specified
+SOS depends on emergency contacts, but the plan does not define CRUD rules.
+
+Missing:
+- add/edit/delete contacts
+- max contacts
+- phone format validation
+- contact verification
+- user-facing empty state
+
+**Improvement:** define emergency contact management rules and validation.
+
+**Priority:** P1
+
+---
+
+### 16. Driver-side SOS parity is unclear
+The endpoint is described as rider+driver, but the scope does not define the driver SOS experience.
+
+Missing:
+- driver SOS entry point
+- driver confirmation flow
+- driver location acquisition
+- admin handling differences between rider and driver SOS
+
+**Improvement:** clarify whether driver SOS is in scope and specify the flow.
+
+**Priority:** P1
+
+---
+
+## C. Time, locale, and money handling
+
+### 17. Countdown timers need server-time offset
+Using server `free_until` is correct, but device clock drift can still break countdown display.
+
+Missing:
+- server time offset in API response
+- client clock skew correction
+- behavior when device time is wrong
+
+**Improvement:** include `server_now` or `expires_in_seconds` in time-sensitive responses.
+
+**Priority:** P1
+
+---
+
+### 18. Date/time pickers need timezone canonicalization
+The plan does not define how local time is converted and stored.
+
+Missing:
+- display timezone should be Asia/Dhaka
+- API payload should be UTC ISO
+- invalid past time handling
+- picker min/max enforcement
+- locale-specific time formatting
+
+**Improvement:** define a single date-time conversion utility for all schedule flows.
+
+**Priority:** P0
+
+---
+
+### 19. Currency formatting needs locale-aware rules
+The plan mentions paisa conversion, but not presentation.
+
+Missing:
+- BDT symbol placement
+- Bengali digit support
+- thousands separators
+- no floating-point display
+- large amount formatting
+
+**Improvement:** create a shared `formatBDT()` helper backed by locale rules.
+
+**Priority:** P1
+
+---
+
+### 20. i18n needs more than string keys
+The plan adds i18n keys, but not formatting rules.
+
+Missing:
+- pluralization
+- interpolation
+- countdown formatting
+- relative time strings
+- currency/date formatting
+
+**Improvement:** define i18n formatting utilities, not only translation dictionaries.
+
+**Priority:** P1
+
+---
+
+## D. State machines, stores, and realtime wiring
+
+### 21. Rider booking state machine is not updated for new features
+The final plan adds schedule toggle, staged promos, and book-for-someone, but does not update the booking state machine.
+
+Missing:
+- `SCHEDULE_TOGGLE_ON`
+- `SCHEDULE_TIME_SELECTED`
+- `BOOK_FOR_OTHER_ON`
+- `PROMO_STAGED`
+- invalid combinations and guards
+
+**Improvement:** extend the rider booking FSM explicitly.
+
+**Priority:** P0
+
+---
+
+### 22. Realtime event contract is missing for new entities
+The plan does not define WS/push events for new features.
+
+Needed events may include:
+- `ride:scheduled`
+- `ride:schedule_updated`
+- `ride:schedule_cancelled`
+- `sos:acknowledged`
+- `dispute:update`
+- `lost_item:update`
+
+**Improvement:** define event names, payload shapes, and consumers.
+
+**Priority:** P1
+
+---
+
+### 23. Notification permission and channel strategy is missing
+The plan uses push/SMS in several places but does not define permission handling.
+
+Missing:
+- iOS permission prompt timing
+- Android notification channels
+- high-priority SOS channel
+- fallback when permission denied
+- deep link behavior from notification
+
+**Improvement:** add notification permission and channel spec.
+
+**Priority:** P1
+
+---
+
+### 24. Stores need reset rules on logout/role switch
+The plan does not define client state cleanup.
+
+Risk:
+- scheduled rides from previous user visible briefly
+- driver earnings goal leaks across driver accounts
+- staged promo persists incorrectly
+- SOS state persists after logout
+
+**Improvement:** define store reset policy for auth/logout/role-switch.
+
+**Priority:** P1
+
+---
+
+## E. Driver feature completeness
+
+### 25. Earnings goal needs validation and reset rules
+The plan adds an AsyncStorage goal, but does not define behavior.
+
+Missing:
+- min/max goal
+- invalid input handling
+- reset at Asia/Dhaka midnight
+- progress reset after logout
+- goal migration if storage schema changes
+
+**Improvement:** define earnings goal state rules.
+
+**Priority:** P2
+
+---
+
+### 26. Incentive rewards as call credits need explanatory UX
+Final plan says rewards are call credits, but does not define how drivers understand them.
+
+Missing:
+- current call credit balance
+- how incentive converts to credits
+- credit expiry
+- ledger entry
+- empty state when no incentives
+
+**Improvement:** add incentive-to-call-ledger explanation and status copy.
+
+**Priority:** P1
+
+---
+
+### 27. Hotspot map needs initial-state and failure handling
+The hotspot spec assumes data and map rendering are available.
+
+Missing:
+- default camera when no location permission
+- default center when no active zone
+- map style load failure
+- tile load failure
+- loading state for first open
+
+**Improvement:** define hotspot map boot states.
+
+**Priority:** P1
+
+---
+
+### 28. Hotspot entry point needs degraded behavior
+The hotspot pill in driver home may be visible even when no forecast data exists.
+
+Missing:
+- hide/disable pill when no active zone
+- tooltip or helper state
+- behavior when forecast job is down
+- manual refresh failure state
+
+**Improvement:** define entry-point disabled/degraded behavior.
+
+**Priority:** P2
+
+---
+
+### 29. Vehicle document expiry needs an operational workflow
+The vehicle screen shows badges for document expiry, but not the workflow.
+
+Missing:
+- renewal CTA
+- reminder notifications
+- grace period
+- blocking rules when expired
+- admin override
+
+**Improvement:** define document expiry lifecycle and driver notifications.
+
+**Priority:** P2
+
+---
+
+### 30. Minimum rate screen needs expectation management
+The min-rate slider affects dispatch eligibility, but the plan does not explain consequences.
+
+Missing:
+- current per-km baseline by zone/vehicle
+- warning if rate is likely to reduce offers
+- recommended rate
+- reset-to-default action
+
+**Improvement:** add contextual helper copy and live baseline display.
+
+**Priority:** P2
+
+---
+
+## F. Backend, zone, and data integrity gaps
+
+### 31. Financial/state mutations need idempotency
+Schedule and cancel are state-changing operations with money implications.
+
+Missing:
+- idempotency key or dedupe window
+- duplicate request handling
+- retry safety
+- client double-tap protection beyond UI disable
+
+**Improvement:** define idempotency rules for schedule/cancel and other paid mutations.
+
+**Priority:** P0
+
+---
+
+### 32. Scheduled-ride promotion needs catch-up behavior
+If the scheduler misses a promotion window, the plan does not define recovery.
+
+Missing:
+- backlog handling
+- late promotion policy
+- alert when scheduled rides are overdue
+- retry/backoff strategy
+
+**Improvement:** define scheduler catch-up and monitoring.
+
+**Priority:** P0
+
+---
+
+### 33. Zone resolution cache needs invalidation rules
+A 60-second cache is mentioned, but admin changes need immediate effect.
+
+Missing:
+- invalidate cache on zone activation/deactivation
+- invalidate cache on polygon update
+- behavior during cache refresh failure
+
+**Improvement:** add cache busting hooks for admin zone mutations.
+
+**Priority:** P1
+
+---
+
+### 34. Zone polygon input needs validation and limits
+Zones are managed as polygon JSON, but the plan does not define data-quality rules.
+
+Missing:
+- closed ring validation
+- self-intersection warning
+- max vertex count
+- max payload size
+- polygon simplification strategy
+
+**Improvement:** add polygon validation and size limits.
+
+**Priority:** P1
+
+---
+
+### 35. Demand forecast needs cold-start behavior
+Using 7-day historical averages will fail for new zones.
+
+Missing:
+- new zone fallback
+- zero-ride fallback
+- holiday/weekend adjustment policy
+- confidence handling for sparse data
+
+**Improvement:** define forecast fallback rules.
+
+**Priority:** P1
+
+---
+
+### 36. Forecast job needs performance safeguards
+Hourly aggregation over 7 days can become expensive.
+
+Missing:
+- indexes for `rides(zone_id, created_at)`
+- aggregate table/materialized view
+- job timeout
+- failure retry
+- max zones processed per run
+
+**Improvement:** add forecast query performance plan.
+
+**Priority:** P1
+
+---
+
+### 37. Fare estimates need zone/pricing stability
+Multi-zone resolution can change pricing if a pickup point is near a boundary.
+
+Missing:
+- quote stability window
+- pricing version snapshot
+- behavior if zone changes between estimate and request
+- user-facing fare change warning
+
+**Improvement:** define fare quote stability rules.
+
+**Priority:** P1
+
+---
+
+### 38. Admin actions need audit trails
+The plan does not define auditing for sensitive operations.
+
+Needed for:
+- zone activation/deactivation
+- polygon changes
+- SOS acknowledgement/resolution
+- dispute resolution
+- lost-item status changes
+
+**Improvement:** add immutable audit log requirements.
+
+**Priority:** P1
+
+---
+
+## G. Reliability, observability, and release readiness
+
+### 39. Feature flags/kill switches are missing
+Several features are high-risk.
+
+Candidates:
+- scheduled rides
+- SOS
+- hotspot map
+- multi-zone resolution
+- promo stacking
+- book-for-someone SMS
+
+**Improvement:** add remote/config-based kill switches with safe fallbacks.
+
+**Priority:** P0
+
+---
+
+### 40. Analytics and funnel events are undefined
+The plan does not define product telemetry.
+
+Needed events:
+- schedule started/completed
+- cancel reason selected
+- promo applied
+- SOS triggered
+- hotspot opened
+- payout method added
+- min rate saved
+
+**Improvement:** define analytics event schema and dashboards.
+
+**Priority:** P1
+
+---
+
+### 41. Structured logging and tracing are not specified
+Critical flows span client, API, scheduler, SMS, and push.
+
+Missing:
+- request IDs
+- user-safe correlation IDs
+- SOS failure logging
+- scheduler run logs
+- zone resolution latency logs
+
+**Improvement:** define structured logging and trace requirements.
+
+**Priority:** P1
+
+---
+
+### 42. Shared typed contracts and contract tests are missing
+The plan relies on manual endpoint specifications.
+
+Risk:
+- client/server drift
+- invalid enum usage
+- stale response assumptions
+
+**Improvement:** generate client types from server Zod schemas and add contract tests.
+
+**Priority:** P1
+
+---
+
+### 43. QA seed data and test matrix are missing
+There is no plan for how QA will test these features.
+
+Needed seed data:
+- active zones
+- forecast rows
+- promos
+- passes
+- scheduled rides
+- lost items
+- disputes
+- SOS contacts
+
+**Improvement:** create seed scripts and a manual/E2E test matrix.
+
+**Priority:** P1
+
+---
+
+### 44. Rollback plan is missing
+The plan defines build order, but not rollback.
+
+Needed:
+- rollback for zone unlock
+- disable forecast job
+- disable scheduled rides
+- disable SOS
+- restore single-zone behavior if needed
+- native module rollback strategy
+
+**Improvement:** add a rollback runbook.
+
+**Priority:** P0
+
+---
+
+### 45. Monitoring alerts are not defined
+The plan does not define what should page/on-call.
+
+Suggested alerts:
+- SOS insert failure
+- SMS provider failure
+- scheduler lag
+- zone resolution latency spike
+- sudden `outside_zone` error spike
+- cancel-preview failure spike
+- forecast job failure
+
+**Improvement:** define alert thresholds and dashboards.
+
+**Priority:** P1
+
+---
+
+### 46. Environment-specific links and schemes are not defined
+The plan mentions deep links and public tracking, but not environment behavior.
+
+Missing:
+- staging vs prod track URLs
+- app scheme per environment
+- universal link domains
+- debug vs release behavior
+
+**Improvement:** define environment-specific link configuration.
+
+**Priority:** P1
+
+---
+
+### 47. Native module release risk is not addressed
+Adding datetimepicker/slider requires a dev build.
+
+Missing:
+- EAS build profile changes
+- permission manifest review
+- store review risk
+- QA regression scope for native module addition
+
+**Improvement:** add release-readiness checklist for native dependency changes.
+
+**Priority:** P1
+
+---
+
+### 48. Resource cleanup is not specified
+Many screens will use timers, polling, maps, and network listeners.
+
+Missing:
+- countdown timer cleanup
+- map listener cleanup
+- polling cleanup on unmount
+- NetInfo unsubscribe
+- location listener cleanup
+
+**Improvement:** add lifecycle cleanup requirements.
+
+**Priority:** P1
+
+---
+
+### 49. Support/admin tooling is not scoped
+The rider screens submit support cases, but the plan does not define how support resolves them.
+
+Missing:
+- dispute resolution UI/API
+- lost-item mediation UI/API
+- SOS acknowledgement/resolution workflow
+- notes/history
+- role-based permissions
+
+**Improvement:** define support tooling scope or explicitly defer it.
+
+**Priority:** P1
+
+---
+
+### 50. Data retention and PII minimization are undefined
+The plan creates sensitive records but does not define retention.
+
+Applies to:
+- SOS alerts and locations
+- lost-item reports
+- fare disputes
+- book-for-someone passenger phone numbers
+- shared tracking links
+
+**Improvement:** define retention periods, access rules, and PII minimization policy.
+
+**Priority:** P1
+
+---
+
+## Highest-leverage additions before implementation
+
+If you want the smallest set with the highest impact, add these first:
+
+1. **Scheduled ride lifecycle + notifications**
+2. **Scheduled dispatch pre-window and catch-up behavior**
+3. **Cancel race-condition handling**
+4. **Promo/pass business rules**
+5. **SOS lifecycle after trigger**
+6. **Server-time offset and timezone canonicalization**
+7. **Rider state machine extension**
+8. **Idempotency for schedule/cancel**
+9. **Feature flags/kill switches**
+10. **Rollback + monitoring plan**
+
+These are not duplicates of DeepSeek’s points and directly reduce the risk of building screens that look complete but fail in production operations.
+
+You are absolutely right. My first response focused on **product lifecycle and UX gaps** based on the original draft, but I completely missed the **hard engineering, database, geospatial, and orchestrator-locked constraints** that Qwen, Kimi, and the 59-point list uncovered in the `FINAL Locked Plan`. 
+
+Now that I have fully ingested the `FINAL Locked Plan`, the `Zone Foundation (Z-1 to Z-8)`, and the `AGENTS.md` rules, I see that even the "Final" plan contains **critical systemic traps** that will cause production crashes, data corruption, or billing leaks if not addressed.
+
+Here are the deep-engineering blind spots that **all previous reviews (including the 59-point list) missed**, grounded strictly in the Final Locked Plan's backend and database specifications.
+
+---
+
+### 1. The Z-7 "Table Lock" Trap (Supabase/Postgres Reality)
+* **The Flaw:** Z-7 specifies: `UPDATE rides/drivers SET zone_id = NULL where zone_id is the nil-UUID`. 
+* **The Reality:** The `rides` table is the largest table in the system. Running a raw, unbatched `UPDATE` on millions of rows will acquire a massive lock, spike CPU, generate millions of dead tuples (bloating the DB), and likely crash the Supabase instance or timeout.
+* **The Fix:** Z-7 cannot be a simple SQL script. It must be a **batched backfill script** (e.g., updating 5,000 rows at a time with a `pg_sleep(0.1)` delay) executed during a low-traffic window, followed by a manual `VACUUM ANALYZE`.
+
+### 2. The Z-6 Timezone Aggregation Bug
+* **The Flaw:** Z-6 states: `predicted_demand = mean of rides created in the same hour-of-day over the trailing 7 days`.
+* **The Reality:** Postgres `EXTRACT(HOUR FROM created_at)` or `DATE_TRUNC('hour', created_at)` defaults to **UTC**. Bangladesh is UTC+6. If you aggregate by UTC hour, the "8 AM Dhaka Morning Rush" will be incorrectly averaged with "2 AM Dhaka" rides from previous days, completely destroying the hotspot prediction model.
+* **The Fix:** The Z-6 SQL query **must** cast to local time before extraction: `EXTRACT(HOUR FROM created_at AT TIME ZONE 'Asia/Dhaka')`.
+
+### 3. Z-4 GPS Drift & H3 Boundary Thrashing
+* **The Flaw:** Z-4 states driver zones re-resolve `only on H3 cell change`
+You are absolutely right. My first response focused on **product lifecycle and UX gaps** based on the original draft, but I completely missed the **hard engineering, database, geospatial, and orchestrator-locked constraints** that Qwen, Kimi, and the 59-point list uncovered in the `FINAL Locked Plan`. 
+
+Now that I have fully ingested the `FINAL Locked Plan`, the `Zone Foundation (Z-1 to Z-8)`, and the `AGENTS.md` rules, I see that even the "Final" plan contains **critical systemic traps** that will cause production crashes, data corruption, or billing leaks if not addressed.
+
+Here are the deep-engineering blind spots that **all previous reviews (including the 59-point list) missed**, grounded strictly in the Final Locked Plan's backend and database specifications.
+
+---
+
+### 1. The Z-7 "Table Lock" Trap (Supabase/Postgres Reality)
+* **The Flaw:** Z-7 specifies: `UPDATE rides/drivers SET zone_id = NULL where zone_id is the nil-UUID`. 
+* **The Reality:** The `rides` table is the largest table in the system. Running a raw, unbatched `UPDATE` on millions of rows will acquire a massive lock, spike CPU, generate millions of dead tuples (bloating the DB), and likely crash the Supabase instance or timeout.
+* **The Fix:** Z-7 cannot be a simple SQL script. It must be a **batched backfill script** (e.g., updating 5,000 rows at a time with a `pg_sleep(0.1)` delay) executed during a low-traffic window, followed by a manual `VACUUM ANALYZE`.
+
+### 2. The Z-6 Timezone Aggregation Bug
+* **The Flaw:** Z-6 states: `predicted_demand = mean of rides created in the same hour-of-day over the trailing 7 days`.
+* **The Reality:** Postgres `EXTRACT(HOUR FROM created_at)` or `DATE_TRUNC('hour', created_at)` defaults to **UTC**. Bangladesh is UTC+6. If you aggregate by UTC hour, the "8 AM Dhaka Morning Rush" will be incorrectly averaged with "2 AM Dhaka" rides from previous days, completely destroying the hotspot prediction model.
+* **The Fix:** The Z-6 SQL query **must** cast to local time before extraction: `EXTRACT(HOUR FROM created_at AT TIME ZONE 'Asia/Dhaka')`.
+
+### 3. Z-4 GPS Drift & H3 Boundary Thrashing
+* **The Flaw:** Z-4 states driver zones re-resolve `only on H3 cell change` (Res 9).
+* **The Reality:** H3 Res 9 cells are roughly ~0.1 km². When a driver is stationary at a zone boundary (e.g., waiting at a pickup spot), natural GPS drift (±10 meters) will cause their coordinates to flip between two H3 cells every few seconds. This will cause `drivers.zone_id` to thrash, spamming the Z-2 cache and corrupting Job 19 (Surge) supply counts.
+* **The Fix:** Implement a **hysteresis/debounce mechanism** in the heartbeat handler. A driver must register in the new H3 cell for *at least 3 consecutive heartbeats* before `drivers.zone_id` is actually updated.
+
+### 4. `cancel-preview` Scheduled vs. On-Demand Branching
+* **The Flaw:** The Final Plan dictates that `cancel-reason` binds 100% to `free_until` from `cancel-preview`. It also notes that scheduled rides have a *different* policy ("free until X hours before pickup").
+* **The Reality:** The `cancel-preview` endpoint is a single route. If it only calculates `free_until` based on `ride.created_at + 5 mins`, it will incorrectly charge fees for scheduled rides that are days away.
+* **The Fix:** The `cancel-preview` backend logic must explicitly branch: 
+  `if (ride.status === 'scheduled')` → calculate `free_until` from `scheduled_at - X hours`. 
+  `if (ride.status === 'active')` → calculate from `created_at + platform_config.free_window`.
+
+### 5. Route Deletion Crash Risk (Expo Router)
+* **The Flaw:** The Final Plan orders the deletion of orphaned routes: `schedule-ride`, `scheduling-user-ride`, `no-drivers-available`.
+* **The Reality:** In Expo Router, deleting the file removes the route. However, if **any** backend push notification template, deep link handler, or hardcoded `router.push()` in `lib/notify.ts` or `store/` still references the string `"/schedule-ride"`, the app will hard-crash with a "Route not found" error in production when that notification is tapped.
+* **The Fix:** A mandatory `grep -rn "schedule-ride"` across the *entire repository* (including `app.config.js`, backend SMS templates, and `lib/`) must be executed and resolved **before** the files are deleted.
+
+### 6. SOS SMS Billing Exhaustion (`lib/dprelay`)
+* **The Flaw:** The Final Plan routes SOS SMS to emergency contacts via `lib/dprelay`. The 59-point list mentions "rate limiting" but doesn't specify the mechanism.
+* **The Reality:** SMS in Bangladesh (via Twilio/dpRelay) costs money and has strict carrier rate limits. A panicked user, or a malicious actor testing the API, could trigger SOS repeatedly, draining the company's SMS budget or getting the Twilio account suspended for spam.
+* **The Fix:** Implement a **hard Redis-backed cooldown** (e.g., `sos_cooldown:{user_id}` = 15 minutes) and a global circuit breaker on `lib/dprelay` to cap total outbound SOS SMS per hour.
+
+### 7. Vehicle Type Change vs. Active Subscriptions
+* **The Flaw:** The Final Plan allows `vehicle-type-change` (e.g., from `car_economy` to `bike_standard`) and auto-offlines the driver.
+* **The Reality:** Driver subscriptions (`subscription-plans`) and insurance packages are often strictly scoped to vehicle classes. If a driver on a "Pro Car Package" switches to a Bike, their current subscription economics and document validity are instantly invalidated, but the database won't know.
+* **The Fix:** The `POST /api/driver/vehicle-type-change` endpoint must trigger a **subscription proration check** and invalidate vehicle-specific documents (e.g., a car's tax token does not apply to a bike), forcing the driver to re-upload.
+
+### 8. Promo + Rider Pass Precedence Collision
+* **The Flaw:** The Final Plan verifies both `ride-pass` and `apply-promos` but treats them as isolated features.
+* **The Reality:** What happens if a user has an active "Weekly Pass" (which covers the fare) AND applies a "20% off" promo code? If `lib/discountEngine.ts` doesn't have a strict precedence rule, the system might attempt to discount a zero-balance fare, or apply the promo to the pass purchase itself incorrectly.
+* **The Fix:** `lib/discountEngine.ts` must explicitly define precedence (e.g., *Pass consumes the ride; Promo is rejected or applied only to out-of-pocket tolls/waiting fees*).
+
+### 9. MapLibre Memory Leaks on Low-End Android
+* **The Flaw:** The Hotspot Map uses MapLibre `CircleLayer` driven by Z-6 forecast data.
+* **The Reality:** If the Z-6 forecast job updates data and the client polls/refreshes, mutating the GeoJSON source repeatedly without clearing the old source causes severe memory leaks on low-end Android devices (violating Master Plan §11/12 constraints).
+* **The Fix:** The frontend map refresh logic must explicitly call `map.removeSource('hotspots')` before `map.addSource()` to prevent GL context bloat.
+
+### 10. "Book for Someone Else" SOS Liability & SMS Context
+* **The Flaw:** The Final Plan dictates that SOS SMS goes to `user_emergency_contacts` via `lib/dprelay`. 
+* **The Reality:** If the *passenger* (secondary rider) is in the car and an emergency happens, they don't have the app open. If the *driver* hits SOS, the SMS goes to the *booker's* emergency contacts. The booker's family will receive a panic SMS, but they might not even know who the "passenger" is, causing massive confusion and liability.
+* **The Fix:** The SOS SMS template must dynamically inject the secondary rider context: *"EMERGENCY: The ride booked by [Booker Name] for passenger [Passenger Name] has triggered an SOS. Current Location: [Link]"*.
+
+---
+
+### Summary of the True Critical Path
+The previous AIs successfully cleaned up the **product scope** and **file paths**. However, if you hand the `FINAL Locked Plan` to a coding agent today without the 10 fixes above, you will face:
+1. **A Supabase outage** on Day 1 (Z-7 Table Lock).
+2. **Useless Hotspot maps** (Z-6 Timezone bug).
+3. **Surge pricing corruption** (Z-4 GPS Thrashing).
+4. **Hard crashes on push notification taps** (Expo Router Deletions).
+
+**Recommendation:** Append these 10 engineering constraints directly to the `FINAL Locked Plan` under a new **"System & Database Safeguards"** section before authorizing Wave 0.

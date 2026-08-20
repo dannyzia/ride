@@ -159,7 +159,7 @@ export async function POST(request: Request, { id }: { id: string }) {
             driver_id: ride.driver_id,
             cancelled_by,
           }),
-        }).catch((e: any) =>
+        }).catch((e) =>
           logger.error("[ride/cancel] WS ride:cancelled broadcast failed", { rideId, driverId: ride.driver_id, error: errors.getErrorMessage(e) }),
         );
       }

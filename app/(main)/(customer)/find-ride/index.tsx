@@ -8,8 +8,10 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  StatusBar,
   StyleSheet,
 } from "react-native";
+import type { ImageSourcePropType } from "react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import RideLayout from "@/components/RideLayout";
 import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
@@ -28,20 +30,23 @@ import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 type Stop = { lat: number; lng: number; address: string };
 const MAX_STOPS = 2;
 
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
+
 // ── Vehicle category grouping ────────────────────────────────────
 type Category = "bike" | "cng" | "car";
-const CATEGORY_META: Record<Category, { label: string; icon: string; prefix: string }> = {
+const CATEGORY_META: Record<Category, { label: string; icon: IoniconName; prefix: string }> = {
   bike: { label: "Bike", icon: "bicycle", prefix: "bike_" },
   cng: { label: "CNG", icon: "car", prefix: "cng" },
   car: { label: "Car", icon: "car-sport", prefix: "car_" },
 };
 const CATEGORY_ORDER: Category[] = ["bike", "cng", "car"];
 
-const VEHICLE_ICONS: Record<string, any> = {
+const VEHICLE_ICONS: Record<string, ImageSourcePropType> = {
   bike_basic: icons.cab,
   bike_standard: icons.cab,
   bike_plus: icons.cab,
@@ -54,6 +59,13 @@ const VEHICLE_ICONS: Record<string, any> = {
 
 const PlanRidePage = () => {
   const router = useRouter();
+  const isDark = useIsDark();
+  const { setTheme } = useAppearance();
+  const bg = isDark ? colors.bgDark : colors.bgLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
   const {
     userAddress,
     userLatitude,
@@ -268,10 +280,12 @@ const PlanRidePage = () => {
         style={[
           styles.estimateCard,
           {
-            borderColor: selected ? colors.primary : colors.borderDark,
+            borderColor: selected ? colors.primary : borderColor,
             backgroundColor: selected
-              ? colors.primary + "26"
-              : colors.darkTabBar,
+              ? isDark
+                ? colors.primaryLightDark
+                : colors.primaryLight
+              : surfaceBg,
           },
         ]}
       >
@@ -280,19 +294,19 @@ const PlanRidePage = () => {
           style={{
             width: 32,
             height: 32,
-            tintColor: selected ? colors.primary : colors.textPrimaryDark,
+            tintColor: selected ? colors.primary : textPrimary,
           }}
           resizeMode="contain"
         />
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.estimateName}>
+          <Text style={[styles.estimateName, { color: textPrimary }]}>
             {def?.display_en || item.vehicle_type}
           </Text>
-          <Text style={styles.estimateSub}>
+          <Text style={[styles.estimateSub, { color: textSecondary }]}>
             {item.seats} seats • {item.eta_minutes} min away
           </Text>
         </View>
-        <Text style={styles.estimatePrice}>
+        <Text style={[styles.estimatePrice, { color: textPrimary }]}>
           ৳{(item.total_bdt / 100).toFixed(0)}
         </Text>
       </TouchableOpacity>
@@ -301,6 +315,7 @@ const PlanRidePage = () => {
 
   return (
     <View style={{ flex: 1 }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <RideLayout title="Plan Ride" disabled={false} snapPoints={["50%", "90%"]}>
         <View style={{ flex: 1 }}>
           <BottomSheetScrollView
@@ -310,10 +325,13 @@ const PlanRidePage = () => {
             contentContainerStyle={{ paddingBottom: 150 }}
           >
             {/* Pickup */}
-            <Text style={styles.sectionLabel}>Pickup</Text>
+            <Text style={[styles.sectionLabel, { color: textPrimary }]}>Pickup</Text>
             <TouchableOpacity
               onPress={useCurrentLocation}
-              style={styles.currentLocationBtn}
+              style={[
+                styles.currentLocationBtn,
+                { backgroundColor: isDark ? colors.primaryLightDark : colors.primaryLight },
+              ]}
               disabled={locating}
             >
               {locating ? (
@@ -332,7 +350,7 @@ const PlanRidePage = () => {
             <BarikoiAutocomplete
               icon={icons.target}
               initialLocation={fromLabel}
-              textInputBackgroundColor={colors.gray100}
+              textInputBackgroundColor={surfaceBg}
               handlePress={(location) => setUserLocation(location)}
             />
 
@@ -340,18 +358,18 @@ const PlanRidePage = () => {
             {stops.map((stop, i) => (
               <View key={`stop-${i}`} style={styles.stopBlock}>
                 <View style={styles.stopHeader}>
-                  <Text style={styles.sectionLabel}>Stop {i + 1}</Text>
+                  <Text style={[styles.sectionLabel, { color: textPrimary }]}>Stop {i + 1}</Text>
                   <TouchableOpacity
                     onPress={() => removeStop(i)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={styles.removeStop}>✕</Text>
+                    <Ionicons name="close" size={16} color={colors.danger} />
                   </TouchableOpacity>
                 </View>
                 <BarikoiAutocomplete
                   icon={icons.point}
                   initialLocation={stop.address}
-                  textInputBackgroundColor={colors.gray100}
+                  textInputBackgroundColor={surfaceBg}
                   handlePress={(location) => updateStop(i, location)}
                 />
               </View>
@@ -365,7 +383,7 @@ const PlanRidePage = () => {
             )}
 
             {/* Destination */}
-            <Text style={[styles.sectionLabel, { marginTop: 8 }]}>Destination</Text>
+            <Text style={[styles.sectionLabel, { color: textPrimary, marginTop: 8 }]}>Destination</Text>
             <BarikoiAutocomplete
               icon={icons.pin}
               initialLocation={
@@ -378,11 +396,11 @@ const PlanRidePage = () => {
             />
 
             {/* Vehicle estimates */}
-            <Text style={[styles.sectionLabel, { marginTop: 8 }]}>Choose a ride</Text>
+            <Text style={[styles.sectionLabel, { color: textPrimary, marginTop: 8 }]}>Choose a ride</Text>
             {estimating ? (
               <View style={styles.centerBox}>
                 <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={styles.mutedText}>
+                <Text style={[styles.mutedText, { color: textSecondary }]}>
                   Finding available vehicles...
                 </Text>
               </View>
@@ -425,17 +443,19 @@ const PlanRidePage = () => {
                           {
                             borderColor: active
                               ? colors.primary
-                              : colors.borderDark,
+                              : borderColor,
                             backgroundColor: active
-                              ? colors.primary + "26"
-                              : colors.darkTabBar,
+                              ? isDark
+                                ? colors.primaryLightDark
+                                : colors.primaryLight
+                              : surfaceBg,
                           },
                         ]}
                       >
                         <Ionicons
-                          name={meta.icon as any}
+                          name={meta.icon}
                           size={24}
-                          color={active ? colors.primary : colors.textPrimaryDark}
+                          color={active ? colors.primary : textPrimary}
                         />
                         <Text
                           style={[
@@ -443,16 +463,16 @@ const PlanRidePage = () => {
                             {
                               color: active
                                 ? colors.primary
-                                : colors.textPrimaryDark,
+                                : textPrimary,
                             },
                           ]}
                         >
                           {meta.label}
                         </Text>
-                        <Text style={styles.categoryPrice}>
+                        <Text style={[styles.categoryPrice, { color: textPrimary }]}>
                           ৳{(cheapest / 100).toFixed(0)}
                         </Text>
-                        <Text style={styles.categoryEta}>{fastest} min</Text>
+                        <Text style={[styles.categoryEta, { color: textSecondary }]}>{fastest} min</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -470,13 +490,13 @@ const PlanRidePage = () => {
               </View>
             ) : hasRoute ? (
               <View style={styles.centerBox}>
-                <Text style={styles.mutedText}>
+                <Text style={[styles.mutedText, { color: textSecondary }]}>
                   No vehicles available for this route
                 </Text>
               </View>
             ) : (
               <View style={styles.centerBox}>
-                <Text style={styles.mutedText}>
+                <Text style={[styles.mutedText, { color: textSecondary }]}>
                   Set pickup and destination to see fares
                 </Text>
               </View>
@@ -493,13 +513,20 @@ const PlanRidePage = () => {
           </View>
         </View>
       </RideLayout>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   sectionLabel: {
-    color: colors.textPrimaryDark,
     fontFamily: fonts.headingSemi,
     fontSize: 15,
     marginBottom: 8,
@@ -511,7 +538,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: colors.primary + "1A",
     alignSelf: "flex-start",
   },
   currentLocationText: {
@@ -527,11 +553,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-  },
-  removeStop: {
-    color: colors.danger,
-    fontSize: 16,
-    paddingHorizontal: 4,
   },
   addStopBtn: {
     flexDirection: "row",
@@ -573,28 +594,23 @@ const styles = StyleSheet.create({
   categoryPrice: {
     fontFamily: fonts.heading,
     fontSize: 15,
-    color: colors.textPrimaryDark,
     marginTop: 2,
   },
   categoryEta: {
     fontFamily: fonts.body,
     fontSize: 11,
-    color: colors.textSecondaryDark,
     marginTop: 1,
   },
   estimateName: {
-    color: colors.textPrimaryDark,
     fontFamily: fonts.heading,
     fontSize: 16,
   },
   estimateSub: {
-    color: colors.textSecondaryDark,
     fontFamily: fonts.body,
     fontSize: 13,
     marginTop: 2,
   },
   estimatePrice: {
-    color: colors.textPrimaryDark,
     fontFamily: fonts.heading,
     fontSize: 16,
   },
@@ -604,7 +620,6 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   mutedText: {
-    color: colors.textSecondaryDark,
     fontFamily: fonts.body,
     fontSize: 14,
     marginTop: 8,

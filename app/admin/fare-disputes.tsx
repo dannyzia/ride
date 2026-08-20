@@ -9,18 +9,30 @@ import { colors } from "@/theme/goRide";
 const STATUS_COLORS: Record<string, string> = { open: colors.amber, under_review: colors.info, resolved: colors.checkGreen, escalated: colors.danger };
 const RES_COLORS: Record<string, string> = { auto_approved: colors.primary, auto_rejected: colors.textSecondaryDark, admin_approved: colors.checkGreen, admin_rejected: colors.danger, pending: colors.amber };
 
+interface FareDisputeRow {
+  id: string;
+  ride_id: string;
+  dispute_reason: string;
+  status: string;
+  claimed_fare_bdt: number;
+  charged_fare_bdt: number;
+  rider_note: string | null;
+  auto_refund_bdt: number | null;
+  final_resolution: string | null;
+}
+
 export default function AdminFareDisputes() {
   const toast = useAdminToast();
-  const [disputes, setDisputes] = useState<any[]>([]);
+  const [disputes, setDisputes] = useState<FareDisputeRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState<FareDisputeRow | null>(null);
   const [filter, setFilter] = useState("");
   const [adjustmentTaka, setAdjustmentTaka] = useState("");
 
   const fetchDisputes = useCallback(async () => {
     setLoading(true);
     const params = filter ? `?status=${filter}` : "";
-    const res = await adminFetch<{ disputes: any[] }>(`/api/admin/fare-disputes${params}`);
+    const res = await adminFetch<{ disputes: FareDisputeRow[] }>(`/api/admin/fare-disputes${params}`);
     if (res.data) setDisputes(res.data.disputes ?? []);
     setLoading(false);
   }, [filter]);
@@ -48,7 +60,7 @@ export default function AdminFareDisputes() {
         ))}
       </View>
       {loading ? <ActivityIndicator size="large" color={colors.adminAccent} style={{ marginTop: 40 }} /> : (
-        <FlatList data={disputes} keyExtractor={(r: any) => r.id}
+        <FlatList data={disputes} keyExtractor={(r) => r.id}
           ListEmptyComponent={<Text style={{ color: colors.textSecondaryDark, fontFamily: "Jakarta-Regular", textAlign: "center", marginTop: 40 }}>No disputes found</Text>}
           renderItem={({ item }) => (
             <Pressable onPress={() => { setSelected(item); setAdjustmentTaka(""); }} style={styles.card}>
@@ -68,12 +80,12 @@ export default function AdminFareDisputes() {
         <Text style={styles.label}>Charged: ৳{((selected?.charged_fare_bdt ?? 0) / 100).toFixed(0)}</Text>
         <Text style={styles.label}>Status: {selected?.status}</Text>
         {selected?.rider_note && <Text style={styles.label}>Note: {selected.rider_note}</Text>}
-        {selected?.auto_refund_bdt > 0 && <Text style={styles.label}>Auto refund: ৳{((selected.auto_refund_bdt) / 100).toFixed(0)}</Text>}
+        {selected && selected.auto_refund_bdt !== null && selected.auto_refund_bdt > 0 && <Text style={styles.label}>Auto refund: ৳{((selected.auto_refund_bdt) / 100).toFixed(0)}</Text>}
         {selected?.status !== 'resolved' && (
           <>
             <Text style={[styles.label, { marginTop: 12, color: colors.textSecondaryDark }]}>Adjustment (BDT, optional):</Text>
             <View style={styles.adjustInput}>
-              <input type="number" value={adjustmentTaka} onChange={(e: any) => setAdjustmentTaka(e.target.value)} placeholder="e.g. 30"
+              <input type="number" value={adjustmentTaka} onChange={(e) => setAdjustmentTaka(e.target.value)} placeholder="e.g. 30"
                 style={{ background: "transparent", color: colors.textPrimaryDark, border: "none", outline: "none", width: "100%", fontFamily: "Jakarta-Regular", fontSize: 14 }} />
             </View>
             <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>

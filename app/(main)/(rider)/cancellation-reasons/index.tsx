@@ -128,8 +128,8 @@ export default function CancellationReasons() {
       }
       removeRideOffer(rideId);
       goHome();
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : String(err)) || "Network error");
       logger.error("Cancel ride failed", err);
     } finally {
       setCancelling(false);

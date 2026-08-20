@@ -17,7 +17,6 @@ const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid:
     );
 
 
-    logger.info('⚠️')
     logger.info(page)
 
 
@@ -69,7 +68,7 @@ const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid:
                     <View>
                         {paid ? (
                             <View className='bg-green-50 p-4 mt-5 rounded-md'>
-                                <Text className='text-green-600 font-semibold text-center text-lg'>✅ Payment Complete</Text>
+                                <Text className='text-green-600 font-semibold text-center text-lg'>Payment Complete</Text>
                             </View>
 
                         ) : (

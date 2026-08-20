@@ -10,11 +10,12 @@ import {
   RefreshControl,
   Alert,
   Modal,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import PaymentWebView from "@/components/PaymentWebView";
 
@@ -43,6 +44,7 @@ export default function PackagesScreen() {
   const [paymentID, setPaymentID] = useState<string | null>(null);
 
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -268,6 +270,7 @@ export default function PackagesScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center justify-between px-5 py-4">
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
@@ -362,6 +365,15 @@ export default function PackagesScreen() {
           </View>
         </Modal>
       )}
+
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

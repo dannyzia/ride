@@ -390,7 +390,7 @@ tasks:
     wireframe: "## 145. Driver Start Trip"
     route_path: "app/(main)/(rider)/enter-otp/index.tsx"
     action: audit_and_fix
-    note: "File EXISTS at app/(main)/(rider)/enter-otp/index.tsx. 4-digit Ride PIN via OtpInput from react-native-otp-entry. WS: ride:start -> ride:started/start_failed."
+    note: "File EXISTS at app/(main)/(rider)/enter-otp/index.tsx. 4-digit Ride PIN via custom PinInput (components/PinInput.tsx; react-native-otp-entry dep removed - M-22). WS: ride:start -> ride:started/start_failed."
     fixes: []
     verification:
       - { type: command, run: "npx tsc --noEmit", expect: 0 }

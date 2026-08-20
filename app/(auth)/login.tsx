@@ -58,7 +58,7 @@ export default function LoginScreen() {
       }
 
       // Auth gate in _layout.tsx handles redirect — do NOT navigate manually here.
-    } catch (e: any) {
+    } catch (e) {
       setError("Login failed. Please try again.");
       logger.error("[auth] login error", e);
     } finally {

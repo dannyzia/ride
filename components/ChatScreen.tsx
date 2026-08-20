@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { GiftedChat, Send, Bubble, IMessage, InputToolbar } from 'react-native-gifted-chat';
+import type { AvatarProps, BubbleProps, InputToolbarProps, SendProps } from 'react-native-gifted-chat';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -28,7 +29,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
   useEffect(() => {
     loadMessages(rideId);
     return () => clearChat();
-  }, [rideId]);
+  }, [rideId, loadMessages, clearChat]);
 
   // Listen for chat:message via WS global store
   useEffect(() => {
@@ -86,7 +87,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
-  const renderBubble = (props: any) => (
+  const renderBubble = (props: BubbleProps<IMessage>) => (
     <Bubble
       {...props}
       wrapperStyle={{
@@ -97,14 +98,10 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
         right: { color: colors.white, fontFamily: 'Jakarta-Regular' },
         left: { color: textPrimary, fontFamily: 'Jakarta-Regular' },
       }}
-      timeTextStyle={{
-        right: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontFamily: 'Jakarta-Regular' },
-        left: { color: textSecondary, fontSize: 11, fontFamily: 'Jakarta-Regular' },
-      }}
     />
   );
 
-  const renderSend = (props: any) => (
+  const renderSend = (props: SendProps<IMessage>) => (
     <Send {...props} containerStyle={{ justifyContent: 'center', marginRight: 8 }}>
       <View style={[styles.sendButton, { backgroundColor: colors.primary }]}>
         <Ionicons name="send" size={16} color={colors.white} />
@@ -112,7 +109,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
     </Send>
   );
 
-  const renderInputToolbar = (props: any) => {
+  const renderInputToolbar = (props: InputToolbarProps<IMessage>) => {
     if (!rideActive) return null;
     return (
       <InputToolbar
@@ -123,7 +120,7 @@ export default function ChatScreen({ rideId, currentUserId, otherUserName, rideA
     );
   };
 
-  const renderAvatar = (props: any) => {
+  const renderAvatar = (props: AvatarProps<IMessage>) => {
     const { currentMessage } = props;
     if (!currentMessage || currentMessage.user?._id === currentUserId) return null;
     const initial = (otherUserName?.[0] ?? '?').toUpperCase();

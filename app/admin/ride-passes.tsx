@@ -73,7 +73,7 @@ export default function RidePassesAdmin() {
     { key: "price_bdt", header: "Price", render: (r) => `৳${(r.price_bdt / 100).toFixed(0)}`, width: 80 },
     { key: "discount_percent", header: "Disc %", width: 60 },
     { key: "validity_days", header: "Days", width: 50 },
-    { key: "is_active", header: "Active", render: (r) => r.is_active ? "✅" : "⬜", width: 60 },
+    { key: "is_active", header: "Active", render: (r) => r.is_active ? "Yes" : "No", width: 60 },
     { key: "id", header: "Actions", render: (r) => (
       <View className="flex-row gap-2">
         <Pressable onPress={() => openEdit(r)} className="px-[8px] py-[4px] bg-goAdminAccent rounded-[4px]"><Text className="text-goBgDark font-JakartaBold text-[11px]">Edit</Text></Pressable>

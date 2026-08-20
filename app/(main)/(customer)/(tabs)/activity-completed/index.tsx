@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useRiderStore } from "@/store/useRiderStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors, fonts } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 export default function ActivityCompleted() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
   const { completedRides, fetchRideHistory } = useRiderStore();
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,7 @@ export default function ActivityCompleted() {
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
         <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
@@ -48,6 +51,7 @@ export default function ActivityCompleted() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
         <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}>
           <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>Back</Text>
@@ -57,11 +61,11 @@ export default function ActivityCompleted() {
       </View>
       <ScrollView style={{ flex: 1, paddingHorizontal: 24 }} contentContainerStyle={{ paddingVertical: 24 }}>
         {(completedRides?.length ?? 0) > 0 ? (
-          completedRides!.map((ride: any, index: number) => (
+          completedRides!.map((ride, index: number) => (
             <View key={index} style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 12, padding: 16, marginBottom: 16 }}>
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
                 <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accentLight, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
-                  <Text style={{ fontSize: 20, fontFamily: fonts.heading, letterSpacing: -0.5, color: colors.primary }}>✓</Text>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: textPrimary }}>
@@ -110,6 +114,14 @@ export default function ActivityCompleted() {
           </View>
         )}
       </ScrollView>
+      <TouchableOpacity
+        onPress={() => setTheme(isDark ? "light" : "dark")}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
+        style={{ backgroundColor: surface, borderWidth: 1, borderColor: border }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

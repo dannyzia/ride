@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ReactNativeModal from "react-native-modal";
@@ -98,7 +98,7 @@ export default function HotspotMapScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
-      <StatusBar style={isDark ? "light" : "dark"} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
         <TouchableOpacity

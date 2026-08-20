@@ -61,8 +61,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           rideId,
         };
       });
-    } catch (e: any) {
-      set({ error: e.message ?? 'network_error', loading: false });
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : String(e), loading: false });
     }
   },
 
