@@ -99,6 +99,11 @@ export const notifications = pgTable('notifications', {
   is_read: boolean('is_read').notNull().default(false),
   read_at: timestamptz('read_at'),
   idempotency_key: text('idempotency_key').unique(),   // prevents duplicate inserts from retried triggers
+  // NOTE: implementation uses varchar(128) nullable + partial unique index
+  // (WHERE idempotency_key IS NOT NULL) because existing non-idempotent callers
+  // (lifecycle events) insert rows without a key. A NOT NULL constraint would
+  // require backfilling all existing rows. The partial index achieves the same
+  // dedup guarantee for keyed rows while leaving legacy rows unaffected.
   created_at: timestamptz('created_at').notNull().defaultNow(),
   updated_at: timestamptz('updated_at').notNull().defaultNow(),
 }, (t) => [
@@ -195,7 +200,8 @@ utils-server gets a thin client `utils-server/notifyClient.ts` that POSTs to `${
 | Tip added | `system` | driver | `app/api/ride/[id]/tip+api.ts` |
 | Chat message — debounced (see §7) | `chat_message` | counterparty | `app/api/chat/message+api.ts`, `app/api/ride/[id]/message+api.ts` |
 | SOS triggered | `urgent_alert` | admin + emergency contacts | `app/api/driver/sos-alert+api.ts`, rider SOS flow, `app/api/admin/sos-alerts/[id]/ack+api.ts` (ack → notify reporter) |
-| Scheduled ride reminder (T-15m) | `alarm` (server) | rider | `utils-server/scheduler.ts` job |
+| Scheduled ride reminder (T-60m) | `alarm` (server) | rider | `utils-server/scheduler.ts` job 21a — idempotency key `ride:{id}:reminder_60`, gate: `rides.reminder_60_sent` |
+| Scheduled ride reminder (T-15m) | `alarm` (server) | rider | `utils-server/scheduler.ts` job 21b — idempotency key `ride:{id}:reminder_15`, gate: `rides.reminder_sent` |
 | Scheduled ride → assigned driver notified | `ride_call` | driver | same scheduler job |
 | Driver no-show wait timer expiry | `alarm` (local, active session) | driver | client timer (§8.8) |
 | Break time exceeded | `alarm` | driver | `app/api/driver/break/start+api.ts` context + scheduler |
@@ -448,7 +454,7 @@ Add to `utils-server/types.ts` (kebab-case event names per convention):
 - [ ] Chat push debounced: one push per burst; none while chat screen open; none over connected WS
 - [ ] SOS push reaches admin + emergency contacts even with prefs "off"
 - [ ] `urgent_alert`/`alarm` cannot be disabled via API (400) or UI
-- [ ] Scheduled-ride reminder fires at T-15m with app killed (server push) and doesn't double when app alive
+- [ ] Scheduled-ride reminders fire at T-60m and T-15m with app killed (server push) and don't double when app alive or on scheduler restart
 - [ ] No-show/break local alarms fire and cancel deterministically
 - [ ] Inbox: pagination, unread badge, mark-one/mark-all read; badge identical on iOS after resume
 - [ ] Deep links resolve correctly from killed state for all 5 types; invalid ride id degrades gracefully

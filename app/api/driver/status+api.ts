@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
-import { drivers, users } from '@/src/db/schema';
-import { eq } from 'drizzle-orm';
+import { drivers, users, driverOnlineSessions, subscriptions } from '@/src/db/schema';
+import { eq, and, isNull } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { getH3Cell } from '@/lib/h3';
@@ -58,6 +58,52 @@ export async function POST(request: Request) {
     }
 
     await db.update(drivers).set(setClause).where(eq(drivers.id, driver.id));
+
+    // Manage driver_online_sessions
+    if (is_online) {
+      const [existingSession] = await db
+        .select()
+        .from(driverOnlineSessions)
+        .where(
+          and(
+            eq(driverOnlineSessions.driver_id, driver.id),
+            isNull(driverOnlineSessions.went_offline_at),
+          ),
+        )
+        .limit(1);
+      if (existingSession) {
+        return Response.json({ error: 'already_online', message: 'You already have an active session' }, { status: 409 });
+      }
+
+      const [activeSub] = await db
+        .select({ id: subscriptions.id })
+        .from(subscriptions)
+        .where(
+          and(
+            eq(subscriptions.driver_id, driver.id),
+            eq(subscriptions.status, 'active'),
+          ),
+        )
+        .limit(1);
+      if (!activeSub) {
+        return Response.json({ error: 'no_active_subscription', message: 'No active subscription found' }, { status: 403 });
+      }
+      await db.insert(driverOnlineSessions).values({
+        driver_id: driver.id,
+        subscription_id: activeSub.id,
+        went_online_at: new Date(),
+      });
+    } else {
+      await db
+        .update(driverOnlineSessions)
+        .set({ went_offline_at: new Date() })
+        .where(
+          and(
+            eq(driverOnlineSessions.driver_id, driver.id),
+            isNull(driverOnlineSessions.went_offline_at),
+          ),
+        );
+    }
 
     logger.info('[driver/status] updated', { userId: user.id, is_online, hasGps: lat != null });
     return Response.json({ success: true, is_online });

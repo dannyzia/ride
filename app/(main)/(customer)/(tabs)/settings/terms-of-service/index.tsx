@@ -23,7 +23,10 @@ export default function SettingsTermsOfService() {
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
-        <Text className="text-[14px] font-Jakarta mt-4 mb-4" style={{ color: textPrimary }}>Last updated: July 15, 2026</Text>
+        <View className="rounded-lg px-4 py-3 mb-4" style={{ backgroundColor: 'rgba(255, 183, 77, 0.12)', borderWidth: 1, borderColor: 'rgba(255, 183, 77, 0.3)' }}>
+          <Text className="text-[12px] font-JakartaSemiBold" style={{ color: colors.amber }}>⏳ Pending owner review — content may change before launch</Text>
+        </View>
+        <Text className="text-[14px] font-Jakarta mt-2 mb-4" style={{ color: textPrimary }}>Last updated: July 15, 2026</Text>
         <View className="gap-6">
           <View><Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>1. Acceptance of Terms</Text><Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>By using GoRide, you agree to these Terms of Service. If you do not agree, please do not use our services.</Text></View>
           <View><Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>2. Eligibility</Text><Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>You must be at least 18 years old and legally capable of entering into contracts to use our services.</Text></View>

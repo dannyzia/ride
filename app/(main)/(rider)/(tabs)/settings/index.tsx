@@ -12,6 +12,9 @@ interface SettingsItem {
 }
 
 const items: SettingsItem[] = [
+  { label: "Packages", route: "/(main)/(rider)/packages" },
+  { label: "Minimum Rate", route: "/(main)/(rider)/min-rate" },
+  { label: "Payout Method", route: "/(main)/(rider)/payout-method" },
   { label: "Notifications", route: "/(main)/(rider)/settings/notifications" },
   { label: "Auto-Accept", route: "/(main)/(rider)/settings/auto-accept" },
   { label: "Account & Security", route: "/(main)/(rider)/settings/account-security" },

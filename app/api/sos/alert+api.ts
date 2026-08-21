@@ -1,10 +1,13 @@
 import { db } from "../../../src/db";
-import { users, rides, sosAlerts } from "../../../src/db/schema";
-import { eq, and } from "drizzle-orm";
+import { users, rides, sosAlerts, userEmergencyContacts } from "../../../src/db/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { verifySupabaseToken } from "../../../lib/auth";
 import { logger } from "../../../lib/logger";
+import { sendNotification } from "../../../lib/notify";
+import { sendSmsSos } from "../../../lib/dprelay";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
+import { getPlan05Int } from "@/lib/platformConfig";
 import * as errors from "@/lib/errors";
 
 // T-1: this endpoint serves BOTH riders and drivers (the plan's canonical
@@ -24,7 +27,7 @@ export async function POST(request: Request) {
     const supabaseUser = await verifySupabaseToken(request);
 
     const [dbUser] = await db
-      .select({ id: users.id, role: users.role })
+      .select({ id: users.id, role: users.role, name: users.name })
       .from(users)
       .where(eq(users.auth_uid, supabaseUser.id))
       .limit(1);
@@ -60,6 +63,29 @@ export async function POST(request: Request) {
       }
     }
 
+    // Configurable cooldown: if the user sent an SOS within the configured
+    // window (default 15 min), reuse the existing open alert.
+    const cooldownSeconds = await getPlan05Int('sos_cooldown_seconds');
+    const cooldownThreshold = new Date(Date.now() - cooldownSeconds * 1000);
+    const [recentAlert] = await db
+      .select({ id: sosAlerts.id })
+      .from(sosAlerts)
+      .where(
+        and(
+          eq(sosAlerts.user_id, dbUser.id),
+          eq(sosAlerts.status, "open"),
+        ),
+      )
+      .orderBy(desc(sosAlerts.created_at))
+      .limit(1);
+    if (recentAlert && (!ride_id || !recentAlert.id)) {
+      // Cooldown: user already has a recent open alert
+      if (recentAlert.id) {
+        logger.info("[sos/alert] cooldown — reusing recent open alert", { alertId: recentAlert.id });
+        return Response.json({ ok: true, deduped: true, alert_id: recentAlert.id });
+      }
+    }
+
     // One open alert per ride: if the ride already has an open SOS (e.g. the
     // auto-SOS fired, or the user double-tapped), keep the existing row — the
     // alert is already on the admin dashboard.
@@ -71,7 +97,7 @@ export async function POST(request: Request) {
         .limit(1);
       if (existing) {
         logger.info("[sos/alert] open alert already exists for ride, keeping it", { ride_id, alertId: existing.id });
-        return Response.json({ ok: true, deduped: true });
+        return Response.json({ ok: true, deduped: true, alert_id: existing.id });
       }
     }
 
@@ -95,6 +121,63 @@ export async function POST(request: Request) {
     // the alert is already on the dashboard. The WS server only broadcasts;
     // it never writes sos_alerts.
     if (inserted) {
+      // Push notification to the user (best-effort)
+      sendNotification(
+        dbUser.id,
+        "sos:alert",
+        "SOS Alert Sent",
+        "Your emergency alert has been sent. Help is on the way.",
+        { alert_id: inserted.id },
+        { priority: "high" },
+      ).catch((e) => logger.warn("[sos/alert] push notification failed", e));
+
+      // Notify admin devices (best-effort)
+      const [adminUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.role, "admin"))
+        .limit(1);
+      if (adminUser) {
+        sendNotification(
+          adminUser.id,
+          "sos:admin_alert",
+          "🚨 SOS Alert",
+          `${dbUser.role} SOS from ${message ?? "emergency"}. Location: ${lat}, ${lng}`,
+          { alert_id: inserted.id, lat: String(lat), lng: String(lng) },
+          { priority: "high" },
+        ).catch((e) => logger.warn("[sos/alert] admin push failed", e));
+      }
+
+      // Best-effort SMS to user_emergency_contacts (NOT the public SOS contacts)
+      // + one retry on failure. Alert succeeds even when SMS fails.
+      const contacts = await db
+        .select({ phone: userEmergencyContacts.phone, name: userEmergencyContacts.name })
+        .from(userEmergencyContacts)
+        .where(eq(userEmergencyContacts.user_id, dbUser.id));
+
+      const notifiedContacts: string[] = [];
+      const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
+      const sosMessage = `Emergency SOS! ${dbUser.name} needs help. Location: ${lat},${lng}${serverUrl ? `. Track: ${serverUrl}/track/${ride_id ?? inserted.id}` : ""}`;
+
+      for (const contact of contacts) {
+        let sent = await sendSmsSos(contact.phone, sosMessage);
+        if (!sent) {
+          // One retry
+          await new Promise((r) => setTimeout(r, 1000));
+          sent = await sendSmsSos(contact.phone, sosMessage);
+        }
+        if (sent) notifiedContacts.push(contact.phone);
+      }
+
+      // Update contacts_notified
+      if (notifiedContacts.length > 0) {
+        await db
+          .update(sosAlerts)
+          .set({ contacts_notified: notifiedContacts as any })
+          .where(eq(sosAlerts.id, inserted.id));
+      }
+
+      // F-15: push to utils-server WS for admin dashboards
       const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
       const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
       if (internalSecret) {
@@ -121,12 +204,12 @@ export async function POST(request: Request) {
           });
         } catch {
           // WS push failure is non-fatal — the alert is already persisted.
-          // Never let a dispatch-server outage fail the user's SOS request.
         }
       }
     }
 
-    return Response.json({ ok: true });
+    // 201 for new alerts (not deduped)
+    return Response.json({ ok: true, alert_id: inserted?.id }, { status: 201 });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: "unauthorized", message: "Authentication required" }, { status: 401 });

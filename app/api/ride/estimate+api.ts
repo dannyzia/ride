@@ -13,6 +13,7 @@ import { VEHICLE_TYPE_VALUES, VEHICLE_TYPES } from '@/lib/vehicleTypes';
 import { loadSpeedTableFromConfig, type EtaSpeedTable, timeBucket, etaSpeedKmh, computeEtaMinutes } from '@/lib/eta';
 import { parseJsonBody } from '@/lib/parseBody';
 import { percentOf } from '@/lib/money';
+import { toUtcIso } from '@/lib/time';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import * as errors from '@/lib/errors';
@@ -55,9 +56,15 @@ export async function POST(request: Request) {
     // Zone check
     const zoneCheck = await validatePickupZone(pickup_lat, pickup_lng);
     if (!zoneCheck.valid) {
-      return Response.json({ error: 'outside_zone', message: 'Pickup location is outside the operational zone' }, { status: 422 });
+      if (zoneCheck.error === 'zones_not_configured') {
+        return Response.json({ error: 'zones_not_configured', message: 'No operational zones configured' }, { status: 503 });
+      }
+      return Response.json({ error: zoneCheck.error ?? 'outside_zone', message: 'Pickup location is outside the operational zone' }, { status: 422 });
     }
-    const zoneId = zoneCheck.zone?.id ?? '00000000-0000-0000-0000-000000000000';
+    if (!zoneCheck.zone?.id) {
+      return Response.json({ error: 'zones_not_configured', message: 'No operational zones configured' }, { status: 503 });
+    }
+    const zoneId = zoneCheck.zone.id;
 
     // Route-based distance with Haversine fallback
     const route = await getRouteDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng).catch(() => null);
@@ -161,6 +168,10 @@ export async function POST(request: Request) {
       const etaTable = await getEtaTable();
       const etaBucket = timeBucket(new Date());
       const etaMin = computeEtaMinutes(totalDistanceKm, etaSpeedKmh(vehicle_type, etaBucket, etaTable));
+      // §1.4: quote_valid_until — 5 minutes from now; client silently
+      // re-estimates when expired and shows refreshed fare.
+      const quoteValidUntil = new Date(Date.now() + 5 * 60 * 1000);
+
       return Response.json({
         estimates: [{
           vehicle_type,
@@ -180,6 +191,7 @@ export async function POST(request: Request) {
          }],
         distance_km: totalDistanceKm,
         preferences_applied: preference_ids ?? [],
+        quote_valid_until: toUtcIso(quoteValidUntil),
       });
     }
 
@@ -251,7 +263,9 @@ export async function POST(request: Request) {
 
     estimates.sort((a, b) => a.fare_breakdown.total_bdt - b.fare_breakdown.total_bdt);
 
-    return Response.json({ estimates, distance_km: totalDistanceKm, preferences_applied: preference_ids ?? [] });
+    const quoteValidUntil = new Date(Date.now() + 5 * 60 * 1000);
+
+    return Response.json({ estimates, distance_km: totalDistanceKm, preferences_applied: preference_ids ?? [], quote_valid_until: toUtcIso(quoteValidUntil) });
 
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });

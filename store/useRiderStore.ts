@@ -100,6 +100,14 @@ interface RiderState {
   pickupCoords: { lat: number; lng: number } | null;
   dropoffCoords: { lat: number; lng: number } | null;
   selectedDiscount: { type: DiscountType; amount_bdt: number } | null;
+  stagedPromo: {
+    promoCodeId: string;
+    code: string;
+    discountType: "percent" | "flat";
+    discountValue: number;
+    maxDiscountBdt: number | null;
+    minSpendBdt: number | null;
+  } | null;
   stops: { lat: number; lng: number; address: string }[];
   setSelectedVehicleType: (vt: VehicleType | null) => void;
   setEstimates: (estimates: FareEstimate[]) => void;
@@ -131,6 +139,7 @@ interface RiderState {
   setPickupCoords: (coords: { lat: number; lng: number } | null) => void;
   setDropoffCoords: (coords: { lat: number; lng: number } | null) => void;
   setSelectedDiscount: (discount: { type: DiscountType; amount_bdt: number } | null) => void;
+  setStagedPromo: (promo: RiderState["stagedPromo"]) => void;
   setStops: (stops: { lat: number; lng: number; address: string }[]) => void;
 }
 
@@ -250,6 +259,7 @@ const initialRiderState = {
   pickupCoords: null,
   dropoffCoords: null,
   selectedDiscount: null,
+  stagedPromo: null,
   stops: [],
 };
 
@@ -281,6 +291,7 @@ export const useRiderStore = create<RiderState>((set, get) => ({
   pickupCoords: null,
   dropoffCoords: null,
   selectedDiscount: null,
+  stagedPromo: null,
   stops: [],
   }),
   setActiveRide: (ride) => set({ activeRide: ride }),
@@ -306,8 +317,35 @@ export const useRiderStore = create<RiderState>((set, get) => ({
   setScheduledRides: (rides) => set({ scheduledRides: rides }),
   setCompletedRides: (rides) => set({ completedRides: rides }),
   setPaymentMethods: (methods) => set({ paymentMethods: methods }),
-  applyPromo: (_promo: unknown) => {
-    // Persisted by the API; no local state required beyond the optimistic UI.
+  applyPromo: (promo: unknown) => {
+    // M-29: Stage the validated promo client-side so the home screen can
+    // display the discount before booking. Server-side staging via
+    // promoCache.ts is the authoritative source for the ride tx.
+    const p = promo as {
+      promo_id?: string;
+      code?: string;
+      discount_type?: string;
+      discount_value?: number;
+      max_discount_bdt?: number | null;
+      min_spend_bdt?: number | null;
+    };
+    if (p?.promo_id && p?.code) {
+      set({
+        stagedPromo: {
+          promoCodeId: p.promo_id,
+          code: p.code,
+          discountType: (p.discount_type as "percent" | "flat") ?? "percent",
+          discountValue: p.discount_value ?? 0,
+          maxDiscountBdt: p.max_discount_bdt ?? null,
+          minSpendBdt: p.min_spend_bdt ?? null,
+        },
+        appliedPromo: {
+          code: p.code,
+          description: `Promo: ${p.code}`,
+          discount_bdt: 0,
+        },
+      });
+    }
   },
   setRecentReceipts: (receipts) => set({ recentReceipts: receipts }),
   setWalletBalance: (balance) => set({ walletBalance: balance }),
@@ -316,6 +354,7 @@ export const useRiderStore = create<RiderState>((set, get) => ({
    setPickupCoords: (coords) => set({ pickupCoords: coords }),
   setDropoffCoords: (coords) => set({ dropoffCoords: coords }),
   setSelectedDiscount: (discount) => set({ selectedDiscount: discount }),
+  setStagedPromo: (promo) => set({ stagedPromo: promo }),
   setStops: (stops) => set({ stops }),
 
   reset: () => {

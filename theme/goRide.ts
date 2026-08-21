@@ -63,6 +63,7 @@ export const colors = {
   indigo: "#6366F1",
   checkGreen: "#22C55E",
   amber: "#F59E0B",
+  amberLight: "#FEF3C7",
 
   adminAccent: "#64B5F6",
   adminSubtle: "#E0E0E0",

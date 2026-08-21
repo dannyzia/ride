@@ -8,6 +8,7 @@ import { parseJsonBody } from '@/lib/parseBody';
 import { evaluateCancellation } from '@/lib/cancellation';
 import { recordCancellationFee } from '@/lib/accounting';
 import { createCancellationCreditInTx } from '@/lib/cancellationCompensation';
+import { createCancellationFeeEventInTx } from '@/lib/paymentEvents';
 import * as errors from '@/lib/errors';
 
 const CANCELLABLE_STATUSES = [
@@ -124,6 +125,14 @@ export async function POST(request: Request, { id }: { id: string }) {
           remaining_amount_bdt: feeBdt,
           status: 'pending',
           expires_at: expiresAt,
+        });
+
+        // Write-ownership: payment_events row creation goes through
+        // lib/paymentEvents.ts — the single write owner for this table.
+        await createCancellationFeeEventInTx(tx, {
+          rideId,
+          riderId: ride.user_id,
+          amountBdt: feeBdt,
         });
       }
     });

@@ -41,12 +41,14 @@ interface DispatchToggleResponse {
 }
 
 // ----- Section 2: Platform Policy (platform_config) -----
-type PolicyType = "ratio" | "moneyTaka";
+type PolicyType = "ratio" | "moneyTaka" | "integer";
 interface PolicyField {
   key: string;
   label: string;
   helpText: string;
   type: PolicyType;
+  /** Optional range [min, max] for validation */
+  range?: [number, number];
 }
 // All platform_config keys are numeric strings on the wire. Money keys store
 // integer paisa in the DB but are edited/displayed in taka on this screen.
@@ -83,6 +85,50 @@ const POLICY_FIELDS: PolicyField[] = [
     helpText:
       "Ceiling on wait-time charge per 2 min. Stored as paisa; shown in taka.",
     type: "moneyTaka",
+  },
+];
+
+// Plan-05 operational bounds (platform_config)
+const POLICY5_FIELDS: PolicyField[] = [
+  {
+    key: "sos_cooldown_seconds",
+    label: "SOS Cooldown (seconds)",
+    helpText:
+      "Minimum gap between SOS alerts per user. Prevents rapid re-triggering.",
+    type: "integer",
+    range: [0, 7200],
+  },
+  {
+    key: "sos_auto_resolve_seconds",
+    label: "SOS Auto-Resolve (seconds)",
+    helpText:
+      "Time after which an unacknowledged SOS is auto-resolved by the scheduler.",
+    type: "integer",
+    range: [60, 14400],
+  },
+  {
+    key: "schedule_min_lead_minutes",
+    label: "Schedule Min Lead (minutes)",
+    helpText:
+      "Minimum advance time a ride can be scheduled (client + server enforced).",
+    type: "integer",
+    range: [5, 120],
+  },
+  {
+    key: "schedule_max_lead_days",
+    label: "Schedule Max Lead (days)",
+    helpText:
+      "Maximum days ahead a ride can be scheduled.",
+    type: "integer",
+    range: [1, 30],
+  },
+  {
+    key: "cancel_grace_period_seconds",
+    label: "Cancel Grace Period (seconds)",
+    helpText:
+      "Free cancellation window after booking. Riders are not charged if they cancel within this period.",
+    type: "integer",
+    range: [0, 600],
   },
 ];
 
@@ -208,6 +254,11 @@ export default function PlatformConfigScreen() {
   const [policyEdits, setPolicyEdits] = useState<Record<string, string>>({});
   const [savingPolicy, setSavingPolicy] = useState(false);
 
+  // Zone multi-active toggle (platform_config boolean)
+  const [zoneMultiActive, setZoneMultiActive] = useState(false);
+  const [zoneMultiActiveOriginal, setZoneMultiActiveOriginal] = useState(false);
+  const [savingZone, setSavingZone] = useState(false);
+
   const [opServer, setOpServer] = useState<Record<string, string>>({});
   const [opEdits, setOpEdits] = useState<Record<string, string>>({});
   const [opAvailableKeys, setOpAvailableKeys] = useState<Set<string>>(
@@ -293,6 +344,11 @@ export default function PlatformConfigScreen() {
         }
       }
       setPolicyEdits(editsMap);
+
+      // Zone multi-active flag
+      const zoneVal = map["zone_multi_active_enabled"] === "true";
+      setZoneMultiActive(zoneVal);
+      setZoneMultiActiveOriginal(zoneVal);
     }
 
     setLoading(false);
@@ -338,7 +394,7 @@ export default function PlatformConfigScreen() {
   const policyDirtyKeys = useMemo(
     () =>
       new Set(
-        POLICY_FIELDS.filter((f) => {
+        [...POLICY_FIELDS, ...POLICY5_FIELDS].filter((f) => {
           if (policyServer[f.key] === undefined) return false;
           const scale = f.type === "moneyTaka" ? 100 : 1;
           const current = serializeNumber(policyEdits[f.key] ?? "", scale);
@@ -357,7 +413,7 @@ export default function PlatformConfigScreen() {
     }
     // Pre-validate before the round-trip so the user gets actionable messages.
     const updates: { key: string; value: string }[] = [];
-    for (const f of POLICY_FIELDS) {
+    for (const f of [...POLICY_FIELDS, ...POLICY5_FIELDS]) {
       if (!policyDirtyKeys.has(f.key)) continue;
       const scale = f.type === "moneyTaka" ? 100 : 1;
       const serialized = serializeNumber(policyEdits[f.key] ?? "", scale);
@@ -382,6 +438,20 @@ export default function PlatformConfigScreen() {
           return;
         }
       }
+      if (f.type === "integer") {
+        const n = Number(serialized);
+        if (!Number.isInteger(n) || n < 0) {
+          toast.show(`${f.label} must be a non-negative integer`, "error");
+          return;
+        }
+        if (f.range) {
+          const [min, max] = f.range;
+          if (n < min || n > max) {
+            toast.show(`${f.label} must be between ${min} and ${max}`, "error");
+            return;
+          }
+        }
+      }
       updates.push({ key: f.key, value: serialized });
     }
     if (updates.length === 0) return;
@@ -402,11 +472,12 @@ export default function PlatformConfigScreen() {
     }
     const map: Record<string, string> = {};
     for (const r of data.config ?? []) {
-      if (POLICY_FIELDS.some((f) => f.key === r.key)) map[r.key] = r.value;
+      if ([...POLICY_FIELDS, ...POLICY5_FIELDS].some((f) => f.key === r.key))
+        map[r.key] = r.value;
     }
     setPolicyServer(map);
     const editsMap: Record<string, string> = {};
-    for (const f of POLICY_FIELDS) {
+    for (const f of [...POLICY_FIELDS, ...POLICY5_FIELDS]) {
       if (map[f.key] !== undefined) {
         const scale = f.type === "moneyTaka" ? 100 : 1;
         editsMap[f.key] = parseDisplayNumber(map[f.key], scale);
@@ -415,6 +486,56 @@ export default function PlatformConfigScreen() {
     setPolicyEdits(editsMap);
     toast.show("Platform policy saved", "success");
     setSavingPolicy(false);
+  };
+
+  // ----- Zone multi-active toggle save -----
+  const zoneDirty = zoneMultiActive !== zoneMultiActiveOriginal;
+
+  const handleSaveZone = async () => {
+    setSavingZone(true);
+    const { data, error, status } = await adminFetch<ConfigResponse>(
+      "/api/admin/config",
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          updates: [
+            {
+              key: "zone_multi_active_enabled",
+              value: zoneMultiActive ? "true" : "false",
+            },
+          ],
+        }),
+      },
+    );
+    if (error || !data) {
+      if (status !== 0) {
+        toast.show(`Zone toggle failed: ${error ?? "unknown"}`, "error");
+      } else {
+        toast.show("Zone toggle failed: network error", "error");
+      }
+      setSavingZone(false);
+      return;
+    }
+    // Update server baseline from response
+    const map: Record<string, string> = {};
+    for (const r of data.config ?? []) {
+      map[r.key] = r.value;
+    }
+    const newVal = map["zone_multi_active_enabled"] === "true";
+    setZoneMultiActive(newVal);
+    setZoneMultiActiveOriginal(newVal);
+    // Also update policyServer so the field is tracked correctly
+    setPolicyServer((prev) => ({
+      ...prev,
+      zone_multi_active_enabled: map["zone_multi_active_enabled"] ?? "false",
+    }));
+    toast.show(
+      newVal
+        ? "Multi-zone enabled — drivers resolve zone from coordinates"
+        : "Multi-zone disabled — single active zone mode",
+      newVal ? "warning" : "success",
+    );
+    setSavingZone(false);
   };
 
   // ----- Op save (Section 3) -----
@@ -631,6 +752,104 @@ export default function PlatformConfigScreen() {
                     </View>
                   );
                 })}
+              </View>
+            )}
+
+            {/* ── Plan-05 Operational Bounds ── */}
+            <View style={styles.plan05Divider} />
+            <Text style={styles.plan05SectionTitle}>Plan 05 — Operational Bounds</Text>
+            <Text style={styles.plan05SectionSubtitle}>
+              SOS, scheduling, and cancellation behaviour. Changes take effect
+              within 60 seconds (platform_config fresh-read).
+            </Text>
+            <View style={styles.formGrid}>
+              {POLICY5_FIELDS.map((f) => {
+                if (policyServer[f.key] === undefined) {
+                  return (
+                    <View key={f.key} style={styles.fieldRow}>
+                      <Text style={styles.fieldLabel}>{f.label}</Text>
+                      <Text style={styles.missingText}>
+                        Not present in DB — add via seed script.
+                      </Text>
+                    </View>
+                  );
+                }
+                const rangeText = f.range
+                  ? `${f.range[0]} – ${f.range[1]}`
+                  : "0";
+                return (
+                  <View key={f.key} style={styles.fieldRow}>
+                    <Text style={styles.fieldLabel}>{f.label}</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={policyEdits[f.key] ?? ""}
+                      onChangeText={(v) =>
+                        setPolicyEdits((prev) => ({ ...prev, [f.key]: v }))
+                      }
+                      placeholder={rangeText}
+                      placeholderTextColor={colors.textDisabledDark}
+                      keyboardType="numeric"
+                    />
+                    <Text style={styles.helpText}>{f.helpText}</Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* ── Zone Multi-Active Toggle ── */}
+            <View style={styles.zoneToggleDivider} />
+            <View style={styles.zoneToggleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>Multi-Zone Mode</Text>
+                <Text style={styles.helpText}>
+                  {"When enabled, drivers resolve their zone from GPS coordinates ("
+                    + "smallest containing polygon wins). When disabled, only "
+                    + "one zone can be active at a time."}
+                </Text>
+              </View>
+              <Pressable
+                style={[
+                  styles.toggleTrack,
+                  zoneMultiActive && styles.toggleTrackActive,
+                  savingZone && styles.btnDisabled,
+                ]}
+                onPress={() => setZoneMultiActive((prev) => !prev)}
+                disabled={savingZone}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: zoneMultiActive }}
+                accessibilityLabel="Toggle multi-zone mode"
+              >
+                <View
+                  style={[
+                    styles.toggleThumb,
+                    zoneMultiActive && styles.toggleThumbActive,
+                  ]}
+                />
+              </Pressable>
+            </View>
+            {zoneMultiActive && (
+              <View style={styles.zoneWarningBanner}>
+                <Text style={styles.zoneWarningText}>
+                  ⚠ Multi-zone is ON. All active zones are loaded on every "
+                  + "heartbeat and fare estimate. Ensure zone polygons do not "
+                  + "overlap unintentionally — the smallest polygon containing "
+                  + "the point wins. Disable if you only operate in one zone."
+                </Text>
+              </View>
+            )}
+            {zoneDirty && (
+              <View style={styles.zoneSaveRow}>
+                <Pressable
+                  style={[styles.saveBtn, savingZone && styles.btnDisabled]}
+                  onPress={handleSaveZone}
+                  disabled={savingZone}
+                >
+                  {savingZone ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>Save Zone Mode</Text>
+                  )}
+                </Pressable>
               </View>
             )}
           </View>
@@ -917,5 +1136,73 @@ const styles = StyleSheet.create({
     fontFamily: "Jakarta-Regular",
     fontSize: 14,
     lineHeight: 20,
+  },
+  // --- Plan-05 section ---
+  plan05Divider: {
+    height: 1,
+    backgroundColor: "#2A2D35",
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  plan05SectionTitle: {
+    color: colors.textPrimaryDark,
+    fontFamily: "Jakarta-Bold",
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  plan05SectionSubtitle: {
+    color: colors.textSecondaryDark,
+    fontFamily: "Jakarta-Regular",
+    fontSize: 11,
+    marginBottom: 12,
+  },
+  // --- Zone toggle ---
+  zoneToggleDivider: {
+    height: 1,
+    backgroundColor: "#2A2D35",
+    marginVertical: 16,
+  },
+  zoneToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  toggleTrack: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#3A3D45",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  toggleTrackActive: {
+    backgroundColor: colors.primary,
+  },
+  toggleThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.white,
+  },
+  toggleThumbActive: {
+    alignSelf: "flex-end",
+  },
+  zoneWarningBanner: {
+    marginTop: 12,
+    backgroundColor: "rgba(255, 183, 77, 0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 183, 77, 0.30)",
+    borderRadius: 8,
+    padding: 12,
+  },
+  zoneWarningText: {
+    color: colors.amber,
+    fontFamily: "Jakarta-Regular",
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  zoneSaveRow: {
+    marginTop: 12,
+    alignItems: "flex-start",
   },
 });

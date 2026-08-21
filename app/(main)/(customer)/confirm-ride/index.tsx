@@ -8,6 +8,7 @@ import { useRouter } from "expo-router";
 import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
 import { UpfrontTipSlider } from "@/components/UpfrontTipSlider";
 import CustomButton from "@/components/CustomButton";
+import ScheduleRideSheet from "@/components/ScheduleRideSheet";
 import { useEffect, useState, Fragment } from "react";
 import { useRiderStore, FareEstimate, DiscountOption, DiscountType } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
@@ -49,6 +50,7 @@ const ConfirmRidePage = () => {
     setSearchingRideId,
     setRideStatus,
     scheduledAt,
+    setScheduledAt,
     selectedPrefIds,
     selectedDiscount,
     setSelectedDiscount,
@@ -60,12 +62,14 @@ const ConfirmRidePage = () => {
   const [bookForOther, setBookForOther] = useState(false);
   const [otherName, setOtherName] = useState("");
   const [otherPhone, setOtherPhone] = useState("");
+  const [otherConsent, setOtherConsent] = useState(false);
   const [upfrontTip, setUpfrontTip] = useState(0);
   const [stops, setStops] = useState<{ lat: number; lng: number; address: string }[]>(storeStops);
   const [showStopModal, setShowStopModal] = useState(false);
   const [preferFemale, setPreferFemale] = useState(false);
   const [refreshedEstimate, setRefreshedEstimate] = useState<FareEstimate | null>(null);
   const [pendingFeeDeduction, setPendingFeeDeduction] = useState<{ remaining: number } | null>(null);
+  const [scheduleLater, setScheduleLater] = useState(false);
 
   const selectedEstimate = estimates.find(
     (e) => e.vehicle_type === selectedVehicleType,
@@ -209,6 +213,11 @@ const ConfirmRidePage = () => {
       setRequesting(false);
       return;
     }
+    if (bookForOther && !otherConsent) {
+      Alert.alert("Consent Required", "Please confirm the passenger has consented to receive an SMS with ride tracking details.");
+      setRequesting(false);
+      return;
+    }
     setRequesting(true);
     try {
       const endpoint = scheduledAt ? `${API_URL}/api/ride/schedule` : `${API_URL}/api/ride/request`;
@@ -233,6 +242,7 @@ const ConfirmRidePage = () => {
             selectedPrefIds.length > 0 ? selectedPrefIds : undefined,
           secondary_rider_name: bookForOther ? otherName.trim() : undefined,
           secondary_rider_phone: bookForOther ? otherPhone.trim() : undefined,
+          secondary_rider_consent: bookForOther ? otherConsent : undefined,
           upfront_tip_bdt: upfrontTip > 0 ? upfrontTip * 100 : undefined,
           stops: stops.length > 0 ? stops : undefined,
           female_driver_preference: preferFemale ? true : undefined,
@@ -262,7 +272,7 @@ const ConfirmRidePage = () => {
         });
         setSearchingRideId(data.ride_id);
         setRideStatus("finding");
-        router.replace("/(main)/(customer)/finding-driver");
+        router.replace(scheduledAt ? "/(main)/(customer)/ride-scheduled" : "/(main)/(customer)/finding-driver");
       } else {
         Alert.alert(
           "Request Failed",
@@ -327,7 +337,8 @@ const ConfirmRidePage = () => {
                     color: colors.primary,
                   }}
                 >
-                  {new Date(scheduledAt).toLocaleTimeString("en-GB", {
+                  {new Date(scheduledAt).toLocaleString("en-GB", {
+                    timeZone: "Asia/Dhaka",
                     hour: "2-digit",
                     minute: "2-digit",
                     hour12: false,
@@ -506,6 +517,20 @@ const ConfirmRidePage = () => {
               placeholder="Passenger name" placeholderTextColor={colors.textSecondaryDark} value={otherName} onChangeText={setOtherName} />
             <TextInput style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, fontFamily: fonts.body, color: textPrimary }}
               placeholder="01XXXXXXXXX" placeholderTextColor={colors.textSecondaryDark} keyboardType="numeric" value={otherPhone} onChangeText={setOtherPhone} />
+            <TouchableOpacity
+              onPress={() => setOtherConsent(!otherConsent)}
+              style={{ flexDirection: "row", alignItems: "flex-start", marginTop: 8 }}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: otherConsent }}
+              accessibilityLabel="Confirm passenger consent for SMS"
+            >
+              <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, marginTop: 1, backgroundColor: otherConsent ? colors.primary : "transparent", borderColor: otherConsent ? colors.primary : border }}>
+                {otherConsent && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
+              </View>
+              <Text style={{ fontSize: 13, fontFamily: fonts.body, color: textSecondary, flex: 1, lineHeight: 18 }}>
+                I confirm the passenger has consented to receive an SMS with ride tracking details.
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -518,6 +543,44 @@ const ConfirmRidePage = () => {
           </View>
           <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>Prefer female driver</Text>
         </TouchableOpacity>
+
+        {/* Schedule for later toggle — §R1/S4 */}
+        <TouchableOpacity
+          onPress={() => {
+            const next = !scheduleLater;
+            setScheduleLater(next);
+            if (!next) {
+              // Turning OFF: clear any scheduled time so the request goes
+              // through the immediate ride path.
+              setScheduledAt(null);
+            }
+          }}
+          style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel={scheduleLater ? "Disable schedule for later" : "Enable schedule for later"}
+        >
+          <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: scheduleLater ? colors.primary : "transparent", borderColor: scheduleLater ? colors.primary : border }}>
+            {scheduleLater && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
+          </View>
+          <Ionicons name="time-outline" size={16} color={scheduleLater ? colors.primary : textSecondary} style={{ marginRight: 6 }} />
+          <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>Schedule for later</Text>
+        </TouchableOpacity>
+
+        {/* ScheduleRideSheet — inline when toggle is ON */}
+        {scheduleLater && (
+          <View style={{ marginBottom: 16 }}>
+            <ScheduleRideSheet
+              onConfirm={(iso) => {
+                setScheduledAt(iso);
+              }}
+              onClose={() => {
+                setScheduleLater(false);
+                setScheduledAt(null);
+              }}
+              initialDate={scheduledAt ? new Date(scheduledAt) : null}
+            />
+          </View>
+        )}
 
         {stops.length < 2 && (
           <TouchableOpacity onPress={() => setShowStopModal(true)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, marginBottom: 8 }}>
@@ -533,7 +596,7 @@ const ConfirmRidePage = () => {
         ))}
 
         <CustomButton
-          title={requesting ? "Requesting..." : "Request Ride"}
+          title={requesting ? "Requesting..." : scheduledAt ? "Schedule Ride" : "Request Ride"}
           onPress={handleRequestRide}
           disabled={requesting || !selectedVehicleType}
           className="w-full mt-auto"

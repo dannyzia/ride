@@ -255,19 +255,51 @@ const ReachCustomer = () => {
     // LOW-16: if the socket is dead the ride:arrived message never lands — the
     // rider never gets the notification and the pin flow depends on the rider
     // app polling. Don't advance silently; surface it and let the driver retry.
+    // M-6: wait for server ack before navigating to enter-otp.
     if (!ws || ws.readyState !== WebSocket.OPEN || !activeRideId) {
       Alert.alert("Connection Lost", "Not connected to the server. Returning home.", [
         { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
       ]);
       return;
     }
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const ackPromise = new Promise<void>((resolve, reject) => {
+      const handler = (event: MessageEvent) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "ride:arrived" && msg.ride_id === activeRideId) {
+            ws.removeEventListener("message", handler);
+            if (timeoutId) clearTimeout(timeoutId);
+            resolve();
+          }
+        } catch {
+          // ignore
+        }
+      };
+      ws.addEventListener("message", handler);
+      timeoutId = setTimeout(() => {
+        ws.removeEventListener("message", handler);
+        reject(new Error("Server did not acknowledge ride:arrived"));
+      }, 5000);
+    });
+
     ws.send(
       JSON.stringify({
         type: "ride:arrived",
         ride_id: activeRideId,
       }),
     );
-    router.replace("/(main)/(rider)/enter-otp");
+
+    ackPromise
+      .then(() => {
+        router.replace("/(main)/(rider)/enter-otp");
+      })
+      .catch(() => {
+        Alert.alert("Connection Lost", "Server did not acknowledge. Please try again.", [
+          { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+        ]);
+      });
   };
 
   const rideDetails = giveRideDetails(activeRideId!);

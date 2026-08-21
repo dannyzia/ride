@@ -197,7 +197,14 @@ declare interface DriverDetails {
 
 declare interface WSStore {
     ws: WebSocket | null;
-    setWebSocket: (ws: WebSocket) => void;
+    /** Identity of the socket's authenticated owner. Adoption guards (audit
+     *  H-1): a socket left in the slot by another role or a previous
+     *  sign-in must never be adopted by the next session. */
+    socketRole: 'rider' | 'driver' | null;
+    socketUserId: string | null;
+    setWebSocket: (ws: WebSocket, role: 'rider' | 'driver', userId: string) => void;
+    /** Sign-out teardown: clears the slot and its identity tag. */
+    resetWebSocket: () => void;
 }
 
 declare interface RideOfferDetails {

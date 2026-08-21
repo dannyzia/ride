@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       ORDER BY e.entry_date, e.entry_number
     `);
 
-    const data = rows as any as any[];
+    const data = rows as any[];
 
     if (format === 'csv') {
       const header = 'Entry Number,Date,Reference Type,Description,Account Code,Account Name,Debit (BDT),Credit (BDT)\n';

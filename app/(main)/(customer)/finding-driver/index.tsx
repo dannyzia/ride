@@ -188,12 +188,30 @@ export default function FindingDriver() {
     }
   }, [pickupLat, pickupLng, selectedVehicleType]);
 
-  const handleCancel = () => {
-    clearRoute();
-    setSearchingRideId(null);
-    setRideStatus("idle");
-    setSelectedVehicleType(null);
-    router.back();
+  const handleCancel = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const rideId = useRiderStore.getState().searchingRideId;
+      if (rideId && token) {
+        await fetch(`${API_URL}/api/ride/${rideId}/cancel`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({}),
+        });
+      }
+    } catch {
+      // non-blocking: still clear local state
+    } finally {
+      clearRoute();
+      setSearchingRideId(null);
+      setRideStatus("idle");
+      setSelectedVehicleType(null);
+      router.back();
+    }
   };
 
   useEffect(() => {

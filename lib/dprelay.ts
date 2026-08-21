@@ -12,6 +12,54 @@ export interface DpRelayVerifyOtpResponse {
 
 const FETCH_TIMEOUT_MS = 10_000;
 
+// ── SOS-only hourly circuit breaker ──────────────────────────────────
+// Scoped exclusively to SOS SMS traffic so OTP remains unaffected.
+// When the breaker trips (>= SOS_MAX_FAILURES_PER_HOUR failures within
+// an hour window), sendSmsSos returns false without hitting the wire.
+// The breaker self-resets after SOS_COOLDOWN_MS.
+const SOS_MAX_FAILURES_PER_HOUR = 5;
+const SOS_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+let sosFailureCount = 0;
+let sosWindowStart = Date.now();
+let sosTripped = false;
+let sosTrippedAt = 0;
+
+function recordSosFailure(): boolean {
+  const now = Date.now();
+  if (sosTripped && now - sosTrippedAt < SOS_COOLDOWN_MS) {
+    return false; // still tripped
+  }
+  if (sosTripped) {
+    // Cooldown expired — reset
+    sosTripped = false;
+    sosFailureCount = 0;
+    sosWindowStart = now;
+  }
+  if (now - sosWindowStart > SOS_COOLDOWN_MS) {
+    sosFailureCount = 0;
+    sosWindowStart = now;
+  }
+  sosFailureCount++;
+  if (sosFailureCount >= SOS_MAX_FAILURES_PER_HOUR) {
+    sosTripped = true;
+    sosTrippedAt = now;
+    logger.warn("[dprelay] SOS circuit breaker tripped", { failures: sosFailureCount });
+    return false;
+  }
+  return true;
+}
+
+function isSosCircuitOpen(): boolean {
+  if (!sosTripped) return false;
+  if (Date.now() - sosTrippedAt >= SOS_COOLDOWN_MS) {
+    sosTripped = false;
+    sosFailureCount = 0;
+    sosWindowStart = Date.now();
+    return false;
+  }
+  return true;
+}
+
 async function dpRelayFetch(
   path: string,
   body: Record<string, unknown>,
@@ -78,6 +126,37 @@ export async function sendSms(
     const errorText = await response.text();
     logger.error("[dprelay] sendSms failed", response.status, errorText);
     throw new Error(`dpRelay sendSms failed: ${response.status}`);
+  }
+}
+
+/**
+ * SOS-scoped SMS with circuit breaker. Returns true if SMS was sent
+ * successfully, false if the circuit is open or SMS failed.
+ * The caller must log failures and never throw — SOS delivery is
+ * best-effort; the alert row is already persisted.
+ */
+export async function sendSmsSos(
+  phoneNumber: string,
+  message: string,
+): Promise<boolean> {
+  if (isSosCircuitOpen()) {
+    logger.warn("[dprelay] SOS SMS skipped — circuit breaker open");
+    return false;
+  }
+  try {
+    const normalized = normalizeBdPhone(phoneNumber);
+    const response = await dpRelayFetch("/sendSms", { phoneNumber: normalized, message });
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error("[dprelay] sendSmsSos failed", response.status, errorText);
+      recordSosFailure();
+      return false;
+    }
+    return true;
+  } catch (e) {
+    logger.error("[dprelay] sendSmsSos error", e);
+    recordSosFailure();
+    return false;
   }
 }
 

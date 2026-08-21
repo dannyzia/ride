@@ -61,7 +61,9 @@ function isSosAlert(value: unknown): value is SosAlert {
 }
 
 function attachListeners(sock: WebSocket): void {
-  sock.addEventListener("message", (event) => {
+  // on* assignment (not addEventListener) so teardownAdminSocket() can fully
+  // detach by nulling the handler properties.
+  sock.onmessage = (event) => {
     let msg: unknown;
     try {
       msg = JSON.parse(String(event.data));
@@ -85,7 +87,7 @@ function attachListeners(sock: WebSocket): void {
       sock.close();
     }
     // All other message types (auth:ok, unknown) are ignored.
-  });
+  };
 }
 
 async function connectAdminSocket(): Promise<WebSocket | null> {
@@ -107,16 +109,16 @@ async function connectAdminSocket(): Promise<WebSocket | null> {
 
   try {
     const sock = new WebSocket(WS_URL);
-    sock.addEventListener("open", () => {
+    sock.onopen = () => {
       reconnectAttempts = 0;
       sock.send(
         JSON.stringify({ type: "auth:hello", access_token: token, role: "admin" }),
       );
-    });
-    sock.addEventListener("close", () => {
+    };
+    sock.onclose = () => {
       if (socket === sock) socket = null;
       scheduleReconnect();
-    });
+    };
     attachListeners(sock);
     socket = sock;
     return sock;
@@ -151,4 +153,32 @@ export function ensureAdminSocket(onAlert: AlertListener): () => void {
   return () => {
     listeners.delete(onAlert);
   };
+}
+
+/**
+ * Sign-out teardown (audit H-1 parity): stop the reconnect loop, detach
+ * handlers, close the socket, and drop every listener. Without this, the
+ * module singleton outlives the Supabase session and keeps receiving SOS
+ * broadcasts (and reconnecting with a dead token) after sign-out.
+ */
+export function teardownAdminSocket(): void {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  reconnectAttempts = 0;
+  listeners.clear();
+  const sock = socket;
+  socket = null;
+  if (sock) {
+    sock.onopen = null;
+    sock.onclose = null;
+    sock.onerror = null;
+    sock.onmessage = null;
+    try {
+      sock.close();
+    } catch {
+      // already closed / closing
+    }
+  }
 }

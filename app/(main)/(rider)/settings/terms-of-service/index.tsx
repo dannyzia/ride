@@ -23,6 +23,9 @@ export default function DriverTerms() {
         <View className="w-12" />
       </View>
       <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingVertical: 16, gap: 12 }}>
+        <View className="rounded-lg px-4 py-3" style={{ backgroundColor: 'rgba(255, 183, 77, 0.12)', borderWidth: 1, borderColor: 'rgba(255, 183, 77, 0.3)' }}>
+          <Text className="text-[12px] font-JakartaSemiBold" style={{ color: colors.amber }}>⏳ Pending owner review — content may change before launch</Text>
+        </View>
         <Text className="text-sm font-Jakarta leading-6" style={{ color: textSecondary }}>
           By using the Ride platform, you agree to the following terms and conditions.{"\n\n"}
           1. You must be at least 18 years old and possess a valid driver&apos;s license.{"\n\n"}

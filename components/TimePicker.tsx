@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { colors, radii, spacing } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { dhakaTodayKey, bdtDayBoundariesUtc } from "@/lib/time";
 
 interface TimePickerProps {
   /** Selected date — slots are generated for this day (null = today). */
@@ -12,8 +13,19 @@ interface TimePickerProps {
 }
 
 const SLOT_MS = 30 * 60 * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
 const MIN_LEAD_MS = 30 * 60 * 1000;
+
+/** Extract BDT minutes-since-midnight from a Date stored as a BDT slot. */
+function bdtMinutes(slotUtcMs: number, bdtMidnightUtcMs: number): number {
+  return Math.round((slotUtcMs - bdtMidnightUtcMs) / 60000);
+}
+
+/** Format a BDT time label from minutes-since-midnight. */
+function bdtTimeLabel(minutesSinceMidnight: number): string {
+  const h = Math.floor(minutesSinceMidnight / 60);
+  const m = minutesSinceMidnight % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
 
 export default function TimePicker({ date, selectedTime, onSelectTime }: TimePickerProps) {
   const isDark = useIsDark();
@@ -23,27 +35,39 @@ export default function TimePicker({ date, selectedTime, onSelectTime }: TimePic
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
-  // 30-minute slots from the day's start; on "today" only slots >= now + 30 min
-  // (the server's minimum lead) are offered — a slot grid can't produce too_soon.
-  const slots = useMemo(() => {
-    const base = date ? new Date(date) : new Date();
-    base.setHours(0, 0, 0, 0);
-    const dayStart = base.getTime();
+  // 30-minute slots anchored to the selected Dhaka day's midnight (UTC).
+  // On "today" in BDT, only slots >= BDT now + 30 min are offered.
+  const { slots, bdtMidnightMs } = useMemo(() => {
+    const dayKey = dhakaTodayKey(date ?? new Date());
+    const boundaries = bdtDayBoundariesUtc(dayKey);
+    if (!boundaries) return { slots: [], bdtMidnightMs: 0 };
+    const dayStart = boundaries.start.getTime(); // UTC ms of BDT midnight
+    const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+
+    // Is this the current BDT day?
     const now = Date.now();
-    const isToday = now >= dayStart && now < dayStart + DAY_MS;
-    let firstSlot = dayStart;
+    const todayKey = dhakaTodayKey();
+    const isToday = dayKey === todayKey;
+
+    // First slot: on today, advance to BDT now + 30 min, rounded up to the next 30-min boundary
+    let firstSlotMs = dayStart;
     if (isToday) {
-      firstSlot = Math.ceil((now + MIN_LEAD_MS) / SLOT_MS) * SLOT_MS;
+      firstSlotMs = Math.ceil((now + MIN_LEAD_MS) / SLOT_MS) * SLOT_MS;
+      // Clamp to this day's range
+      if (firstSlotMs < dayStart) firstSlotMs = dayStart;
     }
+
     const out: Date[] = [];
-    for (let t = firstSlot; t < dayStart + DAY_MS; t += SLOT_MS) {
+    for (let t = firstSlotMs; t < dayEnd; t += SLOT_MS) {
       out.push(new Date(t));
     }
-    return out;
+    return { slots: out, bdtMidnightMs: dayStart };
   }, [date]);
 
-  const selectedMinutes = selectedTime
-    ? selectedTime.getHours() * 60 + selectedTime.getMinutes()
+  // selectedTime is a Date that was passed via onSelectTime — it's one of
+  // our slot Dates, so we compare by BDT minutes since midnight.
+  const selectedMins = selectedTime && bdtMidnightMs > 0
+    ? bdtMinutes(selectedTime.getTime(), bdtMidnightMs)
     : -1;
 
   if (slots.length === 0) {
@@ -65,12 +89,9 @@ export default function TimePicker({ date, selectedTime, onSelectTime }: TimePic
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
       {slots.map((slot) => {
-        const minutes = slot.getHours() * 60 + slot.getMinutes();
-        const isSelected = minutes === selectedMinutes;
-        const label = slot.toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+        const mins = bdtMinutes(slot.getTime(), bdtMidnightMs);
+        const isSelected = mins === selectedMins;
+        const label = bdtTimeLabel(mins);
         return (
           <TouchableOpacity
             key={slot.toISOString()}

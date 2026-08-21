@@ -32,11 +32,11 @@ import {
   subscriptions,
   callLedger,
   pricing,
-  zones,
   rideStops,
 } from "../src/db/schema";
 import { eq, and, inArray, isNull, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { getZoneForLocation } from "../lib/zone";
 import { getH3Cell, getH3Ring } from "../lib/h3";
 import { calculateFare, haversineKm } from "../lib/fareCalc";
 import { VEHICLE_TYPE_VALUES } from "../lib/vehicleTypes";
@@ -92,6 +92,12 @@ const OFFER_LOCK_TTL_MS = 10_000;
 const OFFER_LOCK_SWEEP_MS = 30_000; // periodic sweep threshold
 const STALE_DRIVER_TIMEOUT_MS = 90_000;
 const CLEANUP_INTERVAL_MS = 60_000;
+
+// ── Zone Hysteresis (3-beat) ──────────────────────────────────────────────
+// Drivers at zone borders flicker between zones on consecutive heartbeats.
+// Track consecutive beats in the same pending zone; only commit to DB after 3.
+const ZONE_HYSTERESIS_BEATS = 3;
+const zoneHysteresis = new Map<string, { pending: string | null; beats: number }>();
 
 // ── DB Persist Throttle (30s per driver) ───────────────────────────────────
 const lastPersist = new Map<string, number>();
@@ -633,7 +639,7 @@ wss.on("connection", (ws: WebSocket) => {
 
         // Always update in-memory H3 index for accurate dispatch scoring
         const [driverRow] = await db
-          .select({ vehicle_type: drivers.vehicle_type })
+          .select({ vehicle_type: drivers.vehicle_type, zone_id: drivers.zone_id })
           .from(drivers)
           .where(eq(drivers.id, client.driverId))
           .limit(1);
@@ -648,12 +654,62 @@ wss.on("connection", (ws: WebSocket) => {
         if (now - lastPersist < 30_000) break;
         setLastPersist(client.driverId, now);
 
-        // Backfill zone_id — only one active zone at a time
-        const [activeZone] = await db
-          .select({ id: zones.id })
-          .from(zones)
-          .where(eq(zones.is_active, true))
-          .limit(1);
+        // Z-4 + hysteresis: Resolve driver zone from heartbeat coordinates.
+        // Uses getZoneForLocation which respects zone_multi_active_enabled:
+        // - When multi-active: finds the smallest containing zone
+        // - When single-active: falls back to getActiveZone()
+        // Returns null zone_id when outside all zones or none configured.
+        // 3-beat hysteresis: zone only changes after 3 consecutive heartbeats
+        // resolve to the same zone, preventing border flicker.
+        let resolvedZoneId: string | null = null;
+        try {
+          const zoneResult = await getZoneForLocation(lat, lng);
+          resolvedZoneId = zoneResult.zone?.id ?? null;
+        } catch (e: unknown) {
+          logger.error('[ws] zone resolution failed for driver heartbeat', e);
+        }
+
+        // Fetch current DB zone for hysteresis comparison
+        const currentZoneId: string | null = driverRow?.zone_id ?? null;
+
+        // Outside all zones → immediately set null (no hysteresis needed)
+        let finalZoneId = currentZoneId;
+        if (resolvedZoneId === null) {
+          if (currentZoneId !== null) {
+            logger.info('[ws] driver left all zones — clearing zone_id', {
+              driverId: client.driverId,
+              prevZone: currentZoneId,
+            });
+            finalZoneId = null;
+          }
+          zoneHysteresis.delete(client.driverId);
+        } else if (resolvedZoneId === currentZoneId) {
+          // Same zone as DB — no change, clear hysteresis state
+          zoneHysteresis.delete(client.driverId);
+        } else {
+          // Different zone from DB — apply hysteresis
+          const hyst = zoneHysteresis.get(client.driverId);
+          if (hyst && hyst.pending === resolvedZoneId) {
+            // Same pending zone as last beat — increment
+            hyst.beats += 1;
+            if (hyst.beats >= ZONE_HYSTERESIS_BEATS) {
+              logger.info('[ws] zone hysteresis threshold reached — updating', {
+                driverId: client.driverId,
+                from: currentZoneId,
+                to: resolvedZoneId,
+                beats: hyst.beats,
+              });
+              finalZoneId = resolvedZoneId;
+              zoneHysteresis.delete(client.driverId);
+            }
+          } else {
+            // New or different pending zone — reset counter
+            zoneHysteresis.set(client.driverId, {
+              pending: resolvedZoneId,
+              beats: 1,
+            });
+          }
+        }
 
         await db
           .update(drivers)
@@ -662,7 +718,7 @@ wss.on("connection", (ws: WebSocket) => {
             last_location_lng: String(lng),
             last_location_at: new Date(),
             h3_cell_res9: cell,
-            zone_id: activeZone?.id ?? null,
+            zone_id: finalZoneId,
           })
           .where(eq(drivers.id, client.driverId));
         break;
@@ -1262,7 +1318,10 @@ async function handleDisconnect(client: WSClient) {
     // Same guard for riders
     if (connectedRiders.get(client.userId) === client) {
       connectedRiders.delete(client.userId);
-      // Cancel orphaned dispatching rides on rider disconnect
+      // Cancel orphaned dispatching rides on rider disconnect, but only
+      // if the ride has been in dispatching status for >5 seconds to avoid
+      // racing with a driver accept that lands between the query and the
+      // dispatch pipeline status update.
       await db
         .update(rides)
         .set({ status: "cancelled", cancelled_by: "system" })
@@ -1270,6 +1329,7 @@ async function handleDisconnect(client: WSClient) {
           and(
             eq(rides.user_id, client.userId),
             eq(rides.status, "dispatching"),
+            sql`${rides.updated_at} < now() - interval '5 seconds'`,
           ),
         );
     }
@@ -1288,6 +1348,9 @@ async function handleDisconnect(client: WSClient) {
 }
 
 async function handleDriverDisconnect(driverId: string) {
+  // Clean up zone hysteresis state
+  zoneHysteresis.delete(driverId);
+
   // Close online session
   await db
     .update(driverOnlineSessions)

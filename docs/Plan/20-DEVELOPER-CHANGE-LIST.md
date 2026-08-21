@@ -644,7 +644,7 @@ async function seed() {
       ('brta_max_wait_per_2min_bdt', '850',   now())    -- BRTA wait ceiling: 850 paisa/2min = ৳8.50
     ON CONFLICT (key) DO NOTHING;
   `);
-  console.log('platform_config seeded (5 keys)');
+  console.log('platform_config seeded (6 keys)');
 }
 seed().catch(console.error);
 ```

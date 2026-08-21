@@ -35,15 +35,17 @@ function scheduleReconnect(): void {
 
 async function connectRiderSocket(): Promise<WebSocket | null> {
   let token: string | null = null;
+  let userId: string | null = null;
   try {
     const {
       data: { session },
     } = await supabase.auth.getSession();
     token = session?.access_token ?? null;
+    userId = session?.user?.id ?? null;
   } catch (e) {
     logger.error("[riderSocket] session fetch failed", e);
   }
-  if (!token) {
+  if (!token || !userId) {
     // No session — nothing to connect with. Do NOT schedule a reconnect loop;
     // the next ensureRiderSocket() call (session start / tracking mount) is
     // the retry for the logged-out case.
@@ -52,16 +54,18 @@ async function connectRiderSocket(): Promise<WebSocket | null> {
 
   try {
     const socket = new WebSocket(WS_URL);
-    useWSStore.getState().setWebSocket(socket);
-    socket.addEventListener("open", () => {
+    // Tag the socket's owner so later adoption checks can reject a socket
+    // left behind by another role or a previous sign-in (audit H-1).
+    useWSStore.getState().setWebSocket(socket, "rider", userId);
+    socket.onopen = () => {
       reconnectAttempts = 0;
       socket.send(
         JSON.stringify({ type: "auth:hello", access_token: token, role: "rider" }),
       );
-    });
-    socket.addEventListener("close", () => {
+    };
+    socket.onclose = () => {
       scheduleReconnect();
-    });
+    };
     return socket;
   } catch (e) {
     logger.error("[riderSocket] connect failed", e);
@@ -70,15 +74,67 @@ async function connectRiderSocket(): Promise<WebSocket | null> {
   }
 }
 
+/**
+ * Sign-out / session-change teardown (audit H-1): stop the reconnect loop,
+ * detach handlers, close whatever socket occupies the shared WS slot (the
+ * slot is single — it may hold a rider OR driver socket after a role
+ * switch), and clear the store. Called by authCleanup() on every sign-out
+ * path and by ensureRiderSocket() when the slot holds a foreign socket.
+ */
+export function teardownRiderSocket(): void {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  reconnectAttempts = 0;
+  const { ws } = useWSStore.getState();
+  if (ws) {
+    ws.onopen = null;
+    ws.onclose = null;
+    ws.onerror = null;
+    ws.onmessage = null;
+    try {
+      ws.close();
+    } catch {
+      // already closed / closing
+    }
+  }
+  useWSStore.getState().resetWebSocket();
+}
+
 /** Return the live rider socket from the store, creating one if absent. */
 export async function ensureRiderSocket(): Promise<WebSocket | null> {
-  const existing = useWSStore.getState().ws;
-  if (
-    existing &&
-    (existing.readyState === WebSocket.OPEN ||
-      existing.readyState === WebSocket.CONNECTING)
-  ) {
-    return existing;
+  const state = useWSStore.getState();
+  const existing = state.ws;
+  if (existing && state.socketRole === "rider") {
+    if (
+      existing.readyState === WebSocket.OPEN ||
+      existing.readyState === WebSocket.CONNECTING
+    ) {
+      // Adopt ONLY our own socket: it must belong to the current session's
+      // user (audit H-1). A socket surviving from a previous sign-in is
+      // torn down and replaced, never reused.
+      let currentUserId: string | null = null;
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        currentUserId = session?.user?.id ?? null;
+      } catch {
+        currentUserId = null;
+      }
+      if (currentUserId !== null && state.socketUserId === currentUserId) {
+        return existing;
+      }
+      teardownRiderSocket();
+    } else {
+      // Closed/closing rider socket — clear the dead slot.
+      useWSStore.getState().resetWebSocket();
+    }
+  } else if (existing) {
+    // The slot holds a driver (or otherwise foreign) socket from a role
+    // switch on the same device — replace it with a rider socket.
+    teardownRiderSocket();
   }
   if (connecting) return connecting;
 

@@ -17,6 +17,8 @@ import { colors, spacing, radii } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
+import { enqueueSosAlert } from "@/lib/sosQueue";
+import NetInfo from "@react-native-community/netinfo";
 
 interface SOSContact {
   label: string;
@@ -35,6 +37,7 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
   const [contacts, setContacts] = useState<SOSContact[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [queued, setQueued] = useState(false);
   const isDark = useIsDark();
 
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -95,18 +98,30 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
         // Fire the alert best-effort in the background — the sos_alerts row
         // feeds the admin SOS dashboard, but a failed fetch here must never
         // fail the call the user just made.
+        // C-4 / SOS Queue: if offline, queue the alert for retry on reconnect
+        // instead of silently dropping it.
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          const token = session?.access_token;
-          if (token) {
-            await fetch(`${SOS_API_URL}/api/sos/alert`, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ lat, lng }),
-            }).catch(() => {});
+          const net = await NetInfo.fetch();
+          const isOnline = net.isConnected === true;
+          if (!isOnline) {
+            const result = await enqueueSosAlert({ lat, lng });
+            if (result.queued) {
+              setQueued(true);
+              logger.info("[SOS] alert queued (offline)", { id: result.id, lat, lng });
+            }
+          } else {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (token) {
+              await fetch(`${SOS_API_URL}/api/sos/alert`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ lat, lng }),
+              }).catch(() => {});
+            }
           }
         } catch {
           // Non-blocking
@@ -123,6 +138,7 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
 
   const handleDismiss = useCallback(() => {
     setVisible(false);
+    setQueued(false);
   }, []);
 
   return (
@@ -270,6 +286,31 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
             />
           )}
 
+          {queued && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: spacing.sm,
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.md,
+                borderRadius: radii.md,
+                backgroundColor: colors.amberLight,
+              }}
+            >
+              <Ionicons name="cloud-offline-outline" size={16} color={colors.amber} style={{ marginRight: spacing.xs }} />
+              <Text
+                style={{
+                  fontFamily: "Jakarta-Medium",
+                  fontSize: 13,
+                  color: colors.amber,
+                }}
+              >
+                Alert queued — will send when online
+              </Text>
+            </View>
+          )}
           <TouchableOpacity
             onPress={handleDismiss}
             disabled={sending}

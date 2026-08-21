@@ -18,6 +18,7 @@ import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { authCleanup } from "@/lib/authCleanup";
 
 const DELETED_ITEMS = [
   "Your name, phone number and email",
@@ -68,6 +69,7 @@ export default function SettingsDeleteAccount() {
         setError(data.message || data.error || "Failed to delete account");
         return;
       }
+      await authCleanup();
       await supabase.auth.signOut();
     } catch (err) {
       logger.error("[delete-account] failed", err);

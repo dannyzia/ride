@@ -617,6 +617,7 @@ export const rides = pgTable(
     secondary_rider_phone: varchar("secondary_rider_phone", { length: 20 }),
     is_booked_for_someone_else: boolean("is_booked_for_someone_else").default(false),
     reminder_sent: boolean("reminder_sent").default(false),
+    reminder_60_sent: boolean("reminder_60_sent").default(false),
     cancellation_fee_bdt: integer("cancellation_fee_bdt"),
     cancellation_compensation_driver_id: uuid("cancellation_compensation_driver_id")
       .references(() => drivers.id),
@@ -690,6 +691,8 @@ export const rides = pgTable(
       .on(t.promo_code_id)
       .where(sql`promo_code_id IS NOT NULL`),
     index("rides_vehicle_type_idx").on(t.vehicle_type),
+    // Z-1: zone+time composite for forecast aggregation and zone P&L queries
+    index("rides_zone_created_idx").on(t.zone_id, t.created_at),
   ],
 );
 
@@ -910,10 +913,11 @@ export const zones = pgTable(
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
-  (_t) => [
-    uniqueIndex("zones_one_active")
-      .on(sql`(1)`)
-      .where(sql`is_active = true`),
+  (t) => [
+    // Z-1: replaced zones_one_active partial unique with plain index
+    // to permit multiple active zones. Drop SQL:
+    //   DROP INDEX zones_one_active;
+    index("zones_active_idx").on(t.is_active),
   ],
 );
 
@@ -1591,11 +1595,13 @@ export const notifications = pgTable(
     sent_at: timestamptz("sent_at").notNull().defaultNow(),
     delivered_at: timestamptz("delivered_at"),
     failed_reason: varchar("failed_reason", { length: 255 }),
+    idempotency_key: varchar("idempotency_key", { length: 128 }),
     created_at: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
     index("notifications_user_idx").on(t.user_id),
     index("notifications_sent_idx").on(t.sent_at),
+    uniqueIndex("notifications_idempotency_idx").on(t.idempotency_key),
   ],
 );
 
@@ -1931,7 +1937,13 @@ export const demandForecasts = pgTable("demand_forecasts", {
   predicted_supply: integer("predicted_supply").notNull(),
   confidence_score: numeric("confidence_score", { precision: 4, scale: 2 }),
   created_at: timestamptz("created_at").notNull().defaultNow(),
-});
+},
+(t) => [
+  // Z-1: unique composite for forecast upsert idempotency
+  uniqueIndex("demand_forecasts_zone_hour_idx").on(t.zone_id, t.forecast_hour),
+  index("demand_forecasts_hour_idx").on(t.forecast_hour),
+],
+);
 
 // AI Demand: Driver Repositioning Nudges
 export const driverRepositioningNudges = pgTable("driver_repositioning_nudges", {

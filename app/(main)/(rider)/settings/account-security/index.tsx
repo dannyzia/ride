@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { authCleanup } from "@/lib/authCleanup";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
@@ -20,7 +21,19 @@ export default function DriverSettingsAccount() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState("");
+
+  // Audit H-1: the driver app previously had NO sign-out surface at all.
+  // authCleanup() tears down the WebSocket singleton + all stores before the
+  // session dies; the auth gate handles the redirect (never navigate
+  // manually — binding sign-out rule, doc 03 §3).
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    authCleanup();
+    await supabase.auth.signOut();
+  };
 
   const handleDelete = async () => {
     setDeleting(true); setError("");
@@ -35,8 +48,8 @@ export default function DriverSettingsAccount() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Failed to delete account"); setDeleting(false); return; }
+      authCleanup();
       await supabase.auth.signOut();
-      router.replace("/(auth)/phone-entry");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");
       logger.error("Account delete failed", err);
@@ -70,12 +83,47 @@ export default function DriverSettingsAccount() {
         <TouchableOpacity
           className="p-[14px] border rounded-[12px] mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
+          onPress={() => setShowSignOutConfirm(true)}
+        >
+          <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Sign out</Text>
+          <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Disconnect and return to the login screen</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className="p-[14px] border rounded-[12px] mb-3"
+          style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => setShowDeleteConfirm(true)}
         >
           <Text className="text-[15px] font-JakartaBold text-goDanger">Delete account</Text>
           <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Permanently remove your account and all data</Text>
         </TouchableOpacity>
       </ScrollView>
+      <Modal visible={showSignOutConfirm} transparent animationType="fade">
+        <View className="flex-1 bg-black/50 items-center justify-center px-[24px]">
+          <View className="rounded-[16px] p-[24px] w-full" style={{ backgroundColor: surfaceBg }}>
+            <Text className="text-[18px] font-JakartaBold mb-2" style={{ color: textPrimary }}>Sign Out?</Text>
+            <Text className="text-[14px] font-Jakarta mb-6" style={{ color: textSecondary }}>You will need to sign in again to go back online.</Text>
+            <TouchableOpacity
+              className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3"
+              onPress={handleSignOut}
+              disabled={signingOut}
+            >
+              {signingOut ? (
+                <ActivityIndicator size={20} color="#FFFFFF" />
+              ) : (
+                <Text className="text-[18px] font-JakartaBold text-goWhite">Yes, Sign Out</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="border rounded-full w-full py-[16px] items-center"
+              style={{ borderColor }}
+              onPress={() => { setShowSignOutConfirm(false); }}
+              disabled={signingOut}
+            >
+              <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={showDeleteConfirm} transparent animationType="fade">
         <View className="flex-1 bg-black/50 items-center justify-center px-[24px]">
           <View className="rounded-[16px] p-[24px] w-full" style={{ backgroundColor: surfaceBg }}>

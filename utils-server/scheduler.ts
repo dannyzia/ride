@@ -25,6 +25,7 @@ import {
   promoCodes,
   driverWalletTransactions,
   weatherConditions,
+  sosAlerts,
 } from "../src/db/schema";
 import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte } from "drizzle-orm";
 import { detectStationaryAnomaly } from "../lib/safety";
@@ -37,6 +38,8 @@ import { expireCredits, expireRiderFeeDeductions } from "../lib/walletCashback";
 import { runFraudDetection } from "../lib/fraudDetection";
 import { expireCancellationCredits } from "../lib/cancellationCompensation";
 import { sendNotification } from "../lib/notify";
+import { getPlan05Int } from "@/lib/platformConfig";
+import { upsertDemandForecasts } from "@/lib/forecast";
 
 export function startScheduler(): void {
 
@@ -893,7 +896,43 @@ export function startScheduler(): void {
     }
   }, 6 * 3600_000);
 
-  // ── (21) Scheduled Ride Reminder Push — every 60s ───────────────────
+  // ── (21a) Scheduled Ride Reminder — 60 min — every 60s ───────────────
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const sixtyMin = new Date(now.getTime() + 60 * 60 * 1000);
+      const due = await db
+        .select({ id: rides.id, user_id: rides.user_id })
+        .from(rides)
+        .where(
+          and(
+            eq(rides.status, "scheduled"),
+            eq(rides.reminder_60_sent, false),
+            lte(rides.scheduled_at, sixtyMin),
+            gte(rides.scheduled_at, now),
+          ),
+        );
+      for (const ride of due) {
+        try {
+          await sendNotification(
+            ride.user_id,
+            "reminder",
+            "Ride Coming Up",
+            "Your scheduled ride is in 1 hour. We'll remind you again 15 minutes before.",
+            { ride_id: ride.id },
+            { idempotencyKey: `ride:${ride.id}:reminder_60` },
+          );
+          await db.update(rides).set({ reminder_60_sent: true }).where(eq(rides.id, ride.id));
+        } catch (e) {
+          logger.error("[scheduler] 60-min reminder failed, will retry", { rideId: ride.id, error: e });
+        }
+      }
+    } catch (e: any) {
+      logger.error("[scheduler] 60-min reminder error", e);
+    }
+  }, 60_000);
+
+  // ── (21b) Scheduled Ride Reminder — 15 min — every 60s ───────────────
   setInterval(async () => {
     try {
       const now = new Date();
@@ -917,14 +956,15 @@ export function startScheduler(): void {
             "Ride Coming Up",
             "Your scheduled ride is in 15 minutes. Please be ready.",
             { ride_id: ride.id },
+            { idempotencyKey: `ride:${ride.id}:reminder_15` },
           );
           await db.update(rides).set({ reminder_sent: true }).where(eq(rides.id, ride.id));
         } catch (e) {
-          logger.error("[scheduler] reminder push failed, will retry", { rideId: ride.id, error: e });
+          logger.error("[scheduler] 15-min reminder failed, will retry", { rideId: ride.id, error: e });
         }
       }
     } catch (e: any) {
-      logger.error("[scheduler] reminder push error", e);
+      logger.error("[scheduler] 15-min reminder error", e);
     }
   }, 60_000);
 
@@ -1098,5 +1138,126 @@ export function startScheduler(): void {
     }
   }, 60_000);
 
-  logger.info("[scheduler] started (31 jobs)");
+  // ── (32) SOS auto-resolution — every 60s ─────────────────────────────
+  // Open or acknowledged SOS alerts older than the configured duration are
+  // automatically resolved. Acknowledged alerts are included so that admin-
+  // acknowledged alerts that the user never resolved are not stuck forever.
+  // The creator-only resolve endpoint (sos/resolve) is the primary path;
+  // this is a safety net for when the user can't reach their phone.
+  setInterval(async () => {
+    try {
+      // Configurable auto-resolve duration (default 30 min, platform_config)
+      const resolveSeconds = await getPlan05Int('sos_auto_resolve_seconds');
+      const cutoff = new Date(Date.now() - resolveSeconds * 1000);
+      const resolved = await db
+        .update(sosAlerts)
+        .set({
+          status: "resolved",
+          acknowledged_at: new Date(),
+          // No acknowledged_by — auto-resolved by system
+        })
+        .where(
+          and(
+            or(
+              eq(sosAlerts.status, "open"),
+              eq(sosAlerts.status, "acknowledged"),
+            ),
+            lt(sosAlerts.created_at, cutoff),
+          ),
+        )
+        .returning({ id: sosAlerts.id, user_id: sosAlerts.user_id });
+
+      if (resolved.length > 0) {
+        logger.info("[scheduler] SOS auto-resolved", {
+          count: resolved.length,
+          ids: resolved.map((r) => r.id),
+        });
+        // Notify each user that their SOS was auto-resolved
+        for (const alert of resolved) {
+          try {
+            await sendNotification(
+              alert.user_id,
+              "sos:auto_resolved",
+              "SOS Alert Resolved",
+              "Your SOS alert has been automatically resolved after 30 minutes.",
+              { alert_id: alert.id },
+            );
+          } catch (e) {
+            logger.error("[scheduler] SOS auto-resolve push failed", { alertId: alert.id, error: e });
+          }
+        }
+      }
+    } catch (e) {
+      logger.error("[scheduler] SOS auto-resolution error", e);
+    }
+  }, 60_000);
+
+  // ── (33) Scheduled ride cutoff — every 60s ──────────────────────────────
+  // Scheduled rides whose dispatch_window_end has passed without being
+  // dispatched are cancelled automatically. This prevents stale scheduled
+  // rides from sitting in 'scheduled' status forever.
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const cancelled = await db
+        .update(rides)
+        .set({
+          status: "cancelled",
+          cancelled_by: "system",
+          cancel_reason: "scheduled_cutoff",
+        })
+        .where(
+          and(
+            eq(rides.status, "scheduled"),
+            isNotNull(rides.dispatch_window_end),
+            lt(rides.dispatch_window_end, now),
+          ),
+        )
+        .returning({ id: rides.id, user_id: rides.user_id });
+
+      for (const ride of cancelled) {
+        if (!ride.user_id) continue;
+        try {
+          await sendNotification(
+            ride.user_id,
+            "ride:cancelled",
+            "Scheduled Ride Cancelled",
+            "Your scheduled ride could not find a driver within the dispatch window and has been cancelled.",
+            { ride_id: ride.id },
+          );
+        } catch (e) {
+          logger.error("[scheduler] cutoff cancel push failed", { rideId: ride.id, error: e });
+        }
+      }
+      if (cancelled.length > 0) {
+        logger.info("[scheduler] scheduled ride cutoff completed", {
+          count: cancelled.length,
+        });
+      }
+    } catch (e) {
+      logger.error("[scheduler] scheduled ride cutoff error", e);
+    }
+  }, 60_000);
+
+  // ── (34) Demand forecast upsert — every 60s, fires at the top of each hour ──
+  // Z-6: per active zone, compute predicted demand (7-day trailing avg) and
+  // supply (current online drivers), upsert into demand_forecasts. Prunes
+  // rows older than 14 days. This lights up the heatmap API.
+  let forecastRunning = false;
+  setInterval(async () => {
+    if (forecastRunning) return;
+    const now = new Date();
+    // Fire at the top of each hour (minute 0)
+    if (now.getMinutes() !== 0) return;
+    forecastRunning = true;
+    try {
+      await upsertDemandForecasts();
+    } catch (e) {
+      logger.error("[scheduler] forecast upsert error", e);
+    } finally {
+      forecastRunning = false;
+    }
+  }, 60_000);
+
+  logger.info("[scheduler] started (34 jobs)");
 }

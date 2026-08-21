@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  TextInput,
   StatusBar,
   useWindowDimensions,
 } from "react-native";
@@ -32,8 +31,10 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { FloatingNavMenu } from "@/components/FloatingNavMenu";
 import FareBreakdownSheet from "@/components/FareBreakdownSheet";
 import CustomButton from "@/components/CustomButton";
+import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
+import { icons } from "@/constants/data";
 
-type HomeState = "idle" | "destination" | "pickup" | "vehicle" | "confirm" | "finding";
+type HomeState = "idle" | "destination" | "pickup" | "vehicle" | "confirm";
 
 type SheetSnap = "peek" | "half" | "full";
 
@@ -44,24 +45,17 @@ interface SheetSnapDef {
 
 // Custom sheet snap table (percent of window height). snaps[0] is the resting
 // snap for the state, mirroring the previous BottomSheet index={0} behavior.
+// No "finding" state: handoff to confirm-ride owns the search (audit H-3).
 const SHEET_SNAPS: Record<HomeState, SheetSnapDef> = {
   idle: { snaps: ["peek", "half"], percent: { peek: 18, half: 30 } },
   destination: { snaps: ["full"], percent: { full: 92 } },
   pickup: { snaps: ["half"], percent: { half: 35 } },
   vehicle: { snaps: ["half", "full"], percent: { half: 50, full: 80 } },
   confirm: { snaps: ["half", "full"], percent: { half: 70, full: 90 } },
-  finding: { snaps: ["full"], percent: { full: 100 } },
 };
 
-interface Stop {
-  id: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-}
-
 interface VehicleOption {
-  key: string;
+  key: VehicleTypeEnum;
   label: string;
   eta: number;
   fare: number;
@@ -97,9 +91,6 @@ const VEHICLE_ICONS: Record<VehicleTypeEnum, VehicleIconName> = {
   car_premium: "car",
   car_xl: "bus",
 };
-
-const TIP_OPTIONS = [0, 20, 50, 100];
-
 export default function HomeScreen() {
   const {
     service,
@@ -124,16 +115,15 @@ export default function HomeScreen() {
   const [homeState, setHomeState] = useState<HomeState>("idle");
   const [pickup, setPickup] = useState<SavedPlace | null>(null);
   const [destination, setDestination] = useState<SavedPlace | null>(null);
-  const [stops, setStops] = useState<Stop[]>([]);
-  const [savedPlaces, _setSavedPlaces] = useState<SavedPlace[]>([]);
-  const [recentPlaces, _setRecentPlaces] = useState<SavedPlace[]>([]);
+  // Real data (audit H-3): saved places from GET /api/rider/addresses,
+  // recents from GET /api/ride/get-all — previously permanently-empty arrays.
+  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
+  const [recentPlaces, setRecentPlaces] = useState<SavedPlace[]>([]);
+  const [destListTab, setDestListTab] = useState<"recent" | "saved">("recent");
   const [vehicleOptions, setVehicleOptions] = useState<VehicleOption[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleTypeEnum | null>(null);
   const [fareBreakdown, setFareBreakdown] = useState<{ key: string; label: string; eta: number; fare: number; seats: number; hasAc: boolean | null; icon: VehicleIconName; total_bdt?: number } | null>(null);
   const [loadingFare, setLoadingFare] = useState(false);
-  const [promoCode, setPromoCode] = useState("");
-  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
-  const [tip, setTip] = useState(0);
   const [requesting, setRequesting] = useState(false);
 
   const isDark = useIsDark();
@@ -259,6 +249,72 @@ export default function HomeScreen() {
     }
   }, [userLatitude, userLongitude, userAddress]);
 
+  // Audit H-3: populate saved + recent destinations with real data. Saved
+  // places come from the rider's address book; recents are deduped dropoffs
+  // of completed rides. Both lists were permanently empty before, which left
+  // the destination state with nothing to tap.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const [addrRes, ridesRes] = await Promise.all([
+          fetch(`${API_URL}/api/rider/addresses`, { headers }),
+          fetch(`${API_URL}/api/ride/get-all`, { headers }),
+        ]);
+        if (!active) return;
+
+        if (addrRes.ok) {
+          const data: { addresses?: { id: string; label: string; address: string; lat: string; lng: string }[] } = await addrRes.json();
+          const places: SavedPlace[] = (data.addresses ?? [])
+            .map((a) => ({
+              id: a.id,
+              label: a.label,
+              address: a.address,
+              lat: parseFloat(a.lat),
+              lng: parseFloat(a.lng),
+            }))
+            .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+          if (active) setSavedPlaces(places);
+        }
+
+        if (ridesRes.ok) {
+          const data: {
+            data?: {
+              ride_id: string;
+              destination_address: string | null;
+              destination_latitude: string | null;
+              destination_longitude: string | null;
+              status: string;
+            }[];
+          } = await ridesRes.json();
+          const seen = new Set<string>();
+          const places: SavedPlace[] = [];
+          for (const r of data.data ?? []) {
+            if (!r.destination_address || r.status !== "completed") continue;
+            if (seen.has(r.destination_address)) continue;
+            const lat = r.destination_latitude ? parseFloat(r.destination_latitude) : NaN;
+            const lng = r.destination_longitude ? parseFloat(r.destination_longitude) : NaN;
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+            seen.add(r.destination_address);
+            places.push({ id: r.ride_id, label: "Recent", address: r.destination_address, lat, lng });
+            if (places.length >= 5) break;
+          }
+          if (active) setRecentPlaces(places);
+        }
+      } catch (e) {
+        logger.error("[home] saved/recent destinations fetch failed", e);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const fetchEstimate = useCallback(async () => {
     if (!pickup || !destination) return;
     setLoadingFare(true);
@@ -270,7 +326,9 @@ export default function HomeScreen() {
         pickup_lng: pickup.lng,
         dropoff_lat: destination.lat,
         dropoff_lng: destination.lng,
-        stops: stops.map((s) => ({ lat: s.latitude, lng: s.longitude, address: s.address })),
+        // Stops belong to confirm-ride's sheet (L14 caps at 2) — home's
+        // dead stop inputs were deleted (audit H-3).
+        stops: [],
       };
       const res = await fetch(`${API_URL}/api/ride/estimate`, {
         method: "POST",
@@ -301,8 +359,10 @@ export default function HomeScreen() {
           };
         });
       setVehicleOptions(options);
-      // Rebook preselect: honor the original ride's vehicle type when available.
-      const preferred = options.find((o) => o.key === rebookVehicleType) ?? options[0];
+      // Rebook preselect: honor the original ride's vehicle type when available
+      // (rebookVehicleType is an untyped URL param — narrow it first).
+      const rebookType = VEHICLE_TYPES.find((v) => v.key === rebookVehicleType)?.key;
+      const preferred = options.find((o) => o.key === rebookType) ?? options[0];
       if (preferred) setSelectedVehicle(preferred.key);
       if (preferred) setFareBreakdown(preferred);
     } catch (e) {
@@ -310,7 +370,7 @@ export default function HomeScreen() {
     } finally {
       setLoadingFare(false);
     }
-  }, [pickup, destination, stops, service, rebookVehicleType]);
+  }, [pickup, destination, service, rebookVehicleType]);
 
   const handleDestinationSelect = (loc: { latitude: number; longitude: number; address: string }) => {
     const place: SavedPlace = {
@@ -325,62 +385,8 @@ export default function HomeScreen() {
     setHomeState("pickup");
   };
 
-  const handleAddStop = () => {
-    if (stops.length < 2) {
-      setStops([...stops, { id: `stop-${stops.length}`, address: "", latitude: 0, longitude: 0 }]);
-    }
-  };
-
-  const handleRemoveStop = (index: number) => {
-    setStops(stops.filter((_, i) => i !== index));
-  };
-
-  const handleVehicleSelect = (key: string) => {
+  const handleVehicleSelect = (key: VehicleTypeEnum) => {
     setSelectedVehicle(key);
-  };
-
-  const handleApplyPromo = async () => {
-    if (!promoCode.trim()) return;
-    if (!pickup || !selectedVehicle) {
-      Alert.alert("Select pickup and vehicle first");
-      return;
-    }
-    try {
-      // /api/promo/redeem requires a session token — without the header every
-      // apply attempt 401'd and showed "not valid or expired".
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      const res = await fetch(`${API_URL}/api/promo/redeem`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          code: promoCode.trim(),
-          vehicle_type: selectedVehicle,
-          pickup_lat: pickup.lat,
-          pickup_lng: pickup.lng,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.status === "valid") {
-        const discountValue = data.promo?.discount_value || 0;
-        const discountType = data.promo?.discount_type || "flat";
-        const baseFare = fareBreakdown?.total_bdt || 0;
-        let discountPaisa = 0;
-        if (discountType === "percent") {
-          discountPaisa = Math.round(baseFare * discountValue / 100);
-        } else {
-          discountPaisa = Math.round(discountValue * 100);
-        }
-        setAppliedPromo({ code: promoCode.trim(), discount: discountPaisa });
-      } else {
-        Alert.alert("Invalid Code", data.error || "This promo code is not valid or has expired.");
-      }
-    } catch {
-      Alert.alert("Error", "Could not validate promo code.");
-    }
   };
 
   const handleBook = async () => {
@@ -391,7 +397,7 @@ export default function HomeScreen() {
       setRiderDropoff(destination.address, destination.lat, destination.lng);
       setPickupCoords({ lat: pickup.lat, lng: pickup.lng });
       setDropoffCoords({ lat: destination.lat, lng: destination.lng });
-      setSelectedVehicleType(selectedVehicle as any);
+      setSelectedVehicleType(selectedVehicle);
       // Seed the coords confirm-ride reads (useCustomer) and hand off to the
       // real booking pipeline: confirm-ride POSTs /api/ride/request and
       // navigates to finding-driver itself on success. Previously this jumped
@@ -413,17 +419,7 @@ export default function HomeScreen() {
     }
   };
 
-  const handleCancelFind = () => {
-    setRequesting(false);
-    setHomeState("confirm");
-  };
-
-  const finalFare = useMemo(() => {
-    let fare = fareBreakdown?.total_bdt || 0;
-    if (appliedPromo) fare = Math.max(0, fare - appliedPromo.discount);
-    fare += tip * 100;
-    return fare;
-  }, [fareBreakdown, appliedPromo, tip]);
+  const finalFare = useMemo(() => fareBreakdown?.total_bdt || 0, [fareBreakdown]);
 
   // ── RENDER: IDLE STATE ──
   const renderIdle = () => (
@@ -480,7 +476,10 @@ export default function HomeScreen() {
               <Text style={[styles.chipText, { color: textPrimary }]}>{place.label}</Text>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity style={[styles.chip, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}>
+          <TouchableOpacity
+            style={[styles.chip, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
+            onPress={() => setHomeState("destination")}
+          >
             <Ionicons name="time" size={16} color={textSecondary} />
             <Text style={[styles.chipText, { color: textSecondary }]}>Recent</Text>
           </TouchableOpacity>
@@ -490,95 +489,84 @@ export default function HomeScreen() {
   );
 
   // ── RENDER: DESTINATION SELECTOR ──
-  const renderDestination = () => (
-    <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
-      <View style={styles.destHeader}>
-        <TouchableOpacity onPress={() => setHomeState("idle")}>
-          <Ionicons name="arrow-back" size={24} color={textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.destTitle, { color: textPrimary }]}>Where do you want to go?</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      {/* Pickup field */}
-      <View style={[styles.inputRow, { borderColor: borderColor }]}>
-        <View style={[styles.dot, { backgroundColor: colors.primary }]} />
-        <Text style={[styles.inputText, { color: textSecondary }]} numberOfLines={1}>
-          {pickup?.address || "Your location"}
-        </Text>
-      </View>
-
-      {/* Destination field */}
-      <View style={[styles.inputRow, { borderColor: borderColor }]}>
-        <View style={[styles.dot, { backgroundColor: colors.danger }]} />
-        <TextInput
-          style={[styles.inputText, { color: textPrimary, flex: 1 }]}
-          placeholder="Where to?"
-          placeholderTextColor={textDisabled}
-          onFocus={() => {/* Show autocomplete */}}
-        />
-        {stops.length < 2 && (
-          <TouchableOpacity onPress={handleAddStop} style={styles.addStopBtn}>
-            <Ionicons name="add-circle" size={24} color={colors.primary} />
+  // Audit H-3: this state was cosmetically complete but functionally dead —
+  // the TextInput had no handlers, the lists were permanently empty, and
+  // "Select from map" did nothing. It now runs the same BarikoiAutocomplete
+  // find-ride uses, over real saved/recent data. Stops are confirm-ride's
+  // concern (L14); the map-select row was removed until a picker exists.
+  const renderDestination = () => {
+    const listPlaces = destListTab === "recent" ? recentPlaces : savedPlaces;
+    return (
+      <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
+        <View style={styles.destHeader}>
+          <TouchableOpacity onPress={() => setHomeState("idle")}>
+            <Ionicons name="arrow-back" size={24} color={textPrimary} />
           </TouchableOpacity>
-        )}
-      </View>
+          <Text style={[styles.destTitle, { color: textPrimary }]}>Where do you want to go?</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      {/* Stop fields */}
-      {stops.map((stop, idx) => (
-        <View key={stop.id} style={[styles.inputRow, { borderColor: borderColor }]}>
-          <View style={[styles.dot, { backgroundColor: colors.amber }]} />
-          <TextInput
-            style={[styles.inputText, { color: textPrimary, flex: 1 }]}
-            placeholder={`Stop ${idx + 1}`}
-            placeholderTextColor={textDisabled}
-            value={stop.address}
-          />
-          <TouchableOpacity onPress={() => handleRemoveStop(idx)}>
-            <Ionicons name="close-circle" size={22} color={textSecondary} />
+        {/* Pickup field */}
+        <View style={[styles.inputRow, { borderColor: borderColor }]}>
+          <View style={[styles.dot, { backgroundColor: colors.primary }]} />
+          <Text style={[styles.inputText, { color: textSecondary }]} numberOfLines={1}>
+            {pickup?.address || "Your location"}
+          </Text>
+        </View>
+
+        {/* Destination search — real Barikoi autocomplete (audit H-3) */}
+        <BarikoiAutocomplete
+          icon={icons.target}
+          initialLocation=""
+          handlePress={handleDestinationSelect}
+        />
+
+        {/* Recent / Saved tabs */}
+        <View style={styles.tabRow}>
+          <TouchableOpacity
+            style={[styles.tab, { borderBottomColor: destListTab === "recent" ? colors.primary : "transparent" }]}
+            onPress={() => setDestListTab("recent")}
+          >
+            <Text style={[destListTab === "recent" ? styles.tabTextActive : styles.tabText, { color: destListTab === "recent" ? colors.primary : textSecondary }]}>Recent</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, { borderBottomColor: destListTab === "saved" ? colors.primary : "transparent" }]}
+            onPress={() => setDestListTab("saved")}
+          >
+            <Text style={[destListTab === "saved" ? styles.tabTextActive : styles.tabText, { color: destListTab === "saved" ? colors.primary : textSecondary }]}>Saved</Text>
           </TouchableOpacity>
         </View>
-      ))}
 
-      {/* Select from map */}
-      <TouchableOpacity style={styles.mapSelectRow}>
-        <Ionicons name="map" size={18} color={colors.primary} />
-        <Text style={[styles.mapSelectText, { color: colors.primary }]}>Select from map</Text>
-      </TouchableOpacity>
-
-      {/* Recent / Suggested tabs */}
-      <View style={styles.tabRow}>
-        <TouchableOpacity style={[styles.tab, { borderBottomColor: colors.primary }]}>
-          <Text style={[styles.tabTextActive, { color: colors.primary }]}>Recent</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, { borderBottomColor: "transparent" }]}>
-          <Text style={[styles.tabText, { color: textSecondary }]}>Suggested</Text>
-        </TouchableOpacity>
+        {/* Place list */}
+        <ScrollView style={styles.placeList}>
+          {listPlaces.map((place) => (
+            <TouchableOpacity
+              key={place.id}
+              style={[styles.placeItem, { borderBottomColor: borderColor }]}
+              onPress={() => handleDestinationSelect({ latitude: place.lat, longitude: place.lng, address: place.address })}
+            >
+              <View style={[styles.placeIcon, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}>
+                <Ionicons
+                  name={destListTab === "saved" && place.label === "Home" ? "home" : destListTab === "saved" && place.label === "Work" ? "briefcase" : "time"}
+                  size={18}
+                  color={textSecondary}
+                />
+              </View>
+              <View style={styles.placeInfo}>
+                <Text style={[styles.placeName, { color: textPrimary }]}>{place.label}</Text>
+                <Text style={[styles.placeAddress, { color: textSecondary }]} numberOfLines={1}>{place.address}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+          {listPlaces.length === 0 && (
+            <Text style={[styles.emptyText, { color: textSecondary }]}>
+              {destListTab === "recent" ? "No recent destinations yet" : "No saved places yet"}
+            </Text>
+          )}
+        </ScrollView>
       </View>
-
-      {/* Place list */}
-      <ScrollView style={styles.placeList}>
-        {recentPlaces.map((place) => (
-          <TouchableOpacity
-            key={place.id}
-            style={[styles.placeItem, { borderBottomColor: borderColor }]}
-            onPress={() => handleDestinationSelect({ latitude: place.lat, longitude: place.lng, address: place.address })}
-          >
-            <View style={[styles.placeIcon, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}>
-              <Ionicons name="time" size={18} color={textSecondary} />
-            </View>
-            <View style={styles.placeInfo}>
-              <Text style={[styles.placeName, { color: textPrimary }]}>{place.label}</Text>
-              <Text style={[styles.placeAddress, { color: textSecondary }]} numberOfLines={1}>{place.address}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-        {recentPlaces.length === 0 && (
-          <Text style={[styles.emptyText, { color: textSecondary }]}>No recent destinations</Text>
-        )}
-      </ScrollView>
-    </View>
-  );
+    );
+  };
 
   // ── RENDER: PICKUP CONFIRM ──
   const renderPickup = () => (
@@ -675,12 +663,12 @@ export default function HomeScreen() {
         {/* Selected vehicle summary */}
         <View style={[styles.confirmVehicleRow, { borderBottomColor: borderColor }]}>
           <Ionicons
-            name={selectedVehicle ? VEHICLE_ICONS[selectedVehicle as VehicleTypeEnum] : "car"}
+            name={selectedVehicle ? VEHICLE_ICONS[selectedVehicle] : "car"}
             size={24}
             color={colors.primary}
           />
           <Text style={[styles.confirmVehicleText, { color: textPrimary }]}>
-            {selectedVehicle ? (language === "bn" ? getVehicleType(selectedVehicle as VehicleTypeEnum).display_bn : getVehicleType(selectedVehicle as VehicleTypeEnum).display_en) : ""}
+            {selectedVehicle ? (language === "bn" ? getVehicleType(selectedVehicle).display_bn : getVehicleType(selectedVehicle).display_en) : ""}
           </Text>
           <Text style={[styles.confirmFare, { color: textPrimary }]}>
             ৳{(finalFare / 100).toFixed(0)}
@@ -690,47 +678,8 @@ export default function HomeScreen() {
         {/* Fare breakdown (expandable) */}
         {fareBreakdown && <FareBreakdownSheet fareBreakdown={fareBreakdown} />}
 
-        {/* Promo code */}
-        <View style={[styles.promoRow, { borderColor: borderColor }]}>
-          <Ionicons name="ticket" size={18} color={colors.primary} />
-          <TextInput
-            style={[styles.promoInput, { color: textPrimary }]}
-            placeholder="Enter promo code"
-            placeholderTextColor={textDisabled}
-            value={promoCode}
-            onChangeText={setPromoCode}
-          />
-          <TouchableOpacity onPress={handleApplyPromo}>
-            <Text style={[styles.promoApply, { color: colors.primary }]}>Apply</Text>
-          </TouchableOpacity>
-        </View>
-        {appliedPromo && (
-          <Text style={[styles.promoApplied, { color: colors.greenVariant }]}>
-            {appliedPromo.code} applied (-৳{(appliedPromo.discount / 100).toFixed(0)})
-          </Text>
-        )}
-
-        {/* Tip */}
-        <Text style={[styles.sectionLabel, { color: textSecondary }]}>Add Tip</Text>
-        <View style={styles.tipRow}>
-          {TIP_OPTIONS.map((t) => (
-            <TouchableOpacity
-              key={t}
-              style={[
-                styles.tipBtn,
-                {
-                  backgroundColor: tip === t ? colors.primary : isDark ? colors.darkSecondary : colors.gray100,
-                  borderColor: tip === t ? colors.primary : borderColor,
-                },
-              ]}
-              onPress={() => setTip(t)}
-            >
-              <Text style={{ color: tip === t ? colors.white : textPrimary, fontFamily: "Jakarta-SemiBold" }}>
-                {t === 0 ? "No Tip" : `৳${t}`}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* Promo + tip live on confirm-ride (audit H-3): home's copies were
+            never carried into the booking handoff — dead UI, deleted. */}
 
         {/* Payment */}
         <View style={[styles.paymentRow, { borderColor: borderColor }]}>
@@ -747,25 +696,6 @@ export default function HomeScreen() {
           className="mt-4"
         />
       </ScrollView>
-    </View>
-  );
-
-  // ── RENDER: FINDING ──
-  const renderFinding = () => (
-    <View style={[styles.sheetContent, { backgroundColor: surfaceBg, justifyContent: "center", alignItems: "center" }]}>
-      <View style={[styles.pulseRing, { borderColor: colors.primary + "30" }]} />
-      <View style={[styles.pulseRingInner, { borderColor: colors.primary + "50" }]} />
-      <ActivityIndicator size="large" color={colors.primary} style={{ marginBottom: 24 }} />
-      <Text style={[styles.findingTitle, { color: textPrimary }]}>Finding you a nearby driver...</Text>
-      <Text style={[styles.findingSub, { color: textSecondary }]}>
-        The driver will pick you up as soon as possible after they confirm your order.
-      </Text>
-      <TouchableOpacity
-        style={[styles.cancelBtn, { borderColor: colors.danger }]}
-        onPress={handleCancelFind}
-      >
-        <Text style={[styles.cancelText, { color: colors.danger }]}>Cancel Ride</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -815,7 +745,6 @@ export default function HomeScreen() {
         {homeState === "pickup" && renderPickup()}
         {homeState === "vehicle" && renderVehicle()}
         {homeState === "confirm" && renderConfirm()}
-        {homeState === "finding" && renderFinding()}
       </Animated.View>
     </GestureHandlerRootView>
   );

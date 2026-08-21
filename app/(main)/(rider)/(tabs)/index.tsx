@@ -64,6 +64,14 @@ const DEMAND_COLOR: Record<DemandLevel, string> = {
   high: colors.danger,
 };
 
+// Audit H-1 / L-a: the LATEST mounted screen's WS message handler. Every
+// socket this screen wires routes messages through this module-level
+// indirection instead of capturing a mount-local closure — so a reconnect
+// scheduled by an unmounted onclose can never re-attach its stale handler
+// (with its stale router/stores) to the fresh socket it creates. Cleanup on
+// unmount nulls it; the next mount sets it again.
+let driverHomeMessageHandler: ((event: MessageEvent) => void) | null = null;
+
 export default function DriverHome() {
   const {
     driver,
@@ -403,32 +411,51 @@ export default function DriverHome() {
       }
     };
 
-    // Reuse an existing open socket if present (e.g. returning Home after a
-    // ride) so we never spin up a duplicate connection.
-    const existing = useWSStore.getState().ws;
-    if (existing && existing.readyState === WebSocket.OPEN) {
-      existing.onmessage = handleWsMessage;
-      setWsConnected(true);
-      // H-4: detach on unmount so this mount's handler can't keep navigating
-      // from another screen (the socket itself stays alive for the next mount
-      // to reuse).
-      return () => {
-        if (existing) existing.onmessage = null;
-      };
-    }
+    driverHomeMessageHandler = handleWsMessage;
 
     async function connect() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) return;
+      const userId = session?.user?.id;
+      if (!token || !userId) return;
+
+      // Reuse our own authenticated socket if present (e.g. returning Home
+      // after a ride) so we never spin up a duplicate connection. H-1:
+      // adoption is identity-checked — a socket left in the shared slot by
+      // the rider singleton or a previous sign-in/role is torn down and
+      // replaced, never adopted.
+      const state = useWSStore.getState();
+      const existing = state.ws;
+      if (
+        existing &&
+        state.socketRole === "driver" &&
+        state.socketUserId === userId &&
+        existing.readyState === WebSocket.OPEN
+      ) {
+        existing.onmessage = (ev) => driverHomeMessageHandler?.(ev);
+        setWsConnected(true);
+        return;
+      }
+      if (existing) {
+        existing.onopen = null;
+        existing.onclose = null;
+        existing.onerror = null;
+        existing.onmessage = null;
+        try {
+          existing.close();
+        } catch {
+          // already closed / closing
+        }
+        useWSStore.getState().resetWebSocket();
+      }
 
       ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
         reconnectAttempts = 0;
-        useWSStore.getState().setWebSocket(ws);
+        useWSStore.getState().setWebSocket(ws, "driver", userId);
         ws.send(
           JSON.stringify({
             type: "auth:hello",
@@ -438,7 +465,7 @@ export default function DriverHome() {
         );
       };
 
-      ws.onmessage = handleWsMessage;
+      ws.onmessage = (ev) => driverHomeMessageHandler?.(ev);
 
       ws.onclose = () => {
         setWsConnected(false);
@@ -461,14 +488,17 @@ export default function DriverHome() {
     return () => {
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      // H-4: detach the message handler so a stale mount's closure can't
-      // navigate from another screen (M3-class). Intentionally do NOT detach
-      // onclose and do NOT close the WebSocket: the socket must persist across
-      // navigation (Home -> find-customer -> enter-otp -> finish-ride), and
-      // the onclose reconnect keeps the connection alive while the driver is
-      // away — the store is updated on every onopen, so downstream screens
-      // re-bind their addEventListener to the new socket.
-      if (ws) ws.onmessage = null;
+      // H-4 + L-a: nulling the indirection detaches EVERY socket this screen
+      // ever wired — the live one and any socket a later unmount-scheduled
+      // reconnect creates. Intentionally do NOT detach onclose and do NOT
+      // close the WebSocket: the socket must persist across navigation
+      // (Home -> find-customer -> enter-otp -> finish-ride), and the onclose
+      // reconnect keeps the connection alive while the driver is away — the
+      // store is identity-tagged on every onopen, so downstream screens
+      // re-bind their addEventListener to the new socket and the next
+      // driver-home mount re-adopts by role + user id. Sign-out kills the
+      // socket itself via authCleanup() -> teardownRiderSocket().
+      driverHomeMessageHandler = null;
     };
   }, [
     addRideOffer,
@@ -1227,8 +1257,8 @@ export default function DriverHome() {
         </View>
       </View>
 
-      {/* SOS Button */}
-      <SOSButton disabled={!isOnline} />
+      {/* SOS Button — always enabled; offline alerts are queued for retry */}
+      <SOSButton />
 
       {/* Ride Offer Sheet */}
       <RideOfferSheet />

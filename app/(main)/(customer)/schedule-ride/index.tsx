@@ -20,8 +20,7 @@ import { useCustomer } from "@/store";
 import { useRiderStore } from "@/store/useRiderStore";
 import { VEHICLE_TYPES, VehicleTypeEnum } from "@/lib/vehicleTypes";
 import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
-import DatePicker from "@/components/DatePicker";
-import TimePicker from "@/components/TimePicker";
+import ScheduleRideSheet from "@/components/ScheduleRideSheet";
 import { icons } from "@/constants/data";
 
 const MIN_LEAD_MS = 30 * 60 * 1000;
@@ -82,24 +81,9 @@ export default function ScheduleRide() {
   else if (scheduledAt.getTime() > Date.now() + MAX_LEAD_MS)
     validationHint = "Rides can be scheduled up to 7 days ahead.";
 
-  const handleSelectDate = (day: Date) => {
+  const handleSelectTime = (iso: string) => {
     setError(null);
-    setScheduledAt((prev) => {
-      const base = prev ?? new Date();
-      const merged = new Date(day);
-      merged.setHours(base.getHours(), base.getMinutes(), 0, 0);
-      return merged;
-    });
-  };
-
-  const handleSelectTime = (time: Date) => {
-    setError(null);
-    setScheduledAt((prev) => {
-      const base = prev ?? new Date();
-      const merged = new Date(base);
-      merged.setHours(time.getHours(), time.getMinutes(), 0, 0);
-      return merged;
-    });
+    setScheduledAt(new Date(iso));
   };
 
   const handleSchedule = async () => {
@@ -248,36 +232,15 @@ export default function ScheduleRide() {
           })}
         </View>
 
-        {/* Date + time */}
+        {/* Date + time via ScheduleRideSheet */}
         <Text style={[styles.sectionTitle, styles.sectionGap, { color: textPrimary }]}>
           Date & Time
         </Text>
-        <View style={{ marginBottom: spacing.md }}>
-          <DatePicker selectedDate={scheduledAt} onSelectDate={handleSelectDate} />
-        </View>
-        <TimePicker
-          date={scheduledAt}
-          selectedTime={scheduledAt}
-          onSelectTime={handleSelectTime}
+        <ScheduleRideSheet
+          onConfirm={handleSelectTime}
+          onClose={() => router.back()}
+          initialDate={scheduledAt}
         />
-
-        {scheduledAt && scheduleValid && (
-          <View style={[styles.schedulePreview, { backgroundColor: surfaceBg, borderColor }]}>
-            <Ionicons name="time-outline" size={16} color={colors.primary} />
-            <Text style={[styles.schedulePreviewText, { color: textSecondary }]}>
-              Pickup at{" "}
-              <Text style={{ color: textPrimary, fontFamily: "Jakarta-SemiBold" }}>
-                {scheduledAt.toLocaleString("en-GB", {
-                  weekday: "short",
-                  day: "numeric",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Text>
-            </Text>
-          </View>
-        )}
 
         {error && (
           <View style={[styles.errorBox, { backgroundColor: `${colors.danger}14` }]}>

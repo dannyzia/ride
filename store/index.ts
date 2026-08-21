@@ -459,6 +459,10 @@ export const useDriverDetails = create<DriverDetails>((set) => ({
 
 export const useWSStore = create<WSStore>((set) => ({
     ws: null,
-    setWebSocket: (ws: WebSocket) => set({ ws }),
+    socketRole: null,
+    socketUserId: null,
+    setWebSocket: (ws: WebSocket, role: 'rider' | 'driver', userId: string) =>
+        set({ ws, socketRole: role, socketUserId: userId }),
+    resetWebSocket: () => set({ ws: null, socketRole: null, socketUserId: null }),
 }))
 

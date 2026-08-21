@@ -5,6 +5,8 @@ import { eq, desc } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { VEHICLE_TYPE_VALUES } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
+import { normalizePolygon } from "@/lib/polygon";
+import { invalidateZoneCache } from "@/lib/zone";
 import { z } from "zod";
 import { safeRequestJson } from "@/lib/parseBody";
 import * as errors from "@/lib/errors";
@@ -72,15 +74,18 @@ export async function POST(request: Request) {
         );
       }
 
-      // If setting active, deactivate all others
-      if (parsed.data.is_active) {
-        await db
-          .update(zones)
-          .set({ is_active: false })
-          .where(eq(zones.is_active, true));
+      // Z-5: validate polygon before insert — reject malformed polygons
+      const normalized = normalizePolygon(parsed.data.polygon);
+      if (!normalized || normalized.length < 3) {
+        return Response.json(
+          { error: "invalid_polygon", message: "Zone polygon must have at least 3 valid vertices" },
+          { status: 422 },
+        );
       }
 
+      // Z-5: no exclusive-activation sweep — multiple zones can be active
       const [zone] = await db.insert(zones).values(parsed.data).returning();
+      invalidateZoneCache();
       return Response.json({ zone }, { status: 201 });
     }
 
@@ -132,13 +137,18 @@ export async function PUT(request: Request) {
         );
       }
 
-      if (parsed.data.is_active) {
-        await db
-          .update(zones)
-          .set({ is_active: false })
-          .where(eq(zones.is_active, true));
+      // Z-5: validate polygon on update if provided
+      if (parsed.data.polygon) {
+        const normalized = normalizePolygon(parsed.data.polygon);
+        if (!normalized || normalized.length < 3) {
+          return Response.json(
+            { error: "invalid_polygon", message: "Zone polygon must have at least 3 valid vertices" },
+            { status: 422 },
+          );
+        }
       }
 
+      // Z-5: no exclusive-activation sweep — multiple zones can be active
       const { id, ...updates } = parsed.data;
       const [zone] = await db
         .update(zones)
@@ -147,6 +157,7 @@ export async function PUT(request: Request) {
         .returning();
       if (!zone)
         return Response.json({ error: 'zone_not_found', message: 'Zone not found' }, { status: 404 });
+      invalidateZoneCache();
       return Response.json({ zone });
     }
 
@@ -210,6 +221,7 @@ export async function DELETE(request: Request) {
       .update(pricing)
       .set({ is_active: false, updated_at: new Date() })
       .where(eq(pricing.zone_id, id));
+    invalidateZoneCache();
     return Response.json({ success: true });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401)

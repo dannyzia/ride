@@ -11,10 +11,11 @@ async function seed() {
       ('driver_max_ratio',           '1.50',  now()),
       ('brta_max_base_bdt',          '8500',  now()),
       ('brta_max_per_km_bdt',        '3400',  now()),
-      ('brta_max_wait_per_2min_bdt', '850',   now())
+      ('brta_max_wait_per_2min_bdt', '850',   now()),
+      ('zone_multi_active_enabled',  'false', now())
     ON CONFLICT (key) DO NOTHING;
   `);
-  console.log("platform_config seeded (5 keys)");
+  console.log("platform_config seeded (6 keys)");
   await client.end();
 }
 seed().catch(console.error);

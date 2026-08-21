@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Text, TouchableOpacity, ScrollView } from "react-native";
 import { colors, radii, spacing } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { dhakaTodayKey, bdtDayBoundariesUtc } from "@/lib/time";
 
 interface DatePickerProps {
   /** Currently selected date (only the date part is used). */
@@ -15,10 +16,12 @@ interface DatePickerProps {
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const isSameDay = (a: Date, b: Date) =>
-  a.getFullYear() === b.getFullYear() &&
-  a.getMonth() === b.getMonth() &&
-  a.getDate() === b.getDate();
+/**
+ * Compare two dates by their Asia/Dhaka calendar day.
+ * Uses fixed UTC+6 offset — correct regardless of device timezone.
+ */
+const isSameDhakaDay = (a: Date, b: Date) =>
+  dhakaTodayKey(a) === dhakaTodayKey(b);
 
 export default function DatePicker({
   selectedDate,
@@ -34,12 +37,25 @@ export default function DatePicker({
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   const days = useMemo(() => {
-    const start = minDate ? new Date(minDate) : new Date();
-    start.setHours(0, 0, 0, 0);
+    // Anchor to Dhaka "today" using the fixed UTC+6 offset — correct
+    // regardless of the device's timezone setting.
+    const todayKey = dhakaTodayKey();
+
+    // If a minDate is provided, use its Dhaka day as the start
+    let startKey = todayKey;
+    if (minDate) {
+      startKey = dhakaTodayKey(minDate);
+    }
+    const [sy, sm, sd] = startKey.split("-").map(Number);
+
     return Array.from({ length: dayCount }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return d;
+      const dayDate = new Date(Date.UTC(sy, sm - 1, sd + i));
+      const key = `${dayDate.getUTCFullYear()}-${String(dayDate.getUTCMonth() + 1).padStart(2, "0")}-${String(dayDate.getUTCDate()).padStart(2, "0")}`;
+      const boundaries = bdtDayBoundariesUtc(key);
+      const utcAnchor = boundaries ? boundaries.start : dayDate;
+      // Store the BDT date parts for display (UTC anchor is midnight BDT,
+      // but getDate() on it returns the UTC date, not BDT).
+      return { utcAnchor, bdtDay: dayDate.getUTCDate(), bdtDow: dayDate.getUTCDay(), key };
     });
   }, [minDate, dayCount]);
 
@@ -49,14 +65,14 @@ export default function DatePicker({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ gap: spacing.sm }}
     >
-      {days.map((day, index) => {
-        const isSelected = selectedDate !== null && isSameDay(day, selectedDate);
+      {days.map(({ utcAnchor, bdtDay, bdtDow }, index) => {
+        const isSelected = selectedDate !== null && isSameDhakaDay(utcAnchor, selectedDate);
         const label =
-          index === 0 ? "Today" : index === 1 ? "Tomorrow" : DAY_NAMES[day.getDay()];
+          index === 0 ? "Today" : index === 1 ? "Tomorrow" : DAY_NAMES[bdtDow];
         return (
           <TouchableOpacity
-            key={day.toISOString()}
-            onPress={() => onSelectDate(day)}
+            key={utcAnchor.toISOString()}
+            onPress={() => onSelectDate(utcAnchor)}
             accessibilityRole="button"
             accessibilityLabel={`Select ${label}`}
             style={{
@@ -87,7 +103,7 @@ export default function DatePicker({
                 color: isSelected ? colors.white : textPrimary,
               }}
             >
-              {day.getDate()}
+              {bdtDay}
             </Text>
           </TouchableOpacity>
         );

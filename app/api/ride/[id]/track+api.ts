@@ -45,10 +45,12 @@ export async function GET(request: Request, { id }: { id: string }) {
       "driver_arriving",
       "driver_arrived",
       "in_progress",
+      "scheduled",
     ]);
+    const isTerminal = new Set(["completed", "cancelled", "expired", "no_drivers"]).has(ride.status);
     const isActive = ACTIVE_STATUSES.has(ride.status);
 
-    return Response.json({
+    const body = {
       status: ride.status,
       driver_name: isActive ? driverName : null,
       driver_rating: isActive ? driverRating : null,
@@ -57,6 +59,20 @@ export async function GET(request: Request, { id }: { id: string }) {
       origin_lng: isActive ? ride.origin_longitude : null,
       destination_lat: isActive ? ride.destination_latitude : null,
       destination_lng: isActive ? ride.destination_longitude : null,
+    };
+
+    // §10.2: terminal-state / no-store / noindex for finished rides.
+    // Search engines must not cache completed/cancelled ride data.
+    const headers: Record<string, string> = {};
+    if (isTerminal) {
+      headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
+      headers["Pragma"] = "no-cache";
+      headers["X-Robots-Tag"] = "noindex, nofollow";
+    }
+
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (err: unknown) {
     logger.error('[track] error', err);

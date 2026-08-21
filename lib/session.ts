@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
+import { authCleanup } from './authCleanup';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface AppUser {
@@ -84,7 +85,13 @@ export function useSessionAuth() {
 
 export function useSignOut() {
   return {
-    signOut: async () => { await supabase.auth.signOut(); },
+    signOut: async () => {
+      // Full teardown (stores + WebSocket) before killing the session —
+      // audit H-1: a bare signOut() left the authenticated socket open for
+      // the next sign-in to adopt.
+      authCleanup();
+      await supabase.auth.signOut();
+    },
   };
 }
 

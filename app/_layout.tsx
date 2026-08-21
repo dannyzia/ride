@@ -15,6 +15,8 @@ import { useAppearance } from "@/lib/useAppearance";
 import "@/i18n/i18n";
 import { API_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
+import { processQueue } from "@/lib/sosQueue";
+import NetInfo from "@react-native-community/netinfo";
 
 const isWeb = Platform.OS === "web";
 
@@ -178,6 +180,22 @@ export default function RootLayout() {
       Appearance.setColorScheme(theme);
     }
   }, [theme]);
+
+  // ── SOS queue: process on startup + network reconnect ──────────────
+  // If there are queued SOS alerts from a previous offline session, send
+  // them now. Also subscribe to NetInfo to replay on reconnect.
+  useEffect(() => {
+    // Process immediately on mount (catches alerts queued before restart)
+    processQueue().catch(() => {});
+
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      if (state.isConnected === true) {
+        processQueue().catch(() => {});
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // ── Push notification setup ──────────────────────────────────────────
   // Hoisted above all early returns (rules-of-hooks requirement) and

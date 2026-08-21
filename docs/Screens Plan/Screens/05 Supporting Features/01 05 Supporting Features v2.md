@@ -414,6 +414,7 @@ Client reads flags via the existing public config/reference endpoint (VERIFY whi
 1.2 Schedule toggle + sheet in `confirm-ride` (S4: VERIFY FACT `SchedulePicker.tsx` first — reuse/rename, build new only if it fails)
 1.3 `ride/schedule` backend extension (overlap guard, advisory lock, timezone validation §8.10)
 1.4 Scheduler promotion + reminders + cutoff + catch-up (§9.1)
+   — **Reminders DONE (2026-08-21):** T-60m + T-15m implemented in scheduler.ts jobs 21a/21b with idempotency keys (`ride:{id}:reminder_60` / `ride:{id}:reminder_15`), `rides.reminder_60_sent` boolean column (migration 0043), `notifications.idempotency_key` partial unique index for global dedup. Promotion/cutoff/catch-up still pending.
 1.5 `ride-scheduled` rebuild (entry = `router.replace` from 1.2 — explicitly wired)
 1.6 Route deletions DEL-1..4 — **only after G-1 passes**
 1.7 `cancel-reason` + `canceled` fixes (server-bound §5.3)

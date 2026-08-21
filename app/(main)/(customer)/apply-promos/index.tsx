@@ -32,7 +32,7 @@ export default function ApplyPromos() {
   const [loading, setLoading] = useState(false);
   const [promos, setPromos] = useState<Promo[]>([]);
   const [promosLoading, setPromosLoading] = useState(true);
-  const { applyPromo } = useRiderStore();
+  const { applyPromo, setStagedPromo, selectedVehicleType, pickupCoords } = useRiderStore();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -74,7 +74,12 @@ export default function ApplyPromos() {
       const res = await fetch(`${API_URL}/api/promo/redeem`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ code: promoCode.trim() }),
+        body: JSON.stringify({
+          code: promoCode.trim(),
+          vehicle_type: selectedVehicleType ?? "bike_basic",
+          pickup_lat: pickupCoords?.lat ?? 23.8103,
+          pickup_lng: pickupCoords?.lng ?? 90.4125,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -84,7 +89,20 @@ export default function ApplyPromos() {
       }
       setMessage("Promo applied successfully!");
       setMessageType("success");
-      if (applyPromo) await applyPromo(data.promo);
+      // M-29: stage the promo in the rider store for the home screen to
+      // display the discount. Server-side staging via promoCache.ts is the
+      // authoritative source for the ride transaction.
+      if (applyPromo) applyPromo(data.promo);
+      if (setStagedPromo && data.promo?.promo_id) {
+        setStagedPromo({
+          promoCodeId: data.promo.promo_id,
+          code: data.promo.code,
+          discountType: data.promo.discount_type as "percent" | "flat",
+          discountValue: data.promo.discount_value,
+          maxDiscountBdt: data.promo.max_discount_bdt,
+          minSpendBdt: data.promo.min_spend_bdt,
+        });
+      }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to apply promo");
       setMessageType("error");

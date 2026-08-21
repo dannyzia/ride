@@ -10,6 +10,11 @@ const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
  * Send a push notification to a user across all their registered devices.
  * Creates a notifications row for delivery tracking.
  * Returns { sent: number, failed: number }.
+ *
+ * When `idempotencyKey` is provided the notification row is inserted first
+ * with ON CONFLICT DO NOTHING.  If the row already exists the call is a
+ * no-op (duplicate trigger / retry).  This is the canonical dedup gate —
+ * callers should pass a deterministic key such as `ride:{id}:reminder_60`.
  */
 export async function sendNotification(
   userId: string,
@@ -17,12 +22,35 @@ export async function sendNotification(
   title: string,
   body: string,
   data?: Record<string, string>,
-  options?: { priority?: 'default' | 'high' },
+  options?: { priority?: 'default' | 'high'; idempotencyKey?: string },
 ): Promise<{ sent: number; failed: number }> {
   let sent = 0;
   let failed = 0;
 
   try {
+    // Idempotency gate: insert the audit row first; if it already exists,
+    // this notification was already sent — skip the push entirely.
+    if (options?.idempotencyKey) {
+      const inserted = await db
+        .insert(notifications)
+        .values({
+          user_id: userId,
+          type,
+          title,
+          body,
+          data: (data ?? {}) as any,
+          sent_at: new Date(),
+          idempotency_key: options.idempotencyKey,
+        })
+        .onConflictDoNothing({ target: notifications.idempotency_key })
+        .returning({ id: notifications.id });
+
+      if (inserted.length === 0) {
+        logger.debug('[notify] duplicate suppressed by idempotency key', { userId, type, key: options.idempotencyKey });
+        return { sent: 0, failed: 0 };
+      }
+    }
+
     const devices = await db
       .select({ push_token: userDevices.push_token })
       .from(userDevices)
@@ -94,15 +122,18 @@ export async function sendNotification(
       logger.info('[notify] pruned dead push tokens', { userId, count: deadTokens.length });
     }
 
-    await db.insert(notifications).values({
-      user_id: userId,
-      type,
-      title,
-      body,
-      data: (data ?? {}) as any,
-      sent_at: new Date(),
-      failed_reason: failed > 0 ? `${failed}/${uniqueTokens.length} failed` : null,
-    });
+    // Non-idempotent path: insert audit row after push (legacy callers).
+    if (!options?.idempotencyKey) {
+      await db.insert(notifications).values({
+        user_id: userId,
+        type,
+        title,
+        body,
+        data: (data ?? {}) as any,
+        sent_at: new Date(),
+        failed_reason: failed > 0 ? `${failed}/${uniqueTokens.length} failed` : null,
+      });
+    }
   } catch (err: unknown) {
     logger.error('[notify] sendNotification error', { userId, type, error: errors.getErrorMessage(err) });
   }

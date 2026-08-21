@@ -12,6 +12,8 @@ import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
 import { VEHICLE_TYPE_ZOD_ENUM } from '@/lib/vehicleTypes';
 import { sendSms } from '@/lib/dprelay';
+import { getPlan05Int } from '@/lib/platformConfig';
+import { computeEstimatedDurationMinutes, checkRideOverlap } from '@/lib/scheduleUtils';
 import * as errors from '@/lib/errors';
 
 const scheduleSchema = z.object({
@@ -27,6 +29,7 @@ const scheduleSchema = z.object({
   preference_ids: z.array(z.string().uuid()).max(10).optional(),
   secondary_rider_name: z.string().min(1).max(255).optional(),
   secondary_rider_phone: z.string().min(1).max(20).optional(),
+  secondary_rider_consent: z.boolean().optional().default(false),
   upfront_tip_bdt: z.number().int().min(0).max(20000).optional(),
   stops: z.array(z.object({ lat: z.number(), lng: z.number(), address: z.string().min(1).max(500) })).max(2).optional(),
 });
@@ -43,24 +46,44 @@ export async function POST(request: Request) {
     const parsed = await parseJsonBody(request, scheduleSchema);
     if (!parsed.ok) return parsed.response;
 
-    const { pickup_lat, pickup_lng, pickup_address, dropoff_lat, dropoff_lng, dropoff_address, vehicle_type, scheduled_at, preference_ids, secondary_rider_name, secondary_rider_phone, upfront_tip_bdt, stops } = parsed.data;
+    const { pickup_lat, pickup_lng, pickup_address, dropoff_lat, dropoff_lng, dropoff_address, vehicle_type, scheduled_at, preference_ids, secondary_rider_name, secondary_rider_phone, secondary_rider_consent, upfront_tip_bdt, stops } = parsed.data;
 
     const scheduledDate = new Date(scheduled_at);
     const now = new Date();
-    const minLead = 30 * 60 * 1000;
-    const maxLead = 7 * 24 * 60 * 60 * 1000;
-    if (scheduledDate.getTime() - now.getTime() < minLead) {
-      return Response.json({ error: 'too_soon', message: 'Schedule at least 30 minutes in advance' }, { status: 422 });
+
+    // §1.5: schedule bounds read from platform_config (fresh, never cached)
+    const [minLeadMinutes, maxLeadDays] = await Promise.all([
+      getPlan05Int('schedule_min_lead_minutes'),
+      getPlan05Int('schedule_max_lead_days'),
+    ]);
+    const minLeadMs = minLeadMinutes * 60 * 1000;
+    const maxLeadMs = maxLeadDays * 24 * 60 * 60 * 1000;
+    if (scheduledDate.getTime() - now.getTime() < minLeadMs) {
+      return Response.json({ error: 'too_soon', message: `Schedule at least ${minLeadMinutes} minutes in advance` }, { status: 422 });
     }
-    if (scheduledDate.getTime() - now.getTime() > maxLead) {
-      return Response.json({ error: 'too_far', message: 'Cannot schedule more than 7 days ahead' }, { status: 422 });
+    if (scheduledDate.getTime() - now.getTime() > maxLeadMs) {
+      return Response.json({ error: 'too_far', message: `Cannot schedule more than ${maxLeadDays} days ahead` }, { status: 422 });
     }
 
     const zoneCheck = await validatePickupZone(pickup_lat, pickup_lng);
     if (!zoneCheck.valid) {
-      return Response.json({ error: 'outside_zone', message: 'Pickup location is outside the operational zone' }, { status: 422 });
+      if (zoneCheck.error === 'zones_not_configured') {
+        return Response.json({ error: 'zones_not_configured', message: 'No operational zones configured' }, { status: 503 });
+      }
+      return Response.json({ error: zoneCheck.error ?? 'outside_zone', message: 'Pickup location is outside the operational zone' }, { status: 422 });
     }
-    const zoneId = zoneCheck.zone?.id ?? '00000000-0000-0000-0000-000000000000';
+    if (!zoneCheck.zone?.id) {
+      return Response.json({ error: 'zones_not_configured', message: 'No operational zones configured' }, { status: 503 });
+    }
+    const zoneId = zoneCheck.zone.id;
+
+    // Consent check: required when booking for someone else
+    if (secondary_rider_phone && !secondary_rider_consent) {
+      return Response.json(
+        { error: 'consent_required', message: 'Passenger consent is required when booking for someone else' },
+        { status: 400 },
+      );
+    }
 
     const dispatchWindowStart = new Date(scheduledDate.getTime() - 15 * 60 * 1000);
     const dispatchWindowEnd = new Date(scheduledDate.getTime() + 15 * 60 * 1000);
@@ -126,27 +149,34 @@ export async function POST(request: Request) {
     }
 
     let rideId = "";
-    let alreadyScheduledConflict = false;
+    let overlapConflict: string | null = null;
     let rateLimited = false;
     await db.transaction(async (tx) => {
-      // C-3: the advisory lock and the "one active scheduled ride" guard must
-      // run INSIDE the transaction. A pre-tx lock in autocommit releases
-      // immediately, and a pre-tx SELECT lets two concurrent requests both
-      // pass the check and both insert — two scheduler jobs, two dispatches.
+      // C-3: the advisory lock and the overlap guard must run INSIDE the
+      // transaction. A pre-tx lock in autocommit releases immediately, and
+      // a pre-tx SELECT lets two concurrent requests both pass the check
+      // and both insert — two scheduler jobs, two dispatches.
       // Serialized by the lock, this re-check sees the first request's
-      // committed ride and aborts the second with 409/429.
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('ride_schedule_' || ${user.id}))`);
+      // committed ride and aborts the second with 409.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('ride_schedule_overlap_' || ${user.id}))`);
 
-      const [activeScheduled] = await tx
-        .select({ id: rides.id })
-        .from(rides)
-        .where(and(
-          eq(rides.user_id, user.id),
-          eq(rides.status, 'scheduled'),
-        ))
-        .limit(1);
-      if (activeScheduled) {
-        alreadyScheduledConflict = true;
+      // §8.1–§8.4: overlap check — compute the new ride's time window and
+      // compare against all existing scheduled rides for this rider.
+      const estimatedDurationMin = computeEstimatedDurationMinutes(
+        fareBreakdown.distance_km,
+        vehicle_type,
+        scheduledDate,
+      );
+      const newEnd = new Date(scheduledDate.getTime() + estimatedDurationMin * 60 * 1000);
+
+      // Re-check inside the lock (serialized with concurrent requests)
+      const overlapResult = await checkRideOverlap(
+        user.id,
+        scheduledDate,
+        newEnd,
+      );
+      if (overlapResult.overlap) {
+        overlapConflict = overlapResult.conflict_ride_id ?? null;
         return;
       }
 
@@ -207,8 +237,8 @@ export async function POST(request: Request) {
       }
     });
 
-    if (alreadyScheduledConflict) {
-      return Response.json({ error: 'ride_already_scheduled', message: 'You already have an active scheduled ride' }, { status: 409 });
+    if (overlapConflict) {
+      return Response.json({ error: 'ride_overlap', message: 'This time overlaps with another scheduled ride', conflict_ride_id: overlapConflict }, { status: 409 });
     }
     if (rateLimited) {
       return Response.json({ error: 'rider_rate_limited', message: 'Rate limit exceeded for this rider' }, { status: 429 });
@@ -216,15 +246,37 @@ export async function POST(request: Request) {
 
     // ── SMS to secondary rider (non-blocking) ────────────────────────
     if (secondary_rider_phone) {
-      try {
-        const trackingUrl = `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/track/${rideId}`;
-        await sendSms(
-          secondary_rider_phone,
-          `Your ride has been booked on Ride. Track it here: ${trackingUrl}`,
+      // Rate limit: max 5 book-for-other SMS per rider per hour
+      const smsHourAgo = new Date(Date.now() - 3600000);
+      const [smsCountResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(rides)
+        .where(
+          and(
+            eq(rides.user_id, user.id),
+            eq(rides.is_booked_for_someone_else, true),
+            gte(rides.created_at, smsHourAgo),
+          ),
         );
-        logger.info("[ride/schedule] SMS sent to secondary rider", { rideId: rideId });
-      } catch (smsErr) {
-        logger.warn("[ride/schedule] SMS to secondary rider failed (non-blocking)", smsErr);
+      const smsCount = Number(smsCountResult?.count ?? 0);
+
+      if (smsCount >= 5) {
+        logger.warn("[ride/schedule] book-for-other SMS rate limit hit", {
+          userId: user.id,
+          smsCount,
+          rideId,
+        });
+      } else {
+        try {
+          const trackingUrl = `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/track/${rideId}`;
+          await sendSms(
+            secondary_rider_phone,
+            `Your ride has been booked on Ride. Track it here: ${trackingUrl}`,
+          );
+          logger.info("[ride/schedule] SMS sent to secondary rider", { rideId: rideId });
+        } catch (smsErr) {
+          logger.warn("[ride/schedule] SMS to secondary rider failed (non-blocking)", smsErr);
+        }
       }
     }
 

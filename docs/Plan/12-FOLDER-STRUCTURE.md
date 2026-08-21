@@ -265,7 +265,7 @@ components/
 scripts/
   seed-admin.js                   ← Creates admin user record for local dev (uses SEED_ADMIN_PHONE)
   seed-system-config.js           ← Creates initial system_config rows (dispatch_paused=false, min_app_version=1.0.0)
-  seed-platform-config.js         ← Seeds platform_config table with 5 keys (driver_min_ratio, driver_max_ratio, brta_max_*). Safe to re-run (ON CONFLICT DO NOTHING).
+  seed-platform-config.js         ← Seeds platform_config table with 6 keys (driver_min_ratio, driver_max_ratio, brta_max_*, zone_multi_active_enabled). Safe to re-run (ON CONFLICT DO NOTHING).
   seed-pricing.js                 ← Seeds pricing table with 8 vehicle type rows, production fare matrix (paisa). Uses ON CONFLICT...DO UPDATE.
   seed-packages.js                ← Inserts initial micro-trial and starter packages into `packages` table. Safe to re-run (ON CONFLICT DO NOTHING).
   generate-env-example.js         ← Generates .env.example and utils-server/.env.example from 11-ENV-VARS.md

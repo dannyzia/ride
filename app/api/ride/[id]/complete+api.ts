@@ -13,6 +13,7 @@ import { percentOf } from '@/lib/money';
 import { evaluateStreaks } from '@/lib/gamification';
 import { earnCashback } from '@/lib/walletCashback';
 import { spendZoneBudget } from '@/lib/zoneBudget';
+import { computeCompletionWalletReceivable } from '@/lib/rideCompletionWallet';
 import * as errors from '@/lib/errors';
 
 export async function POST(request: Request) {
@@ -270,20 +271,31 @@ const rideId = segments[segments.indexOf("ride") + 1];
         await earnCashback(tx, ride.id, ride.user_id, riderPayableBdt);
       }
 
-      await tx.insert(driverWalletTransactions).values({
-        driver_id: driver.id,
-        transaction_type: "adjustment",
-        amount_bdt: fare.driver_net_bdt,
-        balance_after: sql`(SELECT driver_wallet_balance_bdt FROM drivers WHERE id = ${driver.id}) + ${fare.driver_net_bdt}`,
-      });
+      // 06-API steps 9–10: the only completion-time driver-wallet receivable
+      // is the platform-funded promo subsidy (snapshotted at request as
+      // rides.promo_code_id + platform_subsidy_bdt) — never the cash fare.
+      // The driver collects driver_net in cash (L13); crediting it here would
+      // pay fares out of withdrawable top-up money on the first payout.
+      // Referral receivables have no completion trigger in this schema (no
+      // rides.referral_* columns) — they settle via /api/user/referral.
+      const receivable = computeCompletionWalletReceivable(ride);
+      if (receivable) {
+        await tx.insert(driverWalletTransactions).values({
+          driver_id: driver.id,
+          transaction_type: receivable.transaction_type,
+          amount_bdt: receivable.amount_bdt,
+          reference_id: receivable.reference_id,
+          balance_after: sql`(SELECT driver_wallet_balance_bdt FROM drivers WHERE id = ${driver.id}) + ${receivable.amount_bdt}`,
+        });
 
-      await tx
-        .update(drivers)
-        .set({
-          driver_wallet_balance_bdt: sql`${drivers.driver_wallet_balance_bdt} + ${fare.driver_net_bdt}`,
-          updated_at: new Date(),
-        })
-        .where(eq(drivers.id, driver.id));
+        await tx
+          .update(drivers)
+          .set({
+            driver_wallet_balance_bdt: sql`${drivers.driver_wallet_balance_bdt} + ${receivable.amount_bdt}`,
+            updated_at: new Date(),
+          })
+          .where(eq(drivers.id, driver.id));
+      }
 
       // Phase D: Deduct platform-funded discount from zone budget
       if (

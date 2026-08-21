@@ -242,6 +242,11 @@ export default function RideTrackingScreen() {
             break;
           case "ride:completed":
             setTrackingState("complete");
+            if (typeof msg.total_bdt === "number") {
+              setRide((prev) =>
+                prev ? { ...prev, fare_bdt: msg.total_bdt } : prev,
+              );
+            }
             break;
           case "ride:cancelled":
             Alert.alert("Ride Cancelled", "The ride was cancelled");

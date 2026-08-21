@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { driverPayoutMethods, drivers, users } from '@/src/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
@@ -10,6 +10,34 @@ import * as errors from '@/lib/errors';
 const payoutSchema = z.object({
   account_number: z.string().regex(/^01\d{9}$/, 'Invalid bKash number'),
 });
+
+export async function GET(request: Request) {
+  try {
+    const supabaseUser = await verifySupabaseToken(request);
+
+    const [user] = await db.select({ id: users.id })
+      .from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
+    if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
+
+    const [driver] = await db.select({ id: drivers.id })
+      .from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
+    if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
+
+    const [activeMethod] = await db.select()
+      .from(driverPayoutMethods)
+      .where(and(
+        eq(driverPayoutMethods.driver_id, driver.id),
+        eq(driverPayoutMethods.is_active, true),
+      ))
+      .limit(1);
+
+    return Response.json({ payout_method: activeMethod ?? null });
+  } catch (err: unknown) {
+    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    logger.error('[driver/payout-method] GET error', err);
+    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   try {

@@ -84,6 +84,28 @@ export function prevBdtMidnightUtc(): Date {
   return new Date(midnight.getTime() - BDT_OFFSET_MS);
 }
 
+/** Convert a Date to an ISO 8601 UTC string. */
+export function toUtcIso(d: Date): string {
+  return d.toISOString();
+}
+
+/**
+ * Asia/Dhaka calendar day key as "YYYY-MM-DD".
+ * Deterministic across server/client — always uses the fixed UTC+6 offset.
+ */
+export function dhakaTodayKey(now: Date = new Date()): string {
+  const bdt = new Date(now.getTime() + BDT_OFFSET_MS);
+  const y = bdt.getUTCFullYear();
+  const m = String(bdt.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(bdt.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Milliseconds remaining until `deadline`; clamps to 0. */
+export function msUntil(deadline: Date, now: Date = new Date()): number {
+  return Math.max(0, deadline.getTime() - now.getTime());
+}
+
 /**
  * UTC boundaries [start, end) of a given Asia/Dhaka calendar day.
  *

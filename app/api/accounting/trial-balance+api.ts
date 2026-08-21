@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       ORDER BY a.code
     `);
 
-    const data = rows as any as { code: string; name: string; type: string; total_dr: number; total_cr: number }[];
+    const data = rows as unknown as { code: string; name: string; type: string; total_dr: number; total_cr: number }[];
     const totalDr = data.reduce((s, r) => s + Number(r.total_dr), 0);
     const totalCr = data.reduce((s, r) => s + Number(r.total_cr), 0);
 

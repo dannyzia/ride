@@ -1,4 +1,3 @@
-// Zone validation: lib/zone.ts has Bangladesh fallback polygon
 import { db } from "@/src/db";
 import {
   users,
@@ -36,7 +35,9 @@ const requestSchema = z.object({
   dropoff_lng: z.number().min(-180).max(180),
   dropoff_address: z.string().min(1).max(500),
   vehicle_type: VEHICLE_TYPE_ZOD_ENUM,
-  scheduled_at: z.string().datetime().optional(),
+  scheduled_at: z.string().datetime().optional().refine(val => !val || new Date(val) > new Date(Date.now() + 30 * 60 * 1000), {
+    message: "Scheduled rides must be at least 30 minutes in the future"
+  }),
   allow_downgrade: z.boolean().optional().default(false),
   selected_discount_type: z
     .enum(["intro", "promo", "pass", "none"])
@@ -44,10 +45,12 @@ const requestSchema = z.object({
   selected_discount_amount_bdt: z.number().int().nonnegative().optional(),
   preference_ids: z.array(z.string().uuid()).max(10).optional(),
   secondary_rider_name: z.string().min(1).max(255).optional(),
-  secondary_rider_phone: z.string().min(1).max(20).optional(),
+  secondary_rider_phone: z.string().regex(/^01\d{9}$/, "Invalid Bangladesh phone number").optional(),
+  secondary_rider_consent: z.boolean().optional().default(false),
   upfront_tip_bdt: z.number().int().min(0).max(20000).optional(),
   stops: z.array(z.object({ lat: z.number(), lng: z.number(), address: z.string().min(1).max(500) })).max(2).optional(),
   female_driver_preference: z.boolean().optional(),
+  promo_code: z.string().min(1).max(50).optional(),
 });
 
 export async function POST(request: Request) {
@@ -83,23 +86,39 @@ export async function POST(request: Request) {
        preference_ids,
       secondary_rider_name,
       secondary_rider_phone,
+      secondary_rider_consent,
       upfront_tip_bdt,
       stops,
       female_driver_preference,
+      promo_code,
     } = parsed.data;
 
     // Zone check
     const zoneCheck = await validatePickupZone(pickup_lat, pickup_lng);
     if (!zoneCheck.valid) {
+      if (zoneCheck.error === 'zones_not_configured') {
+        return Response.json({ error: 'zones_not_configured', message: 'No operational zones configured' }, { status: 503 });
+      }
       return Response.json(
         {
-          error: "outside_zone",
-          message: "Pickup location is outside the operational zone",
+          error: zoneCheck.error ?? 'outside_zone',
+          message: 'Pickup location is outside the operational zone',
         },
         { status: 422 },
       );
     }
-    const zoneId = zoneCheck.zone?.id ?? "00000000-0000-0000-0000-000000000000";
+    if (!zoneCheck.zone?.id) {
+      return Response.json({ error: 'zones_not_configured', message: 'No operational zones configured' }, { status: 503 });
+    }
+    const zoneId = zoneCheck.zone.id;
+
+    // Consent check: required when booking for someone else
+    if (secondary_rider_phone && !secondary_rider_consent) {
+      return Response.json(
+        { error: 'consent_required', message: 'Passenger consent is required when booking for someone else' },
+        { status: 400 },
+      );
+    }
 
     // Rate limit: 5 requests per hour
     const hourAgo = new Date(Date.now() - 3600000);
@@ -305,6 +324,21 @@ export async function POST(request: Request) {
       if (discountType === "promo") {
         const staged = getStagedPromo(user.id);
         if (staged) {
+          // If promo_code is provided, validate it matches the staged promo.
+          // This prevents a stale or mismatched code from being applied.
+          if (promo_code) {
+            const [promoRow] = await db
+              .select({ id: promoCodes.id, code: promoCodes.code })
+              .from(promoCodes)
+              .where(eq(promoCodes.id, staged.promoCodeId))
+              .limit(1);
+            if (!promoRow || promoRow.code !== promo_code) {
+              return Response.json(
+                { error: "promo_code_mismatch", message: "Promo code does not match the staged discount" },
+                { status: 409 },
+              );
+            }
+          }
           const [promoRow] = await db
             .select()
             .from(promoCodes)
@@ -454,15 +488,37 @@ export async function POST(request: Request) {
 
     // ── SMS to secondary rider (non-blocking) ────────────────────────
     if (secondary_rider_phone) {
-      try {
-        const trackingUrl = `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/track/${rideId}`;
-        await sendSms(
-          secondary_rider_phone,
-          `Your ride has been booked on Ride. Track it here: ${trackingUrl}`,
+      // Rate limit: max 5 book-for-other SMS per rider per hour
+      const smsHourAgo = new Date(Date.now() - 3600000);
+      const [smsCountResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(rides)
+        .where(
+          and(
+            eq(rides.user_id, user.id),
+            eq(rides.is_booked_for_someone_else, true),
+            gte(rides.created_at, smsHourAgo),
+          ),
         );
-        logger.info("[ride/request] SMS sent to secondary rider", { rideId: rideId });
-      } catch (smsErr) {
-        logger.warn("[ride/request] SMS to secondary rider failed (non-blocking)", smsErr);
+      const smsCount = Number(smsCountResult?.count ?? 0);
+
+      if (smsCount >= 5) {
+        logger.warn("[ride/request] book-for-other SMS rate limit hit", {
+          userId: user.id,
+          smsCount,
+          rideId,
+        });
+      } else {
+        try {
+          const trackingUrl = `${process.env.EXPO_PUBLIC_SERVER_URL ?? ""}/track/${rideId}`;
+          await sendSms(
+            secondary_rider_phone,
+            `Your ride has been booked on Ride. Track it here: ${trackingUrl}`,
+          );
+          logger.info("[ride/request] SMS sent to secondary rider", { rideId: rideId });
+        } catch (smsErr) {
+          logger.warn("[ride/request] SMS to secondary rider failed (non-blocking)", smsErr);
+        }
       }
     }
 

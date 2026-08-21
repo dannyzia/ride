@@ -1,19 +1,23 @@
 import { db } from '@/src/db';
+import * as schema from '@/src/db/schema';
 import { paymentEvents } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
+import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 import { portposClient } from '@/lib/portpos';
 import { logger } from '@/lib/logger';
 
+type Tx = PgTransaction<PostgresJsQueryResultHKT, typeof schema, any>;
+
 /**
  * Write-ownership (AGENTS.md): payment_events rows may ONLY be created through
- * `initiatePortposPayment` in this file. The payment-initiation routes call it:
- *   - app/api/rider/wallet/topup+api.ts
- *   - app/api/rider/passes+api.ts
- *   - app/api/driver/wallet/topup+api.ts
- *   - app/api/package/purchase+api.ts
- * Status transitions (paid/failed) happen ONLY in lib/activateSubscription.ts
- * and app/api/payment/portpos/callback+api.ts. No other file writes
- * payment_events directly.
+ * this file. All creation paths:
+ *   - `initiatePortposPayment` — PortPos gateway (wallet topup, rider pass, driver package)
+ *   - `createZeroAmountPaymentEvent` — ৳0 trial packages
+ *   - `createCancellationFeeEventInTx` — cancellation fee tracking (in-transaction)
+ * Status transitions (paid/failed) happen ONLY in lib/activateSubscription.ts,
+ * app/api/payment/portpos/callback+api.ts, and lib/paymentRepair.ts.
+ * No other file writes payment_events directly.
  */
 
 export interface PortposPaymentInitiation {
@@ -80,6 +84,66 @@ export async function createZeroAmountPaymentEvent(params: {
     return { id: evt.id };
   });
   return result;
+}
+
+/**
+ * Create a payment_events row for a cancellation fee inside the caller's
+ * transaction (M-28 / §1.3).
+ *
+ * Cancellation fees are collected from future cashback, not through a
+ * gateway. The row is created as status='paid' (the fee is owed and
+ * will be collected via rider_fee_deductions). The idempotency key is
+ * deterministic on the ride ID so concurrent/duplicate cancels produce
+ * exactly one row (unique constraint).
+ *
+ * @param tx — the parent Drizzle transaction (from cancel+api.ts)
+ * @param params.rideId — the cancelled ride
+ * @param params.riderId — the user who is charged
+ * @param params.amountBdt — cancellation fee in integer paisa
+ */
+export async function createCancellationFeeEventInTx(
+  tx: Tx,
+  params: { rideId: string; riderId: string; amountBdt: number },
+): Promise<{ paymentEventId: string }> {
+  const idempotencyKey = `cancel_fee_${params.rideId}`;
+
+  const [evt] = await tx
+    .insert(paymentEvents)
+    .values({
+      user_id: params.riderId,
+      ride_id: params.rideId,
+      provider: 'portpos',
+      status: 'paid',
+      idempotency_key: idempotencyKey,
+      amount_bdt: params.amountBdt,
+      purpose: 'cancellation_fee',
+      confirmed_at: new Date(),
+    })
+    .onConflictDoNothing()
+    .returning({ id: paymentEvents.id });
+
+  if (!evt) {
+    // Duplicate — another concurrent cancel already created the row.
+    // Fetch the existing one so the caller can reference it.
+    const [existing] = await tx
+      .select({ id: paymentEvents.id })
+      .from(paymentEvents)
+      .where(eq(paymentEvents.idempotency_key, idempotencyKey))
+      .limit(1);
+    logger.info('[paymentEvents] cancellation fee event already exists', {
+      rideId: params.rideId,
+      existingEventId: existing?.id,
+    });
+    return { paymentEventId: existing?.id ?? '' };
+  }
+
+  logger.info('[paymentEvents] cancellation fee event created', {
+    paymentEventId: evt.id,
+    rideId: params.rideId,
+    amountBdt: params.amountBdt,
+  });
+
+  return { paymentEventId: evt.id };
 }
 
 export async function initiatePortposPayment(

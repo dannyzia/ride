@@ -15,6 +15,8 @@ import {
 import { router, usePathname } from "expo-router";
 import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
+import { teardownAdminSocket } from "@/lib/adminSocket";
+import { authCleanup } from "@/lib/authCleanup";
 import { colors } from "@/theme/goRide";
 
 interface NavItem {
@@ -199,6 +201,11 @@ export function AdminShell({
   const isDesktop = width >= 1024;
 
   const handleSignOut = async () => {
+    // Kill the admin WS singleton before the session dies — otherwise it
+    // keeps receiving SOS broadcasts and reconnecting with a dead token
+    // (audit H-1 parity).
+    teardownAdminSocket();
+    await authCleanup();
     await supabase!.auth.signOut();
     router.replace("/admin/login");
   };

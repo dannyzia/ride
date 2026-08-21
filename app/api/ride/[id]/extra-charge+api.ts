@@ -107,12 +107,12 @@ export async function PATCH(request: Request, { id }: { id: string }) {
     await db.update(rideExtraCharges).set({ status: newStatus, resolved_at: new Date() }).where(eq(rideExtraCharges.id, parsed.data.charge_id));
 
     if (newStatus === 'disputed') {
-      await db.insert(supportTickets as any).values({
+      await db.insert(supportTickets).values({
         user_id: supabaseUser.id,
         ride_id: id,
         category: 'fare_dispute',
         subject: `Disputed ${charge.type} charge: ৳${(charge.amount_bdt / 100).toFixed(0)}`,
-        message: `Charge ID: ${charge.id}\nType: ${charge.type}\nAmount: ${charge.amount_bdt}\nDescription: ${charge.description ?? ''}`,
+        description: `Charge ID: ${charge.id}\nType: ${charge.type}\nAmount: ${charge.amount_bdt}\nDescription: ${charge.description ?? ''}`,
         priority: 'medium',
       });
     }

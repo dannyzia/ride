@@ -13,8 +13,11 @@ const STATUS_LABELS: Record<string, string> = {
   scheduled: "Scheduled", pending: "Searching for driver", dispatching: "Searching for driver",
   matched: "Driver on the way", driver_arriving: "Driver arriving",
   driver_arrived: "Driver arrived", in_progress: "On the way",
-  completed: "Completed", cancelled: "Cancelled",
+  completed: "Completed", cancelled: "Cancelled", expired: "Expired",
+  no_drivers: "No drivers available",
 };
+
+const TERMINAL_STATUSES = new Set(["completed", "cancelled", "expired", "no_drivers"]);
 
 interface TrackData {
   status: string;
@@ -46,8 +49,12 @@ export default function PublicTrackPage() {
       try {
         const res = await fetch(`${API_URL}/api/ride/${rideId}/track`);
         if (res.ok) {
-          setData(await res.json());
+          const responseData = await res.json();
+          setData(responseData);
           setError("");
+          if (TERMINAL_STATUSES.has(responseData.status)) {
+            if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+          }
         } else {
           setData(null);
           setError("Ride not found or no longer trackable");

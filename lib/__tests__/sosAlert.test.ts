@@ -20,6 +20,12 @@ jest.mock("../auth", () => ({
 jest.mock("../../src/db", () => ({
   db: { select: jest.fn(), insert: jest.fn() },
 }));
+// The route reads its SOS cooldown from platform_config (never cached).
+// This suite tests the broadcast seam, not config parsing — pin the default
+// 15-minute window and keep the config query out of the db mock.
+jest.mock("../platformConfig", () => ({
+  getPlan05Int: jest.fn(async () => 900),
+}));
 
 import { db } from "../../src/db";
 import { users, rides, sosAlerts } from "../../src/db/schema";
@@ -42,9 +48,23 @@ beforeEach(() => {
     from: jest.fn((table: unknown) => {
       const rows = () => BY_TABLE.get(table) ?? [];
       return {
-        where: jest.fn(() => ({
-          limit: jest.fn(async (n: number) => rows().slice(0, n)),
-        })),
+        // The chain object is ALSO promise-like: some routes await the
+        // where() result directly (no limit/orderBy — e.g. the emergency
+        // contacts query), which must resolve to the rows.
+        where: jest.fn(() => {
+          const rowsNow = rows();
+          const chain = {
+            limit: jest.fn(async (n: number) => rowsNow.slice(0, n)),
+            // The cooldown probe orders by created_at before limiting.
+            orderBy: jest.fn(() => ({
+              limit: jest.fn(async (n: number) => rowsNow.slice(0, n)),
+            })),
+          };
+          return {
+            ...chain,
+            then: (resolve: (v: unknown) => void) => resolve(rowsNow),
+          };
+        }),
       };
     }),
   }));
@@ -73,8 +93,9 @@ describe("sos/alert — F-15 real-time admin broadcast", () => {
       BY_TABLE.set(users, [{ id: "rider-user-1", role: "rider" }]);
 
       const res = await POST(sosRequest({ lat: 23.8, lng: 90.4 }));
-      expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ ok: true });
+      // 201 = new alert created (route contract: dedupe returns 200).
+      expect(res.status).toBe(201);
+      expect(await res.json()).toMatchObject({ ok: true });
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
       const [url, init] = fetchMock.mock.calls[0];
@@ -112,7 +133,9 @@ describe("sos/alert — F-15 real-time admin broadcast", () => {
 
       const res = await POST(sosRequest({ lat: 23.8, lng: 90.4, ride_id: RIDE_ID }));
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ ok: true, deduped: true });
+      // toMatchObject: the cooldown-aware route also echoes alert_id of the
+      // kept alert — the behavioral contract here is dedupe + silence.
+      expect(await res.json()).toMatchObject({ ok: true, deduped: true });
 
       expect(db.insert).not.toHaveBeenCalled();
       expect(fetchMock).not.toHaveBeenCalled();
@@ -134,8 +157,8 @@ describe("sos/alert — F-15 real-time admin broadcast", () => {
       BY_TABLE.set(users, [{ id: "rider-user-1", role: "rider" }]);
 
       const res = await POST(sosRequest({ lat: 23.8, lng: 90.4 }));
-      expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ ok: true });
+      expect(res.status).toBe(201);
+      expect(await res.json()).toMatchObject({ ok: true });
       expect(fetchMock).toHaveBeenCalledTimes(1);
     } finally {
       (global as unknown as { fetch: unknown }).fetch = originalFetch;

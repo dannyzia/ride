@@ -23,6 +23,9 @@ export default function DriverPrivacyPolicy() {
         <View className="w-12" />
       </View>
       <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingVertical: 16, gap: 12 }}>
+        <View className="rounded-lg px-4 py-3" style={{ backgroundColor: 'rgba(255, 183, 77, 0.12)', borderWidth: 1, borderColor: 'rgba(255, 183, 77, 0.3)' }}>
+          <Text className="text-[12px] font-JakartaSemiBold" style={{ color: colors.amber }}>⏳ Pending owner review — content may change before launch</Text>
+        </View>
         <Text className="text-sm font-Jakarta leading-6" style={{ color: textSecondary }}>
           We value your privacy. This policy explains how we collect, use, and protect your personal information.{"\n\n"}
           1. Information we collect: Name, phone number, vehicle information, location data, and payment details.{"\n\n"}
