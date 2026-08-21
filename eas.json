@@ -24,7 +24,7 @@
         "EAS_BUILD_PROFILE": "production"
       },
       "android": {
-        "buildType": "appBundle"
+        "buildType": "app-bundle"
       }
     }
   },
