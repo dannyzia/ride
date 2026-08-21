@@ -383,6 +383,12 @@ export const vehicles = pgTable(
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
   (t) => [
+    // C5 RESOLVED (temporary): one vehicle per driver is the applied safe
+    // default — see docs/vehicle-model-decision.md. The multi-vehicle UI and
+    // the vehicle-activate endpoint were removed to match this index. If
+    // Product approves multi-vehicle, follow the Option B migration steps in
+    // that doc (drop this index, plain INSERT in POST /api/driver/vehicles,
+    // reinstate activation).
     uniqueIndex("vehicles_driver_id_idx").on(t.driver_id),
     uniqueIndex("vehicles_reg_number_idx").on(t.registration_number),
     index("vehicles_fitness_expires_idx").on(t.fitness_expires_at),

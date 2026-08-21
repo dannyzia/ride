@@ -221,6 +221,27 @@ Here are some screens showcasing the GlideX user experience for both customers a
 
 ---
 
+## ⚖️ Required Legal Text (release gate)
+
+The four legal screens (rider/driver × Terms of Service / Privacy Policy) render exclusively
+from [`lib/legalContent.ts`](lib/legalContent.ts). That file currently contains a **generic
+professional template** authored by Engineering — it is **not approved legal copy**.
+
+Before production release, Product/Legal must supply:
+
+- Approved English and Bengali Terms of Service and Privacy Policy text
+- Effective date and revision-date policy
+- Contact email and registered office address
+
+Replace the template inside `lib/legalContent.ts` (marked with
+`// @TODO: Replace with approved legal copy`) and keep
+`lib/__tests__/legalContent.test.ts` green — that suite is the build-time guard that fails
+if placeholder markers (e.g. `@PLACEHOLDER`, "Pending owner review") ever appear in the
+rendered content. See `docs/vehicle-model-decision.md` and `docs/payout-product-gate.md`
+for the other open product gates.
+
+---
+
 ## 🧪 Testing
 
 - Unit tests for business logic (**Coming Soon**)  

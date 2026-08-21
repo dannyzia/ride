@@ -18,6 +18,8 @@ import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT } from "@/lib/format";
 import { useDriverStore } from "@/store/useDriverStore";
+import { useState as useStateModal } from "react";
+import PaymentWebView from "@/components/PaymentWebView";
 
 interface DuesData {
   subscription: {
@@ -45,10 +47,13 @@ interface CancellationCredit {
   created_at: string | null;
 }
 
+// P0-B: Instant Pay disabled – product gate pending. See
+// docs/payout-product-gate.md. No Withdraw/cash-out control, payout-history
+// write route, or 'payout' transaction label may appear until Product
+// approves the funding/payout model.
 const TXN_TYPE_LABELS: Record<string, string> = {
   promo_receivable: "Promo Credit",
   referral_receivable: "Referral Bonus",
-  payout: "Payout",
   adjustment: "Adjustment",
   cancellation_compensation: "Cancel Bonus",
 };
@@ -149,6 +154,10 @@ export default function WalletScreen() {
     setRefreshing(false);
   }, [fetchWallet, fetchDues, fetchCredits]);
 
+  // C2: Wallet top-up via PortPos PaymentWebView
+  const [topUpUrl, setTopUpUrl] = useStateModal<string | null>(null);
+  const [topUpInvoiceId, setTopUpInvoiceId] = useStateModal<string | null>(null);
+
   const handleTopUp = useCallback(async () => {
     try {
       const {
@@ -156,9 +165,24 @@ export default function WalletScreen() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
-      // Use the existing top-up API which initiates PortPos
-      router.push("/(main)/(rider)/wallet/topup" as never);
-    } catch {}
+      const res = await fetch(`${API_URL}/api/driver/wallet/topup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ amount_bdt: 0 }), // amount determined by PortPos redirect
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.payment_url) {
+          setTopUpUrl(data.payment_url);
+          setTopUpInvoiceId(data.payment_event_id ?? "");
+        }
+      }
+    } catch {
+      // Non-blocking — user can retry
+    }
   }, []);
 
   const pendingCredits = credits.filter((c) => c.status === "pending");
@@ -506,6 +530,24 @@ export default function WalletScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* C2: PaymentWebView for wallet top-up */}
+      {topUpUrl && topUpInvoiceId && (
+        <PaymentWebView
+          bkashURL={topUpUrl}
+          paymentID={topUpInvoiceId}
+          purpose="wallet_topup"
+          onSuccess={() => {
+            setTopUpUrl(null);
+            setTopUpInvoiceId(null);
+            void handleRefresh();
+          }}
+          onError={() => {
+            setTopUpUrl(null);
+            setTopUpInvoiceId(null);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }

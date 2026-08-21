@@ -40,9 +40,24 @@ export async function GET(request: Request) {
       ? Math.max(0, Math.min(52, parseInt(weekOffsetParam, 10) || 0))
       : 0;
 
+    // H8: Calendar-week anchored to Monday 00:00 Dhaka time.
+    // weekOffset 0 = current Mon-Sun, 1 = last Mon-Sun, etc.
     const now = new Date();
-    const weekEnd = new Date(now.getTime() - weekOffset * WEEK_MS);
-    const weekStart = new Date(weekEnd.getTime() - WEEK_MS);
+    const BDT_OFFSET_MS = 6 * 60 * 60 * 1000;
+    const bdtNow = new Date(now.getTime() + BDT_OFFSET_MS);
+    // Find this Monday's midnight in Dhaka, then convert to UTC
+    const dayOfWeek = bdtNow.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const thisMondayUtc = new Date(
+      Date.UTC(
+        bdtNow.getUTCFullYear(),
+        bdtNow.getUTCMonth(),
+        bdtNow.getUTCDate() - daysSinceMonday,
+      ) - BDT_OFFSET_MS,
+    );
+    // weekOffset shifts by whole weeks
+    const weekStart = new Date(thisMondayUtc.getTime() - weekOffset * WEEK_MS);
+    const weekEnd = new Date(weekStart.getTime() + WEEK_MS);
 
     const tripRows = await db
       .select({

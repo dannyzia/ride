@@ -42,6 +42,9 @@ export default function PackagesScreen() {
 
   const [paymentURL, setPaymentURL] = useState<string | null>(null);
   const [paymentID, setPaymentID] = useState<string | null>(null);
+  // H5: Track the subscription_id from the purchase response to avoid
+  // false-positive confirmation when an old subscription exists.
+  const newSubscriptionIdRef = useRef<string | null>(null);
 
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
@@ -83,12 +86,15 @@ export default function PackagesScreen() {
     setPurchasing(true);
     setPendingPkgId(pkg.id);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       const idempotencyKey = crypto.randomUUID();
       const res = await fetch(`${API_URL}/api/package/purchase`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Idempotency-Key": idempotencyKey,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ package_id: pkg.id, provider: "portpos" }),
       });
@@ -101,6 +107,10 @@ export default function PackagesScreen() {
           setPurchasing(false);
           setPendingPkgId(null);
           return;
+        }
+        // H5: Track the newly created subscription for confirmation polling
+        if (data.subscription_id) {
+          newSubscriptionIdRef.current = data.subscription_id;
         }
         setPaymentURL(data.payment_url);
         setPaymentID(data.payment_event_id);
@@ -139,10 +149,17 @@ export default function PackagesScreen() {
         return;
       }
 
-      fetch(`${API_URL}/api/package/active`)
+      supabase.auth.getSession().then(({ data: { session } }) => session?.access_token)
+        .then((token) => fetch(`${API_URL}/api/package/active`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }))
         .then((res) => res.json())
         .then((data) => {
-          if (data.subscription && data.subscription.id) {
+          // H5: Only confirm when the NEWLY purchased subscription becomes active.
+          // Compare against the subscription_id from the purchase response to avoid
+          // false-positive when a pre-existing subscription is already active.
+          const activeSub = data.subscription;
+          if (activeSub && activeSub.id && (!newSubscriptionIdRef.current || activeSub.id === newSubscriptionIdRef.current)) {
             stopPolling();
             Alert.alert("Success", "Package purchased successfully!", [
               {

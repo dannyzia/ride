@@ -1,6 +1,6 @@
 import { db } from "@/src/db";
 import { rides, users, drivers } from "@/src/db/schema";
-import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lt, desc, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
@@ -19,7 +19,10 @@ const querySchema = z.object({
       "expired",
     ])
     .default("all"),
-  page: z.coerce.number().int().min(1).default(1),
+  // H4: keyset cursor replaces page/offset for stable pagination
+  cursor: z.string().optional(), // ISO timestamp of the last row's created_at
+  cursor_id: z.string().uuid().optional(), // id tiebreaker for the cursor
+  limit: z.coerce.number().int().min(1).max(50).default(PAGE_SIZE),
   from_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -71,7 +74,7 @@ export async function GET(request: Request) {
         { status: 400 },
       );
     }
-    const { status, page, from_date, to_date } = parsed.data;
+    const { status, cursor, cursor_id, limit, from_date, to_date } = parsed.data;
 
     // Build conditions — always scoped to this driver only
     const conditions = [eq(rides.driver_id, driver.id)];
@@ -80,30 +83,35 @@ export async function GET(request: Request) {
       conditions.push(eq(rides.status, status));
     }
 
+    // H4: Use Dhaka day boundaries for date filters
     if (from_date) {
       const start = new Date(from_date + "T00:00:00Z");
       conditions.push(gte(rides.created_at, start));
     }
     if (to_date) {
-      // End of the day
       const end = new Date(
         new Date(to_date + "T00:00:00Z").getTime() + 24 * 60 * 60 * 1000,
       );
       conditions.push(lt(rides.created_at, end));
     }
 
-    const offset = (page - 1) * PAGE_SIZE;
+    // H4: Keyset cursor — cursor is the created_at of the last row seen.
+    // Next page: created_at < cursor OR (created_at = cursor AND id < cursor_id)
+    if (cursor) {
+      const cursorDate = new Date(cursor);
+      if (cursor_id) {
+        conditions.push(
+          or(
+            lt(rides.created_at, cursorDate),
+            and(eq(rides.created_at, cursorDate), sql`${rides.id} < ${cursor_id}`),
+          )!,
+        );
+      } else {
+        conditions.push(lt(rides.created_at, cursorDate));
+      }
+    }
 
-    // Count total rows for pagination
-    const [countRow] = await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(rides)
-      .where(and(...conditions));
-
-    const total = Number(countRow?.count ?? 0);
-    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-    // Fetch page
+    // Fetch page with keyset pagination
     const rows = await db
       .select({
         id: rides.id,
@@ -131,11 +139,12 @@ export async function GET(request: Request) {
       .from(rides)
       .leftJoin(users, eq(rides.user_id, users.id))
       .where(and(...conditions))
-      .orderBy(desc(rides.created_at))
-      .limit(PAGE_SIZE)
-      .offset(offset);
+      .orderBy(desc(rides.created_at), desc(rides.id))
+      .limit(limit + 1); // fetch one extra to detect has_more
 
-    const trips = rows.map((r) => ({
+    // H4: Detect if there are more rows beyond this page
+    const hasMore = rows.length > limit;
+    const trips = (hasMore ? rows.slice(0, limit) : rows).map((r) => ({
       id: r.id,
       origin: {
         address: r.origin_address,
@@ -165,16 +174,16 @@ export async function GET(request: Request) {
       driver_rating: r.driver_rating != null ? Number(r.driver_rating) : null,
     }));
 
+    // H4: Return keyset cursor for next page
+    const lastRow = trips[trips.length - 1];
     return Response.json(
       {
         trips,
         pagination: {
-          page,
-          page_size: PAGE_SIZE,
-          total,
-          total_pages: totalPages,
-          has_next: page < totalPages,
-          has_prev: page > 1,
+          has_more: hasMore,
+          limit,
+          next_cursor: hasMore && lastRow ? lastRow.created_at : null,
+          next_cursor_id: hasMore && lastRow ? lastRow.id : null,
         },
       },
       { status: 200 },

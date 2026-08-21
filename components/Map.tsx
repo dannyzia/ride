@@ -140,6 +140,32 @@ const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
     origin?.lng ??
     (hotspotBounds ? (hotspotBounds.ne[0] + hotspotBounds.sw[0]) / 2 : userLongitude);
 
+  // H3 hexagon polygon features for each hotspot zone.
+  // Built from zone centroids via h3-js cellToBoundary.
+  // (Declared before the GPS early-return below: React hooks must run in a
+  // consistent order on every render.)
+  const hexFeatures = useMemo(() => {
+    if (!hotspots || hotspots.length === 0) return null;
+    return hotspots.map((h) => {
+      const boundary = getH3Boundary(h.lat, h.lng);
+      // GeoJSON Polygon expects [lng, lat] and the ring must close.
+      const ring: [number, number][] = [...boundary, boundary[0]];
+      return {
+        type: "Feature" as const,
+        geometry: {
+          type: "Polygon" as const,
+          coordinates: [ring],
+        },
+        properties: {
+          color: heatColor(h.intensity),
+          fillOpacity: 0.25 + 0.45 * h.intensity,
+          strokeColor: heatColor(h.intensity),
+          strokeOpacity: 0.5 + 0.3 * h.intensity,
+        },
+      };
+    });
+  }, [hotspots]);
+
   if (displayLat == null || displayLng == null) {
     return (
       <View
@@ -181,30 +207,6 @@ const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
     : destinationLatitude && destinationLongitude
       ? [destinationLongitude, destinationLatitude]
       : null;
-
-  // H3 hexagon polygon features for each hotspot zone.
-  // Built from zone centroids via h3-js cellToBoundary.
-  const hexFeatures = useMemo(() => {
-    if (!hotspots || hotspots.length === 0) return null;
-    return hotspots.map((h) => {
-      const boundary = getH3Boundary(h.lat, h.lng);
-      // GeoJSON Polygon expects [lng, lat] and the ring must close.
-      const ring: [number, number][] = [...boundary, boundary[0]];
-      return {
-        type: "Feature" as const,
-        geometry: {
-          type: "Polygon" as const,
-          coordinates: [ring],
-        },
-        properties: {
-          color: heatColor(h.intensity),
-          fillOpacity: 0.25 + 0.45 * h.intensity,
-          strokeColor: heatColor(h.intensity),
-          strokeOpacity: 0.5 + 0.3 * h.intensity,
-        },
-      };
-    });
-  }, [hotspots]);
 
   return (
     <View style={{ flex: 1 }}>

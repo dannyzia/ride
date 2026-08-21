@@ -7,8 +7,6 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
-  Alert,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -17,7 +15,6 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
-import { useDriverStore } from "@/store/useDriverStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 
 interface Vehicle {
@@ -34,21 +31,17 @@ const vehicleTypeDisplay: Record<string, string> = Object.fromEntries(
   VEHICLE_TYPES.map((v) => [v.key, v.display_en]),
 );
 
+// C5 (temporary decision): one vehicle per driver. See
+// docs/vehicle-model-decision.md. The multi-vehicle "Activate" UI and the
+// vehicle-activate endpoint were removed; changing the vehicle is
+// support-assisted until Product approves Option B.
+const ONE_VEHICLE_NOTICE =
+  "You can only register one vehicle. Contact support to change it.";
+
 export default function VehicleManagement() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activating, setActivating] = useState<string | null>(null);
-
-  // Online confirmation modal state
-  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
-  const [pendingActivation, setPendingActivation] = useState<{
-    vehicleId: string;
-    vehicleName: string;
-  } | null>(null);
-
-  const { driver } = useDriverStore();
-  const isOnline = driver?.is_online ?? false;
 
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -92,74 +85,22 @@ export default function VehicleManagement() {
     fetchVehicles();
   }, [fetchVehicles]);
 
-  const handleActivate = useCallback(
-    async (vehicleId: string) => {
-      setActivating(vehicleId);
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) return;
-        const res = await fetch(`${API_URL}/api/driver/vehicle-activate`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ vehicle_id: vehicleId }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          Alert.alert("Activation Failed", err.message || "Could not activate vehicle");
-          return;
-        }
-        // Refresh the list to reflect the new active vehicle
-        await fetchVehicles();
-        Alert.alert("Vehicle Activated", "Your active vehicle has been updated.");
-      } catch (err) {
-        Alert.alert("Error", "Network error. Please try again.");
-        logger.error("Vehicle activation failed", err);
-      } finally {
-        setActivating(null);
-        setConfirmModalVisible(false);
-        setPendingActivation(null);
-      }
-    },
-    [fetchVehicles],
-  );
-
-  const requestActivation = useCallback(
-    (vehicle: Vehicle) => {
-      if (vehicle.is_active) return;
-
-      // If driver is online, show confirmation modal
-      if (isOnline) {
-        setPendingActivation({
-          vehicleId: vehicle.id,
-          vehicleName: vehicle.vehicle_model,
-        });
-        setConfirmModalVisible(true);
-        return;
-      }
-
-      // Offline — activate directly
-      handleActivate(vehicle.id);
-    },
-    [isOnline, handleActivate],
-  );
-
   const formatVehicleType = (type: string) =>
     vehicleTypeDisplay[type] ??
     type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const isDocumentExpiring = (dateStr: string | null): boolean => {
-    if (!dateStr) return false;
+  // H6: Distinguish expired docs (red) from expiring-soon docs (orange)
+  const getDocumentStatus = (dateStr: string | null): "expired" | "expiring" | "ok" => {
+    if (!dateStr) return "ok";
     const expiry = new Date(dateStr);
     const now = new Date();
     const daysUntil = (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-    return daysUntil <= 30 && daysUntil > 0;
+    if (daysUntil <= 0) return "expired";
+    if (daysUntil <= 30) return "expiring";
+    return "ok";
   };
+
+  const hasVehicle = vehicles.length > 0;
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
@@ -230,8 +171,12 @@ export default function VehicleManagement() {
           </View>
         ) : (
           vehicles.map((v) => {
-            const fitnessExpiring = isDocumentExpiring(v.fitness_expires_at);
-            const taxExpiring = isDocumentExpiring(v.tax_token_expires_at);
+            const fitnessStatus = getDocumentStatus(v.fitness_expires_at);
+            const taxStatus = getDocumentStatus(v.tax_token_expires_at);
+            const fitnessExpiring = fitnessStatus === "expiring";
+            const taxExpiring = taxStatus === "expiring";
+            const fitnessExpired = fitnessStatus === "expired";
+            const taxExpired = taxStatus === "expired";
 
             return (
               <View
@@ -283,10 +228,24 @@ export default function VehicleManagement() {
                   {v.registration_plate} · {formatVehicleType(v.vehicle_type)}
                 </Text>
 
-                {/* Document expiry warnings */}
-                {(fitnessExpiring || taxExpiring) && (
-                  <View className="flex-row gap-2 mt-1 mb-2">
-                    {fitnessExpiring && (
+                {/* H6: Document expiry/expired warnings */}
+                {(fitnessExpiring || taxExpiring || fitnessExpired || taxExpired) && (
+                  <View className="flex-row flex-wrap gap-2 mt-1 mb-2">
+                    {fitnessExpired && (
+                      <View
+                        className="flex-row items-center gap-1 px-2 py-1 rounded-full"
+                        style={{ backgroundColor: `${colors.danger}20` }}
+                      >
+                        <Ionicons name="close-circle" size={12} color={colors.danger} />
+                        <Text
+                          className="text-[11px] font-Jakarta"
+                          style={{ color: colors.danger }}
+                        >
+                          Fitness expired
+                        </Text>
+                      </View>
+                    )}
+                    {fitnessExpiring && !fitnessExpired && (
                       <View
                         className="flex-row items-center gap-1 px-2 py-1 rounded-full"
                         style={{ backgroundColor: `${colors.amber}20` }}
@@ -300,7 +259,21 @@ export default function VehicleManagement() {
                         </Text>
                       </View>
                     )}
-                    {taxExpiring && (
+                    {taxExpired && (
+                      <View
+                        className="flex-row items-center gap-1 px-2 py-1 rounded-full"
+                        style={{ backgroundColor: `${colors.danger}20` }}
+                      >
+                        <Ionicons name="close-circle" size={12} color={colors.danger} />
+                        <Text
+                          className="text-[11px] font-Jakarta"
+                          style={{ color: colors.danger }}
+                        >
+                          Tax token expired
+                        </Text>
+                      </View>
+                    )}
+                    {taxExpiring && !taxExpired && (
                       <View
                         className="flex-row items-center gap-1 px-2 py-1 rounded-full"
                         style={{ backgroundColor: `${colors.amber}20` }}
@@ -316,127 +289,48 @@ export default function VehicleManagement() {
                     )}
                   </View>
                 )}
-
-                {/* Activate button for non-active vehicles */}
-                {!v.is_active && (
-                  <TouchableOpacity
-                    className="rounded-full py-[10px] items-center mt-2"
-                    style={{
-                      borderWidth: 1.5,
-                      borderColor: colors.primary,
-                    }}
-                    onPress={() => requestActivation(v)}
-                    disabled={activating === v.id}
-                  >
-                    {activating === v.id ? (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <Text
-                        className="text-[14px] font-JakartaBold"
-                        style={{ color: colors.primary }}
-                      >
-                        Activate
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                )}
               </View>
             );
           })
         )}
 
-        {/* Add Vehicle button */}
-        <TouchableOpacity
-          className="rounded-full w-full py-[16px] items-center mt-2"
-          style={{ backgroundColor: colors.primary }}
-          onPress={() => router.push("/(main)/(rider)/add-vehicle")}
-        >
-          <Text className="text-[18px] font-JakartaBold" style={{ color: colors.white }}>
-            + Add Vehicle
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Online Activation Confirmation Modal */}
-      <Modal
-        visible={confirmModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          setConfirmModalVisible(false);
-          setPendingActivation(null);
-        }}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
+        {/* C5: One-vehicle constraint notice replaces the Add Vehicle button
+            once a vehicle is registered. */}
+        {hasVehicle ? (
           <View
-            className="w-[85%] rounded-[16px] p-[20px]"
-            style={{ backgroundColor: surfaceBg }}
+            className="rounded-[12px] p-[14px] flex-row items-center gap-2 mt-2"
+            style={{
+              backgroundColor: `${colors.info}10`,
+              borderWidth: 1,
+              borderColor: `${colors.info}20`,
+            }}
           >
-            <View className="flex-row items-center gap-2 mb-3">
-              <Ionicons name="warning" size={24} color={colors.amber} />
-              <Text
-                className="text-[18px] font-JakartaBold"
-                style={{ color: textPrimary }}
-              >
-                Switch Vehicle While Online?
-              </Text>
-            </View>
+            <Ionicons name="information-circle-outline" size={18} color={colors.info} />
             <Text
-              className="text-[14px] font-Jakarta mb-4"
+              className="text-[13px] font-Jakarta flex-1"
               style={{ color: textSecondary }}
             >
-              You are currently online and may receive ride offers. Switching your
-              active vehicle may temporarily affect your dispatch eligibility if
-              the vehicle type changes.
+              {ONE_VEHICLE_NOTICE}
             </Text>
-            {pendingActivation && (
-              <Text
-                className="text-[14px] font-JakartaSemiBold mb-4"
-                style={{ color: textPrimary }}
-              >
-                Activating: {pendingActivation.vehicleName}
-              </Text>
-            )}
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                className="flex-1 py-[12px] rounded-[10px] items-center"
-                style={{ borderWidth: 1, borderColor }}
-                onPress={() => {
-                  setConfirmModalVisible(false);
-                  setPendingActivation(null);
-                }}
-              >
-                <Text
-                  className="text-[15px] font-JakartaSemiBold"
-                  style={{ color: textPrimary }}
-                >
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 py-[12px] rounded-[10px] items-center"
-                style={{ backgroundColor: colors.primary }}
-                onPress={() => {
-                  if (pendingActivation) {
-                    handleActivate(pendingActivation.vehicleId);
-                  }
-                }}
-              >
-                <Text className="text-[15px] font-JakartaSemiBold text-white">
-                  Confirm Switch
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
-        </View>
-      </Modal>
+        ) : (
+          !loading &&
+          !error && (
+            <TouchableOpacity
+              className="rounded-full w-full py-[16px] items-center mt-2"
+              style={{ backgroundColor: colors.primary }}
+              onPress={() => router.push("/(main)/(rider)/add-vehicle")}
+            >
+              <Text
+                className="text-[18px] font-JakartaBold"
+                style={{ color: colors.white }}
+              >
+                + Add Vehicle
+              </Text>
+            </TouchableOpacity>
+          )
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, AppState } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { useDriverFlowStore } from '@/store/useDriverFlowStore';
 import { colors } from '@/theme/goRide';
@@ -74,6 +74,16 @@ export default function DriverStatusGuard({ children }: Props) {
   useEffect(() => {
     if (!driver) fetchDriver();
   }, [driver, fetchDriver]);
+
+  // H2: AppState listener — re-check status when app returns to foreground
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        fetchDriver();
+      }
+    });
+    return () => sub.remove();
+  }, [fetchDriver]);
 
   // Non-active drivers may only view the onboarding wizard and the
   // verification screen — the two screens that complete or track their
@@ -243,7 +253,43 @@ export default function DriverStatusGuard({ children }: Props) {
     case 'active':
       return <>{children}</>;
 
+    // H2: Fail closed for unknown statuses — never grant full access
     default:
-      return <>{children}</>;
+      return (
+        <View className="flex-1 items-center justify-center px-[24px]" style={{ backgroundColor: bg }}>
+          <View
+            className="w-16 h-16 rounded-full items-center justify-center mb-4"
+            style={{ backgroundColor: colors.dangerLight }}
+          >
+            <Text className="text-[28px]">⚠️</Text>
+          </View>
+          <Text className="text-goDanger text-[22px] font-JakartaBold mb-2">
+            Account Issue
+          </Text>
+          <Text className="text-center text-[14px] font-Jakarta mb-4" style={{ color: textPrimary }}>
+            There is an issue with your account status. Please contact support for assistance.
+          </Text>
+          <TouchableOpacity
+            className="bg-goPrimary rounded-full w-full py-[14px] items-center mb-3"
+            onPress={handleCheckStatus}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Text className="text-[16px] font-JakartaBold text-goWhite">Check Status</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="border rounded-full w-full py-[14px] items-center"
+            style={{ borderColor }}
+            onPress={() => router.push('/(main)/(rider)/contact-support')}
+          >
+            <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>
+              Contact Support
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
   }
 }

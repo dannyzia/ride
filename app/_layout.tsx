@@ -12,7 +12,7 @@ import { ToastHost } from "@/components/Toast";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useAppearance } from "@/lib/useAppearance";
-import "@/i18n/i18n";
+import { initI18n } from "@/i18n/i18n";
 import { API_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
 import { processQueue } from "@/lib/sosQueue";
@@ -144,6 +144,12 @@ export default function RootLayout() {
     if (fontsLoaded && !isWeb) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
 
+  // ── i18n language hydration ──────────────────────────────────────
+  // C4: hydrate saved language on startup so non-English persists across restarts.
+  useEffect(() => {
+    initI18n().catch(() => {});
+  }, []);
+
   // ── Theme persistence ──────────────────────────────────────────
   const { theme } = useAppearance();
 
@@ -164,6 +170,39 @@ export default function RootLayout() {
       }
     });
     return () => unsubscribe();
+  }, []);
+
+  // ── H9: Pending payment reconciliation on app open ──────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+        const pendingEventId = await AsyncStorage.getItem("pending_payment_event_id");
+        if (!pendingEventId) return;
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+
+        const res = await fetch(`${API_URL}/api/payment/portpos/status?event_id=${pendingEventId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === "paid") {
+            // Payment confirmed — clear the pending marker
+            await AsyncStorage.removeItem("pending_payment_event_id");
+            logger.info("[payment] reconciled pending payment on app open", { eventId: pendingEventId });
+          } else if (data.status === "failed") {
+            await AsyncStorage.removeItem("pending_payment_event_id");
+            logger.info("[payment] cleared failed pending payment on app open", { eventId: pendingEventId });
+          }
+          // If still pending, leave the marker — will be checked again next time
+        }
+      } catch {
+        // Non-blocking — reconciliation is best-effort
+      }
+    })();
   }, []);
 
   // ── Push notification routing ───────────────────────────────────
@@ -187,17 +226,37 @@ export default function RootLayout() {
     // This fires when the user taps a notification that opened the app.
     // Expo Router's initial URL is already handled by the linking config
     // below, so we only need to handle the notification data payload.
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+    const sub = Notifications.addNotificationResponseReceivedListener(async (response) => {
       const data = response.notification.request.content.data as
         | Record<string, string>
         | undefined;
       if (!data) return;
 
+      // H1: Derive role from session instead of hardcoding "driver"
+      let role: "rider" | "driver" = "driver";
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          const res = await fetch(`${API_URL}/api/auth/verify-token`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const authData = await res.json();
+            if (authData.role === "rider" || authData.role === "driver") role = authData.role;
+          }
+        }
+      } catch {
+        // Default to driver if role derivation fails
+      }
+
       // Route via the centralized router (handles all notification types)
-      const routed = routeNotification(data, "driver");
+      const routed = routeNotification(data, role);
       if (!routed) {
         // Fallback: legacy ride_id handling for backward compatibility
-        if (data.ride_id) {
+        // H1: Validate ride_id with UUID regex before pushing
+        if (data.ride_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.ride_id)) {
           if (data.type === "ride:offer") {
             router.push("/(main)/(rider)" as never);
           } else {
