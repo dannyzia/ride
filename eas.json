@@ -16,6 +16,7 @@
       }
     },
     "staging": {
+      "environment": "production",
       "releaseChannel": "staging",
       "autoIncrement": false,
       "developmentClient": false,
