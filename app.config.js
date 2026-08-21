@@ -22,7 +22,13 @@ export default {
     },
     updates: {
       enabled: true,
+      // EAS Update project URL — required for OTA delivery. Without it the
+      // client never checks for updates and `eas update` pushes are inert.
+      url: "https://u.expo.dev/3293078f-d655-46b9-8a03-c45b2fab2c2d",
       fallbackToCacheTimeout: 0,
+    },
+    runtimeVersion: {
+      policy: "appVersion",
     },
     assetBundlePatterns: ["**/*"],
     ios: {
