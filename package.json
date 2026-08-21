@@ -59,6 +59,7 @@
     "expo-status-bar": "~2.2.3",
     "expo-symbols": "~0.4.4",
     "expo-system-ui": "~5.0.7",
+    "expo-updates": "~0.28.18",
     "expo-web-browser": "~14.1.6",
     "h3-js": "^4.1.0",
     "i18next": "^26.3.6",
