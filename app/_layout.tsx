@@ -17,6 +17,7 @@ import { API_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
 import { processQueue } from "@/lib/sosQueue";
 import NetInfo from "@react-native-community/netinfo";
+import { routeNotification, routeDeepLink } from "@/lib/notificationRouter";
 
 const isWeb = Platform.OS === "web";
 
@@ -65,15 +66,12 @@ export default function RootLayout() {
     "Jakarta-SemiBold": require("../assets/fonts/PlusJakartaSans-SemiBold.ttf"),
   });
 
+  // ── Auth gate ──────────────────────────────────────────────────
   useEffect(() => {
-    // Safety timeout: if auth initialization doesn't resolve within 8 seconds,
-    // force-initialize so the user isn't stuck on a blank screen.
     const timeout = setTimeout(() => {
       setInitializing(false);
     }, 8000);
 
-    // Guard: if Supabase client is not properly configured (e.g., env vars
-    // missing on the server), skip auth initialization entirely.
     if (!supabase?.auth?.onAuthStateChange) {
       logger.warn("[auth] Supabase client not configured — skipping auth gate");
       setInitializing(false);
@@ -83,16 +81,6 @@ export default function RootLayout() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // ── INITIAL_SESSION gate ─────────────────────────────────────────
-      // INITIAL_SESSION is the first event Supabase fires (0-2 s after
-      // mount) when it restores the local session.  The splash screen
-      // (app/index.tsx) owns initial routing per §9.3:
-      //   SPLASH → No auth → WELCOME → Get Started → PHONE_ENTRY
-      // Redirecting here would bypass welcome.tsx for first-time users and
-      // send them straight to phone-entry.  We also skip the verify-token
-      // round-trip (unnecessary — the splash does its own check after
-      // 1.5 s).  Only subsequent events (SIGNED_IN, SIGNED_OUT, etc.)
-      // represent real mid-session auth changes that need a redirect.
       if (!event || event === "INITIAL_SESSION") {
         if (session?.user) {
           registerPushForUser(session.access_token).catch(() => {});
@@ -101,7 +89,6 @@ export default function RootLayout() {
         return;
       }
 
-      // ── Mid-session auth changes ─────────────────────────────────────
       if (session?.user) {
         try {
           const token = session.access_token;
@@ -113,13 +100,8 @@ export default function RootLayout() {
           if (res.ok) {
             const data = await res.json();
             const inAuthGroup = segmentsRef.current[0] === "(auth)";
-            // Allow admin routes through — the admin layout has its own
-            // auth guard (role === "admin"). Do NOT redirect admin here.
             const isAdminRoute = segmentsRef.current[0] === "admin";
-            // /track is a public share link — logged-out friends must be able
-            // to see the ride without signing in (its endpoint is public).
             const isPublicRoute = isAdminRoute || segmentsRef.current[0] === "track";
-            // Register push token after successful auth (fire-and-forget)
             registerPushForUser(session.access_token).catch(() => {});
 
             if (data.exists && inAuthGroup && !isPublicRoute) {
@@ -132,24 +114,16 @@ export default function RootLayout() {
               router.replace("/(auth)/phone-entry");
             }
           } else if (res.status === 401 || res.status === 403) {
-            // Actual auth failure — sign out and redirect (never from the
-            // public /track share page).
             if (segmentsRef.current[0] !== "admin" && segmentsRef.current[0] !== "track") {
               router.replace("/(auth)/phone-entry");
             }
           } else {
-            // 5xx / network error — do NOT log the user out, just log.
-            // The next auth event or app restart will retry.
             logger.warn(`[auth] verify-token failed with status ${res.status} — keeping session`);
           }
         } catch {
-          // Network error — do NOT log the user out. The next auth event
-          // or app restart will retry.
           logger.warn("[auth] verify-token network error — keeping session");
         }
       } else {
-        // Session lost mid-session (e.g. sign-out from another device,
-        // token revocation).  Redirect to auth unless already there.
         const inAuthGroup = segmentsRef.current[0] === "(auth)";
         const isAdminRoute = segmentsRef.current[0] === "admin";
         const isPublicRoute = isAdminRoute || segmentsRef.current[0] === "track";
@@ -170,7 +144,7 @@ export default function RootLayout() {
     if (fontsLoaded && !isWeb) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
 
-  // ── Theme persistence ───────────────────────────────────────────────
+  // ── Theme persistence ──────────────────────────────────────────
   const { theme } = useAppearance();
 
   useEffect(() => {
@@ -181,26 +155,23 @@ export default function RootLayout() {
     }
   }, [theme]);
 
-  // ── SOS queue: process on startup + network reconnect ──────────────
-  // If there are queued SOS alerts from a previous offline session, send
-  // them now. Also subscribe to NetInfo to replay on reconnect.
+  // ── SOS queue ──────────────────────────────────────────────────
   useEffect(() => {
-    // Process immediately on mount (catches alerts queued before restart)
     processQueue().catch(() => {});
-
     const unsubscribe = NetInfo.addEventListener((state) => {
       if (state.isConnected === true) {
         processQueue().catch(() => {});
       }
     });
-
     return () => unsubscribe();
   }, []);
 
-  // ── Push notification setup ──────────────────────────────────────────
-  // Hoisted above all early returns (rules-of-hooks requirement) and
-  // registered unconditionally so the notification handler is available
-  // even during splash/skeleton screens.
+  // ── Push notification routing ───────────────────────────────────
+  // Uses centralized notificationRouter for type → route mapping.
+  // Handles three states:
+  //   1. Foreground: notification arrives while app is open (banner shown by handler)
+  //   2. Background: user taps notification while app is backgrounded
+  //   3. Cold start: app is launched by tapping a notification
   useEffect(() => {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
@@ -212,13 +183,26 @@ export default function RootLayout() {
       }),
     });
 
+    // ── Background / cold-start tap handler ───────────────────────
+    // This fires when the user taps a notification that opened the app.
+    // Expo Router's initial URL is already handled by the linking config
+    // below, so we only need to handle the notification data payload.
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as Record<string, string> | undefined;
-      if (data?.ride_id) {
-        if (data?.type === 'ride:offer') {
-          router.push(`/(main)/(rider)`);
-        } else {
-          router.push(`/(main)/(customer)/ride-tracking/${data.ride_id}`);
+      const data = response.notification.request.content.data as
+        | Record<string, string>
+        | undefined;
+      if (!data) return;
+
+      // Route via the centralized router (handles all notification types)
+      const routed = routeNotification(data, "driver");
+      if (!routed) {
+        // Fallback: legacy ride_id handling for backward compatibility
+        if (data.ride_id) {
+          if (data.type === "ride:offer") {
+            router.push("/(main)/(rider)" as never);
+          } else {
+            router.push(`/(main)/(customer)/ride-tracking/${data.ride_id}` as never);
+          }
         }
       }
     });
@@ -226,9 +210,13 @@ export default function RootLayout() {
     return () => sub.remove();
   }, [router]);
 
-  // On web: skip the Reanimated splash animation (it can hang in production
-  // web builds and leave a blank screen). Show a simple loading indicator
-  // instead while auth initializes.
+  // ── Deep-link handling ──────────────────────────────────────────
+  // Expo Router's `linking` config handles the initial URL on cold start.
+  // For runtime deep links (while app is open), we use the
+  // `Linking.addEventListener` in the linking config's `getStateFromPath`.
+  // The linking config below defines all valid URL patterns.
+
+  // On web: skip the Reanimated splash animation
   if (isWeb && (initializing || !fontsLoaded)) {
     return (
       <View

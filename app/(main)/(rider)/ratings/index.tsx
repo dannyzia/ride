@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
@@ -83,8 +84,12 @@ export default function Ratings() {
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
-      <View className="px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Ratings & Reviews</Text>
+      <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
+        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]">
+          <Ionicons name="chevron-back" size={24} color={textPrimary} />
+        </TouchableOpacity>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Ratings & Reviews</Text>
+        <View style={{ width: 32 }} />
         {loading ? (
           <ActivityIndicator size="small" color="#0CC25F" className="mt-3" />
         ) : error ? (

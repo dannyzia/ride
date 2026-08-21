@@ -370,25 +370,27 @@ export default function IncentivesScreen() {
         style={{
           flexDirection: "row",
           alignItems: "center",
-          justifyContent: "space-between",
           paddingHorizontal: spacing.lg,
           paddingVertical: spacing.md,
+          borderBottomWidth: 1,
+          borderBottomColor: borderColor,
         }}
       >
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={textPrimary} />
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: spacing.sm, padding: spacing.xs }}>
+          <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
           style={{
-            fontFamily: "Jakarta-Regular",
-            fontWeight: "700",
-            fontSize: 17,
+            flex: 1,
+            textAlign: "center",
+            fontFamily: "Jakarta-Bold",
+            fontSize: 18,
             color: textPrimary,
           }}
         >
           Incentives
         </Text>
-        <View style={{ width: 24 }} />
+        <View style={{ width: 32 }} />
       </View>
 
       {loading ? (

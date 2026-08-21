@@ -16,6 +16,7 @@ import RideLayout from "@/components/RideLayout";
 import Map from "@/components/Map";
 import { fetchRouteGeometry } from "@/lib/routeGeometry";
 import TollParkingModal from "@/components/TollParkingModal";
+import SOSButton from "@/components/SOSButton";
 import { useIsDark } from "@/lib/useAppearance";
 import { Ionicons } from "@expo/vector-icons";
 import ReactNativeModal from "react-native-modal";
@@ -665,6 +666,9 @@ const ReachCustomer = () => {
       </ReactNativeModal>
 
       <TollParkingModal visible={showTollModal} rideId={activeRideId} onClose={() => setShowTollModal(false)} />
+
+      {/* SOS emergency button with 5-second cooldown */}
+      <SOSButton rideId={activeRideId ?? undefined} />
     </Fragment>
   );
 };

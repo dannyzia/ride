@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -27,18 +27,45 @@ interface SOSContact {
 
 interface SOSButtonProps {
   disabled?: boolean;
+  /** Ride ID to attach to the SOS alert for admin dashboard correlation. */
+  rideId?: string;
 }
 
 const SOS_API_URL = Constants.expoConfig?.extra?.serverUrl ?? "";
 
-export default function SOSButton({ disabled = false }: SOSButtonProps) {
+/** Cooldown in seconds after firing an SOS before the button re-enables. */
+const SOS_COOLDOWN_SECONDS = 5;
+
+export default function SOSButton({ disabled = false, rideId }: SOSButtonProps) {
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const [contacts, setContacts] = useState<SOSContact[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [queued, setQueued] = useState(false);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const cooldownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isDark = useIsDark();
+
+  // Cleanup cooldown interval on unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
+    };
+  }, []);
+
+  const startCooldown = useCallback(() => {
+    setCooldownRemaining(SOS_COOLDOWN_SECONDS);
+    cooldownIntervalRef.current = setInterval(() => {
+      setCooldownRemaining((prev) => {
+        if (prev <= 1) {
+          if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
 
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
@@ -47,6 +74,14 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
   const textDisabled = isDark ? colors.textDisabledDark : colors.textDisabledLight;
 
   const handleOpen = useCallback(async () => {
+    // 5-second cooldown gate: prevent accidental double-taps
+    if (cooldownRemaining > 0) {
+      Alert.alert(
+        "SOS Cooldown",
+        `Please wait ${cooldownRemaining} second${cooldownRemaining !== 1 ? "s" : ""} before sending another SOS.`,
+      );
+      return;
+    }
     setVisible(true);
     setLoading(true);
     try {
@@ -119,7 +154,7 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
                   Authorization: `Bearer ${token}`,
                   "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ lat, lng }),
+                body: JSON.stringify({ lat, lng, ride_id: rideId }),
               }).catch(() => {});
             }
           }
@@ -127,6 +162,8 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
           // Non-blocking
         }
         logger.info("[SOS] alert fired", { lat, lng, contact: contact.number });
+        // Start cooldown after successful fire
+        startCooldown();
       } catch (err) {
         logger.error("[SOS] error", err);
       } finally {
@@ -141,11 +178,13 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
     setQueued(false);
   }, []);
 
+  const isCooldownActive = cooldownRemaining > 0 || disabled;
+
   return (
     <>
       <TouchableOpacity
         onPress={handleOpen}
-        disabled={disabled}
+        disabled={isCooldownActive}
         activeOpacity={0.8}
         style={{
           position: "absolute",
@@ -154,7 +193,7 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
           width: 56,
           height: 56,
           borderRadius: 28,
-          backgroundColor: disabled ? textDisabled : colors.danger,
+          backgroundColor: isCooldownActive ? textDisabled : colors.danger,
           justifyContent: "center",
           alignItems: "center",
           shadowColor: colors.black,
@@ -165,7 +204,20 @@ export default function SOSButton({ disabled = false }: SOSButtonProps) {
           zIndex: 100,
         }}
       >
-        <Ionicons name="shield" size={28} color={colors.white} />
+        {cooldownRemaining > 0 ? (
+          <Text
+            style={{
+              color: colors.white,
+              fontFamily: "Jakarta-Bold",
+              fontSize: 18,
+              fontVariant: ["tabular-nums"],
+            }}
+          >
+            {cooldownRemaining}
+          </Text>
+        ) : (
+          <Ionicons name="shield" size={28} color={colors.white} />
+        )}
       </TouchableOpacity>
 
       <ReactNativeModal

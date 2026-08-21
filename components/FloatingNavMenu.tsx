@@ -53,7 +53,7 @@ const DRIVER_ITEMS: NavItem[] = [
   { route: "/(main)/(rider)/(tabs)/activity/index", label: "Activity", icon: "time-outline", group: "Main" },
   { route: "/(main)/(rider)/(tabs)/wallet/index", label: "Wallet", icon: "wallet-outline", group: "Main" },
   { route: "/(main)/(rider)/(tabs)/profile/index", label: "Profile", icon: "person-outline", group: "Account" },
-  { route: "/(main)/(rider)/(tabs)/settings/index", label: "Settings", icon: "settings-outline", group: "Account" },
+  { route: "/(main)/(rider)/settings", label: "Settings", icon: "settings-outline", group: "Account" },
   { route: "/(main)/(rider)/packages", label: "Packages", icon: "cube-outline", group: "Programs" },
   { route: "/(main)/(rider)/incentives", label: "Incentives", icon: "trophy-outline", group: "Programs" },
   { route: "/(main)/(rider)/call-ledger", label: "Call Ledger", icon: "clipboard-outline", group: "Programs" },

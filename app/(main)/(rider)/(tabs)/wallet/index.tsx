@@ -1,12 +1,42 @@
 import { useState, useEffect, useCallback } from "react";
 import { API_URL } from "@/lib/config";
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StatusBar } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  StatusBar,
+  RefreshControl,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/theme/goRide";
-import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { colors, radii, spacing } from "@/theme/goRide";
+import { useIsDark } from "@/lib/useAppearance";
+import { formatBDT } from "@/lib/format";
+import { useDriverStore } from "@/store/useDriverStore";
+
+interface DuesData {
+  subscription: {
+    package_name: string;
+    expires_at: string;
+    calls_remaining: number;
+    status: string;
+  } | null;
+  commission_due_bdt: number;
+  total_outstanding_bdt: number;
+}
+
+interface Transaction {
+  id: string;
+  transaction_type: string;
+  amount_bdt: number;
+  balance_after: number;
+  created_at: string;
+}
 
 interface CancellationCredit {
   id: string;
@@ -15,157 +45,467 @@ interface CancellationCredit {
   created_at: string | null;
 }
 
+const TXN_TYPE_LABELS: Record<string, string> = {
+  promo_receivable: "Promo Credit",
+  referral_receivable: "Referral Bonus",
+  payout: "Payout",
+  adjustment: "Adjustment",
+  cancellation_compensation: "Cancel Bonus",
+};
+
 export default function WalletScreen() {
   const isDark = useIsDark();
-  const { setTheme } = useAppearance();
   const [balancePaisa, setBalancePaisa] = useState(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [dues, setDues] = useState<DuesData | null>(null);
   const [credits, setCredits] = useState<CancellationCredit[]>([]);
-  const [creditsLoading, setCreditsLoading] = useState(false);
+
+  const activeSubscription = useDriverStore((s) => s.activeSubscription);
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
-  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const textSecondary = isDark
+    ? colors.textSecondaryDark
+    : colors.textSecondaryLight;
 
   const fetchWallet = useCallback(async () => {
-    setLoading(true);
-    setError("");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) { setError("Not authenticated"); return; }
+      if (!token) {
+        setError("Not authenticated");
+        return;
+      }
       const res = await fetch(`${API_URL}/api/driver/wallet`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) { setError("Failed to load wallet"); return; }
+      if (!res.ok) {
+        setError("Failed to load wallet");
+        return;
+      }
       const data = await res.json();
       setBalancePaisa(data.balance_bdt ?? 0);
+      setTransactions(data.recent_transactions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");
       logger.error("Wallet fetch failed", err);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
-  const fetchCredits = useCallback(async () => {
-    setCreditsLoading(true);
+  const fetchDues = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/driver/dues`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setDues(await res.json());
+    } catch {}
+  }, []);
+
+  const fetchCredits = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
       const res = await fetch(`${API_URL}/api/driver/cancellation-credits`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) return;
-      const data = await res.json();
-      setCredits(data.credits ?? []);
+      if (res.ok) {
+        const data = await res.json();
+        setCredits(data.credits ?? []);
+      }
     } catch (err) {
       logger.error("Cancellation credits fetch failed", err);
-    } finally {
-      setCreditsLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchWallet(); }, [fetchWallet]);
-  useEffect(() => { fetchCredits(); }, [fetchCredits]);
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    await Promise.all([fetchWallet(), fetchDues(), fetchCredits()]);
+    setLoading(false);
+  }, [fetchWallet, fetchDues, fetchCredits]);
 
-  const pendingCount = credits.filter((c) => c.status === "pending").length;
-  const totalPendingBdt = credits
-    .filter((c) => c.status === "pending")
-    .reduce((sum, c) => sum + c.amount_bdt, 0);
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchWallet(), fetchDues(), fetchCredits()]);
+    setRefreshing(false);
+  }, [fetchWallet, fetchDues, fetchCredits]);
+
+  const handleTopUp = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      // Use the existing top-up API which initiates PortPos
+      router.push("/(main)/(rider)/wallet/topup" as never);
+    } catch {}
+  }, []);
+
+  const pendingCredits = credits.filter((c) => c.status === "pending");
+  const totalPendingBdt = pendingCredits.reduce(
+    (sum, c) => sum + c.amount_bdt,
+    0,
+  );
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
-      <View className="px-[24px] py-[16px] border-b" style={{ borderColor }}>
-        <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>Wallet</Text>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={bg}
+      />
+      {/* Header */}
+      <View
+        className="px-[24px] py-[16px] border-b"
+        style={{ borderColor }}
+      >
+        <Text
+          className="text-[20px] font-JakartaBold tracking-tight"
+          style={{ color: textPrimary }}
+        >
+          Wallet
+        </Text>
         {loading ? (
-          <ActivityIndicator size="small" color={colors.primary} className="mt-3" />
+          <ActivityIndicator
+            size="small"
+            color={colors.primary}
+            className="mt-3"
+          />
         ) : error ? (
-          <Text className="text-[14px] font-Jakarta mt-2" style={{ color: colors.danger }}>{error}</Text>
+          <Text
+            className="text-[14px] font-Jakarta mt-2"
+            style={{ color: colors.danger }}
+          >
+            {error}
+          </Text>
         ) : (
           <>
-            <Text className="text-[32px] font-JakartaBold tracking-tight mt-1" style={{ color: colors.primary }}>৳{(balancePaisa / 100).toFixed(0)}</Text>
-            <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
-              Total earnings tracker
+            <Text
+              className="text-[32px] font-JakartaBold tracking-tight mt-1"
+              style={{ color: textPrimary }}
+            >
+              {formatBDT(balancePaisa)}
+            </Text>
+            <Text
+              className="text-[13px] font-Jakarta"
+              style={{ color: textSecondary }}
+            >
+              Driver wallet balance
             </Text>
           </>
         )}
       </View>
-      <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16, gap: 12 }}>
-        <View className="border rounded-[12px] p-[14px]" style={{ backgroundColor: surfaceBg, borderColor }}>
-          <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
-            Total earnings are credited here at ride completion and from gamification rewards. No withdrawals are available yet.
-          </Text>
-        </View>
 
-        {/* Cancellation Compensation Section */}
-        <View className="border rounded-[12px] p-[14px]" style={{ backgroundColor: surfaceBg, borderColor }}>
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-[14px] font-JakartaSemiBold" style={{ color: textPrimary }}>
-              Cancellation Compensation
+      <ScrollView
+        className="flex-1 px-[24px]"
+        contentContainerStyle={{ paddingVertical: 16, gap: 12 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        {/* Active Package Card */}
+        {activeSubscription && (
+          <View
+            className="rounded-[12px] p-[14px]"
+            style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+          >
+            <View className="flex-row items-center gap-2 mb-2">
+              <Ionicons name="cube-outline" size={16} color={colors.primary} />
+              <Text
+                className="text-[14px] font-JakartaSemiBold"
+                style={{ color: textPrimary }}
+              >
+                Active Package
+              </Text>
+            </View>
+            <View className="flex-row justify-between items-center">
+              <View>
+                <Text
+                  className="text-[13px] font-Jakarta"
+                  style={{ color: textSecondary }}
+                >
+                  Calls remaining
+                </Text>
+                <Text
+                  className="text-[20px] font-JakartaBold"
+                  style={{ color: textPrimary }}
+                >
+                  {activeSubscription.calls_remaining === -1
+                    ? "Unlimited"
+                    : activeSubscription.calls_remaining}
+                </Text>
+              </View>
+              <View className="items-end">
+                <Text
+                  className="text-[13px] font-Jakarta"
+                  style={{ color: textSecondary }}
+                >
+                  Expires
+                </Text>
+                <Text
+                  className="text-[14px] font-JakartaSemiBold"
+                  style={{ color: textPrimary }}
+                >
+                  {new Date(activeSubscription.expires_at).toLocaleDateString(
+                    "en-BD",
+                    { day: "numeric", month: "short", timeZone: "Asia/Dhaka" },
+                  )}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Dues Card */}
+        {dues && dues.total_outstanding_bdt > 0 && (
+          <View
+            className="rounded-[12px] p-[14px]"
+            style={{
+              backgroundColor: `${colors.danger}08`,
+              borderWidth: 1,
+              borderColor: `${colors.danger}30`,
+            }}
+          >
+            <View className="flex-row items-center gap-2 mb-2">
+              <Ionicons
+                name="alert-circle-outline"
+                size={16}
+                color={colors.danger}
+              />
+              <Text
+                className="text-[14px] font-JakartaSemiBold"
+                style={{ color: colors.danger }}
+              >
+                Outstanding Dues
+              </Text>
+            </View>
+            <Text
+              className="text-[18px] font-JakartaBold"
+              style={{ color: colors.danger }}
+            >
+              {formatBDT(dues.total_outstanding_bdt)}
             </Text>
-            <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
-              {pendingCount} pending
+            <Text
+              className="text-[12px] font-Jakarta mt-1"
+              style={{ color: textSecondary }}
+            >
+              Commission owed on completed rides
             </Text>
           </View>
-          {creditsLoading ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : credits.length === 0 ? (
-            <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
-              No cancellation compensations yet.
+        )}
+
+        {/* Top Up Button */}
+        <TouchableOpacity
+          className="rounded-[12px] py-[14px] items-center flex-row justify-center gap-2"
+          style={{ backgroundColor: colors.primary }}
+          onPress={handleTopUp}
+          accessibilityRole="button"
+          accessibilityLabel="Top up wallet"
+        >
+          <Ionicons name="add-circle-outline" size={20} color={colors.white} />
+          <Text className="text-[16px] font-JakartaBold text-white">
+            Top Up
+          </Text>
+        </TouchableOpacity>
+
+        {/* Payout Method shortcut */}
+        <TouchableOpacity
+          className="rounded-[12px] p-[14px] flex-row items-center justify-between"
+          style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+          onPress={() => router.push("/(main)/(rider)/payout-method")}
+        >
+          <View className="flex-row items-center gap-2">
+            <Ionicons
+              name="card-outline"
+              size={18}
+              color={colors.primary}
+            />
+            <Text
+              className="text-[14px] font-JakartaSemiBold"
+              style={{ color: textPrimary }}
+            >
+              Payout Method
             </Text>
-          ) : (
-            <View style={{ gap: 8 }}>
-              {credits.map((credit) => {
-                const statusColor =
-                  credit.status === "pending"
-                    ? colors.accent
-                    : credit.status === "applied"
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={textSecondary} />
+        </TouchableOpacity>
+
+        {/* Cancellation Credits */}
+        {credits.length > 0 && (
+          <View
+            className="rounded-[12px] p-[14px]"
+            style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+          >
+            <View className="flex-row justify-between items-center mb-2">
+              <Text
+                className="text-[14px] font-JakartaSemiBold"
+                style={{ color: textPrimary }}
+              >
+                Cancellation Credits
+              </Text>
+              <Text
+                className="text-[13px] font-Jakarta"
+                style={{ color: textSecondary }}
+              >
+                {pendingCredits.length} pending
+              </Text>
+            </View>
+            {credits.slice(0, 5).map((credit) => {
+              const statusColor =
+                credit.status === "pending"
+                  ? colors.accent
+                  : credit.status === "applied"
                     ? colors.primary
                     : textSecondary;
-                return (
-                  <View key={credit.id} className="flex-row justify-between items-center py-2 border-b last:border-0" style={{ borderColor }}>
-                    <View>
-                      <Text className="text-[13px] font-JakartaSemiBold" style={{ color: textPrimary }}>
-                        ৳{(credit.amount_bdt / 100).toFixed(0)} bonus
-                      </Text>
-                      <Text className="text-[11px] font-Jakarta" style={{ color: textSecondary }}>
-                        {credit.created_at ? new Date(credit.created_at).toLocaleDateString("en-BD") : ""}
-                      </Text>
-                    </View>
-                    <Text className="text-[12px] font-JakartaSemiBold" style={{ color: statusColor }}>
-                      {credit.status.toUpperCase()}
+              return (
+                <View
+                  key={credit.id}
+                  className="flex-row justify-between items-center py-2 border-b last:border-0"
+                  style={{ borderColor }}
+                >
+                  <View>
+                    <Text
+                      className="text-[13px] font-JakartaSemiBold"
+                      style={{ color: textPrimary }}
+                    >
+                      {formatBDT(credit.amount_bdt)} bonus
+                    </Text>
+                    <Text
+                      className="text-[11px] font-Jakarta"
+                      style={{ color: textSecondary }}
+                    >
+                      {credit.created_at
+                        ? new Date(credit.created_at).toLocaleDateString(
+                            "en-BD",
+                          )
+                        : ""}
                     </Text>
                   </View>
-                );
-              })}
-              {totalPendingBdt > 0 && (
-                <View className="flex-row justify-between items-center pt-2 border-t" style={{ borderColor }}>
-                  <Text className="text-[13px] font-JakartaSemiBold" style={{ color: textPrimary }}>
-                    Total pending credits
-                  </Text>
-                  <Text className="text-[14px] font-JakartaBold" style={{ color: colors.primary }}>
-                    ৳{(totalPendingBdt / 100).toFixed(0)}
+                  <Text
+                    className="text-[12px] font-JakartaSemiBold"
+                    style={{ color: statusColor }}
+                  >
+                    {credit.status.toUpperCase()}
                   </Text>
                 </View>
-              )}
-            </View>
-          )}
+              );
+            })}
+            {totalPendingBdt > 0 && (
+              <View
+                className="flex-row justify-between items-center pt-2 border-t"
+                style={{ borderColor }}
+              >
+                <Text
+                  className="text-[13px] font-JakartaSemiBold"
+                  style={{ color: textPrimary }}
+                >
+                  Total pending
+                </Text>
+                <Text
+                  className="text-[14px] font-JakartaBold"
+                  style={{ color: colors.primary }}
+                >
+                  {formatBDT(totalPendingBdt)}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Recent Transactions */}
+        {transactions.length > 0 && (
+          <View>
+            <Text
+              className="text-[16px] font-JakartaBold mb-2"
+              style={{ color: textPrimary }}
+            >
+              Recent Transactions
+            </Text>
+            {transactions.map((txn) => (
+              <View
+                key={txn.id}
+                className="rounded-[12px] p-[14px] mb-2 flex-row justify-between items-center"
+                style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+              >
+                <View className="flex-1">
+                  <Text
+                    className="text-[14px] font-JakartaSemiBold"
+                    style={{ color: textPrimary }}
+                  >
+                    {TXN_TYPE_LABELS[txn.transaction_type] ?? txn.transaction_type}
+                  </Text>
+                  <Text
+                    className="text-[12px] font-Jakarta mt-0.5"
+                    style={{ color: textSecondary }}
+                  >
+                    {new Date(txn.created_at).toLocaleDateString("en-BD", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                      timeZone: "Asia/Dhaka",
+                    })}
+                  </Text>
+                </View>
+                <View className="items-end">
+                  <Text
+                    className="text-[14px] font-JakartaBold"
+                    style={{
+                      color: txn.amount_bdt >= 0 ? colors.success : colors.danger,
+                    }}
+                  >
+                    {txn.amount_bdt >= 0 ? "+" : ""}
+                    {formatBDT(txn.amount_bdt)}
+                  </Text>
+                  <Text
+                    className="text-[11px] font-Jakarta"
+                    style={{ color: textSecondary }}
+                  >
+                    Bal: {formatBDT(txn.balance_after)}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Offline note */}
+        <View
+          className="rounded-[12px] p-[14px] mt-2"
+          style={{ backgroundColor: `${colors.info}10`, borderWidth: 1, borderColor: `${colors.info}20` }}
+        >
+          <Text
+            className="text-[13px] font-Jakarta"
+            style={{ color: textSecondary }}
+          >
+            Wallet balance is credited at ride completion and from gamification
+            rewards. Withdrawals are not yet available.
+          </Text>
         </View>
       </ScrollView>
-      <TouchableOpacity
-        onPress={() => setTheme(isDark ? "light" : "dark")}
-        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
-        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }

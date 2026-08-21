@@ -11,6 +11,8 @@ import * as errors from '@/lib/errors';
 
 const schema = z.object({
   new_vehicle_type: z.enum(VEHICLE_TYPE_VALUES),
+  /** Required when driver is online. Client must show confirmation modal first. */
+  confirm_online_switch: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -20,7 +22,7 @@ export async function POST(request: Request) {
     const parsed = await parseJsonBody(request, schema);
     if (!parsed.ok) return parsed.response;
 
-    const { new_vehicle_type } = parsed.data;
+    const { new_vehicle_type, confirm_online_switch } = parsed.data;
 
     const [dbUser] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
@@ -30,6 +32,16 @@ export async function POST(request: Request) {
 
     if (driver.vehicle_type === new_vehicle_type) {
       return Response.json({ error: 'already_current_type', message: 'Vehicle already has this type' }, { status: 422 });
+    }
+
+    // Online-state guard: warn the driver that switching types while online
+    // will temporarily affect dispatch eligibility.
+    if (driver.is_online && !confirm_online_switch) {
+      return Response.json({
+        error: 'online_switch_requires_confirmation',
+        message: 'You are currently online. Switching vehicle type while online may temporarily affect your dispatch eligibility. Please confirm.',
+        requires_confirmation: true,
+      }, { status: 409 });
     }
 
     // Check driver eligibility for the new vehicle type

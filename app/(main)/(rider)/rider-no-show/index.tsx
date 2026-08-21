@@ -100,11 +100,11 @@ export default function RiderNoShow() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]">
+          <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Rider No-Show</Text>
-        <View className="w-[50px]" />
+        <View style={{ width: 32 }} />
       </View>
       <View className="flex-1 items-center justify-center px-[24px]">
         <View className="w-24 h-24 rounded-full items-center justify-center mb-6" style={{ backgroundColor: `${colors.danger}1A` }}>

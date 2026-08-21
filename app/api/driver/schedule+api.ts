@@ -64,6 +64,39 @@ export async function PUT(request: Request) {
     const parsed = await parseJsonBody(request, putSchema);
     if (!parsed.ok) return parsed.response;
 
+    // Server-side overlap validation: check that no two active slots on the
+    // same day have overlapping time ranges. Each slot is [start, end) in
+    // HH:MM format. Two slots overlap when slotA.start < slotB.end AND
+    // slotA.end > slotB.start.
+    const activeSlots = parsed.data.schedule.filter((s) => s.is_active !== false);
+    const byDay = new Map<number, typeof activeSlots>();
+    for (const slot of activeSlots) {
+      const list = byDay.get(slot.day_of_week) ?? [];
+      list.push(slot);
+      byDay.set(slot.day_of_week, list);
+    }
+    for (const [day, slots] of byDay) {
+      for (let i = 0; i < slots.length; i++) {
+        for (let j = i + 1; j < slots.length; j++) {
+          const a = slots[i];
+          const b = slots[j];
+          // Overlap: a.start < b.end AND a.end > b.start
+          if (a.start_time < b.end_time && a.end_time > b.start_time) {
+            return Response.json(
+              {
+                error: 'schedule_overlap',
+                message: `Time slots overlap on day ${day}: ${a.start_time}-${a.end_time} and ${b.start_time}-${b.end_time}`,
+                day_of_week: day,
+                slot_a: `${a.start_time}-${a.end_time}`,
+                slot_b: `${b.start_time}-${b.end_time}`,
+              },
+              { status: 422 },
+            );
+          }
+        }
+      }
+    }
+
     await db.transaction(async (tx) => {
       await tx.delete(driverSchedule)
         .where(eq(driverSchedule.driver_id, driver.id));

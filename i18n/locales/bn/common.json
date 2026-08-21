@@ -12,7 +12,12 @@
     "error": "ত্রুটি",
     "success": "সফল",
     "retry": "পুনরায় চেষ্টা",
-    "search": "অনুসন্ধান"
+    "search": "অনুসন্ধান",
+    "no_data": "কোনো তথ্য পাওয়া যায়নি",
+    "pull_to_refresh": "রিফ্রেশ করতে টেনে দিন",
+    "load_more": "আরো লোড করুন",
+    "offline": "আপনি অফলাইনে আছেন",
+    "sign_out": "সাইন আউট"
   },
   "auth": {
     "phone_entry": "আপনার ফোন নম্বর লিখুন",
@@ -23,6 +28,52 @@
     "get_started": "শুরু করুন",
     "tagline": "আপনার রাইড, আপনার পথে"
   },
+  "driver": {
+    "home": "হোম",
+    "earnings": "আয়",
+    "activity": "কার্যকলাপ",
+    "wallet": "ওয়ালেট",
+    "profile": "প্রোফাইল",
+    "settings": "সেটিংস",
+    "go_online": "অনলাইন হোন",
+    "go_offline": "অফলাইন হোন",
+    "connected": "সংযুক্ত",
+    "reconnecting": "পুনরায় সংযোগ হচ্ছে…",
+    "calls_remaining": "অবশিষ্ট কল",
+    "unlimited": "অসীমিত",
+    "daily_goal": "দৈনিক লক্ষ্য",
+    "set_goal": "দৈনিক আয়ের লক্ষ্য নির্ধারণ করুন",
+    "goal_reached": "লক্ষ্য অর্জিত!",
+    "no_trips": "কোনো ট্রিপ পাওয়া যায়নি",
+    "total_earnings": "ড্রাইভার ওয়ালেট ব্যালান্স",
+    "top_up": "টপ আপ",
+    "active_package": "সক্রিয় প্যাকেজ",
+    "expires": "মেয়াদ শেষ",
+    "outstanding_dues": "বকেয়া পাওনা",
+    "commission_owed": "সম্পন্ন রাইডে কমিশন বকেয়া",
+    "cancellation_credits": "বাতিলকরণ ক্রেডিট",
+    "pending": "মুলতুবি",
+    "no_withdrawals": "ওয়ালেট ব্যালান্স রাইড সম্পন্ন হলে এবং গেমিফিকেশন পুরস্কার থেকে জমা হয়। উত্তোলন এখনো পাওয়া যায়নি।",
+    "payout_method": "পেমেন্ট পদ্ধতি",
+    "recent_transactions": "সাম্প্রতিক লেনদেন",
+    "sign_out_confirm": "আপনি কি সাইন আউট করতে চান?",
+    "verification_pending": "যাচাইকরণ চলমান",
+    "verification_pending_desc": "আপনার নথি পর্যালোচনা করা হচ্ছে। সাধারণত ২৪-৪৮ ঘণ্টা সময় লাগে।",
+    "check_status": "স্ট্যাটাস চেক করুন",
+    "account_suspended": "অ্যাকাউন্ট সাসপেন্ড",
+    "documents_rejected": "নথি প্রত্যাখ্যাত",
+    "reupload_documents": "নথি পুনরায় আপলোড করুন",
+    "contact_support": "সাপোর্টে যোগাযোগ করুন",
+    "loading_profile": "প্রোফাইল লোড হচ্ছে...",
+    "document_expired": "নথির মেয়াদ শীঘ্রই শেষ হচ্ছে"
+  },
+  "tabs": {
+    "home": "হোম",
+    "earnings": "আয়",
+    "activity": "কার্যকলাপ",
+    "wallet": "ওয়ালেট",
+    "profile": "প্রোফাইল"
+  },
   "home": {
     "search_destination": "কোথায় যাবেন?",
     "recent_rides": "সাম্প্রতিক রাইড",
@@ -31,7 +82,11 @@
     "welcome": "স্বাগতম",
     "search": "গন্তব্য অনুসন্ধান করুন...",
     "calls_remaining": "অবশিষ্ট কল",
-    "connected": "সংযুক্ত"
+    "connected": "সংযুক্ত",
+    "welcome_name": "স্বাগতম, {{name}}",
+    "your_current_location": "আপনার বর্তমান অবস্থান:",
+    "no_recent_rides": "সাম্প্রতিক রাইড নেই",
+    "fetching": "লোড হচ্ছে..."
   },
   "ride": {
     "request": "রাইড অনুরোধ",
@@ -69,19 +124,50 @@
     "select_category": "অনুগ্রহ করে একটি ক্যাটাগরি নির্বাচন করুন",
     "describe_the_issue": "অনুগ্রহ করে ইস্যু বর্ণনা করুন"
   },
-  "home": {
-    "search_destination": "কোথায় যাবেন?",
-    "recent_rides": "সাম্প্রতিক রাইড",
-    "go_online": "অনলাইন হোন",
-    "go_offline": "অফলাইন হোন",
-    "welcome": "স্বাগতম",
-    "search": "গন্তব্য অনুসন্ধান করুন...",
+  "activity": {
+    "all": "সব",
+    "completed": "সম্পন্ন",
+    "cancelled": "বাতিল",
+    "call_ledger": "কল খাতা",
+    "due_amounts": "বকেয়া",
+    "schedule": "সূচি",
+    "no_trips": "কোনো ট্রিপ পাওয়া যায়নি",
+    "showing_of": "{{total}} টি ট্রিপের মধ্যে {{count}} টি দেখাচ্ছে"
+  },
+  "wallet": {
+    "balance": "ড্রাইভার ওয়ালেট ব্যালান্স",
+    "top_up": "টপ আপ",
+    "active_package": "সক্রিয় প্যাকেজ",
     "calls_remaining": "অবশিষ্ট কল",
-    "connected": "সংযুক্ত",
-    "welcome_name": "স্বাগতম, {{name}}",
-    "your_current_location": "আপনার বর্তমান অবস্থান:",
-    "no_recent_rides": "সাম্প্রতিক রাইড নেই",
-    "fetching": "লোড হচ্ছে..."
+    "expires": "মেয়াদ শেষ",
+    "outstanding_dues": "বকেয়া পাওনা",
+    "commission_owed": "সম্পন্ন রাইডে কমিশন বকেয়া",
+    "cancellation_credits": "বাতিলকরণ ক্রেডিট",
+    "no_credits": "এখনো কোনো বাতিলকরণ ক্ষতিপূরণ নেই",
+    "recent_transactions": "সাম্প্রতিক লেনদেন",
+    "payout_method": "পেমেন্ট পদ্ধতি",
+    "no_withdrawals": "উত্তোলন এখনো পাওয়া যায়নি।",
+    "transaction_types": {
+      "promo_receivable": "প্রোমো ক্রেডিট",
+      "referral_receivable": "রেফারেল বোনাস",
+      "payout": "পেমেন্ট",
+      "adjustment": "সমন্বয়",
+      "cancellation_compensation": "বাতিল বোনাস"
+    }
+  },
+  "profile": {
+    "edit_profile": "প্রোফাইল সম্পাদনা",
+    "personal_profile": "ব্যক্তিগত প্রোফাইল",
+    "my_vehicles": "আমার গাড়ি",
+    "documents": "নথি",
+    "insurance": "বীমা",
+    "ratings": "রেটিং ও রিভিউ",
+    "referral": "রেফারেল",
+    "incentives": "প্রোত্সাহন",
+    "packages": "প্যাকেজ",
+    "emergency_contacts": "জরুরি যোগাযোগ",
+    "safety": "নিরাপত্তা",
+    "sign_out": "সাইন আউট"
   },
   "settings": {
     "title": "সেটিংস",
@@ -91,6 +177,59 @@
     "language": "ভাষা",
     "privacy": "গোপনীয়তা নীতি",
     "terms": "সেবার শর্তাবলী",
-    "about": "সম্পর্কে"
+    "about": "সম্পর্কে",
+    "auto_accept": "স্বয়ংক্রিয় গ্রহণ",
+    "account_security": "অ্যাকাউন্ট ও নিরাপত্তা",
+    "lost_items": "হারানো সামগ্রী",
+    "support": "সাপোর্ট",
+    "safety": "নিরাপত্তা",
+    "referral": "রেফারেল",
+    "min_rate": "সর্বনিম্ন হার",
+    "payout_method": "পেমেন্ট পদ্ধতি",
+    "packages": "প্যাকেজ"
+  },
+  "earnings": {
+    "daily_goal": "দৈনিক লক্ষ্য",
+    "set_goal": "লক্ষ্য নির্ধারণ",
+    "edit_goal": "সম্পাদনা",
+    "remove_goal": "লক্ষ্য সরান",
+    "goal_range": "লক্ষ্য ৳১০০ থেকে ৳৫০,০০০ এর মধ্যে হতে হবে",
+    "earned_today": "আয়",
+    "goal_label": "লক্ষ্য:",
+    "goal_reached": "লক্ষ্য অর্জিত!",
+    "last_7_days": "গত ৭ দিন",
+    "no_earnings": "গত ৭ দিনে কোনো সম্পন্ন ট্রিপ নেই।",
+    "earnings_overview": "আয়ের সারসংক্ষেপ",
+    "earnings_breakdown": "আয়ের বিশ্লেষণ",
+    "commission_statement": "কমিশন স্টেটমেন্ট",
+    "performance_stats": "কর্মদক্ষতা পরিসংখ্যান",
+    "hotspot_map": "হটস্পট মানচিত্র"
+  },
+  "vehicle": {
+    "add_vehicle": "গাড়ি যোগ করুন",
+    "manage_vehicles": "গাড়ি পরিচালনা",
+    "select_active": "সক্রিয় গাড়ি নির্বাচন",
+    "vehicle_type": "গাড়ির ধরন",
+    "manufacturer": "প্রস্ততাকারক",
+    "model": "মডেল",
+    "year": "সাল",
+    "registration_number": "নিবন্ধন নম্বর",
+    "photos": "ছবি",
+    "documents": "নথি",
+    "expiry_warning": "নথির মেয়াদ শীঘ্রই শেষ হচ্ছে",
+    "active_vehicle": "সক্রিয় গাড়ি"
+  },
+  "legal": {
+    "terms_of_service": "সেবার শর্তাবলী",
+    "privacy_policy": "গোপনীয়তা নীতি",
+    "effective_date": "কার্যকর তারিখ",
+    "revision_date": "শেষ সংশোধিত"
+  },
+  "notification": {
+    "ride_offer": "নতুন রাইড অফার",
+    "ride_cancelled": "রাইড বাতিল",
+    "payment_confirmed": "পেমেন্ট নিশ্চিত",
+    "package_expiring": "প্যাকেজের মেয়াদ শেষ হচ্ছে",
+    "document_expiry": "নথির মেয়াদ শেষ হচ্ছে"
   }
 }

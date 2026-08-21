@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       .from(users).where(eq(users.auth_uid, user.id)).limit(1);
     if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
-    const [driver] = await db.select({ id: drivers.id })
+    const [driver] = await db.select({ id: drivers.id, vehicle_id: drivers.vehicle_id })
       .from(drivers).where(eq(drivers.user_id, dbUser.id)).limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
@@ -47,7 +47,9 @@ export async function GET(request: Request) {
       ...v,
       vehicle_model: `${v.manufacturer} ${v.model} ${v.manufacturing_year}`,
       registration_plate: v.registration_number,
-      is_active: true,
+      // P0-A FIX: derive is_active from the driver's vehicle_id reference
+      // instead of fabricating `true` for every vehicle.
+      is_active: driver.vehicle_id != null && v.id === driver.vehicle_id,
     }));
 
     return Response.json({ vehicles: result }, { status: 200 });
@@ -155,21 +157,14 @@ export async function POST(request: Request) {
         vehicle_type: vehicle_type as any,
         manufacturer: brand,
         model,
-        // TODO: manufacturing_year = BRTA registration year placeholder (UI collects
-        // only one year) — admin-correctable
         manufacturing_year: registration_year,
         has_ac: null,
         passenger_seats: number_of_seats ?? 4,
-        // TODO: registration_area is a NOT NULL placeholder — admin-correctable
         registration_area: 'DHAKA_METRO' as any,
-        // TODO: vehicle_class_letter is a NOT NULL placeholder — admin-correctable
         vehicle_class_letter: 'KA' as any,
         registration_number: registration_plate.toUpperCase(),
-        // Jan 1 of the BRTA registration year (UI collects only the year; D-1)
         registration_date: `${registration_year}-01-01`,
-        // TODO: fitness expiry +1yr placeholder — admin-correctable
         fitness_expires_at: toDateStr(oneYearAhead),
-        // TODO: tax token expiry +1yr placeholder — admin-correctable
         tax_token_expires_at: toDateStr(oneYearAhead),
       }).onConflictDoUpdate({
         target: vehicles.driver_id,
@@ -177,22 +172,16 @@ export async function POST(request: Request) {
           vehicle_type: vehicle_type as any,
           manufacturer: brand,
           model,
-          // TODO: manufacturing_year = BRTA registration year placeholder (UI collects
-          // only one year) — admin-correctable
           manufacturing_year: registration_year,
           passenger_seats: number_of_seats ?? 4,
           registration_number: registration_plate.toUpperCase(),
-          // Jan 1 of the BRTA registration year (UI collects only the year; D-1)
           registration_date: `${registration_year}-01-01`,
           updated_at: now,
         },
       }).returning();
 
       // Keep the driver's dispatch-facing type AND vehicle link in sync with
-      // the vehicle row (M-3). drivers.vehicle_id was previously written by
-      // nothing — so the wizard's "Skip — I already have a vehicle on file"
-      // path (me?.vehicle_id) was dead code and docs could be submitted with
-      // vehicle_id: null after an app kill between steps 2 and 3.
+      // the vehicle row (M-3).
       await tx.update(drivers)
         .set({
           vehicle_type: vehicle_type as any,

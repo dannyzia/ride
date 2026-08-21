@@ -1,5 +1,5 @@
 import { View, Text, Keyboard, Image } from "react-native";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useCustomer } from "@/store";
 import { colors, spacing } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
@@ -8,6 +8,7 @@ import {
   createBarikoiClient,
 } from "@/utils/mapUtils";
 import MapLibreGL, { type MapLibreModule } from "@/utils/maplibreLoader";
+import { getH3Boundary } from "@/lib/h3";
 import type { ComponentRef } from "react";
 
 const MARKER_USER = require("@/assets/icons/marker-goride-Marker Navigation.png");
@@ -19,6 +20,7 @@ const Camera = MapLibreGL?.Camera ?? null;
 const ShapeSource = MapLibreGL?.ShapeSource ?? null;
 const LineLayer = MapLibreGL?.LineLayer ?? null;
 const CircleLayer = MapLibreGL?.CircleLayer ?? null;
+const FillLayer = MapLibreGL?.FillLayer ?? null;
 
 export interface MapRoutePoint {
   lat: number;
@@ -180,17 +182,29 @@ const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
       ? [destinationLongitude, destinationLatitude]
       : null;
 
-  const hotspotFeatures =
-    hotspots && hotspots.length >= 1
-      ? hotspots.map((h) => ({
-          type: "Feature" as const,
-          geometry: { type: "Point" as const, coordinates: [h.lng, h.lat] },
-          properties: {
-            color: heatColor(h.intensity),
-            opacity: 0.35 + 0.45 * h.intensity,
-          },
-        }))
-      : null;
+  // H3 hexagon polygon features for each hotspot zone.
+  // Built from zone centroids via h3-js cellToBoundary.
+  const hexFeatures = useMemo(() => {
+    if (!hotspots || hotspots.length === 0) return null;
+    return hotspots.map((h) => {
+      const boundary = getH3Boundary(h.lat, h.lng);
+      // GeoJSON Polygon expects [lng, lat] and the ring must close.
+      const ring: [number, number][] = [...boundary, boundary[0]];
+      return {
+        type: "Feature" as const,
+        geometry: {
+          type: "Polygon" as const,
+          coordinates: [ring],
+        },
+        properties: {
+          color: heatColor(h.intensity),
+          fillOpacity: 0.25 + 0.45 * h.intensity,
+          strokeColor: heatColor(h.intensity),
+          strokeOpacity: 0.5 + 0.3 * h.intensity,
+        },
+      };
+    });
+  }, [hotspots]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -248,22 +262,53 @@ const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
               />
             </ShapeSource>
           )}
-          {hotspotFeatures && hotspotFeatures.length > 0 && ShapeSource && CircleLayer && (
+          {hexFeatures && hexFeatures.length > 0 && ShapeSource && FillLayer && (
             <ShapeSource
-              id="hotspots-source"
-              shape={{ type: "FeatureCollection", features: hotspotFeatures }}
+              id="hotspots-hex-source"
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              shape={{ type: "FeatureCollection", features: hexFeatures } as any}
             >
-              <CircleLayer
-                id="hotspots-layer"
+              <FillLayer
+                id="hotspots-hex-fill"
                 style={{
-                  circleColor: ["get", "color"],
-                  circleOpacity: ["get", "opacity"],
-                  circleRadius: 26,
-                  circleBlur: 0.45,
+                  fillColor: ["get", "color"],
+                  fillOpacity: ["get", "fillOpacity"],
                 }}
               />
             </ShapeSource>
           )}
+          {/* Fallback circle layer for when FillLayer is unavailable */}
+          {hexFeatures &&
+            hexFeatures.length > 0 &&
+            ShapeSource &&
+            CircleLayer &&
+            !FillLayer && (
+              <ShapeSource
+                id="hotspots-circle-source"
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                shape={{
+                  type: "FeatureCollection",
+                  features: hexFeatures.map((f) => ({
+                    type: "Feature" as const,
+                    geometry: {
+                      type: "Point" as const,
+                      coordinates: f.geometry.coordinates[0],
+                    },
+                    properties: f.properties,
+                  })),
+                } as any}
+              >
+                <CircleLayer
+                  id="hotspots-circle-layer"
+                  style={{
+                    circleColor: ["get", "color"],
+                    circleOpacity: ["get", "fillOpacity"],
+                    circleRadius: 26,
+                    circleBlur: 0.45,
+                  }}
+                />
+              </ShapeSource>
+            )}
           {PointAnnotation && destinationMarkerCoord && (
             <PointAnnotation
               id="destination"
