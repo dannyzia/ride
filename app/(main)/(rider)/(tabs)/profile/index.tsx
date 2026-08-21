@@ -15,11 +15,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useDriverStore } from "@/store/useDriverStore";
-import { useDriverFlowStore } from "@/store/useDriverFlowStore";
-import { colors, radii, spacing } from "@/theme/goRide";
+import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
-import { formatBDT } from "@/lib/format";
 
 const vehicleTypeDisplay: Record<string, string> = Object.fromEntries(
   VEHICLE_TYPES.map((v) => [v.key, v.display_en]),
@@ -51,7 +49,7 @@ const SECTION_ORDER = ["Account", "Vehicles", "Activity", "Programs", "Safety"];
 
 export default function ProfileScreen() {
   const { driver } = useDriverStore();
-  const { fetchDriver } = useDriverFlowStore();
+
   const isDark = useIsDark();
   const [profileData, setProfileData] = useState<{
     full_name: string;

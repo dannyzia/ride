@@ -3,7 +3,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ThemeToggle from "@/components/ThemeToggle";
-import { colors, radii } from "@/theme/goRide";
+import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 
 interface SettingsItem {

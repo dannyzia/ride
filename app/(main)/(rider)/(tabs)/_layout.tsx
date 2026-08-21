@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { colors, spacing } from "@/theme/goRide";
+import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { useDriverStore } from "@/store/useDriverStore";
 

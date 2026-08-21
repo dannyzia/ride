@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Linking,
   StatusBar,
-  Alert,
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,7 +16,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-import { colors, radii, spacing } from "@/theme/goRide";
+import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 
 const MAX_CONTACTS = 5;

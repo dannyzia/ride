@@ -14,7 +14,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-import { colors, radii } from "@/theme/goRide";
+import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT } from "@/lib/format";
 

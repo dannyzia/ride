@@ -18,7 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { uploadImage } from "@/lib/imageToURL";
 import { logger } from "@/lib/logger";
-import { colors, radii } from "@/theme/goRide";
+import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 
 interface DriverProfile {

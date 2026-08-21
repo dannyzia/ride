@@ -20,8 +20,6 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import Map, { type MapHotspot } from "@/components/Map";
 import ThemeToggle from "@/components/ThemeToggle";
-import { formatBDT } from "@/lib/format";
-
 interface HotspotRow {
   zone_id: string;
   name: string;

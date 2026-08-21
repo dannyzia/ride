@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   ScrollView,
   StatusBar,
-  Alert,
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

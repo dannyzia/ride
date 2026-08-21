@@ -17,7 +17,7 @@ import { API_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
 import { processQueue } from "@/lib/sosQueue";
 import NetInfo from "@react-native-community/netinfo";
-import { routeNotification, routeDeepLink } from "@/lib/notificationRouter";
+import { routeNotification } from "@/lib/notificationRouter";
 
 const isWeb = Platform.OS === "web";
 
