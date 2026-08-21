@@ -1,1578 +1,1360 @@
-# Ride App — Plans 06–11 Draft Implementation Plan & Model Allocation
+# Ride — Draft / Initial Implementation Plan
 
-**Version:** Draft 1.0
-**Date:** 2026-08-21
-**Source Basis:** Kimi `01 06-10 Features Update.md` v3.2, current Ride repository structure, current stack, Plan 05 supporting-feature constraints, and Kilo model-orchestration strategy.
+## Pass 3 — Repository-Grounded Execution Plan for Plans 06–11
 
----
+This is the **revised implementation plan**, not a review of the previous plan.
 
-## 1. Purpose
+It is based on:
 
-This document converts Kimi's revised Plans 06–11 into an **executable implementation program** for Kilo Code.
+* Kimi Plans 06–10 v3.2, which defines **52 screens + 3 infrastructure items** and explicitly adds edge cases, validation, accessibility, backend Zod contracts, notification/deep-link mapping, etc. 
+* `FEATURES.md` v14 and the current Plan 05 state. 
+* The repository audit, which establishes the actual current implementation state: 24 implemented, 7 defective, 8 partial, 6 UI-only, 1 backend-only, and 6 not started. 
+* The audit's exact remaining-work and dependency lists. 
 
-It does **not** replace the product requirements in Kimi's document.
+The central change from the earlier draft is:
 
-It establishes:
-
-* implementation phases;
-* dependency order;
-* repository verification requirements;
-* backend/frontend sequencing;
-* reusable-component strategy;
-* model allocation;
-* review gates;
-* high-risk areas;
-* parallelization opportunities;
-* completion criteria.
-
-Kimi's document remains the feature specification. This document is the execution strategy.
-
-Kimi explicitly identifies Plan 06 as the foundation, followed by Plans 07–10, with Plan 11 and cross-cutting work integrated around them.
+> **We are not implementing Plans 06–11 from scratch. We are completing and repairing an existing system against the Kimi specification.**
 
 ---
 
-# 2. Repository Baseline
+# 1. Execution Model
 
-The current application is an Expo SDK 53 / React Native / TypeScript application using:
+The implementation should **not** be executed as:
 
-* Zustand;
-* NativeWind;
-* MapLibre;
-* Supabase/PostgreSQL;
-* Drizzle ORM;
-* Expo API routes under `app/api`;
-* a separate WebSocket dispatch server;
-* H3-based dispatch;
-* PortPos for payments;
-* Barikoi for Bangladesh geocoding/maps.
+```text
+Plan 06 → Plan 07 → Plan 08 → Plan 09 → Plan 10 → Plan 11
+```
 
-The repository already contains substantial driver infrastructure.
+That would unnecessarily serialize work and would cause coding agents to repeatedly modify the same foundation.
 
-Examples include:
+Instead:
 
-* driver tabs;
-* driver home;
-* earnings;
-* call ledger;
-* incentives;
-* vehicles;
-* documents;
-* subscriptions;
-* wallet;
-* ratings;
-* performance;
-* hotspot map;
-* schedule;
-* support;
-* safety;
-* driver APIs.
+```text
+                    ┌─────────────────────────┐
+                    │  P0 — Architecture Gates │
+                    └────────────┬────────────┘
+                                 │
+                    ┌────────────▼────────────┐
+                    │ P1 — Driver Foundation  │
+                    │ Activity + Wallet       │
+                    └────────────┬────────────┘
+                                 │
+              ┌──────────────────┼──────────────────┐
+              ▼                  ▼                  ▼
+       P2 Vehicle          P3 Money/Payment    P4 Support/Safety
+       + Subscription      + Payout            + Schedule
+              │                  │                  │
+              └──────────────────┼──────────────────┘
+                                 ▼
+                    ┌────────────────────────┐
+                    │ P5 Performance/Intell.  │
+                    └────────────┬───────────┘
+                                 │
+                    ┌────────────▼───────────┐
+                    │ P6 Legal + i18n        │
+                    └────────────┬───────────┘
+                                 │
+                    ┌────────────▼───────────┐
+                    │ P7 Cross-cutting       │
+                    │ + Final Verification   │
+                    └────────────────────────┘
+```
 
-The repository therefore **must not be treated as greenfield**.
+---
 
-The coding agents must inspect existing implementations before creating replacements.
+# 2. Phase 0 — Architecture / Safety Gates
 
-The current repository structure already contains driver API routes such as:
+**Do not start the dependent implementation units until these gates are settled.**
 
-`daily-stats`, `call-ledger`, `commission-statement`, `documents`, `dues`, `incentives`, `lost-items`, `me`, `missed-requests`, `payout-method`, `performance`, `ratings`, `schedule`, `slider-config`, `status`, `vehicle-models`, `vehicles`, `vehicle-type-change`, `wallet`, and earnings endpoints.
+This phase is intentionally small. It is not a giant architecture project.
 
-This is important because Kimi's document frequently describes endpoints as if they may need to be created, while the repository indicates that many already exist.
+## P0.1 Driver navigation/status gate
+
+### Required
+
+Modify:
+
+```text
+app/(main)/(rider)/(tabs)/_layout.tsx
+```
+
+to establish the intended driver tab foundation.
+
+Current problems:
+
+* tab bar is hidden;
+* `DriverStatusGuard` is not wrapping the tabs;
+* Settings exists but isn't wired into the tab layout;
+* actual guard lives at `components/auth/DriverStatusGuard.tsx`;
+* guard lacks the specified 30-second polling/check-status behavior. 
+
+### Decision
+
+**Do not create a second `DriverStatusGuard`.**
+
+Use the existing component and modify it only as required.
+
+### Model
+
+**GLM-5.2**
+
+This is architecture-sensitive enough to avoid a weak implementation, but not sufficiently uncertain to spend GLM-5.3 yet.
+
+---
+
+# 3. Phase 0.2 — Payment / Subscription Boundary
+
+This is the most important architectural gate.
+
+The repository already has:
+
+```text
+packages
+subscriptions
+callLedger
+paymentEvents
+```
+
+and working:
+
+```text
+/api/package/list
+/api/package/purchase
+```
+
+while Kimi proposes dedicated subscription endpoints.
+
+The audit explicitly identifies the conflict and marks the subscription flow high risk. 
+
+## Required decision
+
+Determine whether:
+
+### Option A — Extend existing package architecture
+
+```text
+package/*
+    ↓
+subscriptions
+    ↓
+callLedger
+```
+
+or:
+
+### Option B — Introduce dedicated driver subscription APIs
+
+```text
+driver/subscription-plans
+driver/subscription/checkout
+driver/subscription/renew
+    ↓
+subscriptions
+    ↓
+callLedger
+```
+
+### Constraint
+
+**Do not allow both systems to become independent sources of truth.**
+
+The existing `subscriptions` table relates drivers to packages, while the existing package APIs are already used by working flows. 
+
+### Model
+
+**GPT-5.6 Terra**
+
+This is one of the few places where the scarce planning model is justified: one wrong decision can cause four screens, payment handling, and wallet/subscription state to be rebuilt later.
+
+---
+
+# 4. Phase 0.3 — Money / Payment Integrity Gate
+
+Before modifying wallet, payout, subscription, or instant-pay flows:
+
+Audit and lock:
+
+```text
+paymentEvents
+wallet
+driver transactions
+payouts
+subscriptions
+callLedger
+accounting
+tax
+```
+
+The repository already has accounting integration and payment-event infrastructure. `FEATURES.md` confirms wallet top-up, instant pay, subscription sale and payout accounting are already integrated. 
+
+### Required invariant
+
+Every payment-producing operation must have:
+
+```text
+one transaction owner
+one payment-event owner
+one ledger effect
+one accounting effect
+```
+
+No new agent is allowed to invent another payment-event writer.
+
+### Model
+
+**GLM-5.3**
+
+This is data-integrity-sensitive work, exactly the class for which GLM-5.3 should be reserved. 
+
+---
+
+# 5. Phase 0.4 — Vehicle State Gate
+
+Fix the canonical active vehicle state before vehicle UI work.
+
+Current API behavior returns:
+
+```text
+is_active: true
+```
+
+for every vehicle. 
+
+The existing backend already has:
+
+```text
+POST /api/driver/vehicle-type-change
+```
+
+with authorization, eligibility checks and a transaction. 
+
+## Decision
+
+Do **not** blindly replace this with Kimi's proposed:
+
+```text
+PATCH /api/driver/vehicles/{id}/activate
+```
+
+Instead:
+
+1. establish canonical active-vehicle semantics;
+2. fix `vehicles+api.ts`;
+3. preserve the existing vehicle-type-change business logic unless it demonstrably fails the product requirement;
+4. make the frontend conform to the canonical backend behavior.
+
+### Model
+
+**GLM-5.2**
+
+---
+
+# 6. Phase 0.5 — Zone / H3 Gate
+
+The hotspot screen is visually implemented, but the audit establishes that the backend currently derives hotspot positions from zone polygon centroids rather than H3. 
+
+`FEATURES.md` also establishes that Zone Z-4 remains unfinished and heartbeat still stamps a single active zone. 
 
 Therefore:
 
-> **VERIFY → MODIFY/EXTEND → CREATE ONLY IF ABSENT**
-
-is the governing implementation rule.
-
----
-
-# 3. Overall Implementation Architecture
-
-The execution should be organized into **seven major implementation waves**, not 52 independent screen tasks.
-
 ```text
-WAVE 0
-Repository / component / API verification
-        ↓
-WAVE 1
-Driver navigation + status foundation
-        ↓
-WAVE 2
-Driver core tabs
-        ↓
-WAVE 3
-Vehicle + subscription + package ecosystem
-        ↓
-WAVE 4
-Money / ledger / payout / lost-items
-        ↓
-WAVE 5
-Support / safety / communication / schedule
-        ↓
-WAVE 6
-Performance / ratings / intelligence / profile
-        ↓
-WAVE 7
-Cross-cutting completion + legal + i18n + final audit
+Hotspot screen ≠ fully compliant hotspot implementation
 ```
 
-The critical principle is:
+### Required
 
-**Do not send 52 screens to one coding model as one task.**
+Do not rebuild the hotspot UI first.
 
-Each wave should be divided into coherent implementation units.
+Resolve:
 
----
+* H3 resolution 9;
+* zone → H3 mapping;
+* actual demand/supply cell semantics;
+* multi-zone compatibility;
+* heartbeat zone resolution where required.
 
-# 4. High-Level Phase Allocation
+This is partly Plan 05 carryover, but it is a **prerequisite to calling Plan 10 hotspot intelligence complete**.
 
-| Phase | Main Scope                                      | Dependency | Primary Model     | Review          |
-| ----- | ----------------------------------------------- | ---------- | ----------------- | --------------- |
-| 0     | Repository verification + architecture baseline | None       | GPT-5.6 Luna      | MiMo Pro        |
-| 1     | Driver foundation                               | Phase 0    | GLM-5.3           | MiMo Pro        |
-| 2     | Driver core tabs                                | Phase 1    | GLM-5.2 / GLM-5.3 | MiMo Pro        |
-| 3     | Vehicle/subscription/packages                   | Phase 1    | GLM-5.2           | MiMo Pro        |
-| 4     | Money + ledger + lost items                     | Phases 1–3 | GLM-5.3           | GLM-5.3 skeptic |
-| 5     | Support/safety/communication                    | Phase 1    | GLM-5.2           | MiMo Pro        |
-| 6     | Performance/profile/intelligence                | Phases 2–4 | GLM-5.2           | MiMo Pro        |
-| 7     | Cross-cutting + legal + i18n + final audit      | All        | DeepSeek/GLM-5.2  | GLM-5.3         |
+### Model
+
+**GLM-5.3**
 
 ---
 
-# 5. Phase 0 — Repository Reality Check
+# 7. Phase 1 — Driver Foundation
 
-## Objective
+## P1.1 Driver Tab Layout
 
-Before implementation, establish which parts of Kimi's plan already exist, which require modification, and which are genuinely new.
+**R-04 + R-05**
 
-This phase should **not modify application behavior** unless a verification reveals an existing blocker that is explicitly part of the execution prerequisites.
+Implement:
 
-## Tasks
-
-### 0.1 Route Inventory
-
-Verify every route mentioned by Plans 06–11 against the actual repository.
-
-Classify each:
-
-* EXISTING + correct;
-* EXISTING + incomplete;
-* EXISTING + buggy;
-* EXISTING + wrong contract;
-* MISSING.
-
-The repository already demonstrates significant overlap with Kimi's proposed API surface.
-
-### 0.2 Component Inventory
-
-Locate and classify:
-
-* `EmptyState`;
-* `StatusBadge`;
-* `SettingsRow`;
-* `TransactionRow`;
-* `LoadingRider`;
-* skeleton components;
-* `DriverStatsBar`;
-* `MinRateSlider`;
-* `SchedulePicker`;
-* `SOSButton`;
-* payment components;
-* theme utilities;
-* driver state stores.
-
-Plan 05 explicitly states that existing reusable components should be reused rather than duplicated. `EmptyState`, `StatusBadge`, `SettingsRow`, `TransactionRow`, `LoadingRider`, and related components are specifically identified as reuse candidates.
-
-### 0.3 API Contract Audit
-
-For each API:
-
-1. inspect current implementation;
-2. inspect authentication;
-3. inspect role authorization;
-4. inspect request validation;
-5. inspect database queries;
-6. inspect response shape;
-7. compare against Kimi contract;
-8. determine whether modification is required.
-
-### 0.4 Navigation Audit
-
-Verify:
-
-* `(main)/(rider)` really is the driver namespace;
-* existing tab layout;
-* existing stack layout;
-* authentication routing;
-* driver onboarding;
-* driver status;
-* deep-link behavior.
-
-### 0.5 Existing Defect Inventory
-
-Known repository issues already called out by Plan 05 must be included in the implementation baseline, including the vehicle-type-change flow and SOS routing issues.
-
-### Deliverable
-
-A machine-readable/internal implementation map:
-
-```text
-route
-  → existing file
-  → required action
-  → API dependency
-  → component dependency
-  → risk
-  → implementation phase
-```
-
-**Model:** GPT-5.6 Luna
-
-**Why:** This is repository decomposition, not a major architecture redesign. Terra is unnecessary at this stage unless the repository inspection discovers a fundamental architectural conflict.
-
----
-
-# 6. Phase 1 — Driver Foundation
-
-## Priority: CRITICAL
-
-Kimi correctly identifies this as the foundation without which the driver application cannot function.
-
-### Unit 1A — Driver Tab Layout
-
-Target:
-
-`app/(main)/(rider)/(tabs)/_layout.tsx`
-
-Responsibilities:
-
-* five tabs;
-* 64px driver tab bar;
+* visible 5-tab navigation;
 * Pattern A theming;
-* no header;
-* wallet badge;
-* `DriverStatusGuard`.
+* correct icons;
+* status guard wrapping;
+* wallet badge support;
+* correct driver route structure.
 
-This should be implemented first.
+The Kimi specification defines the tab layout as Wave 0 and explicitly makes it the foundation for all other driver tabs. 
 
-### Model
-
-**GLM-5.3**
-
-Reason:
-
-This is navigation infrastructure and affects every downstream driver screen. A bad implementation creates widespread routing problems.
+**Model:** DeepSeek V4 Flash for straightforward wiring, with **MiMo 2.5 review**.
 
 ---
 
-## Unit 1B — DriverStatusGuard
+## P1.2 DriverStatusGuard
 
-Target:
+Repair existing guard:
 
-`components/DriverStatusGuard.tsx`
+```text
+components/auth/DriverStatusGuard.tsx
+```
 
-States:
+Required:
 
-| Status    | Result                      |
-| --------- | --------------------------- |
-| temporary | onboarding                  |
-| pending   | pending review              |
-| suspended | suspended                   |
-| rejected  | rejected + reason + reapply |
-| active    | driver application          |
+* pending;
+* suspended;
+* rejected;
+* temporary;
+* active;
+* polling while on status screen;
+* status refresh;
+* rejection reason;
+* verification retry/check-status path;
+* no access to active driver tabs when blocked.
 
-Requirements include:
-
-* `GET /api/driver/me`;
-* polling while blocked;
-* retry/check status;
-* support routing;
-* onboarding routing;
-* authorization boundary.
-
-### Model
-
-**GLM-5.3**
-
-This is not merely UI. It is an authorization/navigation boundary.
+**Model:** GLM-5.2.
 
 ---
 
-## Unit 1C — Storage Registry
+## P1.3 Earnings Goal
 
-Target:
+**R-01 + R-23**
 
-`lib/storageKeys.ts`
+Restore the removed earnings-goal functionality.
 
-Centralize driver storage keys.
+Required:
 
-This is mechanical and can be handled by:
-
-**DeepSeek V4 Flash**
-
----
-
-## Unit 1D — Shared Foundation Components
-
-Build/verify:
-
-* `ErrorBanner`;
-* `OfflineIndicator`;
-* Pattern A skeleton;
-* reusable confirmation modal;
-* reusable driver section/card primitives;
-* `ProgressBar`;
-* `StatCard`.
-
-However, existing components must be inspected first. Plan 05 explicitly identifies reuse of existing `EmptyState`, `StatusBadge`, `SettingsRow`, `TransactionRow`, and loading components.
-
-### Model
-
-**GLM-5.2**
-
-The shared components are simple, but they become dependencies for many screens.
-
----
-
-# 7. Phase 2 — Driver Core Tabs
-
-## Dependency
-
-Phase 1 complete.
-
-Kimi's specified order is:
-
-1. Earnings;
-2. Wallet;
-3. Activity;
-4. Profile;
-5. Settings.
-
-The draft execution should preserve this order because Earnings and Wallet establish the core driver data surfaces.
-
----
-
-## Unit 2A — Earnings Tab
-
-Includes:
-
-* daily earnings;
-* goal tracking;
-* weekly chart;
-* stats;
-* earnings navigation;
 * goal modal;
-* refresh;
-* empty/loading/error states.
+* persistence;
+* canonical storage key;
+* allowed range;
+* Dhaka-date reset;
+* progress calculation;
+* earnings breakdown integration;
+* empty/loading/error state.
 
-The repository already has `/api/driver/daily-stats`, so this should initially be treated as an existing API to verify rather than automatically recreated.
+The feature is explicitly identified as a regression: the API remains but the UI has disappeared from the tree. 
 
-### Model
-
-**GLM-5.3**
-
-Reason:
-
-Money + chart + persisted goal + date logic + driver UX.
-
----
-
-## Unit 2B — Wallet Tab
-
-Includes:
-
-* balance;
-* dues;
-* subscription;
-* recent transactions;
-* top-up;
-* due payment;
-* payment routing.
-
-Payment purpose tags must be respected:
-
-* `wallet_topup`;
-* `due_payment`.
-
-Kimi explicitly specifies these payment purposes.
-
-### Model
-
-**GLM-5.3**
-
-Reason:
-
-Wallet and payment state are high-trust functionality.
+**Model:** GLM-5.2 rather than MiMo Pro. The audit's MiMo allocation is acceptable for routine work, but this is a regression in a primary tab and should be implemented correctly the first time.
 
 ---
 
-## Unit 2C — Activity Tab
+# 8. Phase 1.4 — Activity Tab
 
-Includes:
+## R-02
 
-* trip history;
+This is a **rebuild**, not a modification.
+
+Current Activity is only a static menu. It does not provide trip history. 
+
+### Backend
+
+Create:
+
+```text
+GET /api/driver/trips
+```
+
+using existing:
+
+```text
+rides
+```
+
+### Frontend
+
+Implement:
+
+* trip cards;
+* date/time;
+* origin/destination;
+* fare;
+* status;
 * filters;
-* pagination;
+* pagination/infinite scroll;
 * pull-to-refresh;
-* empty state;
-* trip detail routing.
+* loading;
+* empty;
+* error;
+* offline state.
+
+### Important
+
+Do not disturb existing:
+
+* Call Ledger;
+* Missed Requests;
+* Due Amounts;
+* Schedule.
+
+Those remain separate destinations.
+
+**Model:** GLM-5.3.
+
+This is one of the three critical defects identified by the audit. 
+
+---
+
+# 9. Phase 1.5 — Wallet
+
+## R-03 + R-12
+
+Current Wallet is incomplete:
+
+* no due card;
+* no subscription card;
+* no transaction list;
+* no top-up/withdraw actions;
+* wallet API response does not provide the expected due field. 
+
+### Canonical Wallet contract
+
+The final contract should support:
+
+```text
+balance
+due
+active subscription
+transactions
+top-up
+withdraw / instant pay
+```
+
+But transaction/top-up/withdraw implementations must reuse existing payment/accounting infrastructure.
+
+### API
+
+Fix:
+
+```text
+GET /api/driver/dues
+GET /api/driver/wallet
+```
+
+and verify:
+
+```text
+GET /api/driver/active-subscription
+GET /api/driver/transactions
+POST /api/driver/instant-pay
+```
+
+where applicable.
 
 ### Model
 
-**GLM-5.2**
+**GLM-5.3** for the backend/data-integrity portion.
 
-The logic is substantial but comparatively conventional.
-
----
-
-## Unit 2D — Profile Tab
-
-Includes:
-
-* driver identity;
-* rating;
-* trip count;
-* vehicle summary;
-* vehicle/document/verification links;
-* settings/support/referral;
-* sign-out.
-
-Sign-out must clear driver application state correctly.
-
-### Model
-
-**GLM-5.2**
+Wallet UI can then be implemented by **GLM-5.2**.
 
 ---
 
-## Unit 2E — Settings Tab
+# 10. Phase 2 — Vehicle Ecosystem
 
-Includes:
+## P2.1 Vehicle Management
 
-* Auto Accept;
-* sound;
-* navigation app;
-* minimum rate;
-* account settings;
-* support;
-* legal.
+**R-06 + R-22**
 
-The minimum-rate flow should reuse the existing `MinRateSlider` and its validation path rather than creating a second slider abstraction. Plan 05 explicitly mandates this reuse.
+Fix:
 
-### Model
+```text
+GET /api/driver/vehicles
+```
 
-**GLM-5.2**
+first.
 
----
+Then modify UI for:
 
-## Phase 2 Gate
+* actual active state;
+* vehicle photo;
+* document expiry;
+* inactive vehicle activation prompt;
+* delete confirmation;
+* appropriate empty state.
 
-Before proceeding:
-
-* five tabs work;
-* status guard works;
-* navigation is correct;
-* driver APIs return expected data;
-* money values are correct;
-* TypeScript passes;
-* lint passes;
-* no duplicate shared components;
-* no `console.log`;
-* no legacy theme logic.
+**Model:** GLM-5.2.
 
 ---
 
-# 8. Phase 3 — Vehicle, Subscription & Package Ecosystem
+## P2.2 Select Active Vehicle
 
-## Priority: HIGH
+**R-07**
 
-Kimi defines this as 10 screens with seven backend dependencies.
+Use the canonical vehicle-type-change implementation.
 
-This phase should be divided into three functional groups.
+Add:
 
----
+* radio selection;
+* online-state warning;
+* confirmation;
+* automatic offline transition if required by product semantics;
+* refresh after change.
 
-## Unit 3A — Vehicle Management
+Do not create a duplicate activation API merely to match Kimi's path literally.
 
-Screens:
-
-* Add Vehicle;
-* Select Active Vehicle;
-* Vehicle Management.
-
-Existing repository routes include:
-
-* `vehicles`;
-* `vehicle-models`;
-* `vehicle-type-change`.
-
-Therefore the coding agent must inspect these before creating anything.
-
-### Important existing issue
-
-Plan 05 explicitly identifies the existing active-vehicle implementation as incorrectly PATCHing `vehicle_type` to `/api/driver/me`, where it is silently stripped.
-
-The intended fix is the dedicated:
-
-`/api/driver/vehicle-type-change`
-
-flow.
-
-This is a **high-value correctness item**, not cosmetic cleanup.
-
-### Model
-
-**GLM-5.3**
-
-Use GLM-5.3 specifically for the vehicle-state transition and type-change implementation.
+**Model:** GLM-5.2.
 
 ---
 
-## Unit 3B — Subscription
+# 11. Phase 2.3 — Subscription / Package Ecosystem
 
-Screens:
+## R-08
 
-* Subscription Plans;
-* Subscription Checkout;
-* Subscription Confirmation;
-* Subscription Details;
-* Subscription Renewal;
-* Active Subscription.
+This is a dedicated implementation epic.
 
-Payment flow uses PortPos.
+It includes:
 
-Payment purpose:
+```text
+subscription-plans
+subscription-checkout
+subscription-details
+subscription-renewal
+```
 
-* `subscription`;
-* `subscription_renewal`.
+### Order
 
-Kimi explicitly specifies these purpose tags.
+```text
+subscription architecture decision
+        ↓
+API/data contract
+        ↓
+payment flow
+        ↓
+active subscription state
+        ↓
+screens
+        ↓
+wallet integration
+        ↓
+renewal
+```
 
-The repository already has payment and package infrastructure, so the coding agent must inspect existing subscription activation/payment-event logic before changing it.
+The existing package purchase flow already works, including PaymentWebView and polling. 
 
-### Model
-
-**GLM-5.2**
-
-Escalate a specific payment-state bug to GLM-5.3.
-
----
-
-## Unit 3C — Call Packages
-
-Includes:
-
-* available packages;
-* active package;
-* purchase;
-* package confirmation behavior.
-
-Payment purpose:
-
-`driver_package`.
-
-### Model
-
-**GLM-5.2**
-
----
-
-## Phase 3 Review
-
-**MiMo 2.5 Pro**
-
-Review specifically for:
-
-* vehicle state transitions;
-* subscription state;
-* payment callback behavior;
-* accidental duplication;
-* online/offline vehicle switching;
-* stale subscription state.
-
----
-
-# 9. Phase 4 — Money System
-
-## Priority: HIGH / HIGH-RISK
-
-This phase should receive more model budget than ordinary UI work.
-
-Kimi classifies this as 11 screens and 10 backend dependencies and explicitly describes money screens as high-trust.
-
-The repository also contains existing earnings, wallet, dues, commission, call-ledger, and payout endpoints.
-
----
-
-## Unit 4A — Call Ledger
-
-Includes:
-
-* monthly grouping;
-* deductions;
-* pagination;
-* missed-request integration.
-
-Important repository fact:
-
-Plan 05 explicitly says there should **not** be a separate missed-requests screen. The existing missed-request endpoint feeds the call-ledger missed tab.
-
-Therefore the implementation should not create a redundant screen unless repository evidence proves the existing architecture has changed.
-
-### Model
-
-**GLM-5.2**
-
----
-
-## Unit 4B — Commission Statement
-
-Includes:
-
-* monthly statement;
-* earnings;
-* deductions;
-* net;
-* PDF export.
-
-### Model
-
-**GLM-5.2**
-
----
-
-## Unit 4C — Earnings Breakdown / Weekly / Detail
-
-Reuse existing earnings APIs where possible.
-
-The repository already contains:
-
-* `/api/driver/earnings/breakdown`;
-* `/api/driver/earnings/weekly`.
-
-The Kimi plan also identifies `/api/driver/earnings/breakdown` as an existing contract requiring extension/verification.
-
-### Model
-
-**GLM-5.2**
-
----
-
-## Unit 4D — Due Amounts
-
-Includes:
-
-* due balance;
-* explanation;
-* payment action;
-* payment callback;
-* Wallet synchronization.
+Therefore the implementation must **extend/reuse existing payment infrastructure**, not create a parallel checkout system.
 
 ### Model
 
 **GLM-5.3**
-
-Reason:
-
-Due amounts interact directly with wallet/payment state.
-
----
-
-## Unit 4E — Payout Methods
-
-Kimi proposes bKash payout methods.
-
-Plan 05 explicitly locks bKash-only payout methods and identifies a new GET requirement alongside the existing POST endpoint.
-
-### Model
-
-**GLM-5.2**
-
----
-
-## Unit 4F — Minimum Rate
-
-Reuse:
-
-`components/MinRateSlider.tsx`
-
-and:
-
-`GET /api/driver/slider-config`
-
-plus:
-
-`PATCH /api/driver/me`
-
-with `validateDriverMinKm()`.
-
-This validation requirement is explicitly identified in Plan 05.
-
-### Model
-
-**GLM-5.2**
-
----
-
-## Unit 4G — Driver Lost Items
-
-This is a critical gap identified by Kimi.
-
-The driver must be able to respond:
-
-* I Have It;
-* Not Found;
-* Arrange Return.
-
-The repository already contains:
-
-`app/api/driver/lost-items+api.ts`
-
-so the first task is contract verification, not API recreation.
-
-### Model
-
-**GLM-5.3**
-
-Reason:
-
-This crosses rider/driver state and must preserve the lost-item state machine.
-
----
-
-## Phase 4 Gate
-
-Require:
-
-* monetary values verified in paisa;
-* no floating-point persistence;
-* payment callbacks verified;
-* due state synchronized;
-* ledger state correct;
-* lost-item transitions correct;
-* API authorization verified;
-* pagination verified.
 
 ### Review
 
-**GLM-5.3 Code Skeptic**
+**Claude 5 / Claude Code**
 
-This is one of the places where spending scarce GLM-5.3 capacity is justified.
-
-The skeptic should actively attempt to break:
-
-* ledger calculations;
-* duplicate payment handling;
-* callback replay;
-* stale wallet balance;
-* negative balances;
-* concurrent transactions;
-* lost-item transitions.
+This is exactly the kind of high-risk multi-screen architecture where independent review is warranted.
 
 ---
 
-# 10. Phase 5 — Support, Safety, Communication & Schedule
+# 12. Phase 3 — Money Features
 
-## Priority: HIGH
+## P3.1 Earnings Breakdown
 
-Kimi defines 10 screens.
+Modify:
 
-Group them by technical complexity.
+```text
+earnings-breakdown/index.tsx
+```
 
----
+to use the required date-driven contract rather than the current fixed weekly range. 
 
-## Unit 5A — Support
-
-Includes:
-
-* Contact Support;
-* FAQ;
-* Support chat;
-* Trip Issue;
-* Report Issue.
-
-Requirements:
-
-* category selection;
-* attachments;
-* issue classification;
-* chat;
-* retry;
-* empty/loading states.
-
-### Model
-
-**GLM-5.2**
+**Model:** GLM-5.2.
 
 ---
 
-## Unit 5B — Safety
+## P3.2 Commission Statement
 
-Includes:
+**R-11**
 
-* Safety;
-* SOS;
-* emergency contacts.
+Add:
 
-The repository already has an `SOSButton`.
+* month selector;
+* 12-month history;
+* PDF export if supported by existing infrastructure;
+* API `?month=`.
 
-Plan 05 explicitly identifies an existing defect: it currently routes to a driver-only SOS endpoint that produces 403s for riders. The intended endpoint is:
+The audit identifies this as a current partial implementation. 
 
-`POST /api/sos/alert`
-
-This should be treated as a cross-cutting safety correction.
-
-### Model
-
-**GLM-5.3**
-
-Reason:
-
-Safety actions are high-risk and authorization-sensitive.
+**Model:** MiMo Pro / GLM-5.2.
 
 ---
 
-## Unit 5C — Communication
+## P3.3 Payout Methods
 
-Includes:
+**R-09 + R-13**
 
-* Driver Chat;
-* Customer Navigation.
+Implement:
 
-Customer Navigation uses MapLibre.
+```text
+GET /api/driver/payout-method
+POST /api/driver/payout-method
+```
 
-### Model
+and management screen.
 
-**GLM-5.2**
+Preserve the existing:
 
-Escalate MapLibre lifecycle problems to GLM-5.3 if discovered.
+* bKash-only rule;
+* validation;
+* driver authorization;
+* single-active-method behavior.
 
----
+The POST already exists; the missing capability is listing/management. 
 
-## Unit 5D — Schedule
-
-Includes:
-
-* day selection;
-* availability;
-* time ranges;
-* conflict detection;
-* save.
-
-Existing `SchedulePicker` must be inspected before creating a new scheduling component. Plan 05 explicitly says to reuse it if it already covers the required behavior.
-
-### Model
-
-**GLM-5.2**
+**Model:** GLM-5.2.
 
 ---
 
-# 11. Phase 6 — Performance, Ratings, Intelligence & Profile
+## P3.4 Minimum Rate
 
-## Priority: MEDIUM
+**R-10**
 
-Kimi defines eight screens and five backend dependencies.
+Create settings screen around existing:
 
-This phase should be divided into:
+```text
+MinRateSlider
+GET /api/driver/slider-config
+PATCH /api/driver/me
+```
 
----
+Use canonical `validateMinPerKm`.
 
-## Unit 6A — Profile
+**Model:** DeepSeek V4 Flash.
 
-* Edit Profile;
-* Personal Profile.
-
-Photo upload must use the existing Supabase storage conventions.
-
-Kimi specifies:
-
-* gallery-only selection;
-* JPG/PNG;
-* 5MB maximum;
-* upload progress.
-
-### Model
-
-**GLM-5.2**
+Review with MiMo 2.5.
 
 ---
 
-## Unit 6B — Ratings
+# 13. Phase 4 — Support / Safety / Schedule
 
-Includes:
+These are mostly **modification and verification**, not greenfield work.
 
-* average;
-* count;
-* distribution;
-* reviews;
+## P4.1 Support
+
+**R-14**
+
+Verify whether the generic:
+
+```text
+POST /api/support/ticket
+```
+
+can safely serve driver support.
+
+Do not create:
+
+```text
+/api/driver/support-tickets
+```
+
+unless role semantics require it.
+
+The current screen works against the generic endpoint, but lacks the richer Kimi form. 
+
+Add:
+
+* category;
+* subject;
+* message;
+* attachment if required by spec;
+* success/error;
+* driver authorization semantics.
+
+**Model:** GLM-5.2.
+
+---
+
+# 14. Phase 4.2 — Emergency Contacts
+
+Modify existing CRUD:
+
+```text
+GET/POST/DELETE /api/user/emergency-contacts
+```
+
+Add:
+
+* Bangladesh phone validation;
+* maximum five contacts;
+* confirmation;
 * empty state.
 
-Existing:
+The underlying feature already works. 
 
-`/api/driver/ratings`
-
-must be verified before modification.
-
-### Model
-
-**GLM-5.2**
+**Model:** DeepSeek V4 Flash.
 
 ---
 
-## Unit 6C — Referral
+# 15. Phase 4.3 — SOS
 
-Includes:
+Do not rebuild the existing SOS button.
 
-* referral code;
-* rewards;
-* history;
-* copy;
-* share.
+Repair the known gaps:
 
-No new referral deep-link system should be introduced without repository/product evidence; Plan 05 explicitly excludes referral deep linking.
+* actual cooldown enforcement;
+* active-alert state;
+* retry behavior;
+* offline handling;
+* polling;
+* resolve behavior.
 
-### Model
+`FEATURES.md` confirms the existing alert pipeline already includes DB, SMS, push, admin broadcast and auto-resolution. 
 
-**DeepSeek V4 Flash**
+The remaining issue is primarily correctness of the cooldown/state behavior.
+
+**Model:** GLM-5.3.
 
 ---
 
-## Unit 6D — Hotspot Map
+# 16. Phase 4.4 — Scheduling
 
-Uses the existing H3/geospatial architecture and MapLibre.
+Current schedule is only day toggles and lacks time ranges/conflict detection. 
 
-This is more technically sensitive than an ordinary screen because hotspot rendering is connected to the dispatch/geospatial system.
+Implement:
 
-Existing `/api/driver/hotspots` and related heatmap infrastructure should be inspected.
+* time ranges;
+* overlap validation;
+* server-side conflict logic;
+* correct GET/PUT contract;
+* remove or implement the currently-404 overlap endpoint.
+
+**Model:** GLM-5.2.
+
+---
+
+# 17. Phase 4.5 — Lost Items
+
+**Do not rebuild.**
+
+The feature already exists end-to-end:
+
+* GET;
+* driver-scoped authorization;
+* "I Have It";
+* "Not Found";
+* "Arrange Return";
+* persisted state transition. 
+
+Only verify against the current Kimi specification and repair the `return_method` schema typing if necessary.
+
+**Model:** DeepSeek V4 Flash / MiMo review.
+
+---
+
+# 18. Phase 5 — Performance / Intelligence / Profile
+
+## P5.1 Performance
+
+Already implemented.
+
+Only:
+
+* verify against Plan 10;
+* test period switching;
+* verify ≤30 points;
+* verify chart rendering;
+* verify retry.
+
+**Model:** MiMo 2.5.
+
+---
+
+## P5.2 Incentives
+
+Already implemented and authenticated.
+
+Verify only.
+
+**Model:** MiMo 2.5.
+
+---
+
+## P5.3 Ratings
+
+**R-15**
+
+Add:
+
+* 5-star distribution bars;
+* anonymous-review indication;
+* preserve current API semantics.
+
+**Model:** MiMo Pro.
+
+---
+
+## P5.4 Referral
+
+**R-16**
+
+First verify whether `/api/user/referral` is correctly role-safe and semantically suitable.
+
+Only create `/api/driver/referral` if repository evidence demonstrates that the generic endpoint cannot meet the driver requirement.
+
+**Model:** DeepSeek V4 Flash.
+
+---
+
+## P5.5 Driver Profile
+
+Add:
+
+* member since;
+* vehicle information;
+* preserve existing photo/name/city editing.
+
+Also fix the unrelated-but-real navigation regression:
+
+```text
+router.push("/(main)/(rider)/onboarding")
+```
+
+→ correct profile return behavior.
+
+This is **R-21**.
+
+**Model:** MiMo Pro.
+
+---
+
+## P5.6 Hotspot
+
+Treat as a backend/data-architecture task first.
+
+Current screen is already visually implemented, but the backend is not using the required H3 model. 
 
 ### Model
 
 **GLM-5.3**
 
-This is a good GLM-5.3 use because incorrect assumptions about H3 or map data can cause functional rather than cosmetic failure.
+### Review
+
+**Gemini 3.1 Pro**
 
 ---
 
-## Unit 6E — Incentives / Performance
+# 19. Phase 6 — Plan 11 Content / i18n
 
-Includes:
+## P6.1 Legal Content
 
-* performance statistics;
-* incentives;
-* earnings-performance visualization.
+**R-17 + R-18**
 
-Existing performance and incentives endpoints exist.
+Create:
 
-Plan 05 specifically calls for daily earnings bars using `react-native-svg` rather than introducing a chart library.
+```text
+lib/legalContent.ts
+```
 
-### Model
+then make:
+
+* Rider Terms;
+* Driver Terms;
+* Rider Privacy;
+* Driver Privacy
+
+consume the shared content.
+
+Do not duplicate legal text across screens.
+
+**Model:** DeepSeek V4 Flash.
+
+---
+
+## P6.2 i18n
+
+**R-19 + R-20**
+
+There is already:
+
+```text
+i18n/
+  locales/en/common.json
+  locales/bn/common.json
+```
+
+Therefore:
+
+> **Extend the existing i18n architecture. Do not create a competing i18n implementation.**
+
+Add:
+
+* language persistence;
+* driver strings;
+* missing Bengali strings;
+* correct hydration on startup.
+
+**Model:** GLM-5.2.
+
+---
+
+# 20. Phase 7 — Shared Component Cleanup
+
+These should be handled opportunistically, not allowed to become a standalone giant phase.
+
+## Keep and wire where they have a real consumer
+
+### R-24
+
+`ProgressBar`
+
+### R-25
+
+`Badge`
+
+### R-26
+
+`Avatar`
+
+### R-28
+
+`CheckboxGroup` — first verify whether it has a legitimate consumer.
+
+## Delete
+
+### R-27
+
+`HeatmapOverlay`
+
+The audit explicitly says it is superseded by the existing Map CircleLayer implementation. 
+
+Do not manufacture consumers just to eliminate an "unwired component" finding.
+
+---
+
+# 21. Cross-Cutting Plan 05 Carryovers
+
+These should **not disappear simply because they are outside Plans 06–11.**
+
+The following remain tracked:
+
+| Item                                            | Treatment                                    |
+| ----------------------------------------------- | -------------------------------------------- |
+| Zone Z-4                                        | Complete before hotspot is declared complete |
+| Nil-UUID zone sentinel                          | Remove                                       |
+| `zone_multi_active_enabled` admin configuration | Fix                                          |
+| Apply-promos contract                           | Fix separately                               |
+| SOS cooldown                                    | Included in P4                               |
+| Schedule overlap                                | Included in P4                               |
+| platform_config seeding                         | Fix                                          |
+| Shared component cleanup                        | P7                                           |
+
+`FEATURES.md` explicitly identifies the zone and configuration items as remaining Plan 05 work. 
+
+---
+
+# 22. Model Allocation
+
+## High-end models
+
+| Work                               | Model             | Reason                              |
+| ---------------------------------- | ----------------- | ----------------------------------- |
+| Subscription/package architecture  | **GPT-5.6 Terra** | Cross-domain architecture decision  |
+| Payment-event/accounting integrity | **GLM-5.3**       | Financial/data integrity            |
+| Activity rebuild                   | **GLM-5.3**       | Primary driver navigation/data flow |
+| Wallet/payment integration         | **GLM-5.3**       | Financial state                     |
+| Subscription implementation        | **GLM-5.3**       | Payment + state machine             |
+| SOS correctness                    | **GLM-5.3**       | Safety/state machine                |
+| H3 hotspot architecture            | **GLM-5.3**       | Geospatial architecture             |
+| Schedule state/overlap             | **GLM-5.2**       | Complex but contained               |
+| Vehicle state                      | **GLM-5.2**       | Existing architecture modification  |
+
+The allocation follows the stated model strategy: GLM-5.3 is reserved for complex, architecture-sensitive, security/data-integrity and difficult state-machine work rather than routine UI. 
+
+---
+
+## Normal implementation
 
 **GLM-5.2**
 
+Use for:
+
+* vehicle management;
+* payout;
+* commission;
+* support;
+* scheduling;
+* i18n;
+* medium-complexity API changes;
+* normal multi-file features.
+
 ---
 
-## Unit 6F — Rider No-Show
+## High-volume implementation
 
-This is an operational ride-state transition and should not be treated as ordinary UI.
+**DeepSeek V4 Flash / Kilo Auto Free**
 
-### Model
+Use for:
 
-**GLM-5.3**
+* legal content;
+* simple CRUD;
+* simple settings screens;
+* shared-component wiring;
+* simple validation;
+* straightforward UI modifications;
+* mechanical cleanup.
+
+Kilo Auto should only be used where exact model identity is not important. 
 
 ---
 
-# 12. Phase 7 — Plan 11: Legal + i18n
+# 23. Review Allocation
 
-## Priority: LOW TECHNICAL RISK / HIGH COMPLETION VALUE
+| Implementation          | Reviewer                                 |
+| ----------------------- | ---------------------------------------- |
+| Driver foundation       | MiMo Pro                                 |
+| Activity                | GLM-5.3 final verification               |
+| Wallet                  | MiMo Pro + GLM-5.3 audit                 |
+| Vehicle                 | MiMo 2.5                                 |
+| Subscription            | **Claude 5 / Claude Code**               |
+| Payment/accounting      | **Claude + GLM-5.3**                     |
+| SOS                     | MiMo Pro                                 |
+| Scheduling              | MiMo Pro                                 |
+| Hotspot/H3              | **Gemini 3.1 Pro**                       |
+| i18n/legal              | MiMo 2.5                                 |
+| Final Plans 06–11 audit | **Claude + Gemini + Qwen independently** |
 
-Plan 11 contains:
+The independent reviewers should receive the same source context but different review roles, consistent with the orchestration protocol. 
 
-* rider Terms;
-* rider Privacy;
-* driver Terms;
-* driver Privacy;
-* i18n foundation.
+---
 
-Kimi specifies `lib/legalContent.ts` and English/Bengali structure.
+# 24. Parallelization
 
-However, there is an important dependency:
+After Phase 0:
 
-Plan 05 states that legal content is **blocked on owner-provided copy**.
+### Can run in parallel
 
-Therefore the implementation plan must distinguish:
+```text
+Vehicle
+    │
+    ├── Vehicle Management
+    └── Active Vehicle
 
-### 7A — Legal UI Infrastructure
+Money
+    │
+    ├── Earnings Breakdown
+    ├── Commission
+    ├── Payout
+    └── Minimum Rate
 
-Can proceed:
+Support/Safety
+    │
+    ├── Support
+    ├── Emergency Contacts
+    └── SOS
 
-* screen layout;
-* content loader;
-* section rendering;
-* theme;
-* typography;
-* navigation.
+Performance
+    │
+    ├── Ratings
+    ├── Referral
+    └── Profile
 
-### 7B — Actual Legal Copy
+Plan 11
+    ├── Legal
+    └── i18n
+```
 
-Blocked until authoritative legal content is supplied.
+### Must remain serialized
 
-Do not have a coding model invent legally binding Terms or Privacy Policy language.
-
-### 7C — i18n
-
-Extend the existing i18n system if repository inspection confirms its structure.
-
-Plan 05 indicates:
-
-`i18n/locales/{en,bn}/common.json`
+```text
+Subscription architecture
+        ↓
+Subscription backend
+        ↓
+Subscription UI
+        ↓
+Wallet subscription card
+        ↓
+Renewal
+```
 
 and:
 
-`i18n/i18n.ts`
-
-already exist and should be extended.
-
-Therefore do **not** automatically create a competing `lib/i18n.ts`.
-
-This is a concrete example where repository reality should override Kimi's suggested alternative implementation location.
-
-### Model
-
-**DeepSeek V4 Flash** for mechanical string migration.
-
-**GLM-5.2** for the initial i18n architecture migration if existing implementation is inconsistent.
-
----
-
-# 13. Cross-Cutting Implementation
-
-These should not be postponed blindly until the end.
-
-## 13.1 Theme
-
-Every new/modified screen must follow Pattern A:
-
-* `useIsDark()`;
-* theme tokens;
-* no `theme === "dark"`;
-* no NativeWind `dark:` classes.
-
-Kimi's master verification requires this for all screens.
-
----
-
-## 13.2 Loading
-
-Standardize:
-
-* initial loading;
-* refresh loading;
-* pagination loading;
-* action loading.
-
-Do not create one bespoke skeleton per screen.
-
----
-
-## 13.3 Empty State
-
-Reuse the existing `EmptyState`.
-
-Duplicate EmptyState components should be considered a review failure because Plan 05 explicitly identifies duplication as a blocker.
-
----
-
-## 13.4 Errors
-
-Use `ErrorBanner` consistently.
-
-Required categories:
-
-* error;
-* warning;
-* info.
-
----
-
-## 13.5 Offline
-
-Implement the shared `OfflineIndicator`.
-
-Then apply it to data-heavy driver screens.
-
----
-
-## 13.6 Image Upload
-
-Centralize the upload behavior:
-
-* gallery;
-* validation;
-* compression;
-* unique filename;
-* Supabase Storage;
-* progress;
-* retry.
-
-Kimi specifies compression to 1200px width and retry with exponential backoff.
-
-The exact bucket names must be verified against the repository before implementation.
-
----
-
-## 13.7 PaymentWebView
-
-Standardize the `purpose` contract.
-
-Required purposes from Kimi:
-
 ```text
-wallet_topup
-due_payment
-subscription
-subscription_renewal
-driver_package
+Payment integrity
+        ↓
+Wallet
+        ↓
+Payout / Instant Pay
+        ↓
+Final money audit
 ```
 
-Payment callback/deep-link handling should be implemented as one coherent system rather than independently by each screen.
-
----
-
-## 13.8 Push Notifications
-
-Implement notification-to-route mapping centrally.
-
-Kimi identifies this as a previously missing cross-cutting requirement.
-
----
-
-# 14. Dependency Graph
+and:
 
 ```text
-Repository Audit
-      │
-      ├── Shared Components
-      │
-      ├── API Contract Audit
-      │
-      └── Navigation Audit
-              │
-              ▼
-       Driver Tab Foundation
-              │
-       ┌──────┼───────────┐
-       ▼      ▼           ▼
-    Earnings Wallet    Activity/Profile/Settings
-       │      │
-       └──────┼───────────┘
-              │
-              ▼
-       Vehicle Ecosystem
-              │
-              ├── Vehicle
-              ├── Subscription
-              └── Packages
-              │
-              ▼
-          Money System
-              │
-       ┌──────┼─────────────┐
-       ▼      ▼             ▼
-     Ledger  Wallet      Lost Items
-       │
-       ▼
- Support / Safety / Communication
-              │
-              ▼
- Performance / Profile / Intelligence
-              │
-              ▼
- Cross-Cutting Completion
-              │
-              ▼
- Final Audit
+Vehicle state
+        ↓
+Vehicle management
+        ↓
+Active vehicle
+        ↓
+Vehicle-dependent subscription/package behavior
 ```
 
 ---
 
-# 15. Parallelization Strategy
+# 25. Implementation Unit Inventory
 
-Parallelization should happen **between independent functional domains**, not between tightly coupled files.
+The audit already gives us **R-01 through R-28**. I would retain those IDs as the execution IDs rather than inventing another numbering system. 
 
-## Safe Parallelization
+### Core units
 
-After Phase 1:
+| ID   | Work                         | Action          | Model        |
+| ---- | ---------------------------- | --------------- | ------------ |
+| R-01 | Earnings Goal                | NEW             | GLM-5.2      |
+| R-02 | Activity                     | REBUILD + API   | GLM-5.3      |
+| R-03 | Wallet                       | MODIFY          | GLM-5.3      |
+| R-04 | Settings/tab wiring          | MODIFY          | Auto         |
+| R-05 | Status Guard                 | MODIFY          | GLM-5.2      |
+| R-06 | Vehicle management           | MODIFY          | GLM-5.2      |
+| R-07 | Active vehicle warning/state | MODIFY          | GLM-5.2      |
+| R-08 | Subscription ecosystem       | VERIFY + MODIFY | GLM-5.3      |
+| R-09 | Payout management            | NEW             | GLM-5.2      |
+| R-10 | Minimum rate                 | NEW             | DeepSeek     |
+| R-11 | Commission history           | MODIFY          | GLM-5.2      |
+| R-12 | Wallet due contract          | BUG FIX         | DeepSeek     |
+| R-13 | Payout GET                   | MODIFY          | DeepSeek     |
+| R-14 | Driver support               | VERIFY + MODIFY | GLM-5.2      |
+| R-15 | Rating distribution          | MODIFY          | MiMo/GLM-5.2 |
+| R-16 | Referral                     | VERIFY          | DeepSeek     |
+| R-17 | Legal content                | NEW             | DeepSeek     |
+| R-18 | Legal screens                | MODIFY          | DeepSeek     |
+| R-19 | Language persistence         | MODIFY          | GLM-5.2      |
+| R-20 | Driver translations          | CONTENT         | DeepSeek     |
+| R-21 | Profile navigation bug       | BUG FIX         | DeepSeek     |
+| R-22 | Vehicle active-state API     | BUG FIX         | GLM-5.2      |
+| R-23 | Storage keys                 | NEW             | DeepSeek     |
+| R-24 | ProgressBar                  | MODIFY          | DeepSeek     |
+| R-25 | Badge                        | MODIFY          | DeepSeek     |
+| R-26 | Avatar                       | MODIFY          | DeepSeek     |
+| R-27 | HeatmapOverlay               | DELETE          | DeepSeek     |
+| R-28 | CheckboxGroup                | VERIFY / DELETE | DeepSeek     |
+
+---
+
+# 26. Verification Gates
+
+Every implementation unit must pass its own verification before downstream work treats it as complete.
+
+## Gate A — Static
 
 ```text
-                 Driver Foundation
-                       │
-       ┌───────────────┼────────────────┐
-       ▼               ▼                ▼
-   Vehicle          Support          Performance
-   Ecosystem        & Safety         Screens
-       │               │                │
-       └───────────────┼────────────────┘
+TypeScript
+ESLint
+imports
+dead code
+API route existence
+auth headers
+Zod schemas
+```
+
+## Gate B — Contract
+
+For each API:
+
+```text
+frontend request
+      =
+server request schema
+      =
+server response
+      =
+frontend response expectation
+```
+
+## Gate C — State
+
+For relevant features:
+
+```text
+idle
+loading
+success
+empty
+error
+offline
+retry
+destructive action
+```
+
+## Gate D — Navigation
+
+Every new screen must have:
+
+```text
+entry point
+→ screen
+→ successful action
+→ next screen
+```
+
+and notification/deep-link entry where applicable.
+
+## Gate E — Data integrity
+
+For money:
+
+```text
+integer paisa
+transaction
+payment event
+ledger
+accounting
+```
+
+must remain consistent.
+
+## Gate F — Regression
+
+After every major phase:
+
+```text
+existing rider flows
+existing driver ride flow
+existing dispatch
+existing payment
+existing zone logic
+existing SOS
+```
+
+must remain functional.
+
+---
+
+# 27. Final Independent Audit
+
+After all implementation units:
+
+### Claude
+
+**Repository / agentic implementation audit**
+
+Look for:
+
+* duplicated architecture;
+* incorrect abstractions;
+* hidden dependencies;
+* incomplete wiring;
+* implementation drift.
+
+### Gemini
+
+**Whole-system consistency audit**
+
+Look for:
+
+* cross-plan contradictions;
+* state-model inconsistencies;
+* navigation inconsistencies;
+* payment/subscription/vehicle interactions;
+* H3/zone consistency.
+
+### Qwen
+
+**Technical feasibility audit**
+
+Look for:
+
+* API/DB mismatches;
+* wrong file assumptions;
+* missing imports;
+* incorrect dependencies;
+* backend/frontend contract errors.
+
+They should work independently first, as specified in the orchestration protocol. 
+
+---
+
+# 28. Final Definition of Done
+
+Plans 06–11 are **not complete** merely because all 52 screens exist.
+
+The final condition is:
+
+```text
+52 screens
++
+3 infrastructure items
++
+existing features repaired
++
+API contracts verified
++
+DB relationships verified
++
+navigation wired
++
+payment/accounting integrity verified
++
+driver status gating verified
++
+vehicle state verified
++
+subscription state verified
++
+H3 hotspot architecture verified
++
+i18n persisted
++
+legal content centralized
++
+offline/error/empty/loading states
++
+accessibility
++
+notification/deep-link routing
++
+TypeScript
++
+lint
++
+independent audits
+```
+
+The repository audit gives us the current baseline and the exact R-01–R-28 remaining-work inventory; the revised Kimi specification supplies the target behavior.  
+
+## Recommended execution sequence
+
+```text
+P0.1  Driver navigation/status
+P0.2  Subscription architecture decision
+P0.3  Payment integrity gate
+P0.4  Vehicle state gate
+P0.5  Zone/H3 gate
+        │
+        ▼
+P1    Driver foundation
+      ├─ Earnings Goal
+      ├─ Activity
+      └─ Wallet
+        │
+        ├──────────────┬──────────────┐
+        ▼              ▼              ▼
+P2 Vehicle        P3 Money       P4 Safety/
+   ecosystem         ecosystem       Support/
+                                     Schedule
+        │              │              │
+        └──────────────┴──────────────┘
                        ▼
-                  Money System
+P5 Performance / Intelligence / Profile
+                       ▼
+P6 Legal / i18n
+                       ▼
+P7 Cross-cutting cleanup
+                       ▼
+        Independent audits
+                       ▼
+             FINAL VERIFICATION
 ```
 
-However, money should not be implemented concurrently with changes to shared wallet/payment contracts unless the API contracts have already been frozen.
-
----
-
-# 16. Model Allocation
-
-## GPT-5.6 Luna
-
-Use for:
-
-* Phase 0 repository analysis;
-* decomposition;
-* dependency mapping;
-* routine planning.
-
-Do not spend Terra capacity here.
-
----
-
-## GLM-5.3
-
-Reserve for:
-
-1. DriverStatusGuard;
-2. Driver tab foundation;
-3. Earnings/Wallet high-risk implementation;
-4. Vehicle state transition;
-5. Due/payment integrity;
-6. Driver lost-items state machine;
-7. SOS/safety;
-8. Hotspot/H3 integration;
-9. rider no-show;
-10. final code skepticism/audit.
-
-This is approximately **10 high-value uses**, rather than consuming GLM-5.3 on dozens of ordinary screens.
-
----
-
-## GLM-5.2
-
-Primary implementation model for:
-
-* ordinary driver screens;
-* API extensions;
-* subscription UI;
-* package UI;
-* activity;
-* support;
-* schedule;
-* profile;
-* ratings;
-* performance;
-* forms.
-
----
-
-## DeepSeek V4 Flash
-
-Use for:
-
-* repetitive UI;
-* legal screen rendering;
-* string migration;
-* straightforward CRUD;
-* simple component extraction;
-* mechanical refactors;
-* test additions.
-
----
-
-## MiMo 2.5 Pro
-
-Use as an independent reviewer after:
-
-* Phase 1;
-* Phase 3;
-* Phase 5;
-* Phase 6.
-
-It should not receive the implementer's reasoning as truth.
-
----
-
-## GLM-5.3 Skeptic
-
-Use after:
-
-* Phase 4 money system;
-* complete Plans 06–11 implementation.
-
-The final skeptic should attempt to disprove correctness rather than merely review style.
-
----
-
-# 17. Recommended Execution Schedule
-
-The Kimi plan suggests a three-week implementation sequence.
-
-The more useful execution schedule is:
-
-### Stage 1 — Foundation
-
-1. Repository audit.
-2. Shared component verification.
-3. API contract audit.
-4. Driver tab layout.
-5. DriverStatusGuard.
-6. Storage registry.
-7. Core shared components.
-
-### Stage 2 — Driver Core
-
-8. Earnings.
-9. Wallet.
-10. Activity.
-11. Profile.
-12. Settings.
-
-### Stage 3 — Vehicle / Monetization
-
-13. Vehicle management.
-14. Vehicle type-change correction.
-15. Subscription.
-16. Packages.
-
-### Stage 4 — Money
-
-17. Call Ledger.
-18. Earnings breakdown.
-19. Commission.
-20. Due amounts.
-21. Payout methods.
-22. Minimum rate.
-23. Lost items.
-
-### Stage 5 — Operational Support
-
-24. Support.
-25. FAQ.
-26. SOS.
-27. Emergency contacts.
-28. Chat.
-29. Customer navigation.
-30. Schedule.
-
-### Stage 6 — Driver Intelligence
-
-31. Profile editing.
-32. Ratings.
-33. Referral.
-34. Hotspot.
-35. Incentives.
-36. Performance.
-37. Rider no-show.
-
-### Stage 7 — Completion
-
-38. i18n.
-39. Legal UI.
-40. Notification routing.
-41. Deep links.
-42. Offline behavior.
-43. accessibility pass.
-44. loading/empty/error pass.
-45. TypeScript/lint.
-46. independent review.
-47. GLM-5.3 final skeptic.
-48. final corrections.
-
----
-
-# 18. Verification Gates
-
-## Gate A — Foundation
-
-Must pass before screens:
-
-* navigation;
-* status guard;
-* auth;
-* shared components;
-* theme;
-* TypeScript;
-* lint.
-
-## Gate B — Core Driver
-
-Must pass before Vehicle/Money:
-
-* all five tabs;
-* real API data;
-* navigation;
-* refresh;
-* loading;
-* empty;
-* errors.
-
-## Gate C — Money
-
-Must pass before Support/Performance:
-
-* wallet;
-* payments;
-* ledger;
-* dues;
-* payout;
-* lost items.
-
-This is the most important functional gate.
-
-## Gate D — Complete Driver Experience
-
-All Plans 06–10 implemented.
-
-## Gate E — Final System Audit
-
-Check:
-
-* requirements;
-* API contracts;
-* authorization;
-* state transitions;
-* money;
-* payments;
-* navigation;
-* deep links;
-* push routing;
-* theme;
-* accessibility;
-* errors;
-* loading;
-* empty states;
-* TypeScript;
-* lint;
-* regression.
-
-Kimi's master checklist explicitly requires these screen/API verification categories.
-
----
-
-# 19. Important Plan Reconciliation Items
-
-These are not implementation decisions to silently make. They are items the execution process must explicitly verify.
-
-### 19.1 Screen Count
-
-Kimi's document states:
-
-* 52 screens + 3 infrastructure items;
-* while also describing an earlier 55-screen figure.
-
-The implementation tracker should use the **actual repository route inventory**, not the headline number.
-
-### 19.2 Existing vs New APIs
-
-Many APIs already exist.
-
-Therefore "backend needs N endpoints" should be interpreted as:
-
-> N endpoint contracts requiring verification/extension,
-
-not necessarily N new files.
-
-### 19.3 i18n Location
-
-Kimi proposes `lib/i18n.ts`.
-
-Plan 05 indicates an existing:
-
-`i18n/i18n.ts`
-
-and locale structure.
-
-The coding agent must inspect and extend the existing implementation rather than creating a competing i18n system.
-
-### 19.4 Missed Requests
-
-Do not create a separate missed-request screen merely because Kimi lists missed requests within the money scope.
-
-Plan 05 explicitly establishes the call-ledger missed tab as canonical.
-
-### 19.5 Payout History / Instant Pay
-
-Plan 05 explicitly excludes:
-
-* `instant-pay`;
-* `payout-history`.
-
-The wallet should therefore not silently acquire a withdrawal subsystem during Plans 06–11.
-
-### 19.6 Legal Content
-
-The UI can be prepared, but authoritative legal copy is blocked on owner content.
-
-### 19.7 Referral Deep Linking
-
-Do not build it during this program without new product authorization.
-
----
-
-# 20. Final Model Strategy
-
-The optimal allocation is **not**:
-
-```text
-Every screen → GLM-5.3
-```
-
-and it is also not:
-
-```text
-Everything → cheapest model
-```
-
-The correct allocation is:
-
-```text
-              HIGH RISK
-                  │
-      ┌───────────┴────────────┐
-      │                        │
- GLM-5.3                  GLM-5.3 Skeptic
-      │                        │
- state/payment/security       final audit
-      │
-      ▼
- GLM-5.2
- normal implementation
-      │
-      ▼
-DeepSeek V4 Flash
-mechanical work
-      │
-      ▼
-MiMo 2.5 Pro
-independent review
-```
-
-This preserves GLM-5.3 for the areas where one incorrect implementation can cause substantial downstream rework.
-
----
-
-# 21. Immediate Next Step
-
-Do **not** generate all Kilo prompts yet.
-
-The next execution artifact should be:
-
-**Phase 0 + Phase 1 detailed implementation specification**, containing:
-
-1. exact files to inspect;
-2. existing files to reuse;
-3. API contracts to verify;
-4. DriverTabsLayout implementation boundary;
-5. DriverStatusGuard implementation boundary;
-6. shared components;
-7. acceptance criteria;
-8. GLM-5.3 implementation prompt for the foundation;
-9. MiMo Pro review prompt for the completed foundation.
-
-Once that foundation is reviewed, the remaining Kilo prompts can be generated in dependency order rather than producing a large collection of prompts that may encode incorrect assumptions about the repository.
+**This is the draft implementation baseline I would now use to generate the individual Kilo execution prompts.** It is materially different from a simple Plan-06-through-11 screen implementation sequence because the repository audit proves that a large portion of the functionality already exists and should be **repaired, verified, or extended rather than rebuilt**. 
