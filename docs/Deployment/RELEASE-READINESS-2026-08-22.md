@@ -1,106 +1,190 @@
 # Final Release Readiness Report — Ride (Plans 06–11 completion)
 
+**Version:** 4 (staging deployed + production handover)
 **Date:** 2026-08-22
-**Scope:** Resolution of the three remaining post-audit blockers (C5 vehicle model, legal copy, P0-B payout gate) + full validation pass.
-**Prepared by:** Engineering (Kilo session). Product sign-off points are called out explicitly.
+**Branch:** `staging` @ **`5011881`** (pushed to `origin/staging`)
+**Prepared by:** Engineering (Kilo session). Product/Legal sign-off points are called out explicitly.
 
 ---
 
-## 1. Summary of fixes in this session
+## 1. Summary of fixes (engineering sessions culminating in `5011881`)
 
 | # | Change | Files |
 |---|---|---|
-| C5-a | Vehicle-model decision document (Option A temporary, Option B migration path) | `docs/vehicle-model-decision.md` (new) |
+| Audit | C1–C4, H1–H9 fixes (prior sessions, previously uncommitted) | profile, packages, verification, `_layout`, `DriverStatusGuard`, `trips+api`, `commission-statement+api`, wallet, etc. |
+| C5-a | Vehicle-model decision document (Option A temporary, Option B migration path) | `docs/vehicle-model-decision.md` |
 | C5-b | Removed dead multi-vehicle activation endpoint | `app/api/driver/vehicle-activate+api.ts` (deleted) |
-| C5-c | Vehicle management simplified to single-vehicle display; "Activate" button, activation state and online-switch modal removed; one-vehicle notice ("You can only register one vehicle. Contact support to change it.") replaces the Add button once a vehicle exists | `app/(main)/(rider)/vehicle-management/index.tsx` |
-| C5-d | Select-active-vehicle simplified to read-only single-vehicle confirmation with Continue/Add actions; all `vehicle-activate`/`vehicle-type-change` client calls removed | `app/(main)/(rider)/select-active-vehicle.tsx` |
-| C5-e | Schema C5 TODO comment updated to record the applied decision (no schema/migration change; unique index `vehicles_driver_id_idx` kept) | `src/db/schema.ts:386` |
-| Legal-a | `lib/legalContent.ts` replaced with a generic professional bilingual (en/bn) template — 10 ToS sections, 6 privacy sections, valid dates and `@ride.com.bd` contacts — marked `// @TODO: Replace with approved legal copy` | `lib/legalContent.ts` |
-| Legal-b | All four legal screens now render exclusively from `lib/legalContent.ts` via one shared component (previously each hard-coded divergent copy with "Pending owner review" banners and stale `@goride.com` addresses). Bilingual rendering follows the persisted i18n language. | `components/LegalDocumentScreen.tsx` (new); 4 screens under `(customer)/(tabs)/settings/{terms-of-service,privacy-policy}` and `(rider)/settings/{terms-of-service,privacy-policy}` |
-| Legal-c | Build-time guard: Jest suite fails on placeholder markers (`@PLACEHOLDER`, "Pending owner review", `goride.com`, `example.com`, TODO/TBD/Lorem) and validates dates/contacts/bilingual completeness | `lib/__tests__/legalContent.test.ts` (new) |
-| Legal-d | README release-gate note on required legal text | `README.md` |
-| P0-B-a | Removed dead `payout` transaction label; gate comment added | `app/(main)/(rider)/(tabs)/wallet/index.tsx:50` |
-| P0-B-b | Product-gate document with verification evidence and the full list of missing decisions | `docs/payout-product-gate.md` (new) |
-| Extra | Fixed pre-existing ESLint **error** (`react-hooks/rules-of-hooks`: `useMemo` after early return) blocking the lint gate — hook hoisted above the GPS early-return, no behavior change | `components/Map.tsx:143` |
-
-Previous sessions (uncommitted working tree): C1–C4, H1–H9 fixes across profile, packages, verification, `_layout`, `DriverStatusGuard`, `trips+api`, `commission-statement+api`.
-
----
+| C5-c/d | Vehicle screens simplified to single-vehicle display + "Contact support to change it." notice | `vehicle-management/index.tsx`, `select-active-vehicle.tsx` |
+| C5-e | Schema C5 comment updated to record the applied decision (unique index kept, no DDL) | `src/db/schema.ts:386` |
+| Legal-a | `lib/legalContent.ts` professional bilingual template + `// @TODO: Replace with approved legal copy` | `lib/legalContent.ts` |
+| Legal-b | All 4 legal screens render from one shared component wired to `lib/legalContent.ts` | `components/LegalDocumentScreen.tsx` + 4 screens |
+| Legal-c | Build-time placeholder guard suite | `lib/__tests__/legalContent.test.ts` |
+| Legal-d | README release-gate note | `README.md` |
+| P0-B | Dead `payout` label removed, gate comment, gate document | wallet screen, `docs/payout-product-gate.md` |
+| Extra | Fixed pre-existing ESLint error (rules-of-hooks in Map.tsx) | `components/Map.tsx` |
+| Deploy | Staging EAS profile, environment pinning, OTA wiring, Node≥22 build fix | `eas.json`, `app.config.js`, `package.json` |
 
 ## 2. Blocker status
 
-### C5 — Vehicle model contradiction → **RESOLVED (temporary safe default) + documented path forward**
-- Applied **Option A: one vehicle per driver**, matching the hard `vehicles_driver_id_idx` unique index and dispatch's single `drivers.vehicle_type` filtering.
-- The contradictory multi-vehicle UI and dead endpoint are gone; users get an explicit message instead of a silently-overwritten vehicle.
-- **Path forward:** `docs/vehicle-model-decision.md` §3 contains the full Option B migration plan (drop index via drizzle migration, plain INSERT, reinstate activation, restore UI). **Product ruling still required** before multi-vehicle work starts.
-- Accepted residual risk (documented): a crafted direct POST to `/api/driver/vehicles` can still overwrite the caller's own vehicle row (upsert retained for idempotent onboarding retries). Server-side `409` guard recommended post-decision.
+### C5 — Vehicle model → RESOLVED (temporary safe default) + documented path
+Option A (one vehicle/driver) applied, matching `vehicles_driver_id_idx` and dispatch's single `drivers.vehicle_type`. Dead endpoint/UI removed. **Product ruling still required**; Option B migration plan is in `docs/vehicle-model-decision.md` §3. Residual risk (documented): direct POST to `/api/driver/vehicles` can still overwrite the caller's own row (upsert retained for onboarding retries); server-side `409` guard recommended post-decision.
 
-### Legal copy → **RESOLVED as template + hard gate on placeholders; approval still pending**
-- All four screens now consume one source (`lib/legalContent.ts`); professional bilingual template with effective date 2026-08-01, revision 2026-08-22, `support@ride.com.bd` / `privacy@ride.com.bd` contacts.
-- Placeholder markers cannot ship: `legalContent.test.ts` fails the suite (and thus the phase-gate `npx jest --watchAll=false`) if any marker reappears.
-- README documents what Product/Legal must supply (approved en+bn text, dates, contact address).
-- **Path forward:** swap template content for approved copy; keep the guard green. Not a code change.
+### Legal copy → RESOLVED as template + hard gate; approval pending
+All four screens consume `lib/legalContent.ts` (bilingual, dates, contacts). `legalContent.test.ts` fails the suite on any placeholder marker or structural gap. **Production gate:** approved EN/BN copy must replace the template.
 
-### P0-B — Instant Pay / payout history → **VERIFIED GATED (no remnants) + documented**
-- Verified by source sweep (§3 of `docs/payout-product-gate.md`): no Withdraw/Instant-Pay/cash-out UI anywhere; no API route writes payouts/withdrawals; no store state; dead `TXN_TYPE_LABELS.payout` label removed; wallet screen carries the gate comment; informational "Withdrawals are not yet available" note retained for users.
-- Schema enum values (`payout` txn type, `source_tax_payout`/`driver_instant_pay` tax codes) are forward-compatible DB definitions with no writer — kept intentionally and documented.
-- **Path forward:** the five required Product decisions (funding source, payout rail, fees/limits/tax, idempotency/reversal/dispute, history semantics) plus the sanctioned implementation path are listed in `docs/payout-product-gate.md` §3–4.
+### P0-B — Instant Pay / payout history → VERIFIED GATED (no remnants)
+Sweep evidence in `docs/payout-product-gate.md`: zero withdrawal UI/API/state; forward-compatible schema enums have no writer. Five missing Product decisions + sanctioned implementation path documented.
 
----
-
-## 3. Validation evidence
+## 3. Validation evidence (pre-deploy, re-run at `5011881` state)
 
 | Gate | Command | Result |
 |---|---|---|
-| Typecheck | `npx tsc --noEmit` | **PASS** (0 errors; run twice — before and after Map.tsx fix) |
-| Lint | `npm run lint` | **PASS** — 0 errors, 55 warnings (all pre-existing tolerated `react-hooks/exhaustive-deps`-class warnings; the prior blocking `components/Map.tsx` rules-of-hooks **error** was fixed this session) |
-| Tests | `npx jest --watchAll=false` | **PASS** — 37 suites, **332/332 tests** (includes the new legal-content guard; pre-existing force-exit teardown warning on one worker, not a failure) |
-| console.log sweep | source files in `app/ lib/ utils-server/ src/` (492 files, node_modules excluded) | **0 matches** |
-| Removed-tech sweep | clerk / stripe / firebase over same scope | **0 matches** |
-| Dangling refs | `vehicle-activate` | Only explanatory comments in the decision doc/screens; no code references, no route |
-| Legal wiring | all 4 screens | All import `LegalDocumentScreen` → `lib/legalContent.ts` |
-| Graph maintenance | `code-review-graph update` | OK (1832 nodes, 366 flows) |
+| Typecheck | `npx tsc --noEmit` | **PASS** |
+| Lint | `npm run lint` | **PASS** — 0 errors (55 pre-existing tolerated warnings) |
+| Tests | `npx jest --watchAll=false` | **PASS** — 37 suites, 332/332 |
+| console.log sweep | 492 source files (node_modules excluded) | **0 matches** |
+| Removed-tech sweep | clerk/stripe/firebase | **0 matches** |
+| Graph | `code-review-graph update` | OK (1832 nodes) |
 
-### Manual smoke test — static vs runtime status
+---
 
-Runtime device/emulator testing was **not possible in this environment**. Status per critical path:
+## 4. Staging deployment record (2026-08-22)
 
-| Path | Static evidence | Runtime QA |
+### 4.1 Commits on `staging` (all pushed)
+
+| SHA | Subject |
+|---|---|
+| `490b1e5` | fix: address critical audit findings (C1-C4, H1-H9); resolve C5 (one-vehicle default); legal template; P0-B gate |
+| `764461a` | schema(drizzle): migration 0042 — notifications idempotency, rides reminder flag, demand-forecast/zones indexes |
+| `ed20376` | chore(deploy): staging EAS profile — pin production environment so internal QA builds embed server URLs |
+| `9067f16` | chore(deploy): wire EAS Update URL + appVersion runtime policy into app config (enables OTA) |
+| `0f99da6` | chore(deploy): declare expo-updates dependency for OTA |
+| `5011881` | fix(deploy): staging build — EXPO_WEB_OUTPUT=single to avoid Node>=22 SSR eager-bundle crash |
+
+### 4.2 Database migration — generated and reviewed; **NOT applied**
+
+`drizzle-kit generate` produced `src/db/migrations/0042_noisy_omega_red.sql` (legitimate drift from earlier approved work — the Z-1 zone-index swap, notifications idempotency, ride reminder flag; this session's schema change was comment-only). Reviewed line-by-line: **additive only** — no FK drops, no column/table drops, no data loss. The single `DROP INDEX zones_one_active` is the documented Z-1 replacement by `zones_active_idx`.
+
+**Required pre-deploy action (DBA/lead):** `npx drizzle-kit push` against the target database before deploying the backend.
+**Caveats:** (1) `CREATE UNIQUE INDEX demand_forecasts_zone_hour_idx` fails if `(zone_id, forecast_hour)` duplicates exist — dedupe first if the table has history. (2) `notifications_idempotency_idx` is safe: existing NULL keys are allowed multiple times by Postgres. (3) Rollback is trivial (drop the two indexes/columns) since the migration is additive.
+
+### 4.3 EAS — build and OTA
+
+| Artifact | ID / URL | Status |
 |---|---|---|
-| Package purchase (auth + confirmation) | Existing `/api/package/*` + `PaymentWebView` flow untouched this session; full test suite green | Required on staging |
-| Wallet top-up (PaymentWebView) | Wallet screen wiring verified in source (`handleTopUp` → `/api/driver/wallet/topup` → `payment_url` → `PaymentWebView`); paymentEvents/portposCallback/paymentRepair tests pass | Required on staging |
-| Language persistence (Bangla restart) | `i18n/i18n.ts` AsyncStorage persistence verified in source; legal screens now render bn when language = bn | Required on staging |
-| Trip history pagination (no duplicates) | H4 keyset cursor (`cursor` + `cursor_id` tiebreaker, limit ≤ 50) verified in `trips+api.ts` | Required on staging |
-| Document expiry warnings (expired red badge) | Verified in rewritten `vehicle-management` (expired = red `close-circle`, ≤30d = amber `warning`) | Required on staging |
-| Commission calendar weeks | H8 Monday-anchored Dhaka weeks, `week_offset` 0–52 verified in `commission-statement+api.ts` | Required on staging |
-| Sign-out (all stores cleared) | `authCleanup.test.ts` passes | Required on staging |
-| Vehicle activation (online confirmation) | **Behavior changed by C5 decision:** activation UI/endpoint removed; screen is now single-vehicle display + one-vehicle notice. Verify new flow instead | Required on staging |
-| Notification deep links | `_layout.tsx` handling from prior session; not modified this session | Required on staging (as before) |
+| Staging APK (Android, internal) | build `f8747a0c-0261-4016-9d6c-4a53d2015c58` → `https://expo.dev/artifacts/eas/5wZCn4J959_h7GLBCcW2Vcey4Ze8Sk2fBc0_9fFAXk0.apk` | **FINISHED** (20.9 min) |
+| EAS Update (JS bundle) | group `ce77d916-c910-4c37-a042-779dd4fdab71`, branch `staging`, runtime `1.0.4`, commit `0f99da6` | **Published** |
+| Update channel | `staging` → branch `staging` | **Linked** |
+| Environment secrets in APK | `EXPO_PUBLIC_SERVER_URL`, `EXPO_PUBLIC_WEB_SOCKET_SERVER_URL`, `EXPO_PUBLIC_SUPABASE_*`, `EXPO_PUBLIC_BARIKOI_API_KEY`, `EXPO_PUBLIC_SUPPORT_PHONE` | **Embedded** (verified in build log) |
+
+**Deploy-time engineering fixes (were genuine gaps):**
+1. No `staging` EAS profile existed → created (internal APK, release channel `staging`).
+2. Internal distribution resolves the `preview` EAS environment, which had no URL secrets → pinned `"environment": "production"` (only backend that exists — see caveat below).
+3. **OTA was never wired**: `app.config.js` lacked `updates.url` and `expo-updates` wasn't a dependency → added `updates.url` + `runtimeVersion {policy: appVersion}` + `expo-updates@~0.28.18`. This also enables OTA for future production builds.
+4. Build `b02380fa` failed in EAGER_BUNDLE with the repo-documented Node≥22 SSR crash (`web.output: "server"`) → set `EXPO_WEB_OUTPUT=single` in the staging profile (mobile builds don't need SSR; the Render backend's own build is unaffected).
+
+**⚠️ Caveat — no dedicated staging backend exists.** The staging APK targets the **production** API/WS hosts (EAS production secrets). QA must use designated test accounts and expect test data in the production database, or provision a staging backend (new EAS `preview`-environment secrets + profile switch) before broad smoke testing.
+
+### 4.4 Backend services — NOT deployable from this session (handoff)
+
+- **API/web server (Render):** deployed via the Render dashboard from the repo (see `app.config.js` comment). Confirm which branch Render auto-deploys (`staging` push has happened) and redeploy on `5011881` when the migration (§4.2) is applied.
+- **utils-server (WebSocket dispatch):** deploy to its host; `INSTANCE_COUNT=1` (no split-brain); secrets per `docs/Plan/11-ENV-VARS.md`.
 
 ---
 
-## 4. Deployment checklist (staging)
+## 5. Staging smoke test matrix — **PENDING QA EXECUTION**
 
-1. **No migrations required this session** (unique index kept; no schema DDL). Prior uncommitted work also contains no pending migration — confirm with `npx drizzle-kit generate` diff before deploy; run `npx drizzle-kit push` only if a delta appears.
-2. Set/verify environment variables per `docs/Plan/11-ENV-VARS.md` (`DATABASE_URL`, `SUPABASE_*`, `PORTPOS_*`, `BARIKOI_API_KEY`, `WEBSOCKET_INTERNAL_SECRET`, `UTILS_SERVER_PORT`, `EXPO_PUBLIC_*`).
-3. Deploy order per AGENTS.md: DB push (if any) → `utils-server` (INSTANCE_COUNT=1) → EAS build + submit.
-4. Run the staging smoke matrix in §3 (runtime column) — especially the changed vehicle-management/select-active-vehicle flows and the four legal screens in both languages.
-5. Legal: obtain approved copy and swap into `lib/legalContent.ts` (guard suite must stay green) — **before production**, not required for staging.
-6. Product decisions to schedule (not staging blockers): C5 Option A/B ruling (`docs/vehicle-model-decision.md`), P0-B payout model (`docs/payout-product-gate.md`).
-7. Commit the working tree (all C1–C4/H1–H9 + this session's work is currently uncommitted) using the conventional scopes (`fix(driver)`, `docs(...)`, etc.).
+> **Honest status:** this environment has no Android device/emulator or Maestro runner, so the runtime matrix could not be executed here. No results are fabricated. QA should run this matrix against the staging APK (§4.3). Static evidence from the shipped code is noted per row. Existing Maestro coverage: 10 flows in `maestro/` (pre-read gates in `.claude/rules/testing-agent.md` apply before authoring new flows).
+
+#### Core driver flows
+| Test | Static evidence | QA result |
+|---|---|---|
+| Authentication / status guard | `DriverStatusGuard` wraps driver root; polling + reason UX committed | ☐ Pending |
+| Navigation — five tabs, Settings push | `(rider)/(tabs)/_layout.tsx` (prior session) | ☐ Pending |
+| Vehicle management — one vehicle, notice, no Activate | Verified in rewritten screens (this session) | ☐ Pending |
+| Package purchase — PaymentWebView + confirmation | `/api/package/*` flow untouched; 332 tests green | ☐ Pending |
+| Wallet top-up — PaymentWebView + balance refresh | `handleTopUp` wiring verified in source | ☐ Pending |
+
+#### Data integrity
+| Test | Static evidence | QA result |
+|---|---|---|
+| Earnings goal persistence (1000 BDT) | `lib/storageKeys.ts` + Earnings tab (prior session) | ☐ Pending |
+| Trip history pagination (3 pages, filters) | H4 keyset cursor + `cursor_id` tiebreaker, limit ≤ 50 | ☐ Pending |
+| Commission weeks (contiguous Mon–Sun) | H8 Monday-anchored Dhaka weeks, `week_offset` 0–52 | ☐ Pending |
+| Document expiry red/orange badges | Verified in rewritten `vehicle-management` | ☐ Pending |
+| Schedule overlap validation | Existing overlap route (P4) | ☐ Pending |
+| Dues from `/api/driver/dues` | Unchanged endpoint | ☐ Pending |
+| Call ledger filters/pagination | Unchanged screens | ☐ Pending |
+
+#### Support & safety
+| Test | Static evidence | QA result |
+|---|---|---|
+| Contact support ticket | Existing route | ☐ Pending |
+| Emergency contacts (max 5, `01X` validation) | Client+server validation (P4) | ☐ Pending |
+| SOS cooldown | `sosQueue`/`sosAlert` tests green | ☐ Pending |
+| Lost items actions | Root PATCH with canonical actions | ☐ Pending |
+
+#### Profile & persistence
+| Test | Static evidence | QA result |
+|---|---|---|
+| Profile edit (name/city/photo) | Prior-session H-fixes | ☐ Pending |
+| Ratings distribution | Prior session | ☐ Pending |
+| Referral share | Prior session | ☐ Pending |
+| Performance/incentives | Prior session | ☐ Pending |
+| No-show wait threshold | Server-anchored timer | ☐ Pending |
+
+#### i18n & legal
+| Test | Static evidence | QA result |
+|---|---|---|
+| Bangla persistence across restart | `i18n.ts` AsyncStorage hydration | ☐ Pending |
+| Legal screens from `lib/legalContent.ts`, no placeholders | All 4 screens wired (verified by grep); guard suite green | ☐ Pending |
+
+#### Notifications & deep links
+| Test | Static evidence | QA result |
+|---|---|---|
+| Foreground notification / background tap | Root handler (prior session) | ☐ Pending |
+| Deep link opens wallet | Scheme is **`ride`** (W-4). Correct test URI format for expo-router: `ride:///(main)/(rider)/(tabs)/wallet` — the originally proposed `ride://driver/wallet` matches no route | ☐ Pending |
 
 ---
 
-## 5. Go/No-Go recommendation
+## 6. Production handover package
 
-**GO for staging. NO-GO for production until two conditions are met.**
+### 6.1 Final code state
+- **Branch:** `staging`; **HEAD:** `5011881` (`fix(deploy): staging build — EXPO_WEB_OUTPUT=single …`); pushed to `origin/staging`.
+- **Staging artifacts:** APK `f8747a0c` (URL §4.3); OTA group `ce77d916` on branch/channel `staging`.
+- **Pre-deploy validations:** all green (§3).
 
-Rationale:
-- All three blockers are either resolved or safely contained with verifiable guards: C5 has a coherent single-vehicle implementation plus a decision doc; legal copy ships a professional template with a build-time placeholder guard; P0-B is verifiably absent with a documented gate.
-- Full validation suite passes: typecheck, lint (0 errors), 332/332 tests, source sweeps clean.
+### 6.2 Staging test results
+Deployment succeeded (§4). Runtime smoke matrix is **pending QA execution** (§5) — no known failures, none executed. Known issues: none open from engineering; infra gaps (staging backend absent, §4.3 caveat; Render/utils-server deploy, §4.4) are handoff actions, not defects.
 
-**Production blockers (policy, not engineering):**
-1. Approved legal copy (Terms + Privacy, en & bn) must replace the template in `lib/legalContent.ts`.
-2. Product ruling on C5 (one vs. many vehicles) — the temporary default is safe, but shipping it to production is a product commitment to support-assisted vehicle changes.
+### 6.3 Pending gates for production (both non-coding)
 
-P0-B is explicitly not a production blocker: the feature is intentionally and verifiably absent.
+1. **Legal copy (blocking):** approved EN/BN Terms + Privacy must replace the template in `lib/legalContent.ts`; `lib/__tests__/legalContent.test.ts` enforces placeholder-free content and must stay green. README section "Required Legal Text (release gate)" documents the inputs needed (text, dates, contact address).
+2. **Vehicle model decision (blocking as a commitment):** Product must confirm the one-vehicle default or commission Option B per `docs/vehicle-model-decision.md`. The default is safe to ship but implies support-assisted vehicle changes.
+3. *(Non-blocking, tracked)* P0-B payout model decisions per `docs/payout-product-gate.md`; staging-backend provisioning per §4.3 caveat.
+
+### 6.4 Rollback plan
+
+| Layer | Procedure |
+|---|---|
+| Mobile app (stores) | Production store builds are untouched (v1.0.4 build 7, git `4f7f2d4`). No production store release has been made from this branch. |
+| OTA (staging) | `eas update --branch staging` re-publish from a previous commit, or repoint the channel: `eas channel:edit staging --branch <rollback-branch>`. Runtime policy `appVersion` (1.0.4) bounds delivery to matching builds. |
+| OTA (production, future) | Same mechanism on the `production` channel; only relevant after a production update is ever published. |
+| Database | Migration 0042 is fully additive; rollback = `DROP INDEX demand_forecasts_zone_hour_idx, demand_forecasts_hour_idx, notifications_idempotency_idx, rides_zone_created_idx, zones_active_idx; ALTER TABLE notifications DROP COLUMN idempotency_key; ALTER TABLE rides DROP COLUMN reminder_60_sent;` and recreate `zones_one_active` per Z-1 predecessor. |
+| Backend (Render / utils-server) | Redeploy from the previous commit via the host dashboard; keep `INSTANCE_COUNT=1`. |
+| Git | `git revert` the offending commits on `staging` (no force-push; `main`/`develop` untouched). |
+
+### 6.5 Sign-off checklist
+
+| Stakeholder | Responsibility | Status |
+|---|---|---|
+| Engineering Lead | Code, validation, staging deployment (this report §1–§5) | ✅ Complete — `5011881` |
+| QA | Execute §5 smoke matrix on the staging APK; record Pass/Fail | ⬜ Pending |
+| Product | C5 vehicle-model ruling (`docs/vehicle-model-decision.md`); P0-B payout decisions (`docs/payout-product-gate.md`) | ⬜ Pending |
+| Legal | Approved EN/BN legal copy into `lib/legalContent.ts` (guard suite green) | ⬜ Pending |
+| Ops/DBA | Apply migration 0042 (`drizzle-kit push`, §4.2 caveats); deploy Render API + utils-server (`INSTANCE_COUNT=1`, §4.4) | ⬜ Pending |
+| Release Manager | Final Go/No-Go after the above | ⬜ Pending |
+
+### 6.6 Go/No-Go
+
+**Staging: DEPLOYED** (APK + OTA + migration staged for DBA). **Production: NO-GO** until Legal copy (6.3-1), Product C5 ruling (6.3-2), QA matrix (6.5), and Ops deployment steps (6.5) are complete. All remaining work is non-coding gates plus QA execution; engineering development is finished.
