@@ -24,7 +24,6 @@ jest.mock("@/lib/platformConfig", () => ({
 }));
 
 import { db } from "@/src/db";
-import { sosAlerts } from "@/src/db/schema";
 import { verifySupabaseToken } from "@/lib/auth";
 import { POST as resolvePOST } from "../resolve+api";
 import { GET as activeGET } from "../active+api";
@@ -33,7 +32,7 @@ import { GET as adminGET } from "../../admin/sos-alerts+api";
 const USER_ID = "11111111-1111-4111-a111-111111111111";
 const ADMIN_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const ALERT_ID = "33333333-3333-4333-8333-333333333333";
-const CREATED_AT = new Date("2026-08-21T10:00:00Z");
+const _CREATED_AT = new Date("2026-08-21T10:00:00Z");
 
 /* ------------------------------------------------------------------ */
 /*  Mock DB chain helpers                                              */
@@ -290,13 +289,31 @@ describe("scheduler auto-resolve — acknowledged alerts", () => {
 describe("admin sos-alerts SELECT — includes status + ack columns", () => {
   test("admin select includes status, acknowledged_by, acknowledged_at", async () => {
     const capturedCols: Record<string, unknown> = {};
+    // The admin endpoint makes two queries:
+    //   1. db.select({total: count()}).from().where() — count query, where() resolves to array
+    //   2. db.select({id, status, ...}).from().where().orderBy().limit().offset() — rows query
+    // The admin endpoint makes two db.select() calls:
+    //   1. db.select({total: count()}).from().where(conditions) → count query, await resolves here
+    //   2. db.select({id, status, ...}).from().where().orderBy().limit().offset() → rows query
     (db.select as jest.Mock).mockImplementation((cols: Record<string, unknown>) => {
       Object.assign(capturedCols, cols);
       return {
         from: jest.fn(() => ({
-          orderBy: jest.fn(() => ({
-            limit: jest.fn(async () => []),
-          })),
+          where: jest.fn(() => {
+            const chainResult: Record<string, unknown> = {
+              orderBy: jest.fn(() => ({
+                limit: jest.fn(() => ({
+                  offset: jest.fn(async () => []),
+                })),
+              })),
+            };
+            // Make .where() result a thenable so the count query's
+            // `const [totalRow] = await db.select().from().where()` resolves
+            (chainResult as { then: (r: (v: unknown) => void) => void }).then = (
+              resolve: (v: unknown) => void,
+            ) => resolve([]);
+            return chainResult;
+          }),
         })),
       };
     });

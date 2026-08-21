@@ -5,8 +5,7 @@
  * - return 409 if already online
  */
 import { db } from "@/src/db";
-import { drivers, users, driverOnlineSessions, subscriptions } from "@/src/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { driverOnlineSessions } from "@/src/db/schema";
 
 jest.mock("@/src/db", () => ({
   db: {
@@ -24,7 +23,7 @@ jest.mock("@/lib/h3", () => ({
   getH3Cell: jest.fn(() => "test-cell"),
 }));
 
-const mockDb = db as jest.Mocked<typeof db>;
+const _mockDb = db as jest.Mocked<typeof db>;
 
 const RESPONSES: any[] = [];
 

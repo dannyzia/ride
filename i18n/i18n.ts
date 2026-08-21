@@ -34,7 +34,7 @@ export async function setLanguage(lang: SupportedLanguage): Promise<void> {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
     await i18n.changeLanguage(lang);
-  } catch (e) {
+  } catch (_e) {
     // Non-critical — the in-memory change still takes effect for the session
   }
 }

@@ -1,6 +1,6 @@
 import { db } from "@/src/db";
 import { sosAlerts, users } from "@/src/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";

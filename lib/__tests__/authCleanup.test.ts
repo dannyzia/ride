@@ -9,6 +9,16 @@
 jest.mock("../riderSocket", () => ({
   teardownRiderSocket: jest.fn(),
 }));
+jest.mock("../sosQueue", () => ({
+  clearQueue: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock("../supabase", () => ({
+  supabase: {
+    auth: {
+      getSession: jest.fn().mockResolvedValue({ data: { session: null } }),
+    },
+  },
+}));
 
 const calls: string[] = [];
 jest.mock("../../store/useRiderStore", () => ({

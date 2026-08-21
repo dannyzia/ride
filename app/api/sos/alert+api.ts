@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     // Configurable cooldown: if the user sent an SOS within the configured
     // window (default 15 min), reuse the existing open alert.
     const cooldownSeconds = await getPlan05Int('sos_cooldown_seconds');
-    const cooldownThreshold = new Date(Date.now() - cooldownSeconds * 1000);
+    const _cooldownThreshold = new Date(Date.now() - cooldownSeconds * 1000);
     const [recentAlert] = await db
       .select({ id: sosAlerts.id })
       .from(sosAlerts)

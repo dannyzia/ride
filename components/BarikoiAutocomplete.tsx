@@ -49,7 +49,7 @@ const BarikoiAutocomplete = ({
 
   const bg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
-  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const _textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
   const placeholderColor = isDark ? colors.textDisabledDark : colors.textDisabledLight;
   const suggestionBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;

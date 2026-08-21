@@ -9,7 +9,7 @@ export default function DriverWelcome() {
   const isDark = useIsDark();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
-  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const _textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   return (

@@ -7,12 +7,11 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radii, spacing } from "@/theme/goRide";
+import { colors, radii } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
-import { logger } from "@/lib/logger";
-import { toUtcIso, dhakaTodayKey } from "@/lib/time";
+import { toUtcIso } from "@/lib/time";
 import DatePicker from "@/components/DatePicker";
 import TimePicker from "@/components/TimePicker";
 
@@ -59,7 +58,7 @@ function formatDhaka(d: Date): string {
   });
 }
 
-function formatDhakaDate(d: Date): string {
+function _formatDhakaDate(d: Date): string {
   return d.toLocaleString("en-GB", {
     timeZone: "Asia/Dhaka",
     weekday: "short",

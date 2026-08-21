@@ -14,7 +14,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  runOnJS,
 } from "react-native-reanimated";
 import {
   Gesture,

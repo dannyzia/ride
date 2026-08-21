@@ -49,7 +49,7 @@ export default function PaymentWebView({
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
-  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const _textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
   const checkStatus = useCallback(async () => {
     try {

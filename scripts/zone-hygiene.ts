@@ -14,14 +14,13 @@
  */
 import { db } from "../src/db";
 import { zones, pricing, demandForecasts } from "../src/db/schema";
-import { eq, and, sql, not } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { normalizePolygon, pointInPolygon, type LatLng } from "../lib/polygon";
 import { logger } from "../lib/logger";
 
-const BDT_OFFSET_MS = 6 * 60 * 60 * 1000;
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
-function polygonArea(pts: LatLng[]): number {
+function _polygonArea(pts: { lat: number; lng: number }[]): number {
   let area = 0;
   for (let i = 0; i < pts.length; i++) {
     const j = (i + 1) % pts.length;

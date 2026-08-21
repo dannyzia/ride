@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, Text } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
