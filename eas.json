@@ -25,7 +25,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EAS_BUILD_PROFILE": "staging"
+        "EAS_BUILD_PROFILE": "staging",
+        "EXPO_WEB_OUTPUT": "single"
       }
     },
     "production": {
