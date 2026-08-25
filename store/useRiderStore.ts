@@ -27,6 +27,10 @@ export interface FareEstimate {
   available_discounts?: DiscountOption[];
   /** Provided by GET/POST /api/ride/estimate. */
   fare_breakdown?: FareBreakdown;
+  /** Pickup fee advisory range (paisa). Only present when pickup_fee_enabled. */
+  pickup_fee_low_bdt?: number | null;
+  pickup_fee_high_bdt?: number | null;
+  pickup_fee_range_low_confidence?: boolean;
 }
 
 export interface ActiveRide {

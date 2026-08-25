@@ -9,12 +9,13 @@ import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
 import { UpfrontTipSlider } from "@/components/UpfrontTipSlider";
 import CustomButton from "@/components/CustomButton";
 import ScheduleRideSheet from "@/components/ScheduleRideSheet";
+import PickupFeeExplainerSheet, { shouldShowExplainer } from "@/components/PickupFeeExplainerSheet";
 import { useEffect, useState, Fragment } from "react";
 import { useRiderStore, FareEstimate, DiscountOption, DiscountType } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/theme/goRide";
-import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance"
 
 const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
 
@@ -65,6 +66,8 @@ const ConfirmRidePage = () => {
   const [refreshedEstimate, setRefreshedEstimate] = useState<FareEstimate | null>(null);
   const [pendingFeeDeduction, setPendingFeeDeduction] = useState<{ remaining: number } | null>(null);
   const [scheduleLater, setScheduleLater] = useState(false);
+  const [showPickupExplainer, setShowPickupExplainer] = useState(false);
+  const [pickupExplainerChecked, setPickupExplainerChecked] = useState(false);
 
   const selectedEstimate = estimates.find(
     (e) => e.vehicle_type === selectedVehicleType,
@@ -92,6 +95,17 @@ const ConfirmRidePage = () => {
       } catch { /* non-blocking */ }
     })();
   }, []);
+
+  // First-time pickup fee explainer — show once per device
+  useEffect(() => {
+    if (pickupExplainerChecked) return;
+    if (displayEstimate?.pickup_fee_low_bdt == null) return;
+    (async () => {
+      const show = await shouldShowExplainer();
+      if (show) setShowPickupExplainer(true);
+      setPickupExplainerChecked(true);
+    })();
+  }, [displayEstimate, pickupExplainerChecked]);
 
   useEffect(() => {
     if (
@@ -445,18 +459,18 @@ const ConfirmRidePage = () => {
               </Text>
             </View>
           )}
-          {/* Pickup fee range (Phase H — replaces deleted surge banner area) */}
-          {(displayEstimate as unknown as Record<string, unknown>)?.pickup_fee_low_bdt != null &&
-           (displayEstimate as unknown as Record<string, unknown>)?.pickup_fee_high_bdt != null && (
+          {/* Pickup fee range */}
+          {displayEstimate?.pickup_fee_low_bdt != null &&
+           displayEstimate.pickup_fee_high_bdt != null && (
             <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: textSecondary }}>Pickup fee</Text>
-                {(displayEstimate as unknown as Record<string, unknown>)?.pickup_fee_range_low_confidence === true && (
+                {displayEstimate.pickup_fee_range_low_confidence === true && (
                   <Text style={{ color: colors.amber, fontSize: 11, marginTop: 2 }}>(estimated)</Text>
                 )}
               </View>
               <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
-                ৳{(((displayEstimate as unknown as Record<string, unknown>).pickup_fee_low_bdt as number) / 100).toFixed(0)}–{(((displayEstimate as unknown as Record<string, unknown>).pickup_fee_high_bdt as number) / 100).toFixed(0)}
+                ৳{(displayEstimate.pickup_fee_low_bdt / 100).toFixed(0)}–{(displayEstimate.pickup_fee_high_bdt / 100).toFixed(0)}
               </Text>
             </View>
           )}
@@ -628,6 +642,10 @@ const ConfirmRidePage = () => {
       >
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
+      <PickupFeeExplainerSheet
+        visible={showPickupExplainer}
+        onDismiss={() => setShowPickupExplainer(false)}
+      />
     </Fragment>
   );
 };
