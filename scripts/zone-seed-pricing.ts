@@ -95,6 +95,19 @@ const BD_DEFAULTS: Record<VehicleTypeEnum, PricingDefaults> = {
     wait_fee_per_minute_bdt: 200,
     brta_fare_ceiling_bdt: null,
   },
+  // REQUIRES PRODUCT INPUT — sentinel, do not seed
+  car_compact: {
+    base_fare_bdt: 0,
+    per_km_bdt: 0,
+    intercity_per_km_bdt: 0,
+    per_min_bdt: 0,
+    floor_length_km: "0.00",
+    floor_min: 0,
+    platform_commission_percent: null,
+    free_wait_minutes: 0,
+    wait_fee_per_minute_bdt: 0,
+    brta_fare_ceiling_bdt: null,
+  },
   car_economy: {
     base_fare_bdt: 4500,
     per_km_bdt: 1500,
@@ -162,7 +175,11 @@ async function findReferenceZone(): Promise<{
       .from(pricing)
       .where(and(eq(pricing.zone_id, zone.id), eq(pricing.is_active, true)));
 
-    if (prices.length >= VEHICLE_TYPE_VALUES.length) {
+    // C2: car_compact may not be seeded yet (sentinel). Account for that.
+    const expectedTypes = BD_DEFAULTS.car_compact.base_fare_bdt === 0
+      ? VEHICLE_TYPE_VALUES.length - 1
+      : VEHICLE_TYPE_VALUES.length;
+    if (prices.length >= expectedTypes) {
       return { zone: [zone], pricing: prices };
     }
   }
@@ -295,6 +312,13 @@ async function seedPricing(): Promise<void> {
     );
 
     for (const vt of toSeed) {
+      // C2: Skip car_compact entirely when rates are still sentinel (all-zero).
+      // The category must never get seeded rates that product has not approved.
+      if (vt === 'car_compact' && BD_DEFAULTS[vt].base_fare_bdt === 0) {
+        console.log(`    ⏭  car_compact pricing skipped — REQUIRES PRODUCT INPUT`);
+        continue;
+      }
+
       // Prefer reference zone pricing if available
       const refRow = ref?.pricing.find((p) => p.vehicle_type === vt);
       const defaults: PricingDefaults = refRow

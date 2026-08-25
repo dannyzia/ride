@@ -40,6 +40,9 @@ const PRICING = [
     floor_length_km: 3.0,
     floor_min: 15,
   },
+  // REQUIRES PRODUCT INPUT — sentinel, do not seed
+  // car_compact rates will be added here once product approves them.
+
   {
     vehicle_type: "car_economy",
     base_fare_bdt: 4500,
@@ -104,7 +107,8 @@ async function seed() {
         updated_at            = now();
     `);
   }
-  console.log("pricing seeded (8 vehicle types, fare system v2)");
+  const seededTypes = PRICING.filter((r) => r.base_fare_bdt > 0);
+  console.log(`pricing seeded (${seededTypes.length} vehicle types, fare system v2)`);
   await client.end();
 }
 seed().catch(console.error);

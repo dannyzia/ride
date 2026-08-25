@@ -37,6 +37,10 @@ export default function FareBreakdownSheet({ fareBreakdown }: FareBreakdownSheet
   if (fareBreakdown.driver_net_bdt != null && fareBreakdown.driver_net_bdt !== fareBreakdown.total_bdt) {
     detailRows.push({ label: 'Driver receives', amount_bdt: fareBreakdown.driver_net_bdt });
   }
+  // Pickup fee (Phase H) — defensive reads on historical fare_breakdown JSONB
+  if (fareBreakdown.pickup_fee_final_bdt != null && fareBreakdown.pickup_fee_final_bdt > 0) {
+    detailRows.push({ label: 'Pickup fee', amount_bdt: fareBreakdown.pickup_fee_final_bdt });
+  }
 
   const totalRow: FareRow | null = fareBreakdown.total_bdt != null
     ? { label: 'Total', amount_bdt: fareBreakdown.total_bdt }
@@ -112,13 +116,25 @@ export default function FareBreakdownSheet({ fareBreakdown }: FareBreakdownSheet
                   paddingVertical: 6,
                 }}
               >
-                <Text style={{
-                  fontSize: 14,
-                  fontFamily: 'Jakarta-Regular',
-                  color: textSecondary,
-                }}>
-                  {row.label}
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 14,
+                    fontFamily: 'Jakarta-Regular',
+                    color: textSecondary,
+                  }}>
+                    {row.label}
+                  </Text>
+                  {row.label === 'Pickup fee' && fareBreakdown.pickup_trueup_delta_bdt != null && fareBreakdown.pickup_trueup_delta_bdt !== 0 && (
+                    <Text style={{
+                      fontSize: 11,
+                      fontFamily: 'Jakarta-Regular',
+                      color: colors.amber,
+                      marginTop: 2,
+                    }}>
+                      (adjusted for actual distance)
+                    </Text>
+                  )}
+                </View>
                 <Text style={{
                   fontSize: 14,
                   fontFamily: 'Jakarta-Regular',

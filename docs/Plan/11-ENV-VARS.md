@@ -98,7 +98,7 @@ Validated at startup by `validateUtilsServerEnv()` in `lib/env.ts`.
 | `WEBSOCKET_INTERNAL_SECRET` | yes | — | Must match `WEBSOCKET_INTERNAL_SECRET` in Expo app | Same value as Expo app |
 | `INSTANCE_COUNT` | yes | `"1"` | Must always be `"1"`. utils-server exits on startup if value is not `"1"`. Prevents accidental multi-replica deployments that cause split-brain dispatch. | Set in Render/Railway config |
 | `UTILS_SERVER_PORT` | no | `"3001"` | Port the WebSocket server listens on. Must match `UTILS_SERVER_PORT` in Expo app. | — |
-| `BARIKOI_API_KEY` | no | — | Barikoi Maps API key (optional for utils-server). | Barikoi developer portal |
+| `BARIKOI_API_KEY` | yes | — | Barikoi Maps API key (required for firm-quote routing in `barikoiRoute.ts`). | Barikoi developer portal |
 | `H3_CACHE_TTL_SECONDS` | no | `"30"` | How often to refresh H3 driver index from DB (seconds) | — |
 | `LOG_LEVEL` | no | `"info"` | Logging verbosity | — |
 

@@ -202,9 +202,9 @@ describe('calculateFare — formula', () => {
   });
 });
 
-// ── All 8 vehicle type sample trips ──────────────────────────────────────────
+// ── All 9 vehicle type sample trips ──────────────────────────────────────────
 
-describe('calculateFare — all 8 vehicle types sample trips', () => {
+describe('calculateFare — all 9 vehicle types sample trips', () => {
   test('bike_basic: 4 km, 30 min → total 10850', () => {
     // distance_charge = round(775 × 4) = 3100
     // time_charge     = 30 × 175 = 5250

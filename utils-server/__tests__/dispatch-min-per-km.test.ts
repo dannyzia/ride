@@ -1,8 +1,9 @@
 /**
  * dispatch_offers candidate-pool invariants (AGENTS.md Dispatch invariants):
  *  - drivers with min_per_km_bdt above the system rate are never offered
- *  - filtered drivers get a dispatch_offers row with outcome='filtered'
- *  - drivers already offered for this ride are excluded (batch exclusion)
+ *  - Phase D: dispatch.ts NO LONGER WRITES dispatch_offers (no 'filtered'
+ *    audit rows) — filtered drivers are simply absent from the return list
+ *  - drivers already offered for this ride are excluded (chain exclusion)
  *  - exhausted drivers (calls_remaining = 0) are never in the candidate pool
  *
  * The DB and H3 index are mocked. dispatch.ts imports resolve to root modules
@@ -22,6 +23,21 @@ jest.mock("../../lib/h3", () => ({
 jest.mock("../../lib/vehicleTypes", () => ({
   checkDriverEligibility: jest.fn(() => ({ eligible: true })),
 }));
+jest.mock("../../lib/fareFrameworkConfig", () => ({
+  getFareFrameworkConfig: jest.fn(async () => ({
+    new_driver_priority_days: "7",
+    new_driver_priority_leads: "0",
+    return_lead_affinity_multiplier: "1.1",
+  })),
+  parseConfigNumber: jest.fn((_v: string, fallback: number) => fallback),
+  parseConfigBool: jest.fn(() => false),
+}));
+jest.mock("../coldDrop", () => ({
+  getColdDropInfos: jest.fn(async () => new Map()),
+  recordColdDrop: jest.fn(),
+  clearColdDropCache: jest.fn(),
+  getColdDropBoost: jest.fn(async () => 1),
+}));
 
 import { db } from "../../src/db";
 import {
@@ -30,10 +46,10 @@ import {
   dispatchOffers,
 } from "../../src/db/schema";
 import { getDriversInCells } from "../h3Index";
-import { scoreAndBatchDrivers } from "../dispatch";
+import { buildCandidateList } from "../dispatch";
 
 // Responses keyed by table identity (the real schema objects), so the mock is
-// robust to query ordering inside scoreAndBatchDrivers.
+// robust to query ordering inside buildCandidateList.
 const BY_TABLE = new Map<unknown, Array<Record<string, unknown>>>();
 
 beforeEach(() => {
@@ -94,7 +110,7 @@ const ORIGIN = { lat: 23.8103, lng: 90.4125 };
 const DEST = { lat: 23.8203, lng: 90.4225 };
 
 function run() {
-  return scoreAndBatchDrivers(
+  return buildCandidateList(
     RIDE_ID,
     ORIGIN.lat,
     ORIGIN.lng,
@@ -102,12 +118,11 @@ function run() {
     DEST.lng,
     "bike_basic",
     ZONE_ID,
-    5,
     [],
   );
 }
 
-describe("scoreAndBatchDrivers — min_per_km_bdt filter", () => {
+describe("buildCandidateList — min_per_km_bdt filter", () => {
   test("driver with null min_per_km_bdt is offered", async () => {
     (getDriversInCells as jest.Mock).mockReturnValue(["driver-1"]);
     BY_TABLE.set(pricing, [{ per_km_bdt: 775 }]);
@@ -128,24 +143,18 @@ describe("scoreAndBatchDrivers — min_per_km_bdt filter", () => {
     expect(scored).toHaveLength(0);
   });
 
-  test("filtered driver gets a dispatch_offers row with outcome=filtered / min_per_km", async () => {
+  test("driver with min_per_km_bdt above the system rate is filtered out — and Phase D writes NO dispatch_offers row", async () => {
     (getDriversInCells as jest.Mock).mockReturnValue(["driver-2"]);
     BY_TABLE.set(pricing, [{ per_km_bdt: 775 }]);
     BY_TABLE.set(drivers, [
       { ...DRIVER_BASE, id: "driver-2", min_per_km_bdt: 1200 },
     ]);
 
-    await run();
-
-    const insertMock = db.insert as jest.Mock;
-    expect(insertMock).toHaveBeenCalled();
-    const values = insertMock.mock.results[0].value.values.mock.calls[0][0];
-    expect(values).toMatchObject({
-      ride_id: RIDE_ID,
-      driver_id: "driver-2",
-      outcome: "filtered",
-      filtered_reason: "min_per_km",
-    });
+    const scored = await run();
+    expect(scored).toHaveLength(0);
+    // Phase D write-ownership: dispatch.ts never writes dispatch_offers —
+    // the min_per_km filter is a pure pool exclusion now.
+    expect(db.insert).not.toHaveBeenCalled();
   });
 
   test("driver with min_per_km_bdt at the system rate is NOT filtered", async () => {
@@ -174,7 +183,7 @@ describe("scoreAndBatchDrivers — min_per_km_bdt filter", () => {
   });
 });
 
-describe("scoreAndBatchDrivers — pool invariants", () => {
+describe("buildCandidateList — pool invariants", () => {
   test("driver already offered for this ride is excluded (batch exclusion)", async () => {
     (getDriversInCells as jest.Mock).mockReturnValue(["driver-1"]);
     BY_TABLE.set(pricing, [{ per_km_bdt: 775 }]);

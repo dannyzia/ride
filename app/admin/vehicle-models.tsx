@@ -29,7 +29,10 @@ import { colors } from "@/theme/goRide";
 import {
   VEHICLE_TYPES,
   VEHICLE_TYPE_VALUES,
+  BODY_TYPE_VALUES,
+  BODY_TYPE_ZOD_ENUM,
   type VehicleTypeEnum,
+  type BodyTypeEnum,
 } from "@/lib/vehicleTypes";
 
 interface VehicleModel {
@@ -41,6 +44,7 @@ interface VehicleModel {
   default_vehicle_type: VehicleTypeEnum;
   typical_cc_min: number | null;
   typical_cc_max: number | null;
+  body_type: BodyTypeEnum | null;
   has_ac: boolean | null;
   passenger_seats: number;
   is_active: boolean;
@@ -66,6 +70,14 @@ const VEHICLE_TYPE_FORM_OPTIONS = VEHICLE_TYPES.map((v) => ({
   value: v.key,
 }));
 
+const BODY_TYPE_FORM_OPTIONS = [
+  { label: "— None —", value: "" },
+  ...BODY_TYPE_VALUES.map((bt) => ({
+    label: bt.replace(/_/g, " "),
+    value: bt,
+  })),
+];
+
 const EMPTY_FORM: Record<string, unknown> = {
   brand: "",
   model: "",
@@ -74,6 +86,7 @@ const EMPTY_FORM: Record<string, unknown> = {
   default_vehicle_type: "bike_standard",
   typical_cc_min: "",
   typical_cc_max: "",
+  body_type: "",
   has_ac: false,
   passenger_seats: 4,
   is_active: true,
@@ -146,6 +159,7 @@ export default function VehicleModelsScreen() {
       default_vehicle_type: m.default_vehicle_type,
       typical_cc_min: m.typical_cc_min ?? "",
       typical_cc_max: m.typical_cc_max ?? "",
+      body_type: m.body_type ?? "",
       has_ac: m.has_ac ?? false,
       passenger_seats: m.passenger_seats,
       is_active: m.is_active,
@@ -223,6 +237,12 @@ export default function VehicleModelsScreen() {
       return null;
     }
 
+    // Body type: empty string → null
+    const bodyTypeRaw = String(form.body_type ?? "").trim();
+    const bodyType = bodyTypeRaw && BODY_TYPE_ZOD_ENUM.safeParse(bodyTypeRaw).success
+      ? (bodyTypeRaw as BodyTypeEnum)
+      : null;
+
     return {
       brand,
       model,
@@ -231,6 +251,7 @@ export default function VehicleModelsScreen() {
       default_vehicle_type: defaultVehicleType,
       typical_cc_min: ccMin,
       typical_cc_max: ccMax,
+      body_type: bodyType,
       has_ac: Boolean(form.has_ac),
       passenger_seats: seats,
       is_active: Boolean(form.is_active),
@@ -331,6 +352,14 @@ export default function VehicleModelsScreen() {
       type: "number",
     },
     {
+      name: "body_type",
+      label: "Body Type",
+      type: "select",
+      options: BODY_TYPE_FORM_OPTIONS,
+      helpText:
+        "Vehicle body classification. Used by the server-side classifier to determine vehicle category.",
+    },
+    {
       name: "passenger_seats",
       label: "Passenger Seats",
       type: "number",
@@ -412,6 +441,16 @@ export default function VehicleModelsScreen() {
       header: "Seats",
       sortable: true,
       width: 80,
+    },
+    {
+      key: "body_type",
+      header: "Body Type",
+      width: 120,
+      render: (m) => (
+        <Text style={styles.cellText}>
+          {m.body_type ? m.body_type.replace(/_/g, " ") : "—"}
+        </Text>
+      ),
     },
     {
       key: "has_ac",

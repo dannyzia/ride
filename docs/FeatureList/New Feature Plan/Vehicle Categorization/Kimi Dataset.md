@@ -754,3 +754,5 @@
 | Toyota | Town Ace | 1976 | still in production | van | 1495 | 1495 | 6 | True | car_xl | seat count + body type |  |
 | Toyota | Vellfire (7-seat) | 2008 | still in production | MPV | 2362 | 3456 | 7 | True | car_xl | seat count + body type |  |
 | Toyota | Voxy | 2001 | still in production | MPV | 1798 | 1986 | 7 | True | car_xl | seat count + body type |  |
+
+

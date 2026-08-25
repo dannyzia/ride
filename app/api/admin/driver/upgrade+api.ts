@@ -4,21 +4,12 @@ import { db } from '@/src/db';
 import { drivers, vehicles, vehicleTypeChanges } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
-import { VEHICLE_TYPE_ZOD_ENUM } from '@/lib/vehicleTypes';
+import { VEHICLE_TYPE_ZOD_ENUM, VEHICLE_TIER_ORDER } from '@/lib/vehicleTypes';
 import { logger } from '@/lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 
-const VEHICLE_TIER: Record<string, number> = {
-  bike_basic: 0,
-  bike_standard: 1,
-  bike_plus: 2,
-  cng: 3,
-  car_economy: 4,
-  car_comfort: 5,
-  car_premium: 6,
-  car_xl: 7,
-};
+
 
 const schema = z.object({
   driver_id: z.string().uuid(),
@@ -37,8 +28,8 @@ export async function POST(request: Request) {
     const [driver] = await db.select().from(drivers).where(eq(drivers.id, driver_id)).limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
-    const currentTier = VEHICLE_TIER[driver.vehicle_type];
-    const newTier = VEHICLE_TIER[new_vehicle_type];
+    const currentTier = VEHICLE_TIER_ORDER[driver.vehicle_type as keyof typeof VEHICLE_TIER_ORDER];
+    const newTier = VEHICLE_TIER_ORDER[new_vehicle_type];
     if (newTier <= currentTier) {
       return Response.json(
         {

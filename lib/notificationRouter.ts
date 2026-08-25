@@ -155,6 +155,16 @@ const RIDER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
     router.push("/(main)/(customer)/(tabs)/home" as never);
     return true;
   },
+  // Phase G: post-cancellation survey invite on driver-cancelled rides —
+  // deep-links to the ride screen where the survey prompt is shown.
+  "ride:cancel_survey": (data) => {
+    if (data.ride_id && isValidUUID(data.ride_id)) {
+      router.push(`/(main)/(customer)/ride-tracking/${data.ride_id}` as never);
+      return true;
+    }
+    router.push("/(main)/(customer)/(tabs)/home" as never);
+    return true;
+  },
 
   // Payment
   "payment:confirmed": () => {

@@ -5,20 +5,20 @@ import {
   pricing,
   promoCodes,
   promoRedemptions,
-  zones,
-  surgeCurrent,
   rideStops,
+  zoneHeat,
 } from "@/src/db/schema";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
-import { validatePickupZone } from "@/lib/zone";
+import { getZoneForLocation, validatePickupZone } from "@/lib/zone";
 import { calculateFare, haversineKm } from "@/lib/fareCalc";
-import { applySurge } from "@/lib/surge";
 import { getAvailableDiscounts } from "@/lib/discountEngine";
 import { sendSms } from "@/lib/dprelay";
 import { detectOriginCity, isIntercity } from "@/lib/cityBoundary";
 import { splitRoute } from "@/lib/routeSplit";
 import { getRouteDistance } from "@/lib/barikoi";
+import { getFareFrameworkConfig, parseConfigBool } from "@/lib/fareFrameworkConfig";
+import { PICKUP_QUOTE_CONFIG_KEYS, pickupQuoteRange } from "@/lib/pickupQuote";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -52,6 +52,35 @@ const requestSchema = z.object({
   female_driver_preference: z.boolean().optional(),
   promo_code: z.string().min(1).max(50).optional(),
 });
+
+/**
+ * Drop zone + heat snapshot at request time (ruling 16 measurement mode —
+ * runs regardless of the fee flag). Outside all zones → null id + 'cold'
+ * (ruling 13: outside the served area is the coldest possible drop;
+ * never blocks the ride). Heat tag reads the live zone_heat engine,
+ * defaulting to 'neutral' when no row exists yet.
+ */
+async function resolveDropZone(
+  lat: number,
+  lng: number,
+): Promise<{ id: string | null; heat: "hot" | "neutral" | "cold" }> {
+  try {
+    const res = await getZoneForLocation(lat, lng);
+    if (!res.zone?.id) return { id: null, heat: "cold" };
+    const [heatRow] = await db
+      .select({ tag: zoneHeat.tag })
+      .from(zoneHeat)
+      .where(eq(zoneHeat.zone_id, res.zone.id))
+      .limit(1);
+    const tag = heatRow?.tag;
+    return {
+      id: res.zone.id,
+      heat: tag === "hot" || tag === "cold" ? tag : "neutral",
+    };
+  } catch {
+    return { id: null, heat: "cold" };
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -216,37 +245,31 @@ export async function POST(request: Request) {
       intercity,
     );
 
-    // ── Surge pricing — look up active zone's multiplier ────────────────
-    const [activeZone] = await db
-      .select({ id: zones.id })
-      .from(zones)
-      .where(eq(zones.is_active, true))
-      .limit(1);
-    let surgeMultiplier = 1.0;
-    if (activeZone) {
-      const [sr] = await db
-        .select()
-        .from(surgeCurrent)
-        .where(eq(surgeCurrent.zone_id, activeZone.id))
-        .limit(1);
-      if (sr && Date.now() - new Date(sr.updated_at).getTime() < 300_000)
-        surgeMultiplier = Number(sr.multiplier);
-    }
-    const surge = applySurge(Number(fareBreakdown.total_bdt), surgeMultiplier);
-    fareBreakdown.total_bdt = surge.totalWithSurge;
-    fareBreakdown.surge_multiplier = surge.multiplier;
-    fareBreakdown.surge_fee_bdt = surge.surgeFeeBdt;
-    const commPct = Number(activePricing.platform_commission_percent ?? 0);
-    if (commPct > 0) {
-      fareBreakdown.platform_commission_bdt = percentOf(fareBreakdown.total_bdt, commPct);
-      fareBreakdown.driver_net_bdt = fareBreakdown.total_bdt - fareBreakdown.platform_commission_bdt;
-    }
+    // ── Pickup fee range snapshot (Phase F quote state 1; ruling 5: ≤2
+    // route calls for the quote — nearest + p75-reference — separate from
+    // the trip route call above). Null when fee disabled (Stage 0). ──
+    const fwCfg = await getFareFrameworkConfig(PICKUP_QUOTE_CONFIG_KEYS);
+    const pickupQuote = parseConfigBool(fwCfg.pickup_fee_enabled)
+      ? await pickupQuoteRange({
+          zoneId,
+          vehicleType: vehicle_type,
+          pickupLat: pickup_lat,
+          pickupLng: pickup_lng,
+          fareBeforePickupPaisa: fareBreakdown.total_bdt,
+          cfg: fwCfg,
+        }).catch(() => null)
+      : null;
 
-    // ── Available discounts (calculated AFTER surge on the surged total) ──
+    // ── Measurement-mode snapshots (ruling 16 — independent of fee flag):
+    // drop zone + heat, and the trip polyline from the Barikoi route call
+    // already made above (null when routing fell back to haversine). ──
+    const dropZone = await resolveDropZone(dropoff_lat, dropoff_lng);
+
+    // ── Available discounts ──
     const availableDiscounts = await getAvailableDiscounts({
       riderId: user.id,
       totalRides: user.total_rides ?? 0,
-      surgedTotalBdt: fareBreakdown.total_bdt,
+      fareTotalBdt: fareBreakdown.total_bdt,
       zoneId,
     });
 
@@ -420,11 +443,20 @@ export async function POST(request: Request) {
           rider_payable_bdt: riderPayableBdt,
           platform_subsidy_bdt:
             platformSubsidyBdt > 0 ? platformSubsidyBdt : null,
-          preference_surcharge_bdt: preferenceSurchargeBdt,
-          preference_ids: preference_ids ?? [],
-          surge_multiplier: surgeMultiplier.toString(),
-          surge_zone_id: activeZone?.id,
-          secondary_rider_name: secondary_rider_name || null,
+           preference_surcharge_bdt: preferenceSurchargeBdt,
+           preference_ids: preference_ids ?? [],
+
+           // Phase F quote state 1: advisory range snapshot (all null when
+           // fee disabled — no rider-facing fields exist in that mode).
+           pickup_fee_state: pickupQuote ? "range" : null,
+           pickup_fee_low_bdt: pickupQuote?.lowPaisa ?? null,
+           pickup_fee_high_bdt: pickupQuote?.highPaisa ?? null,
+           // Measurement-mode snapshots (ruling 16 — always captured).
+           drop_zone_id: dropZone.id,
+           drop_zone_heat: dropZone.heat,
+           route_polyline: route?.polyline ?? null,
+
+           secondary_rider_name: secondary_rider_name || null,
           secondary_rider_phone: secondary_rider_phone || null,
           is_booked_for_someone_else: !!(secondary_rider_phone || secondary_rider_name),
           upfront_tip_bdt: upfront_tip_bdt ?? 0,

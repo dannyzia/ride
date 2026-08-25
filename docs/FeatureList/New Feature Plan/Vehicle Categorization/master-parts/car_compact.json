@@ -1,0 +1,1639 @@
+[
+  {
+    "brand": "BYD",
+    "model": "F0",
+    "year_start": 2008,
+    "year_end": 2015,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Spark (5-seat)",
+    "year_start": 2008,
+    "year_end": 2017,
+    "body_type": "hatchback",
+    "typical_cc_min": 995,
+    "typical_cc_max": 995,
+    "passenger_seats": 5,
+    "has_ac": null,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Atrai Wagon",
+    "year_start": 1999,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Boon (5-seat)",
+    "year_start": 2004,
+    "year_end": 2022,
+    "body_type": "hatchback",
+    "typical_cc_min": 996,
+    "typical_cc_max": 996,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Cast",
+    "year_start": 2015,
+    "year_end": 2020,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 658,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Copen",
+    "year_start": 2002,
+    "year_end": 2012,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 2,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Esse",
+    "year_start": 2005,
+    "year_end": 2011,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Hijet Cargo",
+    "year_start": 1994,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Max",
+    "year_start": 2001,
+    "year_end": 2005,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Mira",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Mira e:S",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "kimi",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Mira Cocoa",
+    "year_start": 2009,
+    "year_end": 2018,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Mira Gino",
+    "year_start": 1999,
+    "year_end": 2009,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Move",
+    "year_start": 1995,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Move Conte",
+    "year_start": 2008,
+    "year_end": 2017,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Move Latte",
+    "year_start": 2004,
+    "year_end": 2009,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Rocky",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 996,
+    "typical_cc_max": 996,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": "sub-1001cc crossover — product may want comfort — needs Zia",
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Tanto",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Tanto Exe",
+    "year_start": 2009,
+    "year_end": 2014,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Datsun",
+    "model": "redi-GO",
+    "year_start": 2016,
+    "year_end": 2022,
+    "body_type": "hatchback",
+    "typical_cc_min": 799,
+    "typical_cc_max": 999,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Life",
+    "year_start": 1998,
+    "year_end": 2014,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "N-Box",
+    "year_start": 2011,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "N-Box Plus",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 6,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "N-One",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "N-WGN",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "That's",
+    "year_start": 2002,
+    "year_end": 2007,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Zest",
+    "year_start": 2006,
+    "year_end": 2012,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Atos / Santro 1.0",
+    "year_start": 1998,
+    "year_end": 2014,
+    "body_type": "hatchback",
+    "typical_cc_min": 999,
+    "typical_cc_max": 999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Eon",
+    "year_start": 2011,
+    "year_end": 2019,
+    "body_type": "hatchback",
+    "typical_cc_min": 814,
+    "typical_cc_max": 814,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Picanto 1.0",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Ray",
+    "year_start": 2011,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "AZ-Wagon",
+    "year_start": 1994,
+    "year_end": 2012,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Carol",
+    "year_start": 1989,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Flair",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Scrum Wagon",
+    "year_start": 1989,
+    "year_end": 2013,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "eK Custom",
+    "year_start": 2013,
+    "year_end": 2019,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "eK Space",
+    "year_start": 2014,
+    "year_end": 2021,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "eK Sport",
+    "year_start": 2001,
+    "year_end": 2013,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "eK Wagon",
+    "year_start": 2001,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 657,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "includes eK Space variants"
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "i",
+    "year_start": 2006,
+    "year_end": 2013,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Toppo",
+    "year_start": 1990,
+    "year_end": 2013,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Dayz",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Dayz / Dayz Roox",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 658,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Leaf",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": null,
+    "typical_cc_max": null,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "EV — no canonical cc; pre-decided for admin review",
+    "_notes": "Hatchback, 5 seats → car_compact per admin pre-decision"
+  },
+  {
+    "brand": "Nissan",
+    "model": "March 1.0",
+    "year_start": 1997,
+    "year_end": 2002,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 5,
+    "has_ac": null,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Moco",
+    "year_start": 2001,
+    "year_end": 2016,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Otti",
+    "year_start": 2005,
+    "year_end": 2013,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Pino",
+    "year_start": 2007,
+    "year_end": 2010,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Perodua",
+    "model": "Axia",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Perodua",
+    "model": "Viva",
+    "year_start": 2007,
+    "year_end": 2014,
+    "body_type": "hatchback",
+    "typical_cc_min": 659,
+    "typical_cc_max": 989,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Renault",
+    "model": "Kwid",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 799,
+    "typical_cc_max": 999,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Lucra",
+    "year_start": 2010,
+    "year_end": 2015,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Pleo",
+    "year_start": 1998,
+    "year_end": 2018,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "R1",
+    "year_start": 2005,
+    "year_end": 2010,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "R2",
+    "year_start": 2003,
+    "year_end": 2010,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Sambar Dias",
+    "year_start": 1990,
+    "year_end": 2012,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Stella",
+    "year_start": 2006,
+    "year_end": 2014,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "800",
+    "year_start": 1983,
+    "year_end": 2014,
+    "body_type": "hatchback",
+    "typical_cc_min": 796,
+    "typical_cc_max": 796,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Alto",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 1000,
+    "passenger_seats": 4,
+    "has_ac": null,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Alto (Indian/800)",
+    "year_start": 2000,
+    "year_end": 2020,
+    "body_type": "hatchback",
+    "typical_cc_min": 796,
+    "typical_cc_max": 796,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Alto (Japanese kei)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Alto (JDM)",
+    "year_start": 2004,
+    "year_end": 2018,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 658,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Alto 800",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 796,
+    "typical_cc_max": 796,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Alto K10",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Alto K10 (Indian)",
+    "year_start": 2010,
+    "year_end": 2020,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Celerio",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Celerio (1.0L)",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 4,
+    "has_ac": null,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Celerio 1.0",
+    "year_start": 2014,
+    "year_end": 2024,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 5,
+    "has_ac": null,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Cultus (new gen)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 5,
+    "has_ac": null,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Every",
+    "year_start": 2011,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 658,
+    "typical_cc_max": 658,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Kei",
+    "year_start": 1998,
+    "year_end": 2009,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Lapin",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "MR Wagon",
+    "year_start": 2001,
+    "year_end": 2017,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Palette",
+    "year_start": 2008,
+    "year_end": 2013,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "S-Presso",
+    "year_start": 2019,
+    "year_end": 2024,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 5,
+    "has_ac": null,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Spacia",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 658,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Twin",
+    "year_start": 2003,
+    "year_end": 2005,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 660,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Wagon R (Indian)",
+    "year_start": 1993,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 998,
+    "passenger_seats": 4,
+    "has_ac": null,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Wagon R (JDM)",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 658,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "deepseek",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Zen",
+    "year_start": 1993,
+    "year_end": 2006,
+    "body_type": "hatchback",
+    "typical_cc_min": 993,
+    "typical_cc_max": 993,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Nano",
+    "year_start": 2008,
+    "year_end": 2018,
+    "body_type": "hatchback",
+    "typical_cc_min": 624,
+    "typical_cc_max": 624,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Passo 1.0",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 996,
+    "typical_cc_max": 996,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi",
+      "gemini",
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Pixis Epoch",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 658,
+    "typical_cc_max": 658,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Raize",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 996,
+    "typical_cc_max": 996,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": "sub-1001cc crossover — product may want comfort — needs Zia",
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Roomy / Tank",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 996,
+    "typical_cc_max": 996,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Vitz 1.0",
+    "year_start": 1999,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 996,
+    "typical_cc_max": 999,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "glm5.3",
+      "kimi",
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Kona 1.0",
+    "year_start": 2017,
+    "year_end": 2023,
+    "body_type": "crossover",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "sub-1001cc crossover — car_compact by cc band",
+    "_notes": "Turbo 1.0L 3-cyl variant"
+  },
+  {
+    "brand": "MG",
+    "model": "ZS 1.0",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 999,
+    "typical_cc_max": 999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_compact",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "sub-1001cc crossover — car_compact by cc band",
+    "_notes": "Turbo 1.0L variant"
+  }
+]

@@ -25,10 +25,24 @@ export const vehicleTypeEnum = pgEnum("vehicle_type", [
   "bike_standard",
   "bike_plus",
   "cng",
+  "car_compact",
   "car_economy",
   "car_comfort",
   "car_premium",
   "car_xl",
+]);
+export const bodyTypeEnum = pgEnum("body_type", [
+  "motorcycle",
+  "scooter",
+  "auto_rickshaw",
+  "hatchback",
+  "sedan",
+  "crossover",
+  "suv",
+  "suv_large",
+  "mpv",
+  "van",
+  "minibus",
 ]);
 export const userRoleEnum = pgEnum("user_role", ["rider", "driver", "admin"]);
 export const driverStatusEnum = pgEnum("driver_status", [
@@ -365,6 +379,8 @@ export const vehicles = pgTable(
     model: varchar("model", { length: 100 }).notNull(),
     manufacturing_year: integer("manufacturing_year").notNull(),
     cc_range: varchar("cc_range", { length: 30 }),
+    engine_cc: integer("engine_cc"),
+    body_type: bodyTypeEnum("body_type"),
     has_ac: boolean("has_ac"),
     passenger_seats: integer("passenger_seats").notNull(),
     registration_area: registrationAreaEnum("registration_area").notNull(),
@@ -614,8 +630,7 @@ export const rides = pgTable(
     vehicle_type: vehicleTypeEnum("vehicle_type").notNull(),
     status: rideStatusEnum("status").notNull().default("pending"),
     fare_breakdown: jsonb("fare_breakdown").notNull(),
-    surge_multiplier: numeric("surge_multiplier", { precision: 4, scale: 2 }),
-    surge_zone_id: uuid("surge_zone_id"),
+
     wait_start_at: timestamptz("wait_start_at"),
     wait_end_at: timestamptz("wait_end_at"),
     wait_fee_bdt: integer("wait_fee_bdt").notNull().default(0),
@@ -664,7 +679,7 @@ export const rides = pgTable(
       .default("none"),
     applied_discount_bdt: integer("applied_discount_bdt").notNull().default(0),
     // W-2: which active rider subscription supplied the 'pass' discount.
-    // Snapshotted at request (like promo_code_id / surge_multiplier) so the
+    // Snapshotted at request so the
     // completion path increments rides_used on exactly that pass — never on
     // every active subscription the rider happens to hold.
     // `(): any =>` breaks the type-level cycle rides → rider_subscriptions →
@@ -681,6 +696,24 @@ export const rides = pgTable(
       .notNull()
       .default(0),
     preference_ids: jsonb("preference_ids"),
+    // ── Ride Fare Framework v1: pickup fee lifecycle ──
+    pickup_fee_state: text("pickup_fee_state", { enum: ['range', 'firm', 'trued'] }),
+    pickup_fee_low_bdt: integer("pickup_fee_low_bdt"),
+    pickup_fee_high_bdt: integer("pickup_fee_high_bdt"),
+    pickup_fee_firm_bdt: integer("pickup_fee_firm_bdt"),
+    pickup_fee_final_bdt: integer("pickup_fee_final_bdt"),
+    pickup_trueup_delta_bdt: integer("pickup_trueup_delta_bdt"),
+    pickup_firm_km: numeric("pickup_firm_km", { precision: 7, scale: 3 }),
+    pickup_realized_km: numeric("pickup_realized_km", { precision: 7, scale: 3 }),
+    pickup_realized_confidence: numeric("pickup_realized_confidence", { precision: 4, scale: 3 }),
+    pickup_accept_lat: numeric("pickup_accept_lat", { precision: 10, scale: 7 }),
+    pickup_accept_lng: numeric("pickup_accept_lng", { precision: 10, scale: 7 }),
+    pickup_requote_count: integer("pickup_requote_count").notNull().default(0),
+    pickup_requoted_at: timestamptz("pickup_requoted_at"),
+    drop_zone_id: uuid("drop_zone_id").references((): any => zones.id),
+    drop_zone_heat: text("drop_zone_heat"),
+    route_polyline: text("route_polyline"),
+    driver_cancel_within_200m: boolean("driver_cancel_within_200m").notNull().default(false),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -926,24 +959,6 @@ export const zones = pgTable(
     index("zones_active_idx").on(t.is_active),
   ],
 );
-
-export const surgeCurrent = pgTable("surge_current", {
-  zone_id: uuid("zone_id").primaryKey().references(() => zones.id),
-  multiplier: numeric("multiplier", { precision: 4, scale: 2 }).notNull().default("1.0"),
-  demand_count: integer("demand_count").notNull().default(0),
-  supply_count: integer("supply_count").notNull().default(0),
-  updated_at: timestamptz("updated_at").notNull().defaultNow(),
-});
-
-export const surgeHistory = pgTable("surge_history", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  zone_id: uuid("zone_id").notNull().references(() => zones.id),
-  multiplier: numeric("multiplier", { precision: 4, scale: 2 }).notNull(),
-  demand_count: integer("demand_count").notNull(),
-  supply_count: integer("supply_count").notNull(),
-  triggered_at: timestamptz("triggered_at").notNull().defaultNow(),
-  ended_at: timestamptz("ended_at"),
-});
 
 export const cityBoundaries = pgTable(
   "city_boundaries",
@@ -1240,6 +1255,7 @@ export const vehicleModels = pgTable(
     default_vehicle_type: vehicleTypeEnum("default_vehicle_type").notNull(),
     typical_cc_min: integer("typical_cc_min"),
     typical_cc_max: integer("typical_cc_max"),
+    body_type: bodyTypeEnum("body_type"),
     has_ac: boolean("has_ac"),
     passenger_seats: integer("passenger_seats").notNull().default(4),
     is_active: boolean("is_active").notNull().default(true),
@@ -1810,7 +1826,7 @@ export const fareDisputes = pgTable("fare_disputes", {
   driver_id: uuid("driver_id").references(() => drivers.id, { onDelete: "cascade" }).notNull(),
   claimed_fare_bdt: integer("claimed_fare_bdt").notNull(),
   charged_fare_bdt: integer("charged_fare_bdt").notNull(),
-  dispute_reason: text("dispute_reason", { enum: ['route_longer', 'wrong_vehicle', 'wait_fee_unfair', 'surge_unexplained', 'other'] }).notNull(),
+  dispute_reason: text("dispute_reason", { enum: ['route_longer', 'wrong_vehicle', 'wait_fee_unfair', 'other'] }).notNull(),
   rider_note: text("rider_note"),
   actual_distance_meters: integer("actual_distance_meters"),
   estimated_distance_meters: integer("estimated_distance_meters"),
@@ -1969,12 +1985,22 @@ export const weatherConditions = pgTable("weather_conditions", {
   condition: text("condition").notNull(),
   temperature_celsius: numeric("temperature_celsius", { precision: 4, scale: 1 }),
   is_severe: boolean("is_severe").notNull().default(false),
-  surge_multiplier_override: numeric("surge_multiplier_override", { precision: 3, scale: 2 }),
+
   fetched_at: timestamptz("fetched_at").notNull().defaultNow(),
   created_at: timestamptz("created_at").notNull().defaultNow(),
 });
 
-// Weather: Event Calendar
+// Event Calendar — dispatch/heat-engine input ONLY. Concerts, matches, and
+// similar events that create real, verifiable localized demand near a venue.
+// LOCKED: never wire any field on this table into fare calculation, directly
+// or via a multiplier. Ride Fare Framework v1 §1 bans demand coefficients in
+// the fare formula, permanently. Legitimate use: feed active events into the
+// zone_heat engine (Phase C, driver-facing hot/neutral/cold tag only) and
+// rider-facing informational notices ("event nearby, expect traffic").
+// A prior demand_multiplier column existed here, unused end-to-end (zero
+// references outside this file) — dropped rather than left dormant, per the
+// same reasoning that removed surge: a wired-but-neutral lever is one edit
+// away from becoming a live one.
 export const eventCalendar = pgTable("event_calendar", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
@@ -1984,9 +2010,9 @@ export const eventCalendar = pgTable("event_calendar", {
   longitude: numeric("longitude", { precision: 11, scale: 8 }),
   event_start: timestamptz("event_start").notNull(),
   event_end: timestamptz("event_end").notNull(),
-  demand_multiplier: numeric("demand_multiplier", { precision: 3, scale: 2 }).notNull().default('1.5'),
   is_active: boolean("is_active").notNull().default(true),
   created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
 });
 
 // ── Rider Growth Tier 1 ────────────────────────────────────────────────────
@@ -2116,3 +2142,116 @@ export const riderIntroConfigs = pgTable(
       .where(sql`is_active = true`),
   ],
 );
+
+// ── Vehicle Premium Allowlist ──────────────────────────────────────────
+// Admin-managed list of brands/models that map to car_premium regardless
+// of engine_cc. Brand-only rows (model NULL) match the entire brand;
+// brand+model rows match a specific model.
+export const vehiclePremiumAllowlist = pgTable(
+  "vehicle_premium_allowlist",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    brand: varchar("brand", { length: 100 }).notNull(),
+    model: varchar("model", { length: 100 }),
+    is_active: boolean("is_active").notNull().default(true),
+    created_by: uuid("created_by").references((): any => users.id),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("vpa_brand_idx").on(t.brand),
+    index("vpa_brand_model_idx").on(t.brand, t.model),
+    index("vpa_active_idx").on(t.is_active),
+    // Brand-only rows: unique on lowercase brand where model IS NULL
+    uniqueIndex("vpa_brand_only_unique")
+      .on(sql`LOWER(${t.brand})`)
+      .where(sql`model IS NULL`),
+    // Brand+model rows: unique on lowercase brand+model where model IS NOT NULL
+    uniqueIndex("vpa_brand_model_unique")
+      .on(sql`LOWER(${t.brand})`, sql`LOWER(${t.model})`)
+      .where(sql`model IS NOT NULL`),
+  ],
+);
+
+// ═══════════════════════════════════════════════════════════════════
+// Ride Fare Framework v1 — new tables
+// ═══════════════════════════════════════════════════════════════════
+
+export const zoneHeat = pgTable("zone_heat", {
+  zone_id: uuid("zone_id").primaryKey().references(() => zones.id),
+  score: numeric("score", { precision: 5, scale: 4 }).notNull().default("0"),
+  baseline_pct: integer("baseline_pct").notNull().default(0),
+  live_pctile: integer("live_pctile").notNull().default(0),
+  live_ewma: numeric("live_ewma", { precision: 10, scale: 4 }).notNull().default("0"),
+  tag: text("tag", { enum: ['hot', 'neutral', 'cold'] }).notNull().default('neutral'),
+  idle_driver_count: integer("idle_driver_count").notNull().default(0),
+  computed_at: timestamptz("computed_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("zone_heat_tag_idx").on(t.tag),
+]);
+
+export const zoneHeatHistory = pgTable("zone_heat_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  zone_id: uuid("zone_id").notNull().references(() => zones.id),
+  score: numeric("score", { precision: 5, scale: 4 }).notNull(),
+  baseline_pct: integer("baseline_pct").notNull(),
+  live_pctile: integer("live_pctile").notNull(),
+  tag: text("tag", { enum: ['hot', 'neutral', 'cold'] }).notNull(),
+  computed_at: timestamptz("computed_at").notNull().defaultNow(),
+}, (t) => [
+  index("zone_heat_history_zone_time_idx").on(t.zone_id, t.computed_at),
+]);
+
+export const pickupDistanceSamples = pgTable("pickup_distance_samples", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ride_id: uuid("ride_id").notNull().references(() => rides.id),
+  zone_id: uuid("zone_id").references(() => zones.id),
+  vehicle_type: text("vehicle_type").notNull(),
+  category: text("category").notNull(),
+  quote_km: numeric("quote_km", { precision: 7, scale: 3 }),
+  firm_km: numeric("firm_km", { precision: 7, scale: 3 }),
+  realized_km: numeric("realized_km", { precision: 7, scale: 3 }),
+  charged: boolean("charged").notNull().default(false),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+}, (t) => [
+  index("pds_category_zone_time_idx").on(t.category, t.zone_id, t.created_at),
+]);
+
+export const fraudFlags = pgTable("fraud_flags", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  driver_id: uuid("driver_id").notNull().references(() => drivers.id),
+  flag_type: text("flag_type", { enum: ['dawdle', 'off_platform_completion', 'cancel_rate', 'heat_manipulation'] }).notNull(),
+  ride_id: uuid("ride_id").references(() => rides.id),
+  evidence: jsonb("evidence"),
+  status: text("status", { enum: ['open', 'warned', 'escalated', 'blocked', 'resolved'] }).notNull().default('open'),
+  offense_count: integer("offense_count").notNull().default(1),
+  resolved_by: uuid("resolved_by").references(() => users.id),
+  resolved_at: timestamptz("resolved_at"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("fraud_flags_driver_type_status_idx").on(t.driver_id, t.flag_type, t.status),
+]);
+
+export const zoneRecalibrationQueue = pgTable("zone_recalibration_queue", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  zone_id: uuid("zone_id").notNull().references(() => zones.id),
+  deviation_pct: numeric("deviation_pct", { precision: 5, scale: 2 }),
+  sample_count: integer("sample_count").notNull(),
+  status: text("status", { enum: ['open', 'reviewed'] }).notNull().default('open'),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("zr_queue_status_time_idx").on(t.status, t.created_at),
+]);
+
+export const cancelSurveys = pgTable("cancel_surveys", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ride_id: uuid("ride_id").notNull().references(() => rides.id),
+  rider_id: uuid("rider_id").notNull().references(() => users.id),
+  completed: boolean("completed").notNull().default(false),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("cancel_surveys_ride_unique").on(t.ride_id),
+]);

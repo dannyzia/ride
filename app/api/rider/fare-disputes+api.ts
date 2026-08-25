@@ -11,7 +11,7 @@ import * as errors from '@/lib/errors';
 const disputeSchema = z.object({
   ride_id: z.string().uuid(),
   claimed_fare_bdt: z.number().int().positive().max(5_000_000), // paisa; cap matches topupSchema bounds
-  dispute_reason: z.enum(['route_longer', 'wrong_vehicle', 'wait_fee_unfair', 'surge_unexplained', 'other']),
+  dispute_reason: z.enum(['route_longer', 'wrong_vehicle', 'wait_fee_unfair', 'other']),
   rider_note: z.string().max(1000).optional(),
 });
 

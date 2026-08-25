@@ -1,15 +1,18 @@
 import { db } from '@/src/db';
-import { users, pricing, preferences, systemConfig, zones, surgeCurrent } from '@/src/db/schema';
+import { users, pricing, preferences, systemConfig, zones } from '@/src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
 import { calculateFare, haversineKm } from '@/lib/fareCalc';
-import { applySurge } from '@/lib/surge';
+
 import { getAvailableDiscounts } from '@/lib/discountEngine';
 import { detectOriginCity, isIntercity } from '@/lib/cityBoundary';
 import { splitRoute } from '@/lib/routeSplit';
 import { getRouteDistance } from '@/lib/barikoi';
+import { getFareFrameworkConfig, parseConfigBool } from '@/lib/fareFrameworkConfig';
+import { PICKUP_QUOTE_CONFIG_KEYS, pickupQuoteRange } from '@/lib/pickupQuote';
 import { VEHICLE_TYPE_VALUES, VEHICLE_TYPES } from '@/lib/vehicleTypes';
+import { isOfferablePricing } from '@/lib/pricingGate';
 import { loadSpeedTableFromConfig, type EtaSpeedTable, timeBucket, etaSpeedKmh, computeEtaMinutes } from '@/lib/eta';
 import { parseJsonBody } from '@/lib/parseBody';
 import { percentOf } from '@/lib/money';
@@ -124,7 +127,8 @@ export async function POST(request: Request) {
           eq(pricing.zone_id, zoneId),
           eq(pricing.is_active, true),
         )).limit(1);
-      if (!activePricing) {
+      if (!activePricing || !isOfferablePricing(activePricing)) {
+        // release gate: zero-sentinel pricing rows are never offered
         return Response.json({ error: 'pricing_not_found', message: 'Pricing configuration not found' }, { status: 422 });
       }
       const fare = calculateFare({
@@ -138,28 +142,27 @@ export async function POST(request: Request) {
         platform_commission_percent: Number(activePricing.platform_commission_percent ?? 0),
       }, insideKm, 0, undefined, outsideKm, origin_city, intercity);
 
-      // ── Multi-leg distance — override routeKm when stops are set ──────
-      // ── Surge pricing lookup ───────────────────────────────────────
-      const [sz] = await db.select({ id: zones.id }).from(zones).where(eq(zones.is_active, true)).limit(1);
-      let surgeMul = 1.0;
-      if (sz) {
-        const [sr] = await db.select().from(surgeCurrent).where(eq(surgeCurrent.zone_id, sz.id)).limit(1);
-        if (sr && Date.now() - new Date(sr.updated_at).getTime() < 300_000) surgeMul = Number(sr.multiplier);
-      }
-      if (surgeMul > 1.0) {
-        const surge = applySurge(Number(fare.total_bdt), surgeMul);
-        fare.total_bdt = surge.totalWithSurge;
-        fare.surge_multiplier = surge.multiplier;
-        fare.surge_fee_bdt = surge.surgeFeeBdt;
-        const cp = Number(activePricing.platform_commission_percent ?? 0);
-        if (cp > 0) { fare.platform_commission_bdt = percentOf(fare.total_bdt, cp); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
-       }
+      // ── Pickup fee range (Phase F quote state 1; ruling 5: ≤2 route
+      // calls for the quote — nearest + p75-reference — separate from the
+      // trip route call above). Disabled (Stage 0) → null → no fields.
+      // Computed after `fare` — the %-of-fare backstop needs the trip total.
+      const fwCfg = await getFareFrameworkConfig(PICKUP_QUOTE_CONFIG_KEYS);
+      const pickupQuote = parseConfigBool(fwCfg.pickup_fee_enabled)
+        ? await pickupQuoteRange({
+            zoneId,
+            vehicleType: vehicle_type,
+            pickupLat: pickup_lat,
+            pickupLng: pickup_lng,
+            fareBeforePickupPaisa: fare.total_bdt,
+            cfg: fwCfg,
+          }).catch(() => null)
+        : null;
 
-      // ── Available discounts (calculated AFTER surge on the surged total) ──
+      // ── Available discounts ──
       const availableDiscounts = await getAvailableDiscounts({
         riderId: rider.id,
         totalRides: rider.total_rides ?? 0,
-        surgedTotalBdt: fare.total_bdt,
+        fareTotalBdt: fare.total_bdt,
         zoneId,
       });
 
@@ -188,7 +191,14 @@ export async function POST(request: Request) {
           rider_payable_bdt: driverFare,
           eta_minutes: etaMin,
          available_discounts: availableDiscounts,
-         }],
+        // Advisory pickup fee range — ADVISORY ONLY: totals above EXCLUDE it
+        // (fee becomes real at accept; prevents double-count bugs).
+        ...(pickupQuote ? {
+          pickup_fee_low_bdt: pickupQuote.lowPaisa,
+          pickup_fee_high_bdt: pickupQuote.highPaisa,
+          pickup_fee_range_low_confidence: pickupQuote.lowConfidence,
+        } : {}),
+        }],
         distance_km: totalDistanceKm,
         preferences_applied: preference_ids ?? [],
         quote_valid_until: toUtcIso(quoteValidUntil),
@@ -196,21 +206,20 @@ export async function POST(request: Request) {
     }
 
     // Return all vehicle types
-    const pricings = await db.select().from(pricing)
+    // release gate: zero-sentinel pricing rows are never offered
+    const allPricings = await db.select().from(pricing)
       .where(and(eq(pricing.zone_id, zoneId), eq(pricing.is_active, true)));
+    const pricings = allPricings.filter(isOfferablePricing);
 
     const etaTable = await getEtaTable();
     const etaBucket = timeBucket(new Date());
 
-    // ── Surge lookup (shared across all vehicle types) ──────────────
-    let surgeMul2 = 1.0;
-    const [sz2] = await db.select({ id: zones.id }).from(zones).where(eq(zones.is_active, true)).limit(1);
-    if (sz2) {
-      const [sr2] = await db.select().from(surgeCurrent).where(eq(surgeCurrent.zone_id, sz2.id)).limit(1);
-      if (sr2 && Date.now() - new Date(sr2.updated_at).getTime() < 300_000) surgeMul2 = Number(sr2.multiplier);
-    }
+    // ── Rider pass discount for multi-vehicle ──
 
-    // ── Rider pass discount for multi-vehicle (now handled by discount engine AFTER surge) ──
+    // Pickup fee range config (ruling 5: multi-vehicle path = haversine × 1.4
+    // per pool, 0 route calls). One config read shared by every pool.
+    const fwCfg = await getFareFrameworkConfig(PICKUP_QUOTE_CONFIG_KEYS);
+    const pickupFeeEnabled = parseConfigBool(fwCfg.pickup_fee_enabled);
 
     const estimates = await Promise.all(pricings.map(async (p) => {
       const fare = calculateFare({
@@ -224,25 +233,27 @@ export async function POST(request: Request) {
         platform_commission_percent: Number(p.platform_commission_percent ?? 0),
       }, insideKm, 0, undefined, outsideKm, origin_city, intercity);
 
-      if (surgeMul2 > 1.0) {
-        const surge = applySurge(Number(fare.total_bdt), surgeMul2);
-        fare.total_bdt = surge.totalWithSurge;
-        fare.surge_multiplier = surge.multiplier;
-        fare.surge_fee_bdt = surge.surgeFeeBdt;
-        const cp = Number(p.platform_commission_percent ?? 0);
-        if (cp > 0) { fare.platform_commission_bdt = percentOf(fare.total_bdt, cp); fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt; }
-      }
-
       const availableDiscounts = await getAvailableDiscounts({
         riderId: rider.id,
         totalRides: rider.total_rides ?? 0,
-        surgedTotalBdt: fare.total_bdt,
+        fareTotalBdt: fare.total_bdt,
         zoneId,
       });
 
       const vtDef = VEHICLE_TYPES.find(v => v.key === p.vehicle_type);
       const driverFare = fare.total_bdt + preferenceSurchargeBdt;
       const etaMin = computeEtaMinutes(totalDistanceKm, etaSpeedKmh(p.vehicle_type, etaBucket, etaTable));
+      const pickupQuote = pickupFeeEnabled
+        ? await pickupQuoteRange({
+            zoneId,
+            vehicleType: p.vehicle_type,
+            pickupLat: pickup_lat,
+            pickupLng: pickup_lng,
+            fareBeforePickupPaisa: fare.total_bdt,
+            cfg: fwCfg,
+            haversineOnly: true,
+          }).catch(() => null)
+        : null;
       return {
         vehicle_type:  p.vehicle_type,
         display_en:    vtDef?.display_en ?? p.vehicle_type,
@@ -258,6 +269,12 @@ export async function POST(request: Request) {
         rider_payable_bdt: driverFare,
         eta_minutes:   etaMin,
         available_discounts: availableDiscounts,
+        // Advisory pickup fee range — totals above EXCLUDE it (ruling 5).
+        ...(pickupQuote ? {
+          pickup_fee_low_bdt: pickupQuote.lowPaisa,
+          pickup_fee_high_bdt: pickupQuote.highPaisa,
+          pickup_fee_range_low_confidence: pickupQuote.lowConfidence,
+        } : {}),
       };
     }));
 

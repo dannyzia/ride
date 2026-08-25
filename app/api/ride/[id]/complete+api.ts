@@ -1,10 +1,9 @@
 // Auth: verifySupabaseToken via requireRole
 import { db } from "@/src/db";
-import { rides, pricing, drivers, driverWalletTransactions, riderSubscriptions, rideExtraCharges, riderWalletTransactions, users } from "@/src/db/schema";
+import { rides, pricing, drivers, driverWalletTransactions, riderSubscriptions, rideExtraCharges, riderWalletTransactions, users, pickupDistanceSamples } from "@/src/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
 import { calculateFare } from "@/lib/fareCalc";
-import { applySurge } from "@/lib/surge";
 import { logger } from "@/lib/logger";
 import { sendNotification } from "@/lib/notify";
 import { z } from "zod";
@@ -14,6 +13,9 @@ import { evaluateStreaks } from '@/lib/gamification';
 import { earnCashback } from '@/lib/walletCashback';
 import { spendZoneBudget } from '@/lib/zoneBudget';
 import { computeCompletionWalletReceivable } from '@/lib/rideCompletionWallet';
+import { getFareFrameworkConfig, parseConfigBool, parseConfigNumber } from '@/lib/fareFrameworkConfig';
+import { PICKUP_CATEGORY } from '@/lib/vehicleTypes';
+import { PICKUP_TRUEUP_CONFIG_KEYS, computePickupTrueup, type PickupTrueupResult } from '@/lib/pickupTrueup';
 import * as errors from '@/lib/errors';
 
 export async function POST(request: Request) {
@@ -141,25 +143,14 @@ const rideId = segments[segments.indexOf("ride") + 1];
       isIntercity,
     );
 
-    // ── Surge pricing — use the ride's stored surge_multiplier (snapshotted at request) ──
-    const rideSurgeMul = Number(ride.surge_multiplier ?? 1.0);
-    if (rideSurgeMul > 1.0) {
-      const surge = applySurge(Number(fare.total_bdt), rideSurgeMul);
-      fare.total_bdt = surge.totalWithSurge;
-      fare.surge_multiplier = surge.multiplier;
-      fare.surge_fee_bdt = surge.surgeFeeBdt;
-      const commPct = Number(pricingRow.platform_commission_percent ?? 0);
-      if (commPct > 0) {
-        fare.platform_commission_bdt = percentOf(fare.total_bdt, commPct);
-        fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
-      }
-    }
+    // Ruling 18: the true-up's %-of-fare backstop re-check basis — the
+    // completion-recalculated TRIP fare (base + distance + time, post-floor),
+    // snapshotted BEFORE the wait fee, extra charges, or pickup fee are
+    // layered on.
+    const recalculatedTripFarePaisa = fare.total_bdt;
 
     // ── Waiting time fee ────────────────────────────────────────────────
-    // Kept in its own wait_fee_bdt field — NEVER folded into surge_fee_bdt.
-    // The rider receipt renders a "Surge" row from surge_fee_bdt and a
-    // "Waiting Fee" row from the wait amount; conflating them double-counts
-    // the wait fee on the receipt and corrupts any analytics keyed on surge.
+    // Kept in its own wait_fee_bdt field.
     const waitFee = Number(ride.wait_fee_bdt ?? 0);
     if (waitFee > 0) {
       fare.total_bdt += waitFee;
@@ -183,6 +174,53 @@ const rideId = segments[segments.indexOf("ride") + 1];
     if (extraChargeTotal > 0) {
       fare.total_bdt += extraChargeTotal;
       fare.driver_net_bdt = fare.total_bdt - (fare.platform_commission_bdt ?? 0);
+    }
+
+    // ── Phase F quote state 3: pickup fee true-up + charge ─────────────
+    // Rulings 1/14: the pickup fee is DRIVER COMPENSATION, not platform
+    // revenue — the final fee is added to the receipt totals below
+    // (total/driver_net; rider_payable, driver_fare, cash_to_collect derive
+    // from them) but NEVER to the commission base or the recordRideCompletion
+    // input, which stay on the pre-pickup figure captured here.
+    // Ruling 16: fee disabled (Stage 0) → charge nothing, persist 'trued'
+    // state only; realized measurement is already on the ride row.
+    const fareTotalBeforePickupPaisa = fare.total_bdt;
+    let pickupTrueup: PickupTrueupResult | null = null;
+    if (ride.pickup_fee_state === "firm") {
+      const fwCfg = await getFareFrameworkConfig(PICKUP_TRUEUP_CONFIG_KEYS);
+      const pickupCategory = PICKUP_CATEGORY[ride.vehicle_type];
+      pickupTrueup = computePickupTrueup(
+        {
+          pickup_fee_state: ride.pickup_fee_state,
+          pickup_fee_firm_bdt: ride.pickup_fee_firm_bdt ?? null,
+          pickup_firm_km: ride.pickup_firm_km ?? null,
+          pickup_realized_km: ride.pickup_realized_km ?? null,
+          pickup_realized_confidence: ride.pickup_realized_confidence ?? null,
+        },
+        {
+          feeEnabled: parseConfigBool(fwCfg.pickup_fee_enabled),
+          freeRadiusKm: parseConfigNumber(
+            fwCfg[`pickup_free_radius_km_${pickupCategory}`],
+            0,
+          ),
+          capBillableKm: parseConfigNumber(
+            fwCfg[`pickup_cap_billable_km_${pickupCategory}`],
+            2.0,
+          ),
+          backstopPct: parseConfigNumber(fwCfg.pickup_cap_pct_of_fare, 40),
+          minConfidence: parseConfigNumber(fwCfg.pickup_origin_confidence_min, 0.7),
+          capMultiplier: parseConfigNumber(fwCfg.pickup_trueup_cap_multiplier, 1.25),
+          zonePerKmBdt: pricingRow.per_km_bdt,
+          category: pickupCategory,
+          recalculatedTripFareBdt: recalculatedTripFarePaisa,
+        },
+      );
+      if (pickupTrueup.finalFeeBdt != null) {
+        // Receipt totals carry the fee; commission is NOT recomputed here —
+        // the fee must never leak into the commission base (ruling 1).
+        fare.total_bdt += pickupTrueup.finalFeeBdt;
+        fare.driver_net_bdt += pickupTrueup.finalFeeBdt;
+      }
     }
 
     // ── Locked discount from request time ──────────────────────────────
@@ -256,6 +294,15 @@ const rideId = segments[segments.indexOf("ride") + 1];
           rider_payable_bdt: fare.total_bdt + storedPrefSurcharge - appliedDiscountBdt + (tipApplied ? upfrontTip : 0),
           driver_fare_bdt: fare.driver_net_bdt + storedPrefSurcharge + (fare.platform_commission_bdt ?? 0),
           upfront_tip_forfeited_bdt: upfrontTipForfeitedBdt,
+          // Phase F quote state 3: one-time 'firm' → 'trued' transition.
+          // Fee off (Stage 0) → final/delta stay null: nothing was charged.
+          ...(pickupTrueup?.applies
+            ? {
+                pickup_fee_state: "trued" as const,
+                pickup_fee_final_bdt: pickupTrueup.finalFeeBdt,
+                pickup_trueup_delta_bdt: pickupTrueup.deltaBdt,
+              }
+            : {}),
         })
         .where(and(eq(rides.id, rideId), eq(rides.status, "in_progress")))
         .returning();
@@ -264,6 +311,23 @@ const rideId = segments[segments.indexOf("ride") + 1];
         throw new Error("TOCTOU: ride not in progress or already completed");
       }
       finalRiderPayableBdt = Number(updatedRide.rider_payable_bdt ?? 0);
+
+      // Phase F Stage 0 harvester (ruling 16): one pickup_distance_samples
+      // row per firmed ride — in BOTH measurement-only and charge mode.
+      // charged=true only when a positive fee was actually charged.
+      if (pickupTrueup?.insertSample) {
+        await tx.insert(pickupDistanceSamples).values({
+          ride_id: rideId,
+          zone_id: ride.zone_id,
+          vehicle_type: ride.vehicle_type,
+          category: PICKUP_CATEGORY[ride.vehicle_type],
+          // Request-time reference km is not persisted on the ride row.
+          quote_km: null,
+          firm_km: pickupTrueup.firmKm != null ? String(pickupTrueup.firmKm) : null,
+          realized_km: pickupTrueup.realizedKm != null ? String(pickupTrueup.realizedKm) : null,
+          charged: (pickupTrueup.finalFeeBdt ?? 0) > 0,
+        });
+      }
 
       // Phase C: Earn cashback on the rider's payable (discounted) fare
       const riderPayableBdt = Number(updatedRide.rider_payable_bdt ?? 0);
@@ -330,9 +394,12 @@ const rideId = segments[segments.indexOf("ride") + 1];
     }
 
     // ── Accounting entries (non-blocking) ──────────────────────────────
+    // Ruling 14: accounting input is the TRIP-fare-only figure — the pickup
+    // fee is a driver pass-through, never platform revenue, so it is excluded
+    // from finalFarePaisa (and from the commission computed off it).
     try {
       await recordRideCompletion({
-        id: rideId, finalFarePaisa: fare.total_bdt,
+        id: rideId, finalFarePaisa: fareTotalBeforePickupPaisa,
         commissionPct: Number(pricingRow.platform_commission_percent ?? 0),
         driverId: driver.id, riderId: ride.user_id,
         zoneId: ride.zone_id,

@@ -1,0 +1,444 @@
+[
+  {
+    "brand": "Atul",
+    "model": "Gem",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 395,
+    "typical_cc_max": 395,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Atul",
+    "model": "Gem Paxx",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 395,
+    "typical_cc_max": 395,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Atul",
+    "model": "Shakti CNG",
+    "year_start": 2010,
+    "year_end": 2024,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 200,
+    "typical_cc_max": 200,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Maxima X Wide",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 236,
+    "typical_cc_max": 236,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Maxima Z",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 236,
+    "typical_cc_max": 236,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "RE",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 145,
+    "typical_cc_max": 236,
+    "passenger_seats": 3,
+    "has_ac": null,
+    "default_vehicle_type": "cng",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "kimi",
+      "deepseek",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Easy Bike",
+    "model": "Standard",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": null,
+    "typical_cc_max": null,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "EV — no canonical cc; pre-decided for admin review",
+    "_notes": null
+  },
+  {
+    "brand": "Green Tiger",
+    "model": "GT5",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 200,
+    "typical_cc_max": 200,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "H Power",
+    "model": "CNG Auto",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 200,
+    "typical_cc_max": 200,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mahindra",
+    "model": "Alfa CNG",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 200,
+    "typical_cc_max": 395,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mahindra",
+    "model": "Alfa DX",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 395,
+    "typical_cc_max": 395,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mahindra",
+    "model": "Alfa Plus",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 395,
+    "typical_cc_max": 395,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mahindra",
+    "model": "Treo",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": null,
+    "typical_cc_max": null,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "EV — no canonical cc; pre-decided for admin review",
+    "_notes": null
+  },
+  {
+    "brand": "Mayuri",
+    "model": "Deluxe",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 200,
+    "typical_cc_max": 200,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Piaggio",
+    "model": "Ape",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 200,
+    "typical_cc_max": 435,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Piaggio",
+    "model": "Ape City",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 395,
+    "typical_cc_max": 435,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Piaggio",
+    "model": "Ape City CNG",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 197,
+    "typical_cc_max": 197,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Piaggio",
+    "model": "Ape CNG",
+    "year_start": 2000,
+    "year_end": 2024,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 200,
+    "typical_cc_max": 200,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Piaggio",
+    "model": "Ape Xtra LDX",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 435,
+    "typical_cc_max": 435,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Runner",
+    "model": "Auto Rickshaw",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 200,
+    "typical_cc_max": 200,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Sazgar",
+    "model": "CNG Auto",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 200,
+    "typical_cc_max": 200,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Sazgar",
+    "model": "Rickshaw",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 200,
+    "typical_cc_max": 200,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Teja",
+    "model": "Auto",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 200,
+    "typical_cc_max": 200,
+    "passenger_seats": 3,
+    "has_ac": false,
+    "default_vehicle_type": "cng",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "King",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "auto_rickshaw",
+    "typical_cc_min": 199,
+    "typical_cc_max": 225,
+    "passenger_seats": 3,
+    "has_ac": null,
+    "default_vehicle_type": "cng",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi",
+      "deepseek",
+      "glm5.3",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  }
+]

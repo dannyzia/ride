@@ -302,6 +302,20 @@
       "when": 1787345326804,
       "tag": "0042_noisy_omega_red",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1787414461871,
+      "tag": "0043_absurd_gargoyle",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1787500000000,
+      "tag": "0045_seed_premium_allowlist",
+      "breakpoints": true
     }
   ]
 }

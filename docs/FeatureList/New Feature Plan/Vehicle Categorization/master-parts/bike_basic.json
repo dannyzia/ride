@@ -1,0 +1,723 @@
+[
+  {
+    "brand": "Bajaj",
+    "model": "Boxer",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 100,
+    "typical_cc_max": 100,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "CT100",
+    "year_start": 1999,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 99,
+    "typical_cc_max": 102,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Platina",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 102,
+    "typical_cc_max": 102,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Platina 100",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 99,
+    "typical_cc_max": 102,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Haojue",
+    "model": "HJ110-2",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 107,
+    "typical_cc_max": 107,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "CD80",
+    "year_start": 1995,
+    "year_end": 2006,
+    "body_type": "motorcycle",
+    "typical_cc_min": 79,
+    "typical_cc_max": 79,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "HF Deluxe",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 97,
+    "typical_cc_max": 100,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "HF Deluxe 100",
+    "year_start": 2005,
+    "year_end": 2024,
+    "body_type": "motorcycle",
+    "typical_cc_min": 97,
+    "typical_cc_max": 97,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Splendor iSmart",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 97,
+    "typical_cc_max": 97,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Splendor Plus",
+    "year_start": 1994,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 97,
+    "typical_cc_max": 100,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Splendor+ / Splendor 100",
+    "year_start": 1994,
+    "year_end": 2020,
+    "body_type": "motorcycle",
+    "typical_cc_min": 97,
+    "typical_cc_max": 97,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Activa 110",
+    "year_start": 2014,
+    "year_end": 2024,
+    "body_type": "scooter",
+    "typical_cc_min": 109,
+    "typical_cc_max": 109,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CD110 Dream",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 109,
+    "typical_cc_max": 109,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CD70",
+    "year_start": 1990,
+    "year_end": 2010,
+    "body_type": "motorcycle",
+    "typical_cc_min": 72,
+    "typical_cc_max": 72,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CD80",
+    "year_start": 1983,
+    "year_end": 2012,
+    "body_type": "motorcycle",
+    "typical_cc_min": 72,
+    "typical_cc_max": 72,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Dio",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 110,
+    "typical_cc_max": 110,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Dio 110",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 109,
+    "typical_cc_max": 110,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Dream 110",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 109,
+    "typical_cc_max": 110,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Dream Neo",
+    "year_start": 2013,
+    "year_end": 2020,
+    "body_type": "motorcycle",
+    "typical_cc_min": 109,
+    "typical_cc_max": 109,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Livo",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 109,
+    "typical_cc_max": 110,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Livo 110",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 109,
+    "typical_cc_max": 110,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lifan",
+    "model": "LF100-7",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 100,
+    "typical_cc_max": 100,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mahindra",
+    "model": "Centuro",
+    "year_start": 2014,
+    "year_end": 2018,
+    "body_type": "motorcycle",
+    "typical_cc_min": 107,
+    "typical_cc_max": 107,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Roadmaster",
+    "model": "Rapido",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 100,
+    "typical_cc_max": 100,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Runner",
+    "model": "AD80 Deluxe",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 85,
+    "typical_cc_max": 85,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Runner",
+    "model": "Bullet",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 100,
+    "typical_cc_max": 100,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Runner",
+    "model": "Kite Plus",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 80,
+    "typical_cc_max": 80,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Metro / Metro Plus",
+    "year_start": 2009,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 100,
+    "typical_cc_max": 110,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Metro 100",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 99,
+    "typical_cc_max": 100,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Metro Plus",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 109,
+    "typical_cc_max": 110,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Radeon",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 109,
+    "typical_cc_max": 109,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Scooty Zest 110",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 109,
+    "typical_cc_max": 110,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Sport",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 109,
+    "typical_cc_max": 109,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Sport 100",
+    "year_start": 2008,
+    "year_end": 2024,
+    "body_type": "motorcycle",
+    "typical_cc_min": 99,
+    "typical_cc_max": 99,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Star City Plus",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 109,
+    "typical_cc_max": 109,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Walton",
+    "model": "Fusion 100cc",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 100,
+    "typical_cc_max": 100,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Walton",
+    "model": "Fusion 110RX",
+    "year_start": 2012,
+    "year_end": 2016,
+    "body_type": "motorcycle",
+    "typical_cc_min": 110,
+    "typical_cc_max": 110,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "Crux",
+    "year_start": 2005,
+    "year_end": 2015,
+    "body_type": "motorcycle",
+    "typical_cc_min": 106,
+    "typical_cc_max": 106,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Znen",
+    "model": "ZN110",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 110,
+    "typical_cc_max": 110,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_basic",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  }
+]

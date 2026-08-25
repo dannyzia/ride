@@ -8,10 +8,9 @@ import { logger } from '@/lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 
-const JSON_ARRAY_KEYS = new Set(['surge_thresholds']);
+const JSON_ARRAY_KEYS = new Set<string>();
 
 const ALLOWED_KEYS = new Set([
-  'surge_thresholds',
   'dispatch_paused',
   'min_app_version',
   'latest_version',

@@ -13,7 +13,7 @@ export type { DiscountOption };
 export interface DiscountParams {
   riderId: string;
   totalRides: number;
-  surgedTotalBdt: number;
+  fareTotalBdt: number;
   zoneId: string;
 }
 
@@ -28,18 +28,18 @@ export async function getAvailableDiscounts(
   const intro = await getIntroDiscount(
     params.riderId,
     nextRideNumber,
-    params.surgedTotalBdt,
+    params.fareTotalBdt,
     params.zoneId,
   );
   if (intro) options.push(intro);
 
-  const promo = await getPromoOption(params.riderId, params.surgedTotalBdt);
+  const promo = await getPromoOption(params.riderId, params.fareTotalBdt);
   if (promo) options.push(promo);
 
-  const pass = await getPassOption(params.riderId, params.surgedTotalBdt);
+  const pass = await getPassOption(params.riderId, params.fareTotalBdt);
   if (pass) options.push(pass);
 
-  const wallet = await getWalletOption(params.riderId, params.surgedTotalBdt);
+  const wallet = await getWalletOption(params.riderId, params.fareTotalBdt);
   if (wallet) options.push(wallet);
 
   return options;
@@ -47,14 +47,14 @@ export async function getAvailableDiscounts(
 
 async function getPromoOption(
   riderId: string,
-  surgedTotalBdt: number,
+  fareTotalBdt: number,
 ): Promise<DiscountOption | null> {
   const staged = getStagedPromo(riderId);
   if (!staged) return null;
 
   let discountBdt: number;
   if (staged.discountType === "percent") {
-    discountBdt = Math.round((surgedTotalBdt * staged.discountValue) / 100);
+    discountBdt = Math.round((fareTotalBdt * staged.discountValue) / 100);
   } else {
     discountBdt = Math.round(staged.discountValue);
   }
@@ -62,9 +62,9 @@ async function getPromoOption(
   if (staged.maxDiscountBdt != null && discountBdt > staged.maxDiscountBdt) {
     discountBdt = staged.maxDiscountBdt;
   }
-  discountBdt = Math.min(discountBdt, surgedTotalBdt);
+  discountBdt = Math.min(discountBdt, fareTotalBdt);
 
-  if (staged.minSpendBdt != null && surgedTotalBdt < staged.minSpendBdt) {
+  if (staged.minSpendBdt != null && fareTotalBdt < staged.minSpendBdt) {
     return null;
   }
 
@@ -79,7 +79,7 @@ async function getPromoOption(
 
 async function getPassOption(
   riderId: string,
-  surgedTotalBdt: number,
+  fareTotalBdt: number,
 ): Promise<DiscountOption | null> {
   // W-2: pick deterministically — the EARLIEST-expiring active pass supplies
   // the discount (burn the quota closest to expiry first). An un-ordered
@@ -109,13 +109,13 @@ async function getPassOption(
   if (pass.max_rides != null && sub.rides_used >= pass.max_rides) return null;
 
   const discountBdt = Math.round(
-    (surgedTotalBdt * pass.discount_percent) / 100,
+    (fareTotalBdt * pass.discount_percent) / 100,
   );
 
   return {
     type: "pass",
     percent: pass.discount_percent,
-    amount_bdt: Math.min(discountBdt, surgedTotalBdt),
+    amount_bdt: Math.min(discountBdt, fareTotalBdt),
     description: `${pass.name} pass`,
     subscription_id: sub.id,
   };
@@ -123,7 +123,7 @@ async function getPassOption(
 
 async function getWalletOption(
   riderId: string,
-  surgedTotalBdt: number,
+  fareTotalBdt: number,
 ): Promise<DiscountOption | null> {
   const [rider] = await db
     .select({ wallet_balance_bdt: users.rider_wallet_balance_bdt })
@@ -133,12 +133,12 @@ async function getWalletOption(
   if (!rider || rider.wallet_balance_bdt <= 0) return null;
 
   const maxRedemption = Math.round(
-    (surgedTotalBdt * WALLET_REDEMPTION_MAX_PERCENT) / 100,
+    (fareTotalBdt * WALLET_REDEMPTION_MAX_PERCENT) / 100,
   );
   const redeemable = Math.min(
     rider.wallet_balance_bdt,
     maxRedemption,
-    surgedTotalBdt,
+    fareTotalBdt,
   );
   if (redeemable <= 0) return null;
 
@@ -152,9 +152,9 @@ async function getWalletOption(
 }
 
 export function applySelectedDiscount(
-  surgedTotalBdt: number,
+  fareTotalBdt: number,
   option: DiscountOption,
 ): number {
-  const discounted = surgedTotalBdt - option.amount_bdt;
+  const discounted = fareTotalBdt - option.amount_bdt;
   return Math.max(0, discounted);
 }

@@ -1,7 +1,7 @@
 # Ride — Full Feature Inventory
-> v16 — 2026-08-21: Plans 01–04 COMPLETE (+ polish sweep); Plan 05 Waves 0–3 + Zone foundation (Z-1/Z-2/Z-3/Z-4/Z-5/Z-6/Z-7/Z-8) ALL DONE; verified against working tree 2026-08-21 (includes uncommitted zone/SOS/cancellation work).
+> v17 — 2026-08-25: Ride Fare Framework v1 COMPLETE. Surge fully removed; sequential dispatch + debit-on-offer live; heat engine (zone_heat, Lever 0/1/2/3); pickup fee 3-state lifecycle (measurement live, charge gated by `pickup_fee_enabled`); fraud protocol (dawdle, off-platform, cancel-rate, heat manipulation); ~50 fare framework config keys; 4 new admin screens (fare-config, heat-monitor, pickup-analytics, trust-safety); new scheduler jobs 37–41.
 > Core app + P4 Phases 1-3 + Multi-Stop + Tip + Trust & Quality + UI Rethink Plans 01–04 + Plan 05 (Waves 0–3 mostly in; Wave-4 driver leftovers — see §6/§9).
-> Schema: 85 tables, 29 enums (migration 0042 — index-only zone foundation). 171 API route files.
+> Schema: ~97 tables, ~32 enums. Fare Framework v1 added: zone_heat, zone_heat_history, pickup_distance_samples, fraud_flags, zone_recalibration_queue, cancel_surveys. 171+ API route files.
 > P5 Growth features (Gamification, Safety, AI Demand, Weather) — saved for post-launch.
 >
 > Minor caveats (non-blocking):
@@ -15,6 +15,7 @@
 > - All 6 Plan-05 `platform_config` keys admin-settable via `PATCH /api/admin/config` with range validation; `zone_multi_active_enabled` seeded as false
 > - 6 built-but-unwired shared components: ProgressBar, Badge, Avatar, CheckboxGroup, HeatmapOverlay, MinRateSlider
 > - Driver earnings-goal UI REMOVED from tree (was YES at v13; earnings-tab rebuild dropped it) — regression, see §2 #15
+> - Pickup fee Stage 1 (charge) gated by `pickup_fee_enabled` config — code complete, disabled until activated
 
 ---
 
@@ -42,14 +43,14 @@
 | **Ride Request & Booking** | | | | |
 | 15 | Destination autocomplete (Barikoi) | YES | YES | YES |
 | 16 | Find ride (From/To + Use Current Location) | YES | YES | YES |
-| 17 | Ride estimate (8 vehicle types + surge + pass discount) | YES | YES | YES — surge multiplier + rider pass discount applied before surge; `quote_valid_until` (5 min) on estimate response |
+| 17 | Ride estimate (8 vehicle types + heat tag + pass discount) | YES | YES | YES — heat score tags (hot/neutral/cold) replace surge; rider pass discount applied; `quote_valid_until` (5 min) on estimate response. No surge fields remain. |
 | 18 | Vehicle selection (Bike Basic → Car XL) | YES | YES | YES |
 | 19 | Promo code apply | YES | Partial | Partial — `lib/discountEngine.ts` + staged-promo server flow done (`promo/redeem` stages via `lib/promoCache.ts`, consumed in ride tx); **apply-promos screen contract bug**: sends `{code}` only while API requires vehicle_type + pickup coords → 400 |
 | 20 | Ride preference chips | YES | YES | YES |
 | 21 | Confirm ride + Request | YES | YES | YES |
 | 22 | Scheduled ride (conditional endpoint + push reminder) | YES (`ride/schedule`) | YES | YES — "schedule for later" branches to `ride/schedule` (config-driven +30m/+7d bounds); `ride-scheduled` confirmation; `components/ScheduleRideSheet.tsx` (Dhaka tz, client bounds mirror, overlap poll tolerating missing endpoint); scheduler promotes to dispatch + T-60m/T-15m reminder push (idempotent) + cutoff cancellation. NOTE: schedule-ride + no-drivers-available routes are REFERENCED (FloatingNavMenu, finding-driver) — retained; scheduling-user-ride + schedule-ride-after-promo are true orphans |
 | 23 | Book for someone else (toggle + name/phone + SMS) | YES | YES | YES — in confirm-ride; SMS via dpRelay sendSms (schedule-path validation still loose: no phone regex/self-phone/consent) |
-| 24 | Surge consent banner | YES | YES | YES — yellow banner when surge_multiplier > 1.0 (confirm-ride, M-27 ratified) |
+| 24 | ~~Surge consent banner~~ | **REMOVED** | — | — | Surge fully removed from codebase. Heat score tags (hot/neutral/cold) replace surge multiplier; no rider consent banner needed. |
 | 25 | Rider pass / ride pass (weekly/monthly discount) | YES (`rider/passes`) | YES | YES — PortPos purchase (PaymentWebView purpose='rider_pass'), pass discount in estimate (multi-leg), rides_used progress bar (rides_used/max_rides, unlimited fallback), auto-expiry, admin CRUD |
 | 25a | Upfront tip (preset ৳0/20/50/100) | YES | YES | YES — slider in confirm-ride, tip badge in RideOfferSheet, added to driver payout (no commission) |
 | 25b | Multi-stop rides (max 2 stops) | YES (`ride/[id]/stops`) | YES | YES — BarikoiAutocomplete stop inputs (confirm-ride owns stops — L14; home's dead stop inputs deleted, H-3), multi-leg distance in estimate, driver stop list + complete button, WS payload includes stops |
@@ -190,7 +191,7 @@
 
 ## 3. Admin
 
-> Web-only panel. 33 .tsx files (32 screens + `_layout`), all wired. `monitoring.tsx` consolidates dispatch-log / ride-chat / driver-economics (3 tabs); `login.tsx` is the login screen (`index.tsx` = dashboard).
+> Web-only panel. 37 .tsx files (36 screens + `_layout`), all wired. `monitoring.tsx` consolidates dispatch-log / ride-chat / driver-economics (3 tabs); `login.tsx` is the login screen (`index.tsx` = dashboard). Phase F16 added: `fare-config`, `heat-monitor`, `pickup-analytics`, `trust-safety`.
 
 | SL | Feature | Backend | Frontend | Wiring |
 |----|---------|---------|----------|--------|
@@ -203,7 +204,7 @@
 | 7 | SOS alerts viewer + acknowledge + LIVE alerts | YES | YES | YES — F-15: `POST /internal/sos/alert` (utils-server) broadcasts `admin:sos` to connected admin sockets; `lib/adminSocket.ts` singleton (with teardown); screen prepends + id-dedupe + "New SOS alert" toast on top of fetch/ack flow |
 | 8 | SOS contacts management | YES | YES | YES |
 | 9 | Cancellation policies CRUD | YES | YES | YES |
-| 10 | Surge config (thresholds + history) | YES | YES | YES — surge-config.tsx |
+| 10 | ~~Surge config (thresholds + history)~~ | **REMOVED** | — | — | Surge fully removed. `lib/surge.ts`, `app/admin/surge-config.tsx`, `app/api/admin/surge-history+api.ts` deleted. Replaced by Fare Framework v1 heat engine (admin screens: fare-config, heat-monitor). |
 | 11 | Call packages CRUD | YES | YES | YES |
 | 12 | Pricing tiers editor | YES | YES | YES |
 | 13 | Zones CRUD (multi-activation) | YES | YES | YES — Z-5: no exclusive-activation sweep (multiple active zones), polygon validation (422 invalid_polygon), zone-cache invalidation on writes |
@@ -227,20 +228,25 @@
 | 31 | Fare disputes management (view, approve/reject refund) | YES (`admin/fare-disputes`) | YES | YES — status filter tabs + wallet credit, Operations group |
 | 32 | Zone P&L dashboard | YES (`admin/zone-pnl`) | YES | YES — per-zone profitability (zone-pnl.tsx) |
 | 33 | Rider intro configs | YES | YES | YES — rider-intro-configs.tsx (onboarding intro content) |
+| 34 | Fare config (Fare Framework v1) | YES (`PATCH /api/admin/config`) | YES | YES — fare-config.tsx; ~50 fare framework keys (pickup_fee_enabled, heat_*, dawdle_*, cold_drop_*, etc.) |
+| 35 | Heat monitor | YES (`GET /api/admin/heat-monitor`) | YES | YES — heat-monitor.tsx; real-time zone heat scores + history |
+| 36 | Pickup analytics | YES (`GET /api/admin/pickup-analytics`) | YES | YES — pickup-analytics.tsx; distance samples, true-up stats, dawdle rates |
+| 37 | Trust & safety (fraud flags) | YES (`GET/PATCH /api/admin/fraud-flags`) | YES | YES — trust-safety.tsx; fraud flag management (dawdle, off-platform, cancel-rate, heat manipulation) |
 
 ---
 
 ## 4. Backend Summary
 
 - **171 API route files** across `app/api/` — Plan 05 additions: `GET /api/sos/active`, `POST /api/sos/resolve`, `GET /api/driver/insurance`; earlier: `POST /api/sos/alert`, `POST /api/driver/vehicle-type-change`, `GET /api/driver/slider-config`, `GET /api/driver/hotspots` (never a `heatmap` route)
-- **85 tables, 29 enums** (migration 0042 — index-only: drops `zones_one_active`, adds `zones_active_idx`, unique `demand_forecasts (zone_id, forecast_hour)` + hour idx, `rides (zone_id, created_at)` idx; rollback SQL in header)
+- **~97 tables, ~32 enums** (Fare Framework v1 added 6 tables: zone_heat, zone_heat_history, pickup_distance_samples, fraud_flags, zone_recalibration_queue, cancel_surveys)
 - **Zone foundation (Plan 05 §8): DONE** — Z-1 ✓ (0042), Z-2/Z-3 ✓ (`lib/zone.ts` `getZoneForLocation`: multi-zone gated by fresh `zone_multi_active_enabled` read, smallest-polygon-first, 60s TTL cache + `invalidateZoneCache`, 503/422 semantics), Z-4 ✓ (`utils-server/index.ts` heartbeat stamps driver zone via `getZoneForLocation(lat, lng)` + 3-beat hysteresis), Z-5 ✓ (admin multi-activation), Z-6 ✓ (`lib/forecast.ts` hourly upserts), Z-7 ✓ (`scripts/zone-hygiene.ts` — Zone Gate PASS/FAIL), Z-8 ✓ (`scripts/zone-seed-pricing.ts` — BD defaults for all 8 vehicle types, reference-zone clone, `--zone`/`--force`/`--dry-run` flags, upsert). all 6 Plan-05 keys admin-settable via config API + UI; `zone_multi_active_enabled` seeded as false
-- **WebSocket server** (utils-server): heartbeat-gated call deduction, H3 indexing; scheduler now **34 jobs** — adds SOS auto-resolve (60s tick, 30-min cutoff, `sos:auto_resolved` push), scheduled-ride cutoff cancellation (past `dispatch_window_end`), demand-forecast writer, stalled-pending re-dispatch. Auto-redispatch on DRIVER cancel NOT implemented (stale matched rides get cancelled, nothing re-dispatches). Admin socket registry + `POST /internal/sos/alert` broadcast (F-15)
+- **WebSocket server** (utils-server): heartbeat-gated call deduction, H3 indexing; scheduler now **39 jobs** — adds SOS auto-resolve (60s tick, 30-min cutoff, `sos:auto_resolved` push), scheduled-ride cutoff cancellation (past `dispatch_window_end`), demand-forecast writer, stalled-pending re-dispatch, heat_backtest_correlation (job 37, weekly), dawdle detection (job 38), zone recalibration (job 39), response ladder (job 40), decline monitoring (job 41). Auto-redispatch on DRIVER cancel NOT implemented (stale matched rides get cancelled, nothing re-dispatches). Admin socket registry + `POST /internal/sos/alert` broadcast (F-15)
 - **SOS lifecycle**: insert `open` → creator-only `resolve` OR 30-min scheduler auto-resolve; SMS to `user_emergency_contacts` (best-effort + 1 retry; SOS-only hourly circuit breaker in `lib/dprelay.ts` — OTP unaffected); push to user + admin; 201 on new insert; dedupe = any-open-per-user/per-ride (cooldown config read but not time-applied)
 - **Cancellation**: `lib/cancellation.ts` (DB-driven policy tiers); cancel-preview full contract (`fee_bdt`/`free_until`/`server_now`/`policy`/`ride_status`/`reason_required`); atomic cancel (conditional UPDATE in tx, 409 loser) + fee event via `lib/paymentEvents.ts` in-tx
 - **Scheduling**: config-driven +30m/+7d bounds (`schedule_min_lead_minutes`/`schedule_max_lead_days`); estimate carries `quote_valid_until` (5 min); overlap-window semantics via `lib/scheduleUtils.ts` + `/api/ride/schedule/overlap`; book-for-other hardening (regex/self-phone/consent/5-per-hour SMS limit) pending, quote in schedule response pending
 - **Discount engine**: `lib/discountEngine.ts` (intro/promo/pass/wallet options — rider-SELECTABLE, pass-first precedence NOT enforced); staged promos via `lib/promoCache.ts` (in-memory 10-min TTL, single-instance documented); consumed + cleared only on ride-tx success
 - **platform_config**: `lib/platformConfig.ts` with 6 Plan-05 keys (`sos_cooldown_seconds`, `sos_auto_resolve_seconds`, `schedule_min_lead_minutes`, `schedule_max_lead_days`, `cancel_grace_period_seconds`, `zone_multi_active_enabled`), always fresh-read; all 6 admin-settable via `PATCH /api/admin/config` with range validation + UI toggle; `zone_multi_active_enabled` seeded as `false`
+- **Fare Framework v1 (Phase F16)**: Surge fully removed (no tables/columns/code/UI). Heat engine replaces surge: `zone_heat` + `zone_heat_history` tables, EWMA demand/supply scoring (0–1), heat tags (hot/neutral/cold), Lever 0 (baseline) / Lever 1 (live EWMA) / Lever 2 (cold-drop boost, temporary multiplier ~15 min decay) / Lever 3 (return-lead affinity, pickup zone matches recent cold drop zone). Pickup fee 3-state lifecycle: range (estimate at request) → firm (Barikoi route distance at accept) → trued (completion, 1.25× cap down, uncapped up). Gated by `pickup_fee_enabled` config. Fraud protocol: `fraud_flags` table + dawdle guard (inflated realized/firm ratio, rolling 30 charged pickups, zone-relative thresholds), off-platform detection, cancel-rate monitoring, heat manipulation detection. `cancel_surveys` for structured post-cancel feedback. `zone_recalibration_queue` for heat backtest adjustments. ~50 fare framework keys in `platform_config` (admin-editable via `PATCH /api/admin/config`). 4 new admin screens: `fare-config`, `heat-monitor`, `pickup-analytics`, `trust-safety`. New scheduler jobs: 37 (heat_backtest_correlation, weekly), 38 (dawdle detection), 39 (zone recalibration), 40 (response ladder), 41 (decline monitoring). New lib files: `pickupFee.ts`, `pickupQuote.ts`, `pickupTrueup.ts`, `fareFrameworkConfig.ts`. New utils-server files: `leadBilling.ts`, `dispatchChain.ts`, `coldDrop.ts`, `trace.ts`, `firmQuote.ts`, `barikoiRoute.ts`, `polyline.ts`, `offPlatform.ts`. `BARIKOI_API_KEY` now required in utils-server/.env.
 - **Push notifications**: Expo Push Service — ride:matched + scheduled reminders + admin broadcasts + `sos:auto_resolved` + cutoff notifications
 - **PortPos** unified payment gateway — purpose-tagged payment events (`ride` / `wallet_topup` / `driver_package` / `rider_pass`); `PaymentResultScreen` auto-returns via `ride://` scheme from hosted result page
 - **SMS** (dpRelay): OTP + book-for-others + SOS (scoped breaker) + phone normalization
@@ -252,12 +258,13 @@
 
 ## 5. Schema Summary
 
-**85 tables** (67 at migration 0028; growth through migration 0042 — 0042 is index-only, no new tables) including all additions:
+**~97 tables** (67 at migration 0028; growth through Fare Framework v1) including all additions:
 - P3: `surgeCurrent`, `surgeHistory`, `cancellationPolicies`
 - P4 Phase 2: `driverCommutePreferences`, `riderPasses`, `riderSubscriptions`, `rideExtraCharges`
 - P4 Phase 3: `taxRates`, `taxLedgers`, `dailyTaxSummaries`, `accountingAccounts`, `accountingEntries`, `accountingEntryLines`
 - Multi-Stop + Tip: `rideStops` + `rides.upfront_tip_bdt`
 - Trust & Quality: `lostItems`, `fareDisputes`, `driverBlocklists`, `ridePhotos`
+- Fare Framework v1: `zoneHeat`, `zoneHeatHistory`, `pickupDistanceSamples`, `fraudFlags`, `zoneRecalibrationQueue`, `cancelSurveys`
 - Column additions: `payment_events.purpose` + `pass_id`, `rides.reminder_sent` + `reminder_60_sent` + `wait_*` + `upfront_tip_bdt`, `notifications.idempotency_key`, `pricing.free_wait_minutes` + `wait_fee_per_minute_bdt`, `drivers.auto_accept_*`, `point_offers.points_required` + `reward_*`, `promo_codes.target_role` + `metric`
 - Migration 0042 (Zone Z-1): `DROP INDEX zones_one_active` + `zones_active_idx` + `demand_forecasts_zone_hour_idx` (unique) + `demand_forecasts_hour_idx` + `rides_zone_created_idx`
 - Post-migration: triggers (daily tax summary, account balance, commute updated_at) + seed data (4 tax rates + 14 chart of accounts) + GRANT statements
@@ -265,6 +272,27 @@
 ---
 
 ## 6. Fix Verification Logs
+
+### v17 Ride Fare Framework v1 (Phase F16 — verified 2026-08-25)
+| Feature | Status | Key detail |
+|---------|--------|------------|
+| Surge removal | DONE | All surge tables, columns, code, UI, and references fully removed. `lib/surge.ts`, `app/admin/surge-config.tsx`, `app/api/admin/surge-history+api.ts` deleted. |
+| Sequential dispatch + debit-on-offer | DONE | One outstanding offer per ride; lead debited at offer time (not fetch:confirm); every offered driver billed regardless of outcome. `utils-server/dispatchChain.ts` + `leadBilling.ts`. |
+| Ordering tiers | DONE | (1) new-driver protection, (2) cold-drop boost Lever 2 (~15 min decay), (3) return-lead affinity Lever 3, (4) commute bonus 1.1×. |
+| Auto-accept at offer step | DONE | Rating ≥ 4.8, radius gate, first-wins. Auto-accept drivers billed same 1 lead. |
+| Heat engine | DONE | `zone_heat` + `zone_heat_history` tables; EWMA demand/supply scoring (0–1); heat tags hot/neutral/cold; Lever 0/1/2/3. |
+| Pickup fee measurement (Stage 0) | DONE | `pickup_distance_samples` table; haversine×1.4 estimate at offer time; firm quote at accept (Barikoi route); true-up at completion (1.25× cap down, uncapped up). Gated by `pickup_fee_enabled`. |
+| Pickup fee charge (Stage 1) | GATED | Code complete; charge disabled until `pickup_fee_enabled` config set to true. |
+| Fraud protocol | DONE | `fraud_flags` table; dawdle guard (rolling 30 charged pickups, zone-relative thresholds); off-platform detection; cancel-rate monitoring; heat manipulation detection. |
+| Cancel surveys | DONE | `cancel_surveys` table; structured post-cancel feedback (reason_code, details, would_rebook). |
+| Zone recalibration queue | DONE | `zone_recalibration_queue` table; heat backtest adjustments via scheduler job 37. |
+| Fare framework config | DONE | ~50 keys in `platform_config`; all admin-editable via `PATCH /api/admin/config`. |
+| New admin screens | DONE | `fare-config`, `heat-monitor`, `pickup-analytics`, `trust-safety` — 4 new screens in `app/admin/`. |
+| New scheduler jobs | DONE | 37 (heat_backtest_correlation), 38 (dawdle), 39 (zone recal), 40 (response ladder), 41 (decline monitoring). |
+| New API routes | DONE | `POST /api/ride/[id]/pickup-move`, `POST /api/ride/[id]/cancel-survey`, `GET/PATCH /api/admin/fraud-flags`, `GET /api/admin/pickup-analytics`, `GET /api/admin/heat-monitor`, `GET /api/admin/zone-recalibration`. |
+| WS protocol updates | DONE | `ride:offer` carries `dropoff_zone` + `pickup_fee_estimate_bdt` + `lead_cost_calls` + `balance_after_calls`; new `lead:billed` outbound; `offer:lost` carries `reason`; `offer:accepted` reveals exact dropoff. |
+| BARIKOI_API_KEY (utils-server) | DONE | Now required in `utils-server/.env` for firm-quote routing in `barikoiRoute.ts`. |
+| Dispatch invariants (10) | DONE | All 10 invariants asserted by tests: single offer per ride, single deduction per (ride_id, driver_id), calls_remaining=0 excluded, daily-cap excluded, no duplicate offers, every offered driver deducted, declined/expired → next, rider cancel → abort, re-dispatch no re-bill, billing atomicity. |
 
 ### v14 Plans 01–04 polish + Plan 05 Waves 0–3 + Zone foundation (verified against working tree 2026-08-21)
 | Feature | Status | Key detail |
@@ -335,7 +363,7 @@ All P0 (3), P1 (16), P2-002B surge (8), P1-010 PortPos, orphan route deletion. V
 |---|-----------|--------|
 | 1 | Push Notification Service | **DONE** |
 | 2 | Driver Turn-by-Turn Navigation | **DONE** |
-| 3 | Surge Pricing Engine | **DONE** — full pipeline + admin config + rider banner |
+| 3 | ~~Surge Pricing Engine~~ | **REMOVED** — replaced by Fare Framework v1 heat engine (zone_heat, Lever 0/1/2/3, heat tags hot/neutral/cold). Surge tables, columns, code, and UI fully deleted. |
 | 4 | Admin Rider Management | **DONE** |
 | 5 | Cancellation Policy Engine | **DONE** — DB-driven + full preview contract + wallet deduction |
 | 6 | Book for Someone Else | **DONE** — toggle + API + tracking + driver banner + SMS |

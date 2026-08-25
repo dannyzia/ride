@@ -33,47 +33,6 @@ export function normalizeIntensities(values: number[]): number[] {
   return values.map((v) => (v > 0 ? (v - min) / span : 0));
 }
 
-/** One step of the surge threshold table: at this demand/supply ratio, use this multiplier. */
-export interface SurgeThreshold {
-  ratio: number;
-  multiplier: number;
-}
-
-/** Seeded into system_config when surge_thresholds is absent. */
-export const DEFAULT_SURGE_THRESHOLDS: SurgeThreshold[] = [
-  { ratio: 3, multiplier: 2.0 },
-  { ratio: 2, multiplier: 1.5 },
-  { ratio: 1.2, multiplier: 1.25 },
-];
-
-/**
- * Demand/supply ratio for surge: demand / max(supply, 1). A zone with demand
- * but zero online supply saturates to its raw demand count rather than
- * dividing by zero.
- */
-export function surgeRatio(demand: number, supply: number): number {
-  return demand / Math.max(supply, 1);
-}
-
-/**
- * Pick the surge multiplier for a demand/supply ratio from the threshold
- * table. Thresholds are evaluated highest-ratio-first; the first whose ratio
- * is STRICTLY exceeded (`ratio > t.ratio`) wins — so an exactly-3.0 ratio
- * gets the 1.5 tier, not 2.0. No threshold cleared → 1.0 (no surge).
- * Never mutates the input (the scheduler previously sorted the parsed config
- * in place).
- */
-export function pickSurgeMultiplier(
-  ratio: number,
-  thresholds: SurgeThreshold[] = DEFAULT_SURGE_THRESHOLDS,
-): number {
-  const sorted = [...thresholds].sort((a, b) => b.ratio - a.ratio);
-  for (const t of sorted) {
-    if (ratio > t.ratio) return t.multiplier;
-  }
-  return 1.0;
-}
-
 /**
  * Great-circle distance (km), full precision. Used for ranking (nearest
  * hotspot) — unlike lib/mapUtils' display-rounded haversineDistance. Kept
@@ -101,7 +60,6 @@ export interface HotspotPoint {
   intensity: number;
   /** Absolute demand/supply pressure 0..1 (drives demand-tier labels). */
   intensity_raw: number;
-  /** Live counts — let the client derive the surge multiplier locally. */
   demand_count: number;
   supply_count: number;
 }
@@ -123,21 +81,6 @@ export function nearestHotspot(
     }
   }
   return best;
-}
-
-/**
- * Surge multiplier for a zone's live counts, composed from the tested
- * surgeRatio + pickSurgeMultiplier (the same logic the scheduler runs).
- * >1 means surge is active for that zone. Uses DEFAULT_SURGE_THRESHOLDS —
- * the admin-edited surge_thresholds config can differ; the API's `multiplier`
- * field carries the scheduler's applied value if exact parity is needed.
- */
-export function hotspotSurgeMultiplier(
-  demand: number,
-  supply: number,
-  thresholds: SurgeThreshold[] = DEFAULT_SURGE_THRESHOLDS,
-): number {
-  return pickSurgeMultiplier(surgeRatio(demand, supply), thresholds);
 }
 
 export type DemandLevel = "low" | "medium" | "high";

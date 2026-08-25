@@ -11,12 +11,18 @@ import {
   users,
   drivers,
   subscriptions,
+  fraudFlags,
+  rides,
 } from "@/src/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte, inArray, sql } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { isConfigured } from "@/lib/portpos";
 import { initiatePortposPayment, createZeroAmountPaymentEvent } from "@/lib/paymentEvents";
 import { activateSubscription } from "@/lib/activateSubscription";
+import {
+  getFareFrameworkConfig,
+  parseConfigNumber,
+} from "@/lib/fareFrameworkConfig";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 
@@ -26,6 +32,54 @@ const purchaseSchema = z
     provider: z.enum(["portpos"]),
   })
   .strict();
+
+/**
+ * Package-purchase fraud gate: true when the driver has ANY fraud_flags row
+ * with status='blocked', OR their trailing-30-day proximity-cancel rate
+ * (driver-cancelled-within-200m ÷ (completed + driver-cancelled)) exceeds
+ * cancel_rate_package_gate_pct (config, percent — 30 means 30%).
+ * Strictly-greater comparison; a zero-ride denominator never blocks.
+ */
+async function checkPackageGate(driverId: string): Promise<boolean> {
+  const [blockedFlag] = await db
+    .select({ id: fraudFlags.id })
+    .from(fraudFlags)
+    .where(
+      and(
+        eq(fraudFlags.driver_id, driverId),
+        eq(fraudFlags.status, "blocked"),
+      ),
+    )
+    .limit(1);
+  if (blockedFlag) return true;
+
+  const cfg = await getFareFrameworkConfig(["cancel_rate_package_gate_pct"]);
+  const gatePct = parseConfigNumber(cfg.cancel_rate_package_gate_pct, 30);
+
+  const cutoff = new Date(Date.now() - 30 * 86_400_000);
+  const [counts] = await db
+    .select({
+      completed: sql<number>`SUM(CASE WHEN ${rides.status} = 'completed' THEN 1 ELSE 0 END)`,
+      driver_cancelled: sql<number>`SUM(CASE WHEN ${rides.status} = 'cancelled' AND ${rides.cancelled_by} = 'driver' THEN 1 ELSE 0 END)`,
+      proximity_cancels: sql<number>`SUM(CASE WHEN ${rides.status} = 'cancelled' AND ${rides.driver_cancel_within_200m} THEN 1 ELSE 0 END)`,
+    })
+    .from(rides)
+    .where(
+      and(
+        eq(rides.driver_id, driverId),
+        gte(rides.created_at, cutoff),
+        inArray(rides.status, ["completed", "cancelled"]),
+      ),
+    );
+
+  const completed = Number(counts?.completed ?? 0);
+  const driverCancelled = Number(counts?.driver_cancelled ?? 0);
+  const proximityCancels = Number(counts?.proximity_cancels ?? 0);
+  const denominator = completed + driverCancelled;
+  if (denominator <= 0) return false;
+
+  return proximityCancels / denominator > gatePct / 100;
+}
 
 export async function POST(request: Request) {
   try {
@@ -67,6 +121,23 @@ export async function POST(request: Request) {
         {
           error: "driver_status_invalid",
           message: "Driver must be active or temporary",
+        },
+        { status: 403 },
+      );
+    }
+
+    // ── Fare Framework fraud gate (Phase F/G) — pre-check before any
+    // purchase processing. Blocks drivers with an active 'blocked' fraud
+    // flag (dawdle/off-platform 3rd offense, admin review pending) or a
+    // trailing-30-day proximity-cancel rate above
+    // cancel_rate_package_gate_pct. Transaction-free reads.
+    const gateBlocked = await checkPackageGate(driver.id);
+    if (gateBlocked) {
+      return Response.json(
+        {
+          error: "package_gate_blocked",
+          message:
+            "Your account requires review before purchasing. Contact support.",
         },
         { status: 403 },
       );

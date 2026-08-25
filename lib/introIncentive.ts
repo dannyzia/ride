@@ -31,7 +31,7 @@ export async function getIntroConfig(zoneId: string) {
 export async function getIntroDiscount(
   riderId: string,
   nextRideNumber: number,
-  surgedTotalBdt: number,
+  fareTotalBdt: number,
   zoneId: string,
 ): Promise<DiscountOption | null> {
   const [config] = await db
@@ -68,7 +68,7 @@ export async function getIntroDiscount(
   if (dailySpent >= config.daily_cap_bdt) return null;
 
   const discountBdt = Math.round(
-    (surgedTotalBdt * config.discount_percent) / 100,
+    (fareTotalBdt * config.discount_percent) / 100,
   );
   const capped = config.max_discount_bdt
     ? Math.min(discountBdt, config.max_discount_bdt)

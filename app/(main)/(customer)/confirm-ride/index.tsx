@@ -13,7 +13,7 @@ import { useEffect, useState, Fragment } from "react";
 import { useRiderStore, FareEstimate, DiscountOption, DiscountType } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts, surge } from "@/theme/goRide";
+import { colors, fonts } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
@@ -29,11 +29,6 @@ const ConfirmRidePage = () => {
   const border = isDark ? colors.borderDark : colors.borderLight;
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const dividerBorder = isDark ? colors.borderDark : colors.borderLight;
-  // Surge notice palette — tokens in theme/goRide.ts (surge.*)
-  const surgeBg = isDark ? surge.bg.dark : surge.bg.light;
-  const surgeBorder = isDark ? surge.border.dark : surge.border.light;
-  const surgeTitle = isDark ? surge.title.dark : surge.title.light;
-  const surgeBody = isDark ? surge.body.dark : surge.body.light;
 
   const {
     userAddress,
@@ -450,6 +445,21 @@ const ConfirmRidePage = () => {
               </Text>
             </View>
           )}
+          {/* Pickup fee range (Phase H — replaces deleted surge banner area) */}
+          {(displayEstimate as unknown as Record<string, unknown>)?.pickup_fee_low_bdt != null &&
+           (displayEstimate as unknown as Record<string, unknown>)?.pickup_fee_high_bdt != null && (
+            <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: textSecondary }}>Pickup fee</Text>
+                {(displayEstimate as unknown as Record<string, unknown>)?.pickup_fee_range_low_confidence === true && (
+                  <Text style={{ color: colors.amber, fontSize: 11, marginTop: 2 }}>(estimated)</Text>
+                )}
+              </View>
+              <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
+                ৳{(((displayEstimate as unknown as Record<string, unknown>).pickup_fee_low_bdt as number) / 100).toFixed(0)}–{(((displayEstimate as unknown as Record<string, unknown>).pickup_fee_high_bdt as number) / 100).toFixed(0)}
+              </Text>
+            </View>
+          )}
           <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8 }}>
             <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>Total</Text>
             <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>
@@ -487,19 +497,6 @@ const ConfirmRidePage = () => {
             </Text>
           </View>
         </View>
-
-        {/* Surge notice */}
-        {displayEstimate?.fare_breakdown?.surge_multiplier != null &&
-          displayEstimate.fare_breakdown.surge_multiplier > 1.0 && (
-            <View style={{ backgroundColor: surgeBg, borderWidth: 1, borderColor: surgeBorder, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 16 }}>
-              <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: surgeTitle }}>
-                <Ionicons name="flash" size={14} color={surgeTitle} /> High Demand — {displayEstimate.fare_breakdown.surge_multiplier}× pricing active
-              </Text>
-              <Text style={{ fontSize: 13, fontFamily: fonts.body, color: surgeBody }}>
-                Includes ৳{((displayEstimate.fare_breakdown?.surge_fee_bdt ?? 0) / 100).toFixed(0)} surge fee
-              </Text>
-            </View>
-          )}
 
         {/* Book for someone else */}
         <TouchableOpacity

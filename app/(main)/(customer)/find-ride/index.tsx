@@ -51,6 +51,7 @@ const VEHICLE_ICONS: Record<string, ImageSourcePropType> = {
   bike_standard: icons.cab,
   bike_plus: icons.cab,
   cng: icons.cab,
+  car_compact: icons.cab,
   car_economy: icons.cab,
   car_comfort: icons.cab,
   car_premium: icons.cab,

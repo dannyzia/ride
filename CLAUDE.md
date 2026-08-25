@@ -92,7 +92,7 @@ Read in this order:
 | **Payments** | Stripe | **PortPos unified gateway** (bKash/Nagad stubs kept inert) |
 | **Map** | Google Maps | **Barikoi Maps API** (via @maplibre/maplibre-react-native) |
 | **Driver monetization** | Per-ride fare | Subscription call-package wallet |
-| **Dispatch** | None | H3 hexagonal indexing + WebSocket batch broadcast |
+| **Dispatch** | None | H3 hexagonal indexing + WebSocket sequential dispatch (debit-on-offer) |
 | **Admin** | None | Web admin panel |
 | **Database** | Neon + Prisma | **Supabase PostgreSQL + Drizzle ORM** |
 | **Cloud Functions** | Firebase (planned) | **None** — all backend in Expo API routes + utils-server |
@@ -179,11 +179,11 @@ If you cannot confirm the six Section 20 gates are complete, **do not generate f
 - **UI**: NativeWind (TailwindCSS), Lottie, react-native-paper, GoRide design tokens in `theme/goRide.ts`
 - **State**: Zustand stores in `store/` (7 stores: useDriverStore, useRiderStore, useChatStore, useDriverStatusStore, usePackageStore, useCallLedgerStore, useDriverFlowStore)
 - **Map**: `@maplibre/maplibre-react-native` + Barikoi API (`barikoiapis`) via `utils/mapUtils.ts`
-- **Database**: Supabase PostgreSQL + Drizzle ORM (`src/db/schema.ts`) — 85 tables, 29 enums
+- **Database**: Supabase PostgreSQL + Drizzle ORM (`src/db/schema.ts`) — ~97 tables, ~32 enums
 - **Auth**: Supabase Auth phone OTP (`lib/auth.ts`, `lib/supabase.ts`, `lib/supabaseServer.ts`)
 - **Storage**: Supabase Storage (`driver-documents` bucket via `lib/imageToURL.ts`)
 - **Payments**: PortPos via WebView (`lib/portpos.ts`, `components/PaymentWebView.tsx`). Old `lib/bkash.ts` and `lib/nagad.ts` kept as inert fallback.
-- **WebSocket**: `ws` library in `utils-server/` (dispatch.ts, heartbeat.ts, h3Index.ts, scheduler.ts, compensationWorker.ts)
+- **WebSocket**: `ws` library in `utils-server/` (dispatch.ts, dispatchChain.ts, leadBilling.ts, h3Index.ts, scheduler.ts, compensationWorker.ts, coldDrop.ts, trace.ts, firmQuote.ts, barikoiRoute.ts, polyline.ts, offPlatform.ts)
 - **Geo**: H3 hex grid (`lib/h3.ts`) at resolution 9. Import only via `lib/h3.ts` and `utils-server/h3Index.ts`.
 - **SMS**: Supabase Auth handles OTP delivery natively. Android SMS_RETRIEVER_API via `react-native-otp-verify`.
 - **Validation**: Zod at every API route boundary (`lib/vehicleTypes.ts` exports `VEHICLE_TYPE_ZOD_ENUM`)
@@ -191,7 +191,7 @@ If you cannot confirm the six Section 20 gates are complete, **do not generate f
 
 ### Backend Services (implemented)
 1. **Expo API Routes** (`app/api/`) — Business logic, DB queries, rate limiting. Supabase JWT required (unless marked `[public]` or using `requireRole`).
-2. **Utils Server** (`utils-server/`) — WebSocket dispatch, heartbeat-gated call deduction, H3 index, scheduler, compensation worker. Separate package.json with own dependencies.
+2. **Utils Server** (`utils-server/`) — WebSocket dispatch, sequential chains with debit-on-offer lead billing (leadBilling.ts), H3 index, scheduler, compensation worker. Separate package.json with own dependencies.
 
 ### Auth Flow (implemented)
 ```
@@ -201,16 +201,21 @@ verify-token → GET /api/auth/verify-token → { exists, role } or { exists: fa
 register → POST /api/register → create user + optional driver record → role home
 ```
 
-### Dispatch Flow (implemented)
+### Dispatch Flow (Phase D — sequential dispatch, debit-on-offer)
 ```
 Rider requests ride → POST /api/ride/request → zone check + fare calc
-  → WebSocket server: H3 cell lookup → score candidates (distance 40% + rating 30% + acceptance 20% + availability 10%)
-  → Batch broadcast (k=2 cell ring, batch size 5, max 3 batches)
-  → Driver fetch:confirm → heartbeat deduction window (call_ledger write, unique on ride_id+driver_id)
+  → WebSocket server: H3 cell lookup → buildCandidateList (scored, ordered)
+  → Sequential chain (dispatchChain.ts): one offer at a time, NO chain cap
+  → Per offer: leadBilling debit (dispatch_offers + call_ledger in ONE tx)
+    → lead:billed to driver → ride:offer (drop ZONE + heat tag + pickup fee estimate)
+    → settle via offer:accept / offer:reject / TTL expiry / socket close
+  → Ordering tiers: new-driver protection → cold-drop boost (L2) → return-lead affinity (L3) → commute bonus (1.1×)
+  → Auto-accept at offer step (rating ≥ 4.8, radius gate, first-wins)
+  → Pool exhausted → no_drivers/alternatives (existing flow)
 ```
 
-### Database Schema (85 tables, 29 enums, implemented)
-See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema or `docs/Plan/05-DATA-MODEL.md` for the full, authoritative table/enum inventory — do not manually re-list all 85 tables here; this avoids the list drifting out of sync (this section previously understated the count as "22 tables" for that reason).
+### Database Schema (~97 tables, ~32 enums, implemented)
+See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema or `docs/Plan/05-DATA-MODEL.md` for the full, authoritative table/enum inventory — do not manually re-list all ~97 tables here; this avoids the list drifting out of sync (this section previously understated the count as "22 tables" for that reason).
 
 ### Seed Scripts (`scripts/`)
 `seed-system-config.js`, `seed-pricing.js`, `seed-packages.js`, `seed-platform-config.js`, `seed-admin.js`
@@ -221,6 +226,7 @@ See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema or `docs/Plan/
 2. utils-server (depends on current schema)
 3. EAS build + submit (last — references updated API)
 ```
+`INSTANCE_COUNT=1`. Not independently rollback-safe (fare framework changes + dispatch code are one release).
 
 ## Development Phases (current state)
 
@@ -231,7 +237,7 @@ See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema or `docs/Plan/
 | 3 | Supabase Auth Integration | ✅ Done | Replaced Firebase HMAC plan |
 | 4 | Auth Layer | ✅ Done | Screens, middleware, verify-token |
 | 5 | Payment System | ✅ Done | PortPos implemented |
-| 6 | Dispatch Engine | ✅ Done | WebSocket, H3, heartbeat, scheduler |
+| 6 | Dispatch Engine | ✅ Done | WebSocket, H3, sequential chains (dispatchChain.ts), leadBilling, scheduler |
 | 7 | Driver Flows | ✅ Done | Onboarding, home, offers, ledger |
 | 8 | Rider Flows | ✅ Done | Request, pricing, tracking, cancel |
 | 9 | Admin Panel (basic) | ✅ Done | Approval queue, packages, zones (subset) |
@@ -239,6 +245,7 @@ See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema or `docs/Plan/
 | 11 | Commission & Waiting Time | — | Post-MVP decision gate |
 | F7–F14 | Feature bundles (offer sheet, promos, incentives, preferences, SOS, wallets, referrals, vehicle models, face match, vehicle media) | ✅ Done | Underlying tables and APIs shipped |
 | **F15** | **Admin Dashboard Consolidation** | ✅ **Done** | Full web-only admin panel: 10 API items + 14 UI items built and tsc-clean. Includes `packages.vehicle_type` scoping (F15-API-10). See `docs/Plan/14-DEV-CHECKLIST.yaml` phase F15. |
+| **F16** | **Ride Fare Framework v1** | ✅ **Done** | Surge removed; sequential dispatch + debit-on-offer live; heat engine (zone_heat, Lever 0/1/2/3); pickup fee 3-state lifecycle (measurement live, charge gated by `pickup_fee_enabled`); fraud protocol (dawdle, off-platform, cancel-rate, heat manipulation); ~50 fare framework config keys; 4 new admin screens (fare-config, heat-monitor, pickup-analytics, trust-safety); new scheduler jobs 37–41. |
 
 **Note:** Phase 3 was originally "Firebase Cloud Functions" in planning documents, but was **replaced by Supabase Auth**. The `functions/` directory does not exist. All auth logic is in Expo API routes (`app/api/auth/`) and client screens (`app/(auth)/`).
 
@@ -254,10 +261,14 @@ See `docs/Plan/19-GLOSSARY.md` for complete glossary. Key terms:
 - **Call Ledger** — immutable append-only log of all call events
 - **Package** — admin-defined subscription product (calls + duration + price)
 - **Subscription** — driver's active instance of a purchased package
-- **Offer** — a ride request broadcast to a specific driver via WebSocket
-- **Deduction** — call_ledger event subtracting 1 call; heartbeat.ts only
-- **Fetch Confirm** — WebSocket message on first user interaction with offer card (triggers deduction window)
-- **Batch** — one round of offering to top-N drivers (default: 3 batches max)
+- **Offer** — a ride request sent to a specific driver via WebSocket (sequential chain: one outstanding offer per ride)
+- **Deduction** — call_ledger event subtracting 1 call (`reason='offer_sent'`); leadBilling.ts only
+- **Fetch Confirm** — telemetry ack on first interaction with the offer card (no money coupling — billing happened at offer time)
+- **Chain** — the sequential offer sequence for one ride (no cap on length; every offered driver is billed 1 lead)
+- **Pickup Fee** — driver compensation for travel to pickup; 3-state lifecycle: range (estimate) → firm (accept) → trued (completion). Gated by `pickup_fee_enabled` config. Not commissioned, not discountable.
+- **Heat Score** — zone-level demand/supply signal (0–1 blend of trailing baseline + live EWMA); tags: hot/neutral/cold. Replaces surge.
+- **Firm Quote** — pickup fee locked at accept time using Barikoi route distance; true-up at completion adjusts within 1.25× cap (downward uncapped).
+- **Dawdle Guard** — fraud detection for inflated realized/firm pickup distance ratios; rolling 30 charged pickups, zone-relative thresholds.
 - **Pro-rata Credit** — compensating credit for low utilisation due to platform demand shortage
 - **Zone** — polygon defining operational area (MVP: Dhaka)
 - **Daily Cap** — hidden max calls/day for unlimited packages (default: 200)
@@ -272,9 +283,10 @@ See `docs/Plan/19-GLOSSARY.md` for complete glossary. Key terms:
 See AGENTS.md for the complete rules reference. Key rules:
 
 - **Money**: All amounts in integer paisa (BDT), never floats. Divide by 100 only at UI display.
-- **Vehicle types**: 8 lowercase: `bike_basic`, `bike_standard`, `bike_plus`, `cng`, `car_economy`, `car_comfort`, `car_premium`, `car_xl`
-- **call_ledger writes**: `utils-server/heartbeat.ts` (deductions + AC-7 refund rows via `recordCallRefund`) and `lib/activateSubscription.ts` (initial_load, credit, expiry_writeoff)
-- **dispatch_offers writes**: `utils-server/dispatch.ts` (scoring/filter/auto-accept rows), `utils-server/index.ts` (dispatchRidePipeline `delivered` rows), `utils-server/heartbeat.ts` (`fetch_confirmed_at` stamps)
+- **Vehicle types**: 9 lowercase: `bike_basic`, `bike_standard`, `bike_plus`, `cng`, `car_compact`, `car_economy`, `car_comfort`, `car_premium`, `car_xl`
+- **call_ledger writes**: `utils-server/leadBilling.ts` (offer-time deduction rows, `reason='offer_sent'` — Phase D debit-on-offer; heartbeat.ts is deleted) and `lib/activateSubscription.ts` (initial_load, credit, expiry_writeoff). Refund rows no longer exist (AC-7 deleted, ruling 8 — every offer is billed regardless of outcome)
+- **dispatch_offers writes**: `utils-server/leadBilling.ts` is the sole writer of new rows (`delivered`, in one tx with the deduction); terminal-outcome updates in `utils-server/index.ts` (accept/reject/expired stamps, `fetch_confirmed_at` telemetry stamps) and `utils-server/scheduler.ts` job 20 (stale-offer crash-recovery expiry only, skip younger than `dispatch_offer_ttl_seconds + 5s`). `dispatch.ts` no longer writes (no 'filtered' rows — filtering audit is not persisted)
+- **platform_config writers**: admin-only via `PATCH /api/admin/config` PLUS one job-writer: `heat_backtest_correlation` via scheduler job 37 (weekly backtest)
 - **payment_events writes**: row creation + PortPos invoice initiation ONLY via `lib/paymentEvents.ts` (`initiatePortposPayment` — used by rider/wallet/topup, rider/passes, driver/wallet/topup, package/purchase); status transitions (`paid`/`failed`) in `lib/activateSubscription.ts`, `app/api/payment/portpos/callback+api.ts`, and `lib/paymentRepair.ts` (`repairPaymentEvent` — shared transactional repair invoked by the callback and `utils-server/compensationWorker.ts`)
 - **PortPos callback security**: the public callback must call `portposClient.verifyIPN()` (secret-bearing) and Zod-validate the invoice response before crediting wallets / activating subscriptions
 - **Single instance**: `INSTANCE_COUNT=1` required for WebSocket dispatch (no split-brain)
@@ -296,8 +308,8 @@ See AGENTS.md for the complete rules reference. Key rules:
 - **No console.log**: Use `lib/logger.ts` (`logger.info`, `logger.error`)
 - **Vehicle type filter**: Dispatch must filter by vehicle_type BEFORE H3 scoring, using lowercase enum values
 - **Packages vehicle-type scope**: `packages.vehicle_type` (nullable) gates visibility and purchase — NULL = universal, non-null = only matching `drivers.vehicle_type`. Enforced in `GET /api/package/list` (filtered) and `POST /api/package/purchase` (403 `vehicle_type_mismatch`)
-- **Daily cap check**: In dispatch candidate pool, not in heartbeat deduction path
-- **Batch exclusion**: Query `dispatch_offers` for excluded driver_ids before building each batch
+- **Daily cap check**: Primary gate in dispatch candidate pool; re-checked as defense-in-depth inside the leadBilling debit transaction
+- **Chain exclusion**: Query `dispatch_offers` for previously-offered driver_ids when building the candidate list (billed leads are never re-offered)
 - **All tables**: uuid PKs, created_at/updated_at timestamptz. Append-only tables (call_ledger, dispatch_offers, used_challenges, rate_limits) exempt from updated_at.
 - **Soft deletes**: No hard deletes. `deleted_at` columns exist on users, packages, promoCodes, documents, incentiveDefinitions, riderAddresses; rides use status transitions (`cancelled`/`expired`) and drivers use `status` (`suspended`/`rejected`) — those tables have no `deleted_at` column
 - **Commit format**: Conventional Commits with scope (auth, dispatch, payment, ledger, admin, schema, driver, rider)
@@ -316,7 +328,7 @@ See `docs/Plan/18-KNOWN-ISSUES.md` before fixing bugs. Key issues:
 
 - `npx jest --testPathPattern="name"` — single test
 - At phase gates run: `npx jest --watchAll=false` (full suite)
-- **Dispatch invariants** that must always pass: (1) single deduction per `(ride_id, driver_id)`, (2) deduction row has matching `dispatch_offers` row with `outcome='delivered'`, (3) `calls_remaining = 0` drivers never in candidate pool, (4) daily cap exceeded drivers never in candidate pool, (5) no driver receives same offer in consecutive batches.
+- **Dispatch invariants (Phase D — sequential dispatch, debit-on-offer)** that must always pass: (1) exactly one outstanding offer per ride at any time, (2) single deduction per `(ride_id, driver_id)`, (3) `calls_remaining = 0` drivers never in candidate pool, (4) daily cap exceeded drivers never in candidate pool, (5) no driver receives the same offer twice, (6) every offered driver has a `call_ledger` deduction row regardless of outcome, (7) declined/expired offer → next candidate offered, (8) rider cancel mid-chain → chain aborts, no further offers, no refunds, (9) re-dispatch → previously billed drivers not re-billed, (10) billing atomicity — `dispatch_offers` row + deduction commit in ONE transaction.
 - **Payment invariants**: (1) same idempotency key → exactly one `payment_events` row, (2) duplicate callback activates subscription exactly once, (3) failed activation → `compensation_queue` entry within 30 seconds.
 - Test templates: `docs/Plan/22-TEST-TEMPLATES.md`.
 

@@ -187,7 +187,7 @@ describe('getAvailableDiscounts — promo option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -210,7 +210,7 @@ describe('getAvailableDiscounts — promo option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -232,7 +232,7 @@ describe('getAvailableDiscounts — promo option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -254,7 +254,7 @@ describe('getAvailableDiscounts — promo option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 3_000,
+      fareTotalBdt: 3_000,
       zoneId: 'zone-1',
     });
 
@@ -275,7 +275,7 @@ describe('getAvailableDiscounts — promo option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 5_000,
+      fareTotalBdt: 5_000,
       zoneId: 'zone-1',
     });
 
@@ -290,7 +290,7 @@ describe('getAvailableDiscounts — promo option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -311,7 +311,7 @@ describe('getAvailableDiscounts — promo option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 1_000,
+      fareTotalBdt: 1_000,
       zoneId: 'zone-1',
     });
 
@@ -353,7 +353,7 @@ describe('getAvailableDiscounts — pass option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -373,7 +373,7 @@ describe('getAvailableDiscounts — pass option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -410,7 +410,7 @@ describe('getAvailableDiscounts — pass option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -447,7 +447,7 @@ describe('getAvailableDiscounts — pass option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 1_000,
+      fareTotalBdt: 1_000,
       zoneId: 'zone-1',
     });
 
@@ -471,7 +471,7 @@ describe('getAvailableDiscounts — wallet option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -491,7 +491,7 @@ describe('getAvailableDiscounts — wallet option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -511,7 +511,7 @@ describe('getAvailableDiscounts — wallet option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -530,7 +530,7 @@ describe('getAvailableDiscounts — wallet option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 1_000,
+      fareTotalBdt: 1_000,
       zoneId: 'zone-1',
     });
 
@@ -554,7 +554,7 @@ describe('getAvailableDiscounts — intro option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 0,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -569,7 +569,7 @@ describe('getAvailableDiscounts — intro option', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 0,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -626,7 +626,7 @@ describe('getAvailableDiscounts — combined scenarios', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 10_000,
+      fareTotalBdt: 10_000,
       zoneId: 'zone-1',
     });
 
@@ -652,7 +652,7 @@ describe('getAvailableDiscounts — combined scenarios', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 0,
-      surgedTotalBdt: 5_000,
+      fareTotalBdt: 5_000,
       zoneId: 'zone-1',
     });
 
@@ -682,7 +682,7 @@ describe('discount engine — integer arithmetic', () => {
     const options = await getAvailableDiscounts({
       riderId: 'rider-1',
       totalRides: 5,
-      surgedTotalBdt: 7_777,
+      fareTotalBdt: 7_777,
       zoneId: 'zone-1',
     });
 

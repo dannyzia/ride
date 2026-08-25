@@ -35,7 +35,12 @@ export async function GET(request: Request, { id }: { id: string }) {
     // M-31: the cancellation preview exposes fee state for a ride — it must
     // only be readable by the ride's rider.
     const [ride] = await db
-      .select({ user_id: rides.user_id, status: rides.status, created_at: rides.created_at })
+      .select({
+        user_id: rides.user_id,
+        status: rides.status,
+        created_at: rides.created_at,
+        pickup_requoted_at: rides.pickup_requoted_at,
+      })
       .from(rides)
       .where(eq(rides.id, id))
       .limit(1);
@@ -47,11 +52,22 @@ export async function GET(request: Request, { id }: { id: string }) {
     // Read grace period from platform_config (fresh read, never cached)
     const graceSeconds = await getPlan05Int('cancel_grace_period_seconds');
 
-    const { feeBdt, reason } = await evaluateCancellation(id, 'rider');
+    // Phase F pin-edit: a forced pickup requote resets the free-cancel
+    // window — grace anchors on GREATEST(created_at, pickup_requoted_at).
+    const rideCreated = new Date(ride.created_at);
+    const requotedAt = ride.pickup_requoted_at != null ? new Date(ride.pickup_requoted_at) : null;
+    const graceAnchor =
+      requotedAt && requotedAt.getTime() > rideCreated.getTime() ? requotedAt : rideCreated;
+
+    // Snapshot (not rideId) so the policy elapsed-time uses the same
+    // grace anchor as free_until below.
+    const { feeBdt, reason } = await evaluateCancellation(
+      { status: ride.status, created_at: graceAnchor },
+      'rider',
+    );
 
     const serverNow = new Date();
-    const rideCreated = new Date(ride.created_at);
-    const freeUntilMs = rideCreated.getTime() + graceSeconds * 1000;
+    const freeUntilMs = graceAnchor.getTime() + graceSeconds * 1000;
     const freeUntil = new Date(freeUntilMs);
 
     // Reason is required when a fee applies (fee > 0)

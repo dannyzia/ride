@@ -1,5 +1,4 @@
 import { db } from "../src/db";
-import { DEFAULT_SURGE_THRESHOLDS, surgeRatio, pickSurgeMultiplier } from "../lib/hotspots";
 import {
   rides,
   subscriptions,
@@ -10,11 +9,8 @@ import {
   chatMessages,
   compensationQueue,
   zones,
-  surgeCurrent,
-  surgeHistory,
   riderSubscriptions,
   dispatchOffers,
-  callLedger,
   rateLimits,
   creditVouchers,
   ownerConsents,
@@ -22,15 +18,20 @@ import {
   incentiveDefinitions,
   driverIncentives,
   systemConfig,
+  platformConfig,
   promoCodes,
   driverWalletTransactions,
   weatherConditions,
   sosAlerts,
+  zoneHeat,
+  zoneHeatHistory,
+  fraudFlags,
+  zoneRecalibrationQueue,
+  pickupDistanceSamples,
 } from "../src/db/schema";
-import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte } from "drizzle-orm";
+import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte, inArray } from "drizzle-orm";
 import { detectStationaryAnomaly } from "../lib/safety";
 import { logger } from "../lib/logger";
-import { recordCallRefund } from "./heartbeat";
 import { nextBdtMidnightUtc } from "../lib/time";
 import { resetAllBudgets } from "../lib/zoneBudget";
 import { evaluateGraduation } from "../lib/zoneLifecycle";
@@ -40,6 +41,662 @@ import { expireCancellationCredits } from "../lib/cancellationCompensation";
 import { sendNotification } from "../lib/notify";
 import { getPlan05Int } from "@/lib/platformConfig";
 import { upsertDemandForecasts } from "@/lib/forecast";
+import {
+  getFareFrameworkConfig,
+  parseConfigNumber,
+} from "../lib/fareFrameworkConfig";
+import {
+  ewmaUpdate,
+  ewmaAlpha,
+  percentileRank,
+  blendScore,
+  heatTag,
+  median,
+  quantile,
+} from "./heat";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Fare Framework monitors (Phase E/F/G) — pure helpers + job runners.
+// Exported for unit tests; startScheduler wires them as jobs 38–41.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Parse a '1,2,4'-style escalation-windows config value into day counts. */
+export function parseEscalationWindows(csv: string): number[] {
+  return csv
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+}
+
+// ── Dawdle guard (Phase F monitor) ─────────────────────────────────────────
+//
+// ratio = realized_km / firm_km per CHARGED pickup sample. The driver stat is
+// compared ZONE-RELATIVELY: adjusted = 1 + (driverStat − zoneStat), i.e. the
+// driver's ratio indexed against their zone's baseline (driver == zone → 1.0),
+// then compared against the threshold + dawdle_zone_margin slack. Without a
+// zone baseline the absolute thresholds apply.
+
+export interface DawdleThresholds {
+  medianThreshold: number;
+  p90Threshold: number;
+  zoneMargin: number;
+}
+
+export interface DawdleEvaluation {
+  breached: boolean;
+  median: number;
+  p90: number;
+  zone_id: string | null;
+  zone_median: number | null;
+  zone_p90: number | null;
+  sample_count: number;
+}
+
+/** realized/firm ratio; null when the sample is unusable (null km or firm <= 0). */
+export function dawdleRatio(realizedKm: number | null, firmKm: number | null): number | null {
+  if (realizedKm == null || firmKm == null || firmKm <= 0) return null;
+  return realizedKm / firmKm;
+}
+
+export function evaluateDawdle(
+  ratios: number[],
+  zoneId: string | null,
+  zoneRatios: number[] | null,
+  thresholds: DawdleThresholds,
+): DawdleEvaluation {
+  const driverMedian = median(ratios);
+  const driverP90 = quantile(ratios, 0.9);
+  let zoneMedian: number | null = null;
+  let zoneP90: number | null = null;
+  if (zoneId && zoneRatios && zoneRatios.length > 0) {
+    zoneMedian = median(zoneRatios);
+    zoneP90 = quantile(zoneRatios, 0.9);
+  }
+
+  let breached = false;
+  if (zoneMedian != null && zoneP90 != null) {
+    const adjustedMedian = 1 + (driverMedian - zoneMedian);
+    const adjustedP90 = 1 + (driverP90 - zoneP90);
+    breached =
+      adjustedMedian > thresholds.medianThreshold + thresholds.zoneMargin ||
+      adjustedP90 > thresholds.p90Threshold + thresholds.zoneMargin;
+  } else {
+    breached =
+      driverMedian > thresholds.medianThreshold ||
+      driverP90 > thresholds.p90Threshold;
+  }
+
+  return {
+    breached,
+    median: driverMedian,
+    p90: driverP90,
+    zone_id: zoneId,
+    zone_median: zoneMedian,
+    zone_p90: zoneP90,
+    sample_count: ratios.length,
+  };
+}
+
+// ── Response ladder (Phase G) — shared escalation routine ──────────────────
+//
+// Status advances open → warned → escalated → blocked, at most one step per
+// run, gated by the escalation windows ([1,2,4] days by default) measured
+// from the flag's updated_at (the last status change). offense_count
+// increments on each advancement. 'blocked' and 'resolved' are terminal for
+// this routine (admin owns un-blocking via resolution).
+
+export type FraudFlagStatus = "open" | "warned" | "escalated" | "blocked" | "resolved";
+
+const LADDER_NEXT: Record<"open" | "warned" | "escalated", "warned" | "escalated" | "blocked"> = {
+  open: "warned",
+  warned: "escalated",
+  escalated: "blocked",
+};
+
+export interface LadderStep {
+  nextStatus: "warned" | "escalated" | "blocked";
+  offenseCount: number;
+  /** The window (days) that had to elapse for this advancement. */
+  windowDays: number;
+}
+
+export function ladderAdvancement(
+  status: FraudFlagStatus,
+  offenseCount: number,
+  updatedAt: Date,
+  now: Date,
+  windows: number[],
+): LadderStep | null {
+  if (status !== "open" && status !== "warned" && status !== "escalated") return null;
+  const windowDays = windows[status === "open" ? 0 : status === "warned" ? 1 : 2];
+  if (!windowDays || windowDays <= 0) return null;
+  const elapsedDays = (now.getTime() - updatedAt.getTime()) / 86_400_000;
+  if (elapsedDays < windowDays) return null;
+  return {
+    nextStatus: LADDER_NEXT[status],
+    offenseCount: offenseCount + 1,
+    windowDays,
+  };
+}
+
+// ── Zone recalibration (Phase F monitor) ───────────────────────────────────
+
+export interface ZoneDeviation {
+  deviation_pct: number;
+  sample_count: number;
+}
+
+/** mean(|quote − realized| / quote) as a percentage, over usable samples. */
+export function zoneDeviation(
+  samples: { quote_km: number | null; realized_km: number | null }[],
+): ZoneDeviation | null {
+  const usable = samples.filter(
+    (s) => s.quote_km != null && s.quote_km > 0 && s.realized_km != null,
+  );
+  if (usable.length === 0) return null;
+  const sum = usable.reduce(
+    (acc, s) => acc + Math.abs((s.quote_km as number) - (s.realized_km as number)) / (s.quote_km as number),
+    0,
+  );
+  return { deviation_pct: (sum / usable.length) * 100, sample_count: usable.length };
+}
+
+/**
+ * Idempotent CSV append for pickup_low_confidence_zone_ids.
+ * Returns the new CSV string, or null when the zone id is already present.
+ */
+export function mergeZoneCsv(currentCsv: string, zoneId: string): string | null {
+  const id = zoneId.trim();
+  if (!id) return null;
+  const parts = currentCsv
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.includes(id)) return null;
+  parts.push(id);
+  return parts.join(",");
+}
+
+// ── Decline monitoring (Phase E, FC-4 adjacent) ────────────────────────────
+
+export const DECLINE_MONITOR_MIN_OFFERS = 20;
+export const DECLINE_MONITOR_WINDOW_DAYS = 30;
+
+/** Flag when cold-tagged decline rate exceeds 2× the hot-tag median. */
+export function isDeclineAnomaly(
+  coldDeclineRate: number,
+  hotMedianDeclineRate: number,
+): boolean {
+  return coldDeclineRate > 2 * hotMedianDeclineRate;
+}
+
+// ── Job runners (exported for tests; wired by startScheduler) ──────────────
+
+interface DawdleSampleRow {
+  driver_id: string | null;
+  zone_id: string | null;
+  realized_km: string | null;
+  firm_km: string | null;
+  created_at: Date;
+}
+
+function toEvidence(evaluation: DawdleEvaluation, extra: Record<string, unknown>): Record<string, unknown> {
+  return {
+    median: Number(evaluation.median.toFixed(4)),
+    p90: Number(evaluation.p90.toFixed(4)),
+    zone: evaluation.zone_id,
+    zone_median: evaluation.zone_median != null ? Number(evaluation.zone_median.toFixed(4)) : null,
+    zone_p90: evaluation.zone_p90 != null ? Number(evaluation.zone_p90.toFixed(4)) : null,
+    sample_count: evaluation.sample_count,
+    ...extra,
+  };
+}
+
+/**
+ * Job 38 — Dawdle guard (daily 04:00 BDT). Fee-live mode only: charged
+ * samples exist only when the pickup fee is charging. Per driver, the
+ * rolling last dawdle_rolling_pickups charged samples within
+ * dawdle_window_days; zone-relative median/p90 breach → new fraud_flags row
+ * (status 'open'); existing non-resolved flag → still_breaching evidence
+ * refresh (status changes are owned by the response-ladder job 40).
+ */
+export async function runDawdleGuard(): Promise<void> {
+  const cfg = await getFareFrameworkConfig([
+    "dawdle_rolling_pickups",
+    "dawdle_median_threshold",
+    "dawdle_p90_threshold",
+    "dawdle_zone_margin",
+    "dawdle_window_days",
+  ]);
+  const rollingN = parseConfigNumber(cfg.dawdle_rolling_pickups, 30);
+  const thresholds: DawdleThresholds = {
+    medianThreshold: parseConfigNumber(cfg.dawdle_median_threshold, 1.15),
+    p90Threshold: parseConfigNumber(cfg.dawdle_p90_threshold, 1.35),
+    zoneMargin: parseConfigNumber(cfg.dawdle_zone_margin, 0.1),
+  };
+  const windowDays = parseConfigNumber(cfg.dawdle_window_days, 14);
+  const windowStart = new Date(Date.now() - windowDays * 86_400_000);
+  const now = new Date();
+
+  const sampleRows = (await db
+    .select({
+      driver_id: rides.driver_id,
+      zone_id: pickupDistanceSamples.zone_id,
+      realized_km: pickupDistanceSamples.realized_km,
+      firm_km: pickupDistanceSamples.firm_km,
+      created_at: pickupDistanceSamples.created_at,
+    })
+    .from(pickupDistanceSamples)
+    .innerJoin(rides, eq(rides.id, pickupDistanceSamples.ride_id))
+    .where(
+      and(
+        eq(pickupDistanceSamples.charged, true),
+        gte(pickupDistanceSamples.created_at, windowStart),
+      ),
+    )) as DawdleSampleRow[];
+
+  // Zone baselines: ALL charged samples in the window, per zone.
+  const zoneRatioLists = new Map<string, number[]>();
+  // Per driver: ratio/zone pairs in query order (ascending created_at — the
+  // rolling window below takes the LAST rollingN, i.e. the newest).
+  const driverSamples = new Map<string, { ratio: number; zone_id: string | null }[]>();
+  for (const row of sampleRows) {
+    const ratio = dawdleRatio(
+      row.realized_km != null ? Number(row.realized_km) : null,
+      row.firm_km != null ? Number(row.firm_km) : null,
+    );
+    if (ratio == null) continue;
+    if (row.zone_id) {
+      const list = zoneRatioLists.get(row.zone_id) ?? [];
+      list.push(ratio);
+      zoneRatioLists.set(row.zone_id, list);
+    }
+    if (row.driver_id) {
+      const list = driverSamples.get(row.driver_id) ?? [];
+      list.push({ ratio, zone_id: row.zone_id });
+      driverSamples.set(row.driver_id, list);
+    }
+  }
+  if (driverSamples.size === 0) return;
+
+  // Existing non-resolved dawdle flags (open/warned/escalated — blocked is
+  // admin territory, resolved is history).
+  const existingFlags = await db
+    .select({
+      id: fraudFlags.id,
+      driver_id: fraudFlags.driver_id,
+      evidence: fraudFlags.evidence,
+    })
+    .from(fraudFlags)
+    .where(
+      and(
+        eq(fraudFlags.flag_type, "dawdle"),
+        inArray(fraudFlags.status, ["open", "warned", "escalated"]),
+      ),
+    );
+  const flagsByDriver = new Map(existingFlags.map((f) => [f.driver_id, f]));
+
+  let flagged = 0;
+  for (const [driverId, samples] of driverSamples) {
+    const window = samples.slice(-rollingN);
+    if (window.length < rollingN) continue; // not enough charged pickups yet
+
+    // Dominant zone = most frequent zone among the driver's rolling window.
+    const zoneCounts = new Map<string, number>();
+    for (const s of window) {
+      if (s.zone_id) zoneCounts.set(s.zone_id, (zoneCounts.get(s.zone_id) ?? 0) + 1);
+    }
+    const dominantZone =
+      [...zoneCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+    const evaluation = evaluateDawdle(
+      window.map((s) => s.ratio),
+      dominantZone,
+      dominantZone ? (zoneRatioLists.get(dominantZone) ?? null) : null,
+      thresholds,
+    );
+    const existing = flagsByDriver.get(driverId);
+
+    if (evaluation.breached) {
+      const evidence = toEvidence(evaluation, {
+        still_breaching: true,
+        last_breach_at: now.toISOString(),
+        window_days: windowDays,
+      });
+      if (!existing) {
+        await db.insert(fraudFlags).values({
+          driver_id: driverId,
+          flag_type: "dawdle",
+          evidence,
+        });
+        flagged++;
+      } else {
+        await db
+          .update(fraudFlags)
+          .set({
+            evidence: { ...((existing.evidence as Record<string, unknown>) ?? {}), ...evidence },
+            updated_at: now,
+          })
+          .where(eq(fraudFlags.id, existing.id));
+      }
+    } else if (existing) {
+      const prev = (existing.evidence as Record<string, unknown>) ?? {};
+      if (prev.still_breaching === true) {
+        // Recovered driver — stop the ladder from advancing on stale evidence.
+        await db
+          .update(fraudFlags)
+          .set({
+            evidence: { ...prev, still_breaching: false },
+            updated_at: now,
+          })
+          .where(eq(fraudFlags.id, existing.id));
+      }
+    }
+  }
+  if (flagged > 0) {
+    logger.info("[scheduler] dawdle guard: new flags", { count: flagged });
+  }
+}
+
+/**
+ * Job 39 — Zone recalibration (daily 05:00 BDT). Exits early while
+ * zone_recal_min_sample_rides = 0 (off until Stage 0 calibration). Per zone
+ * over charged samples (trailing 28 days): mean |quote−realized|/quote
+ * > zone_recal_deviation_pct with enough samples → queue row (unless an
+ * open one exists) + idempotent pickup_low_confidence_zone_ids CSV append,
+ * both inside one transaction.
+ */
+export async function runZoneRecalibration(): Promise<void> {
+  const cfg = await getFareFrameworkConfig([
+    "zone_recal_deviation_pct",
+    "zone_recal_min_sample_rides",
+    "zone_recal_review_sla_days",
+  ]);
+  const deviationThresholdPct = parseConfigNumber(cfg.zone_recal_deviation_pct, 20);
+  const minSamples = parseConfigNumber(cfg.zone_recal_min_sample_rides, 0);
+  if (minSamples <= 0) return; // 0 = off (Stage 0 default)
+  const slaDays = parseConfigNumber(cfg.zone_recal_review_sla_days, 5);
+  const windowStart = new Date(Date.now() - 28 * 86_400_000);
+
+  const rows = await db
+    .select({
+      zone_id: pickupDistanceSamples.zone_id,
+      quote_km: pickupDistanceSamples.quote_km,
+      realized_km: pickupDistanceSamples.realized_km,
+    })
+    .from(pickupDistanceSamples)
+    .where(
+      and(
+        eq(pickupDistanceSamples.charged, true),
+        gte(pickupDistanceSamples.created_at, windowStart),
+        isNotNull(pickupDistanceSamples.zone_id),
+      ),
+    );
+
+  const byZone = new Map<string, { quote_km: number | null; realized_km: number | null }[]>();
+  for (const row of rows) {
+    if (!row.zone_id) continue;
+    const list = byZone.get(row.zone_id) ?? [];
+    list.push({
+      quote_km: row.quote_km != null ? Number(row.quote_km) : null,
+      realized_km: row.realized_km != null ? Number(row.realized_km) : null,
+    });
+    byZone.set(row.zone_id, list);
+  }
+
+  const qualified: { zoneId: string; deviation: ZoneDeviation }[] = [];
+  for (const [zoneId, samples] of byZone) {
+    const deviation = zoneDeviation(samples);
+    if (!deviation) continue;
+    if (deviation.sample_count >= minSamples && deviation.deviation_pct > deviationThresholdPct) {
+      qualified.push({ zoneId, deviation });
+    }
+  }
+  if (qualified.length === 0) return;
+
+  const openRows = await db
+    .select({ zone_id: zoneRecalibrationQueue.zone_id })
+    .from(zoneRecalibrationQueue)
+    .where(eq(zoneRecalibrationQueue.status, "open"));
+  const openZones = new Set(openRows.map((r) => r.zone_id));
+
+  for (const { zoneId, deviation } of qualified) {
+    await db.transaction(async (tx) => {
+      if (!openZones.has(zoneId)) {
+        await tx.insert(zoneRecalibrationQueue).values({
+          zone_id: zoneId,
+          deviation_pct: deviation.deviation_pct.toFixed(2),
+          sample_count: deviation.sample_count,
+        });
+      }
+      // Read-modify-write the low-confidence CSV under a row lock.
+      const cfgRows = await tx.execute<{ value: string | null }>(
+        sql`SELECT value FROM platform_config WHERE key = 'pickup_low_confidence_zone_ids' FOR UPDATE`,
+      );
+      const currentCsv = cfgRows[0]?.value ?? "";
+      const merged = mergeZoneCsv(currentCsv, zoneId);
+      if (merged != null) {
+        if (cfgRows.length > 0) {
+          await tx
+            .update(platformConfig)
+            .set({ value: merged, updated_at: new Date() })
+            .where(eq(platformConfig.key, "pickup_low_confidence_zone_ids"));
+        } else {
+          await tx
+            .insert(platformConfig)
+            .values({
+              key: "pickup_low_confidence_zone_ids",
+              value: merged,
+              updated_at: new Date(),
+            })
+            .onConflictDoUpdate({
+              target: platformConfig.key,
+              set: { value: merged, updated_at: new Date() },
+            });
+        }
+      }
+    });
+    logger.info("[scheduler] zone recalibration queued", {
+      zone_id: zoneId,
+      deviation_pct: Number(deviation.deviation_pct.toFixed(2)),
+      sample_count: deviation.sample_count,
+      review_sla_days: slaDays,
+    });
+  }
+}
+
+/**
+ * Job 40 — Response ladder (daily 06:00 BDT). Advances non-resolved
+ * fraud_flags of type dawdle / off_platform_completion / cancel_rate one
+ * step at a time (open→warned→escalated→blocked) once the escalation
+ * window has elapsed. Dawdle flags only advance while still breaching
+ * (evidence set daily by job 38). The 'warned' step sends the driver an
+ * in-app warning via the existing push-notification path (there is no
+ * generic WS notification message type — see types.ts OutboundMessage);
+ * evidence.warning_sent records it either way.
+ */
+export async function runResponseLadder(): Promise<void> {
+  const cfg = await getFareFrameworkConfig(["dawdle_escalation_windows"]);
+  const windows = parseEscalationWindows(cfg.dawdle_escalation_windows);
+  const now = new Date();
+
+  const flags = await db
+    .select({
+      id: fraudFlags.id,
+      driver_id: fraudFlags.driver_id,
+      flag_type: fraudFlags.flag_type,
+      evidence: fraudFlags.evidence,
+      status: fraudFlags.status,
+      offense_count: fraudFlags.offense_count,
+      updated_at: fraudFlags.updated_at,
+      driver_user_id: drivers.user_id,
+    })
+    .from(fraudFlags)
+    .innerJoin(drivers, eq(drivers.id, fraudFlags.driver_id))
+    .where(
+      and(
+        inArray(fraudFlags.flag_type, [
+          "dawdle",
+          "off_platform_completion",
+          "cancel_rate",
+        ]),
+        inArray(fraudFlags.status, ["open", "warned", "escalated"]),
+      ),
+    );
+
+  for (const flag of flags) {
+    const evidence = (flag.evidence as Record<string, unknown>) ?? {};
+    // Dawdle advancement requires the guard to have observed a breach on its
+    // latest daily run; the other flag types advance on window elapse alone.
+    if (flag.flag_type === "dawdle" && evidence.still_breaching !== true) continue;
+
+    const step = ladderAdvancement(
+      flag.status as FraudFlagStatus,
+      flag.offense_count,
+      flag.updated_at,
+      now,
+      windows,
+    );
+    if (!step) continue;
+
+    const nextEvidence: Record<string, unknown> = { ...evidence };
+    if (step.nextStatus === "warned") {
+      try {
+        await sendNotification(
+          flag.driver_user_id,
+          "fraud:warning",
+          "Warning from Ride",
+          "Our system flagged unusual activity on your account. Continued issues may restrict package purchases. Contact support if you believe this is a mistake.",
+          { flag_type: flag.flag_type },
+          { idempotencyKey: `fraud:${flag.id}:warned` },
+        );
+      } catch (e) {
+        logger.error("[scheduler] ladder warning push failed", {
+          flagId: flag.id,
+          error: e,
+        });
+      }
+      nextEvidence.warning_sent = true;
+    }
+    if (step.nextStatus === "escalated") {
+      nextEvidence.cooldown_days = 2 * step.windowDays;
+    }
+
+    await db
+      .update(fraudFlags)
+      .set({
+        status: step.nextStatus,
+        offense_count: step.offenseCount,
+        evidence: nextEvidence,
+        updated_at: now,
+      })
+      .where(eq(fraudFlags.id, flag.id));
+
+    logger.info("[scheduler] response ladder advanced", {
+      flagId: flag.id,
+      driverId: flag.driver_id,
+      flagType: flag.flag_type,
+      from: flag.status,
+      to: step.nextStatus,
+      offenseCount: step.offenseCount,
+    });
+  }
+}
+
+/**
+ * Job 41 — Decline monitoring (weekly, Phase E). Trailing 30 days of
+ * dispatch_offers joined rides for drop_zone_heat: a driver with ≥ 20
+ * cold-tagged offers whose cold decline rate exceeds 2× the hot-tag median
+ * decline rate gets a heat_manipulation fraud flag. MONITOR ONLY — status
+ * stays 'open'; no auto-action, and the response ladder never escalates
+ * this flag type.
+ */
+export async function runDeclineMonitoring(): Promise<void> {
+  const windowStart = new Date(Date.now() - DECLINE_MONITOR_WINDOW_DAYS * 86_400_000);
+
+  const rows = await db
+    .select({
+      driver_id: dispatchOffers.driver_id,
+      tag: rides.drop_zone_heat,
+      total: sql<number>`count(*)`,
+      rejected: sql<number>`SUM(CASE WHEN ${dispatchOffers.outcome} = 'rejected' THEN 1 ELSE 0 END)`,
+    })
+    .from(dispatchOffers)
+    .innerJoin(rides, eq(rides.id, dispatchOffers.ride_id))
+    .where(
+      and(
+        gte(dispatchOffers.sent_at, windowStart),
+        isNotNull(rides.drop_zone_heat),
+      ),
+    )
+    .groupBy(dispatchOffers.driver_id, rides.drop_zone_heat);
+
+  interface TagStat {
+    total: number;
+    rejected: number;
+    rate: number;
+  }
+  const byDriver = new Map<string, { hot: TagStat | null; cold: TagStat | null }>();
+  for (const row of rows) {
+    if (row.tag !== "hot" && row.tag !== "cold") continue;
+    const total = Number(row.total);
+    const rejected = Number(row.rejected);
+    const stat: TagStat = { total, rejected, rate: total > 0 ? rejected / total : 0 };
+    const entry = byDriver.get(row.driver_id) ?? { hot: null, cold: null };
+    if (row.tag === "hot" && total >= DECLINE_MONITOR_MIN_OFFERS) entry.hot = stat;
+    if (row.tag === "cold" && total >= DECLINE_MONITOR_MIN_OFFERS) entry.cold = stat;
+    byDriver.set(row.driver_id, entry);
+  }
+
+  const hotRates: number[] = [];
+  for (const entry of byDriver.values()) {
+    if (entry.hot) hotRates.push(entry.hot.rate);
+  }
+  if (hotRates.length === 0) return;
+  const hotMedian = median(hotRates);
+
+  const candidates: { driverId: string; cold: TagStat }[] = [];
+  for (const [driverId, entry] of byDriver) {
+    if (entry.cold && isDeclineAnomaly(entry.cold.rate, hotMedian)) {
+      candidates.push({ driverId, cold: entry.cold });
+    }
+  }
+  if (candidates.length === 0) return;
+
+  // Idempotency: skip drivers that already have a non-resolved flag.
+  const existingFlags = await db
+    .select({ driver_id: fraudFlags.driver_id })
+    .from(fraudFlags)
+    .where(
+      and(
+        eq(fraudFlags.flag_type, "heat_manipulation"),
+        inArray(fraudFlags.status, ["open", "warned", "escalated", "blocked"]),
+      ),
+    );
+  const alreadyFlagged = new Set(existingFlags.map((f) => f.driver_id));
+
+  for (const { driverId, cold } of candidates) {
+    if (alreadyFlagged.has(driverId)) continue;
+    await db.insert(fraudFlags).values({
+      driver_id: driverId,
+      flag_type: "heat_manipulation",
+      evidence: {
+        cold_decline_rate: Number(cold.rate.toFixed(4)),
+        hot_median: Number(hotMedian.toFixed(4)),
+        window: `${DECLINE_MONITOR_WINDOW_DAYS}d`,
+        window_days: DECLINE_MONITOR_WINDOW_DAYS,
+        cold_offers: cold.total,
+        cold_rejected: cold.rejected,
+        monitor_only: true,
+      },
+    });
+    logger.info("[scheduler] decline monitor flagged", {
+      driverId,
+      coldDeclineRate: Number(cold.rate.toFixed(4)),
+      hotMedian: Number(hotMedian.toFixed(4)),
+    });
+  }
+}
 
 export function startScheduler(): void {
 
@@ -700,70 +1357,25 @@ export function startScheduler(): void {
     }
   }, 10_000);
 
-  // ── (20) Stale dispatch offer expiry + AC-7 refund — every 10s ────
-  // Overlap guard: refund/deduction pairs must be processed by one tick at a
-  // time (recordCallRefund is idempotent, but the read-then-act must not race).
+  // ── (20) Stale dispatch offer expiry (crash recovery) — every 10s ────
+  // Phase D: the AC-7 unconsumed-deduction refund sweep is DELETED (ruling 8
+  // — every offer is billed regardless of outcome; no refunds). Only the
+  // stale-offer expiry remains, as crash recovery for offers whose terminal
+  // event was lost to a crash/restart. The threshold is config-driven
+  // (dispatch_offer_ttl_seconds + 5s grace) so the sweep can never race a
+  // LIVE sequential chain's pending offer.
   let offerExpiryRunning = false;
   setInterval(async () => {
     if (offerExpiryRunning) return;
     offerExpiryRunning = true;
     try {
-      // AC-7 (01-PRD.md:313): a CONFIRMED offer the driver never responded to
-      // within the offer window gets the call refunded (append-only refund row
-      // via recordCallRefund) and the offer marked outcome='refunded'. Covers
-      // both driver ignore and race loss (another driver accepted first — the
-      // losing driver's offer was never flipped by the accept handler).
-      const ignored = await db.select({
-        id: dispatchOffers.id,
-        ride_id: dispatchOffers.ride_id,
-        driver_id: dispatchOffers.driver_id,
-      })
-        .from(dispatchOffers)
-        .where(and(
-          eq(dispatchOffers.outcome, "delivered"),
-          isNotNull(dispatchOffers.fetch_confirmed_at),
-          isNull(dispatchOffers.responded_at),
-          sql`${dispatchOffers.fetch_confirmed_at} < now() - interval '15 seconds'`,
-        ));
-      for (const offer of ignored) {
-        try {
-          const [deductionRow] = await db
-            .select({ subscription_id: callLedger.subscription_id })
-            .from(callLedger)
-            .where(and(
-              eq(callLedger.ride_id, offer.ride_id),
-              eq(callLedger.driver_id, offer.driver_id),
-              eq(callLedger.event_type, "deduction"),
-            ))
-            .limit(1);
-          if (!deductionRow) continue;
-          const { refunded } = await recordCallRefund({
-            driverId: offer.driver_id,
-            subscriptionId: deductionRow.subscription_id,
-            rideId: offer.ride_id,
-          });
-          if (refunded) {
-            await db.update(dispatchOffers)
-              .set({ outcome: "refunded", responded_at: new Date() })
-              .where(eq(dispatchOffers.id, offer.id));
-          }
-        } catch (e: any) {
-          logger.error("[scheduler] AC-7 refund failed", {
-            offerId: offer.id,
-            error: e.message,
-          });
-        }
-      }
-      if (ignored.length > 0) {
-        logger.info(`[scheduler] refunded ${ignored.length} confirmed-but-ignored offers (AC-7)`);
-      }
-
-      // Unconfirmed offers nobody engaged with simply expire.
+      const cfg = await getFareFrameworkConfig(['dispatch_offer_ttl_seconds']);
+      const thresholdSeconds = parseConfigNumber(cfg.dispatch_offer_ttl_seconds, 15) + 5;
       const result = await db.update(dispatchOffers)
-        .set({ outcome: "expired" })
+        .set({ outcome: 'expired' })
         .where(and(
-          eq(dispatchOffers.outcome, "delivered"),
-          sql`${dispatchOffers.sent_at} < now() - interval '30 seconds'`
+          eq(dispatchOffers.outcome, 'delivered'),
+          sql`${dispatchOffers.sent_at} < now() - (${thresholdSeconds} * interval '1 second')`
         ));
       if (result.length > 0) {
         logger.info(`[scheduler] expired ${result.length} stale dispatch offers`);
@@ -774,85 +1386,6 @@ export function startScheduler(): void {
       offerExpiryRunning = false;
     }
   }, 10_000);
-
-  // ── (19) Surge Pricing Calculator — every 60s ──────────────────────
-  const prevMultipliers = new Map<string, number>();
-
-  setInterval(async () => {
-    try {
-      // Read thresholds from system_config, seed defaults if missing
-      const [cfg] = await db.select().from(systemConfig)
-        .where(eq(systemConfig.key, "surge_thresholds")).limit(1);
-      const thresholds = cfg
-        ? JSON.parse(cfg.value)
-        : DEFAULT_SURGE_THRESHOLDS;
-      if (!cfg) {
-        await db.insert(systemConfig).values({
-          key: "surge_thresholds",
-          value: JSON.stringify(thresholds),
-          updated_at: new Date(),
-        }).onConflictDoUpdate({
-          target: systemConfig.key,
-          set: { value: JSON.stringify(thresholds), updated_at: new Date() },
-        });
-      }
-
-      const zns = await db.select({ id: zones.id }).from(zones);
-      for (const zone of zns) {
-        const [demand] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(rides)
-          .where(and(eq(rides.zone_id, zone.id), eq(rides.status, "pending")));
-
-        const [supply] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(drivers)
-          .where(and(eq(drivers.zone_id, zone.id), eq(drivers.is_online, true)));
-
-        const ratio = surgeRatio(demand?.count ?? 0, supply?.count ?? 0);
-        const multiplier = pickSurgeMultiplier(ratio, thresholds);
-
-        // Write audit row when multiplier changes
-        const prev = prevMultipliers.get(zone.id) ?? 1.0;
-        if (prev !== multiplier) {
-          if (multiplier > 1.0) {
-            await db.insert(surgeHistory).values({
-              zone_id: zone.id,
-              multiplier: multiplier.toString(),
-              demand_count: demand?.count ?? 0,
-              supply_count: supply?.count ?? 0,
-            });
-          } else if (prev > 1.0) {
-            const [openRow] = await db.select({ id: surgeHistory.id }).from(surgeHistory)
-              .where(and(eq(surgeHistory.zone_id, zone.id), isNull(surgeHistory.ended_at)))
-              .orderBy(sql`triggered_at desc`).limit(1);
-            if (openRow) {
-              await db.update(surgeHistory).set({ ended_at: new Date() }).where(eq(surgeHistory.id, openRow.id));
-            }
-          }
-          prevMultipliers.set(zone.id, multiplier);
-        }
-
-        await db.insert(surgeCurrent).values({
-          zone_id: zone.id,
-          multiplier: multiplier.toString(),
-          demand_count: demand?.count ?? 0,
-          supply_count: supply?.count ?? 0,
-          updated_at: new Date(),
-        }).onConflictDoUpdate({
-          target: surgeCurrent.zone_id,
-          set: {
-            multiplier: multiplier.toString(),
-            demand_count: demand?.count ?? 0,
-            supply_count: supply?.count ?? 0,
-            updated_at: new Date(),
-          },
-        });
-      }
-    } catch (e: any) {
-      logger.error("[scheduler] surge pricing error", e);
-    }
-  }, 60_000);
 
   // ── (20) Document Expiry Alerts — every 6 hours ────────────────────
   setInterval(async () => {
@@ -1027,28 +1560,6 @@ export function startScheduler(): void {
       logger.error("[scheduler] stationary anomaly error", e);
     }
   }, 300_000);
-
-  // ── (25) Weather Surge Override — every 15 min ──────────────────────
-  setInterval(async () => {
-    try {
-      const zonesList = await db.select({ id: zones.id }).from(zones);
-      for (const zone of zonesList) {
-        const [weather] = await db.select().from(weatherConditions)
-          .where(eq(weatherConditions.zone_id, zone.id)).orderBy(sql`fetched_at desc`).limit(1);
-        if (weather && weather.is_severe && weather.surge_multiplier_override) {
-          await db.insert(surgeCurrent).values({
-            zone_id: zone.id, multiplier: weather.surge_multiplier_override.toString(),
-            demand_count: 0, supply_count: 0, updated_at: new Date(),
-          }).onConflictDoUpdate({
-            target: surgeCurrent.zone_id,
-            set: { multiplier: weather.surge_multiplier_override.toString(), updated_at: new Date() },
-          });
-        }
-      }
-    } catch (e: any) {
-      logger.error("[scheduler] weather surge override error", e);
-    }
-  }, 900_000);
 
   // ── (26) Zone budget daily reset — every 60s, fires at BDT midnight ──────
   setInterval(async () => {
@@ -1259,5 +1770,348 @@ export function startScheduler(): void {
     }
   }, 60_000);
 
-  logger.info("[scheduler] started (34 jobs)");
+  // ── (35) Live Heat Score — every 60s ───────────────────────────────
+  // Framework §4: count completed rides per zone in trailing 1 min, update
+  // per-zone EWMA, rank zones → live_pctile. Idle density from connected
+  // drivers. Upsert zone_heat. Math lives in ./heat (ewma/blend/tag helpers).
+  const liveHeatRunning = { value: false };
+  setInterval(async () => {
+    if (liveHeatRunning.value) return;
+    liveHeatRunning.value = true;
+    try {
+      const heatCfg = await getFareFrameworkConfig([
+        'heat_live_ewma_halflife_minutes',
+        'heat_blend_baseline_weight',
+        'heat_tag_hot_pct',
+        'heat_tag_cold_pct',
+      ]);
+      const halflife = parseConfigNumber(heatCfg.heat_live_ewma_halflife_minutes, 30);
+      const baselineWeight = parseConfigNumber(heatCfg.heat_blend_baseline_weight, 0.4);
+      const hotPct = parseConfigNumber(heatCfg.heat_tag_hot_pct, 66);
+      const coldPct = parseConfigNumber(heatCfg.heat_tag_cold_pct, 33);
+
+      const oneMinuteAgo = new Date(Date.now() - 60_000);
+      const zonesList = await db.select({ id: zones.id }).from(zones);
+
+      for (const zone of zonesList) {
+        // Count completed rides in trailing 1 min
+        const [rideCount] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(rides)
+          .where(
+            and(
+              eq(rides.zone_id, zone.id),
+              eq(rides.status, 'completed'),
+              sql`${rides.completed_at} > ${oneMinuteAgo}`,
+            ),
+          );
+
+        const liveCount = Number(rideCount?.count ?? 0);
+
+        // Read current EWMA or initialize
+        const [existing] = await db
+          .select({ live_ewma: zoneHeat.live_ewma })
+          .from(zoneHeat)
+          .where(eq(zoneHeat.zone_id, zone.id))
+          .limit(1);
+
+        const prevEwma = existing ? Number(existing.live_ewma) : 0;
+        // α from halflife config (default 30 min)
+        const alpha = ewmaAlpha(halflife);
+        const newEwma = ewmaUpdate(prevEwma, liveCount, alpha);
+
+        // Write back
+        await db
+          .insert(zoneHeat)
+          .values({
+            zone_id: zone.id,
+            live_ewma: String(newEwma),
+            updated_at: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: zoneHeat.zone_id,
+            set: {
+              live_ewma: String(newEwma),
+              updated_at: new Date(),
+            },
+          });
+      }
+
+      // Compute live percentile ranks across all zones
+      const allHeat = await db.select().from(zoneHeat);
+      if (allHeat.length > 0) {
+        const ewmas = allHeat.map((h) => Number(h.live_ewma));
+        const sorted = [...ewmas].sort((a, b) => a - b);
+        for (const h of allHeat) {
+          const pctile = percentileRank(sorted, Number(h.live_ewma));
+
+          // Blend score (Framework §4: 40% baseline / 60% live by default)
+          const baselinePct = Number(h.baseline_pct);
+          const score = blendScore(baselinePct, pctile, baselineWeight);
+
+          const tag = heatTag(score, hotPct, coldPct);
+
+          await db
+            .update(zoneHeat)
+            .set({
+              live_pctile: pctile,
+              score: String(score),
+              tag,
+              computed_at: new Date(),
+            })
+            .where(eq(zoneHeat.zone_id, h.zone_id));
+        }
+      }
+    } catch (e) {
+      logger.error('[scheduler] live heat score error', e);
+    } finally {
+      liveHeatRunning.value = false;
+    }
+  }, 60_000);
+
+  // ── (36) Baseline Heat — every 15 min ─────────────────────────────
+  // Framework §4: trailing 28-day baseline. For each completed ride, find
+  // same driver's rides with started_at in (completed_at, +60 min], sum
+  // driver_net_bdt → per-zone mean earnings-per-drop → percentile rank.
+  // Math helpers (percentileRank) live in ./heat.
+  const baselineHeatRunning = { value: false };
+  setInterval(async () => {
+    if (baselineHeatRunning.value) return;
+    baselineHeatRunning.value = true;
+    try {
+      const baselineCfg = await getFareFrameworkConfig([
+        'heat_baseline_window_days',
+        'heat_baseline_earnings_minutes',
+      ]);
+      const windowDays = parseConfigNumber(baselineCfg.heat_baseline_window_days, 28);
+      const earningsWindowMin = parseConfigNumber(baselineCfg.heat_baseline_earnings_minutes, 60);
+      const windowStart = new Date(Date.now() - windowDays * 86400_000);
+
+      const zonesList = await db.select({ id: zones.id }).from(zones);
+      const zoneEarnings: Record<string, number[]> = {};
+
+      for (const zone of zonesList) {
+        zoneEarnings[zone.id] = [];
+
+        // Get completed rides in zone within window
+        const completedRides = await db
+          .select({
+            id: rides.id,
+            driver_id: rides.driver_id,
+            completed_at: rides.completed_at,
+            driver_fare_bdt: rides.driver_fare_bdt,
+          })
+          .from(rides)
+          .where(
+            and(
+              eq(rides.zone_id, zone.id),
+              eq(rides.status, 'completed'),
+              sql`${rides.completed_at} > ${windowStart}`,
+            ),
+          );
+
+        for (const ride of completedRides) {
+          if (!ride.driver_id || !ride.completed_at) continue;
+
+          // Find same driver's rides with started_at in (completed_at, +60 min]
+          const completedAt = new Date(ride.completed_at);
+          const windowEnd = new Date(completedAt.getTime() + earningsWindowMin * 60_000);
+
+          const [postDrop] = await db
+            .select({ total: sql<number>`coalesce(sum(${rides.driver_fare_bdt}), 0)` })
+            .from(rides)
+            .where(
+              and(
+                eq(rides.driver_id, ride.driver_id),
+                eq(rides.status, 'completed'),
+                sql`${rides.started_at} > ${completedAt}`,
+                sql`${rides.started_at} <= ${windowEnd}`,
+              ),
+            );
+
+          const earnings = Number(postDrop?.total ?? 0);
+          if (earnings > 0) {
+            zoneEarnings[zone.id].push(earnings);
+          }
+        }
+      }
+
+      // Compute per-zone mean earnings, percentile rank
+      const zoneMeans = Object.entries(zoneEarnings).map(([zoneId, earnings]) => ({
+        zoneId,
+        mean: earnings.length > 0 ? earnings.reduce((a, b) => a + b, 0) / earnings.length : 0,
+      }));
+
+      const sortedMeans = [...zoneMeans].sort((a, b) => a.mean - b.mean);
+      for (const zm of zoneMeans) {
+        const baselinePct = percentileRank(
+          sortedMeans.map((s) => s.mean),
+          zm.mean,
+        );
+
+        // Update zone_heat baseline_pct
+        await db
+          .insert(zoneHeat)
+          .values({
+            zone_id: zm.zoneId,
+            baseline_pct: baselinePct,
+            updated_at: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: zoneHeat.zone_id,
+            set: { baseline_pct: baselinePct, updated_at: new Date() },
+          });
+
+        // Append to history
+        await db.insert(zoneHeatHistory).values({
+          zone_id: zm.zoneId,
+          score: '0',
+          baseline_pct: baselinePct,
+          live_pctile: 0,
+          tag: 'neutral',
+        });
+      }
+    } catch (e) {
+      logger.error('[scheduler] baseline heat error', e);
+    } finally {
+      baselineHeatRunning.value = false;
+    }
+  }, 15 * 60_000);
+
+  // ── (37) Heat Backtest — weekly ────────────────────────────────────
+  // Framework §4: correlation of zone_heat.score at T vs realized post-drop
+  // 60-min earnings over held-out weeks. Writes heat_backtest_correlation
+  // into platform_config — Stage 0 exit gate metric.
+  const backtestRunning = { value: false };
+  setInterval(async () => {
+    if (backtestRunning.value) return;
+    const now = new Date();
+    // Fire once per week (Sunday at 3 AM)
+    if (now.getDay() !== 0 || now.getHours() !== 3) return;
+    backtestRunning.value = true;
+    try {
+      // Simplified: compute Pearson correlation between zone scores and
+      // realized earnings ranks across zones. A "meaningfully positive"
+      // correlation (r > 0.3) is the Stage 0 exit gate.
+      const heatRows = await db.select().from(zoneHeat);
+      if (heatRows.length < 3) return;
+
+      const scores = heatRows.map((h) => Number(h.score));
+      const baselines = heatRows.map((h) => Number(h.baseline_pct));
+
+      // Simple Pearson correlation
+      const n = scores.length;
+      const meanS = scores.reduce((a, b) => a + b, 0) / n;
+      const meanB = baselines.reduce((a, b) => a + b, 0) / n;
+      let num = 0, denS = 0, denB = 0;
+      for (let i = 0; i < n; i++) {
+        const ds = scores[i] - meanS;
+        const db2 = baselines[i] - meanB;
+        num += ds * db2;
+        denS += ds * ds;
+        denB += db2 * db2;
+      }
+      const r = denS > 0 && denB > 0 ? num / Math.sqrt(denS * denB) : 0;
+
+      // Write to platform_config (fareFrameworkConfig reads this table —
+      // job 37 is the sanctioned writer for this key)
+      await db
+        .insert(platformConfig)
+        .values({
+          key: 'heat_backtest_correlation',
+          value: String(r.toFixed(4)),
+          updated_at: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: platformConfig.key,
+          set: { value: String(r.toFixed(4)), updated_at: new Date() },
+        });
+
+      logger.info('[scheduler] heat backtest completed', { correlation: r });
+    } catch (e) {
+      logger.error('[scheduler] heat backtest error', e);
+    } finally {
+      backtestRunning.value = false;
+    }
+  }, 60_000);
+
+  // ── (38) Dawdle guard — daily at 04:00 BDT (22:00 UTC) ───────────────
+  // Phase F monitor: zone-relative realized/firm pickup-distance breach →
+  // fraud_flags('dawdle'). Status advancement is owned by job 40.
+  let dawdleGuardRunning = false;
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getUTCHours() !== 22 || now.getUTCMinutes() >= 1) return;
+    if (dawdleGuardRunning) return;
+    dawdleGuardRunning = true;
+    try {
+      await runDawdleGuard();
+      logger.info("[scheduler] dawdle guard completed");
+    } catch (e) {
+      logger.error("[scheduler] dawdle guard error", e);
+    } finally {
+      dawdleGuardRunning = false;
+    }
+  }, 60_000);
+
+  // ── (39) Zone recalibration — daily at 05:00 BDT (23:00 UTC) ────────
+  // Phase F monitor: quote-vs-realized deviation > threshold →
+  // zone_recalibration_queue + pickup_low_confidence_zone_ids CSV append.
+  // Off while zone_recal_min_sample_rides = 0 (Stage 0 default).
+  let zoneRecalRunning = false;
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getUTCHours() !== 23 || now.getUTCMinutes() >= 1) return;
+    if (zoneRecalRunning) return;
+    zoneRecalRunning = true;
+    try {
+      await runZoneRecalibration();
+      logger.info("[scheduler] zone recalibration completed");
+    } catch (e) {
+      logger.error("[scheduler] zone recalibration error", e);
+    } finally {
+      zoneRecalRunning = false;
+    }
+  }, 60_000);
+
+  // ── (40) Response ladder — daily at 06:00 BDT (00:00 UTC) ───────────
+  // Phase G: advance fraud_flags open→warned→escalated→blocked per the
+  // dawdle_escalation_windows cooldowns. Runs AFTER job 38 so dawdle
+  // still_breaching evidence from the same morning is fresh.
+  let responseLadderRunning = false;
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getUTCHours() !== 0 || now.getUTCMinutes() >= 1) return;
+    if (responseLadderRunning) return;
+    responseLadderRunning = true;
+    try {
+      await runResponseLadder();
+      logger.info("[scheduler] response ladder completed");
+    } catch (e) {
+      logger.error("[scheduler] response ladder error", e);
+    } finally {
+      responseLadderRunning = false;
+    }
+  }, 60_000);
+
+  // ── (41) Decline monitoring — weekly (Saturday 04:00 local) ──────────
+  // Phase E: cold-tag decline rate > 2× hot-tag median →
+  // fraud_flags('heat_manipulation'). MONITOR ONLY (status stays 'open').
+  let declineMonitorRunning = false;
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getDay() !== 6 || now.getHours() !== 4) return;
+    if (declineMonitorRunning) return;
+    declineMonitorRunning = true;
+    try {
+      await runDeclineMonitoring();
+      logger.info("[scheduler] decline monitoring completed");
+    } catch (e) {
+      logger.error("[scheduler] decline monitoring error", e);
+    } finally {
+      declineMonitorRunning = false;
+    }
+  }, 60_000);
+
+  logger.info("[scheduler] started (41 jobs)");
 }

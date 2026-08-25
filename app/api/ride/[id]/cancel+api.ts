@@ -9,7 +9,13 @@ import { evaluateCancellation } from '@/lib/cancellation';
 import { recordCancellationFee } from '@/lib/accounting';
 import { createCancellationCreditInTx } from '@/lib/cancellationCompensation';
 import { createCancellationFeeEventInTx } from '@/lib/paymentEvents';
+import { haversineKm } from '@/lib/hotspots';
+import { sendNotification } from '@/lib/notify';
 import * as errors from '@/lib/errors';
+
+// Phase G: proximity-cancel threshold — driver cancelling within this
+// distance of the pickup pin is stamped for the cooldown/gate monitors.
+const PROXIMITY_CANCEL_THRESHOLD_M = 200;
 
 const CANCELLABLE_STATUSES = [
   'pending',
@@ -60,10 +66,45 @@ export async function POST(request: Request, { id }: { id: string }) {
     // debit — collected from future cashback). Never re-read the ride here:
     // the claim below flips it to 'cancelled', and re-reading would match no
     // policy and silently drop the fee.
+    // Phase F pin-edit: a forced pickup requote resets the free-cancel
+    // window — the grace anchor is GREATEST(created_at, pickup_requoted_at).
+    const rideCreated = new Date(ride.created_at);
+    const requotedAt = ride.pickup_requoted_at != null ? new Date(ride.pickup_requoted_at) : null;
+    const graceAnchor =
+      requotedAt && requotedAt.getTime() > rideCreated.getTime() ? requotedAt : rideCreated;
     const { feeBdt } = await evaluateCancellation(
-      { status: ride.status, created_at: ride.created_at },
+      { status: ride.status, created_at: graceAnchor },
       cancelled_by as 'rider' | 'driver',
     );
+
+    // ── Phase G: proximity-cancel stamp ─────────────────────────────
+    // Driver-cancel branch only: driver position = drivers.last_location_*
+    // (may be null / unparseable — then no stamp). numeric columns come
+    // back as strings from pg, so parse defensively. Computed BEFORE the
+    // transaction (read-only) and folded into the SAME claim UPDATE below
+    // — no second write path.
+    let driverCancelWithin200m = false;
+    if (cancelled_by === 'driver' && ride.driver_id) {
+      const [driverPos] = await db.select({
+        lat: drivers.last_location_lat,
+        lng: drivers.last_location_lng,
+      }).from(drivers).where(eq(drivers.id, ride.driver_id)).limit(1);
+
+      const driverLat = driverPos?.lat != null ? Number(driverPos.lat) : null;
+      const driverLng = driverPos?.lng != null ? Number(driverPos.lng) : null;
+      const pickupLat = ride.origin_latitude != null ? Number(ride.origin_latitude) : null;
+      const pickupLng = ride.origin_longitude != null ? Number(ride.origin_longitude) : null;
+
+      if (
+        driverLat != null && Number.isFinite(driverLat) &&
+        driverLng != null && Number.isFinite(driverLng) &&
+        pickupLat != null && Number.isFinite(pickupLat) &&
+        pickupLng != null && Number.isFinite(pickupLng)
+      ) {
+        const distanceM = haversineKm(driverLat, driverLng, pickupLat, pickupLng) * 1000;
+        driverCancelWithin200m = Number.isFinite(distanceM) && distanceM <= PROXIMITY_CANCEL_THRESHOLD_M;
+      }
+    }
 
     // M-28: every state write is ONE transaction. The atomic claim is the
     // exactly-once guard (two concurrent cancels both pass the pre-check;
@@ -80,6 +121,9 @@ export async function POST(request: Request, { id }: { id: string }) {
           cancelled_by,
           cancel_reason: reason ?? null,
           updated_at: new Date(),
+          // Phase G: stamped in the same claim UPDATE (never true for
+          // rider cancels — driverCancelWithin200m only computes there).
+          ...(driverCancelWithin200m ? { driver_cancel_within_200m: true } : {}),
         })
         .where(and(eq(rides.id, rideId), inArray(rides.status, [...CANCELLABLE_STATUSES])))
         .returning({ id: rides.id });
@@ -148,11 +192,29 @@ export async function POST(request: Request, { id }: { id: string }) {
       catch (e) { logger.warn('[accounting] cancellation fee entry failed', e); }
     }
 
-    logger.info('[ride/cancel] ride cancelled', { rideId, cancelled_by, reason, feeBdt });
+    logger.info('[ride/cancel] ride cancelled', { rideId, cancelled_by, reason, feeBdt, driverCancelWithin200m });
 
-    // Notify the assigned driver's WebSocket — fire-and-forget, must never
-    // fail the cancellation itself if utils-server is down.
-    if (ride.driver_id) {
+    // ── Phase G: rider survey invite on driver-cancelled rides ────────
+    // Fire-and-forget (same convention as ride:completed in complete+api);
+    // a notification failure must never fail the cancellation. The rider
+    // app routes the tap via lib/notificationRouter.ts → ride screen.
+    if (cancelled_by === 'driver') {
+      sendNotification(
+        ride.user_id,
+        'ride:cancel_survey',
+        'Did you still take this trip?',
+        'Your ride was cancelled by the driver. Tap to tell us if the trip still happened.',
+        { ride_id: rideId },
+      ).catch(() => {});
+    }
+
+    // Notify utils-server — fire-and-forget, must never fail the cancellation
+    // itself if utils-server is down. CG-2 / ruling 17: fires for ANY
+    // cancellable ride, pre-match included (driver_id null while a sequential
+    // dispatch chain is in flight) so utils-server aborts the chain and stops
+    // billing further candidates. When driver_id is present, that driver also
+    // receives ride:cancelled directly.
+    {
       const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
       const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
       if (internalSecret) {
@@ -165,11 +227,11 @@ export async function POST(request: Request, { id }: { id: string }) {
           signal: AbortSignal.timeout(3_000),
           body: JSON.stringify({
             ride_id: rideId,
-            driver_id: ride.driver_id,
+            driver_id: ride.driver_id ?? null,
             cancelled_by,
           }),
         }).catch((e) =>
-          logger.error("[ride/cancel] WS ride:cancelled broadcast failed", { rideId, driverId: ride.driver_id, error: errors.getErrorMessage(e) }),
+          logger.error("[ride/cancel] WS ride:cancelled broadcast failed", { rideId, driverId: ride.driver_id ?? null, error: errors.getErrorMessage(e) }),
         );
       }
     }

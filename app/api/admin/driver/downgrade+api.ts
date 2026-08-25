@@ -6,19 +6,10 @@ import { requireRole } from '../../../../lib/auth';
 import { logger } from '../../../../lib/logger';
 import { parseJsonBody } from '../../../../lib/parseBody';
 import { z } from 'zod';
-import { VEHICLE_TYPE_VALUES } from '../../../../lib/vehicleTypes';
+import { VEHICLE_TYPE_VALUES, VEHICLE_TIER_ORDER } from '../../../../lib/vehicleTypes';
 import * as errors from '@/lib/errors';
 
-const VEHICLE_TIER: Record<string, number> = {
-  bike_basic:     0,
-  bike_standard:  1,
-  bike_plus:      2,
-  cng:            3,
-  car_economy:    4,
-  car_comfort:    5,
-  car_premium:    6,
-  car_xl:         7,
-};
+
 
 const schema = z.object({
   driverId: z.string().uuid(),
@@ -39,8 +30,8 @@ export async function POST(request: Request) {
     if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     // Validate downgrade (new type must be lower tier than current)
-    const currentTier = VEHICLE_TIER[driver.vehicle_type];
-    const newTier = VEHICLE_TIER[new_vehicle_type];
+    const currentTier = VEHICLE_TIER_ORDER[driver.vehicle_type as keyof typeof VEHICLE_TIER_ORDER];
+    const newTier = VEHICLE_TIER_ORDER[new_vehicle_type];
     if (newTier >= currentTier) {
       return Response.json({
         error: 'not_a_downgrade',

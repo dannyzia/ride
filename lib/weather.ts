@@ -1,5 +1,5 @@
 import { db } from '@/src/db';
-import { weatherConditions, surgeCurrent } from '@/src/db/schema';
+import { weatherConditions } from '@/src/db/schema';
 import { logger } from '@/lib/logger';
 
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY;
@@ -16,20 +16,10 @@ export async function fetchWeatherForZone(zoneId: string, lat: number, lng: numb
     const condition = data.weather?.[0]?.main ?? 'Clear';
     const temp = data.main?.temp ?? 25;
     const severe = ['Thunderstorm', 'Tornado', 'Hurricane'].includes(condition);
-    const surgeOverride = severe ? '1.5' : condition === 'Rain' ? '1.25' : condition === 'Extreme' ? '2.0' : null;
 
     await db.insert(weatherConditions).values({
       zone_id: zoneId, condition, temperature_celsius: temp.toString(),
-      is_severe: severe, surge_multiplier_override: surgeOverride,
+      is_severe: severe,
     });
-
-    if (surgeOverride && severe) {
-      await db.insert(surgeCurrent).values({
-        zone_id: zoneId, multiplier: surgeOverride, demand_count: 0, supply_count: 0, updated_at: new Date(),
-      }).onConflictDoUpdate({
-        target: surgeCurrent.zone_id,
-        set: { multiplier: surgeOverride, updated_at: new Date() },
-      });
-    }
   } catch (e) { logger.error('[weather] fetchWeatherForZone error', e); }
 }

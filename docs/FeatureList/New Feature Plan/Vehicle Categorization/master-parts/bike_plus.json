@@ -1,0 +1,1375 @@
+[
+  {
+    "brand": "Aprilia",
+    "model": "SR 150",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 154,
+    "typical_cc_max": 154,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Aprilia",
+    "model": "SR 160",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 160,
+    "typical_cc_max": 160,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Avenger 220",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 220,
+    "typical_cc_max": 220,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Dominar 400",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 373,
+    "typical_cc_max": 373,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar 160",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 160,
+    "typical_cc_max": 160,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar 180",
+    "year_start": 2001,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 178,
+    "typical_cc_max": 180,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar 200",
+    "year_start": 2007,
+    "year_end": 2024,
+    "body_type": "motorcycle",
+    "typical_cc_min": 199,
+    "typical_cc_max": 199,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar 220",
+    "year_start": 2007,
+    "year_end": 2024,
+    "body_type": "motorcycle",
+    "typical_cc_min": 220,
+    "typical_cc_max": 220,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar 220F",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 220,
+    "typical_cc_max": 220,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar N160",
+    "year_start": 2022,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 165,
+    "typical_cc_max": 165,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar N250",
+    "year_start": 2021,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 249,
+    "typical_cc_max": 249,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar NS160",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 160,
+    "typical_cc_max": 160,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar NS200",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 199,
+    "typical_cc_max": 199,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar RS200",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 199,
+    "typical_cc_max": 199,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Benelli",
+    "model": "302R",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 300,
+    "typical_cc_max": 300,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Benelli",
+    "model": "302S",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 300,
+    "typical_cc_max": 300,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Benelli",
+    "model": "502C",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 500,
+    "typical_cc_max": 500,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Benelli",
+    "model": "Leoncino 250",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 249,
+    "typical_cc_max": 249,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Benelli",
+    "model": "TNT 249S",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 249,
+    "typical_cc_max": 249,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Benelli",
+    "model": "TNT 300",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 300,
+    "typical_cc_max": 300,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Benelli",
+    "model": "TRK 502",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 500,
+    "typical_cc_max": 500,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Haojue",
+    "model": "DR160",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 162,
+    "typical_cc_max": 162,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Haojue",
+    "model": "HJ300",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 300,
+    "typical_cc_max": 300,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Thriller 160R",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 163,
+    "typical_cc_max": 163,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CB Hornet 160R",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 162,
+    "typical_cc_max": 163,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Hornet 2.0",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 184,
+    "typical_cc_max": 184,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Unicorn 160",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 162,
+    "typical_cc_max": 162,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "X-Blade",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 160,
+    "typical_cc_max": 162,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Keeway",
+    "model": "K-Light 202",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 197,
+    "typical_cc_max": 197,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Keeway",
+    "model": "V302C",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 300,
+    "typical_cc_max": 300,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "KTM",
+    "model": "Duke 200",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 199,
+    "typical_cc_max": 199,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "KTM",
+    "model": "Duke 250",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 248,
+    "typical_cc_max": 248,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "KTM",
+    "model": "Duke 390",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 373,
+    "typical_cc_max": 373,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "KTM",
+    "model": "RC 200",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 199,
+    "typical_cc_max": 199,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "KTM",
+    "model": "RC 390",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 373,
+    "typical_cc_max": 373,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lifan",
+    "model": "KP 250",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 249,
+    "typical_cc_max": 249,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lifan",
+    "model": "KPR 200",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 197,
+    "typical_cc_max": 197,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lifan",
+    "model": "KPT 200",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 197,
+    "typical_cc_max": 197,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Roadmaster",
+    "model": "Rapido 165",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 165,
+    "typical_cc_max": 165,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Royal Enfield",
+    "model": "Bullet 350",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 346,
+    "typical_cc_max": 349,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Royal Enfield",
+    "model": "Classic 350",
+    "year_start": 2009,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 346,
+    "typical_cc_max": 349,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Royal Enfield",
+    "model": "Continental GT 650",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 648,
+    "typical_cc_max": 648,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Royal Enfield",
+    "model": "Himalayan",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 411,
+    "typical_cc_max": 452,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Royal Enfield",
+    "model": "Meteor 350",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 349,
+    "typical_cc_max": 349,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Runner",
+    "model": "Bolt 165",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 165,
+    "typical_cc_max": 165,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Gixxer",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 154,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Gixxer (incl. SF)",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 155,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Gixxer 150",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 154,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Gixxer 155",
+    "year_start": 2014,
+    "year_end": 2024,
+    "body_type": "motorcycle",
+    "typical_cc_min": 155,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Gixxer 155 / SF 155",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 155,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Gixxer 250",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 249,
+    "typical_cc_max": 249,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Gixxer SF",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 154,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Gixxer SF 250",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 249,
+    "typical_cc_max": 249,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Intruder 150",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 154,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "V-Strom 250SX",
+    "year_start": 2022,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 249,
+    "typical_cc_max": 249,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "SYM",
+    "model": "Cruisym 300",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 300,
+    "typical_cc_max": 300,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "SYM",
+    "model": "Jet 14 200",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 200,
+    "typical_cc_max": 200,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Apache RR 310",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 312,
+    "typical_cc_max": 312,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Apache RTR 160",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 159,
+    "typical_cc_max": 160,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Apache RTR 160 4V",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 160,
+    "typical_cc_max": 160,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Apache RTR 180",
+    "year_start": 2009,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 177,
+    "typical_cc_max": 180,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Apache RTR 200",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 197,
+    "typical_cc_max": 198,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Apache RTR 200 4V",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 197,
+    "typical_cc_max": 197,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Walton",
+    "model": "Tornado 160",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 160,
+    "typical_cc_max": 160,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Walton",
+    "model": "Tornado 250",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 249,
+    "typical_cc_max": 249,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "Fazer 250",
+    "year_start": 2014,
+    "year_end": 2024,
+    "body_type": "motorcycle",
+    "typical_cc_min": 249,
+    "typical_cc_max": 249,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "FZ 16",
+    "year_start": 2008,
+    "year_end": 2015,
+    "body_type": "motorcycle",
+    "typical_cc_min": 153,
+    "typical_cc_max": 153,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "FZ25",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 249,
+    "typical_cc_max": 249,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "FZS 25",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 249,
+    "typical_cc_max": 249,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "MT-15",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 155,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "R15",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "R15 V3",
+    "year_start": 2015,
+    "year_end": 2024,
+    "body_type": "motorcycle",
+    "typical_cc_min": 155,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "R15 V3/V4",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 155,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "YZF R15 (V3/V4)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 155,
+    "typical_cc_max": 155,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Znen",
+    "model": "ZN250T-E",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 250,
+    "typical_cc_max": 250,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_plus",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  }
+]

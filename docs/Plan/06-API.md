@@ -15,12 +15,12 @@ Error format: { "error": "machine_code", "message": "human description" }
 Money values: always in BDT paisa (integer). Never floats. Convert to ৳ for display only in the client.
 
 VEHICLE TYPE CHANGE NOTE (integrated 2025-05, case-normalised 2025-07):
-All vehicle_type enum fields now use 8 lowercase values:
-  'bike_basic' | 'bike_standard' | 'bike_plus' | 'cng' |
+All vehicle_type enum fields now use 9 lowercase values:
+  'bike_basic' | 'bike_standard' | 'bike_plus' | 'cng' | 'car_compact' |
   'car_economy' | 'car_comfort' | 'car_premium' | 'car_xl'
 The old 4-value enum ('MOTORCYCLE','CNG_AUTO_RICKSHAW','CAR','MICROBUS') is REMOVED.
 The old UPPERCASE 8-value enum is REPLACED by these lowercase values.
-Every Zod schema, response shape, and enum reference in this file uses the new lowercase 8-value list.
+Every Zod schema, response shape, and enum reference in this file uses the new lowercase 9-value list.
 -->
 
 # API Contract: Ride
@@ -37,10 +37,10 @@ vehicle models CRUD, and usage_interval on promo codes.
 
 ## Global vehicle_type enum
 
-All endpoints that accept or return `vehicle_type` use exactly these 8 lowercase values:
+All endpoints that accept or return `vehicle_type` use exactly these 9 lowercase values:
 
 ```
-'bike_basic' | 'bike_standard' | 'bike_plus' | 'cng' |
+'bike_basic' | 'bike_standard' | 'bike_plus' | 'cng' | 'car_compact' |
 'car_economy' | 'car_comfort' | 'car_premium' | 'car_xl'
 ```
 
@@ -192,7 +192,7 @@ On rollback: 500 `registration_failed`. Client may retry.
 }
 ```
 
-**Notes:** `driver_fare_bdt` = `fare_breakdown.total_bdt` + `preference_surcharge_bdt`. `fare_breakdown` also includes `origin_city`, `is_intercity`, `inside_km`, `outside_km`, `inside_charge_bdt`, `outside_charge_bdt`, `platform_commission_percent`, `platform_commission_bdt`, and `driver_net_bdt` in the response shape. When no promo is applied, `promo` is `null`, `rider_payable_bdt` = `driver_fare_bdt`, and `platform_subsidy_bdt` = 0. When no preferences are selected, `preference_surcharge_bdt` = 0 and `preferences` is `[]`.
+**Notes:** `driver_fare_bdt` = `fare_breakdown.total_bdt` + `preference_surcharge_bdt`. `fare_breakdown` also includes `origin_city`, `is_intercity`, `inside_km`, `outside_km`, `inside_charge_bdt`, `outside_charge_bdt`, `platform_commission_percent`, `platform_commission_bdt`, and `driver_net_bdt` in the response shape. When no promo is applied, `promo` is `null`, `rider_payable_bdt` = `driver_fare_bdt`, and `platform_subsidy_bdt` = 0. When no preferences are selected, `preference_surcharge_bdt` = 0 and `preferences` is `[]`. **Pickup fee**: when `pickup_fee_enabled`, response includes `pickup_fee_state: 'range'`, `pickup_fee_low_bdt`, `pickup_fee_high_bdt` (advisory range, NOT included in `total_bdt`/`driver_fare_bdt`/`rider_payable_bdt`). Drop zone snapshot (`drop_zone_id`, `drop_zone_heat`) and `route_polyline` are always persisted at request time (independent of fee flag). No surge fields.
 
 **Fare formula:**
 ```
@@ -932,6 +932,53 @@ Rules:
 - If `reason_code='other'`, `other_details` is required.
 - For driver-initiated cancel, `reason_code` optional but recommended for analytics.
 **Success: 200** `{ "status": "cancelled", "cancelled_by": "rider|driver" }`
+
+---
+
+### POST /api/ride/:id/pickup-move
+**Auth:** Required (matched driver)
+**Purpose:** Record a pickup-location move event (driver requests rider to move to a better pickup spot). Creates an audit trail for pickup-fee disputes.
+
+**Body:**
+```json
+{
+  "new_lat": 23.78,
+  "new_lng": 90.40,
+  "reason": "traffic|road_closed|accessibility"
+}
+```
+
+**Success: 200** `{ "moved": true, "pickup_move_id": "uuid" }`
+
+**Errors**
+| Code | Condition |
+|------|----------|
+| 403 | `not_your_ride` |
+| 409 | `ride_not_in_pickup_status` (must be driver_arriving or driver_arrived) |
+| 404 | `ride_not_found` |
+
+---
+
+### POST /api/ride/:id/cancel-survey
+**Auth:** Required (rider or driver, ride must be cancelled)
+**Purpose:** Submit a structured cancellation reason survey after ride cancellation. Used for fraud detection and platform quality analytics.
+
+**Body:**
+```json
+{
+  "reason_code": "driver_too_far|price_disagreement|found_alternative|wrong_vehicle|safety_concern|other",
+  "details": "string (0–500 chars, optional)",
+  "would_rebook": true
+}
+```
+
+**Success: 201** `{ "survey_id": "uuid" }`
+
+**Errors**
+| Code | Condition |
+|------|----------|
+| 409 | `already_submitted` (one survey per cancelled ride per role) |
+| 422 | `ride_not_cancelled` |
 
 ---
 
@@ -1731,7 +1778,7 @@ Partial update: merges provided fields into existing JSONB.
   "preferences_applied": ["large_luggage"]
 }
 ```
-**Notes:** Returns only vehicle types with `is_active=true` pricing for the active zone. Sorted by `total_bdt` ascending. If pickup outside zone → 422 `outside_zone`. Response includes `platform_commission_percent` from each pricing row. `fare_breakdown` uses the canonical FareBreakdown shape above, including city/geofence split fields. `driver_fare_bdt` = `fare_breakdown.total_bdt` + `preference_surcharge_bdt` (always present — driver receives full amount). `rider_payable_bdt` = `driver_fare_bdt` − `promo.discount_bdt` (when promo applied) or `driver_fare_bdt` (when no promo). When `promo_code` is provided and valid, each estimate includes a `promo` object with the discount breakdown. `preference_surcharge_bdt` is the sum of surcharges for selected preferences.
+**Notes:** Returns only vehicle types with `is_active=true` pricing for the active zone. Sorted by `total_bdt` ascending. If pickup outside zone → 422 `outside_zone`. Response includes `platform_commission_percent` from each pricing row. `fare_breakdown` uses the canonical FareBreakdown shape above, including city/geofence split fields. `driver_fare_bdt` = `fare_breakdown.total_bdt` + `preference_surcharge_bdt` (always present — driver receives full amount). `rider_payable_bdt` = `driver_fare_bdt` − `promo.discount_bdt` (when promo applied) or `driver_fare_bdt` (when no promo). When `promo_code` is provided and valid, each estimate includes a `promo` object with the discount breakdown. `preference_surcharge_bdt` is the sum of surcharges for selected preferences. **Pickup fee range fields** (`pickup_fee_low_bdt`, `pickup_fee_high_bdt`, `pickup_fee_range_low_confidence`) are included ONLY when `pickup_fee_enabled` config is true; these are advisory — `total_bdt`, `driver_fare_bdt`, `rider_payable_bdt` EXCLUDE the pickup fee (it becomes real at accept). No surge fields remain.
 
 **Zone check on estimate is intentional** — prevents riders from seeing fares for areas the service doesn't cover. On 422 `outside_zone`, the client must show the zone error toast on the map screen (not inside the fare sheet which never opens). Rider should reposition the pickup pin.
 
@@ -2812,6 +2859,141 @@ Uses `supabase.storage.from('driver-documents').createSignedUrl(...)` to generat
 
 ---
 
+### GET /api/admin/fraud-flags
+**Auth:** Required (admin)
+**Purpose:** List fraud flags (dawdle, off-platform, cancel-rate, heat manipulation). Paginated, filterable.
+
+**Query params:**
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| driver_id | uuid | no | Filter by driver |
+| flag_type | string | no | `dawdle` \| `off_platform` \| `cancel_rate` \| `heat_manipulation` |
+| status | string | no | `open` \| `resolved` \| `dismissed` |
+| cursor | string | no | Pagination cursor |
+| limit | integer | no | Max results (default 50, max 200) |
+
+**Response: 200**
+```json
+{
+  "flags": [
+    {
+      "id": "uuid",
+      "driver_id": "uuid",
+      "driver_name": "string",
+      "flag_type": "dawdle",
+      "severity": "low|medium|high",
+      "details": {},
+      "status": "open",
+      "created_at": "ISO-8601"
+    }
+  ],
+  "total": 42,
+  "has_more": true
+}
+```
+
+### PATCH /api/admin/fraud-flags/:id
+**Auth:** Required (admin)
+**Purpose:** Resolve or dismiss a fraud flag.
+
+**Body:** `{ "status": "resolved|dismissed", "resolution_note": "string (10–500)" }`
+
+**Success: 200** `{ "id": "uuid", "status": "resolved" }`
+
+---
+
+### GET /api/admin/pickup-analytics
+**Auth:** Required (admin)
+**Purpose:** Pickup fee analytics — distance samples, true-up stats, dawdle rates. Used by the pickup-analytics admin screen.
+
+**Query params:**
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| zone_id | uuid | no | Filter by zone |
+| from_date | string | no | ISO-8601 date |
+| to_date | string | no | ISO-8601 date |
+
+**Response: 200**
+```json
+{
+  "summary": {
+    "total_samples": 1500,
+    "avg_haversine_km": 3.2,
+    "avg_firm_km": 4.1,
+    "avg_trueup_adjustment_bdt": 150,
+    "dawdle_flag_rate": 0.02
+  },
+  "by_zone": [
+    {
+      "zone_id": "uuid",
+      "zone_name": "Dhaka Central",
+      "samples": 800,
+      "avg_ratio": 1.28
+    }
+  ]
+}
+```
+
+---
+
+### GET /api/admin/heat-monitor
+**Auth:** Required (admin)
+**Purpose:** Real-time zone heat scores and history. Used by the heat-monitor admin screen.
+
+**Query params:**
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| zone_id | uuid | no | Filter by zone |
+
+**Response: 200**
+```json
+{
+  "zones": [
+    {
+      "zone_id": "uuid",
+      "zone_name": "Dhaka Central",
+      "heat_score": 0.78,
+      "heat_tag": "hot",
+      "demand_count": 45,
+      "supply_count": 12,
+      "last_updated": "ISO-8601"
+    }
+  ],
+  "history": [
+    {
+      "zone_id": "uuid",
+      "heat_score": 0.65,
+      "recorded_at": "ISO-8601"
+    }
+  ]
+}
+```
+
+---
+
+### GET /api/admin/zone-recalibration
+**Auth:** Required (admin)
+**Purpose:** List pending zone recalibration queue entries (from heat backtest or manual trigger).
+
+**Response: 200**
+```json
+{
+  "entries": [
+    {
+      "id": "uuid",
+      "zone_id": "uuid",
+      "zone_name": "Dhaka Central",
+      "trigger": "backtest|manual",
+      "status": "pending|applied|dismissed",
+      "proposed_changes": {},
+      "created_at": "ISO-8601"
+    }
+  ]
+}
+```
+
+---
+
 ### GET /api/admin/vehicle-models
 **Auth:** Required (admin)
 **Purpose:** List vehicle model entries for admin management.
@@ -2898,12 +3080,13 @@ Uses `supabase.storage.from('driver-documents').createSignedUrl(...)` to generat
 | `auth:hello` | client → server | `{supabase_jwt, role:'driver'\|'rider'\|'admin'}` | Bind socket. `role:'admin'` (F-15) registers the socket in the admin registry for SOS broadcasts — no driver lookup, no H3 indexing, no online flag. |
 | `auth:refresh` | client → server | `{supabase_jwt}` | Every 50m |
 | `auth:ok`/`error` | server → client | `{user_id, role}` | — |
-| `ride:offer` | server → driver | `{ride_id, pickup: {lat,lng,address}, dropoff: {lat,lng,address}, fare_breakdown, driver_fare_bdt, vehicle_type (8-value enum), rider_first_name, rider_rating, distance_km, pickup_distance_km, pickup_eta_minutes, is_scheduled, is_intercity, origin_city, preferences: [{name, display_label_en, icon}], expires_in_ms: 15000, expires_at: ISO-8601}` | Client drives countdown from `expires_at`. Offer timeout is configurable (default 15s). `pickup_distance_km` and `pickup_eta_minutes` are estimated from driver's current location. `rider_rating` is the rider's average rating. `is_scheduled` is true for scheduled rides. `preferences` lists any rider-selected add-ons. **`driver_fare_bdt` is the amount the driver will earn** (fare_breakdown.total_bdt + preference_surcharge_bdt). The offer card MUST display `driver_fare_bdt`, NOT `fare_breakdown.total_bdt`. `fare_breakdown` contains the base fare components for potential future detailed view. `is_intercity` and `origin_city` are included for driver information — `is_intercity=true` means the dropoff is outside the origin city polygon and the outside-city per-km rate applies to the outside segment. |
+| `ride:offer` | server → driver | `{ride_id, pickup: {lat,lng,address}, dropoff_zone: {zone_id, zone_name, heat_tag}, fare_breakdown, driver_fare_bdt, vehicle_type (9-value enum), rider_first_name, rider_rating, distance_km, pickup_distance_km, pickup_eta_minutes, pickup_fee_estimate_bdt, lead_cost_calls: 1, balance_after_calls, is_scheduled, is_intercity, origin_city, preferences: [{name, display_label_en, icon}], expires_in_ms: 15000, expires_at: ISO-8601}` | Client drives countdown from `expires_at`. Offer timeout is configurable (default 15s). `pickup_distance_km` and `pickup_eta_minutes` are estimated from driver's current location. `rider_rating` is the rider's average rating. `is_scheduled` is true for scheduled rides. `preferences` lists any rider-selected add-ons. **`driver_fare_bdt` is the amount the driver will earn** (fare_breakdown.total_bdt + preference_surcharge_bdt). The offer card MUST display `driver_fare_bdt`, NOT `fare_breakdown.total_bdt`. `fare_breakdown` contains the base fare components for potential future detailed view. `is_intercity` and `origin_city` are included for driver information — `is_intercity=true` means the dropoff is outside the origin city polygon and the outside-city per-km rate applies to the outside segment. **Fare Framework v1 changes:** `dropoff` replaced by `dropoff_zone` (exact address revealed ONLY after accept); `pickup_fee_estimate_bdt` = this driver's haversine×1.4 pickup fee estimate (0 when fee disabled); `lead_cost_calls` = 1 (always); `balance_after_calls` = remaining calls after this offer's debit. |
 | `fetch:confirm` | driver → server | `{ride_id}` | On first interaction with offer card |
-| `offer:accept` | driver → server | `{ride_id}` | — |
+| `offer:accept` | driver → server | `{ride_id}` | Server reveals exact dropoff address to driver after accept (dropoff_zone in offer → full address in matched state). |
 | `offer:reject` | driver → server | `{ride_id, reason?}` | — |
 | `offer:lost` | server → driver | `{ride_id, reason: 'accepted_by_other'}` | — |
 | `offer:expired` | server → driver | `{ride_id, reason: 'timeout'}` | — |
+| `lead:billed` | server → driver | `{ride_id, lead_cost_calls: 1, balance_after_calls, deducted_at: ISO-8601}` | Sent immediately after debit-on-offer (same tx as dispatch_offers insert). Confirms 1 call deducted; `balance_after_calls` = remaining. |
 | `ride:matched` | server → rider | `{ride_id, driver: {name, photo_url, rating, vehicle_type (8-value), vehicle_number}, eta_minutes, masked_phone}` | — |
 | `ride:cancelled` | server → rider | `{ride_id, cancel_reason, cancelled_by}` | — |
 | `location:update` | driver → server | `{lat, lng, ts}` | Every 5s during ride |

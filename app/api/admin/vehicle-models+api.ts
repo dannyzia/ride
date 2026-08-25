@@ -4,7 +4,7 @@ import { db } from "@/src/db";
 import { vehicleModels } from "@/src/db/schema";
 import { eq, ilike, and, sql, or, asc } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
-import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
+import { VEHICLE_TYPE_ZOD_ENUM, BODY_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -17,6 +17,7 @@ const createSchema = z.object({
   default_vehicle_type: VEHICLE_TYPE_ZOD_ENUM,
   typical_cc_min: z.number().int().min(0).optional().nullable(),
   typical_cc_max: z.number().int().min(0).optional().nullable(),
+  body_type: BODY_TYPE_ZOD_ENUM.optional().nullable(),
   has_ac: z.boolean().optional().nullable(),
   passenger_seats: z.number().int().min(1).max(20).optional().nullable(),
   is_active: z.boolean().optional().default(true),

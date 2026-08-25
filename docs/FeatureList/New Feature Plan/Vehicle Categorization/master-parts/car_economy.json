@@ -1,0 +1,2825 @@
+[
+  {
+    "brand": "Changan",
+    "model": "Alsvin (1.5L)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1480,
+    "typical_cc_max": 1497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chery",
+    "model": "Arrizo 3 (1.5L)",
+    "year_start": 2014,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1499,
+    "typical_cc_max": 1499,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chery",
+    "model": "Arrizo 5 (1.5L)",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1499,
+    "typical_cc_max": 1499,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chery",
+    "model": "E5 (1.5L)",
+    "year_start": 2011,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chery",
+    "model": "QQ",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 812,
+    "typical_cc_max": 1083,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 812–1083 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Chery",
+    "model": "Sweet (QQ6)",
+    "year_start": 2006,
+    "year_end": 2010,
+    "body_type": "hatchback",
+    "typical_cc_min": 1100,
+    "typical_cc_max": 1300,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Beat",
+    "year_start": 2010,
+    "year_end": 2020,
+    "body_type": "hatchback",
+    "typical_cc_min": 1199,
+    "typical_cc_max": 1199,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Spark (4-seat)",
+    "year_start": 2005,
+    "year_end": 2016,
+    "body_type": "hatchback",
+    "typical_cc_min": 995,
+    "typical_cc_max": 1206,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 995–1206 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Boon (4-seat)",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 1296,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 998–1296 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Sirion (1.0L/1.3L)",
+    "year_start": 1998,
+    "year_end": 2011,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 1296,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 998–1296 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Datsun",
+    "model": "Go",
+    "year_start": 2014,
+    "year_end": 2020,
+    "body_type": "hatchback",
+    "typical_cc_min": 1198,
+    "typical_cc_max": 1198,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "FAW",
+    "model": "V2",
+    "year_start": 2012,
+    "year_end": 2016,
+    "body_type": "hatchback",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1298,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "FAW",
+    "model": "V5 (1.5L)",
+    "year_start": 2012,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "FAW",
+    "model": "X-PV",
+    "year_start": 2014,
+    "year_end": 2020,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 1298,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 998–1298 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "Figo 1.2",
+    "year_start": 2010,
+    "year_end": 2021,
+    "body_type": "hatchback",
+    "typical_cc_min": 1194,
+    "typical_cc_max": 1194,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Geely",
+    "model": "GC6 (1.5L)",
+    "year_start": 2013,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Geely",
+    "model": "LC",
+    "year_start": 2008,
+    "year_end": 2016,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 1342,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 998–1342 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Geely",
+    "model": "Panda",
+    "year_start": 2008,
+    "year_end": 2016,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 1342,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 998–1342 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Haima",
+    "model": "1",
+    "year_start": 2010,
+    "year_end": 2015,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 1299,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 998–1299 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Haima",
+    "model": "M3 (1.5L)",
+    "year_start": 2013,
+    "year_end": 2017,
+    "body_type": "sedan",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Airwave (1.5L)",
+    "year_start": 2005,
+    "year_end": 2010,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Amaze 1.2",
+    "year_start": 2013,
+    "year_end": 2024,
+    "body_type": "sedan",
+    "typical_cc_min": 1199,
+    "typical_cc_max": 1199,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Brio",
+    "year_start": 2011,
+    "year_end": 2020,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1197,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "City",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "City (1.3L/1.5L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1339,
+    "typical_cc_max": 1497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "City (Bangladesh assembled)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1339,
+    "typical_cc_max": 1497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "City 1.5",
+    "year_start": 2008,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Civic (1.5T)",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Civic 1.5",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Fit 1.5",
+    "year_start": 2007,
+    "year_end": 2020,
+    "body_type": "hatchback",
+    "typical_cc_min": 1317,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi",
+      "gemini",
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Fit 1.3",
+    "year_start": 2001,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1339,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "kimi",
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Fit Shuttle",
+    "year_start": 2011,
+    "year_end": 2015,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Freed (1.5L)",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Grace",
+    "year_start": 2014,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Grace (1.5L Hybrid)",
+    "year_start": 2014,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Grace 1.5",
+    "year_start": 2014,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Insight (1.3L/1.5L Hybrid)",
+    "year_start": 1999,
+    "year_end": 2022,
+    "body_type": "hatchback",
+    "typical_cc_min": 1339,
+    "typical_cc_max": 1497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Mobilio (1.5L)",
+    "year_start": 2014,
+    "year_end": 2020,
+    "body_type": "mpv",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Mobilio Spike",
+    "year_start": 2002,
+    "year_end": 2008,
+    "body_type": "hatchback",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Partner (1.5L)",
+    "year_start": 2006,
+    "year_end": 2010,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Shuttle",
+    "year_start": 2015,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Accent",
+    "year_start": 2000,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 1341,
+    "typical_cc_max": 1495,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Accent / Verna",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1396,
+    "typical_cc_max": 1497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Accent 1.4",
+    "year_start": 2011,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 1396,
+    "typical_cc_max": 1396,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Grand i10",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1186,
+    "typical_cc_max": 1248,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Grand i10 1.2",
+    "year_start": 2013,
+    "year_end": 2023,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1197,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "i10",
+    "year_start": 2007,
+    "year_end": 2019,
+    "body_type": "hatchback",
+    "typical_cc_min": 1086,
+    "typical_cc_max": 1248,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "i10 (1.1L)",
+    "year_start": 2007,
+    "year_end": 2019,
+    "body_type": "hatchback",
+    "typical_cc_min": 1086,
+    "typical_cc_max": 1086,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "i10 (1.1L/1.2L)",
+    "year_start": 2007,
+    "year_end": 2019,
+    "body_type": "hatchback",
+    "typical_cc_min": 1086,
+    "typical_cc_max": 1248,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "i10 (1.2L)",
+    "year_start": 2007,
+    "year_end": 2019,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1197,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "i20",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "i20 (1.2L/1.4L)",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1396,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "i20 1.2",
+    "year_start": 2008,
+    "year_end": 2023,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1197,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Santro",
+    "year_start": 1998,
+    "year_end": 2014,
+    "body_type": "hatchback",
+    "typical_cc_min": 1086,
+    "typical_cc_max": 1086,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Santro (1.1L)",
+    "year_start": 1998,
+    "year_end": 2014,
+    "body_type": "hatchback",
+    "typical_cc_min": 1086,
+    "typical_cc_max": 1086,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Xcent / Aura",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1197,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Morning",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 1248,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 998–1248 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Picanto (1.0L/1.2L)",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 1248,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 998–1248 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Picanto (1.2L)",
+    "year_start": 2011,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1248,
+    "typical_cc_max": 1248,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Pride",
+    "year_start": 2011,
+    "year_end": 2017,
+    "body_type": "hatchback",
+    "typical_cc_min": 1248,
+    "typical_cc_max": 1248,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Rio",
+    "year_start": 2005,
+    "year_end": 2023,
+    "body_type": "hatchback",
+    "typical_cc_min": 1396,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Rio 1.4",
+    "year_start": 2012,
+    "year_end": 2023,
+    "body_type": "sedan",
+    "typical_cc_min": 1396,
+    "typical_cc_max": 1396,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mahindra",
+    "model": "Verito (1.4L/1.5L)",
+    "year_start": 2007,
+    "year_end": 2019,
+    "body_type": "sedan",
+    "typical_cc_min": 1399,
+    "typical_cc_max": 1461,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Axela (1.5)",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Axela/Mazda3 (1.5L)",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Demio",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Demio (1.3L/1.5L)",
+    "year_start": 1996,
+    "year_end": 2019,
+    "body_type": "hatchback",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Demio / Mazda2",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Verisa",
+    "year_start": 2004,
+    "year_end": 2015,
+    "body_type": "hatchback",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Verisa (1.5L)",
+    "year_start": 2004,
+    "year_end": 2015,
+    "body_type": "hatchback",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "MG",
+    "model": "5 (1.5L)",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Attrage",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1199,
+    "typical_cc_max": 1199,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Attrage (1.2L)",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1193,
+    "typical_cc_max": 1193,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Colt (1.3L/1.5L)",
+    "year_start": 2002,
+    "year_end": 2012,
+    "body_type": "hatchback",
+    "typical_cc_min": 1332,
+    "typical_cc_max": 1499,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Lancer 1.5",
+    "year_start": 2000,
+    "year_end": 2017,
+    "body_type": "sedan",
+    "typical_cc_min": 1468,
+    "typical_cc_max": 1499,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Almera (1.2L/1.5L)",
+    "year_start": 1995,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1198,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Bluebird Sylphy 1.5",
+    "year_start": 2000,
+    "year_end": 2021,
+    "body_type": "sedan",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Cube (1.3L/1.4L/1.5L)",
+    "year_start": 1998,
+    "year_end": 2019,
+    "body_type": "hatchback",
+    "typical_cc_min": 1348,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Latio",
+    "year_start": 2004,
+    "year_end": 2019,
+    "body_type": "sedan",
+    "typical_cc_min": 1198,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Latio (1.2L/1.5L)",
+    "year_start": 2004,
+    "year_end": 2012,
+    "body_type": "sedan",
+    "typical_cc_min": 1198,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "March 1.2",
+    "year_start": 2010,
+    "year_end": 2017,
+    "body_type": "hatchback",
+    "typical_cc_min": 1198,
+    "typical_cc_max": 1198,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "March/Micra (1.0L/1.2L)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 1198,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 998–1198 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Micra 1.2",
+    "year_start": 2010,
+    "year_end": 2022,
+    "body_type": "hatchback",
+    "typical_cc_min": 1198,
+    "typical_cc_max": 1198,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Note (1.2L/1.3L)",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1198,
+    "typical_cc_max": 1386,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Note (1.5L)",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Note (incl. e-Power)",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1198,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Sunny",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Sunny / Latio",
+    "year_start": 2004,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Sunny 1.3",
+    "year_start": 2011,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1299,
+    "typical_cc_max": 1299,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Sunny 1.5",
+    "year_start": 2011,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Tiida (1.5L)",
+    "year_start": 2004,
+    "year_end": 2012,
+    "body_type": "hatchback",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Tiida / Latio",
+    "year_start": 2004,
+    "year_end": 2012,
+    "body_type": "hatchback",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Perodua",
+    "model": "Bezza (1.3L)",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1298,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Perodua",
+    "model": "Myvi",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 998,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 998–1496 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Perodua",
+    "model": "Myvi (1.3L/1.5L)",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Proton",
+    "model": "Savvy",
+    "year_start": 2005,
+    "year_end": 2011,
+    "body_type": "hatchback",
+    "typical_cc_min": 1149,
+    "typical_cc_max": 1149,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Baleno",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1248,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Baleno 1.2",
+    "year_start": 2015,
+    "year_end": 2024,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1197,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Ciaz",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1373,
+    "typical_cc_max": 1462,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Dzire",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1248,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Dzire / Swift Dzire",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1248,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Dzire 1.2",
+    "year_start": 2008,
+    "year_end": 2024,
+    "body_type": "sedan",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1197,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Ertiga (1.4L/1.5L)",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1373,
+    "typical_cc_max": 1462,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Swift",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1248,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Swift (1.2L)",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1197,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Swift 1.2",
+    "year_start": 2005,
+    "year_end": 2024,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1242,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Wagon R 1.2",
+    "year_start": 2010,
+    "year_end": 2024,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1197,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Indica (1.2L/1.4L)",
+    "year_start": 1998,
+    "year_end": 2018,
+    "body_type": "hatchback",
+    "typical_cc_min": 1193,
+    "typical_cc_max": 1396,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Indigo (1.4L)",
+    "year_start": 2002,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 1396,
+    "typical_cc_max": 1396,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Indigo / Indigo CS",
+    "year_start": 2002,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 1193,
+    "typical_cc_max": 1405,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Manza (1.3L/1.4L)",
+    "year_start": 2009,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 1248,
+    "typical_cc_max": 1368,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Tiago",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1199,
+    "typical_cc_max": 1199,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Tiago 1.2",
+    "year_start": 2016,
+    "year_end": 2024,
+    "body_type": "hatchback",
+    "typical_cc_min": 1199,
+    "typical_cc_max": 1199,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Tigor",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1199,
+    "typical_cc_max": 1199,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Tigor (1.2L)",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1199,
+    "typical_cc_max": 1199,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Tigor 1.2",
+    "year_start": 2017,
+    "year_end": 2024,
+    "body_type": "sedan",
+    "typical_cc_min": 1199,
+    "typical_cc_max": 1199,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Zest (1.2L/1.3L)",
+    "year_start": 2014,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1193,
+    "typical_cc_max": 1248,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Aqua",
+    "year_start": 2011,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Aqua (1.5L Hybrid)",
+    "year_start": 2011,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Aqua 1.5",
+    "year_start": 2011,
+    "year_end": 2021,
+    "body_type": "hatchback",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Auris (1.5L)",
+    "year_start": 2006,
+    "year_end": 2018,
+    "body_type": "hatchback",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla Axio",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "kimi",
+      "chatgpt",
+      "deepseek",
+      "glm5.3",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "bB (1.3L)",
+    "year_start": 2000,
+    "year_end": 2016,
+    "body_type": "hatchback",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1296,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Belta",
+    "year_start": 2005,
+    "year_end": 2012,
+    "body_type": "sedan",
+    "typical_cc_min": 996,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": "cc range 996–1496 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Belta 1.3",
+    "year_start": 2005,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1299,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla (older E100/E110)",
+    "year_start": 1991,
+    "year_end": 2007,
+    "body_type": "sedan",
+    "typical_cc_min": 1332,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": null,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla 1.3",
+    "year_start": 1998,
+    "year_end": 2007,
+    "body_type": "sedan",
+    "typical_cc_min": 1295,
+    "typical_cc_max": 1298,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla 1.5",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla Fielder",
+    "year_start": 2012,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla Fielder (1.5L)",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Fielder 1.5",
+    "year_start": 2000,
+    "year_end": 2025,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "iQ",
+    "year_start": 2008,
+    "year_end": 2016,
+    "body_type": "hatchback",
+    "typical_cc_min": 996,
+    "typical_cc_max": 1329,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 996–1329 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Ist",
+    "year_start": 2002,
+    "year_end": 2016,
+    "body_type": "hatchback",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "ist (1.3L/1.5L)",
+    "year_start": 2002,
+    "year_end": 2016,
+    "body_type": "hatchback",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Passo Sette (1.5L)",
+    "year_start": 2008,
+    "year_end": 2012,
+    "body_type": "mpv",
+    "typical_cc_min": 1495,
+    "typical_cc_max": 1495,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Porte (1.3L/1.5L)",
+    "year_start": 2004,
+    "year_end": 2020,
+    "body_type": "hatchback",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Probox",
+    "year_start": 2002,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Probox (1.3L/1.5L)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Probox / Succeed",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Probox 1.3/1.5",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Ractis (1.3L/1.5L)",
+    "year_start": 2005,
+    "year_end": 2017,
+    "body_type": "hatchback",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Raum (1.5L)",
+    "year_start": 2003,
+    "year_end": 2011,
+    "body_type": "hatchback",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Sienta (1.5L)",
+    "year_start": 2003,
+    "year_end": 2020,
+    "body_type": "mpv",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Spade (1.3L/1.5L)",
+    "year_start": 2012,
+    "year_end": 2020,
+    "body_type": "hatchback",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Succeed",
+    "year_start": 2002,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Succeed (1.5L)",
+    "year_start": 2002,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": false,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Vios",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Vios (1.3L/1.5L)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Vios 1.5",
+    "year_start": 2007,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Vitz 1.3/1.5",
+    "year_start": 2010,
+    "year_end": 2019,
+    "body_type": "hatchback",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "gemini",
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Yaris (1.3L/1.5L)",
+    "year_start": 1999,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1298,
+    "typical_cc_max": 1497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Yaris (sedan)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Yaris 1.5",
+    "year_start": 2015,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Yaris Sedan / Hatchback",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1329,
+    "typical_cc_max": 1496,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Mirage",
+    "year_start": 2012,
+    "year_end": 2023,
+    "body_type": "sedan",
+    "typical_cc_min": 999,
+    "typical_cc_max": 1193,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_economy",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": "cc range 999–1193 spans category boundary — banded by cc_max",
+    "_notes": ""
+  }
+]

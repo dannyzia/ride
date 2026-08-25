@@ -1,16 +1,9 @@
 import { create } from "zustand";
 import { API_URL } from "@/lib/config";
 import type { FareBreakdown } from "@/lib/fareCalc";
+import type { VehicleTypeEnum } from "@/lib/vehicleTypes";
 
-export type VehicleType =
-  | "bike_basic"
-  | "bike_standard"
-  | "bike_plus"
-  | "cng"
-  | "car_economy"
-  | "car_comfort"
-  | "car_premium"
-  | "car_xl";
+export type VehicleType = VehicleTypeEnum;
 
 export type DiscountType = "intro" | "promo" | "pass" | "wallet" | "none";
 
@@ -32,7 +25,7 @@ export interface FareEstimate {
   distance_km: number;
   eta_minutes: number;
   available_discounts?: DiscountOption[];
-  /** Provided by GET/POST /api/ride/estimate — includes surge pricing. */
+  /** Provided by GET/POST /api/ride/estimate. */
   fare_breakdown?: FareBreakdown;
 }
 

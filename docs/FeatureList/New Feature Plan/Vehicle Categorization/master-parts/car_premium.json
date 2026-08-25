@@ -1,0 +1,3884 @@
+[
+  {
+    "brand": "Acura",
+    "model": "MDX",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2959,
+    "typical_cc_max": 3210,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "A1",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1984,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "A3",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1395,
+    "typical_cc_max": 1984,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "A4",
+    "year_start": 1994,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1395,
+    "typical_cc_max": 2995,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "A4 / A6",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1395,
+    "typical_cc_max": 1984,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "A5",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 2995,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "A6",
+    "year_start": 1994,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1984,
+    "typical_cc_max": 3993,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "A7",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1984,
+    "typical_cc_max": 3993,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "A8",
+    "year_start": 1994,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2995,
+    "typical_cc_max": 5998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "e-tron",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": null,
+    "typical_cc_max": null,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "EV — no canonical cc; pre-decided for admin review",
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "Q2",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1395,
+    "typical_cc_max": 1984,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "Q3",
+    "year_start": 2011,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1395,
+    "typical_cc_max": 1984,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "Q5",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1984,
+    "typical_cc_max": 2995,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "Q8",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2995,
+    "typical_cc_max": 3993,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "R8",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 4163,
+    "typical_cc_max": 5204,
+    "passenger_seats": 2,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Audi",
+    "model": "TT",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 2480,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "1 Series",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 2998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "2 Series",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 2998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "3 Series",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1499,
+    "typical_cc_max": 2998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "4 Series",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1995,
+    "typical_cc_max": 2998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "5 Series",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1995,
+    "typical_cc_max": 4395,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "6 Series",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2979,
+    "typical_cc_max": 4395,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "7 Series",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2979,
+    "typical_cc_max": 6592,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "8 Series",
+    "year_start": 1990,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2998,
+    "typical_cc_max": 4395,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "M2/M3/M4/M5/M8",
+    "year_start": 1986,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2979,
+    "typical_cc_max": 4395,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "X1",
+    "year_start": 2009,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "X2",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "X3",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1995,
+    "typical_cc_max": 2998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "X4",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1995,
+    "typical_cc_max": 2998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "X5",
+    "year_start": 1999,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2979,
+    "typical_cc_max": 4395,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "5-seat variant; 7-seat variant in car_xl"
+  },
+  {
+    "brand": "BMW",
+    "model": "X6",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2979,
+    "typical_cc_max": 4395,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BMW",
+    "model": "Z4",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1995,
+    "typical_cc_max": 2998,
+    "passenger_seats": 2,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BYD",
+    "model": "S6 (2.0L/2.4L)",
+    "year_start": 2011,
+    "year_end": 2017,
+    "body_type": "suv",
+    "typical_cc_min": 1991,
+    "typical_cc_max": 2378,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1991–2378 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Cadillac",
+    "model": "Escalade",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 6162,
+    "typical_cc_max": 6162,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Captiva (2.4L/3.2L)",
+    "year_start": 2006,
+    "year_end": 2018,
+    "body_type": "suv",
+    "typical_cc_min": 2384,
+    "typical_cc_max": 3195,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Suburban (5.3L)",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 5328,
+    "typical_cc_max": 5328,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Tahoe (5.3L)",
+    "year_start": 1994,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 5328,
+    "typical_cc_max": 5328,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Traverse (3.6L)",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 3564,
+    "typical_cc_max": 3564,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "Escape (2.0L/2.3L/2.5L)",
+    "year_start": 2000,
+    "year_end": 2012,
+    "body_type": "crossover",
+    "typical_cc_min": 1999,
+    "typical_cc_max": 2488,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1999–2488 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "Expedition (3.5L/5.4L)",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 3496,
+    "typical_cc_max": 5408,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "Explorer (2.3L/3.5L)",
+    "year_start": 1990,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2299,
+    "typical_cc_max": 3496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "Mondeo (2.5L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2495,
+    "typical_cc_max": 2495,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Genesis",
+    "model": "G80",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2497,
+    "typical_cc_max": 3778,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Genesis",
+    "model": "G90",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 3342,
+    "typical_cc_max": 5038,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Genesis",
+    "model": "GV80",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2497,
+    "typical_cc_max": 3778,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Accord",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 2356,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Accord (2.0L/2.4L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 2356,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Accord (2.0L/2.4L/3.5L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 3471,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Accord 2.4",
+    "year_start": 2008,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 2356,
+    "typical_cc_max": 2356,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CR-V (2.0L/2.4L)",
+    "year_start": 1995,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 2356,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1997–2356 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Element (2.4L)",
+    "year_start": 2003,
+    "year_end": 2011,
+    "body_type": "crossover",
+    "typical_cc_min": 2354,
+    "typical_cc_max": 2354,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Elysion (2.4L/3.5L)",
+    "year_start": 2004,
+    "year_end": 2021,
+    "body_type": "mpv",
+    "typical_cc_min": 2354,
+    "typical_cc_max": 3471,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Legend (3.5L/3.7L)",
+    "year_start": 1985,
+    "year_end": 2012,
+    "body_type": "sedan",
+    "typical_cc_min": 3471,
+    "typical_cc_max": 3664,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Odyssey (3.5L)",
+    "year_start": 1994,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 3471,
+    "typical_cc_max": 3471,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Pilot (3.5L)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 3471,
+    "typical_cc_max": 3471,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Ridgeline (3.5L)",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 3471,
+    "typical_cc_max": 3471,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Azera (2.7L/3.0L/3.3L/3.8L)",
+    "year_start": 1986,
+    "year_end": 2023,
+    "body_type": "sedan",
+    "typical_cc_min": 2656,
+    "typical_cc_max": 3778,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Equus (3.8L/5.0L)",
+    "year_start": 1999,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 3778,
+    "typical_cc_max": 5038,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Genesis (3.8L/5.0L)",
+    "year_start": 2008,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 3778,
+    "typical_cc_max": 5038,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Palisade (3.8L)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 3778,
+    "typical_cc_max": 3778,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Santa Fe (2.0L/2.2L/2.4L/2.7L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2656,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–2656 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Santa Fe (2.4L/2.7L/3.3L/3.5L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2359,
+    "typical_cc_max": 3470,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Sonata (2.0L/2.4L/2.5L)",
+    "year_start": 1985,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2497,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–2497 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Infiniti",
+    "model": "Q50",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1991,
+    "typical_cc_max": 3799,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1991–3799 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Infiniti",
+    "model": "Q70",
+    "year_start": 2013,
+    "year_end": 2019,
+    "body_type": "sedan",
+    "typical_cc_min": 2494,
+    "typical_cc_max": 3799,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Infiniti",
+    "model": "QX60",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2494,
+    "typical_cc_max": 3498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Infiniti",
+    "model": "QX80",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 5552,
+    "typical_cc_max": 5552,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Isuzu",
+    "model": "MU-X (1.9L/2.5L/3.0L)",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1898,
+    "typical_cc_max": 2999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1898–2999 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Isuzu",
+    "model": "MU-X (2.5L/3.0L)",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2499,
+    "typical_cc_max": 2999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Isuzu",
+    "model": "Trooper (3.0L/3.5L)",
+    "year_start": 1981,
+    "year_end": 2002,
+    "body_type": "suv",
+    "typical_cc_min": 2999,
+    "typical_cc_max": 3494,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Jaguar",
+    "model": "E-Pace",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 1997,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Jaguar",
+    "model": "F-Pace",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 5000,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Jaguar",
+    "model": "F-Type",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 5000,
+    "passenger_seats": 2,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Jaguar",
+    "model": "I-Pace",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": null,
+    "typical_cc_max": null,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "EV — no canonical cc; pre-decided for admin review",
+    "_notes": null
+  },
+  {
+    "brand": "Jaguar",
+    "model": "XE",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 2995,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Jaguar",
+    "model": "XF",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 5000,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Jaguar",
+    "model": "XJ",
+    "year_start": 1980,
+    "year_end": 2019,
+    "body_type": "sedan",
+    "typical_cc_min": 2995,
+    "typical_cc_max": 5000,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Carnival/Sedona (2.2L/3.3L/3.5L)",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2199,
+    "typical_cc_max": 3470,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "K5/Optima (2.0L/2.4L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1999,
+    "typical_cc_max": 2359,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1999–2359 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "K5/Optima (2.4L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2359,
+    "typical_cc_max": 2359,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "K7/Cadenza (2.4L/2.5L/3.0L/3.3L)",
+    "year_start": 2009,
+    "year_end": 2021,
+    "body_type": "sedan",
+    "typical_cc_min": 2359,
+    "typical_cc_max": 3342,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "K9/Quoris (3.3L/3.8L/5.0L)",
+    "year_start": 2012,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 3342,
+    "typical_cc_max": 5038,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Sorento (2.0L/2.2L/2.4L)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2359,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–2359 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Sorento (2.2L/2.4L/3.3L/3.5L)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2199,
+    "typical_cc_max": 3470,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Defender",
+    "year_start": 1983,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 4999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "5-seat variant; 7-seat variant in car_xl"
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Discovery",
+    "year_start": 1989,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 4999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "5-seat variant; 7-seat variant in car_xl"
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Discovery Sport",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 1997,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Freelander",
+    "year_start": 1997,
+    "year_end": 2014,
+    "body_type": "suv",
+    "typical_cc_min": 1796,
+    "typical_cc_max": 3191,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Range Rover",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2993,
+    "typical_cc_max": 4999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "5-seat variant; 7-seat variant in car_xl"
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Range Rover Evoque",
+    "year_start": 2011,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Range Rover Sport",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2993,
+    "typical_cc_max": 4999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Range Rover Velar",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 2993,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "ES",
+    "year_start": 1989,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3500,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "ES 300h",
+    "year_start": 2013,
+    "year_end": 2024,
+    "body_type": "sedan",
+    "typical_cc_min": 2494,
+    "typical_cc_max": 2494,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "GS",
+    "year_start": 1993,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 2499,
+    "typical_cc_max": 4969,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "GX",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 3956,
+    "typical_cc_max": 4608,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "IS",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3456,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "LC",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 3456,
+    "typical_cc_max": 4969,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "LM",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2494,
+    "typical_cc_max": 3456,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "LS",
+    "year_start": 1989,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 3456,
+    "typical_cc_max": 4969,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "LX",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 4663,
+    "typical_cc_max": 5663,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "5-seat variant; 7-seat variant in car_xl"
+  },
+  {
+    "brand": "Lexus",
+    "model": "NX",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3456,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "RC",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 4969,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "RX",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 4500,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "RX 350",
+    "year_start": 2009,
+    "year_end": 2024,
+    "body_type": "suv",
+    "typical_cc_min": 3456,
+    "typical_cc_max": 3456,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "RX 350 / NX 300",
+    "year_start": 2009,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3456,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "UX",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1987,
+    "typical_cc_max": 1987,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lincoln",
+    "model": "Navigator",
+    "year_start": 1997,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 3496,
+    "typical_cc_max": 3496,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Maserati",
+    "model": "Ghibli",
+    "year_start": 2013,
+    "year_end": 2023,
+    "body_type": "sedan",
+    "typical_cc_min": 2979,
+    "typical_cc_max": 3799,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Maserati",
+    "model": "Levante",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2979,
+    "typical_cc_max": 3799,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Maserati",
+    "model": "Quattroporte",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2979,
+    "typical_cc_max": 3799,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Atenza/Mazda6 (2.0L/2.5L)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2488,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–2488 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Atenza/Mazda6 (2.5L)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 2488,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "CX-5",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 2488,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "cc range 1997–2488 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "CX-5 (2.0L/2.5L)",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2488,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–2488 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "CX-5 (2.5L)",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 2488,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "CX-7 (2.3L/2.5L)",
+    "year_start": 2006,
+    "year_end": 2012,
+    "body_type": "crossover",
+    "typical_cc_min": 2261,
+    "typical_cc_max": 2488,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "MPV (2.3L)",
+    "year_start": 1999,
+    "year_end": 2016,
+    "body_type": "mpv",
+    "typical_cc_min": 2261,
+    "typical_cc_max": 2261,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "A-Class",
+    "year_start": 1997,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1332,
+    "typical_cc_max": 1998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "AMG GT",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 3982,
+    "typical_cc_max": 3982,
+    "passenger_seats": 2,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "B-Class",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1332,
+    "typical_cc_max": 1998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "C-Class",
+    "year_start": 1993,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 3982,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "C-Class / E-Class",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1991,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "CLA",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1332,
+    "typical_cc_max": 1998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "CLS",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2143,
+    "typical_cc_max": 3982,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "E-Class",
+    "year_start": 1993,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1796,
+    "typical_cc_max": 3982,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "G-Class",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 3982,
+    "typical_cc_max": 5980,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "GLA",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1332,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "GLB",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1332,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "GLC",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1991,
+    "typical_cc_max": 2996,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "GLE",
+    "year_start": 1997,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2143,
+    "typical_cc_max": 3982,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "5-seat variant; 7-seat variant in car_xl"
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "S-Class",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2996,
+    "typical_cc_max": 5980,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "SL",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2996,
+    "typical_cc_max": 5980,
+    "passenger_seats": 2,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "V-Class/Viano",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2143,
+    "typical_cc_max": 2987,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Challenger (2.5L/3.0L/3.5L)",
+    "year_start": 1996,
+    "year_end": 2011,
+    "body_type": "suv",
+    "typical_cc_min": 2477,
+    "typical_cc_max": 3498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Grandis (2.4L)",
+    "year_start": 2003,
+    "year_end": 2011,
+    "body_type": "mpv",
+    "typical_cc_min": 2378,
+    "typical_cc_max": 2378,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Montero Sport (2.4L/3.0L)",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2477,
+    "typical_cc_max": 2972,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Outlander (2L+)",
+    "year_start": 2007,
+    "year_end": 2022,
+    "body_type": "suv",
+    "typical_cc_min": 2360,
+    "typical_cc_max": 2360,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Outlander (2.0L/2.4L)",
+    "year_start": 2001,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2360,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–2360 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Armada (5.6L)",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 5552,
+    "typical_cc_max": 5552,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Cefiro (2.0L/2.5L/3.5L)",
+    "year_start": 1994,
+    "year_end": 2003,
+    "body_type": "sedan",
+    "typical_cc_min": 1995,
+    "typical_cc_max": 3498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1995–3498 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Cefiro (2.5L/3.5L)",
+    "year_start": 1994,
+    "year_end": 2003,
+    "body_type": "sedan",
+    "typical_cc_min": 2495,
+    "typical_cc_max": 3498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Fuga (2.5L/3.5L/3.7L/4.5L)",
+    "year_start": 2004,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 2495,
+    "typical_cc_max": 4494,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "GT-R (3.8L)",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 3799,
+    "typical_cc_max": 3799,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Maxima (3.5L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 3498,
+    "typical_cc_max": 3498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Murano (2.5L/3.5L)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 3498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Pathfinder (2.5L/3.5L/4.0L)",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 3954,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Patrol (4.8L/5.6L)",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 4759,
+    "typical_cc_max": 5552,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Rogue/X-Trail (2.0L/2.5L)",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 2488,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1997–2488 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Teana",
+    "year_start": 2008,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2488,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": "cc range 1998–2488 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Teana (2.0L/2.5L/3.5L)",
+    "year_start": 2003,
+    "year_end": 2018,
+    "body_type": "sedan",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 3498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1997–3498 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Teana (2.5L/3.5L)",
+    "year_start": 2003,
+    "year_end": 2018,
+    "body_type": "sedan",
+    "typical_cc_min": 2495,
+    "typical_cc_max": 3498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Titan (5.6L)",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 5552,
+    "typical_cc_max": 5552,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "X-Trail (2.0L/2.5L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 2488,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1997–2488 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Porsche",
+    "model": "718 Boxster/Cayman",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1988,
+    "typical_cc_max": 3996,
+    "passenger_seats": 2,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Porsche",
+    "model": "911",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2981,
+    "typical_cc_max": 3996,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Porsche",
+    "model": "Cayenne",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2894,
+    "typical_cc_max": 3996,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "kimi",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Porsche",
+    "model": "Macan",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1984,
+    "typical_cc_max": 3996,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Porsche",
+    "model": "Panamera",
+    "year_start": 2009,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2894,
+    "typical_cc_max": 3996,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Porsche",
+    "model": "Taycan",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": null,
+    "typical_cc_max": null,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "EV — no canonical cc; pre-decided for admin review",
+    "_notes": null
+  },
+  {
+    "brand": "Ssangyong",
+    "model": "Actyon (2.0L/2.3L)",
+    "year_start": 2006,
+    "year_end": 2011,
+    "body_type": "crossover",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2295,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–2295 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Ssangyong",
+    "model": "Chairman (2.8L/3.2L/3.6L/5.0L)",
+    "year_start": 1997,
+    "year_end": 2017,
+    "body_type": "sedan",
+    "typical_cc_min": 2799,
+    "typical_cc_max": 5038,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ssangyong",
+    "model": "Kyron (2.0L/2.7L/3.2L)",
+    "year_start": 2005,
+    "year_end": 2015,
+    "body_type": "suv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3199,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–3199 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Ssangyong",
+    "model": "Rexton (2.0L/2.2L/2.7L/3.2L)",
+    "year_start": 2001,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3199,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–3199 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Exiga (2.0L/2.5L)",
+    "year_start": 2008,
+    "year_end": 2018,
+    "body_type": "mpv",
+    "typical_cc_min": 1994,
+    "typical_cc_max": 2498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1994–2498 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Forester (2.0L/2.5L)",
+    "year_start": 1997,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1994,
+    "typical_cc_max": 2498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1994–2498 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Forester (2.5L)",
+    "year_start": 1997,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 2498,
+    "typical_cc_max": 2498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Legacy (2.0L/2.5L)",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1994,
+    "typical_cc_max": 2498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1994–2498 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Legacy (2.5L/3.0L/3.6L)",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2498,
+    "typical_cc_max": 3630,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Outback (2.5L/3.6L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 2494,
+    "typical_cc_max": 3630,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Tribeca (3.0L/3.6L)",
+    "year_start": 2005,
+    "year_end": 2014,
+    "body_type": "suv",
+    "typical_cc_min": 2994,
+    "typical_cc_max": 3630,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Grand Vitara (1.6L/2.0L/2.4L)",
+    "year_start": 1998,
+    "year_end": 2014,
+    "body_type": "suv",
+    "typical_cc_min": 1586,
+    "typical_cc_max": 2393,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1586–2393 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "4Runner (4.0L)",
+    "year_start": 2009,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 3956,
+    "typical_cc_max": 3956,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Allion",
+    "year_start": 2001,
+    "year_end": 2021,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3",
+      "kimi",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Alphard (2.4L/3.5L)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 3456,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Avalon (3.5L)",
+    "year_start": 1994,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 3456,
+    "typical_cc_max": 3456,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Camry",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3500,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Camry (2.0L/2.4L/2.5L/3.5L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3456,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Camry 2.4/2.5",
+    "year_start": 2006,
+    "year_end": 2024,
+    "body_type": "sedan",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 2494,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Century (5.0L V12)",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 4996,
+    "typical_cc_max": 4996,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Crown",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3456,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Crown (2.5L/3.0L/3.5L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 2499,
+    "typical_cc_max": 3456,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Crown 2.0/2.5",
+    "year_start": 2008,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2499,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "FJ Cruiser (4.0L)",
+    "year_start": 2006,
+    "year_end": 2022,
+    "body_type": "suv",
+    "typical_cc_min": 3956,
+    "typical_cc_max": 3956,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Fortuner (2.4L/2.7L/2.8L/4.0L)",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2393,
+    "typical_cc_max": 3956,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Harrier",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1986,
+    "typical_cc_max": 2493,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Harrier (2.0L/2.4L/3.5L)",
+    "year_start": 1997,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3456,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Harrier 2.0/2.4",
+    "year_start": 2003,
+    "year_end": 2024,
+    "body_type": "crossover",
+    "typical_cc_min": 1986,
+    "typical_cc_max": 2362,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Innova (2.7L)",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2694,
+    "typical_cc_max": 2694,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Kluger/Highlander (2.4L/3.5L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 3456,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Mark X",
+    "year_start": 2004,
+    "year_end": 2019,
+    "body_type": "sedan",
+    "typical_cc_min": 2499,
+    "typical_cc_max": 3456,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Mark X (2.5L/3.0L)",
+    "year_start": 2004,
+    "year_end": 2019,
+    "body_type": "sedan",
+    "typical_cc_min": 2499,
+    "typical_cc_max": 2995,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Mark X (2.5L/3.0L/3.5L)",
+    "year_start": 2004,
+    "year_end": 2019,
+    "body_type": "sedan",
+    "typical_cc_min": 2499,
+    "typical_cc_max": 3456,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Mark X 2.5",
+    "year_start": 2004,
+    "year_end": 2019,
+    "body_type": "sedan",
+    "typical_cc_min": 2499,
+    "typical_cc_max": 2499,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Premio",
+    "year_start": 2001,
+    "year_end": 2021,
+    "body_type": "sedan",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3",
+      "kimi",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "RAV4 (2.0L/2.4L/2.5L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2494,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–2494 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Sai (2.4L Hybrid)",
+    "year_start": 2009,
+    "year_end": 2017,
+    "body_type": "sedan",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 2362,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Sequoia (5.7L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 5663,
+    "typical_cc_max": 5663,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Vanguard (2.4L)",
+    "year_start": 2007,
+    "year_end": 2013,
+    "body_type": "crossover",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 2362,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Vellfire (2.4L/3.5L)",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 3456,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Volvo",
+    "model": "C40",
+    "year_start": 2021,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": null,
+    "typical_cc_max": null,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "EV — no canonical cc; pre-decided for admin review",
+    "_notes": null
+  },
+  {
+    "brand": "Volvo",
+    "model": "S60",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 2998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Volvo",
+    "model": "S90",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1969,
+    "typical_cc_max": 1969,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Volvo",
+    "model": "V40",
+    "year_start": 2012,
+    "year_end": 2019,
+    "body_type": "hatchback",
+    "typical_cc_min": 1560,
+    "typical_cc_max": 1969,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Volvo",
+    "model": "V60",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1969,
+    "typical_cc_max": 1969,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Volvo",
+    "model": "V90",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1969,
+    "typical_cc_max": 1969,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Volvo",
+    "model": "XC40",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1560,
+    "typical_cc_max": 1969,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Volvo",
+    "model": "XC60",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 2998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Volvo",
+    "model": "XC90",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1969,
+    "typical_cc_max": 2953,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "kimi",
+      "deepseek"
+    ],
+    "_dispute": "5-seat premium row; 7-seat configs may belong in car_xl via suv_large — product review",
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Land Cruiser 5-seat",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2693,
+    "typical_cc_max": 4663,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": ""
+  },
+  {
+    "brand": "Toyota",
+    "model": "Prado 5-seat",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2693,
+    "typical_cc_max": 4000,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "deepseek",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": ""
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Pajero Sport",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 2477,
+    "typical_cc_max": 2972,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": ""
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Pajero",
+    "year_start": 1999,
+    "year_end": 2019,
+    "body_type": "suv_large",
+    "typical_cc_min": 2835,
+    "typical_cc_max": 3828,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_premium",
+    "_confidence": "verified",
+    "_sources": [
+      "kimi",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": ""
+  }
+]

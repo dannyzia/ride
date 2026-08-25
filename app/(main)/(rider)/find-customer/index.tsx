@@ -8,6 +8,7 @@ import DriverActionBar from "@/components/DriverActionBar";
 import RideInfoCard from "@/components/RideInfoCard";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useDriver, useRideOfferStore, useWSStore } from "@/store";
+import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useSession } from "@/lib/session";
 import * as Location from "expo-location";
 import { LocationObject } from "expo-location";
@@ -68,6 +69,9 @@ const ReachCustomer = () => {
   } = useDriver();
   const { ws } = useWSStore();
   const { activeRideId, giveRideDetails, removeRideOffer, setActiveRideId } = useRideOfferStore();
+  // Phase D / Stage 2 reveal: the exact dropoff arrives only after accept
+  // (offer:accepted) — the pre-accept offer carried just the drop zone name.
+  const acceptedDropoff = useDriverFlowStore((s) => s.acceptedDropoff);
   const { user } = useSession();
   const lastLocationRef = useRef<Location.LocationObject | null>(null);
   // LOW-8: last reverse-geocoded address, reused while the position barely
@@ -308,7 +312,9 @@ const ReachCustomer = () => {
   const pickupAddress =
     rideDetails?.pickupDetails?.pickupAddress || "Pickup location";
   const destinationAddress =
-    rideDetails?.dropoffDetails?.dropoffAddress || "Destination not set";
+    acceptedDropoff?.address ||
+    rideDetails?.dropoffDetails?.dropoffAddress ||
+    "Destination not set";
   const pickupLatitude = rideDetails?.pickupDetails?.pickupLatitude;
   const pickupLongitude = rideDetails?.pickupDetails?.pickupLongitude;
 

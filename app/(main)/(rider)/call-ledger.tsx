@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ReactNativeModal from "react-native-modal";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useCallLedgerStore } from "@/store/useCallLedgerStore";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -66,6 +67,7 @@ const VEHICLE_TYPE_OPTIONS = [
   { key: "bike_standard", label: "Bike Standard" },
   { key: "bike_plus", label: "Bike Plus" },
   { key: "cng", label: "CNG" },
+  { key: "car_compact", label: "Car Compact" },
   { key: "car_economy", label: "Car Economy" },
   { key: "car_comfort", label: "Car Comfort" },
   { key: "car_premium", label: "Car Premium" },
@@ -87,6 +89,9 @@ const EVENT_CONFIG: Record<
     icon: "remove-circle-outline",
     color: colors.danger,
   },
+  // Phase D (§6): new deduction rows are lead debits written at offer time
+  // with reason='offer_sent' — labeled distinctly from legacy per-open
+  // deduction rows via the reason-aware override in renderLedgerItem.
   credit: { label: "Credit Added", icon: "add-circle-outline", color: colors.primary },
   initial_load: {
     label: "Subscription Activated",
@@ -155,6 +160,9 @@ type TabKey = "ledger" | "missed";
 export default function CallLedgerScreen() {
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
+  // Live balance: prefer the store (updated by lead:billed pushes and every
+  // fetch) over the one-shot fetch-local copy.
+  const liveBalance = useCallLedgerStore((s) => s.balanceCalls);
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -215,6 +223,11 @@ export default function CallLedgerScreen() {
           const data = await res.json();
           setEntries(data.entries ?? []);
           setBalance(data.current_balance ?? null);
+          // Keep the shared store in sync so lead:billed pushes and fetches
+          // agree on one authoritative balance.
+          useCallLedgerStore
+            .getState()
+            .setBalanceCalls(data.current_balance ?? null);
         }
       } catch {
         // silently fail
@@ -995,6 +1008,12 @@ export default function CallLedgerScreen() {
           icon: "infocirlceo",
           color: colors.grayMedium,
         };
+        // Phase D: offer-time lead debits carry reason='offer_sent' — give
+        // them the lead label; legacy deduction reasons keep the old one.
+        const entryLabel =
+          entry.event_type === "deduction" && entry.reason === "offer_sent"
+            ? "Lead (offer sent)"
+            : config.label;
         return (
           <View
             key={entry.id}
@@ -1036,7 +1055,7 @@ export default function CallLedgerScreen() {
                     color: textPrimary,
                   }}
                 >
-                  {config.label}
+                  {entryLabel}
                 </Text>
                 <Text
                   style={{
@@ -1189,7 +1208,9 @@ export default function CallLedgerScreen() {
             color: textPrimary,
           }}
         >
-          {balance ?? 0} calls
+          {liveBalance === -1
+            ? "Unlimited"
+            : `${liveBalance ?? balance ?? 0} calls`}
         </Text>
       </View>
 

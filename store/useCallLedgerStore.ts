@@ -16,13 +16,30 @@ interface LedgerEntry {
 interface CallLedgerStore {
   transactions: LedgerEntry[];
   loading: boolean;
+  /**
+   * Authoritative call balance (-1 = unlimited sentinel). Updated by the
+   * server-pushed `lead:billed` message (debit-on-offer, Phase D) and by the
+   * ledger API fetch. Null until the first authoritative value arrives.
+   */
+  balanceCalls: number | null;
+  /**
+   * Cost in calls of the most recent lead debit — always 1 under sequential
+   * dispatch (§6). Surfaced for the offer card / wallet copy.
+   */
+  lastLeadCostCalls: number | null;
   fetchTransactions: (driverId: string, limit?: number) => Promise<void>;
+  /** Apply a server-pushed authoritative balance after an offer-time debit. */
+  applyLeadBilled: (balanceAfterCalls: number) => void;
+  /** Set the balance from an authoritative fetch (ledger API). */
+  setBalanceCalls: (calls: number | null) => void;
   clear: () => void;
 }
 
 export const useCallLedgerStore = create<CallLedgerStore>((set) => ({
   transactions: [],
   loading: false,
+  balanceCalls: null,
+  lastLeadCostCalls: null,
 
   fetchTransactions: async (driverId: string, limit = 50) => {
     set({ loading: true });
@@ -43,5 +60,16 @@ export const useCallLedgerStore = create<CallLedgerStore>((set) => ({
     }
   },
 
-  clear: () => set({ transactions: [], loading: false }),
+  applyLeadBilled: (balanceAfterCalls) =>
+    set({ balanceCalls: balanceAfterCalls, lastLeadCostCalls: 1 }),
+
+  setBalanceCalls: (calls) => set({ balanceCalls: calls }),
+
+  clear: () =>
+    set({
+      transactions: [],
+      loading: false,
+      balanceCalls: null,
+      lastLeadCostCalls: null,
+    }),
 }));

@@ -19,6 +19,10 @@ export interface RouteResult {
   distanceKm: number;
   durationMin: number;
   provider: 'barikoi' | 'google' | 'haversine_fallback';
+  /** Encoded route polyline (pickup→drop reference corridor). Null when no
+   *  road-network route was available (haversine fallback) or the provider
+   *  response omitted the geometry. */
+  polyline: string | null;
 }
 
 interface BarikoiRouteResponse {
@@ -26,6 +30,9 @@ interface BarikoiRouteResponse {
   routes?: {
     distance: number;  // metres
     duration: number;  // seconds
+    // OSRM-style geometry on the same route object as distance/duration
+    // (returned because the request URL asks geometries=polyline).
+    geometry?: string;  // encoded polyline
     legs: { distance: number; duration: number }[];
   }[];
   waypoints?: unknown[];
@@ -37,6 +44,7 @@ interface GoogleRouteResponse {
       distance?: { value: number };  // metres
       duration?: { value: number };  // seconds
     }[];
+    overview_polyline?: { points?: string };  // encoded polyline
   }[];
   status: string;
 }
@@ -72,7 +80,13 @@ async function barikoiRoute(
     const route = body.routes[0];
     const distanceKm = route.distance / 1000;
     const durationMin = route.duration / 60;
-    return { distanceKm, durationMin, provider: 'barikoi' };
+    // Defensive optional access: the geometry key is read off the same route
+    // object as distance/duration; guard against provider shape drift.
+    const polyline =
+      typeof route.geometry === 'string' && route.geometry.length > 0
+        ? route.geometry
+        : null;
+    return { distanceKm, durationMin, provider: 'barikoi', polyline };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     logger.warn('[barikoi] route API error', { error: msg });
@@ -100,7 +114,10 @@ async function googleRoute(
     const leg = body.routes[0].legs[0];
     const distanceKm = (leg.distance?.value ?? 0) / 1000;
     const durationMin = (leg.duration?.value ?? 0) / 60;
-    return { distanceKm, durationMin, provider: 'google' };
+    const points = body.routes[0].overview_polyline?.points;
+    const polyline =
+      typeof points === 'string' && points.length > 0 ? points : null;
+    return { distanceKm, durationMin, provider: 'google', polyline };
   } catch {
     return null;
   }
@@ -169,5 +186,7 @@ export async function getRouteDistanceDuration(
   const distanceKm = Math.round(directKm * 1.3 * 1000) / 1000;
   // Assume 20 km/h average urban speed for ETA estimate
   const durationMin = Math.round((distanceKm / 20) * 60 * 10) / 10;
-  return { distanceKm, durationMin, provider: 'haversine_fallback' };
+  // No road-network path exists to encode — callers persist route_polyline
+  // as null in this case (the rides.route_polyline column is nullable).
+  return { distanceKm, durationMin, provider: 'haversine_fallback', polyline: null };
 }

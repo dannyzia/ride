@@ -1,13 +1,21 @@
 import { db } from '../src/db';
-import { drivers, rides, dispatchOffers, systemConfig, pricing, preferences, subscriptions, packages, driverCommutePreferences, driverBlocklists } from '../src/db/schema';
-import { eq, and, inArray, sql, isNotNull } from 'drizzle-orm';
+import { drivers, rides, dispatchOffers, systemConfig, pricing, preferences, subscriptions, packages, driverCommutePreferences, driverBlocklists, callLedger } from '../src/db/schema';
+import { eq, and, inArray, sql, gte } from 'drizzle-orm';
 import { getH3Ring } from '../lib/h3';
 import { getDriversInCells } from './h3Index';
 import { checkDriverEligibility } from '../lib/vehicleTypes';
 import { haversineKm } from '../lib/fareCalc';
 import { logger } from '../lib/logger';
-import { recordCallDeduction } from './heartbeat';
-import crypto from 'crypto';
+import { getColdDropInfos } from './coldDrop';
+import {
+  getFareFrameworkConfig,
+  parseConfigNumber,
+} from '../lib/fareFrameworkConfig';
+
+// Phase D: dispatch.ts NO LONGER WRITES dispatch_offers (no 'filtered' rows,
+// no auto-accept 'accepted' row). Filtering audit info is not persisted —
+// leadBilling.ts is the sole writer of new offer rows. This file only reads
+// dispatch_offers for chain exclusion and acceptance-rate recomputation.
 
 // ── Scoring weights ────────────────────────────────────────────────────────
 // Defaults used when system_config key 'dispatch_scoring_weights' is absent.
@@ -59,16 +67,34 @@ const MAX_RADIUS_KM = parseFloat(process.env.DISPATCH_MAX_RADIUS_KM ?? '15');
 
 // H3 ring radius for the dispatch candidate search. At resolution 9 (~174m
 // cells) each grid step is ~0.32km, so k=16 ≈ 5km — which matches the scoring
-// threshold (distScore = 1 - distKm/5 in scoreAndBatchDrivers). The previous
+// threshold (distScore = 1 - distKm/5 in buildCandidateList). The previous
 // k=2 (~400m) was far too small: it caused rides to expire with ZERO offers
 // whenever the nearest driver was more than a few hundred metres away (the
 // Banani pickup to the indexed driver at ~1.9km = grid distance 6 was never
 // reached). Tunable via DISPATCH_H3_RING_K without a code change.
 export const DISPATCH_RING_K = parseInt(process.env.DISPATCH_H3_RING_K ?? '60');
 
+/**
+ * Phase G cancellation-cooldown window for a repeat proximity-canceler:
+ * base window × 2^(offense_count − 1), capped at 4× base (the ladder cap —
+ * offense_count beyond 3 no longer grows the window).
+ */
+export function proximityCooldownWindowMinutes(baseMinutes: number, offenseCount: number): number {
+  if (baseMinutes <= 0 || offenseCount <= 1) return baseMinutes;
+  const exponent = Math.min(offenseCount - 1, 2); // cap at 4× (2^2)
+  return baseMinutes * Math.pow(2, exponent);
+}
+
 export interface ScoredDriver {
   driverId: string;
   score: number;
+  /**
+   * Same semantics as the pre-Phase-D in-scoring auto-accept: rating ≥ 4.8,
+   * auto_accept_enabled, and inside the driver's auto-accept radius. The
+   * sequential pipeline consumes this at the offer step (billing the lead
+   * first, then matching directly). No longer matched inside scoring.
+   */
+  auto_accept_eligible: boolean;
 }
 
 export async function isDispatchPaused(): Promise<boolean> {
@@ -76,7 +102,7 @@ export async function isDispatchPaused(): Promise<boolean> {
   return row?.value === 'true';
 }
 
-export async function scoreAndBatchDrivers(
+export async function buildCandidateList(
   rideId: string,
   originLat: number,
   originLng: number,
@@ -84,12 +110,11 @@ export async function scoreAndBatchDrivers(
   destinationLng: number,
   vehicleType: string,
   zoneId: string,
-  batchSize = 5,
   preferenceIds: string[] = [],
 ): Promise<ScoredDriver[]> {
   const cells = getH3Ring(originLat, originLng, DISPATCH_RING_K);
   const candidateIds = getDriversInCells(cells, vehicleType);
-  logger.info('[dispatch] scoreAndBatchDrivers', {
+  logger.info('[dispatch] buildCandidateList', {
     rideId,
     originLat,
     originLng,
@@ -112,6 +137,18 @@ export async function scoreAndBatchDrivers(
   // ── Load scoring weights (cached, 30s TTL) ────────────────────────────
   const W = await getScoringWeights();
 
+  // ── Ordering-composition config (Phase D levers) — fresh read ──────────
+  const leverCfg = await getFareFrameworkConfig([
+    'new_driver_priority_days',
+    'new_driver_priority_leads',
+    'return_lead_affinity_multiplier',
+    'proximity_cancel_cooldown_minutes',
+  ]);
+  const newDriverPriorityLeads = parseConfigNumber(leverCfg.new_driver_priority_leads, 0);
+  const newDriverPriorityDays = parseConfigNumber(leverCfg.new_driver_priority_days, 7);
+  const returnLeadAffinityMultiplier = parseConfigNumber(leverCfg.return_lead_affinity_multiplier, 1.1);
+  const cooldownBaseMinutes = parseConfigNumber(leverCfg.proximity_cancel_cooldown_minutes, 15);
+
   // ── Pricing row: system per-km rate (used for min_per_km_bdt filter) ──
   const [pricingRow] = await db.select({ per_km_bdt: pricing.per_km_bdt })
     .from(pricing)
@@ -129,6 +166,7 @@ export async function scoreAndBatchDrivers(
   // receive calls_remaining = null → balanceScore = 0 → last in ranking.
   const driverRows = await db.select({
     id:                   drivers.id,
+    created_at:           drivers.created_at,
     last_location_lat:    drivers.last_location_lat,
     last_location_lng:    drivers.last_location_lng,
     rating:               drivers.rating,
@@ -213,12 +251,73 @@ export async function scoreAndBatchDrivers(
     }
   }
 
-  // ── Already-offered set ───────────────────────────────────────────────
+  // ── Already-offered set (chain exclusion — reused batch-exclusion query).
+  // Under sequential dispatch a re-entering pipeline skips every driver that
+  // already has a dispatch_offers row for this ride (billed leads are never
+  // re-offered or re-billed; the unique indexes back this up).
   const existingOffers = await db
     .select({ driver_id: dispatchOffers.driver_id })
     .from(dispatchOffers)
     .where(eq(dispatchOffers.ride_id, rideId));
   const alreadyOffered = new Set(existingOffers.map(o => o.driver_id));
+
+  // ── Proximity-cancel cooldown (Phase G) — ONE grouped query, JS filter ──
+  // rides has no dedicated cancelled_at column: `updated_at` carries the
+  // cancel timestamp (same convention as the quality query above). The
+  // lookback is the ladder cap (4× base) so repeat offenders' doubled
+  // windows stay visible; the per-driver effective window is applied in JS.
+  const cooldownDriverIds = new Set<string>();
+  if (driverIds.length > 0 && cooldownBaseMinutes > 0) {
+    const lookbackStart = new Date(Date.now() - 4 * cooldownBaseMinutes * 60_000);
+    const cooldownRows = await db.select({
+      driver_id: rides.driver_id,
+      offense_count: sql<number>`count(*)`,
+      last_cancel_at: sql<string>`max(${rides.updated_at})`,
+    })
+    .from(rides)
+    .where(and(
+      inArray(rides.driver_id, driverIds),
+      eq(rides.status, 'cancelled'),
+      eq(rides.cancelled_by, 'driver'),
+      eq(rides.driver_cancel_within_200m, true),
+      gte(rides.updated_at, lookbackStart),
+    ))
+    .groupBy(rides.driver_id);
+
+    const nowMs = Date.now();
+    for (const row of cooldownRows) {
+      if (!row.driver_id || !row.last_cancel_at) continue;
+      const offenses = Number(row.offense_count);
+      const windowMinutes = proximityCooldownWindowMinutes(cooldownBaseMinutes, offenses);
+      const lastCancelMs = new Date(row.last_cancel_at).getTime();
+      if (nowMs - lastCancelMs < windowMinutes * 60_000) {
+        cooldownDriverIds.add(row.driver_id);
+      }
+    }
+  }
+
+  // ── New-driver protection tier (Lever, §6) — ONE batched count query ──
+  // leads-consumed = count of call_ledger deduction rows per driver
+  // (indexed by call_ledger_driver_date_idx).
+  const leadsConsumedMap = new Map<string, number>();
+  if (newDriverPriorityLeads > 0 && driverIds.length > 0) {
+    const leadRows = await db.select({
+      driver_id: callLedger.driver_id,
+      leads: sql<number>`count(*)`,
+    })
+    .from(callLedger)
+    .where(and(
+      inArray(callLedger.driver_id, driverIds),
+      eq(callLedger.event_type, 'deduction'),
+    ))
+    .groupBy(callLedger.driver_id);
+    for (const row of leadRows) {
+      if (row.driver_id) leadsConsumedMap.set(row.driver_id, Number(row.leads));
+    }
+  }
+
+  // ── Cold-drop boost + return-lead affinity (Levers 2/3) — batched ─────
+  const coldDropInfos = await getColdDropInfos(driverIds);
 
   // ── Preference filter ─────────────────────────────────────────────────
   // Only include drivers who have ALL requested affects_matching preferences.
@@ -294,13 +393,27 @@ export async function scoreAndBatchDrivers(
   }
 
   // ── Score each candidate ──────────────────────────────────────────────
-  const scored: ScoredDriver[] = [];
+  // Local scored row carries the protected-tier flag for the final sort.
+  interface ScoredRow extends ScoredDriver {
+    protected_tier: boolean;
+  }
+  const scored: ScoredRow[] = [];
+  const nowMs = Date.now();
 
   for (const d of driverRows) {
     if (alreadyOffered.has(d.id)) continue;
     if (preferenceEligibleIds != null && !preferenceEligibleIds.has(d.id)) continue;
 
-    // ── Commute filter (batched) ──
+    // ── Proximity-cancel cooldown (Phase G) ──
+    if (cooldownDriverIds.has(d.id)) {
+      logger.debug('[dispatch] driver filtered — proximity-cancel cooldown', {
+        driverId: d.id,
+        baseMinutes: cooldownBaseMinutes,
+      });
+      continue;
+    }
+
+    // ── Commute filter (batched; no audit row — dispatch.ts no longer writes) ──
     const commute = commuteByDriver.get(d.id);
     if (commute) {
       const destLat = parseFloat(commute.destination_lat);
@@ -308,10 +421,6 @@ export async function scoreAndBatchDrivers(
       if (!isNaN(destLat) && !isNaN(destLng)) {
         const distToCommute = haversineMeters(destinationLat, destinationLng, destLat, destLng);
         if (distToCommute > commute.max_deviation_meters) {
-          await db.insert(dispatchOffers).values({
-            ride_id: rideId, driver_id: d.id, batch_index: -1, sent_at: new Date(),
-            outcome: 'filtered' as any, filtered_reason: 'commute',
-          }).onConflictDoNothing();
           continue;
         }
       }
@@ -332,60 +441,17 @@ export async function scoreAndBatchDrivers(
     }
     if (d.daily_calls_used != null && d.daily_calls_used >= (d.daily_cap ?? Infinity)) continue;
 
-    // ── Auto-accept — driver auto-accepts close rides without offer sheet ──
+    // ── Auto-accept eligibility flag (match happens at the offer step in
+    // the pipeline, after billing — auto-accept drivers are billed the same
+    // 1 lead). Same semantics as before: rating ≥ 4.8 + radius gate. ──────
+    let autoAcceptEligible = false;
     if (d.auto_accept_enabled && Number(d.rating ?? 0) >= 4.8) {
       const dlLat = parseFloat(d.last_location_lat?.toString() ?? '0');
       const dlLng = parseFloat(d.last_location_lng?.toString() ?? '0');
       if (dlLat !== 0 && dlLng !== 0) {
         const dist = haversineMeters(originLat, originLng, dlLat, dlLng);
         if (dist <= (d.auto_accept_radius_meters ?? 500)) {
-          if (!d.subscription_id) continue;
-          // Atomic match FIRST, with a start PIN. This prevents the race-loser
-          // from consuming a call credit: the WHERE status='dispatching' guard
-          // means only the first auto-acceptor wins; losers `continue` below
-          // without deducting.
-          const pin = crypto.randomInt(1000, 10000);
-          const matched = await db.update(rides).set({
-            driver_id: d.id, status: 'matched', matched_at: new Date(),
-            start_pin: String(pin),
-          }).where(and(eq(rides.id, rideId), eq(rides.status, 'dispatching')))
-            .returning({ id: rides.id });
-          if (matched.length === 0) {
-            logger.warn('[dispatch] auto-accept race lost — ride already matched by another path', {
-              rideId, driverId: d.id,
-            });
-            continue;
-          }
-          // Call deduction via heartbeat AFTER the match is won (ownership:
-          // call_ledger deduction rows are ONLY written by heartbeat.ts, never
-          // by dispatch.ts directly). The driver already passed the balance
-          // check above, so if deduction now fails we keep the match and log.
-          try {
-            const deduction = await recordCallDeduction({
-              driverId: d.id,
-              subscriptionId: d.subscription_id,
-              rideId,
-              confirmedAt: new Date(),
-            });
-            if (!deduction.deducted) {
-              logger.warn('[dispatch] auto-accept deduction failed after match — keeping match', {
-                rideId, driverId: d.id,
-              });
-            }
-          } catch (e: any) {
-            logger.warn('[dispatch] auto-accept deduction error after match — keeping match', {
-              rideId, driverId: d.id, error: e.message,
-            });
-          }
-          await db.insert(dispatchOffers).values({
-            ride_id: rideId, driver_id: d.id, batch_index: 0, sent_at: new Date(),
-            outcome: 'accepted',
-          });
-          logger.info('[dispatch] auto-accepted', { rideId, driverId: d.id });
-          // Return empty so the pipeline does NOT insert ghost offers for an
-          // already-matched ride. dispatchRidePipeline detects the 'matched'
-          // status and notifies the rider itself (sendToRider lives there).
-          return [];
+          autoAcceptEligible = true;
         }
       }
     }
@@ -398,15 +464,8 @@ export async function scoreAndBatchDrivers(
 
     if (Number(d.rating) < 3.5) continue;
 
-      if (d.min_per_km_bdt != null && systemPerKmBdt > 0 && systemPerKmBdt < d.min_per_km_bdt) {
-      await db.insert(dispatchOffers).values({
-        ride_id:         rideId,
-        driver_id:       d.id,
-        batch_index:     -1,
-        sent_at:         new Date(),
-        outcome:         'filtered' as any,
-        filtered_reason: 'min_per_km',
-      }).onConflictDoNothing();
+    // ── min_per_km filter (no audit row — dispatch.ts no longer writes) ──
+    if (d.min_per_km_bdt != null && systemPerKmBdt > 0 && systemPerKmBdt < d.min_per_km_bdt) {
       continue;
     }
 
@@ -438,10 +497,10 @@ export async function scoreAndBatchDrivers(
       : Math.min(acceptRaw / 100, 1.0);
 
     // ── balanceScore: 0→1, Ride-unique subscription health signal ──────
-    // Prevents broadcasting to zero-balance drivers who will not fetch.
+    // Prevents offering to zero-balance drivers who cannot be billed.
     // calls_remaining = -1 → unlimited package → score = 1.0.
     // calls_remaining = null → no active subscription → score = 0.0
-    //   (driver will not be able to complete a deduction; skip them).
+    //   (driver cannot be billed at offer time; skip them).
     // Caps at 5+ remaining calls → 1.0 (no need to reward hoarding calls).
     const callsRem = d.calls_remaining;
     const balanceScore =
@@ -478,6 +537,26 @@ export async function scoreAndBatchDrivers(
       }
     }
 
+    // ── Lever 2: cold-drop rank boost (decaying, never below 1) ────────
+    // ── Lever 3: return-lead affinity (pickup zone == recent cold drop) ─
+    const cold = coldDropInfos.get(d.id);
+    if (cold) {
+      score *= cold.boostMultiplier;
+      if (zoneId && cold.zoneId === zoneId) {
+        score *= returnLeadAffinityMultiplier;
+      }
+    }
+
+    // ── New-driver protection tier flag (§6): within priority days AND
+    // leads-consumed < N. Tier is applied at the final sort, score order is
+    // preserved within tiers. ─────────────────────────────────────────────
+    let protectedTier = false;
+    if (newDriverPriorityLeads > 0 && d.created_at) {
+      const ageDays = (nowMs - new Date(d.created_at).getTime()) / 86_400_000;
+      const leadsConsumed = leadsConsumedMap.get(d.id) ?? 0;
+      protectedTier = ageDays < newDriverPriorityDays && leadsConsumed < newDriverPriorityLeads;
+    }
+
     logger.debug('[dispatch] driver scored', {
       driverId: d.id, distKm: distKm.toFixed(2),
       distanceScore: distanceScore.toFixed(3),
@@ -486,19 +565,34 @@ export async function scoreAndBatchDrivers(
       balanceScore: balanceScore.toFixed(3),
       onlineScore: onlineScore.toFixed(3),
       total: score.toFixed(4),
+      autoAcceptEligible,
+      protectedTier,
     });
-    scored.push({ driverId: d.id, score });
+    scored.push({
+      driverId: d.id,
+      score,
+      auto_accept_eligible: autoAcceptEligible,
+      protected_tier: protectedTier,
+    });
   }
 
   logger.info('[dispatch] scoring complete', {
     rideId,
     scored: scored.length,
-    batchSize,
     topScore: scored[0]?.score.toFixed(4) ?? 'none',
   });
 
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, batchSize);
+  // Ordering composition: protected new-driver tier sorts ahead of
+  // unprotected (score order preserved within tiers — Array.sort is stable),
+  // then stable sort by score desc.
+  scored.sort((a, b) => (Number(b.protected_tier) - Number(a.protected_tier)) || (b.score - a.score));
+
+  // Return full ordered list — the sequential pipeline consumes one at a time
+  return scored.map(({ driverId, score, auto_accept_eligible }) => ({
+    driverId,
+    score,
+    auto_accept_eligible,
+  }));
 }
 
 export async function updateDriverAcceptanceRate(driverId: string): Promise<void> {
@@ -526,4 +620,3 @@ export async function updateDriverAcceptanceRate(driverId: string): Promise<void
     logger.error('[dispatch] acceptance rate update failed', { driverId, error: e.message });
   }
 }
-

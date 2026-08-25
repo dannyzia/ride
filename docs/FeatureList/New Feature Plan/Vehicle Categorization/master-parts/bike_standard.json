@@ -1,0 +1,1219 @@
+[
+  {
+    "brand": "Bajaj",
+    "model": "Boxer BM150",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 145,
+    "typical_cc_max": 145,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Discover 125",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar 125",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar 135 LS",
+    "year_start": 2011,
+    "year_end": 2020,
+    "body_type": "motorcycle",
+    "typical_cc_min": 134,
+    "typical_cc_max": 135,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "Pulsar 150",
+    "year_start": 2001,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 150,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Bajaj",
+    "model": "V15",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Haojue",
+    "model": "HJ125-8",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Haojue",
+    "model": "KA125",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Achiever",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Glamour",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Glamour 125",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Hunk",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Ignitor",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Passion Pro",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 97,
+    "typical_cc_max": 113,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": "cc range 97-113 spans basic/standard boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Super Splendor 125",
+    "year_start": 2012,
+    "year_end": 2024,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Xtreme",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hero",
+    "model": "Xtreme 125R",
+    "year_start": 2024,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Activa 125",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CB Shine",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CB Shine 125",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 123,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CB Shine SP",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CB Trigger 150",
+    "year_start": 2013,
+    "year_end": 2019,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CB Unicorn 150",
+    "year_start": 2004,
+    "year_end": 2020,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 150,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CG125",
+    "year_start": 1980,
+    "year_end": 2024,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Grazia",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "SP125",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 123,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Unicorn 150",
+    "year_start": 2004,
+    "year_end": 2022,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Keeway",
+    "model": "RKS 125",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Keeway",
+    "model": "Superlight 125",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lifan",
+    "model": "LF150-2",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 150,
+    "typical_cc_max": 150,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Regal Raptor",
+    "model": "DD125E",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Roadmaster",
+    "model": "Prime 125",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Roadmaster",
+    "model": "Velocity",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 100,
+    "typical_cc_max": 150,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": "source cc conflict 100 vs 150 — banded by cc_max",
+    "_notes": "BD brand; cc unverified"
+  },
+  {
+    "brand": "Runner",
+    "model": "Galaxis",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 110,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Runner",
+    "model": "KnightRider",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 150,
+    "typical_cc_max": 150,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Runner",
+    "model": "Turbo",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 150,
+    "typical_cc_max": 150,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Runner",
+    "model": "Turbo 135",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 134,
+    "typical_cc_max": 135,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Access 125",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Avenis 125",
+    "year_start": 2021,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Burgman Street",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "GS150",
+    "year_start": 2010,
+    "year_end": 2019,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "GSX 125",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Hayate",
+    "year_start": 2010,
+    "year_end": 2020,
+    "body_type": "motorcycle",
+    "typical_cc_min": 112,
+    "typical_cc_max": 113,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Hayate 112",
+    "year_start": 2013,
+    "year_end": 2020,
+    "body_type": "motorcycle",
+    "typical_cc_min": 112,
+    "typical_cc_max": 113,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Let's",
+    "year_start": 2014,
+    "year_end": 2020,
+    "body_type": "scooter",
+    "typical_cc_min": 112,
+    "typical_cc_max": 112,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Slingshot Plus",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Apache RTR 150",
+    "year_start": 2007,
+    "year_end": 2021,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 150,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Max 125",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Ntorq 125",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Phoenix",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Stryker 125",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "TVS",
+    "model": "Victor 125",
+    "year_start": 2003,
+    "year_end": 2020,
+    "body_type": "motorcycle",
+    "typical_cc_min": 124,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Walton",
+    "model": "Ranger",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 150,
+    "typical_cc_max": 150,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Walton",
+    "model": "Xplore 140",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 140,
+    "typical_cc_max": 140,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "Fascino",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 113,
+    "typical_cc_max": 113,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "FZ V2.0",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "FZ-S FI (V2/V3)",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "FZS 150",
+    "year_start": 2014,
+    "year_end": 2024,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "FZS V2",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "FZS-FI",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 150,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "Ray ZR",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 110,
+    "typical_cc_max": 113,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "Saluto",
+    "year_start": 2015,
+    "year_end": 2020,
+    "body_type": "motorcycle",
+    "typical_cc_min": 125,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "Saluto 125",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "motorcycle",
+    "typical_cc_min": 125,
+    "typical_cc_max": 125,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "SZ-R 150",
+    "year_start": 2012,
+    "year_end": 2020,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Yamaha",
+    "model": "SZ-RR",
+    "year_start": 2010,
+    "year_end": 2018,
+    "body_type": "motorcycle",
+    "typical_cc_min": 149,
+    "typical_cc_max": 149,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Znen",
+    "model": "ZN125T-E",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "scooter",
+    "typical_cc_min": 124,
+    "typical_cc_max": 124,
+    "passenger_seats": 2,
+    "has_ac": false,
+    "default_vehicle_type": "bike_standard",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  }
+]

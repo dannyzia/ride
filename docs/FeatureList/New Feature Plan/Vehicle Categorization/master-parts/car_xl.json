@@ -1,0 +1,2875 @@
+[
+  {
+    "brand": "BYD",
+    "model": "M6 (7-seat)",
+    "year_start": 2010,
+    "year_end": 2017,
+    "body_type": "mpv",
+    "typical_cc_min": 1991,
+    "typical_cc_max": 2378,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1991–2378 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "BYD",
+    "model": "Song Max (7-seat)",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Orlando (7-seat)",
+    "year_start": 2010,
+    "year_end": 2014,
+    "body_type": "mpv",
+    "typical_cc_min": 1796,
+    "typical_cc_max": 1998,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Atrai",
+    "year_start": 1999,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 658,
+    "typical_cc_max": 658,
+    "passenger_seats": 6,
+    "has_ac": false,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Hijet",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 658,
+    "typical_cc_max": 658,
+    "passenger_seats": 6,
+    "has_ac": false,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Thor",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 998,
+    "typical_cc_max": 998,
+    "passenger_seats": 6,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Force",
+    "model": "Traveller",
+    "year_start": 2001,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 2596,
+    "typical_cc_max": 2596,
+    "passenger_seats": 12,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Force",
+    "model": "Urbania",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 2596,
+    "typical_cc_max": 2596,
+    "passenger_seats": 12,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "Endeavour 2.0/3.2",
+    "year_start": 2015,
+    "year_end": 2024,
+    "body_type": "suv_large",
+    "typical_cc_min": 1996,
+    "typical_cc_max": 3198,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": "cc range 1996–3198 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "Tourneo Custom",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1995,
+    "typical_cc_max": 1995,
+    "passenger_seats": 9,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "Transit",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1995,
+    "typical_cc_max": 3496,
+    "passenger_seats": 12,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1995–3496 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "BR-V 1.5",
+    "year_start": 2016,
+    "year_end": 2024,
+    "body_type": "mpv",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Elysion (7-seat)",
+    "year_start": 2004,
+    "year_end": 2021,
+    "body_type": "mpv",
+    "typical_cc_min": 2354,
+    "typical_cc_max": 3471,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Elysion ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Honda",
+    "model": "Freed",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1498,
+    "passenger_seats": 6,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Freed (7-seat)",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Mobilio (7-seat)",
+    "year_start": 2014,
+    "year_end": 2020,
+    "body_type": "mpv",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Mobilio 1.5",
+    "year_start": 2014,
+    "year_end": 2022,
+    "body_type": "mpv",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Odyssey",
+    "year_start": 1994,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 3569,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": "cc range 1997–3569 spans category boundary — banded by cc_max",
+    "_notes": "7-seat variant of Odyssey (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Honda",
+    "model": "Odyssey (7-seat)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2354,
+    "typical_cc_max": 2354,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Odyssey ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Honda",
+    "model": "Odyssey 2.4",
+    "year_start": 2005,
+    "year_end": 2024,
+    "body_type": "mpv",
+    "typical_cc_min": 2356,
+    "typical_cc_max": 2356,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Stepwgn",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1997,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": "cc range 1496–1997 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Grand Starex",
+    "year_start": 1997,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 2497,
+    "passenger_seats": 9,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": "cc range 1997-2497 spans category boundary — banded by cc_max",
+    "_notes": "H-1 / Starex naming variants merged"
+  },
+  {
+    "brand": "Hyundai",
+    "model": "iMax/i800",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 2497,
+    "typical_cc_max": 2497,
+    "passenger_seats": 8,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Santa Fe",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2188,
+    "typical_cc_max": 2656,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "kimi",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Santa Fe (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Staria",
+    "year_start": 2021,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2199,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "cc range 1998–2199 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Isuzu",
+    "model": "MU-X 3.0",
+    "year_start": 2013,
+    "year_end": 2024,
+    "body_type": "suv_large",
+    "typical_cc_min": 2999,
+    "typical_cc_max": 2999,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Carnival",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2199,
+    "typical_cc_max": 3470,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Carnival (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Kia",
+    "model": "Carnival 2.2/3.3",
+    "year_start": 2005,
+    "year_end": 2024,
+    "body_type": "mpv",
+    "typical_cc_min": 2199,
+    "typical_cc_max": 3342,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Carnival/Sedona",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2199,
+    "typical_cc_max": 3342,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Carnival/Sedona (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Kia",
+    "model": "Grand Carnival",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2199,
+    "typical_cc_max": 3342,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "LM (7-seat)",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2494,
+    "typical_cc_max": 3456,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of LM ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Mahindra",
+    "model": "Marazzo",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mahindra",
+    "model": "XUV500 2.2",
+    "year_start": 2011,
+    "year_end": 2023,
+    "body_type": "suv_large",
+    "typical_cc_min": 2179,
+    "typical_cc_max": 2179,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mahindra",
+    "model": "Xylo",
+    "year_start": 2009,
+    "year_end": 2019,
+    "body_type": "mpv",
+    "typical_cc_min": 2179,
+    "typical_cc_max": 2498,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Biante",
+    "year_start": 2008,
+    "year_end": 2018,
+    "body_type": "mpv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 1998,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "MPV (7-seat)",
+    "year_start": 1999,
+    "year_end": 2016,
+    "body_type": "mpv",
+    "typical_cc_min": 2261,
+    "typical_cc_max": 2261,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of MPV ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Mazda",
+    "model": "Premacy (7-seat)",
+    "year_start": 1999,
+    "year_end": 2010,
+    "body_type": "mpv",
+    "typical_cc_min": 1839,
+    "typical_cc_max": 1998,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "Sprinter",
+    "year_start": 1995,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 2143,
+    "typical_cc_max": 2987,
+    "passenger_seats": 12,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "V-Class/Viano (7-seat)",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2143,
+    "typical_cc_max": 2987,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of V-Class/Viano ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Chariot/Grandis (7-seat)",
+    "year_start": 2003,
+    "year_end": 2011,
+    "body_type": "mpv",
+    "typical_cc_min": 2378,
+    "typical_cc_max": 2378,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Delica",
+    "year_start": 1994,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 2998,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": "cc range 1997–2998 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Delica D:5",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2359,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–2359 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Dion",
+    "year_start": 2000,
+    "year_end": 2005,
+    "body_type": "mpv",
+    "typical_cc_min": 1834,
+    "typical_cc_max": 1997,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Xpander",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1499,
+    "typical_cc_max": 1499,
+    "passenger_seats": 6,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Xpander 1.5",
+    "year_start": 2017,
+    "year_end": 2024,
+    "body_type": "mpv",
+    "typical_cc_min": 1499,
+    "typical_cc_max": 1499,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Caravan / Urvan",
+    "year_start": 2001,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2488,
+    "passenger_seats": 10,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": "cc range 1998-2488 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Elgrand",
+    "year_start": 1997,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 3498,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Elgrand 2.5/3.5",
+    "year_start": 2002,
+    "year_end": 2022,
+    "body_type": "mpv",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 3498,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Lafesta",
+    "year_start": 2004,
+    "year_end": 2012,
+    "body_type": "mpv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 1997,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "NV350 Caravan",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 2488,
+    "passenger_seats": 10,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Presage",
+    "year_start": 1998,
+    "year_end": 2009,
+    "body_type": "mpv",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 3498,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Serena",
+    "year_start": 1991,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1597,
+    "typical_cc_max": 1998,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Perodua",
+    "model": "Alza",
+    "year_start": 2009,
+    "year_end": 2022,
+    "body_type": "mpv",
+    "typical_cc_min": 1495,
+    "typical_cc_max": 1495,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Proton",
+    "model": "Exora",
+    "year_start": 2009,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1561,
+    "typical_cc_max": 1561,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ssangyong",
+    "model": "Korando Turismo",
+    "year_start": 2013,
+    "year_end": 2019,
+    "body_type": "van",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 1998,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ssangyong",
+    "model": "Rodius/Stavic",
+    "year_start": 2004,
+    "year_end": 2019,
+    "body_type": "mpv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3199,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–3199 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Exiga (7-seat)",
+    "year_start": 2008,
+    "year_end": 2018,
+    "body_type": "mpv",
+    "typical_cc_min": 1994,
+    "typical_cc_max": 2498,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1994–2498 spans category boundary — banded by cc_max",
+    "_notes": "7-seat variant of Exiga ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Suzuki",
+    "model": "APV",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1493,
+    "typical_cc_max": 1590,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": "cc range 1493–1590 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Carry",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 657,
+    "typical_cc_max": 797,
+    "passenger_seats": 6,
+    "has_ac": false,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Ertiga 1.5",
+    "year_start": 2012,
+    "year_end": 2024,
+    "body_type": "mpv",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Every",
+    "year_start": 1999,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 657,
+    "typical_cc_max": 657,
+    "passenger_seats": 6,
+    "has_ac": false,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "kei microvan 657cc in XL via seats rule — product review; 4-seat variant in car_compact",
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Every Plus",
+    "year_start": 2001,
+    "year_end": 2006,
+    "body_type": "van",
+    "typical_cc_min": 1490,
+    "typical_cc_max": 1490,
+    "passenger_seats": 6,
+    "has_ac": false,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Aria",
+    "year_start": 2010,
+    "year_end": 2017,
+    "body_type": "mpv",
+    "typical_cc_min": 2179,
+    "typical_cc_max": 2179,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Safari 2.0",
+    "year_start": 2011,
+    "year_end": 2024,
+    "body_type": "suv_large",
+    "typical_cc_min": 1956,
+    "typical_cc_max": 1956,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Venture",
+    "year_start": 2010,
+    "year_end": 2017,
+    "body_type": "van",
+    "typical_cc_min": 1405,
+    "typical_cc_max": 1405,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Winger",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1948,
+    "typical_cc_max": 1948,
+    "passenger_seats": 10,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Tesla",
+    "model": "Model X",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": null,
+    "typical_cc_max": null,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "EV — no canonical cc; pre-decided for admin review",
+    "_notes": "7-seat suv_large → car_xl per rule 5"
+  },
+  {
+    "brand": "Toyota",
+    "model": "Alphard",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 3456,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Alphard (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Toyota",
+    "model": "Alphard (7-seat)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 3456,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Alphard ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Toyota",
+    "model": "Alphard / Vellfire",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 3456,
+    "passenger_seats": 6,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Avanza",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1296,
+    "typical_cc_max": 1496,
+    "passenger_seats": 6,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Coaster",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "minibus",
+    "typical_cc_min": 2694,
+    "typical_cc_max": 4164,
+    "passenger_seats": 20,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Esquire",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1797,
+    "typical_cc_max": 1998,
+    "passenger_seats": 6,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Estima",
+    "year_start": 2006,
+    "year_end": 2019,
+    "body_type": "mpv",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 3456,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Estima/Previa",
+    "year_start": 2000,
+    "year_end": 2019,
+    "body_type": "mpv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2362,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": "cc range 1998–2362 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Fortuner",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2393,
+    "typical_cc_max": 3956,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "kimi",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Fortuner (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Toyota",
+    "model": "Granvia/Grand Hiace",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2755,
+    "typical_cc_max": 2755,
+    "passenger_seats": 6,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Innova Crysta",
+    "year_start": 2004,
+    "year_end": 2024,
+    "body_type": "mpv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2694,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": "cc range 1998–2694 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Lite Ace",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1495,
+    "typical_cc_max": 1495,
+    "passenger_seats": 6,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Noah",
+    "year_start": 2001,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1794,
+    "typical_cc_max": 1998,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Passo Sette (7-seat)",
+    "year_start": 2008,
+    "year_end": 2017,
+    "body_type": "mpv",
+    "typical_cc_min": 1495,
+    "typical_cc_max": 1496,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "kimi",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Prius Alpha",
+    "year_start": 2011,
+    "year_end": 2021,
+    "body_type": "mpv",
+    "typical_cc_min": 1797,
+    "typical_cc_max": 1797,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Town Ace",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1495,
+    "typical_cc_max": 1495,
+    "passenger_seats": 6,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Vellfire",
+    "year_start": 2008,
+    "year_end": 2024,
+    "body_type": "mpv",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 3456,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Vellfire (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Toyota",
+    "model": "Vellfire (7-seat)",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 2362,
+    "typical_cc_max": 3456,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Vellfire ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Toyota",
+    "model": "Voxy",
+    "year_start": 2001,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1794,
+    "typical_cc_max": 1998,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Wish",
+    "year_start": 2003,
+    "year_end": 2017,
+    "body_type": "mpv",
+    "typical_cc_min": 1794,
+    "typical_cc_max": 1998,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Rush (7-seat)",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1495,
+    "typical_cc_max": 1495,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "kimi",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "XL7 (7-seat)",
+    "year_start": 2006,
+    "year_end": 2009,
+    "body_type": "suv_large",
+    "typical_cc_min": 1490,
+    "typical_cc_max": 1490,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Perodua",
+    "model": "Aruz",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1496,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "MG",
+    "model": "Gloster (7-seat)",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1996,
+    "typical_cc_max": 1996,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Jetour",
+    "model": "X90 (7-seat)",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Jetour",
+    "model": "X70 (7-seat)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of X70 ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Tucson (7-seat)",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1999,
+    "typical_cc_max": 1999,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Creta (7-seat)",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1591,
+    "typical_cc_max": 1591,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Crossroad (7-seat)",
+    "year_start": 2007,
+    "year_end": 2010,
+    "body_type": "suv_large",
+    "typical_cc_min": 1799,
+    "typical_cc_max": 1998,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Haval",
+    "model": "H9 (7-seat)",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1967,
+    "typical_cc_max": 1967,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Haval",
+    "model": "H5 (7-seat)",
+    "year_start": 2010,
+    "year_end": 2020,
+    "body_type": "suv_large",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 1997,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "DFSK",
+    "model": "Glory 580 (7-seat)",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1798,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1498–1798 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Chery",
+    "model": "Tiggo 8 (7-seat)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1598,
+    "typical_cc_max": 1998,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Changan",
+    "model": "Oshan X7 (7-seat)",
+    "year_start": 2022,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1499,
+    "typical_cc_max": 1499,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Oshan X7 ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Kia",
+    "model": "Sorento (7-seat)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2359,
+    "typical_cc_max": 3470,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Sorento ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Tata",
+    "model": "Sumo",
+    "year_start": 1994,
+    "year_end": 2019,
+    "body_type": "suv_large",
+    "typical_cc_min": 1948,
+    "typical_cc_max": 2956,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1948–2956 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Safari",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1956,
+    "typical_cc_max": 2179,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1956–2179 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Tata",
+    "model": "Hexa",
+    "year_start": 2017,
+    "year_end": 2020,
+    "body_type": "suv_large",
+    "typical_cc_min": 2179,
+    "typical_cc_max": 2179,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Tribeca (7-seat)",
+    "year_start": 2005,
+    "year_end": 2014,
+    "body_type": "suv_large",
+    "typical_cc_min": 2994,
+    "typical_cc_max": 3630,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Tribeca ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Subaru",
+    "model": "Ascent (7-seat)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2387,
+    "typical_cc_max": 2387,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ssangyong",
+    "model": "Rexton (7-seat)",
+    "year_start": 2001,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3199,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–3199 spans category boundary — banded by cc_max",
+    "_notes": "7-seat variant of Rexton ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Nissan",
+    "model": "X-Trail (7-seat)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 2488,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1997–2488 spans category boundary — banded by cc_max",
+    "_notes": "7-seat variant of X-Trail ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Nissan",
+    "model": "Terra (7-seat)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 2488,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Patrol (7-seat)",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 4759,
+    "typical_cc_max": 5552,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Patrol ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Nissan",
+    "model": "Pathfinder (7-seat)",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 3954,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Pathfinder ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Nissan",
+    "model": "Armada (7-seat)",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 5552,
+    "typical_cc_max": 5552,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Armada ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Montero (7-seat)",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2972,
+    "typical_cc_max": 3828,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Montero ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "GLS (7-seat)",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2987,
+    "typical_cc_max": 5980,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of GLS ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Mercedes-Benz",
+    "model": "GLE (7-seat)",
+    "year_start": 1997,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2143,
+    "typical_cc_max": 3982,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of GLE ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Mazda",
+    "model": "CX-9 (7-seat)",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 2488,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "CX-8 (7-seat)",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2488,
+    "typical_cc_max": 2488,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mahindra",
+    "model": "Scorpio",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2179,
+    "typical_cc_max": 2498,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mahindra",
+    "model": "Bolero",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2523,
+    "typical_cc_max": 2523,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lincoln",
+    "model": "Navigator (7-seat)",
+    "year_start": 1997,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 3496,
+    "typical_cc_max": 3496,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Navigator ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Lincoln",
+    "model": "Aviator (7-seat)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2993,
+    "typical_cc_max": 3496,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Lexus",
+    "model": "RX L (7-seat)",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 3456,
+    "typical_cc_max": 3456,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "kimi",
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of RX L ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Lexus",
+    "model": "LX (7-seat)",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 4663,
+    "typical_cc_max": 5663,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of LX ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Lexus",
+    "model": "GX (7-seat)",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 3956,
+    "typical_cc_max": 4608,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of GX ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Range Rover Sport (7-seat)",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2993,
+    "typical_cc_max": 4999,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Range Rover Sport ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Range Rover (7-seat)",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2993,
+    "typical_cc_max": 4999,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Range Rover ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Discovery (7-seat)",
+    "year_start": 1989,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 4999,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Discovery ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Land Rover",
+    "model": "Defender (7-seat)",
+    "year_start": 1983,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 4999,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Defender ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Kia",
+    "model": "Telluride (7-seat)",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 3778,
+    "typical_cc_max": 3778,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Isuzu",
+    "model": "MU-X (7-seat)",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1898,
+    "typical_cc_max": 2999,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1898–2999 spans category boundary — banded by cc_max",
+    "_notes": "7-seat variant of MU-X ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Infiniti",
+    "model": "QX80 (7-seat)",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 5552,
+    "typical_cc_max": 5552,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of QX80 ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Infiniti",
+    "model": "QX60 (7-seat)",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2494,
+    "typical_cc_max": 3498,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of QX60 ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Palisade (7-seat)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 3778,
+    "typical_cc_max": 3778,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Palisade ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Genesis",
+    "model": "GV80 (7-seat)",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2497,
+    "typical_cc_max": 3778,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of GV80 ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Ford",
+    "model": "Explorer (7-seat)",
+    "year_start": 1990,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2299,
+    "typical_cc_max": 3496,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Explorer ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Ford",
+    "model": "Expedition (7-seat)",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 3496,
+    "typical_cc_max": 5408,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Expedition ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Ford",
+    "model": "Everest (7-seat)",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3198,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–3198 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Traverse (7-seat)",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 3564,
+    "typical_cc_max": 3564,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Traverse ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Tahoe (7-seat)",
+    "year_start": 1994,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 5328,
+    "typical_cc_max": 5328,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Tahoe ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Suburban (7-seat)",
+    "year_start": 1980,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 5328,
+    "typical_cc_max": 5328,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Suburban ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Cadillac",
+    "model": "XT6 (7-seat)",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 3649,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–3649 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Cadillac",
+    "model": "Escalade (7-seat)",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 6162,
+    "typical_cc_max": 6162,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Escalade ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "BMW",
+    "model": "X5 (7-seat)",
+    "year_start": 1999,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2979,
+    "typical_cc_max": 4395,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of X5 ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Audi",
+    "model": "Q8 (7-seat)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2995,
+    "typical_cc_max": 3993,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Q8 ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Audi",
+    "model": "Q7 (7-seat)",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2967,
+    "typical_cc_max": 3993,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Q7 ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Acura",
+    "model": "MDX (7-seat)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2959,
+    "typical_cc_max": 3210,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of MDX ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Toyota",
+    "model": "Hiace",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2982,
+    "passenger_seats": 10,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Land Cruiser 7-seat",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 3956,
+    "typical_cc_max": 4663,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "kimi",
+      "chatgpt",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Land Cruiser ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Toyota",
+    "model": "Prado 7-seat",
+    "year_start": 2002,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2693,
+    "typical_cc_max": 3956,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "glm5.3",
+      "kimi",
+      "gemini",
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Land Cruiser Prado (rule 5: seats>=6 + suv_large → car_xl) | 7-seat variant of Prado ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Pajero Sport (7-seat)",
+    "year_start": 1996,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2398,
+    "typical_cc_max": 3200,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Pajero Sport (rule 5: seats >= 6 + suv_large -> car_xl)"
+  },
+  {
+    "brand": "Toyota",
+    "model": "Innova",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 2694,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": "cc range 1998–2694 spans category boundary — banded by cc_max",
+    "_notes": "7-seat variant of Innova (rule 5: seats>=6 + suv_large → car_xl) | 7-seat variant of Innova ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Ertiga",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "mpv",
+    "typical_cc_min": 1373,
+    "typical_cc_max": 1462,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": ""
+  },
+  {
+    "brand": "Toyota",
+    "model": "Sienta",
+    "year_start": 2003,
+    "year_end": 2020,
+    "body_type": "mpv",
+    "typical_cc_min": 1299,
+    "typical_cc_max": 1498,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "6/7-seat configs"
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Pajero 7-seat",
+    "year_start": 1999,
+    "year_end": 2022,
+    "body_type": "suv_large",
+    "typical_cc_min": 2972,
+    "typical_cc_max": 3828,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "7-seat variant of Pajero 3.0/3.2 (rule 5: seats>=6 + suv_large → car_xl) | 7-seat variant of Pajero ( (rule 5: seats>=6 + suv_large → car_xl)"
+  },
+  {
+    "brand": "BMW",
+    "model": "X7",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "suv_large",
+    "typical_cc_min": 2998,
+    "typical_cc_max": 4395,
+    "passenger_seats": 7,
+    "has_ac": true,
+    "default_vehicle_type": "car_xl",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "7-seat only; provenance reset by auditor — fabricated source list removed",
+    "_notes": null
+  }
+]

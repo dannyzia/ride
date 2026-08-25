@@ -1,0 +1,2402 @@
+[
+  {
+    "brand": "BYD",
+    "model": "L3 (1.8L)",
+    "year_start": 2010,
+    "year_end": 2015,
+    "body_type": "sedan",
+    "typical_cc_min": 1792,
+    "typical_cc_max": 1792,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Changan",
+    "model": "CS35 Plus (1.6L)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1598,
+    "typical_cc_max": 1598,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Changan",
+    "model": "CS55 Plus (1.5L)",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1499,
+    "typical_cc_max": 1499,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chery",
+    "model": "Tiggo 2 (1.5L)",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chery",
+    "model": "Tiggo 4 (1.5L)",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chery",
+    "model": "Tiggo 4 Pro (1.5L non-turbo)",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chery",
+    "model": "Tiggo 7 Pro",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1598,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": "cc range 1498–1598 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Cobalt (1.8L)",
+    "year_start": 2005,
+    "year_end": 2011,
+    "body_type": "sedan",
+    "typical_cc_min": 1796,
+    "typical_cc_max": 1796,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Cruze (1.8L)",
+    "year_start": 2008,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 1799,
+    "typical_cc_max": 1799,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Optra (1.8L)",
+    "year_start": 2004,
+    "year_end": 2012,
+    "body_type": "sedan",
+    "typical_cc_min": 1799,
+    "typical_cc_max": 1799,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Orlando (1.8L/2.0L)",
+    "year_start": 2010,
+    "year_end": 2014,
+    "body_type": "mpv",
+    "typical_cc_min": 1796,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Daihatsu",
+    "model": "Terios 1.5",
+    "year_start": 2006,
+    "year_end": 2018,
+    "body_type": "suv",
+    "typical_cc_min": 1495,
+    "typical_cc_max": 1495,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "DFSK",
+    "model": "Glory 560 (1.5L)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "DFSK",
+    "model": "Glory 580 (1.5L/1.8L)",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1798,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1498–1798 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "EcoSport (1.5L)",
+    "year_start": 2004,
+    "year_end": 2022,
+    "body_type": "crossover",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "EcoSport 1.5",
+    "year_start": 2013,
+    "year_end": 2022,
+    "body_type": "suv",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "Focus (1.8L/2.0L)",
+    "year_start": 1998,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1999,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "Kuga (1.5L/2.0L)",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1499,
+    "typical_cc_max": 1999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1499–1999 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Ford",
+    "model": "Mondeo (2.0L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1999,
+    "typical_cc_max": 1999,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Geely",
+    "model": "Azkarra (1.5L)",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1477,
+    "typical_cc_max": 1477,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Geely",
+    "model": "Coolray (1.5L)",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1477,
+    "typical_cc_max": 1477,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Geely",
+    "model": "Emgrand EC7 (1.8L)",
+    "year_start": 2009,
+    "year_end": 2017,
+    "body_type": "sedan",
+    "typical_cc_min": 1792,
+    "typical_cc_max": 1792,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Haval",
+    "model": "H2 (1.5L)",
+    "year_start": 2014,
+    "year_end": 2021,
+    "body_type": "crossover",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Haval",
+    "model": "H6",
+    "year_start": 2011,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini"
+    ],
+    "_dispute": "cc range 1497–1998 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Haval",
+    "model": "H6 (1.5L/2.0L)",
+    "year_start": 2011,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1967,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1497–1967 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Haval",
+    "model": "Jolion",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Haval",
+    "model": "Jolion (1.5L)",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "BR-V (1.5L)",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Civic (1.8 / e:HEV)",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1799,
+    "typical_cc_max": 1993,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Civic (1.8L/2.0L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1799,
+    "typical_cc_max": 1997,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Civic 1.8",
+    "year_start": 2006,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 1799,
+    "typical_cc_max": 1799,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CR-V",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CR-V 1.5",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "CR-V 2.0",
+    "year_start": 2002,
+    "year_end": 2020,
+    "body_type": "suv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 1997,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Crossroad (1.8L/2.0L)",
+    "year_start": 2007,
+    "year_end": 2010,
+    "body_type": "crossover",
+    "typical_cc_min": 1799,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "HR-V 1.8",
+    "year_start": 2013,
+    "year_end": 2022,
+    "body_type": "suv",
+    "typical_cc_min": 1799,
+    "typical_cc_max": 1799,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "export name of Vezel"
+  },
+  {
+    "brand": "Honda",
+    "model": "Stream (1.8L/2.0L)",
+    "year_start": 2000,
+    "year_end": 2014,
+    "body_type": "mpv",
+    "typical_cc_min": 1799,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Honda",
+    "model": "Vezel 1.5",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "gemini",
+      "glm5.3",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "incl. hybrid"
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Creta",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1353,
+    "typical_cc_max": 1591,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": "cc range 1353–1591 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Creta (1.6L)",
+    "year_start": 2014,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1591,
+    "typical_cc_max": 1591,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Creta 1.5",
+    "year_start": 2015,
+    "year_end": 2024,
+    "body_type": "suv",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Elantra",
+    "year_start": 2011,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1591,
+    "typical_cc_max": 1999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Elantra (1.8L/2.0L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1797,
+    "typical_cc_max": 1999,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "ix35 (2.0L)",
+    "year_start": 2009,
+    "year_end": 2015,
+    "body_type": "crossover",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Kona (1.6L/2.0L)",
+    "year_start": 2017,
+    "year_end": 2023,
+    "body_type": "crossover",
+    "typical_cc_min": 1591,
+    "typical_cc_max": 1999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Tucson",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1591,
+    "typical_cc_max": 1999,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Tucson (1.6L Turbo)",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1591,
+    "typical_cc_max": 1591,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Tucson (2.0L)",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1999,
+    "typical_cc_max": 1999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Hyundai",
+    "model": "Tucson 2.0",
+    "year_start": 2004,
+    "year_end": 2024,
+    "body_type": "suv",
+    "typical_cc_min": 1999,
+    "typical_cc_max": 1999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Jetour",
+    "model": "X70 (1.5L)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Cerato/Forte (2.0L)",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1999,
+    "typical_cc_max": 1999,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Niro (1.6L Hybrid)",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1580,
+    "typical_cc_max": 1580,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Seltos",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1353,
+    "typical_cc_max": 1591,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": "cc range 1353–1591 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Seltos (1.6L/2.0L)",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1591,
+    "typical_cc_max": 1999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Seltos 1.5",
+    "year_start": 2019,
+    "year_end": 2024,
+    "body_type": "suv",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1497,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Soul (1.6L/2.0L)",
+    "year_start": 2008,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1591,
+    "typical_cc_max": 1999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Sportage",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1591,
+    "typical_cc_max": 1999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Sportage (2.0L)",
+    "year_start": 2004,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Kia",
+    "model": "Sportage 2.0",
+    "year_start": 2010,
+    "year_end": 2024,
+    "body_type": "suv",
+    "typical_cc_min": 1999,
+    "typical_cc_max": 1999,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mahindra",
+    "model": "XUV300 1.2",
+    "year_start": 2019,
+    "year_end": 2024,
+    "body_type": "suv",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1197,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Axela (2.0 / hybrid)",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Axela/Mazda3 (1.5L/2.0L)",
+    "year_start": 2003,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1498–1998 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "CX-3",
+    "year_start": 2015,
+    "year_end": 2025,
+    "body_type": "crossover",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "cc range 1496–1998 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "CX-3 (1.5L/2.0L)",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1498–1998 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "CX-3 / CX-30",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1496,
+    "typical_cc_max": 1998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": "cc range 1496–1998 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "CX-30 (2.0L)",
+    "year_start": 2019,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "CX-5 2.0",
+    "year_start": 2012,
+    "year_end": 2024,
+    "body_type": "suv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mazda",
+    "model": "Premacy (1.8L/2.0L)",
+    "year_start": 1999,
+    "year_end": 2010,
+    "body_type": "mpv",
+    "typical_cc_min": 1839,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "MG",
+    "model": "Hector 1.5 turbo",
+    "year_start": 2019,
+    "year_end": 2024,
+    "body_type": "suv",
+    "typical_cc_min": 1451,
+    "typical_cc_max": 1451,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "MG",
+    "model": "ZS 1.5",
+    "year_start": 2017,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1498,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": "cc range spans category boundary — split by cc band",
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "ASX / RVR",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1590,
+    "typical_cc_max": 1998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "ASX/RVR (1.8L/2.0L)",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Galant Fortis (1.8L/2.0L)",
+    "year_start": 2007,
+    "year_end": 2015,
+    "body_type": "sedan",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1998,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Lancer EX (1.6)",
+    "year_start": 2007,
+    "year_end": 2017,
+    "body_type": "sedan",
+    "typical_cc_min": 1590,
+    "typical_cc_max": 1590,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Outlander (comfort)",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "Outlander 2.0",
+    "year_start": 2005,
+    "year_end": 2020,
+    "body_type": "suv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "RVR",
+    "year_start": 2010,
+    "year_end": 2022,
+    "body_type": "crossover",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1798,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Mitsubishi",
+    "model": "RVR/ASX 2.0",
+    "year_start": 2010,
+    "year_end": 2020,
+    "body_type": "suv",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Juke (1.5L/1.6L)",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1618,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1498–1618 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Juke 1.6",
+    "year_start": 2010,
+    "year_end": 2020,
+    "body_type": "suv",
+    "typical_cc_min": 1618,
+    "typical_cc_max": 1618,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "NV200",
+    "year_start": 2009,
+    "year_end": null,
+    "body_type": "van",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1597,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "cc range 1498–1597 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Qashqai",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1997,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "cc range 1197–1997 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Qashqai/Dualis (2.0L)",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 1997,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Sylphy 1.8",
+    "year_start": 2006,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1798,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Sylphy/Sentra (1.8L/2.0L)",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1997,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "Wingroad",
+    "year_start": 2005,
+    "year_end": 2018,
+    "body_type": "sedan",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1798,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": "cc range 1497–1798 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "X-Trail",
+    "year_start": 2014,
+    "year_end": 2022,
+    "body_type": "crossover",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 1997,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "X-Trail (2.0L)",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 1997,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Nissan",
+    "model": "X-Trail 2.0",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1997,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Omoda",
+    "model": "C5 (1.5L/1.6L)",
+    "year_start": 2022,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1498,
+    "typical_cc_max": 1598,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1498–1598 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Proton",
+    "model": "Persona",
+    "year_start": 2008,
+    "year_end": 2015,
+    "body_type": "sedan",
+    "typical_cc_min": 1597,
+    "typical_cc_max": 1597,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Proton",
+    "model": "Saga",
+    "year_start": 1992,
+    "year_end": 2015,
+    "body_type": "sedan",
+    "typical_cc_min": 1295,
+    "typical_cc_max": 1582,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": "cc range 1295–1582 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Proton",
+    "model": "Satria Neo",
+    "year_start": 2006,
+    "year_end": 2015,
+    "body_type": "hatchback",
+    "typical_cc_min": 1332,
+    "typical_cc_max": 1597,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1332–1597 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Proton",
+    "model": "X50",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1477,
+    "typical_cc_max": 1477,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Proton",
+    "model": "X50 (1.5L)",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1477,
+    "typical_cc_max": 1477,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Proton",
+    "model": "X70 (1.8L)",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1799,
+    "typical_cc_max": 1799,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Ssangyong",
+    "model": "Korando (1.5L/1.6L)",
+    "year_start": 2010,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1597,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": "cc range 1497–1597 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Ssangyong",
+    "model": "Tivoli (1.6L)",
+    "year_start": 2015,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1597,
+    "typical_cc_max": 1597,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Forester 2.0",
+    "year_start": 2008,
+    "year_end": 2024,
+    "body_type": "suv",
+    "typical_cc_min": 1995,
+    "typical_cc_max": 1995,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "Impreza (1.6L/2.0L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "hatchback",
+    "typical_cc_min": 1595,
+    "typical_cc_max": 1994,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Subaru",
+    "model": "XV/Crosstrek (1.6L/2.0L)",
+    "year_start": 2012,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1595,
+    "typical_cc_max": 1995,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Vitara 1.6",
+    "year_start": 2005,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1586,
+    "typical_cc_max": 1586,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek",
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": "Escudo export/import naming"
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Ignis (1.2L)",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1197,
+    "typical_cc_max": 1197,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "Jimny (1.3L)",
+    "year_start": 1998,
+    "year_end": 2018,
+    "body_type": "suv",
+    "typical_cc_min": 1328,
+    "typical_cc_max": 1328,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "S-Cross",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1373,
+    "typical_cc_max": 1586,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "cc range 1373–1586 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "S-Cross (1.6L)",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1586,
+    "typical_cc_max": 1586,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "SX4 1.6",
+    "year_start": 2006,
+    "year_end": 2014,
+    "body_type": "hatchback",
+    "typical_cc_min": 1586,
+    "typical_cc_max": 1586,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Suzuki",
+    "model": "XL7 (1.4L/1.5L)",
+    "year_start": 2006,
+    "year_end": 2009,
+    "body_type": "suv",
+    "typical_cc_min": 1490,
+    "typical_cc_max": 1490,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla Axio (1.8L Hybrid)",
+    "year_start": 2013,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1798,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "C-HR",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1196,
+    "typical_cc_max": 1797,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "gemini",
+      "glm5.3"
+    ],
+    "_dispute": "cc range 1196–1797 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "C-HR (1.2L Turbo)",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1198,
+    "typical_cc_max": 1198,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "C-HR (1.8L Hybrid)",
+    "year_start": 2016,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1798,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "C-HR 1.2/1.8",
+    "year_start": 2016,
+    "year_end": 2023,
+    "body_type": "crossover",
+    "typical_cc_min": 1196,
+    "typical_cc_max": 1798,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "cc range 1196–1798 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "C-HR 1.8 hybrid",
+    "year_start": 2016,
+    "year_end": 2022,
+    "body_type": "crossover",
+    "typical_cc_min": 1797,
+    "typical_cc_max": 1797,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla (1.8L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1798,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla (Bangladesh 1.8L)",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1798,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla (locally assembled)",
+    "year_start": 2003,
+    "year_end": 2016,
+    "body_type": "sedan",
+    "typical_cc_min": 1497,
+    "typical_cc_max": 1798,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": "cc range 1497–1798 spans category boundary — banded by cc_max",
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla (new, 1.8L GL/Grande)",
+    "year_start": 2014,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1798,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla 1.6",
+    "year_start": 2000,
+    "year_end": 2019,
+    "body_type": "sedan",
+    "typical_cc_min": 1598,
+    "typical_cc_max": 1598,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla Altis (1.8L)",
+    "year_start": 2007,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1798,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla Cross",
+    "year_start": 2021,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1798,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Corolla Cross 1.8",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1798,
+    "typical_cc_max": 1798,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Prius",
+    "year_start": 2009,
+    "year_end": 2022,
+    "body_type": "sedan",
+    "typical_cc_min": 1797,
+    "typical_cc_max": 1797,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "glm5.3"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Prius (1.8L)",
+    "year_start": 2009,
+    "year_end": null,
+    "body_type": "sedan",
+    "typical_cc_min": 1797,
+    "typical_cc_max": 1797,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Prius 1.8",
+    "year_start": 2009,
+    "year_end": 2020,
+    "body_type": "sedan",
+    "typical_cc_min": 1797,
+    "typical_cc_max": 1797,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Raize (1.2L)",
+    "year_start": 2021,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1198,
+    "typical_cc_max": 1198,
+    "passenger_seats": 4,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "gemini"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "RAV4 2.0",
+    "year_start": 2000,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1987,
+    "typical_cc_max": 1987,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "deepseek"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Rush (1.5L)",
+    "year_start": 2006,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1495,
+    "typical_cc_max": 1495,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Vanguard (2.0L)",
+    "year_start": 2007,
+    "year_end": 2013,
+    "body_type": "crossover",
+    "typical_cc_min": 1998,
+    "typical_cc_max": 1998,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "kimi"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "Toyota",
+    "model": "Yaris Cross 1.5",
+    "year_start": 2020,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": 1490,
+    "typical_cc_max": 1490,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": null,
+    "_notes": null
+  },
+  {
+    "brand": "BYD",
+    "model": "Atto 3",
+    "year_start": 2022,
+    "year_end": null,
+    "body_type": "crossover",
+    "typical_cc_min": null,
+    "typical_cc_max": null,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "single_source",
+    "_sources": [
+      "chatgpt"
+    ],
+    "_dispute": "EV crossover — car_comfort per Zia 2026-08-23",
+    "_notes": "EV — no displacement"
+  },
+  {
+    "brand": "MG",
+    "model": "HS",
+    "year_start": 2018,
+    "year_end": null,
+    "body_type": "suv",
+    "typical_cc_min": 1490,
+    "typical_cc_max": 1995,
+    "passenger_seats": 5,
+    "has_ac": true,
+    "default_vehicle_type": "car_comfort",
+    "_confidence": "verified",
+    "_sources": [
+      "chatgpt",
+      "kimi"
+    ],
+    "_dispute": "cc range 1498–1995 spans category boundary — banded by cc_max",
+    "_notes": ""
+  }
+]

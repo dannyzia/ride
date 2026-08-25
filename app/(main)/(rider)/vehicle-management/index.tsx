@@ -25,11 +25,28 @@ interface Vehicle {
   is_active: boolean;
   fitness_expires_at: string | null;
   tax_token_expires_at: string | null;
+  // §12.2.6: classification status — derived from approval + type-change history
+  driver_status?: string;
+  has_type_changes?: boolean;
 }
 
 const vehicleTypeDisplay: Record<string, string> = Object.fromEntries(
   VEHICLE_TYPES.map((v) => [v.key, v.display_en]),
 );
+
+// §12.2.6: derived classification badge — no new column, derived from
+// driver approval status and vehicle_type_changes history.
+type ClassificationBadge = 'classified' | 'pending_review' | 'adjusted' | null;
+
+function deriveClassificationBadge(v: Vehicle): ClassificationBadge {
+  // 'adjusted' — admin has changed the vehicle type (vehicle_type_changes exist)
+  if (v.has_type_changes) return 'adjusted';
+  // 'pending_review' — driver account still pending approval
+  if (v.driver_status && v.driver_status !== 'approved') return 'pending_review';
+  // 'classified' — driver approved (vehicle went through classification)
+  if (v.driver_status === 'approved') return 'classified';
+  return null;
+}
 
 // C5 (temporary decision): one vehicle per driver. See
 // docs/vehicle-model-decision.md. The multi-vehicle "Activate" UI and the
@@ -227,6 +244,26 @@ export default function VehicleManagement() {
                 >
                   {v.registration_plate} · {formatVehicleType(v.vehicle_type)}
                 </Text>
+
+                {/* §12.2.6: Classification status badge (derived — no new column) */}
+                {(() => {
+                  const badge = deriveClassificationBadge(v);
+                  if (!badge) return null;
+                  const badgeConfig = {
+                    classified: { label: 'Classified', bg: isDark ? colors.primaryLightDark : colors.primaryLight, color: colors.primary, icon: 'checkmark-circle' as const },
+                    pending_review: { label: 'Pending Review', bg: `${colors.info}1A`, color: colors.info, icon: 'time' as const },
+                    adjusted: { label: 'Adjusted', bg: `${colors.amber}20`, color: colors.amber, icon: 'create' as const },
+                  };
+                  const cfg = badgeConfig[badge];
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 100, backgroundColor: cfg.bg }}>
+                        <Ionicons name={cfg.icon} size={12} color={cfg.color} />
+                        <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 11, color: cfg.color }}>{cfg.label}</Text>
+                      </View>
+                    </View>
+                  );
+                })()}
 
                 {/* H6: Document expiry/expired warnings */}
                 {(fitnessExpiring || taxExpiring || fitnessExpired || taxExpired) && (

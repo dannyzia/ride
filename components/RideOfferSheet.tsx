@@ -7,14 +7,26 @@ import { useWSStore } from "@/store";
 import { showToast } from "@/components/Toast";
 import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";
+import { formatBDT } from "@/lib/format";
 import { useIsDark } from "@/lib/useAppearance";
 import CountdownRing from "./CountdownRing";
 import SlideButton from "@/components/SlideButton";
 
+// Phase D / ruling 8: fetch:confirm is a telemetry ack — the server's only
+// remaining failure mode is "no live delivered offer for this driver".
 const FETCH_ERROR_MESSAGES: Record<string, string> = {
   offer_expired: "Offer expired",
-  deduction_failed: "Call could not be deducted — try again",
-  no_subscription: "No active call package",
+};
+
+// Drop-zone heat chip (Phase D / Stage 2 reveal): existing goRide tokens only
+// — hot = warm amber, cold = cool blue, neutral = default gray.
+const HEAT_CHIP: Record<
+  "hot" | "neutral" | "cold",
+  { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }
+> = {
+  hot: { label: "Hot", color: colors.amber, icon: "flame" },
+  neutral: { label: "Neutral", color: colors.gray600, icon: "ellipse-outline" },
+  cold: { label: "Cold", color: colors.accent, icon: "snow-outline" },
 };
 
 export default function RideOfferSheet() {
@@ -91,13 +103,15 @@ export default function RideOfferSheet() {
     // so the server never emitted fetch:confirmed and every Accept fell
     // through to the 3s timeout. Fire it here (the maestro driver-core flow
     // documents Accept as the trigger: "sends fetch:confirm then
-    // offer:accept"), then wait for the server's deduction confirmation.
+    // offer:accept"). Phase D / ruling 8: fetch:confirm is a TELEMETRY ACK
+    // (card-seen stamp) — the 1-call lead was already debited when the offer
+    // was sent, so no billing happens in this handshake.
     ws.send(JSON.stringify({ type: "fetch:confirm", ride_id: rideId }));
     // Exactly-once handshake guard (C1): the 3s fallback previously fired
     // offer:accept UNCONDITIONALLY — double-sending after a fast
-    // fetch:confirmed (which made the server refund the accepted driver's
-    // call deduction) and even sending it after fetch:error (matching a ride
-    // without a deduction). Only a fetch:confirmed reply may commit.
+    // fetch:confirmed and even sending it after fetch:error (accepting an
+    // offer that no longer exists). Only a fetch:confirmed reply — the
+    // server's "the offer is still live for you" ack — may commit.
     const state = { resolved: false };
 
     const finish = (accepted: boolean) => {
@@ -126,7 +140,8 @@ export default function RideOfferSheet() {
         const msg = JSON.parse(ev.data);
         if (msg.ride_id !== rideId) return;
         if (msg.type === "fetch:confirmed") {
-          // The server deducted the call — commit exactly once.
+          // Telemetry ack received and the offer is still live — commit the
+          // accept exactly once.
           ws.send(JSON.stringify({ type: "offer:accept", ride_id: rideId }));
           finish(true);
         } else if (msg.type === "fetch:error") {
@@ -151,8 +166,8 @@ export default function RideOfferSheet() {
     acceptHandshakeRef.current = () => finish(false);
 
     // Fallback if fetch:confirmed never arrives (lost message, dead socket).
-    // Deliberately does NOT send offer:accept — the server only deducts on
-    // fetch:confirm, so a blind accept would match without a deduction.
+    // Deliberately does NOT send offer:accept — the server only acks a live
+    // delivered offer, so a blind accept could target a dead offer.
     acceptTimeoutRef.current = setTimeout(() => {
       if (state.resolved) return;
       logger.warn("[RideOfferSheet] fetch:confirm timed out", { rideId });
@@ -192,6 +207,18 @@ export default function RideOfferSheet() {
   const riderRating = activeOffer.rider_rating;
   const isScheduled = activeOffer.is_scheduled;
   const preferences = activeOffer.preference_ids || [];
+  // Phase D lead economics: this driver's own pickup compensation estimate
+  // (integer paisa; 0 when the pickup fee is disabled) and the 1-call lead
+  // debited at offer receipt, with the post-debit balance (-1 = unlimited).
+  const pickupFeeEstimate = activeOffer.pickup_fee_estimate_bdt ?? 0;
+  const leadCost = activeOffer.lead_cost_calls ?? 1;
+  const balanceAfter = activeOffer.balance_after_calls ?? -1;
+  const dropZone = activeOffer.dropoff_zone;
+  const heatTag =
+    dropZone?.heat_tag === "hot" || dropZone?.heat_tag === "cold"
+      ? dropZone.heat_tag
+      : "neutral";
+  const heat = HEAT_CHIP[heatTag];
 
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
@@ -433,8 +460,8 @@ export default function RideOfferSheet() {
         </View>
       )}
 
-      {/* Pickup distance / ETA row */}
-      {(pickupDist > 0 || pickupEta > 0) && (
+      {/* Pickup distance / ETA / own pickup-fee estimate row */}
+      {(pickupDist > 0 || pickupEta > 0 || pickupFeeEstimate > 0) && (
         <View
           style={{
             flexDirection: "row",
@@ -442,6 +469,7 @@ export default function RideOfferSheet() {
             gap: spacing.md,
             marginBottom: spacing.md,
             paddingHorizontal: spacing.sm,
+            flexWrap: "wrap",
           }}
         >
           {pickupDist > 0 && (
@@ -476,10 +504,66 @@ export default function RideOfferSheet() {
               </View>
             </View>
           )}
+          {pickupFeeEstimate > 0 && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Ionicons name="cash-outline" size={12} color={textSecondary} />
+              <Text
+                style={{
+                  fontFamily: "Jakarta-Regular",
+                  fontSize: 12,
+                  color: textSecondary,
+                }}
+              >
+                +{formatBDT(pickupFeeEstimate, { decimals: true })} pickup fee
+              </Text>
+            </View>
+          )}
         </View>
       )}
 
-      {/* Pickup / Dropoff */}
+      {/* Lead cost (§6): 1 call debited at offer receipt + remaining balance */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: spacing.sm,
+          marginBottom: spacing.md,
+          paddingHorizontal: spacing.sm,
+        }}
+      >
+        <Ionicons name="call-outline" size={12} color={textSecondary} />
+        <Text
+          style={{
+            fontFamily: "Jakarta-Regular",
+            fontSize: 12,
+            color: textSecondary,
+          }}
+        >
+          Lead: {leadCost} call{leadCost === 1 ? "" : "s"}
+        </Text>
+        <Text
+          style={{
+            fontFamily: "Jakarta-Regular",
+            fontSize: 12,
+            color: textSecondary,
+          }}
+        >
+          ·
+        </Text>
+        <Text
+          style={{
+            fontFamily: "Jakarta-SemiBold",
+            fontSize: 12,
+            color: textPrimary,
+          }}
+        >
+          {balanceAfter === -1
+            ? "Unlimited calls"
+            : `${balanceAfter} call${balanceAfter === 1 ? "" : "s"} left`}
+        </Text>
+      </View>
+
+      {/* Pickup / Drop ZONE (exact destination revealed only after accept) */}
       <View style={{ marginBottom: spacing.lg }}>
         <View
           style={{
@@ -528,8 +612,30 @@ export default function RideOfferSheet() {
             }}
             numberOfLines={1}
           >
-            {activeOffer.dropoff?.address || "Dropoff location"}
+            {dropZone?.zone_name || "Outside served area"}
           </Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 3,
+              paddingHorizontal: spacing.sm,
+              paddingVertical: 3,
+              borderRadius: radii.pill,
+              backgroundColor: heat.color + "20",
+            }}
+          >
+            <Ionicons name={heat.icon} size={11} color={heat.color} />
+            <Text
+              style={{
+                fontFamily: "Jakarta-SemiBold",
+                fontSize: 10,
+                color: heat.color,
+              }}
+            >
+              {heat.label}
+            </Text>
+          </View>
         </View>
       </View>
 

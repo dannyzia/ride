@@ -35,8 +35,6 @@ export interface FareBreakdown {
   inside_km: number;
   outside_km: number;
   ride_time_min: number;
-  surge_multiplier: number;
-  surge_fee_bdt: number;
   wait_fee_bdt: number;
   cancellation_fee_bdt?: number;
   pass_discount_bdt?: number;
@@ -161,8 +159,6 @@ export function calculateFare(
     inside_km: insideKm,
     outside_km: outsideKm,
     ride_time_min: rideTimeMin,
-    surge_multiplier: 1.0,
-    surge_fee_bdt: 0,
     wait_fee_bdt: 0,
   };
 }

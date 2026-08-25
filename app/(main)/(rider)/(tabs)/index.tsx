@@ -10,6 +10,7 @@ import ReactNativeModal from "react-native-modal";
 import { supabase } from "@/lib/supabase";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
+import { useCallLedgerStore } from "@/store/useCallLedgerStore";
 import { useRideOfferStore, useWSStore } from "@/store";
 import SOSButton from "@/components/SOSButton";
 import RideOfferSheet from "@/components/RideOfferSheet";
@@ -28,7 +29,6 @@ import {
   nearestHotspot,
   haversineKm,
   demandLevel,
-  hotspotSurgeMultiplier,
   type DemandLevel,
   type HotspotPoint,
 } from "@/lib/hotspots";
@@ -84,7 +84,8 @@ export default function DriverHome() {
     setWsConnected,
   } = useDriverStore();
   const { addRideOffer, removeRideOffer, setActiveRideId } = useRideOfferStore();
-  const { activeOffer, setActiveOffer } = useDriverFlowStore();
+  const { activeOffer, setActiveOffer, setAcceptedDropoff } =
+    useDriverFlowStore();
 
   const isDark = useIsDark();
   const mapStyleUrl = useBarikoiMapStyle(isDark);
@@ -333,7 +334,12 @@ export default function DriverHome() {
           logger.warn("[ws] auth error:", msg.message);
         } else if (type === "ride:offer") {
           const pickupAddr = msg.pickup?.address ?? "";
-          const dropoffAddr = msg.dropoff?.address ?? "";
+          // Phase D / Stage 2 destination reveal: pre-accept the payload
+          // carries ONLY the drop ZONE + heat tag (dropoff_zone). The exact
+          // address/coords arrive post-accept via offer:accepted. The legacy
+          // ride-offer store gets the zone name as its display string and 0/0
+          // coords (never fabricated).
+          const dropZoneName = msg.dropoff_zone?.zone_name ?? null;
           addRideOffer({
             id: msg.ride_id,
             fare: msg.fare_breakdown?.total_bdt != null ? String(msg.fare_breakdown.total_bdt) : "",
@@ -347,10 +353,10 @@ export default function DriverHome() {
               pickupLatitude: msg.pickup?.lat ?? 0,
             },
             dropoffDetails: {
-              dropoff: dropoffAddr,
-              dropoffAddress: dropoffAddr,
-              dropoffLatitude: msg.dropoff?.lat ?? 0,
-              dropoffLongitude: msg.dropoff?.lng ?? 0,
+              dropoff: dropZoneName ?? "",
+              dropoffAddress: dropZoneName ?? "",
+              dropoffLatitude: 0,
+              dropoffLongitude: 0,
             },
             customerDetails: {
               full_name: msg.rider_first_name ?? "",
@@ -365,9 +371,17 @@ export default function DriverHome() {
           setActiveOffer({
             ride_id: msg.ride_id,
             pickup: msg.pickup,
-            dropoff: msg.dropoff,
+            dropoff_zone: {
+              zone_id: msg.dropoff_zone?.zone_id ?? null,
+              zone_name: dropZoneName,
+              // Defensive: old payloads without a heat tag default to neutral.
+              heat_tag: msg.dropoff_zone?.heat_tag ?? "neutral",
+            },
             fare_breakdown: msg.fare_breakdown,
             driver_fare_bdt: msg.driver_fare_bdt ?? null,
+            pickup_fee_estimate_bdt: msg.pickup_fee_estimate_bdt ?? 0,
+            lead_cost_calls: msg.lead_cost_calls ?? 1,
+            balance_after_calls: msg.balance_after_calls ?? -1,
             vehicle_type: msg.vehicle_type,
             rider_first_name: msg.rider_first_name,
             rider_rating: msg.rider_rating,
@@ -380,14 +394,44 @@ export default function DriverHome() {
             expires_at: msg.expires_at,
             upfront_tip_bdt: msg.upfront_tip_bdt ?? 0,
           });
+        } else if (type === "lead:billed") {
+          // §6 lead economics: the server debited 1 call at OFFER receipt and
+          // pushes the authoritative post-debit balance. Apply it to the
+          // ledger + driver stores so the wallet stays honest without a refetch.
+          if (typeof msg.balance_after_calls === "number") {
+            useCallLedgerStore
+              .getState()
+              .applyLeadBilled(msg.balance_after_calls);
+            const sub = useDriverStore.getState().activeSubscription;
+            if (sub) {
+              useDriverStore
+                .getState()
+                .setActiveSubscription({
+                  ...sub,
+                  calls_remaining: msg.balance_after_calls,
+                });
+            }
+          }
         } else if (type === "offer:lost") {
-          // X-2c: the server never emits offer:expired — offer expiry is the
-          // client's own countdown, which already removes the offer locally.
-          // Only the race loser's offer:lost arrives over the wire.
+          // Sequential dispatch (Phase D): the chain terminal notification for
+          // an offer that ended without this driver's accept. Every reason
+          // (expired / cancelled / accepted_elsewhere) closes the card; the
+          // lead stays billed in all cases (server-side).
           if (msg.ride_id) removeRideOffer(msg.ride_id);
           setActiveOffer(null);
-          showToast("Offer expired", "info");
+          const lostToast =
+            msg.reason === "cancelled"
+              ? "Ride cancelled"
+              : msg.reason === "accepted_elsewhere"
+                ? "Accepted by another driver"
+                : "Offer expired";
+          showToast(lostToast, "info");
         } else if (type === "offer:accepted") {
+          // Stage 2 reveal: the exact dropoff arrives only now — populate the
+          // post-accept state the downstream screens consume.
+          if (msg.dropoff?.address != null) {
+            setAcceptedDropoff(msg.dropoff);
+          }
           setActiveRideId(msg.ride_id);
           setActiveOffer(null);
           router.replace("/(main)/(rider)/find-customer");
@@ -404,6 +448,7 @@ export default function DriverHome() {
           if (msg.ride_id) removeRideOffer(msg.ride_id);
           setActiveRideId(null);
           setActiveOffer(null);
+          setAcceptedDropoff(null);
           setIsOnline(true);
         }
       } catch {
@@ -506,6 +551,7 @@ export default function DriverHome() {
     removeRideOffer,
     setActiveOffer,
     setActiveRideId,
+    setAcceptedDropoff,
     setIsOnline,
     setWsConnected,
   ]);
@@ -623,11 +669,7 @@ export default function DriverHome() {
     location && nearestZone
       ? haversineKm(location.lat, location.lng, nearestZone.lat, nearestZone.lng)
       : null;
-  // Surge for the nearest zone, computed client-side from the live counts
-  // via the tested ratio → threshold chain (>1 = surge active).
-  const nearestSurgeMultiplier = nearestZone
-    ? hotspotSurgeMultiplier(nearestZone.demand_count, nearestZone.supply_count)
-    : 1;
+
 
   // ── Render ───────────────────────────────────────────────────────
   return (
@@ -1208,26 +1250,7 @@ export default function DriverHome() {
                 >
                   {DEMAND_LABEL[demandLevel(nearestZone.intensity_raw)]}
                 </Text>
-                {nearestSurgeMultiplier > 1 && (
-                  <View
-                    style={{
-                      backgroundColor: "rgba(227, 29, 28, 0.12)",
-                      borderRadius: 6,
-                      paddingHorizontal: 6,
-                      paddingVertical: 2,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: "Jakarta-Bold",
-                        fontSize: 12,
-                        color: colors.danger,
-                      }}
-                    >
-                      {Number(nearestSurgeMultiplier.toFixed(2))}× surge
-                    </Text>
-                  </View>
-                )}
+
               </View>
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 4 }}

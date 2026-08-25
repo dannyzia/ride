@@ -22,15 +22,13 @@ import Map, { type MapHotspot } from "@/components/Map";
 import ThemeToggle from "@/components/ThemeToggle";
 interface HotspotRow {
   zone_id: string;
-  name: string;
+  zone_name: string;
   lat: number;
   lng: number;
-  intensity: number;
-  intensity_raw?: number;
-  multiplier: number;
-  demand_count: number;
-  supply_count: number;
-  updated_at: string;
+  tag: "hot" | "neutral" | "cold";
+  score: number;
+  idle_driver_count: number;
+  suggest_score: number;
 }
 
 /** Auto-refresh interval (ms) */
@@ -79,10 +77,7 @@ export default function HotspotMapScreen() {
       const rows = data.hotspots ?? [];
       setHotspots(rows);
       if (rows.length > 0) {
-        const latest = rows.reduce((acc, h) =>
-          new Date(h.updated_at) > new Date(acc.updated_at) ? h : acc,
-        );
-        setLastUpdated(new Date(latest.updated_at));
+        setLastUpdated(new Date());
       }
     } catch (e) {
       logger.error("[hotspot-map] load failed", e);
@@ -104,31 +99,30 @@ export default function HotspotMapScreen() {
 
   const mapHotspots: MapHotspot[] | undefined =
     hotspots && hotspots.length > 0
-      ? hotspots.map((h) => ({ lat: h.lat, lng: h.lng, intensity: h.intensity }))
+      ? hotspots.map((h) => ({ lat: h.lat, lng: h.lng, intensity: h.suggest_score }))
       : undefined;
 
   const showEmptyState = hotspots !== null && hotspots.length === 0;
 
   // Summary stats
-  const totalDemand = hotspots?.reduce((s, h) => s + h.demand_count, 0) ?? 0;
-  const totalSupply = hotspots?.reduce((s, h) => s + h.supply_count, 0) ?? 0;
-  const maxMultiplier =
+  const totalIdle = hotspots?.reduce((s, h) => s + h.idle_driver_count, 0) ?? 0;
+  const maxSuggest =
     hotspots && hotspots.length > 0
-      ? Math.max(...hotspots.map((h) => h.multiplier))
+      ? Math.max(...hotspots.map((h) => h.suggest_score))
       : 0;
 
-  // Demand level label for intensity
-  function demandLabel(intensity: number): string {
-    if (intensity < 0.25) return "Low";
-    if (intensity < 0.5) return "Moderate";
-    if (intensity < 0.75) return "High";
+  // Demand level label for suggest_score
+  function demandLabel(score: number): string {
+    if (score < 0.25) return "Low";
+    if (score < 0.5) return "Moderate";
+    if (score < 0.75) return "High";
     return "Very High";
   }
 
-  function demandColor(intensity: number): string {
-    if (intensity < 0.25) return colors.success;
-    if (intensity < 0.5) return colors.amber;
-    return colors.danger;
+  function tagColor(tag: string): string {
+    if (tag === "hot") return colors.amber;
+    if (tag === "cold") return colors.accent;
+    return colors.gray600;
   }
 
   return (
@@ -174,7 +168,7 @@ export default function HotspotMapScreen() {
           <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.centerText, { color: textSecondary }]}>
-              Loading demand data...
+              Loading zone data...
             </Text>
           </View>
         ) : error && hotspots === null ? (
@@ -220,7 +214,7 @@ export default function HotspotMapScreen() {
               No active hotspots right now
             </Text>
             <Text style={[styles.centerText, { color: textSecondary }]}>
-              Demand data updates every few minutes. Check back soon.
+              Suggest data updates every few minutes. Check back soon.
             </Text>
             <TouchableOpacity
               onPress={() => load()}
@@ -253,10 +247,10 @@ export default function HotspotMapScreen() {
                   style={[styles.statValue, { color: textPrimary }]}
                   numberOfLines={1}
                 >
-                  {totalDemand}
+                  {hotspots?.length ?? 0}
                 </Text>
                 <Text style={[styles.statLabel, { color: textSecondary }]}>
-                  Demand
+                  Zones
                 </Text>
               </View>
               <View
@@ -267,10 +261,10 @@ export default function HotspotMapScreen() {
                   style={[styles.statValue, { color: textPrimary }]}
                   numberOfLines={1}
                 >
-                  {totalSupply}
+                  {totalIdle}
                 </Text>
                 <Text style={[styles.statLabel, { color: textSecondary }]}>
-                  Supply
+                  Idle Drivers
                 </Text>
               </View>
               <View
@@ -281,24 +275,10 @@ export default function HotspotMapScreen() {
                   style={[styles.statValue, { color: colors.primary }]}
                   numberOfLines={1}
                 >
-                  {maxMultiplier > 0 ? `${maxMultiplier.toFixed(1)}x` : "—"}
+                  {maxSuggest > 0 ? `${(maxSuggest * 100).toFixed(0)}` : "—"}
                 </Text>
                 <Text style={[styles.statLabel, { color: textSecondary }]}>
-                  Max Surge
-                </Text>
-              </View>
-              <View
-                style={[styles.statDivider, { backgroundColor: borderColor }]}
-              />
-              <View style={styles.statItem}>
-                <Text
-                  style={[styles.statValue, { color: textPrimary }]}
-                  numberOfLines={1}
-                >
-                  {hotspots?.length ?? 0}
-                </Text>
-                <Text style={[styles.statLabel, { color: textSecondary }]}>
-                  Zones
+                  Top Suggest
                 </Text>
               </View>
             </View>
@@ -358,10 +338,10 @@ export default function HotspotMapScreen() {
                 </View>
                 <View style={styles.legendLabels}>
                   <Text style={[styles.legendLabel, { color: textSecondary }]}>
-                    Low demand
+                    Low suggest
                   </Text>
                   <Text style={[styles.legendLabel, { color: textSecondary }]}>
-                    High demand
+                    High suggest
                   </Text>
                 </View>
               </View>
@@ -390,7 +370,7 @@ export default function HotspotMapScreen() {
                 >
                   {hotspots
                     .slice()
-                    .sort((a, b) => b.intensity - a.intensity)
+                    .sort((a, b) => b.suggest_score - a.suggest_score)
                     .map((zone) => (
                       <TouchableOpacity
                         key={zone.zone_id}
@@ -420,7 +400,7 @@ export default function HotspotMapScreen() {
                           <View
                             style={[
                               styles.zoneDot,
-                              { backgroundColor: demandColor(zone.intensity) },
+                              { backgroundColor: tagColor(zone.tag) },
                             ]}
                           />
                           <Text
@@ -430,7 +410,7 @@ export default function HotspotMapScreen() {
                             ]}
                             numberOfLines={1}
                           >
-                            {zone.name}
+                            {zone.zone_name}
                           </Text>
                         </View>
                         <Text
@@ -439,9 +419,9 @@ export default function HotspotMapScreen() {
                             { color: textSecondary },
                           ]}
                         >
-                          {demandLabel(zone.intensity)}
-                          {zone.multiplier > 1
-                            ? ` · ${zone.multiplier.toFixed(1)}x`
+                          {demandLabel(zone.suggest_score)}
+                          {zone.idle_driver_count > 0
+                            ? ` · ${zone.idle_driver_count} idle`
                             : ""}
                         </Text>
                       </TouchableOpacity>
@@ -463,7 +443,7 @@ export default function HotspotMapScreen() {
                     style={[
                       styles.zoneDot,
                       {
-                        backgroundColor: demandColor(selectedZone.intensity),
+                        backgroundColor: tagColor(selectedZone.tag),
                         width: 10,
                         height: 10,
                       },
@@ -475,7 +455,7 @@ export default function HotspotMapScreen() {
                       { color: textPrimary },
                     ]}
                   >
-                    {selectedZone.name}
+                    {selectedZone.zone_name}
                   </Text>
                   <TouchableOpacity
                     onPress={() => setSelectedZone(null)}
@@ -489,82 +469,88 @@ export default function HotspotMapScreen() {
                     <Text
                       style={[styles.zoneDetailValue, { color: textPrimary }]}
                     >
-                      {selectedZone.demand_count}
+                      {(selectedZone.suggest_score * 100).toFixed(0)}
                     </Text>
                     <Text
                       style={[styles.zoneDetailLabel, { color: textSecondary }]}
                     >
-                      Riders
+                      Suggest
                     </Text>
                   </View>
                   <View style={styles.zoneDetailCell}>
                     <Text
                       style={[styles.zoneDetailValue, { color: textPrimary }]}
                     >
-                      {selectedZone.supply_count}
+                      {(selectedZone.score * 100).toFixed(0)}
                     </Text>
                     <Text
                       style={[styles.zoneDetailLabel, { color: textSecondary }]}
                     >
-                      Drivers
+                      Heat Score
+                    </Text>
+                  </View>
+                  <View style={styles.zoneDetailCell}>
+                    <Text
+                      style={[styles.zoneDetailValue, { color: textPrimary }]}
+                    >
+                      {selectedZone.idle_driver_count}
+                    </Text>
+                    <Text
+                      style={[styles.zoneDetailLabel, { color: textSecondary }]}
+                    >
+                      Idle Drivers
                     </Text>
                   </View>
                   <View style={styles.zoneDetailCell}>
                     <Text
                       style={[
                         styles.zoneDetailValue,
-                        {
-                          color:
-                            selectedZone.multiplier > 1
-                              ? colors.primary
-                              : textPrimary,
-                        },
+                        { color: tagColor(selectedZone.tag) },
                       ]}
                     >
-                      {selectedZone.multiplier > 0
-                        ? `${selectedZone.multiplier.toFixed(1)}x`
-                        : "—"}
+                      {selectedZone.tag.charAt(0).toUpperCase() + selectedZone.tag.slice(1)}
                     </Text>
                     <Text
                       style={[styles.zoneDetailLabel, { color: textSecondary }]}
                     >
-                      Surge
-                    </Text>
-                  </View>
-                  <View style={styles.zoneDetailCell}>
-                    <Text
-                      style={[
-                        styles.zoneDetailValue,
-                        { color: demandColor(selectedZone.intensity) },
-                      ]}
-                    >
-                      {demandLabel(selectedZone.intensity)}
-                    </Text>
-                    <Text
-                      style={[styles.zoneDetailLabel, { color: textSecondary }]}
-                    >
-                      Level
+                      Tag
                     </Text>
                   </View>
                 </View>
-                {selectedZone.supply_count === 0 &&
-                  selectedZone.demand_count > 0 && (
-                    <View
-                      style={[
-                        styles.hotBadge,
-                        { backgroundColor: `${colors.danger}15` },
-                      ]}
-                    >
-                      <Ionicons
-                        name="flame-outline"
-                        size={14}
-                        color={colors.danger}
-                      />
-                      <Text style={[styles.hotBadgeText, { color: colors.danger }]}>
-                        No drivers — high earning opportunity!
-                      </Text>
-                    </View>
-                  )}
+                {selectedZone.tag === "hot" && (
+                  <View
+                    style={[
+                      styles.hotBadge,
+                      { backgroundColor: `${colors.amber}15` },
+                    ]}
+                  >
+                    <Ionicons
+                      name="flame-outline"
+                      size={14}
+                      color={colors.amber}
+                    />
+                    <Text style={[styles.hotBadgeText, { color: colors.amber }]}>
+                      High demand zone — worth waiting nearby
+                    </Text>
+                  </View>
+                )}
+                {selectedZone.tag === "cold" && selectedZone.idle_driver_count > 3 && (
+                  <View
+                    style={[
+                      styles.hotBadge,
+                      { backgroundColor: `${colors.accent}15` },
+                    ]}
+                  >
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={14}
+                      color={colors.accent}
+                    />
+                    <Text style={[styles.hotBadgeText, { color: colors.accent }]}>
+                      Many idle drivers — consider moving to a hotter zone
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
           </View>

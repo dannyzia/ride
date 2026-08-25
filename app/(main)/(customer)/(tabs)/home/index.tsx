@@ -86,6 +86,7 @@ const VEHICLE_ICONS: Record<VehicleTypeEnum, VehicleIconName> = {
   bike_standard: "bicycle",
   bike_plus: "bicycle",
   cng: "car-sport",
+  car_compact: "car",
   car_economy: "car",
   car_comfort: "car",
   car_premium: "car",

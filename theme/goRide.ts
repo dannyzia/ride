@@ -70,14 +70,6 @@ export const colors = {
   adminIconDark: "#3A3A3A",
 } as const;
 
-// Surge / high-demand notice palette (Tailwind yellow scale — used by the
-// confirm-ride surge banner; no generic yellow tokens exist in `colors`).
-export const surge = {
-  bg: { light: "#FEFCE8", dark: "rgba(113, 63, 18, 0.2)" },
-  border: { light: "#FEF08A", dark: "#854D0E" },
-  title: { light: "#A16207", dark: "#FACC15" },
-  body: { light: "#CA8A04", dark: "#EAB308" },
-} as const;
 
 export const fonts = {
   heading: "Jakarta-Bold",
@@ -162,5 +154,4 @@ export const goRideTheme = {
   radii,
   spacing,
   shadows,
-  surge,
 };

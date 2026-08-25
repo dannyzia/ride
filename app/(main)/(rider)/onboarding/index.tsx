@@ -23,8 +23,16 @@ import { uploadImage } from "@/lib/imageToURL";
 import { colors, radii, spacing } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import DocumentUploadCard from "@/components/DocumentUploadCard";
-import { VEHICLE_TYPES, type VehicleTypeEnum } from "@/lib/vehicleTypes";
+import {
+  BODY_TYPE_GROUPS,
+  BODY_TYPE_DISPLAY,
+  type VehicleTypeEnum,
+  type BodyTypeEnum,
+  getVehicleType,
+} from "@/lib/vehicleTypes";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
+
+
 
 class ApiError extends Error {
   code: string;
@@ -58,6 +66,25 @@ async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
     );
   }
   return res;
+}
+
+// ── Retry-with-backoff helpers ──────────────────────────────────────────────
+const MAX_RETRIES = 3;
+const RETRY_DELAYS_MS = [1000, 2000, 4000];
+
+/** Errors safe to retry (network/timeout/5xx). Business-logic 4xx are not. */
+function isRetryableError(err: unknown): boolean {
+  if (err instanceof ApiError) {
+    if (["not_authenticated", "manual_review_required", "forbidden", "unauthorized"].includes(err.code)) return false;
+    if (err.code.startsWith("http_5") || err.code === "http_429") return true;
+    return false;
+  }
+  if (err instanceof TypeError) return true;
+  return false;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 const alertApiError = (title: string, err: unknown) => {
@@ -254,6 +281,298 @@ function OptionPickerModal({
   );
 }
 
+// ── §12.2: Body type picker (grouped radio rows) ────────────────────────
+function BodyTypePickerModal({
+  visible,
+  selectedValue,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  selectedValue: BodyTypeEnum | null;
+  onSelect: (value: BodyTypeEnum) => void;
+  onClose: () => void;
+}) {
+  const isDark = useIsDark();
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark
+    ? colors.textSecondaryDark
+    : colors.textSecondaryLight;
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
+        <TouchableOpacity style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} />
+        <View
+          style={{
+            maxHeight: "70%",
+            backgroundColor: surfaceBg,
+            borderTopLeftRadius: radii["2xl"],
+            borderTopRightRadius: radii["2xl"],
+            padding: spacing.lg,
+            paddingBottom: spacing["2xl"],
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>
+            <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 17, color: textPrimary }}>
+              Select Body Type
+            </Text>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close" onPress={onClose}>
+              <Ionicons name="close" size={22} color={textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={BODY_TYPE_GROUPS}
+            keyExtractor={(g) => g.group}
+            renderItem={({ item: group }) => (
+              <View style={{ marginBottom: spacing.sm }}>
+                <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 13, color: textSecondary, marginTop: spacing.sm, marginBottom: spacing.xs, marginLeft: spacing.xs }}>
+                  {group.group}
+                </Text>
+                {group.items.map((item) => {
+                  const selected = item.value === selectedValue;
+                  return (
+                    <TouchableOpacity
+                      key={item.value}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
+                      accessibilityLabel={`${item.en} — ${item.bn}`}
+                      onPress={() => { onSelect(item.value); onClose(); }}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        paddingVertical: spacing.md,
+                        paddingHorizontal: spacing.sm,
+                        borderRadius: radii.md,
+                        backgroundColor: selected ? colors.primary + "1A" : "transparent",
+                      }}
+                    >
+                      <Ionicons
+                        name={selected ? "checkmark-circle" : "ellipse-outline"}
+                        size={22}
+                        color={selected ? colors.primary : textSecondary}
+                      />
+                      <View style={{ marginLeft: spacing.md, flex: 1 }}>
+                        <Text style={{ fontFamily: selected ? "Jakarta-SemiBold" : "Jakarta-Regular", fontSize: 15, color: selected ? colors.primary : textPrimary }}>
+                          {item.en}
+                        </Text>
+                        <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: textSecondary }}>
+                          {item.bn}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ── §12.3: Classification outcome modals ────────────────────────────────
+function ClassificationModal({
+  result,
+  brand,
+  model,
+  onDismiss,
+  onRetry,
+}: {
+  result: { outcome: "classified"; suggested_vehicle_type: string } | { outcome: "manual_review" };
+  brand: string;
+  model: string;
+  onDismiss: () => void;
+  onRetry: () => void;
+}) {
+  const isDark = useIsDark();
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+
+  const isClassified = result.outcome === "classified";
+  const typeName = isClassified
+    ? getVehicleType(result.suggested_vehicle_type as VehicleTypeEnum).display_en
+    : null;
+
+  return (
+    <Modal visible transparent animationType="fade">
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" }}>
+        <View
+          style={{
+            width: "90%",
+            maxWidth: 400,
+            backgroundColor: surfaceBg,
+            borderRadius: 16,
+            padding: 24,
+            alignItems: "center",
+          }}
+        >
+          {/* Icon circle */}
+          <View
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: isClassified ? colors.primary + "1A" : colors.info + "1A",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: spacing.lg,
+            }}
+          >
+            <Ionicons
+              name={isClassified ? "checkmark" : "time"}
+              size={40}
+              color={isClassified ? colors.primary : colors.info}
+            />
+          </View>
+
+          <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 20, color: textPrimary, textAlign: "center" }}>
+            {isClassified ? "Vehicle Classified" : "Submitted for Review"}
+          </Text>
+
+          <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary, textAlign: "center", marginTop: spacing.sm, lineHeight: 20 }}>
+            {isClassified
+              ? `Your ${brand} ${model} has been classified as`
+              : "Your vehicle details have been submitted successfully."}
+          </Text>
+
+          {isClassified && typeName && (
+            <View
+              style={{
+                marginTop: spacing.md,
+                paddingHorizontal: spacing.lg,
+                paddingVertical: spacing.sm,
+                borderRadius: radii.pill,
+                backgroundColor: colors.primary + "1A",
+              }}
+            >
+              <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: colors.primary }}>
+                {typeName}
+              </Text>
+            </View>
+          )}
+
+          <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 13, color: textSecondary, textAlign: "center", marginTop: spacing.md, lineHeight: 18 }}>
+            {isClassified
+              ? "An admin may review and adjust this during document verification."
+              : "Our team will review it and update you soon."}
+          </Text>
+          {!isClassified && (
+            <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: textSecondary, textAlign: "center", marginTop: 2 }}>
+              {"আমাদের টিম শীঘ্রই এটি পর্যালোচনা করে আপনাকে জানাবে।"}
+            </Text>
+          )}
+
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Continue"
+            onPress={onDismiss}
+            style={{
+              marginTop: spacing.xl,
+              paddingVertical: spacing.md,
+              paddingHorizontal: spacing.xl,
+              borderRadius: radii.pill,
+              backgroundColor: colors.primary,
+              minHeight: 56,
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+            }}
+          >
+            <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: colors.white }}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// R1: Manual review required — submission failed, vehicle needs human review
+function ManualReviewRequiredModal({
+  visible,
+  onDismiss,
+}: {
+  visible: boolean;
+  onDismiss: () => void;
+}) {
+  const isDark = useIsDark();
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  if (!visible) return null;
+  return (
+    <Modal visible transparent animationType="fade">
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" }}>
+        <View style={{ width: "90%", maxWidth: 400, backgroundColor: surfaceBg, borderRadius: 16, padding: 24, alignItems: "center" }}>
+          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.info + "1A", alignItems: "center", justifyContent: "center", marginBottom: spacing.lg }}>
+            <Ionicons name="time" size={40} color={colors.info} />
+          </View>
+          <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 20, color: textPrimary, textAlign: "center" }}>Vehicle Needs Review</Text>
+          <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: textSecondary, textAlign: "center", marginTop: 2 }}>যাচাই প্রয়োজন</Text>
+          <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary, textAlign: "center", marginTop: spacing.sm, lineHeight: 20 }}>
+            {"Your vehicle details were submitted for review. Our team will contact you to complete your registration."}
+            {"\n"}
+            {"আপনার গাড়ির তথ্য পর্যালোচনার জন্য জমা দেওয়া হয়েছে। নিবন্ধন সম্পন্ন করতে আমাদের টিম আপনার সাথে যোগাযোগ করবে।"}
+          </Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="OK"
+            onPress={onDismiss}
+            style={{ marginTop: spacing.xl, paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radii.pill, backgroundColor: colors.primary, minHeight: 56, justifyContent: "center", alignItems: "center", width: "100%" }}
+          >
+            <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: colors.white }}>{"OK"} / {"ঠিক আছে"}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function ClassificationErrorModal({
+  visible,
+  onRetry,
+  onBack,
+}: {
+  visible: boolean;
+  onRetry: () => void;
+  onBack: () => void;
+}) {
+  const isDark = useIsDark();
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  if (!visible) return null;
+  return (
+    <Modal visible transparent animationType="fade">
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" }}>
+        <View style={{ width: "90%", maxWidth: 400, backgroundColor: surfaceBg, borderRadius: 16, padding: 24, alignItems: "center" }}>
+          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.danger + "1A", alignItems: "center", justifyContent: "center", marginBottom: spacing.lg }}>
+            <Ionicons name="close" size={40} color={colors.danger} />
+          </View>
+          <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 20, color: textPrimary, textAlign: "center" }}>Could Not Classify</Text>
+          <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary, textAlign: "center", marginTop: spacing.sm, lineHeight: 20 }}>
+            Please check your internet connection and try again.
+          </Text>
+          <View style={{ flexDirection: "row", gap: spacing.md, marginTop: spacing.xl, width: "100%" }}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Back to Form" onPress={onBack}
+              style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, borderWidth: 1.5, borderColor: textSecondary, minHeight: 56, justifyContent: "center", alignItems: "center" }}>
+              <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: textSecondary }}>Back to Form</Text>
+            </TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Retry" onPress={onRetry}
+              style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, backgroundColor: colors.primary, minHeight: 56, justifyContent: "center", alignItems: "center" }}>
+              <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: colors.white }}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function OnboardingWizard() {
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
@@ -278,10 +597,20 @@ export default function OnboardingWizard() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [savedProfileKey, setSavedProfileKey] = useState<string | null>(null);
 
-  // Step 2 — vehicle
-  const [vehicleType, setVehicleType] = useState<VehicleTypeEnum | null>(null);
+  // Step 2 — vehicle (§12.2: body_type + engine_cc replace vehicle_type selector)
+  const [bodyType, setBodyType] = useState<BodyTypeEnum | null>(null);
+  const [engineCc, setEngineCc] = useState("");
+  const [seats, setSeats] = useState("");
+  const [bodyTypeModalVisible, setBodyTypeModalVisible] = useState(false);
   const [models, setModels] = useState<VehicleModelRow[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
+  const [classificationResult, setClassificationResult] = useState<
+    { outcome: "classified"; suggested_vehicle_type: string } | { outcome: "manual_review" } | null
+  >(null);
+  const [classError, setClassError] = useState(false);
+  const [manualReviewRequired, setManualReviewRequired] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
   const [brand, setBrand] = useState<string | null>(null);
   const [brandText, setBrandText] = useState("");
   const [model, setModel] = useState<string | null>(null);
@@ -355,19 +684,24 @@ export default function OnboardingWizard() {
     brand: resolvedBrand,
     model: resolvedModel,
     year: regYear,
-    type: vehicleType,
+    body_type: bodyType,
+    engine_cc: engineCc,
     plate: plate.trim().toUpperCase(),
   });
 
   const profileKey = JSON.stringify({ name: name.trim(), photo: photoUrl ?? photoLocalUri });
 
   const step1Valid = name.trim().length > 0;
+  // §12.2: validation requires body_type + engine_cc instead of vehicleType
+  // H1: seats required (1–20 per §10.5)
+  const parsedSeats = seats.length > 0 ? parseInt(seats, 10) : 0;
+  const seatsValid = parsedSeats >= 1 && parsedSeats <= 20;
   const step2Valid =
-    vehicleType != null &&
-    !!resolvedBrand &&
-    resolvedBrand.length > 0 &&
-    !!resolvedModel &&
-    resolvedModel.length > 0 &&
+    bodyType != null &&
+    engineCc.length > 0 && parseInt(engineCc, 10) > 0 &&
+    seatsValid &&
+    !!resolvedBrand && resolvedBrand.length > 0 &&
+    !!resolvedModel && resolvedModel.length > 0 &&
     regYear != null &&
     plate.trim().length > 0;
   const step3Valid = VEHICLE_DOC_FIELDS.every((f) => !!vehicleDocs[f.key]);
@@ -379,42 +713,40 @@ export default function OnboardingWizard() {
 
   const stepValid = (n: number): boolean => {
     switch (n) {
-      case 1:
-        return step1Valid;
-      case 2:
-        return step2Valid;
-      case 3:
-        return step3Valid;
-      case 4:
-        return step4Valid;
-      case 5:
-        return step5Valid;
-      case 6:
-        return step6Valid;
-      case 7:
-        return step7Valid;
-      default:
-        return false;
+      case 1: return step1Valid;
+      case 2: return step2Valid;
+      case 3: return step3Valid;
+      case 4: return step4Valid;
+      case 5: return step5Valid;
+      case 6: return step6Valid;
+      case 7: return step7Valid;
+      default: return false;
     }
   };
 
-  const selectVehicleType = async (vt: VehicleTypeEnum) => {
-    setVehicleType(vt);
+  // §12.2: load vehicle models when body type is first picked
+  const loadVehicleModels = async () => {
     setBrand(null);
     setBrandText("");
     setModel(null);
     setModelText("");
     setModelsLoading(true);
     try {
-      const res = await apiFetch(
-        `/api/driver/vehicle-models?vehicle_type=${encodeURIComponent(vt)}`,
-      );
+      const res = await apiFetch("/api/driver/vehicle-models");
       const data = await res.json();
       setModels(data.models ?? []);
     } catch (err) {
       alertApiError("Failed to load vehicle models", err);
     } finally {
       setModelsLoading(false);
+    }
+  };
+
+  const selectBodyType = (bt: BodyTypeEnum) => {
+    setBodyType(bt);
+    setBodyTypeModalVisible(false);
+    if (models.length === 0) {
+      void loadVehicleModels();
     }
   };
 
@@ -464,12 +796,18 @@ export default function OnboardingWizard() {
     }
   };
 
-  const submitVehicle = async () => {
+  // §12.3: submit vehicle with classification fields — with retry-with-backoff
+  const submitVehicle = async (attempt = 0) => {
     if (savedVehicleKey === vehiclePayloadKey) {
       setStep(3);
       return;
     }
     setStepSubmitting(true);
+    if (attempt === 0) {
+      setClassificationResult(null);
+      setClassError(false);
+      setRetryAttempt(0);
+    }
     try {
       const res = await apiFetch("/api/driver/vehicles", {
         method: "POST",
@@ -477,25 +815,69 @@ export default function OnboardingWizard() {
           brand: resolvedBrand,
           model: resolvedModel,
           registration_year: regYear,
-          vehicle_type: vehicleType,
           registration_plate: plate.trim(),
+          engine_cc: parseInt(engineCc, 10) || null,
+          body_type: bodyType,
+          number_of_seats: parsedSeats || 4,
         }),
       });
       const data = await res.json();
       setVehicleId(data.vehicle?.id ?? null);
       setSavedVehicleKey(vehiclePayloadKey);
-      if (data.model_created) {
-        Alert.alert(
-          "Pending Admin Review",
-          "The brand/model you entered is new. It has been submitted for admin review and will be visible to other drivers once approved.",
-        );
+      setRetrying(false);
+      setRetryAttempt(0);
+      // §12.3: show classification outcome as same-screen modal
+      if (data.classification) {
+        setClassificationResult(data.classification);
+      } else {
+        // Legacy response — proceed normally
+        if (data.model_created) {
+          Alert.alert(
+            "Pending Admin Review",
+            "The brand/model you entered is new. It has been submitted for admin review and will be visible to other drivers once approved.",
+          );
+        }
+        setStep(3);
       }
-      setStep(3);
     } catch (err) {
-      alertApiError("Vehicle Save Failed", err);
+      setClassificationResult(null);
+      // R1: branch on manual_review_required — distinct modal, never retry
+      if (err instanceof ApiError && err.code === "manual_review_required") {
+        setRetrying(false);
+        setRetryAttempt(0);
+        setManualReviewRequired(true);
+        logger.error("[onboarding] vehicle submit failed", { error: String(err) });
+        return;
+      }
+      // Retry with exponential backoff if error is retryable and attempts remain
+      if (isRetryableError(err) && attempt < MAX_RETRIES - 1) {
+        const delay = RETRY_DELAYS_MS[attempt];
+        setRetryAttempt(attempt + 1);
+        setRetrying(true);
+        logger.info("[onboarding] retrying vehicle submit", { attempt: attempt + 1, delayMs: delay });
+        await sleep(delay);
+        setRetrying(false);
+        await submitVehicle(attempt + 1);
+        return;
+      }
+      // All retries exhausted or non-retryable error
+      setRetrying(false);
+      setRetryAttempt(0);
+      setClassError(true);
+      logger.error("[onboarding] vehicle submit failed", { error: String(err) });
     } finally {
       setStepSubmitting(false);
     }
+  };
+
+  const dismissClassification = () => {
+    setClassificationResult(null);
+    setStep(3);
+  };
+
+  const retryClassification = () => {
+    setClassError(false);
+    void submitVehicle(0);
   };
 
   const skipVehicleStep = () => {
@@ -557,10 +939,6 @@ export default function OnboardingWizard() {
       if (legacyAnswer === "yes") {
         Object.assign(finalDocs, legacyDocs);
       }
-      // M-9: consent was previously persisted only when finalDocs was
-      // non-empty — a re-entry with empty doc state silently dropped it. The
-      // documents endpoint now accepts consent without docs, so persist it
-      // unconditionally.
       await apiFetch("/api/driver/documents", {
         method: "POST",
         body: JSON.stringify({
@@ -584,31 +962,16 @@ export default function OnboardingWizard() {
   const goNext = () => {
     if (!canContinue(step)) return;
     switch (step) {
-      case 1:
-        void submitProfile();
-        break;
+      case 1: void submitProfile(); break;
       case 2:
-        if (vehicleSkipped && !step2Valid) {
-          setStep(3);
-          break;
-        }
+        if (vehicleSkipped && !step2Valid) { setStep(3); break; }
         void submitVehicle();
         break;
-      case 3:
-        void submitVehicleDocs();
-        break;
-      case 4:
-        setStep(5);
-        break;
-      case 5:
-        setStep(6);
-        break;
-      case 6:
-        void submitPayout();
-        break;
-      case 7:
-        void finishOnboarding();
-        break;
+      case 3: void submitVehicleDocs(); break;
+      case 4: setStep(5); break;
+      case 5: setStep(6); break;
+      case 6: void submitPayout(); break;
+      case 7: void finishOnboarding(); break;
     }
   };
 
@@ -654,42 +1017,18 @@ export default function OnboardingWizard() {
   }
 
   const checklistRows = [
-    {
-      label: "Profile",
-      detail: name.trim() || "—",
-      done: step1Valid,
-    },
+    { label: "Profile", detail: name.trim() || "\u2014", done: step1Valid },
     {
       label: "Vehicle",
-      detail:
-        vehicleId != null
-          ? `${resolvedBrand ?? ""} ${resolvedModel ?? ""} · ${plate.trim().toUpperCase()}`
-          : "Existing vehicle on file",
+      detail: vehicleId != null
+        ? `${resolvedBrand ?? ""} ${resolvedModel ?? ""} \u00b7 ${plate.trim().toUpperCase()}`
+        : "Existing vehicle on file",
       done: true,
     },
-    {
-      label: "Vehicle documents",
-      detail: `${VEHICLE_DOC_FIELDS.filter((f) => vehicleDocs[f.key]).length}/${VEHICLE_DOC_FIELDS.length} uploaded`,
-      done: step3Valid,
-    },
-    {
-      label: "Driver documents",
-      detail: `${DRIVER_DOC_FIELDS.filter((f) => driverDocs[f.key]).length}/${DRIVER_DOC_FIELDS.length} uploaded`,
-      done: step4Valid,
-    },
-    {
-      label: "Rideshare experience",
-      detail:
-        legacyAnswer === "yes"
-          ? `${Object.keys(legacyDocs).length} screenshot(s) — optional`
-          : "Skipped",
-      done: true,
-    },
-    {
-      label: "Payout method",
-      detail: bkashValid ? `bKash ${bkash}` : "—",
-      done: bkashValid,
-    },
+    { label: "Vehicle documents", detail: `${VEHICLE_DOC_FIELDS.filter((f) => vehicleDocs[f.key]).length}/${VEHICLE_DOC_FIELDS.length} uploaded`, done: step3Valid },
+    { label: "Driver documents", detail: `${DRIVER_DOC_FIELDS.filter((f) => driverDocs[f.key]).length}/${DRIVER_DOC_FIELDS.length} uploaded`, done: step4Valid },
+    { label: "Rideshare experience", detail: legacyAnswer === "yes" ? `${Object.keys(legacyDocs).length} screenshot(s) \u2014 optional` : "Skipped", done: true },
+    { label: "Payout method", detail: bkashValid ? `bKash ${bkash}` : "\u2014", done: bkashValid },
   ];
 
   return (
@@ -725,63 +1064,34 @@ export default function OnboardingWizard() {
         >
           Driver Onboarding
         </Text>
-        {/* M-6: appearance toggle — the header's right slot was an empty spacer */}
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
           onPress={() => setTheme(isDark ? "light" : "dark")}
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: radii.md,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          style={{ width: 32, height: 32, borderRadius: radii.md, alignItems: "center", justifyContent: "center" }}
         >
-          <Ionicons
-            name={isDark ? "sunny-outline" : "moon-outline"}
-            size={20}
-            color={textPrimary}
-          />
+          <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
         </TouchableOpacity>
       </View>
 
-      {/* Segmented progress bar */}
+      {/* Progress bar */}
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
         <View style={{ flexDirection: "row", gap: spacing.xs }}>
           {STEP_TITLES.map((_, i) => (
-            <View
-              key={i}
-              style={{
-                flex: 1,
-                height: 4,
-                borderRadius: radii.pill,
-                backgroundColor:
-                  i < step ? colors.primary : borderColor,
-              }}
-            />
+            <View key={i} style={{ flex: 1, height: 4, borderRadius: radii.pill, backgroundColor: i < step ? colors.primary : borderColor }} />
           ))}
         </View>
-        <Text
-          style={{
-            fontFamily: "Jakarta-SemiBold",
-            fontSize: 12,
-            color: textSecondary,
-            marginTop: spacing.sm,
-          }}
-        >
-          {`Step ${step} of 7 — ${STEP_TITLES[step - 1]}`}
+        <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 12, color: textSecondary, marginTop: spacing.sm }}>
+          {`Step ${step} of 7 \u2014 ${STEP_TITLES[step - 1]}`}
         </Text>
       </View>
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{
-          padding: spacing.lg,
-          paddingBottom: spacing["4xl"],
-        }}
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing["4xl"] }}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ── Step 1: Profile ──────────────────────────────────────────── */}
         {step === 1 && (
           <View>
             <Text style={{ ...labelStyle, fontSize: 16 }}>Your name</Text>
@@ -793,146 +1103,58 @@ export default function OnboardingWizard() {
               value={name}
               onChangeText={setName}
             />
-            <Text style={{ ...labelStyle, fontSize: 16, marginTop: spacing.xl }}>
-              Profile photo
-            </Text>
+            <Text style={{ ...labelStyle, fontSize: 16, marginTop: spacing.xl }}>Profile photo</Text>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel="Pick profile photo from gallery"
                 onPress={pickProfilePhoto}
-                style={{
-                  width: 96,
-                  height: 96,
-                  borderRadius: 48,
-                  backgroundColor: surfaceBg,
-                  borderWidth: 1,
-                  borderColor,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                }}
+                style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: surfaceBg, borderWidth: 1, borderColor, alignItems: "center", justifyContent: "center", overflow: "hidden" }}
               >
                 {photoLocalUri || photoUrl ? (
-                  <Image
-                    source={{ uri: photoLocalUri ?? photoUrl ?? undefined }}
-                    style={{ width: 96, height: 96, borderRadius: 48 }}
-                    resizeMode="cover"
-                  />
+                  <Image source={{ uri: photoLocalUri ?? photoUrl ?? undefined }} style={{ width: 96, height: 96, borderRadius: 48 }} resizeMode="cover" />
                 ) : (
                   <Ionicons name="person" size={36} color={textSecondary} />
                 )}
               </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel="Pick profile photo from gallery"
-                onPress={pickProfilePhoto}
-                style={{ marginLeft: spacing.lg }}
-              >
-                <Text
-                  style={{
-                    fontFamily: "Jakarta-SemiBold",
-                    fontSize: 14,
-                    color: colors.primary,
-                  }}
-                >
-                  Choose from gallery
-                </Text>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Pick profile photo from gallery" onPress={pickProfilePhoto} style={{ marginLeft: spacing.lg }}>
+                <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: colors.primary }}>Choose from gallery</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
 
+        {/* ── Step 2: Vehicle (§12.2: body_type + engine_cc) ────────────── */}
         {step === 2 && (
           <View>
-            <Text style={{ ...labelStyle, fontSize: 16 }}>Vehicle type</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
-              {VEHICLE_TYPES.map((vt) => {
-                const selected = vehicleType === vt.key;
-                return (
-                  <TouchableOpacity
-                    key={vt.key}
-                    accessibilityRole="button"
-                    accessibilityLabel={vt.display_en}
-                    onPress={() => void selectVehicleType(vt.key)}
-                    style={{
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.sm,
-                      borderRadius: radii.pill,
-                      borderWidth: 1.5,
-                      borderColor: selected ? colors.primary : borderColor,
-                      backgroundColor: selected ? colors.primary + "1A" : "transparent",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: selected ? "Jakarta-SemiBold" : "Jakarta-Regular",
-                        fontSize: 13,
-                        color: selected ? colors.primary : textPrimary,
-                      }}
-                    >
-                      {vt.display_en}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            {/* 1. Body Type (§12.2: first field — frames the mental model) */}
+            <Text style={{ ...labelStyle, fontSize: 16 }}>Body Type</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Select body type"
+              style={{ ...inputStyle, flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 56 }}
+              onPress={() => setBodyTypeModalVisible(true)}
+            >
+              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: bodyType ? textPrimary : textSecondary }}>
+                {bodyType ? BODY_TYPE_DISPLAY[bodyType].en : "Select body type"}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={textSecondary} />
+            </TouchableOpacity>
 
-            {modelsLoading && (
-              <ActivityIndicator
-                size="small"
-                color={colors.primary}
-                style={{ marginTop: spacing.md }}
-              />
-            )}
-
-            {vehicleType != null && !modelsLoading && (
+            {/* 2–4: Brand → Model → Year (existing cluster) */}
+            {bodyType != null && !modelsLoading && (
               <View style={{ marginTop: spacing.lg }}>
                 <Text style={labelStyle}>Brand</Text>
                 {brand === OTHERS ? (
                   <View>
-                    <TextInput
-                      accessibilityLabel="Vehicle brand"
-                      style={inputStyle}
-                      placeholder="Enter brand (e.g. Bajaj)"
-                      placeholderTextColor={textSecondary}
-                      value={brandText}
-                      onChangeText={setBrandText}
-                      autoCapitalize="words"
-                    />
-                    <TouchableOpacity
-                      accessibilityRole="button"
-                      accessibilityLabel="Choose brand from list instead"
-                      onPress={() => setBrand(null)}
-                      style={{ marginTop: spacing.sm }}
-                    >
-                      <Text
-                        style={{
-                          fontFamily: "Jakarta-SemiBold",
-                          fontSize: 13,
-                          color: colors.primary,
-                        }}
-                      >
-                        Choose from list instead
-                      </Text>
+                    <TextInput accessibilityLabel="Vehicle brand" style={inputStyle} placeholder="Enter brand (e.g. Toyota)" placeholderTextColor={textSecondary} value={brandText} onChangeText={setBrandText} autoCapitalize="words" />
+                    <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose brand from list instead" onPress={() => setBrand(null)} style={{ marginTop: spacing.sm }}>
+                      <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 13, color: colors.primary }}>Choose from list instead</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    accessibilityLabel="Select vehicle brand"
-                    style={{ ...inputStyle, justifyContent: "center" }}
-                    onPress={() => setPickerModal("brand")}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: "Jakarta-Regular",
-                        fontSize: 15,
-                        color: brand ? textPrimary : textSecondary,
-                      }}
-                    >
-                      {brand ?? "Select brand"}
-                    </Text>
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select vehicle brand" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("brand")}>
+                    <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: brand ? textPrimary : textSecondary }}>{brand ?? "Select brand"}</Text>
                   </TouchableOpacity>
                 )}
 
@@ -941,92 +1163,86 @@ export default function OnboardingWizard() {
                     <Text style={labelStyle}>Model</Text>
                     {model === OTHERS || brand === OTHERS ? (
                       <View>
-                        <TextInput
-                          accessibilityLabel="Vehicle model"
-                          style={inputStyle}
-                          placeholder="Enter model (e.g. CT100)"
-                          placeholderTextColor={textSecondary}
-                          value={modelText}
-                          onChangeText={setModelText}
-                          autoCapitalize="words"
-                        />
+                        <TextInput accessibilityLabel="Vehicle model" style={inputStyle} placeholder="Enter model (e.g. Premio)" placeholderTextColor={textSecondary} value={modelText} onChangeText={setModelText} autoCapitalize="words" />
                         {brand !== OTHERS && (
-                          <TouchableOpacity
-                            accessibilityRole="button"
-                            accessibilityLabel="Choose model from list instead"
-                            onPress={() => setModel(null)}
-                            style={{ marginTop: spacing.sm }}
-                          >
-                            <Text
-                              style={{
-                                fontFamily: "Jakarta-SemiBold",
-                                fontSize: 13,
-                                color: colors.primary,
-                              }}
-                            >
-                              Choose from list instead
-                            </Text>
+                          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose model from list instead" onPress={() => setModel(null)} style={{ marginTop: spacing.sm }}>
+                            <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 13, color: colors.primary }}>Choose from list instead</Text>
                           </TouchableOpacity>
                         )}
                       </View>
                     ) : (
-                      <TouchableOpacity
-                        accessibilityRole="button"
-                        accessibilityLabel="Select vehicle model"
-                        style={{ ...inputStyle, justifyContent: "center" }}
-                        onPress={() => setPickerModal("model")}
-                      >
-                        <Text
-                          style={{
-                            fontFamily: "Jakarta-Regular",
-                            fontSize: 15,
-                            color: model ? textPrimary : textSecondary,
-                          }}
-                        >
-                          {model ?? "Select model"}
-                        </Text>
+                      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select vehicle model" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("model")}>
+                        <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: model ? textPrimary : textSecondary }}>{model ?? "Select model"}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
                 )}
 
                 {(brand === OTHERS || model === OTHERS) && (
-                  <Text
-                    style={{
-                      fontFamily: "Jakarta-Regular",
-                      fontSize: 12,
-                      color: colors.amber,
-                      marginTop: spacing.sm,
-                    }}
-                  >
-                    New brand/model entries are reviewed by an admin before other
-                    drivers can see them.
+                  <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: colors.amber, marginTop: spacing.sm }}>
+                    New brand/model entries are reviewed by an admin before other drivers can see them.
                   </Text>
                 )}
 
-                <Text style={{ ...labelStyle, marginTop: spacing.lg }}>
-                  BRTA Registration Year
-                </Text>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Select BRTA registration year"
-                  style={{ ...inputStyle, justifyContent: "center" }}
-                  onPress={() => setPickerModal("year")}
-                >
-                  <Text
-                    style={{
-                      fontFamily: "Jakarta-Regular",
-                      fontSize: 15,
-                      color: regYear != null ? textPrimary : textSecondary,
-                    }}
-                  >
+                <Text style={{ ...labelStyle, marginTop: spacing.lg }}>BRTA Registration Year</Text>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select BRTA registration year" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("year")}>
+                  <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: regYear != null ? textPrimary : textSecondary }}>
                     {regYear != null ? String(regYear) : "Select year"}
                   </Text>
                 </TouchableOpacity>
+              </View>
+            )}
 
-                <Text style={{ ...labelStyle, marginTop: spacing.lg }}>
-                  Registration Plate
+            {modelsLoading && (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: spacing.md }} />
+            )}
+
+            {/* 5. Engine CC (§12.2) */}
+            {bodyType != null && !modelsLoading && (
+              <View style={{ marginTop: spacing.lg }}>
+                <Text style={labelStyle}>Engine CC (BRTA Recorded)</Text>
+                <TextInput
+                  accessibilityLabel="Engine CC"
+                  style={{ ...inputStyle, minHeight: 56 }}
+                  placeholder="e.g., 996"
+                  placeholderTextColor={textSecondary}
+                  keyboardType="numeric"
+                  maxLength={5}
+                  value={engineCc}
+                  onChangeText={(t) => setEngineCc(t.replace(/[^0-9]/g, ""))}
+                />
+                <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: textSecondary, marginTop: spacing.xs }}>
+                  From your BRTA registration document
                 </Text>
+              </View>
+            )}
+
+            {/* 6. Registered Seats (H1: restored per §10.1) */}
+            {bodyType != null && !modelsLoading && (
+              <View style={{ marginTop: spacing.lg }}>
+                <Text style={labelStyle}>Registered Seats</Text>
+                <TextInput
+                  accessibilityLabel="Number of seats"
+                  style={{ ...inputStyle, minHeight: 56, borderColor: seats.length > 0 && !seatsValid ? colors.danger : borderColor }}
+                  placeholder="e.g., 4"
+                  placeholderTextColor={textSecondary}
+                  keyboardType="numeric"
+                  maxLength={2}
+                  value={seats}
+                  onChangeText={(t) => setSeats(t.replace(/[^0-9]/g, ""))}
+                />
+                {seats.length > 0 && !seatsValid && (
+                  <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: colors.danger, marginTop: spacing.xs }}>
+                    {parsedSeats <= 0 ? "Must have at least 1 seat" : "Please check seat count"}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* 7. Registration Plate */}
+            {bodyType != null && !modelsLoading && (
+              <View style={{ marginTop: spacing.lg }}>
+                <Text style={{ ...labelStyle, marginTop: spacing.lg }}>Registration Plate</Text>
                 <TextInput
                   accessibilityLabel="Registration plate number"
                   style={inputStyle}
@@ -1039,6 +1255,29 @@ export default function OnboardingWizard() {
               </View>
             )}
 
+            {/* 8. Auto-classification info card (§12.2) */}
+            {bodyType != null && (
+              <View
+                style={{
+                  marginTop: spacing.xl,
+                  padding: spacing.md,
+                  borderRadius: radii.md,
+                  borderWidth: 1,
+                  borderColor: colors.info + "40",
+                  backgroundColor: colors.info + "0D",
+                  flexDirection: "row",
+                  gap: spacing.md,
+                }}
+              >
+                <Ionicons name="information-circle" size={22} color={colors.info} />
+                <Text style={{ flex: 1, fontFamily: "Jakarta-Regular", fontSize: 13, color: textSecondary, lineHeight: 18 }}>
+                  {"We'll classify your vehicle automatically based on engine size, body type, and seats."}
+                  {"\n"}
+                  {"ইঞ্জিনের আয়তন, বডি টাইপ এবং আসন সংখ্যার ভিত্তিতে আমরা স্বয়ংক্রিয়ভাবে শ্রেণীবদ্ধ করব।"}
+                </Text>
+              </View>
+            )}
+
             {me?.vehicle_id != null && !vehicleSkipped && (
               <TouchableOpacity
                 accessibilityRole="button"
@@ -1046,365 +1285,166 @@ export default function OnboardingWizard() {
                 onPress={skipVehicleStep}
                 style={{ marginTop: spacing.xl, alignSelf: "center" }}
               >
-                <Text
-                  style={{
-                    fontFamily: "Jakarta-SemiBold",
-                    fontSize: 14,
-                    color: colors.primary,
-                  }}
-                >
-                  Skip — I already have a vehicle on file
+                <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: colors.primary }}>
+                  Skip \u2014 I already have a vehicle on file
                 </Text>
               </TouchableOpacity>
             )}
             {vehicleSkipped && (
-              <Text
-                style={{
-                  fontFamily: "Jakarta-Regular",
-                  fontSize: 13,
-                  color: textSecondary,
-                  marginTop: spacing.lg,
-                  textAlign: "center",
-                }}
-              >
-                Skipped — your existing vehicle on file will be used.
+              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 13, color: textSecondary, marginTop: spacing.lg, textAlign: "center" }}>
+                Skipped \u2014 your existing vehicle on file will be used.
               </Text>
             )}
           </View>
         )}
 
+        {/* ── Step 3: Vehicle Documents ────────────────────────────────── */}
         {step === 3 && (
           <View>
-            <Text style={secondaryLabelStyle}>
-              Upload your vehicle documents. All are required.
-            </Text>
+            <Text style={secondaryLabelStyle}>Upload your vehicle documents. All are required.</Text>
             {VEHICLE_DOC_FIELDS.map((f) => (
-              <DocumentUploadCard
-                key={f.key}
-                docType={f.key}
-                label={f.label}
-                onUploadComplete={(_path, url) =>
-                  setVehicleDocs((prev) => ({ ...prev, [f.key]: url }))
-                }
-              />
+              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(_path, url) => setVehicleDocs((prev) => ({ ...prev, [f.key]: url }))} />
             ))}
           </View>
         )}
 
+        {/* ── Step 4: Driver Documents ─────────────────────────────────── */}
         {step === 4 && (
           <View>
-            <Text style={secondaryLabelStyle}>
-              Upload your personal documents. All are required.
-            </Text>
+            <Text style={secondaryLabelStyle}>Upload your personal documents. All are required.</Text>
             {DRIVER_DOC_FIELDS.map((f) => (
-              <DocumentUploadCard
-                key={f.key}
-                docType={f.key}
-                label={f.label}
-                onUploadComplete={(_path, url) =>
-                  setDriverDocs((prev) => ({ ...prev, [f.key]: url }))
-                }
-              />
+              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(_path, url) => setDriverDocs((prev) => ({ ...prev, [f.key]: url }))} />
             ))}
           </View>
         )}
 
+        {/* ── Step 5: Rideshare Experience ─────────────────────────────── */}
         {step === 5 && (
           <View>
-            <Text style={{ ...labelStyle, fontSize: 16 }}>
-              Have you driven with Uber, Pathao, Obhai or Indrive?
-            </Text>
+            <Text style={{ ...labelStyle, fontSize: 16 }}>Have you driven with Uber, Pathao, Obhai or Indrive?</Text>
             <View style={{ flexDirection: "row", gap: spacing.md }}>
               {(["yes", "no"] as const).map((ans) => {
                 const selected = legacyAnswer === ans;
                 return (
-                  <TouchableOpacity
-                    key={ans}
-                    accessibilityRole="button"
-                    accessibilityLabel={ans === "yes" ? "Yes" : "No"}
-                    onPress={() => setLegacyAnswer(ans)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      borderWidth: 1.5,
-                      borderColor: selected ? colors.primary : borderColor,
-                      backgroundColor: selected ? colors.primary + "1A" : "transparent",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: selected ? "Jakarta-SemiBold" : "Jakarta-Regular",
-                        fontSize: 15,
-                        color: selected ? colors.primary : textPrimary,
-                      }}
-                    >
-                      {ans === "yes" ? "Yes" : "No"}
-                      </Text>
+                  <TouchableOpacity key={ans} accessibilityRole="button" accessibilityLabel={ans === "yes" ? "Yes" : "No"} onPress={() => setLegacyAnswer(ans)} style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.md, borderWidth: 1.5, borderColor: selected ? colors.primary : borderColor, backgroundColor: selected ? colors.primary + "1A" : "transparent", alignItems: "center" }}>
+                    <Text style={{ fontFamily: selected ? "Jakarta-SemiBold" : "Jakarta-Regular", fontSize: 15, color: selected ? colors.primary : textPrimary }}>{ans === "yes" ? "Yes" : "No"}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
             {legacyAnswer === "yes" && (
               <View style={{ marginTop: spacing.lg }}>
-                <Text style={secondaryLabelStyle}>
-                  Optional — helps us verify your experience. None of these are
-                  required.
-                </Text>
+                <Text style={secondaryLabelStyle}>Optional \u2014 helps us verify your experience. None of these are required.</Text>
                 {LEGACY_DOC_FIELDS.map((f) => (
-                  <DocumentUploadCard
-                    key={f.key}
-                    docType={f.key}
-                    label={f.label}
-                    onUploadComplete={(_path, url) =>
-                      setLegacyDocs((prev) => ({ ...prev, [f.key]: url }))
-                    }
-                  />
+                  <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(_path, url) => setLegacyDocs((prev) => ({ ...prev, [f.key]: url }))} />
                 ))}
               </View>
             )}
           </View>
         )}
 
+        {/* ── Step 6: Payout ───────────────────────────────────────────── */}
         {step === 6 && (
           <View>
-            <Text style={{ ...labelStyle, fontSize: 16 }}>
-              bKash account number
-            </Text>
+            <Text style={{ ...labelStyle, fontSize: 16 }}>bKash account number</Text>
             <TextInput
               accessibilityLabel="bKash account number"
-              style={{
-                ...inputStyle,
-                borderColor:
-                  bkashTouched && !bkashValid ? colors.danger : borderColor,
-              }}
+              style={{ ...inputStyle, borderColor: bkashTouched && !bkashValid ? colors.danger : borderColor }}
               placeholder="01XXXXXXXXX"
               placeholderTextColor={textSecondary}
               keyboardType="phone-pad"
               maxLength={11}
               value={bkash}
-              onChangeText={(t) => {
-                setBkash(t.replace(/[^0-9]/g, ""));
-                setBkashTouched(true);
-              }}
+              onChangeText={(t) => { setBkash(t.replace(/[^0-9]/g, "")); setBkashTouched(true); }}
             />
             {bkashTouched && !bkashValid && (
-              <Text
-                style={{
-                  fontFamily: "Jakarta-Regular",
-                  fontSize: 13,
-                  color: colors.danger,
-                  marginTop: spacing.xs,
-                }}
-              >
+              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 13, color: colors.danger, marginTop: spacing.xs }}>
                 Enter a valid bKash number (11 digits starting with 01)
               </Text>
             )}
-            <Text style={{ ...secondaryLabelStyle, marginTop: spacing.md }}>
-              Your ride earnings are paid out to this bKash account.
-            </Text>
+            <Text style={{ ...secondaryLabelStyle, marginTop: spacing.md }}>Your ride earnings are paid out to this bKash account.</Text>
           </View>
         )}
 
+        {/* ── Step 7: Review & Consent ─────────────────────────────────── */}
         {step === 7 && (
           <View>
             <Text style={{ ...labelStyle, fontSize: 16 }}>Review</Text>
             {checklistRows.map((row) => (
-              <View
-                key={row.label}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: surfaceBg,
-                  borderWidth: 1,
-                  borderColor,
-                  borderRadius: radii.md,
-                  padding: spacing.md,
-                  marginBottom: spacing.sm,
-                }}
-              >
-                <Ionicons
-                  name={row.done ? "checkmark-circle" : "ellipse-outline"}
-                  size={22}
-                  color={row.done ? colors.success : colors.gray600}
-                />
+              <View key={row.label} style={{ flexDirection: "row", alignItems: "center", backgroundColor: surfaceBg, borderWidth: 1, borderColor, borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.sm }}>
+                <Ionicons name={row.done ? "checkmark-circle" : "ellipse-outline"} size={22} color={row.done ? colors.success : colors.gray600} />
                 <View style={{ flex: 1, marginLeft: spacing.md }}>
-                  <Text
-                    style={{
-                      fontFamily: "Jakarta-SemiBold",
-                      fontSize: 14,
-                      color: textPrimary,
-                    }}
-                  >
-                    {row.label}
-                  </Text>
-                  <Text
-                    style={{
-                      fontFamily: "Jakarta-Regular",
-                      fontSize: 13,
-                      color: textSecondary,
-                      marginTop: 2,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {row.detail}
-                  </Text>
+                  <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: textPrimary }}>{row.label}</Text>
+                  <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 13, color: textSecondary, marginTop: 2 }} numberOfLines={1}>{row.detail}</Text>
                 </View>
               </View>
             ))}
 
-            <Text style={{ ...labelStyle, fontSize: 16, marginTop: spacing.lg }}>
-              Consent
-            </Text>
+            <Text style={{ ...labelStyle, fontSize: 16, marginTop: spacing.lg }}>Consent</Text>
             {CONSENT_ITEMS.map((item, i) => (
               <TouchableOpacity
                 key={i}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: consent[i] }}
                 accessibilityLabel={item}
-                onPress={() =>
-                  setConsent((prev) => {
-                    const next = [...prev];
-                    next[i] = !next[i];
-                    return next;
-                  })
-                }
-                style={{
-                  flexDirection: "row",
-                  alignItems: "flex-start",
-                  backgroundColor: surfaceBg,
-                  borderWidth: 1,
-                  borderColor,
-                  borderRadius: radii.md,
-                  padding: spacing.md,
-                  marginBottom: spacing.sm,
-                }}
+                onPress={() => setConsent((prev) => { const next = [...prev]; next[i] = !next[i]; return next; })}
+                style={{ flexDirection: "row", alignItems: "flex-start", backgroundColor: surfaceBg, borderWidth: 1, borderColor, borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.sm }}
               >
-                <Ionicons
-                  name={consent[i] ? "checkbox" : "square-outline"}
-                  size={20}
-                  color={consent[i] ? colors.primary : textSecondary}
-                />
-                <Text
-                  style={{
-                    flex: 1,
-                    fontFamily: "Jakarta-Regular",
-                    fontSize: 13,
-                    color: textPrimary,
-                    marginLeft: spacing.md,
-                    lineHeight: 19,
-                  }}
-                >
-                  {item}
-                </Text>
+                <Ionicons name={consent[i] ? "checkbox" : "square-outline"} size={20} color={consent[i] ? colors.primary : textSecondary} />
+                <Text style={{ flex: 1, fontFamily: "Jakarta-Regular", fontSize: 13, color: textPrimary, marginLeft: spacing.md, lineHeight: 19 }}>{item}</Text>
               </TouchableOpacity>
             ))}
             <Text style={{ ...secondaryLabelStyle, marginTop: spacing.md }}>
-              After submission, an admin reviews your documents and activates
-              your account manually — usually 1–2 business days.
+              After submission, an admin reviews your documents and activates your account manually \u2014 usually 1\u20132 business days.
             </Text>
           </View>
         )}
       </ScrollView>
 
       {/* Footer navigation */}
-      <View
-        style={{
-          flexDirection: "row",
-          gap: spacing.md,
-          padding: spacing.lg,
-          borderTopWidth: 1,
-          borderTopColor: borderColor,
-          backgroundColor: bg,
-        }}
-      >
+      <View style={{ flexDirection: "row", gap: spacing.md, padding: spacing.lg, borderTopWidth: 1, borderTopColor: borderColor, backgroundColor: bg }}>
         {step > 1 && (
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Previous step"
-            onPress={goBack}
-            style={{
-              paddingVertical: spacing.md,
-              paddingHorizontal: spacing.xl,
-              borderRadius: radii.pill,
-              borderWidth: 1.5,
-              borderColor,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: "Jakarta-Bold",
-                fontSize: 15,
-                color: textSecondary,
-              }}
-            >
-              Back
-            </Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Previous step" onPress={goBack} style={{ paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radii.pill, borderWidth: 1.5, borderColor, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: textSecondary }}>Back</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel={
-            step === 7 ? "Submit onboarding" : "Continue to next step"
-          }
+          accessibilityLabel={step === 7 ? "Submit onboarding" : "Continue to next step"}
           onPress={goNext}
           disabled={!canContinue(step) || stepSubmitting || finishing}
-          style={{
-            flex: 1,
-            paddingVertical: spacing.md,
-            borderRadius: radii.pill,
-            backgroundColor:
-              canContinue(step) && !stepSubmitting && !finishing
-                ? colors.primary
-                : isDark
-                  ? colors.textDisabledDark
-                  : colors.textDisabledLight,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, backgroundColor: canContinue(step) && !stepSubmitting && !finishing ? colors.primary : isDark ? colors.textDisabledDark : colors.textDisabledLight, alignItems: "center", justifyContent: "center", minHeight: 56 }}
         >
           {stepSubmitting || finishing ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
-            <Text
-              style={{
-                fontFamily: "Jakarta-Bold",
-                fontSize: 15,
-                color: colors.white,
-              }}
-            >
-              {step === 7 ? "Submit" : "Continue"}
-            </Text>
+            <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: colors.white }}>{step === 7 ? "Submit" : "Continue"}</Text>
           )}
         </TouchableOpacity>
       </View>
 
+      {/* §12.2: Body type picker modal */}
+      <BodyTypePickerModal
+        visible={bodyTypeModalVisible}
+        selectedValue={bodyType}
+        onSelect={selectBodyType}
+        onClose={() => setBodyTypeModalVisible(false)}
+      />
+
+      {/* Existing pickers */}
       <OptionPickerModal
         visible={pickerModal === "brand"}
         title="Select brand"
         selectedValue={brand}
-        options={[
-          ...brands.map((b) => ({ value: b, label: b })),
-          { value: OTHERS, label: "Others" },
-        ]}
-        onSelect={(v) => {
-          setBrand(v);
-          setModel(null);
-          setModelText("");
-        }}
+        options={[...brands.map((b) => ({ value: b, label: b })), { value: OTHERS, label: "Others" }]}
+        onSelect={(v) => { setBrand(v); setModel(null); setModelText(""); }}
         onClose={() => setPickerModal(null)}
       />
       <OptionPickerModal
         visible={pickerModal === "model"}
         title="Select model"
         selectedValue={model}
-        options={[
-          ...modelOptions.map((m) => ({ value: m, label: m })),
-          { value: OTHERS, label: "Others" },
-        ]}
+        options={[...modelOptions.map((m) => ({ value: m, label: m })), { value: OTHERS, label: "Others" }]}
         onSelect={(v) => setModel(v)}
         onClose={() => setPickerModal(null)}
       />
@@ -1416,6 +1456,43 @@ export default function OnboardingWizard() {
         onSelect={(v) => setRegYear(parseInt(v, 10))}
         onClose={() => setPickerModal(null)}
       />
+
+      {/* §12.3: Classification outcome modals */}
+      {classificationResult && (
+        <ClassificationModal
+          result={classificationResult}
+          brand={resolvedBrand ?? ""}
+          model={resolvedModel ?? ""}
+          onDismiss={dismissClassification}
+          onRetry={retryClassification}
+        />
+      )}
+      <ClassificationErrorModal
+        visible={classError}
+        onRetry={retryClassification}
+        onBack={() => { setClassError(false); }}
+      />
+      <ManualReviewRequiredModal
+        visible={manualReviewRequired}
+        onDismiss={() => { setManualReviewRequired(false); /* stay on vehicle step — form preserved */ }}
+      />
+
+      {/* Retry-in-progress overlay — form state is preserved */}
+      {retrying && (
+        <Modal visible transparent animationType="fade">
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center" }}>
+            <View style={{ width: 260, backgroundColor: surfaceBg, borderRadius: 16, padding: 28, alignItems: "center" }}>
+              <ActivityIndicator size="large" color={colors.primary} style={{ marginBottom: spacing.md }} />
+              <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 16, color: textPrimary, textAlign: "center" }}>
+                Retrying… ({retryAttempt}/{MAX_RETRIES})
+              </Text>
+              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 13, color: textSecondary, textAlign: "center", marginTop: spacing.xs }}>
+                Please wait
+              </Text>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }

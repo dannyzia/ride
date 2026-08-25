@@ -119,6 +119,12 @@ const NAV: NavItem[] = [
     group: "Programs",
   },
   {
+    route: "/admin/events",
+    label: "Events",
+    icon: "calendar-star",
+    group: "Programs",
+  },
+  {
     route: "/admin/vehicle-models",
     label: "Vehicle Models",
     icon: "car-multiple",
@@ -152,11 +158,37 @@ const NAV: NavItem[] = [
     icon: "chart-pie",
     group: "Finance",
   },
+  {
+    route: "/admin/pickup-analytics",
+    label: "Pickup Analytics",
+    icon: "chart-bar",
+    group: "Finance",
+  },
+
+  // Operations — Fare Framework
+  {
+    route: "/admin/heat-monitor",
+    label: "Heat Monitor",
+    icon: "fire",
+    group: "Operations",
+  },
+  {
+    route: "/admin/trust-safety",
+    label: "Trust & Safety",
+    icon: "shield-check",
+    group: "Operations",
+  },
 
   {
     route: "/admin/platform-config",
     label: "Platform Config",
     icon: "cog",
+    group: "Config",
+  },
+  {
+    route: "/admin/fare-config",
+    label: "Fare Config",
+    icon: "cash-multiple",
     group: "Config",
   },
   {

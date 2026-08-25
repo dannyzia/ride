@@ -28,8 +28,9 @@ interface FareBreakdown {
   base_fare_bdt?: number | null;
   distance_charge_bdt?: number | null;
   time_charge_bdt?: number | null;
-  surge_fee_bdt?: number | null;
   total_bdt?: number | null;
+  pickup_fee_final_bdt?: number | null;
+  pickup_trueup_delta_bdt?: number | null;
 }
 
 interface RideDetail {
@@ -218,18 +219,25 @@ const RideDetailScreen = () => {
   const base = toPaisa(fb.base_fare_bdt);
   const distance = toPaisa(fb.distance_charge_bdt);
   const time = toPaisa(fb.time_charge_bdt);
-  const surge = toPaisa(fb.surge_fee_bdt);
   const wait = toPaisa(ride.wait_fee_bdt);
   const tip = toPaisa(ride.tip_bdt);
   const discount = toPaisa(ride.applied_discount_bdt);
   const total = toPaisa(ride.rider_payable_bdt) ?? toPaisa(fb.total_bdt) ?? 0;
 
-  const fareRows: { label: string; value: number }[] = [
+  const fareRows: { label: string; value: number; note?: string }[] = [
     ...(base !== null ? [{ label: "Base Fare", value: base }] : []),
     ...(distance !== null ? [{ label: "Distance", value: distance }] : []),
     ...(time !== null ? [{ label: "Time", value: time }] : []),
-    ...(surge !== null && surge > 0 ? [{ label: "Surge", value: surge }] : []),
     ...(wait !== null && wait > 0 ? [{ label: "Waiting Fee", value: wait }] : []),
+    ...(fb.pickup_fee_final_bdt != null && fb.pickup_fee_final_bdt > 0
+      ? [{
+          label: "Pickup Fee",
+          value: fb.pickup_fee_final_bdt,
+          note: fb.pickup_trueup_delta_bdt != null && fb.pickup_trueup_delta_bdt !== 0
+            ? "(adjusted for actual distance)"
+            : undefined,
+        }]
+      : []),
     ...(tip !== null && tip > 0 ? [{ label: "Tip", value: tip }] : []),
     ...(discount !== null && discount > 0 ? [{ label: "Discount", value: -discount }] : []),
   ];
@@ -371,7 +379,14 @@ const RideDetailScreen = () => {
             <Text style={[styles.sectionTitle, { color: textPrimary }]}>Fare Breakdown</Text>
             {fareRows.map((row) => (
               <View key={row.label} style={styles.fareRow}>
-                <Text style={[styles.fareLabel, { color: textSecondary }]}>{row.label}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.fareLabel, { color: textSecondary }]}>{row.label}</Text>
+                  {row.note && (
+                    <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 11, color: colors.amber, marginTop: 2 }}>
+                      {row.note}
+                    </Text>
+                  )}
+                </View>
                 <Text style={[styles.fareValue, { color: textPrimary }]}>{formatBDT(row.value)}</Text>
               </View>
             ))}

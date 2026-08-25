@@ -55,7 +55,6 @@ interface RideApiRow {
     base_fare_bdt?: number | null;
     distance_charge_bdt?: number | null;
     time_charge_bdt?: number | null;
-    surge_fee_bdt?: number | null;
   } | null;
   driver: RideApiDriver | null;
 }
@@ -78,7 +77,6 @@ interface RideItem {
   fare_base_bdt: number | null;
   fare_distance_bdt: number | null;
   fare_time_bdt: number | null;
-  fare_surge_bdt: number | null;
   driver_name: string | null;
   driver_avatar: string | null;
   driver_rating: number | null;
@@ -152,7 +150,7 @@ const mapRideRow = (row: RideApiRow): RideItem => ({
   fare_base_bdt: toPaisa(row.fare_breakdown?.base_fare_bdt),
   fare_distance_bdt: toPaisa(row.fare_breakdown?.distance_charge_bdt),
   fare_time_bdt: toPaisa(row.fare_breakdown?.time_charge_bdt),
-  fare_surge_bdt: toPaisa(row.fare_breakdown?.surge_fee_bdt),
+
   driver_name: row.driver?.full_name ?? null,
   driver_avatar: row.driver?.profile_image_url ?? null,
   driver_rating: row.driver?.rating ?? null,
@@ -465,14 +463,7 @@ export default function RidesScreen() {
                     </Text>
                   </View>
                 )}
-                {selectedRide.fare_surge_bdt !== null && selectedRide.fare_surge_bdt > 0 && (
-                  <View style={styles.fareRow}>
-                    <Text style={[styles.fareLabel, { color: textSecondary }]}>Surge</Text>
-                    <Text style={[styles.fareValue, { color: textPrimary }]}>
-                      {formatBDT(selectedRide.fare_surge_bdt)}
-                    </Text>
-                  </View>
-                )}
+
                 <View style={[styles.fareRow, styles.fareTotal, { borderTopColor: borderColor }]}>
                   <Text style={[styles.fareTotalLabel, { color: textPrimary }]}>Total Fare</Text>
                   <Text style={[styles.fareTotalValue, { color: colors.primary }]}>

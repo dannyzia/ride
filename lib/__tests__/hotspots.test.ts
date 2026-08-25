@@ -1,13 +1,9 @@
 import {
   demandPressure,
   normalizeIntensities,
-  surgeRatio,
-  pickSurgeMultiplier,
-  DEFAULT_SURGE_THRESHOLDS,
   haversineKm,
   nearestHotspot,
   demandLevel,
-  hotspotSurgeMultiplier,
   type HotspotPoint,
 } from '../hotspots';
 
@@ -39,7 +35,6 @@ describe('normalizeIntensities', () => {
   });
 
   it('keeps inactive zones at 0 and only stretches zones with activity', () => {
-    // Active = [0.3, 0.9]; span 0.6 → 0.3→0, 0.9→1; the 0s stay 0.
     expect(normalizeIntensities([0, 0.3, 0, 0.9])).toEqual([0, 0, 0, 1]);
   });
 
@@ -57,80 +52,6 @@ describe('normalizeIntensities', () => {
     const input = [0.1, 0.4, 0.7];
     normalizeIntensities(input);
     expect(input).toEqual([0.1, 0.4, 0.7]);
-  });
-});
-
-describe('surgeRatio', () => {
-  it('is demand / supply', () => {
-    expect(surgeRatio(9, 3)).toBe(3);
-  });
-
-  it('saturates to raw demand when supply is zero (never divides by zero)', () => {
-    expect(surgeRatio(5, 0)).toBe(5);
-    expect(surgeRatio(0, 0)).toBe(0);
-  });
-
-  it('is 0 when there is no demand', () => {
-    expect(surgeRatio(0, 5)).toBe(0);
-  });
-});
-
-describe('pickSurgeMultiplier', () => {
-  it('returns 1.0 when no threshold is cleared', () => {
-    expect(pickSurgeMultiplier(0.5)).toBe(1.0);
-    expect(pickSurgeMultiplier(1.0)).toBe(1.0);
-    expect(pickSurgeMultiplier(1.19)).toBe(1.0);
-  });
-
-  it('uses strictly-greater comparison at every tier boundary', () => {
-    // Exactly 1.2 and 2.0 do NOT clear their own tiers; exactly 3.0 skips 2.0.
-    expect(pickSurgeMultiplier(1.2)).toBe(1.0);
-    expect(pickSurgeMultiplier(2.0)).toBe(1.25);
-    expect(pickSurgeMultiplier(3.0)).toBe(1.5);
-  });
-
-  it('picks the highest cleared tier', () => {
-    expect(pickSurgeMultiplier(1.21)).toBe(1.25);
-    expect(pickSurgeMultiplier(2.1)).toBe(1.5);
-    expect(pickSurgeMultiplier(5)).toBe(2.0);
-  });
-
-  it('handles custom threshold tables and empty tables', () => {
-    const custom = [{ ratio: 1, multiplier: 1.1 }];
-    expect(pickSurgeMultiplier(1.5, custom)).toBe(1.1);
-    expect(pickSurgeMultiplier(0.5, custom)).toBe(1.0);
-    expect(pickSurgeMultiplier(2, [])).toBe(1.0);
-  });
-
-  it('does not mutate the threshold table (sorts a copy)', () => {
-    const table = [
-      { ratio: 2, multiplier: 1.5 },
-      { ratio: 3, multiplier: 2.0 },
-    ];
-    pickSurgeMultiplier(3.5, table);
-    expect(table).toEqual([
-      { ratio: 2, multiplier: 1.5 },
-      { ratio: 3, multiplier: 2.0 },
-    ]);
-  });
-
-  it('defaults to the same tiers the scheduler seeds', () => {
-    expect(DEFAULT_SURGE_THRESHOLDS).toEqual([
-      { ratio: 3, multiplier: 2.0 },
-      { ratio: 2, multiplier: 1.5 },
-      { ratio: 1.2, multiplier: 1.25 },
-    ]);
-  });
-});
-
-describe('surge decision chain', () => {
-  it('maps a demand/supply count pair through ratio → multiplier', () => {
-    // 9 demand / 3 supply → ratio 3 → strictly above 2.0 but not 3.0 → 1.5.
-    expect(pickSurgeMultiplier(surgeRatio(9, 3))).toBe(1.5);
-    // 5 demand / 0 supply → ratio 5 → clears the top tier.
-    expect(pickSurgeMultiplier(surgeRatio(5, 0))).toBe(2.0);
-    // 2 demand / 10 supply → ratio 0.2 → no surge.
-    expect(pickSurgeMultiplier(surgeRatio(2, 10))).toBe(1.0);
   });
 });
 
@@ -187,31 +108,9 @@ describe('demandLevel', () => {
   });
 
   it('is anchored to absolute demand/supply ratios, not relative rank', () => {
-    // 2:1 demand/supply → 2/3 pressure → 'high'; 1:1 → 0.5 → 'medium';
-    // 1:2 → 1/3 → 'medium'; 1:3 → 0.25 → 'low'.
     expect(demandLevel(2 / 3)).toBe('high');
     expect(demandLevel(0.5)).toBe('medium');
     expect(demandLevel(1 / 3)).toBe('medium');
     expect(demandLevel(0.25)).toBe('low');
-  });
-});
-
-describe('hotspotSurgeMultiplier', () => {
-  it('composes the tested ratio → pick chain for a zone\'s counts', () => {
-    // 9 demand / 3 supply → ratio 3 → 1.5 tier.
-    expect(hotspotSurgeMultiplier(9, 3)).toBe(1.5);
-    // 5 demand / 0 supply → ratio 5 → top tier.
-    expect(hotspotSurgeMultiplier(5, 0)).toBe(2.0);
-    // Supply-heavy and balanced zones get no surge.
-    expect(hotspotSurgeMultiplier(2, 10)).toBe(1.0);
-    expect(hotspotSurgeMultiplier(10, 10)).toBe(1.0);
-  });
-
-  it('respects a custom threshold table (strict > boundary included)', () => {
-    const custom = [{ ratio: 1, multiplier: 1.1 }];
-    // Ratio 1.2 clears the 1.0 threshold; ratio 1.0 (exactly equal) does not.
-    expect(hotspotSurgeMultiplier(6, 5, custom)).toBe(1.1);
-    expect(hotspotSurgeMultiplier(5, 5, custom)).toBe(1.0);
-    expect(hotspotSurgeMultiplier(1, 5, custom)).toBe(1.0);
   });
 });

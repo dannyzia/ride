@@ -35,7 +35,6 @@ const DISPUTE_REASONS: { value: string; label: string }[] = [
   { value: "route_longer", label: "Route was longer than expected" },
   { value: "wrong_vehicle", label: "Wrong vehicle type" },
   { value: "wait_fee_unfair", label: "Waiting fee was unfair" },
-  { value: "surge_unexplained", label: "Surge was unexplained" },
   { value: "other", label: "Other" },
 ];
 
