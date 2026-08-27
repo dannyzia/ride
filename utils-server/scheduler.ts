@@ -1804,7 +1804,7 @@ export function startScheduler(): void {
             and(
               eq(rides.zone_id, zone.id),
               eq(rides.status, 'completed'),
-              sql`${rides.completed_at} > ${oneMinuteAgo}`,
+              sql`${rides.completed_at} > ${oneMinuteAgo.toISOString()}`,
             ),
           );
 
@@ -1908,7 +1908,7 @@ export function startScheduler(): void {
             and(
               eq(rides.zone_id, zone.id),
               eq(rides.status, 'completed'),
-              sql`${rides.completed_at} > ${windowStart}`,
+              sql`${rides.completed_at} > ${windowStart.toISOString()}`,
             ),
           );
 
@@ -1926,8 +1926,8 @@ export function startScheduler(): void {
               and(
                 eq(rides.driver_id, ride.driver_id),
                 eq(rides.status, 'completed'),
-                sql`${rides.started_at} > ${completedAt}`,
-                sql`${rides.started_at} <= ${windowEnd}`,
+                sql`${rides.started_at} > ${completedAt.toISOString()}`,
+                sql`${rides.started_at} <= ${windowEnd.toISOString()}`,
               ),
             );
 

@@ -143,7 +143,7 @@ export async function upsertDemandForecasts(): Promise<void> {
   const pruneBefore = new Date(Date.now() - FOURTEEN_DAYS_MS);
   const pruned = await db
     .delete(demandForecasts)
-    .where(sql`${demandForecasts.forecast_hour} < ${pruneBefore}`);
+    .where(sql`${demandForecasts.forecast_hour} < ${pruneBefore.toISOString()}`);
 
   logger.info("[forecast] demand forecast upsert completed", {
     zonesProcessed: activeZones.length,
