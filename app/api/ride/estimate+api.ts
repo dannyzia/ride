@@ -1,5 +1,5 @@
 import { db } from '@/src/db';
-import { users, pricing, preferences, systemConfig, zones } from '@/src/db/schema';
+import { users, pricing, preferences, systemConfig, zoneHeat } from '@/src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
@@ -15,7 +15,6 @@ import { VEHICLE_TYPE_VALUES, VEHICLE_TYPES } from '@/lib/vehicleTypes';
 import { isOfferablePricing } from '@/lib/pricingGate';
 import { loadSpeedTableFromConfig, type EtaSpeedTable, timeBucket, etaSpeedKmh, computeEtaMinutes } from '@/lib/eta';
 import { parseJsonBody } from '@/lib/parseBody';
-import { percentOf } from '@/lib/money';
 import { toUtcIso } from '@/lib/time';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -119,6 +118,15 @@ export async function POST(request: Request) {
       preferenceSurchargeBdt = prefs.reduce((sum, p) => sum + p.charge_bdt, 0);
     }
 
+    // ── Zone heat for traffic warning (Phase F §6) ──
+    const [heatRow] = await db
+      .select({ tag: zoneHeat.tag, idle_driver_count: zoneHeat.idle_driver_count })
+      .from(zoneHeat)
+      .where(eq(zoneHeat.zone_id, zoneId))
+      .limit(1);
+    const zoneHeatTag = heatRow?.tag ?? 'neutral';
+    const isTrafficHeavy = zoneHeatTag === 'hot';
+
     // If specific vehicle type requested, return single estimate
     if (vehicle_type) {
       const [activePricing] = await db.select().from(pricing)
@@ -198,10 +206,19 @@ export async function POST(request: Request) {
           pickup_fee_high_bdt: pickupQuote.highPaisa,
           pickup_fee_range_low_confidence: pickupQuote.lowConfidence,
         } : {}),
+        // Non-binding fare range (Phase F §6): ±15% of estimated total.
+        // Labeled as estimate — never a contractual offer.
+        fare_range_low_bdt: Math.round(fare.total_bdt * 0.85),
+        fare_range_high_bdt: Math.round(fare.total_bdt * 1.15),
         }],
         distance_km: totalDistanceKm,
         preferences_applied: preference_ids ?? [],
         quote_valid_until: toUtcIso(quoteValidUntil),
+        // Traffic warning (Phase F §6): hot zone → "traffic is heavy"
+        ...(isTrafficHeavy ? {
+          traffic_warning: true,
+          traffic_message: 'Traffic is heavy now — trip may take longer and cost more.',
+        } : {}),
       });
     }
 
@@ -275,6 +292,9 @@ export async function POST(request: Request) {
           pickup_fee_high_bdt: pickupQuote.highPaisa,
           pickup_fee_range_low_confidence: pickupQuote.lowConfidence,
         } : {}),
+        // Non-binding fare range (Phase F §6): ±15% of estimated total.
+        fare_range_low_bdt: Math.round(fare.total_bdt * 0.85),
+        fare_range_high_bdt: Math.round(fare.total_bdt * 1.15),
       };
     }));
 
@@ -282,7 +302,17 @@ export async function POST(request: Request) {
 
     const quoteValidUntil = new Date(Date.now() + 5 * 60 * 1000);
 
-    return Response.json({ estimates, distance_km: totalDistanceKm, preferences_applied: preference_ids ?? [], quote_valid_until: toUtcIso(quoteValidUntil) });
+    return Response.json({
+      estimates,
+      distance_km: totalDistanceKm,
+      preferences_applied: preference_ids ?? [],
+      quote_valid_until: toUtcIso(quoteValidUntil),
+      // Traffic warning (Phase F §6): hot zone → "traffic is heavy"
+      ...(isTrafficHeavy ? {
+        traffic_warning: true,
+        traffic_message: 'Traffic is heavy now — trip may take longer and cost more.',
+      } : {}),
+    });
 
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });

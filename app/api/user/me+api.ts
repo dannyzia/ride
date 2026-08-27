@@ -26,6 +26,7 @@ export async function GET(request: Request) {
       profile_image_url: users.profile_image_url,
       rating: users.rating,
       rating_count: users.rating_count,
+      zone_fee_explained: users.zone_fee_explained,
       created_at: users.created_at,
     })
       .from(users)

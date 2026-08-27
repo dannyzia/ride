@@ -42,8 +42,9 @@ import {
   rideStops,
   zones,
   fraudFlags,
+  driverSessions,
 } from "../src/db/schema";
-import { eq, and, inArray, isNull, sql } from "drizzle-orm";
+import { eq, and, inArray, isNull, sql, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { getZoneForLocation } from "../lib/zone";
 import { getH3Cell, getH3Ring } from "../lib/h3";
@@ -116,6 +117,7 @@ interface WSClient {
   driverId?: string;
   subscribedRideId?: string; // rider: which ride they are tracking
   lastSeen?: number; // epoch ms of last heartbeat (for stale-connection cleanup)
+  driverSessionId?: string; // PATCH 4: driver session tracking for utilization
 }
 
 // ── Connection Maps ────────────────────────────────────────────────────────
@@ -618,6 +620,47 @@ const server = http.createServer(async (req, res) => {
             error: e.message,
           });
         }
+
+        // PATCH 4: increment driver_session trips_completed + billed_minutes
+        // for utilization denominator (billed_minutes / online_minutes).
+        // Hardened: match ONLY the LATEST open session (orderBy desc, limit 1)
+        // to prevent stale open rows from accumulating phantom increments.
+        try {
+          const billedMin = Number(ride_time_min ?? 0);
+          const [rideDriver] = await db
+            .select({ driver_id: rides.driver_id })
+            .from(rides)
+            .where(eq(rides.id, ride_id))
+            .limit(1);
+          if (rideDriver?.driver_id) {
+            const [latestSession] = await db
+              .select({ id: driverSessions.id })
+              .from(driverSessions)
+              .where(
+                and(
+                  eq(driverSessions.driver_id, rideDriver.driver_id),
+                  isNull(driverSessions.session_end),
+                ),
+              )
+              .orderBy(desc(driverSessions.session_start))
+              .limit(1);
+            if (latestSession?.id) {
+              await db
+                .update(driverSessions)
+                .set({
+                  trips_completed: sql`${driverSessions.trips_completed} + 1`,
+                  billed_minutes: sql`${driverSessions.billed_minutes} + ${billedMin}`,
+                })
+                .where(eq(driverSessions.id, latestSession.id));
+            }
+          }
+        } catch (e: any) {
+          logger.warn("[internal] driver_session increment failed", {
+            ride_id,
+            error: e.message,
+          });
+        }
+
         writeJson(200, { ok: true });
       } catch {
         writeJson(400, { error: "invalid_body" });
@@ -841,6 +884,18 @@ wss.on("connection", (ws: WebSocket) => {
                   prevDriver.ws.close();
                 }
                 connectedDrivers.set(driver.id, client);
+
+                // PATCH 4: track driver session for utilization denominator
+                try {
+                  await db.insert(driverSessions).values({
+                    driver_id: driver.id,
+                    session_start: new Date(),
+                  }).returning({ id: driverSessions.id }).then((rows) => {
+                    client.driverSessionId = rows[0]?.id;
+                  });
+                } catch (e) {
+                  logger.warn('[ws] driver_sessions insert failed', { driverId: driver.id, error: String(e) });
+                }
 
                 // Re-online driver on WS reconnect.
                 await db.update(drivers)
@@ -1507,6 +1562,26 @@ async function handleDriverDisconnect(driverId: string) {
         isNull(driverOnlineSessions.went_offline_at),
       ),
     );
+
+  // PATCH 4: close driver_sessions row for utilization denominator
+  const client = connectedDrivers.get(driverId);
+  if (client?.driverSessionId) {
+    const sessionRow = await db
+      .select({ session_start: driverSessions.session_start })
+      .from(driverSessions)
+      .where(eq(driverSessions.id, client.driverSessionId))
+      .limit(1);
+    const onlineMs = sessionRow[0]
+      ? Date.now() - new Date(sessionRow[0].session_start).getTime()
+      : 0;
+    await db
+      .update(driverSessions)
+      .set({
+        session_end: new Date(),
+        online_minutes: Math.round(onlineMs / 60_000),
+      })
+      .where(eq(driverSessions.id, client.driverSessionId));
+  }
 
   // M1: Mark driver offline to prevent ghost entries in candidate pool.
   // BUG FIX: Only flip is_online if no live connection exists (reconnect race).
@@ -2281,7 +2356,23 @@ async function startup() {
   startCompensationWorker();
   startScheduler();
 
-  // Recovery: re-dispatch rides stuck in 'dispatching' for >60s
+  // RECOVERY: re-dispatch rides stuck in 'dispatching' for >60s.
+  //
+  // Known bounded blast radius on restart:
+  //   - In-memory sequential chains are lost. Any offer that was active at
+  //     the moment of restart will time out naturally (TTL expiry).
+  //   - The unique index on dispatch_offers(ride_id, driver_id) + the
+  //     onConflictDoNothing in leadBilling.ts prevent double-billing when
+  //     a restarted instance re-dispatches a ride that was already offered.
+  //   - Scheduler job 20 (stale-offer sweep) flips delivered→expired after
+  //     dispatch_offer_ttl_seconds + 5s, so orphaned offers are cleaned up
+  //     within one TTL cycle.
+  //   - Drivers with active-but-orphaned offers are not billed again:
+  //     buildCandidateList's chain-exclusion clause skips drivers who
+  //     already have a dispatch_offers row for this ride.
+  //
+  // Rides in 'dispatching' state for >60s are re-entered into a fresh
+  // pipeline. Unique indexes guarantee idempotent deduplication.
   try {
     const stuckRides = await db
       .select()

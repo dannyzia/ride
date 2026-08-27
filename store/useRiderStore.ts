@@ -31,6 +31,12 @@ export interface FareEstimate {
   pickup_fee_low_bdt?: number | null;
   pickup_fee_high_bdt?: number | null;
   pickup_fee_range_low_confidence?: boolean;
+  /** Non-binding fare range (Phase F §6): ±15% of estimated total. */
+  fare_range_low_bdt?: number;
+  fare_range_high_bdt?: number;
+  /** Traffic warning (Phase F §6): hot zone indicator. */
+  traffic_warning?: boolean;
+  traffic_message?: string;
 }
 
 export interface ActiveRide {

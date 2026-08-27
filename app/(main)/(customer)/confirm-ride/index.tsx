@@ -10,6 +10,7 @@ import { UpfrontTipSlider } from "@/components/UpfrontTipSlider";
 import CustomButton from "@/components/CustomButton";
 import ScheduleRideSheet from "@/components/ScheduleRideSheet";
 import PickupFeeExplainerSheet, { shouldShowExplainer } from "@/components/PickupFeeExplainerSheet";
+import ZoneFeeExplainerSheet from "@/components/ZoneFeeExplainerSheet";
 import { useEffect, useState, Fragment } from "react";
 import { useRiderStore, FareEstimate, DiscountOption, DiscountType } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
@@ -68,6 +69,8 @@ const ConfirmRidePage = () => {
   const [scheduleLater, setScheduleLater] = useState(false);
   const [showPickupExplainer, setShowPickupExplainer] = useState(false);
   const [pickupExplainerChecked, setPickupExplainerChecked] = useState(false);
+  const [showZoneFeeExplainer, setShowZoneFeeExplainer] = useState(false);
+  const [zoneFeeExplainerChecked, setZoneFeeExplainerChecked] = useState(false);
 
   const selectedEstimate = estimates.find(
     (e) => e.vehicle_type === selectedVehicleType,
@@ -100,12 +103,37 @@ const ConfirmRidePage = () => {
   useEffect(() => {
     if (pickupExplainerChecked) return;
     if (displayEstimate?.pickup_fee_low_bdt == null) return;
+    let alive = true;
     (async () => {
       const show = await shouldShowExplainer();
+      if (!alive) return;
       if (show) setShowPickupExplainer(true);
       setPickupExplainerChecked(true);
     })();
+    return () => { alive = false; };
   }, [displayEstimate, pickupExplainerChecked]);
+
+  // First-time zone fee explainer — show once per user (server-gated)
+  useEffect(() => {
+    if (zoneFeeExplainerChecked) return;
+    let alive = true;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token || !alive) return;
+        const res = await fetch(`${API_URL}/api/user/me`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok || !alive) return;
+        const data = await res.json();
+        if (!data.zone_fee_explained && alive) {
+          setShowZoneFeeExplainer(true);
+        }
+      } catch { /* non-blocking */ }
+      if (alive) setZoneFeeExplainerChecked(true);
+    })();
+    return () => { alive = false; };
+  }, [zoneFeeExplainerChecked]);
 
   useEffect(() => {
     if (
@@ -322,6 +350,12 @@ const ConfirmRidePage = () => {
               <Text style={{ color: textPrimary, fontSize: 18, fontFamily: fonts.heading }}>
                 ৳{(displayEstimate.total_bdt / 100).toFixed(0)}
               </Text>
+              {/* Non-binding fare range (Phase F §6) */}
+              {displayEstimate.fare_range_low_bdt != null && displayEstimate.fare_range_high_bdt != null && (
+                <Text style={{ color: textSecondary, fontSize: 11 }}>
+                  ৳{(displayEstimate.fare_range_low_bdt / 100).toFixed(0)} – ৳{(displayEstimate.fare_range_high_bdt / 100).toFixed(0)} est.
+                </Text>
+              )}
               <Text style={{ color: textSecondary, fontSize: 12 }}>
                 {displayEstimate.eta_minutes} min
               </Text>
@@ -354,6 +388,15 @@ const ConfirmRidePage = () => {
                   })}
                 </Text>
               </View>
+            </View>
+          )}
+          {/* Traffic warning (Phase F §6) */}
+          {displayEstimate?.traffic_warning && (
+            <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingHorizontal: 12, marginBottom: 8, borderRadius: 10, backgroundColor: "rgba(245, 158, 11, 0.10)" }}>
+              <Ionicons name="alert-circle-outline" size={16} color="#f59e0b" />
+              <Text style={{ color: "#f59e0b", fontSize: 13, marginLeft: 8, flex: 1 }}>
+                {displayEstimate.traffic_message ?? 'Traffic is heavy now — trip may take longer and cost more.'}
+              </Text>
             </View>
           )}
           <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
@@ -645,6 +688,10 @@ const ConfirmRidePage = () => {
       <PickupFeeExplainerSheet
         visible={showPickupExplainer}
         onDismiss={() => setShowPickupExplainer(false)}
+      />
+      <ZoneFeeExplainerSheet
+        visible={showZoneFeeExplainer}
+        onDismiss={() => setShowZoneFeeExplainer(false)}
       />
     </Fragment>
   );
