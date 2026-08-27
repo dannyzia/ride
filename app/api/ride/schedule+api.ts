@@ -3,7 +3,7 @@ import { users, rides, pricing, rideStops } from '@/src/db/schema';
 import { eq, and, sql, gte } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
-import { calculateFare, haversineKm } from '@/lib/fareCalc';
+import { calculateFare, calculateV6Fare, haversineKm, type V6PricingRow } from '@/lib/fareCalc';
 import { detectOriginCity, isIntercity } from '@/lib/cityBoundary';
 import { splitRoute } from '@/lib/routeSplit';
 import { getRouteDistance } from '@/lib/barikoi';
@@ -131,6 +131,33 @@ export async function POST(request: Request) {
       insideKm, 0, undefined, outsideKm, origin_city, intercity,
     );
 
+    // v6 shadow (PATCH 1)
+    const v6FareBreakdown = calculateV6Fare({
+      pricing: {
+        base_fare_bdt: activePricing.base_fare_bdt,
+        base_km: Number(activePricing.base_km ?? 0),
+        initiation_minutes: activePricing.initiation_minutes ?? 4,
+        per_km_bdt: activePricing.per_km_bdt,
+        intercity_per_km_bdt: activePricing.intercity_per_km_bdt ?? 0,
+        per_min_bdt: activePricing.per_min_bdt,
+        floor_length_km: Number(activePricing.floor_length_km ?? 0),
+        floor_min: activePricing.floor_min ?? 0,
+        brta_fare_ceiling_bdt: activePricing.brta_fare_ceiling_bdt,
+        platform_commission_percent: 0, // v6 = 0% commission (subscription-only)
+      } as V6PricingRow,
+      trip_km: insideKm + outsideKm,
+      ride_time_min: 0, // scheduled — 0 at schedule time
+      night_mult: 1.0,
+      grace_min: activePricing.free_wait_minutes ?? 3,
+      wait_min: 0, // no wait at schedule time
+      pickup_fee_bdt: 0, // no pickup data at schedule time
+      zone_fee_bdt: 0, // Stage 0: zone_fee_enabled=false
+      inside_km: insideKm,
+      outside_km: outsideKm,
+      origin_city,
+      is_intercity: intercity,
+    });
+
     let preferenceSurchargeBdt = 0;
     if (preference_ids && preference_ids.length > 0) {
       const { preferences: prefsTable } = await import('@/src/db/schema');
@@ -217,6 +244,9 @@ export async function POST(request: Request) {
         secondary_rider_phone: secondary_rider_phone || null,
         is_booked_for_someone_else: !!(secondary_rider_phone || secondary_rider_name),
         upfront_tip_bdt: upfront_tip_bdt ?? 0,
+        // v6 shadow (PATCH 1)
+        fare_v6_shadow: v6FareBreakdown as any,
+        fare_v6_shadow_computed_at: new Date(),
        }).returning();
 
       if (!ride) {

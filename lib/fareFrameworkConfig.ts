@@ -98,6 +98,83 @@ export const FARE_FRAMEWORK_CONFIG_KEYS = [
 
   // Label
   'fare_framework_stage',
+
+  // ════════════════════════════════════════════════════════════════
+  // Fare Framework v6 — new config keys (§4, §9)
+  // ════════════════════════════════════════════════════════════════
+
+  // Night multiplier
+  'night_mult_value', // 1.000 = disabled, e.g. 1.200 = 20% night surcharge
+  'night_schedule', // JSON array of {start_hour, end_hour, value}
+
+  // Fuel prices (BDT, admin-updatable)
+  'fuel_price_octane_bdt',
+  'fuel_price_petrol_bdt',
+  'fuel_price_cng_bdt',
+
+  // Per-tier fuel efficiency (km/L or km/m³)
+  'fuel_efficiency_bike_basic',
+  'fuel_efficiency_bike_standard',
+  'fuel_efficiency_bike_plus',
+  'fuel_efficiency_cng',
+  'fuel_efficiency_car_compact',
+  'fuel_efficiency_car_economy',
+  'fuel_efficiency_car_comfort',
+  'fuel_efficiency_car_premium',
+  'fuel_efficiency_car_xl',
+
+  // Driver maintenance per km (paisa) — 50% of total maint
+  'driver_maint_per_km_bike',
+  'driver_maint_per_km_cng',
+  'driver_maint_per_km_car',
+
+  // Parking per km (paisa)
+  'parking_per_km_bike',
+  'parking_per_km_cng',
+  'parking_per_km_car',
+
+  // Daily target per category (paisa)
+  'daily_target_bdt_bike',
+  'daily_target_bdt_cng',
+  'daily_target_bdt_car',
+
+  // Expected billed minutes per category
+  'expected_billed_minutes_bike',
+  'expected_billed_minutes_cng',
+  'expected_billed_minutes_car',
+
+  // Zone fee
+  'zone_fee_enabled', // false (inert in Stage 0)
+  'zone_fee_entry_threshold_min', // 30
+  'zone_fee_exit_threshold_min', // 20
+  'zone_fee_coverage_factor', // 0.55
+
+  // Pickup v6 (REV-3)
+  'pickup_rate_basis', // 1.0 (locked — flat 1.0×, no multiplier)
+  'pickup_free_time_min_bike', // 3 min
+  'pickup_free_time_min_cng', // 4 min
+  'pickup_free_time_min_car', // 5 min
+
+  // Pickup v6 cap (backstop 25% — was 40% at old 0.75×)
+  'pickup_cap_pct_of_fare_v6', // 25 (overrides v1's 40)
+
+  // Grace (waiting): single source of truth = pricing.free_wait_minutes
+  // waiting_rate_mode = same_as_time_rate (locked, no config key needed)
+
+  // Dawdle guard — time dimension (complements existing distance keys)
+  'dawdle_time_median_threshold', // 1.20
+  'dawdle_time_p90_threshold', // 1.40
+
+  // Gate metrics thresholds (admin-adjustable before Stage 1)
+  'fare_gate_complaint_rate_max', // 5 (per 1k rides)
+  'fare_gate_deviation_max_pct', // 15
+  'fare_gate_periphery_drop_max_pp', // 5
+  'fare_gate_backstop_binding_max_pct', // 40
+  'fare_gate_retention_drop_max_pp', // 5
+  'fare_gate_heat_correlation_min', // 0.3
+
+  // Fuel recompute trigger (admin sets to 'true', job 45 clears)
+  'fuel_recompute_pending',
 ] as const;
 
 export type FareFrameworkConfigKey = (typeof FARE_FRAMEWORK_CONFIG_KEYS)[number];
@@ -106,9 +183,9 @@ export type FareFrameworkConfigKey = (typeof FARE_FRAMEWORK_CONFIG_KEYS)[number]
 export const FARE_FRAMEWORK_DEFAULTS: Record<FareFrameworkConfigKey, string> = {
   pickup_measurement_enabled: 'true',
   pickup_fee_enabled: 'false',
-  pickup_free_radius_km_bike: '0',
-  pickup_free_radius_km_cng: '0',
-  pickup_free_radius_km_car: '0',
+  pickup_free_radius_km_bike: '1.0',
+  pickup_free_radius_km_cng: '1.2',
+  pickup_free_radius_km_car: '1.5',
   pickup_rate_multiplier_bike: '0.75',
   pickup_rate_multiplier_cng: '0.80',
   pickup_rate_multiplier_car: '0.90',
@@ -154,6 +231,52 @@ export const FARE_FRAMEWORK_DEFAULTS: Record<FareFrameworkConfigKey, string> = {
   dispatch_offer_ttl_seconds: '15',
   heat_backtest_correlation: '',
   fare_framework_stage: 'stage0',
+
+  // v6 defaults
+  night_mult_value: '1.000', // disabled
+  night_schedule: '[]',
+  fuel_price_octane_bdt: '145',
+  fuel_price_petrol_bdt: '145',
+  fuel_price_cng_bdt: '43',
+  fuel_efficiency_bike_basic: '45',
+  fuel_efficiency_bike_standard: '40',
+  fuel_efficiency_bike_plus: '33',
+  fuel_efficiency_cng: '20',
+  fuel_efficiency_car_compact: '12',
+  fuel_efficiency_car_economy: '10',
+  fuel_efficiency_car_comfort: '8',
+  fuel_efficiency_car_premium: '10',
+  fuel_efficiency_car_xl: '13',
+  driver_maint_per_km_bike: '55',
+  driver_maint_per_km_cng: '105',
+  driver_maint_per_km_car: '345',
+  parking_per_km_bike: '10',
+  parking_per_km_cng: '15',
+  parking_per_km_car: '20',
+  daily_target_bdt_bike: '110000',
+  daily_target_bdt_cng: '120000',
+  daily_target_bdt_car: '125000',
+  expected_billed_minutes_bike: '240',
+  expected_billed_minutes_cng: '220',
+  expected_billed_minutes_car: '200',
+  zone_fee_enabled: 'false',
+  zone_fee_entry_threshold_min: '30',
+  zone_fee_exit_threshold_min: '20',
+  zone_fee_coverage_factor: '0.55',
+  pickup_rate_basis: '1.0',
+  pickup_free_time_min_bike: '3',
+  pickup_free_time_min_cng: '4',
+  pickup_free_time_min_car: '5',
+  pickup_cap_pct_of_fare_v6: '25', // v6: was 40% at old 0.75×, tighter at 1.0×
+  dawdle_time_median_threshold: '1.20',
+  dawdle_time_p90_threshold: '1.40',
+  fare_gate_complaint_rate_max: '5',
+  fare_gate_deviation_max_pct: '15',
+  fare_gate_periphery_drop_max_pp: '5',
+  fare_gate_backstop_binding_max_pct: '40',
+  fare_gate_retention_drop_max_pp: '5',
+  fare_gate_heat_correlation_min: '0.3',
+  fuel_recompute_pending: 'false',
 };
 
 /**

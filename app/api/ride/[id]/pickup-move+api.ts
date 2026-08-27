@@ -3,7 +3,7 @@ import { users, rides, pricing } from '@/src/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
-import { calculateFare, haversineKm } from '@/lib/fareCalc';
+import { calculateFare, calculateV6Fare, haversineKm, type V6PricingRow } from '@/lib/fareCalc';
 import { detectOriginCity, isIntercity } from '@/lib/cityBoundary';
 import { splitRoute } from '@/lib/routeSplit';
 import { getRouteDistance } from '@/lib/barikoi';
@@ -213,6 +213,33 @@ export async function POST(request: Request, { id }: { id: string }) {
       intercity,
     );
 
+    // v6 shadow (PATCH 1)
+    const v6FareBreakdown = calculateV6Fare({
+      pricing: {
+        base_fare_bdt: activePricing.base_fare_bdt,
+        base_km: Number(activePricing.base_km ?? 0),
+        initiation_minutes: activePricing.initiation_minutes ?? 4,
+        per_km_bdt: activePricing.per_km_bdt,
+        intercity_per_km_bdt: activePricing.intercity_per_km_bdt ?? 0,
+        per_min_bdt: activePricing.per_min_bdt,
+        floor_length_km: Number(activePricing.floor_length_km ?? 0),
+        floor_min: activePricing.floor_min ?? 0,
+        brta_fare_ceiling_bdt: activePricing.brta_fare_ceiling_bdt,
+        platform_commission_percent: 0, // v6 = 0% commission (subscription-only)
+      } as V6PricingRow,
+      trip_km: insideKm + outsideKm,
+      ride_time_min: 0, // pickup-move — re-estimate on actual ride
+      night_mult: 1.0,
+      grace_min: activePricing.free_wait_minutes ?? 3,
+      wait_min: 0, // no wait at pickup-move
+      pickup_fee_bdt: 0, // pickup fee computed at completion
+      zone_fee_bdt: 0, // Stage 0: zone_fee_enabled=false
+      inside_km: insideKm,
+      outside_km: outsideKm,
+      origin_city,
+      is_intercity: intercity,
+    });
+
     // ── Pickup fee range refresh (only when the fee is enabled) ──────
     const pickupQuote = pickupFeeEnabled
       ? await pickupQuoteRange({
@@ -248,6 +275,9 @@ export async function POST(request: Request, { id }: { id: string }) {
                 pickup_fee_high_bdt: pickupQuote?.highPaisa ?? null,
               }
             : {}),
+          // v6 shadow (PATCH 1)
+          fare_v6_shadow: v6FareBreakdown as any,
+          fare_v6_shadow_computed_at: new Date(),
           ...(forced
             ? {
                 pickup_requote_count: ride.pickup_requote_count + 1,

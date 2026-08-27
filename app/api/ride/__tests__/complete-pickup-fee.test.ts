@@ -202,11 +202,13 @@ describe("complete — pickup fee charged path", () => {
 
   function setup(rideOverrides: Row = {}): TxState {
     mockSelectQueue([
-      [{ id: DRIVER_ID }],
-      [rideRow(rideOverrides)],
-      [pricingRow()],
-      [], // approved extra charges
-      FEE_ON_CONFIG,
+      [{ id: DRIVER_ID }],          // [0] driver lookup
+      [rideRow(rideOverrides)],       // [1] ride lookup
+      [pricingRow()],                 // [2] pricing lookup
+      [],                             // [3] approved extra charges
+      FEE_ON_CONFIG,                  // [4] v6 shadow getFareFrameworkConfig (12 keys)
+      [],                             // [5] lookupZoneFee getFareFrameworkConfig → zone_fee_enabled=false → returns 0 early
+      FEE_ON_CONFIG,                  // [6] true-up getFareFrameworkConfig
     ]);
     return mockTransaction([{ id: RIDE_ID, rider_payable_bdt: TRIP_TOTAL + FINAL_FEE }]);
   }
@@ -269,6 +271,8 @@ describe("complete — pickup fee charged path", () => {
       firm_km: "3",
       realized_km: "4",
       charged: true,
+      cap_was_binding: true,  // chargeable 3.5 km > cap 2.0 km
+      backstop_was_binding: false, // uncapped fee 2034 < backstop limit 5100
     });
   });
 });
@@ -290,7 +294,9 @@ describe("complete — pickup fee disabled (Stage 0)", () => {
       ],
       [pricingRow()],
       [], // extra charges
-      [], // platform_config empty → defaults → pickup_fee_enabled=false
+      [], // v6 shadow getFareFrameworkConfig → defaults
+      [], // lookupZoneFee getFareFrameworkConfig → zone_fee_enabled=false → returns 0 early
+      [], // true-up getFareFrameworkConfig → defaults → pickup_fee_enabled=false
     ]);
     const state = mockTransaction([{ id: RIDE_ID, rider_payable_bdt: 12750 }]);
 
@@ -319,6 +325,8 @@ describe("complete — pickup fee disabled (Stage 0)", () => {
       firm_km: "3",
       realized_km: "4",
       charged: false,
+      cap_was_binding: false, // fee disabled → no binding computation
+      backstop_was_binding: false, // fee disabled → no binding computation
     });
 
     const body = await getJson(res);
@@ -343,7 +351,9 @@ describe("complete — true-up guard paths", () => {
       ],
       [pricingRow()],
       [],
-      FEE_ON_CONFIG,
+      FEE_ON_CONFIG, // v6 shadow config
+      [],             // lookupZoneFee config → returns 0 early
+      FEE_ON_CONFIG,  // true-up config
     ]);
     const state = mockTransaction([{ id: RIDE_ID, rider_payable_bdt: 13650 }]);
 
@@ -375,7 +385,9 @@ describe("complete — true-up guard paths", () => {
       ],
       [pricingRow()],
       [],
-      FEE_ON_CONFIG,
+      // v6 shadow config fetch is skipped (pickup_realized_km is null)
+      FEE_ON_CONFIG, // lookupZoneFee config → zone_fee_enabled not set, returns 0
+      FEE_ON_CONFIG,  // true-up config
     ]);
     const state = mockTransaction([{ id: RIDE_ID, rider_payable_bdt: 13650 }]);
 
@@ -410,7 +422,9 @@ describe("complete — backstop re-check", () => {
       ],
       [pricingRow({ base_fare_bdt: 1000 })],
       [],
-      FEE_ON_CONFIG,
+      FEE_ON_CONFIG, // v6 shadow config
+      [],             // lookupZoneFee config → returns 0 early
+      FEE_ON_CONFIG,  // true-up config
     ]);
     const state = mockTransaction([{ id: RIDE_ID, rider_payable_bdt: 3570 }]);
 
@@ -439,7 +453,9 @@ describe("complete — no pickup fee lifecycle", () => {
         [rideRow({ pickup_fee_state: pickupState, pickup_fee_firm_bdt: pickupState ? 900 : null })],
         [pricingRow()],
         [], // extra charges
-        // NOTE: no config call queued — the true-up is skipped entirely.
+        [], // v6 shadow getFareFrameworkConfig → defaults
+        [], // lookupZoneFee getFareFrameworkConfig → returns 0 early
+        // NOTE: true-up skipped for non-firm states.
       ]);
       const state = mockTransaction([{ id: RIDE_ID, rider_payable_bdt: 12750 }]);
 

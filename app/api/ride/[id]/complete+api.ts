@@ -1,9 +1,9 @@
 // Auth: verifySupabaseToken via requireRole
 import { db } from "@/src/db";
-import { rides, pricing, drivers, driverWalletTransactions, riderSubscriptions, rideExtraCharges, riderWalletTransactions, users, pickupDistanceSamples } from "@/src/db/schema";
+import { rides, pricing, drivers, driverWalletTransactions, riderSubscriptions, rideExtraCharges, riderWalletTransactions, users, pickupDistanceSamples, tripTimeSamples, zoneRecoverySamples } from "@/src/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { requireRole } from "@/lib/auth";
-import { calculateFare } from "@/lib/fareCalc";
+import { calculateFare, calculateV6Fare, type V6PricingRow } from "@/lib/fareCalc";
 import { logger } from "@/lib/logger";
 import { sendNotification } from "@/lib/notify";
 import { z } from "zod";
@@ -16,6 +16,8 @@ import { computeCompletionWalletReceivable } from '@/lib/rideCompletionWallet';
 import { getFareFrameworkConfig, parseConfigBool, parseConfigNumber } from '@/lib/fareFrameworkConfig';
 import { PICKUP_CATEGORY } from '@/lib/vehicleTypes';
 import { PICKUP_TRUEUP_CONFIG_KEYS, computePickupTrueup, type PickupTrueupResult } from '@/lib/pickupTrueup';
+import { pickupFeeV6 } from '@/lib/pickupFee';
+import { lookupZoneFee } from '@/lib/zoneFee';
 import * as errors from '@/lib/errors';
 
 export async function POST(request: Request) {
@@ -74,14 +76,16 @@ const rideId = segments[segments.indexOf("ride") + 1];
     //   timer_start = min(arrived_at + max_free_wait_seconds, started_at)
     //   If arrived_at IS NULL, timer_start = started_at
     //   ride_time_min = CEIL((completed_at - timer_start) / 60000)
-    const MAX_FREE_WAIT_MS = 60_000; // system_config.max_free_wait_seconds (default 60)
+    // Read grace from the pricing row — the single source of truth.
+    // pricing.free_wait_minutes is per zone × vehicle_type (finer than per-category).
+    const freeWaitMs = (pricingRow.free_wait_minutes ?? 3) * 60_000;
     const completedAt = new Date();
     const startedAt = ride.started_at ? new Date(ride.started_at) : completedAt;
     const arrivedAt = ride.arrived_at ? new Date(ride.arrived_at) : null;
 
     let timerStart: Date;
     if (arrivedAt) {
-      const freeWaitExpiry = new Date(arrivedAt.getTime() + MAX_FREE_WAIT_MS);
+      const freeWaitExpiry = new Date(arrivedAt.getTime() + freeWaitMs);
       timerStart = new Date(
         Math.min(freeWaitExpiry.getTime(), startedAt.getTime()),
       );
@@ -142,6 +146,89 @@ const rideId = segments[segments.indexOf("ride") + 1];
       originCity,
       isIntercity,
     );
+
+    // ── v6 shadow (PATCH 1): recompute with actual ride time, log to shadow ──
+    // Commission is always 0% in v6 (subscription-only revenue). Shadow
+    // models the FUTURE engine — pass 0, not the v2 commission rate.
+    const v6NightMult = 1.0; // Stage 0: night_mult ships disabled
+
+    // v6 pickup fee: compute from firm/realized data using the v6 formula
+    // (flat 1.0×, two dimensions, pinned cap sequence — PATCH 3).
+    let v6PickupFeeBdt = 0;
+    if (ride.pickup_fee_state === 'firm' && ride.pickup_realized_km != null) {
+      const pickupCategory = PICKUP_CATEGORY[ride.vehicle_type];
+      const fwCfg = await getFareFrameworkConfig([
+        'pickup_free_radius_km_bike', 'pickup_free_radius_km_cng', 'pickup_free_radius_km_car',
+        'pickup_free_time_min_bike', 'pickup_free_time_min_cng', 'pickup_free_time_min_car',
+        'pickup_cap_pct_of_fare',
+        'pickup_cap_billable_km_bike', 'pickup_cap_billable_km_cng', 'pickup_cap_billable_km_car',
+      ]);
+      const freeRadiusKm = parseConfigNumber(
+        fwCfg[`pickup_free_radius_km_${pickupCategory}`], 1.0,
+      );
+      const freePickupMin = parseConfigNumber(
+        fwCfg[`pickup_free_time_min_${pickupCategory}`], 3,
+      );
+      const capPct = parseConfigNumber(fwCfg.pickup_cap_pct_of_fare, 25);
+      const capBillableKm = parseConfigNumber(
+        fwCfg[`pickup_cap_billable_km_${pickupCategory}`], 2.0,
+      );
+
+      const realizedKm = Number(ride.pickup_realized_km);
+      // Pickup time: matched_at → arrived_at (time spent going to pickup)
+      const matchedAt = ride.matched_at ? new Date(ride.matched_at) : null;
+      const arrivedAt2 = ride.arrived_at ? new Date(ride.arrived_at) : null;
+      const pickupMin = (matchedAt && arrivedAt2)
+        ? Math.max(0, (arrivedAt2.getTime() - matchedAt.getTime()) / 60_000)
+        : 0;
+
+      // fareBeforePickup = v2 trip fare (base + distance + time)
+      const fareBeforePickup = fare.total_bdt;
+
+      v6PickupFeeBdt = pickupFeeV6({
+        pickupKm: realizedKm,
+        pickupMin,
+        freeRadiusKm,
+        freePickupMin,
+        kmRate: pricingRow.per_km_bdt,
+        timeRate: pricingRow.per_min_bdt,
+        capBillableKm,
+        capPct,
+        fareBeforePickup,
+      });
+    }
+
+    // v6 zone fee: look up from schedule (0 in Stage 0 when zone_fee_enabled=false)
+    const v6ZoneFeeBdt = await lookupZoneFee(
+      ride.zone_id,
+      PICKUP_CATEGORY[ride.vehicle_type],
+    );
+
+    const v6FareBreakdown = calculateV6Fare({
+      pricing: {
+        base_fare_bdt: pricingRow.base_fare_bdt,
+        base_km: Number(pricingRow.base_km ?? 0),
+        initiation_minutes: pricingRow.initiation_minutes ?? 4,
+        per_km_bdt: pricingRow.per_km_bdt,
+        intercity_per_km_bdt: pricingRow.intercity_per_km_bdt ?? 0,
+        per_min_bdt: pricingRow.per_min_bdt,
+        floor_length_km: Number(pricingRow.floor_length_km ?? 0),
+        floor_min: pricingRow.floor_min ?? 0,
+        brta_fare_ceiling_bdt: pricingRow.brta_fare_ceiling_bdt,
+        platform_commission_percent: 0, // v6 = 0% commission (subscription-only)
+      } as V6PricingRow,
+      trip_km: insideKm + outsideKm,
+      ride_time_min: effectiveRideTimeMin,
+      night_mult: v6NightMult,
+      grace_min: pricingRow.free_wait_minutes ?? 3,
+      wait_min: chargeableWaitMin, // real chargeable wait minutes (P1-3)
+      pickup_fee_bdt: v6PickupFeeBdt,
+      zone_fee_bdt: v6ZoneFeeBdt,
+      inside_km: insideKm,
+      outside_km: outsideKm,
+      origin_city: originCity,
+      is_intercity: isIntercity,
+    });
 
     // Ruling 18: the true-up's %-of-fare backstop re-check basis — the
     // completion-recalculated TRIP fare (base + distance + time, post-floor),
@@ -221,6 +308,14 @@ const rideId = segments[segments.indexOf("ride") + 1];
         fare.total_bdt += pickupTrueup.finalFeeBdt;
         fare.driver_net_bdt += pickupTrueup.finalFeeBdt;
       }
+    }
+
+    // ── Zone fee (v6 §3): 100% to driver, not commission base ──────────
+    // Stage 0: zone_fee_enabled=false → zoneFeeBdt=0 always. Computed but inert.
+    const zoneFeeBdt = 0; // TODO(C-9): lookupZoneFee() when zone_fee_enabled=true
+    if (zoneFeeBdt > 0) {
+      fare.total_bdt += zoneFeeBdt;
+      fare.driver_net_bdt += zoneFeeBdt;
     }
 
     // ── Locked discount from request time ──────────────────────────────
@@ -303,6 +398,11 @@ const rideId = segments[segments.indexOf("ride") + 1];
                 pickup_trueup_delta_bdt: pickupTrueup.deltaBdt,
               }
             : {}),
+          // v6 shadow (PATCH 1): recompute at completion with actual ride time
+          fare_v6_shadow: v6FareBreakdown as any,
+          fare_v6_shadow_computed_at: completedAt,
+          // v6 zone fee — 100% to driver, no commission
+          zone_fee_bdt: zoneFeeBdt,
         })
         .where(and(eq(rides.id, rideId), eq(rides.status, "in_progress")))
         .returning();
@@ -326,7 +426,35 @@ const rideId = segments[segments.indexOf("ride") + 1];
           firm_km: pickupTrueup.firmKm != null ? String(pickupTrueup.firmKm) : null,
           realized_km: pickupTrueup.realizedKm != null ? String(pickupTrueup.realizedKm) : null,
           charged: (pickupTrueup.finalFeeBdt ?? 0) > 0,
+          cap_was_binding: pickupTrueup.capWasBinding,
+          backstop_was_binding: pickupTrueup.backstopWasBinding,
         });
+      }
+
+      // ── v6 Telemetry E-2: trip_time_samples (time-rate calibration) ──
+      const startHourBdt = (completedAt.getUTCHours() + 6) % 24; // Asia/Dhaka
+      await tx.insert(tripTimeSamples).values({
+        ride_id: rideId,
+        zone_id: ride.zone_id,
+        vehicle_type: ride.vehicle_type,
+        trip_km: String(distanceKm),
+        trip_minutes: String(rideTimeMin),
+        billed_minutes: effectiveRideTimeMin,
+        estimated_minutes: null, // TODO: capture from estimate response
+        night_mult_applied: String(v6NightMult),
+        start_hour_bdt: startHourBdt,
+      }).catch((e) => logger.warn('[complete] trip_time_samples insert failed', { rideId, error: String(e) }));
+
+      // ── v6 Telemetry E-3: zone_recovery_samples (zone fee derivation) ──
+      // Only insert if driver is known (driver cancelled rides still have driver_id)
+      if (ride.driver_id) {
+        await tx.insert(zoneRecoverySamples).values({
+          zone_id: ride.zone_id,
+          driver_id: ride.driver_id,
+          dropped_at: completedAt,
+          next_accepted_at: null, // filled by future acceptance
+          recovery_minutes: null, // filled by future acceptance or exit
+        }).catch((e) => logger.warn('[complete] zone_recovery_samples insert failed', { rideId, error: String(e) }));
       }
 
       // Phase C: Earn cashback on the rider's payable (discounted) fare
