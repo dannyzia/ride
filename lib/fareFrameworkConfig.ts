@@ -173,7 +173,8 @@ export const FARE_FRAMEWORK_CONFIG_KEYS = [
   'fare_gate_retention_drop_max_pp', // 5
   'fare_gate_heat_correlation_min', // 0.3
 
-  // Fuel recompute trigger (admin sets to 'true', job 45 clears)
+  // Fuel recompute trigger — read by scheduler job 45 (not settable via admin API).
+  // A-6b is Stage-1 work; flag is preserved until recompute pipeline is built.
   'fuel_recompute_pending',
 ] as const;
 

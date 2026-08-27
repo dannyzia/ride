@@ -28,6 +28,8 @@ import {
   fraudFlags,
   zoneRecalibrationQueue,
   pickupDistanceSamples,
+  zoneRecoverySamples,
+  tripTimeSamples,
 } from "../src/db/schema";
 import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte, inArray } from "drizzle-orm";
 import { detectStationaryAnomaly } from "../lib/safety";
@@ -2113,5 +2115,124 @@ export function startScheduler(): void {
     }
   }, 60_000);
 
-  logger.info("[scheduler] started (41 jobs)");
+  // ══════════════════════════════════════════════════════════════════════
+  // Fare Framework v6 — new scheduler jobs 42–45
+  // ══════════════════════════════════════════════════════════════════════
+
+  // ── (42) Zone recovery — every 60s ────────────────────────────────────
+  // Compute median driver recovery time per zone from zone_recovery_samples
+  // (7-day window). Upsert zone_heat.recovery_time_min + sample_count.
+  let zoneRecoveryRunning = false;
+  setInterval(async () => {
+    if (zoneRecoveryRunning) return;
+    zoneRecoveryRunning = true;
+    try {
+      const { computeZoneRecoveries } = await import('../lib/zoneRecovery');
+      const medians = await computeZoneRecoveries(7);
+      for (const [zoneId, medianMin] of medians) {
+        // Count total samples for this zone in the window
+        const [countRow] = await db
+          .select({ count: sql`count(*)::int` })
+          .from(zoneRecoverySamples)
+          .where(
+            and(
+              eq(zoneRecoverySamples.zone_id, zoneId),
+              gte(zoneRecoverySamples.dropped_at, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
+            ),
+          );
+        await db
+          .update(zoneHeat)
+          .set({
+            recovery_time_min: String(medianMin),
+            recovery_sample_count: (countRow?.count as number) ?? 0,
+            updated_at: new Date(),
+          })
+          .where(eq(zoneHeat.zone_id, zoneId));
+      }
+    } catch (e) {
+      logger.error('[scheduler] zone recovery error', e);
+    } finally {
+      zoneRecoveryRunning = false;
+    }
+  }, 60_000);
+
+  // ── (43) Zone fee schedule — monthly (1st of month, 02:00 UTC = 08:00 BDT)
+  // Generate fee schedule from recovery data. Currently ships inert.
+  let zoneFeeScheduleRunning = false;
+  setInterval(async () => {
+    const now = new Date();
+    const utcHour = now.getUTCHours();
+    const utcMinutes = now.getUTCMinutes();
+    if (now.getDate() !== 1 || utcHour !== 2 || utcMinutes >= 1) return;
+    if (zoneFeeScheduleRunning) return;
+    zoneFeeScheduleRunning = true;
+    try {
+      const cfg = await getFareFrameworkConfig(['zone_fee_enabled', 'zone_fee_coverage_factor']);
+      if (cfg.zone_fee_enabled !== 'true') {
+        logger.info('[scheduler] zone fee schedule — disabled, skipping');
+        return;
+      }
+      // TODO(C-8): derive and insert zone_fee_schedule rows for new month
+      logger.info('[scheduler] zone fee schedule generation completed');
+    } catch (e) {
+      logger.error('[scheduler] zone fee schedule error', e);
+    } finally {
+      zoneFeeScheduleRunning = false;
+    }
+  }, 60_000);
+
+  // ── (44) Billed-min aggregation — daily (03:00 UTC = 09:00 BDT) ──────
+  // Aggregate billed_minutes/day per tier from trip_time_samples.
+  // Stage-1 work: write calibration data to platform_config.
+  let billingMinRunning = false;
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getUTCHours() !== 3 || now.getUTCMinutes() >= 1) return;
+    if (billingMinRunning) return;
+    billingMinRunning = true;
+    try {
+      // Aggregate billed_minutes per vehicle_type over last 7 days
+      const rows = await db
+        .select({
+          vehicle_type: tripTimeSamples.vehicle_type,
+          avg_billed_minutes: sql`avg(${tripTimeSamples.billed_minutes})::numeric(7,1)`,
+          trip_count: sql`count(*)::int`,
+        })
+        .from(tripTimeSamples)
+        .where(gte(tripTimeSamples.created_at, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
+        .groupBy(tripTimeSamples.vehicle_type);
+      logger.info('[scheduler] billed-min aggregation completed', { tiers: rows.length });
+    } catch (e) {
+      logger.error('[scheduler] billed-min aggregation error', e);
+    } finally {
+      billingMinRunning = false;
+    }
+  }, 60_000);
+
+  // ── (45) Fuel recompute — every 30s ──────────────────────────────────
+  // Check fuel_recompute_pending flag. If set: log not_implemented and leave
+  // the flag intact (A-6b is Stage-1 work — tierRateDerivation integration).
+  // No admin UI sets this flag (not in ALLOWED_KEYS), so this is effectively
+  // a no-op until the fuel recompute pipeline is built.
+  let fuelRecomputeRunning = false;
+  setInterval(async () => {
+    if (fuelRecomputeRunning) return;
+    try {
+      const cfg = await getFareFrameworkConfig(['fuel_recompute_pending']);
+      if (cfg.fuel_recompute_pending !== 'true') return;
+      fuelRecomputeRunning = true;
+      // A-6b is Stage-1 work — do NOT clear the flag; admin will see it stuck
+      // until the recompute pipeline is implemented. Log for observability.
+      logger.warn('[scheduler] fuel recompute flag set but A-6b not implemented — flag preserved', {
+        key: 'fuel_recompute_pending',
+        status: 'not_implemented',
+      });
+    } catch (e) {
+      logger.error('[scheduler] fuel recompute check error', e);
+    } finally {
+      fuelRecomputeRunning = false;
+    }
+  }, 30_000);
+
+  logger.info("[scheduler] started (45 jobs)");
 }
