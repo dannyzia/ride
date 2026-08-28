@@ -3,7 +3,7 @@
 import { db } from '@/src/db';
 import { systemConfig } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from '@/lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
@@ -92,7 +92,7 @@ function validateValue(key: string, value: string): string | null {
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('catalog.write')(request);
     const rows = await db.select().from(systemConfig);
     return Response.json({ config: rows });
   } catch (err: unknown) {
@@ -106,7 +106,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { supabaseUser: admin } = await requireRole('admin')(request);
+    const { supabaseUser: admin } = await requireAdminPermission('catalog.write')(request);
     const result = await parseJsonBody(request, patchSchema);
     if (!result.ok) return result.response;
 

@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { ticketReplies, users } from '@/src/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import * as errors from '@/lib/errors';
@@ -11,7 +11,7 @@ export async function GET(request: Request, { id }: { id: string }) {
     const uuidParam = z.string().uuid().safeParse(id);
     if (!uuidParam.success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
 
-    await requireRole('admin')(request);
+    await requireAdminPermission('finance.write')(request);
     const rows = await db
       .select({
         id: ticketReplies.id,

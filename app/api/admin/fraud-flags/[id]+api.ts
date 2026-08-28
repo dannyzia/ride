@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { fraudFlags } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -24,7 +24,7 @@ const patchSchema = z.object({
 
 export async function PATCH(request: Request, { id }: { id: string }) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('review.write')(request);
 
     const uuidResult = z.string().uuid().safeParse(id);
     if (!uuidResult.success) {

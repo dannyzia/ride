@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { lostItems } from '@/src/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -15,7 +15,7 @@ const mediateSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('support.write')(request);
     const items = await db.select().from(lostItems).orderBy(desc(lostItems.reported_at));
     return Response.json({ items });
   } catch (err: unknown) {
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('support.write')(request);
     const parsed = await parseJsonBody(request, mediateSchema);
     if (!parsed.ok) return parsed.response;
 

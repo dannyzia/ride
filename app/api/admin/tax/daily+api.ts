@@ -1,11 +1,11 @@
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { getDailyTaxReport } from '@/lib/tax';
 import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('admin.read')(request);
     const url = new URL(request.url);
     const dateStr = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
     const report = await getDailyTaxReport(new Date(dateStr));

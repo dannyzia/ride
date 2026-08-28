@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/src/db";
 import { documents } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 
 const SIXTY_SECONDS = 60;
@@ -12,7 +12,7 @@ const idSchema = z.string().uuid();
 
 export async function GET(request: Request, { id }: { id: string }) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('verification.write')(request);
 
     const parsedId = idSchema.safeParse(id);
     if (!parsedId.success) {

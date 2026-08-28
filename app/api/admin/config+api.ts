@@ -1,8 +1,8 @@
-// Auth: verifySupabaseToken via requireRole
+// Auth: requireAdminPermission via adminRbac — key-level enforcement in PATCH
 import { db } from '../../../src/db';
 import { platformConfig, configAuditLog } from '../../../src/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireRole } from '../../../lib/auth';
+import { requireAdminPermission, isOwner, OWNER_ONLY_CONFIG_KEYS, GUARDRAIL_KM_KEYS, guardrailViolation } from '../../../lib/adminRbac';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
@@ -111,6 +111,12 @@ const ALLOWED_KEYS = new Set([
 
   // Fare framework — stage label
   'fare_framework_stage',
+
+  // Owner-only keys (added for RBAC — owner-only enforced in PATCH)
+  'zone_fee_enabled',
+  'night_mult_value',
+  'night_schedule',
+  'pickup_cap_pct_of_fare_v6',
 ]);
 
 const BOOLEAN_KEYS = new Set([
@@ -119,6 +125,7 @@ const BOOLEAN_KEYS = new Set([
   'pickup_fee_enabled',
   'pickup_low_confidence_never_bills_above_firm_quote',
   'cold_drop_boost_enabled',
+  'zone_fee_enabled',
 ]);
 
 const CSV_KEYS = new Set([
@@ -128,6 +135,7 @@ const CSV_KEYS = new Set([
 
 const ENUM_KEYS: Record<string, Set<string>> = {
   fare_framework_stage: new Set(['stage0', 'stage1', 'stage2', 'stage3']),
+  night_schedule: new Set(['20:00-06:00']),
 };
 
 function validateKeyValue(key: string, value: string): string | null {
@@ -362,12 +370,17 @@ function validateKeyValue(key: string, value: string): string | null {
     if (v < -1 || v > 1) return `${key} must be between -1 and 1`;
   }
 
+  // Night multiplier: 1.0–3.0
+  if (key === 'night_mult_value') {
+    if (v < 1.0 || v > 3.0) return `${key} must be between 1.0 and 3.0`;
+  }
+
   return null;
 }
 
 export async function GET(req: Request) {
   try {
-    await requireRole('admin')(req);
+    await requireAdminPermission('config.write')(req);
     const config = await db.select().from(platformConfig);
     return Response.json({ config });
   } catch (err: unknown) {
@@ -380,7 +393,7 @@ export async function GET(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const { supabaseUser: admin } = await requireRole('admin')(req);
+    const { supabaseUser: admin, dbUser } = await requireAdminPermission('config.write')(req);
 
     const result = await parseJsonBody(req, patchSchema);
     if (!result.ok) return result.response;
@@ -395,6 +408,32 @@ export async function PATCH(req: Request) {
       return Response.json({ error: 'validation_failed', message: validationErrors.join('; ') }, { status: 400 });
     }
 
+    // RBAC: owner-only key enforcement
+    if (!isOwner(dbUser)) {
+      for (const { key } of body.updates) {
+        if (OWNER_ONLY_CONFIG_KEYS.has(key)) {
+          return Response.json({ error: 'forbidden', message: `Key '${key}' is owner-only` }, { status: 403 });
+        }
+      }
+    }
+
+    // RBAC: guardrail enforcement for ops_manager
+    if (dbUser.role === 'ops_manager') {
+      for (const { key, value } of body.updates) {
+        const numericVal = parseFloat(value);
+        if (!Number.isFinite(numericVal)) continue;
+        // Read current value for guardrail check
+        const [currentRow] = await db.select({ value: platformConfig.value })
+          .from(platformConfig)
+          .where(eq(platformConfig.key, key))
+          .limit(1);
+        const currentVal = currentRow?.value ? parseFloat(currentRow.value) : null;
+        if (guardrailViolation(key, currentVal, numericVal)) {
+          return Response.json({ error: 'guardrail_violation', message: `Key '${key}' change exceeds ±${GUARDRAIL_KM_KEYS.has(key) ? '0.25km' : '1min'} guardrail — requires owner` }, { status: 403 });
+        }
+      }
+    }
+
     // Phase D: config audit — log every change before applying
     for (const { key, value } of body.updates) {
       if (!ALLOWED_KEYS.has(key)) continue;
@@ -403,12 +442,13 @@ export async function PATCH(req: Request) {
         .from(platformConfig)
         .where(eq(platformConfig.key, key))
         .limit(1);
-      // Insert audit log BEFORE the update
+      // Insert audit log BEFORE the update (REV-5: actor_role populated)
       await db.insert(configAuditLog).values({
         config_key: key,
         old_value: oldRow?.value ?? null,
         new_value: value,
         admin_id: admin.id,
+        actor_role: dbUser.role,
       });
       await db.update(platformConfig)
         .set({ value, updated_at: new Date() })

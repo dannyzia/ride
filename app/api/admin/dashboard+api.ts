@@ -1,13 +1,13 @@
 import { db } from '@/src/db';
 import { drivers, rides, documents } from '@/src/db/schema';
 import { eq, and, sql, gte } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('admin.read')(request);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);

@@ -3,7 +3,7 @@
 import { db } from "@/src/db";
 import { paymentEvents } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { activateSubscription } from "@/lib/activateSubscription";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
@@ -12,7 +12,7 @@ const idSchema = z.string().uuid();
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
-    const { supabaseUser: admin } = await requireRole("admin")(request);
+    const { supabaseUser: admin } = await requireAdminPermission('finance.write')(request);
 
     const parsedId = idSchema.safeParse(id);
     if (!parsedId.success) {

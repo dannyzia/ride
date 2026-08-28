@@ -1,8 +1,8 @@
-// Auth: verifySupabaseToken via requireRole
+// Auth: requireAdminPermission via adminRbac
 import { db } from "@/src/db";
 import { zones, zoneBudgets } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { getZonePnL } from "@/lib/zoneEconomics";
@@ -10,7 +10,7 @@ import * as errors from "@/lib/errors";
 
 export async function GET(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('admin.read')(request);
 
     const url = new URL(request.url);
     const zoneId = url.searchParams.get("zone_id");

@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { userDevices, users } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -39,7 +39,7 @@ async function sendBatch(tokens: string[], title: string, body: string): Promise
 
 export async function POST(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('safety.write')(request);
 
     const now = Date.now();
     if (now - lastBroadcastAt < 300_000) {

@@ -2,7 +2,7 @@ import { db } from '@/src/db';
 import { cityBoundaries } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { clearCityBoundaryCache } from '@/lib/cityBoundary';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
@@ -25,7 +25,7 @@ const updateSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('catalog.write')(request);
     const url = new URL(request.url);
     const includeInactive = url.searchParams.get('include_inactive') === 'true';
     const cities = includeInactive
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('catalog.write')(request);
     const result = await parseJsonBody(request, createSchema);
     if (!result.ok) return result.response;
 
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('catalog.write')(request);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
     if (!id) return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });
@@ -123,7 +123,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('catalog.write')(request);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
     if (!id) return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });

@@ -6,14 +6,14 @@ import { db } from "@/src/db";
 import { chatMessages, users, rides, drivers } from "@/src/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 
 const idSchema = z.string().uuid();
 
 export async function GET(request: Request, { id }: { id: string }) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('admin.read')(request);
     const rideId = id;
 
     const parsedId = idSchema.safeParse(rideId);

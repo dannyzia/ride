@@ -3,7 +3,7 @@
 import { db } from '@/src/db';
 import { systemConfig } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from '@/lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
@@ -41,7 +41,7 @@ async function setDispatchPaused(paused: boolean): Promise<void> {
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('safety.write')(request);
     return Response.json({ dispatch_paused: await readDispatchPaused() });
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { supabaseUser: admin } = await requireRole('admin')(request);
+    const { supabaseUser: admin } = await requireAdminPermission('safety.write')(request);
     const result = await parseJsonBody(request, schema);
     if (!result.ok) return result.response;
 

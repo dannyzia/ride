@@ -3,7 +3,7 @@
 import { db } from '@/src/db';
 import { drivers } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from '@/lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
@@ -14,7 +14,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const { supabaseUser: admin } = await requireRole('admin')(request);
+    const { supabaseUser: admin } = await requireAdminPermission('verification.write')(request);
 
     const result = await parseJsonBody(request, schema);
     if (!result.ok) return result.response;

@@ -1,13 +1,13 @@
 import { db } from '@/src/db';
 import { pickupDistanceSamples, zones } from '@/src/db/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('admin.read')(request);
 
     const url = new URL(request.url);
     const dateFrom = url.searchParams.get('from');

@@ -8,7 +8,7 @@ import {
   zones,
 } from '@/src/db/schema';
 import { eq, gte, lte, sql, and, isNotNull, count, countDistinct } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { getFareFrameworkConfig } from '@/lib/fareFrameworkConfig';
 import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
@@ -43,7 +43,7 @@ const LOOKBACK_DAYS = 30;
  */
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('admin.read')(request);
 
     const now = new Date();
     const cutoff = new Date(now.getTime() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000);

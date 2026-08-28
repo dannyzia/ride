@@ -5,7 +5,7 @@
 import { db } from "@/src/db";
 import { eventCalendar } from "@/src/db/schema";
 import { eq, sql, desc, and, or, ilike, gt } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -26,7 +26,7 @@ const patchSchema = createSchema.partial().extend({
 });
 
 export async function POST(req: Request) {
-  await requireRole("admin")(req);
+  await requireAdminPermission('catalog.write')(req);
 
   const result = await parseJsonBody(req, createSchema);
   if (!result.ok) return result.response;
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  await requireRole("admin")(req);
+  await requireAdminPermission('catalog.write')(req);
 
   const url = new URL(req.url);
   const eventId = url.searchParams.get("id");
@@ -105,7 +105,7 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  await requireRole("admin")(req);
+  await requireAdminPermission('catalog.write')(req);
 
   const url = new URL(req.url);
   const eventId = url.searchParams.get("id");
@@ -127,7 +127,7 @@ export async function DELETE(req: Request) {
 // GET /api/admin/events — list events, optionally filtered to upcoming/active.
 export async function GET(req: Request) {
   try {
-    await requireRole("admin")(req);
+    await requireAdminPermission('catalog.write')(req);
 
     const url = new URL(req.url);
     const status = url.searchParams.get("status") ?? "all"; // all | upcoming | active | inactive

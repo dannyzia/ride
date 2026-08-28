@@ -8,13 +8,17 @@
  * The audit log records: config_key, old_value, new_value, admin_id.
  */
 /* eslint-disable import/first */
-jest.mock('@/lib/auth', () => ({
-  requireRole: jest.fn(() =>
+jest.mock('@/lib/adminRbac', () => ({
+  requireAdminPermission: jest.fn(() =>
     jest.fn(async () => ({
       supabaseUser: { id: 'admin-uuid-1111' },
       dbUser: { id: 'admin-uuid-1111', role: 'admin' },
     })),
   ),
+  isOwner: (u: { role: string }) => u.role === 'owner',
+  OWNER_ONLY_CONFIG_KEYS: new Set(['fare_framework_stage']),
+  GUARDRAIL_KM_KEYS: new Set(['pickup_free_radius_km_bike']),
+  guardrailViolation: () => false,
 }));
 jest.mock('@/src/db', () => ({
   db: { select: jest.fn(), update: jest.fn(), insert: jest.fn() },

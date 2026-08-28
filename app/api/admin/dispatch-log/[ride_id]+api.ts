@@ -3,7 +3,7 @@
 import { db } from "@/src/db";
 import { dispatchOffers, drivers, users, callLedger } from "@/src/db/schema";
 import { eq, and, asc } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
@@ -11,7 +11,7 @@ const rideIdSchema = z.string().uuid();
 
 export async function GET(request: Request, { ride_id }: { ride_id: string }) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('admin.read')(request);
 
     const parsedId = rideIdSchema.safeParse(ride_id);
     if (!parsedId.success) {

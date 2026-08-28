@@ -7,6 +7,20 @@
  *
  * Owner-only config keys and the pickup-allowance guardrails (±0.25km / ±1min)
  * are enforced per-key in app/api/admin/config+api.ts.
+ *
+ * ## Owner seeding
+ *
+ * There is NO self-escalation endpoint. The first owner account is created
+ * via direct SQL against the live database:
+ *
+ * ```sql
+ * -- Step 1: Ensure the user exists (via phone OTP registration)
+ * -- Step 2: Promote to owner
+ * UPDATE users SET role = 'owner' WHERE phone = '+880XXXXXXXXXX';
+ * ```
+ *
+ * Subsequent owner accounts: promote existing admin via the same SQL or via
+ * a staff-management endpoint (not yet built — deferred to Stage-1).
  */
 import { requireAnyRole, type AdminRole } from './auth';
 import type { User } from '@supabase/supabase-js';

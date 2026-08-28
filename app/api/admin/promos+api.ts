@@ -1,7 +1,7 @@
 import { db } from "@/src/db";
 import { promoCodes, promoRedemptions } from "@/src/db/schema";
 import { eq, sql, desc, and, isNull, or, ilike, lt, gt } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -27,7 +27,7 @@ const patchSchema = createSchema.partial().extend({
 });
 
 export async function POST(req: Request) {
-  const { dbUser } = await requireRole("admin")(req);
+  const { dbUser } = await requireAdminPermission('catalog.write')(req);
 
   const result = await parseJsonBody(req, createSchema);
   if (!result.ok) return result.response;
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  await requireRole("admin")(req);
+  await requireAdminPermission('catalog.write')(req);
 
   const url = new URL(req.url);
   const promoId = url.searchParams.get("id");
@@ -133,7 +133,7 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  await requireRole("admin")(req);
+  await requireAdminPermission('catalog.write')(req);
 
   const url = new URL(req.url);
   const promoId = url.searchParams.get("id");
@@ -155,7 +155,7 @@ export async function DELETE(req: Request) {
 // GET /api/admin/promos — list all promos with usage stats. F15-API-09.
 export async function GET(req: Request) {
   try {
-    await requireRole("admin")(req);
+    await requireAdminPermission('catalog.write')(req);
 
     const url = new URL(req.url);
     const status = url.searchParams.get("status") ?? "all"; // all | active | expired | inactive

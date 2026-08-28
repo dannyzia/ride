@@ -3,7 +3,7 @@
 import { db } from "@/src/db";
 import { vehiclePremiumAllowlist } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -18,7 +18,7 @@ const patchSchema = z.object({
 
 export async function GET(request: Request, { id }: { id: string }) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('catalog.write')(request);
     const parsedId = idSchema.safeParse(id);
     if (!parsedId.success) {
       return Response.json(
@@ -46,7 +46,7 @@ export async function GET(request: Request, { id }: { id: string }) {
 
 export async function PATCH(request: Request, { id }: { id: string }) {
   try {
-    const { supabaseUser: admin } = await requireRole("admin")(request);
+    const { supabaseUser: admin } = await requireAdminPermission('catalog.write')(request);
     const parsedId = idSchema.safeParse(id);
     if (!parsedId.success) {
       return Response.json(
@@ -88,7 +88,7 @@ export async function PATCH(request: Request, { id }: { id: string }) {
 
 export async function DELETE(request: Request, { id }: { id: string }) {
   try {
-    const { supabaseUser: admin } = await requireRole("admin")(request);
+    const { supabaseUser: admin } = await requireAdminPermission('catalog.write')(request);
     const parsedId = idSchema.safeParse(id);
     if (!parsedId.success) {
       return Response.json(

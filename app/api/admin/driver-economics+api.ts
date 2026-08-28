@@ -3,12 +3,12 @@
 import { db } from "@/src/db";
 import { drivers, users, subscriptions, packages } from "@/src/db/schema";
 import { eq, inArray, desc } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('admin.read')(request);
 
     // Only include active or temporarily active drivers
     const rows = await db

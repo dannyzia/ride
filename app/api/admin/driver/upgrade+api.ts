@@ -3,7 +3,7 @@
 import { db } from '@/src/db';
 import { drivers, vehicles, vehicleTypeChanges } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { VEHICLE_TYPE_ZOD_ENUM, VEHICLE_TIER_ORDER } from '@/lib/vehicleTypes';
 import { logger } from '@/lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
@@ -19,7 +19,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const { supabaseUser: admin, dbUser } = await requireRole('admin')(request);
+    const { supabaseUser: admin, dbUser } = await requireAdminPermission('verification.write')(request);
 
     const result = await parseJsonBody(request, schema);
     if (!result.ok) return result.response;

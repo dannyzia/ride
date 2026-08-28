@@ -1,7 +1,7 @@
 import { db } from "@/src/db";
 import { preferences } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -22,7 +22,7 @@ const patchSchema = createSchema.partial().extend({
 
 export async function GET(req: Request) {
   try {
-    await requireRole("admin")(req);
+    await requireAdminPermission('catalog.write')(req);
 
     const url = new URL(req.url);
     const includeInactive = url.searchParams.get("include_inactive") === "true";
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  await requireRole("admin")(req);
+  await requireAdminPermission('catalog.write')(req);
 
   const result = await parseJsonBody(req, createSchema);
   if (!result.ok) return result.response;
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  await requireRole("admin")(req);
+  await requireAdminPermission('catalog.write')(req);
 
   const url = new URL(req.url);
   const prefId = url.searchParams.get("id");
@@ -123,7 +123,7 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  await requireRole("admin")(req);
+  await requireAdminPermission('catalog.write')(req);
 
   const url = new URL(req.url);
   const prefId = url.searchParams.get("id");

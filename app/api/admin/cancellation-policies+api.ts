@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { cancellationPolicies } from '@/src/db/schema';
 import { desc } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -31,7 +31,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('catalog.write')(request);
     const parsed = await parseJsonBody(request, policySchema);
     if (!parsed.ok) return parsed.response;
     const [policy] = await db.insert(cancellationPolicies).values(parsed.data).returning();

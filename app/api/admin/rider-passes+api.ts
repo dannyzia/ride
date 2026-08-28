@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { riderPasses } from '@/src/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -30,7 +30,7 @@ const updateSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('support.write')(request);
     const rows = await db.select().from(riderPasses).orderBy(desc(riderPasses.created_at));
     return Response.json({ passes: rows });
   } catch (err: unknown) {
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('support.write')(request);
     const parsed = await parseJsonBody(request, passSchema);
     if (!parsed.ok) return parsed.response;
     const [pass] = await db.insert(riderPasses).values(parsed.data).returning();
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('support.write')(request);
     const parsed = await parseJsonBody(request, updateSchema);
     if (!parsed.ok) return parsed.response;
     const { id, ...data } = parsed.data;
@@ -71,7 +71,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('support.write')(request);
     const { searchParams } = new URL(request.url);
 const id = searchParams.get('id');
      if (!id) return Response.json({ error: 'id_required', message: 'ID parameter required' }, { status: 400 });

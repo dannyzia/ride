@@ -18,13 +18,17 @@ jest.mock('@/lib/fareFrameworkConfig', () => ({
   },
 }));
 
-jest.mock('@/lib/auth', () => ({
-  requireRole: jest.fn(() =>
+jest.mock('@/lib/adminRbac', () => ({
+  requireAdminPermission: jest.fn(() =>
     jest.fn(async () => ({
       supabaseUser: { id: 'admin-1111' },
       dbUser: { id: 'admin-1111', role: 'admin' },
     })),
   ),
+  isOwner: (u: { role: string }) => u.role === 'owner',
+  OWNER_ONLY_CONFIG_KEYS: new Set<string>(),
+  GUARDRAIL_KM_KEYS: new Set<string>(),
+  guardrailViolation: () => false,
 }));
 jest.mock('@/lib/logger', () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },

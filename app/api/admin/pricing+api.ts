@@ -1,8 +1,8 @@
-// Auth: verifySupabaseToken via requireRole
+// Auth: requireAdminPermission via adminRbac
 import { db } from "@/src/db";
 import { pricing } from "@/src/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 import { parseJsonBody } from "@/lib/parseBody";
 import { z } from "zod";
@@ -28,7 +28,7 @@ const updateSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('price.write')(request);
     const all = await db
       .select()
       .from(pricing)
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('price.write')(request);
     const result = await parseJsonBody(request, updateSchema);
     if (!result.ok) return result.response;
 

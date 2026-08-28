@@ -13,6 +13,16 @@ jest.mock("@/lib/auth", () => ({
   verifySupabaseToken: jest.fn(),
   requireRole: jest.fn(() => async () => ({ id: "admin-uid", role: "admin" })),
 }));
+jest.mock("@/lib/adminRbac", () => ({
+  requireAdminPermission: jest.fn(() => async () => ({
+    supabaseUser: { id: "admin-uid" },
+    dbUser: { id: "admin-uid", role: "admin" },
+  })),
+  isOwner: (u: { role: string }) => u.role === "owner",
+  OWNER_ONLY_CONFIG_KEYS: new Set<string>(),
+  GUARDRAIL_KM_KEYS: new Set<string>(),
+  guardrailViolation: () => false,
+}));
 jest.mock("@/src/db", () => ({
   db: { select: jest.fn(), update: jest.fn(), insert: jest.fn() },
 }));

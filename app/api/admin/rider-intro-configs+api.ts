@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { riderIntroConfigs, zones } from '@/src/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -24,7 +24,7 @@ const updateSchema = configSchema.partial().extend({
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('catalog.write')(request);
     const configs = await db
       .select()
       .from(riderIntroConfigs)
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('catalog.write')(request);
     const parsed = await parseJsonBody(request, configSchema);
     if (!parsed.ok) return parsed.response;
     const [config] = await db
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('catalog.write')(request);
     const parsed = await parseJsonBody(request, updateSchema);
     if (!parsed.ok) return parsed.response;
     const { id, ...data } = parsed.data;
@@ -106,7 +106,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('catalog.write')(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return Response.json({ error: 'id_required', message: 'ID parameter required' }, { status: 400 });

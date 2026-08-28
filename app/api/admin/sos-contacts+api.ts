@@ -1,7 +1,7 @@
 import { db } from '../../../src/db';
 import { systemConfig } from '../../../src/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireRole } from '../../../lib/auth';
+import { requireAdminPermission } from '../../../lib/adminRbac';
 import { logger } from '../../../lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
@@ -16,7 +16,7 @@ const sosContactsArraySchema = z.array(sosContactSchema).min(1).max(10);
 const patchSchema = z.object({ contacts: sosContactsArraySchema });
 
 export async function GET(req: Request) {
-  await requireRole('admin')(req);
+  await requireAdminPermission('safety.write')(req);
 
   const [row] = await db.select().from(systemConfig).where(eq(systemConfig.key, 'sos_contacts')).limit(1);
   if (!row) return Response.json({ contacts: [] });
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  await requireRole('admin')(req);
+  await requireAdminPermission('safety.write')(req);
 
   const result = await parseJsonBody(req, patchSchema);
   if (!result.ok) return result.response;

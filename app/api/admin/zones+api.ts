@@ -1,8 +1,8 @@
-// Auth: verifySupabaseToken via requireRole
+// Auth: requireAdminPermission via adminRbac
 import { db } from "@/src/db";
 import { zones, pricing } from "@/src/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { VEHICLE_TYPE_VALUES } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
 import { normalizePolygon } from "@/lib/polygon";
@@ -32,7 +32,7 @@ const pricingSchema = z.object({
 // GET /api/admin/zones list
 export async function GET(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('catalog.write')(request);
     const allZones = await db
       .select()
       .from(zones)
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('catalog.write')(request);
     const bodyResult = await safeRequestJson(request);
     if (!bodyResult.ok) return bodyResult.response;
     const body = bodyResult.data as Record<string, unknown>;
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('catalog.write')(request);
     const bodyResult = await safeRequestJson(request);
     if (!bodyResult.ok) return bodyResult.response;
     const body = bodyResult.data as Record<string, unknown>;
@@ -207,7 +207,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('catalog.write')(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });

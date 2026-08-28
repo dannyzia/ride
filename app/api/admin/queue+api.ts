@@ -9,14 +9,14 @@ import {
   systemConfig,
 } from "@/src/db/schema";
 import { eq, inArray } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 
 type StatusFilter = "pending" | "temporary" | "rejected" | "all";
 
 export async function GET(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('support.write')(request);
 
     const url = new URL(request.url);
     const statusParam = (url.searchParams.get("status") ??

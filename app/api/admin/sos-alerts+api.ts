@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { sosAlerts } from '@/src/db/schema';
 import { desc, eq, count } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
 
@@ -10,7 +10,7 @@ const DEFAULT_LIMIT = 50;
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('safety.write')(request);
 
     const url = new URL(request.url);
     const rawLimit = parseInt(url.searchParams.get('limit') ?? String(DEFAULT_LIMIT), 10);

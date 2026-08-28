@@ -3,7 +3,7 @@
 import { db } from "@/src/db";
 import { vehicleModels } from "@/src/db/schema";
 import { eq, ilike, and, sql, or, asc } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { VEHICLE_TYPE_ZOD_ENUM, BODY_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
@@ -25,7 +25,7 @@ const createSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('catalog.write')(request);
     const url = new URL(request.url);
     const brand = url.searchParams.get("brand");
     const search = url.searchParams.get("search");
@@ -92,7 +92,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { supabaseUser: admin } = await requireRole("admin")(request);
+    const { supabaseUser: admin } = await requireAdminPermission('catalog.write')(request);
     const result = await parseJsonBody(request, createSchema);
     if (!result.ok) return result.response;
 

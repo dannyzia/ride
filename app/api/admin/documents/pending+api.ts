@@ -1,14 +1,14 @@
-// Auth: verifySupabaseToken via requireRole
+// Auth: requireAdminPermission via adminRbac
 import { db } from '../../../../src/db';
 import { documents, users, drivers } from '../../../../src/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireRole } from '../../../../lib/auth';
+import { requireAdminPermission } from '../../../../lib/adminRbac';
 import { logger } from '../../../../lib/logger';
 import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('verification.write')(request);
 
     const pendingDocs = await db.select({
       id: documents.id,

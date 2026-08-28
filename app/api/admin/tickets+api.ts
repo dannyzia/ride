@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { supportTickets, users } from '@/src/db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import * as errors from '@/lib/errors';
@@ -16,7 +16,7 @@ const listSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('finance.write')(request);
     const url = new URL(request.url);
     const parsed = listSchema.safeParse(Object.fromEntries(url.searchParams));
     const { status, priority, category, limit, offset } = parsed.data ?? { limit: 50, offset: 0 };

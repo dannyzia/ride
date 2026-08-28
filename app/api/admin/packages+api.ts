@@ -1,8 +1,8 @@
-// Auth: verifySupabaseToken via requireRole
+// Auth: requireAdminPermission via adminRbac
 import { db } from "@/src/db";
 import { packages } from "@/src/db/schema";
 import { eq, desc, isNull } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
@@ -26,7 +26,7 @@ const updateSchema = createSchema.partial().extend({
 
 export async function GET(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('price.write')(request);
     const all = await db
       .select()
       .from(packages)
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('price.write')(request);
     const result = await parseJsonBody(request, createSchema);
     if (!result.ok) return result.response;
 
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('price.write')(request);
     const result = await parseJsonBody(request, updateSchema);
     if (!result.ok) return result.response;
 
@@ -89,7 +89,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await requireRole("admin")(request);
+    await requireAdminPermission('price.write')(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return Response.json({ error: 'missing_id', message: 'ID parameter missing' }, { status: 400 });

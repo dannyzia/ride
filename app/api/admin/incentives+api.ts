@@ -5,7 +5,7 @@ import {
   driverIncentives,
 } from "@/src/db/schema";
 import { eq, and, sql, isNull } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
@@ -34,7 +34,7 @@ const patchSchema = createSchema.partial().extend({
 
 export async function GET(req: Request) {
   try {
-    await requireRole("admin")(req);
+    await requireAdminPermission('catalog.write')(req);
 
     const url = new URL(req.url);
     const includeInactive = url.searchParams.get("include_inactive") === "true";
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { dbUser } = await requireRole("admin")(req);
+  const { dbUser } = await requireAdminPermission('catalog.write')(req);
 
   const result = await parseJsonBody(req, createSchema);
   if (!result.ok) return result.response;
@@ -124,7 +124,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  await requireRole("admin")(req);
+  await requireAdminPermission('catalog.write')(req);
 
   const url = new URL(req.url);
   const incentiveId = url.searchParams.get("id");
@@ -169,7 +169,7 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  await requireRole("admin")(req);
+  await requireAdminPermission('catalog.write')(req);
 
   const url = new URL(req.url);
   const incentiveId = url.searchParams.get("id");

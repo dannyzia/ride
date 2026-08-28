@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { fareDisputes, users, riderWalletTransactions } from '@/src/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { parseJsonBody } from '@/lib/parseBody';
 import { recordAdminRefund } from '@/lib/accounting';
 import { logger } from '@/lib/logger';
@@ -10,7 +10,7 @@ import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('review.write')(request);
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
 
@@ -40,7 +40,7 @@ const resolveSchema = z.object({
 
 export async function PATCH(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('review.write')(request);
     const parsed = await parseJsonBody(request, resolveSchema);
     if (!parsed.ok) return parsed.response;
 

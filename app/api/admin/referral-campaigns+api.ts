@@ -3,7 +3,7 @@
 import { db } from '@/src/db';
 import { referralCampaigns } from '@/src/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
@@ -19,7 +19,7 @@ const createSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('catalog.write')(request);
     const rows = await db
       .select()
       .from(referralCampaigns)
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { supabaseUser: admin } = await requireRole('admin')(request);
+    const { supabaseUser: admin } = await requireAdminPermission('catalog.write')(request);
     const result = await parseJsonBody(request, createSchema);
     if (!result.ok) return result.response;
 

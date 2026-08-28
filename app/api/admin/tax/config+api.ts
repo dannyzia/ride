@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { taxRates } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { parseJsonBody } from '@/lib/parseBody';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -15,7 +15,7 @@ const updateSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('finance.write')(request);
     const rows = await db.select().from(taxRates);
     return Response.json({ rates: rows });
   } catch (err: unknown) {
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('finance.write')(request);
     const parsed = await parseJsonBody(request, updateSchema);
     if (!parsed.ok) return parsed.response;
     const { id, ...data } = parsed.data;

@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 import { taxLedgers } from '@/src/db/schema';
 import { inArray } from 'drizzle-orm';
-import { requireRole } from '@/lib/auth';
+import { requireAdminPermission } from '@/lib/adminRbac';
 import { parseJsonBody } from '@/lib/parseBody';
 import { getTaxReportRange } from '@/lib/tax';
 import { logger } from '@/lib/logger';
@@ -14,7 +14,7 @@ const markSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('finance.write')(request);
     const url = new URL(request.url);
     const start = url.searchParams.get('start');
     const end = url.searchParams.get('end');
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireRole('admin')(request);
+    await requireAdminPermission('finance.write')(request);
     const parsed = await parseJsonBody(request, markSchema);
     if (!parsed.ok) return parsed.response;
     await db.update(taxLedgers)
