@@ -6,7 +6,10 @@ services:
     branch: implementation
     plan: free
     region: singapore
-    buildCommand: npm ci && npx expo export --platform web
+    # Heap raised because `expo export` bundles 184 API routes in ONE Metro
+    # process; measured peak heap ~3.5 GB (2026-08-28, --trace-gc run). Node's
+    # ~2 GB default cap OOMs mid-build on Render.
+    buildCommand: npm ci && NODE_OPTIONS="--max-old-space-size=4096" npx expo export --platform web
     startCommand: node server.js
     autoDeploy: true
     # ───────────────────────────────────────────────────────────
