@@ -72,6 +72,17 @@ This repo has **two independently-typed packages**:
 **Additional reference files (lower priority, load as needed):**
 `.claude/RULES.md`, `.claude/SECURITY.md`, `.claude/STYLEGUIDE.md`, `.claude/TESTING.md`, `.claude/WORKFLOWS.md`, `.claude/REVIEW-CHECKLIST.md`, `.claude/CONTEXT/phase-context.md`, `.claude/MEMORY/decisions.md`, plus other docs in `docs/Plan/`.
 
+## Model Chain & Orchestration
+
+Four roles: **Owner (Zia)** — final rulings, kickoff/field decisions · **Architect** — design brain, NO codebase access; its output is proposals/rulings, never verified state · **Orchestrator** — execution + gatekeeping; the only role that confirms on-disk state; verdict-first reporting to the owner (done / acceptable / rejected + messages to other models — no prose explanations) · **Planning/Coding models** — plan and build against the codebase.
+
+Protocol (non-negotiable):
+1. **Verify state assertions.** Any "X is done/closed/exists" claim from a party that cannot see the files is checked against disk before it becomes a ledger fact.
+2. **Rulings beat artifacts.** Owner-chain rulings (Zia/Architect) win over artifact text. On divergence: the ruling wins, the divergence is recorded in-file — never silently reconciled.
+3. **The file is the single source of truth.** If chat memory and the artifact file disagree, the file wins. Re-read before editing; re-grep after editing before calling anything closed.
+4. **Handoffs are artifacts** (`.kilo/plans/*.md`), not chat history. Implementers start from disk state, with round-verification notes appended at the bottom.
+5. **Orchestrator reports are verdict-first.** One-line verdict + short messages to the models concerned. Detail lives in the artifact files.
+
 ## Essential Commands
 
 ```bash

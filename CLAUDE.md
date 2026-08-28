@@ -30,6 +30,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 For the most up-to-date command reference, critical rules, and architecture map, see **AGENTS.md**. This file focuses on implementation methodology, source of truth hierarchy, and what has changed from the original GlideX codebase.
 
+Model-chain orchestration (Owner / Architect / Orchestrator / Planning-Coding roles, verification protocol, rulings-beat-artifacts) is defined in **AGENTS.md § Model Chain & Orchestration** — it applies to every model working in this repo.
+
 ## Implementation Methodology
 
 This is a **modification of existing GlideX code**, not a greenfield build. Follow these execution rules:

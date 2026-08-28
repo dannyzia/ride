@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rider Booking Wireframes</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 16px; background: #f4f4f5; color: #18181b; font-size: 12px; line-height: 1.4; }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  .screen { background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+  .screen h2 { font-size: 14px; margin: 0 0 8px; color: #18181b; }
+  .wire { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+  .box { border: 1px solid #d4d4d8; border-radius: 4px; padding: 5px 7px; font-size: 10px; background: #fafafa; color: #3f3f46; }
+  .row { display: flex; gap: 3px; }
+  .col { flex: 1; }
+  table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  th, td { border: 1px solid #e4e4e7; padding: 4px 5px; text-align: left; vertical-align: top; }
+  th { background: #f4f4f5; font-weight: 600; }
+  .tag { display: inline-block; background: #eef2ff; color: #3730a3; border-radius: 3px; padding: 1px 4px; font-size: 9px; margin: 1px 2px; }
+</style>
+</head>
+<body>
+<h1>Rider Booking Wireframes (R-019 → R-036)</h1>
+
+<div class="screen">
+  <h2>R-019 Home</h2>
+  <div class="wire">
+    <div class="box" style="height:60px">Map (full screen)</div>
+    <div class="row"><div class="box" style="width:40px">SOS</div><div class="box" style="width:40px">Theme</div><div class="box" style="width:40px">Menu</div></div>
+    <div class="box" style="border-top-left-radius:10px;border-top-right-radius:10px">
+      <b>Bottom Sheet</b><br>
+      idle: [Where to?] [Chips] [Quick chips]<br>
+      destination: [Back] [Search] [Tabs: Recent|Saved] [List]<br>
+      pickup: [Back] [Address] [Confirm Pickup]<br>
+      vehicle: [Back] [Cards: icon, name, fare, ETA] [Continue]<br>
+      confirm: [Back] [Vehicle summary] [Fare breakdown] [Cash] [Book Now]
+    </div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Entry point; select destination, pickup, vehicle, confirm</td></tr>
+    <tr><th>Entry</th><td>App launch, back from booking flow</td></tr>
+    <tr><th>Exit</th><td>confirm-ride</td></tr>
+    <tr><th>UI Elements</th><td>Map, bottom sheet, SOS, theme toggle, hamburger</td></tr>
+    <tr><th>States</th><td>idle, destination, pickup, vehicle, confirm</td></tr>
+    <tr><th>Actions</th><td>Select dest/pickup/vehicle, book, cancel</td></tr>
+    <tr><th>Data Shown</th><td>Saved/recent places, estimates, fare</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/(tabs)/home/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-020 Find Ride</h2>
+  <div class="wire">
+    <div class="box">[Use Current Location]</div>
+    <div class="box">Pickup [Barikoi Autocomplete]</div>
+    <div class="box">Stop 1 [Barikoi Autocomplete] [×]</div>
+    <div class="box">[+ Add Stop]</div>
+    <div class="box">Destination [Barikoi Autocomplete]</div>
+    <div class="box">Choose a ride</div>
+    <div class="row"><div class="col box">Bike ৳80 5min</div><div class="col box">CNG ৳120 8min</div><div class="col box">Car ৳200 3min</div></div>
+    <div class="box">[Confirm Ride]</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Set pickup, stops, destination; view vehicle estimates</td></tr>
+    <tr><th>Entry</th><td>home (idle), autocomplete</td></tr>
+    <tr><th>Exit</th><td>confirm-ride</td></tr>
+    <tr><th>UI Elements</th><td>Barikoi autocomplete inputs, stop blocks, category tabs, estimate cards</td></tr>
+    <tr><th>States</th><td>loading, error, empty, estimates loaded</td></tr>
+    <tr><th>Actions</th><td>GPS locate, add/remove stops, select category, confirm</td></tr>
+    <tr><th>Data Shown</th><td>Estimates grouped by bike/cng/car with fare + ETA</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/find-ride/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-021 Confirm Ride</h2>
+  <div class="wire">
+    <div class="box">[Vehicle: Car Economy ৳200 4 seats 3 min]</div>
+    <div class="box">Ride info: Distance 5.2km | Duration 12 mins | Base ৳200 | -৳50 discount | Total ৳150</div>
+    <div class="box">Pickup: ... | Dropoff: ...</div>
+    <div class="box">[✓] Book for someone else [Name] [Phone] [Consent]</div>
+    <div class="box">Upfront Tip: [৳0] [৳20] [৳50] [৳100]</div>
+    <div class="box">[✓] Prefer female driver</div>
+    <div class="box">[✓] Schedule for later [ScheduleRideSheet]</div>
+    <div class="box">[Add Stop] Stop1: addr [×]</div>
+    <div class="box">[Request Ride / Schedule Ride]</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Finalize ride options and submit request</td></tr>
+    <tr><th>Entry</th><td>find-ride, finding-driver (alternative)</td></tr>
+    <tr><th>Exit</th><td>finding-driver, ride-scheduled</td></tr>
+    <tr><th>UI Elements</th><td>Fare breakdown, discount selector, tip slider, stop modal, pickup explainer</td></tr>
+    <tr><th>States</th><td>requesting, schedule toggle on/off, fee deduction pending</td></tr>
+    <tr><th>Actions</th><td>Toggle book-other, tip, female pref, schedule, add stop, submit</td></tr>
+    <tr><th>Data Shown</th><td>Refreshed estimate, distance, duration, discounts, pickup fee, total</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/confirm-ride/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-022 Apply Promos</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Back</div><div class="col box" style="text-align:center">Apply Promo</div><div class="col box"></div></div>
+    <div class="box">Enter Promo Code [___________]</div>
+    <div class="box" id="msg">[Apply]</div>
+    <div class="box">Available Promos</div>
+    <div class="row"><div class="col box">● RIDE50 50% off</div></div>
+    <div class="row"><div class="col box">● FIRST ৳100 off</div></div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Redeem promo codes before booking</td></tr>
+    <tr><th>Entry</th><td>confirm-ride</td></tr>
+    <tr><th>Exit</th><td>confirm-ride (back)</td></tr>
+    <tr><th>UI Elements</th><td>Code input, apply button, promo list with eligibility</td></tr>
+    <tr><th>States</th><td>loading, success, error</td></tr>
+    <tr><th>Actions</th><td>Enter code, apply, select from list</td></tr>
+    <tr><th>Data Shown</th><td>Eligible promos with discount value, ineligible reason</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/apply-promos/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-023 Add Tip</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Back</div><div class="col box" style="text-align:center">Add Tip</div><div class="col box"></div></div>
+    <div class="box" style="text-align:center">[D avatar] Driver Name</div>
+    <div class="box">Tip Amount</div>
+    <div class="row">
+      <div class="col box">No Tip</div><div class="col box">৳20</div><div class="col box">৳50</div><div class="col box">৳100</div>
+    </div>
+    <div class="box">Or enter custom amount [_______]</div>
+    <div class="box">[Add Tip]</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Add post-ride tip for driver</td></tr>
+    <tr><th>Entry</th><td>services-hub</td></tr>
+    <tr><th>Exit</th><td>services-hub</td></tr>
+    <tr><th>UI Elements</th><td>Driver avatar, preset buttons, custom input</td></tr>
+    <tr><th>States</th><td>submitting, error</td></tr>
+    <tr><th>Actions</th><td>Select preset, enter custom, submit</td></tr>
+    <tr><th>Data Shown</th><td>Driver name, active ride context</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/add-tip/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-024 Autocomplete</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">←</div><div class="col box">Theme</div></div>
+    <div class="box" style="text-align:center;font-weight:bold">Where do you want to go?</div>
+    <div class="box">[🔍 Search destination...       ✕]</div>
+    <div class="box">[spinner]</div>
+    <div class="box">• House 12, Road 5, Dhaka</div>
+    <div class="box">• Bashundhara R/A Gate 2</div>
+    <div class="box">• Uttara Sector 3</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Search destination with Barikoi/Nominatim fallback</td></tr>
+    <tr><th>Entry</th><td>home-raster</td></tr>
+    <tr><th>Exit</th><td>find-ride</td></tr>
+    <tr><th>UI Elements</th><td>Search input, clear button, suggestion list, loading</td></tr>
+    <tr><th>States</th><td>loading, results, empty</td></tr>
+    <tr><th>Actions</th><td>Type query (min 3 chars), select suggestion</td></tr>
+    <tr><th>Data Shown</th><td>Place suggestions from Barikoi then Nominatim</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/autocomplete/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-025 Cancel Reason</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Back</div><div class="col box" style="text-align:center">Cancel Ride</div><div class="col box"></div></div>
+    <div class="box" style="background:#e0f2fe">Free cancellation: 2m 30s left — no fee</div>
+    <div class="box">○ Waiting too long</div>
+    <div class="box">○ Found another ride</div>
+    <div class="box">○ Driver asked to cancel</div>
+    <div class="box">○ Changed my mind</div>
+    <div class="box">○ Other</div>
+    <div class="box">Optional note [___________]</div>
+    <div class="box">[Confirm Cancel]</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Collect cancel reason and confirm cancellation</td></tr>
+    <tr><th>Entry</th><td>finding-driver, ride-details-scheduled</td></tr>
+    <tr><th>Exit</th><td>canceled</td></tr>
+    <tr><th>UI Elements</th><td>Countdown banner, radio group, note input, confirm button</td></tr>
+    <tr><th>States</th><td>loading, error, grace period vs fee</td></tr>
+    <tr><th>Actions</th><td>Select reason, type note, confirm cancel</td></tr>
+    <tr><th>Data Shown</th><td>Cancel preview fee, elapsed time, translations</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/cancel-reason/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-026 Canceled</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Theme</div></div>
+    <div class="box" style="text-align:center">[✕ icon]</div>
+    <div class="box" style="text-align:center;font-weight:bold">Ride Canceled</div>
+    <div class="box" style="text-align:center">Your ride has been canceled. Any charges will be refunded.</div>
+    <div class="box">[Back to Home]</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Confirmation after rider cancels ride</td></tr>
+    <tr><th>Entry</th><td>cancel-reason</td></tr>
+    <tr><th>Exit</th><td>home</td></tr>
+    <tr><th>UI Elements</th><td>Cancel icon, status text, primary CTA</td></tr>
+    <tr><th>States</th><td>Static confirmation</td></tr>
+    <tr><th>Actions</th><td>Back to home</td></tr>
+    <tr><th>Data Shown</th><td>Refund note</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/canceled/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-027 No Drivers Available</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Theme</div></div>
+    <div class="box" style="text-align:center">[🚫 icon]</div>
+    <div class="box" style="text-align:center;font-weight:bold">No Drivers Available</div>
+    <div class="box" style="text-align:center">No drivers in your area. Try again or schedule later.</div>
+    <div class="box">[Try Again]</div>
+    <div class="box">[Schedule for Later]</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Inform rider no drivers found; offer retry or schedule</td></tr>
+    <tr><th>Entry</th><td>finding-driver (expired/alternatives canceled)</td></tr>
+    <tr><th>Exit</th><td>home, schedule-ride</td></tr>
+    <tr><th>UI Elements</th><td>Ban icon, message, two CTAs</td></tr>
+    <tr><th>States</th><td>Static fallback</td></tr>
+    <tr><th>Actions</th><td>Retry search, schedule ride</td></tr>
+    <tr><th>Data Shown</th><td>None</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/no-drivers-available/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-028 Finding Driver</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Theme</div></div>
+    <div class="box" style="height:120px">Map + pulse animation</div>
+    <div class="box">
+      <div class="row"><div class="col box" style="text-align:center">[spinner] Finding your driver...<br>Searching nearby drivers…</div></div>
+      <div class="box">2 nearby drivers | Est. wait: 4 min</div>
+      <div class="box">[Cancel Booking]</div>
+    </div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Poll for nearby drivers while ride is pending</td></tr>
+    <tr><th>Entry</th><td>confirm-ride</td></tr>
+    <tr><th>Exit</th><td>ride-tracking, no-drivers-available</td></tr>
+    <tr><th>UI Elements</th><td>Map, pulse overlay, count/eta card, cancel button, alternatives sheet</td></tr>
+    <tr><th>States</th><td>loading, found, prolonged empty, error, alternatives offered</td></tr>
+    <tr><th>Actions</th><td>Cancel ride, select alternative vehicle</td></tr>
+    <tr><th>Data Shown</th><td>Driver count, ETA, ride:status/expired/alternatives via WS</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/finding-driver/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-029 Schedule Ride</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">← Back</div><div class="col box" style="text-align:center">Schedule a Ride</div><div class="col box">Theme</div></div>
+    <div class="box">Pickup [Barikoi autocomplete]</div>
+    <div class="box">Destination [Barikoi autocomplete]</div>
+    <div class="box">Vehicle [bike_basic] [cng] [car_compact] ...</div>
+    <div class="box">Date & Time [ScheduleRideSheet picker]</div>
+    <div class="box">[error/hint]</div>
+    <div class="box">[Schedule Ride]</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Schedule ride for future (30min–7days)</td></tr>
+    <tr><th>Entry</th><th>no-drivers-available, confirm-ride (schedule toggle)</th></tr>
+    <tr><th>Exit</th><td>ride-scheduled, back</td></tr>
+    <tr><th>UI Elements</th><td>Barikoi inputs, vehicle grid, date/time sheet</td></tr>
+    <tr><th>States</th><td>validation hints, requesting, error</td></tr>
+    <tr><th>Actions</th><td>Set pickup/dest, pick vehicle, pick datetime, submit</td></tr>
+    <tr><th>Data Shown</th><td>Vehicle types, scheduled timestamp</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/schedule-ride/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-030 Schedule Ride After Promo</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Back</div><div class="col box" style="text-align:center">Schedule Ride</div><div class="col box"></div></div>
+    <div class="box">Promo Applied</div>
+    <div class="box">Fare Options (with discount)</div>
+    <div class="row"><div class="col box">GoRide Economy ৳800</div></div>
+    <div class="row"><div class="col box">GoRide Comfort ৳1200</div></div>
+    <div class="row"><div class="col box">GoRide Premium ৳2000</div></div>
+    <div class="box">[Continue]</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Review discounted fare options after promo</td></tr>
+    <tr><th>Entry</th><td>apply-promos (legacy flow)</td></tr>
+    <tr><th>Exit</th><td>ride-scheduled</td></tr>
+    <tr><th>UI Elements</th><td>Promo banner, fare option list</td></tr>
+    <tr><th>States</th><td>Static options</td></tr>
+    <tr><th>Actions</th><td>Continue to confirmation</td></tr>
+    <tr><th>Data Shown</th><td>Discounted fare options</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/schedule-ride-after-promo/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-031 Scheduling User Ride</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Theme</div></div>
+    <div class="box" style="text-align:center">[⏳ icon]</div>
+    <div class="box" style="text-align:center">[spinner]</div>
+    <div class="box" style="text-align:center;font-weight:bold">Scheduling your ride...</div>
+    <div class="box" style="text-align:center">Please wait while we confirm your scheduled ride.</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Loading state while schedule API confirms</td></tr>
+    <tr><th>Entry</th><td>schedule-ride (auto-transition)</td></tr>
+    <tr><th>Exit</th><td>ride-scheduled</td></tr>
+    <tr><th>UI Elements</th><td>Hourglass icon, spinner, status text</td></tr>
+    <tr><th>States</th><td>Loading only</td></tr>
+    <tr><th>Actions</th><td>None</td></tr>
+    <tr><th>Data Shown</th><td>None</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/scheduling-user-ride/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-032 Ride Scheduled</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Theme</div></div>
+    <div class="box" style="text-align:center">[✓ icon]</div>
+    <div class="box" style="text-align:center;font-weight:bold">Ride Scheduled</div>
+    <div class="box" style="text-align:center">Your ride has been scheduled successfully.</div>
+    <div class="box">[🕒 Pickup at 14:30]</div>
+    <div class="box" style="text-align:center">Reference #ABC12345</div>
+    <div class="box">[View Schedule]</div>
+    <div class="box">[Back to Home]</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Confirm scheduled ride to rider</td></tr>
+    <tr><th>Entry</th><td>confirm-ride, schedule-ride</td></tr>
+    <tr><th>Exit</th><td>activity, home</td></tr>
+    <tr><th>UI Elements</th><td>Success icon, time detail card, reference, two CTAs</td></tr>
+    <tr><th>States</th><th>Static confirmation</th></tr>
+    <tr><th>Actions</th><td>View schedule, back home</td></tr>
+    <tr><th>Data Shown</th><td>Scheduled time, ride reference</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/ride-scheduled/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-033 Ride Details Scheduled</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Back</div><div class="col box" style="text-align:center">Ride Details</div><div class="col box">Theme</div></div>
+    <div class="box">[loading spinner] OR [error + retry] OR [not found]</div>
+    <div class="box">[📅 Car Economy] 26 Aug 2026 · 14:30</div>
+    <div class="box">Pickup: ... | Destination: ... | Fare: ৳200</div>
+    <div class="row"><div class="col box">[Rate Driver]</div><div class="col box">[Cancel]</div></div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Show details of a specific scheduled ride</td></tr>
+    <tr><th>Entry</th><td>activity tab, ride-scheduled</td></tr>
+    <tr><th>Exit</th><td>rate-driver, cancel-reason</td></tr>
+    <tr><th>UI Elements</th><td>Detail card, action buttons, retry/error states</td></tr>
+    <tr><th>States</th><td>loading, error, empty, loaded</td></tr>
+    <tr><th>Actions</th><td>Rate driver, cancel ride</td></tr>
+    <tr><th>Data Shown</th><td>Ride by ID: vehicle, time, addresses, fare</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/ride-details-scheduled/[id]/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-034 Services Hub</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Good Morning</div><div class="col box">📍 Current Location</div><div class="col box">Theme</div></div>
+    <div class="box" style="font-weight:bold">What service do you need?</div>
+    <div class="row">
+      <div class="col box" style="text-align:center">[🚲] Bike<br>Quick & cheap</div>
+      <div class="col box" style="text-align:center">[🚗] CNG<br>Mid-size trips</div>
+    </div>
+    <div class="row">
+      <div class="col box" style="text-align:center">[🚙] Car<br>Comfort rides</div>
+      <div class="col box" style="text-align:center"></div>
+    </div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Service category selection entry point</td></tr>
+    <tr><th>Entry</th><td>home (when service param provided), activity</td></tr>
+    <tr><th>Exit</th><td>home (with service param)</td></tr>
+    <tr><th>UI Elements</th><td>Greeting, location, service grid cards</td></tr>
+    <tr><th>States</th><td>Static grid</td></tr>
+    <tr><th>Actions</th><td>Select service category</td></tr>
+    <tr><th>Data Shown</th><td>Vehicle categories with icons + subtitles</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/services-hub.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-035 User Arrived</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Theme</div></div>
+    <div class="box" style="text-align:center">[📍 icon]</div>
+    <div class="box" style="text-align:center;font-weight:bold">You have arrived</div>
+    <div class="box" style="text-align:center">Hope you enjoyed the ride with Driver Name. Please rate.</div>
+    <div class="box">[Rate your driver]</div>
+    <div class="box">[Skip]</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Prompt rider to rate driver after ride completion</td></tr>
+    <tr><th>Entry</th><td>ride-tracking (arrived state)</td></tr>
+    <tr><th>Exit</th><td>rate-driver, home</td></tr>
+    <tr><th>UI Elements</th><td>Location icon, driver name, rate/skip CTAs</td></tr>
+    <tr><th>States</th><td>Static prompt</td></tr>
+    <tr><th>Actions</th><td>Rate, skip</td></tr>
+    <tr><th>Data Shown</th><td>Driver name from active ride</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/user-arrived/index.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <h2>R-036 Home Raster</h2>
+  <div class="wire">
+    <div class="row"><div class="col box">Theme</div></div>
+    <div class="box" style="text-align:center">[🗺 icon]</div>
+    <div class="box" style="text-align:center;font-weight:bold">Your location</div>
+    <div class="box" style="text-align:center">23.8103, 90.4125</div>
+    <div class="box">[Where to?]</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Fallback map view when location needs manual search</td></tr>
+    <tr><th>Entry</th><td>home (rare fallback), direct link</td></tr>
+    <tr><th>Exit</th><td>autocomplete</td></tr>
+    <tr><th>UI Elements</th><td>Map icon, coordinates display, CTA</td></tr>
+    <tr><th>States</th><td>Static raster</td></tr>
+    <tr><th>Actions</th><td>Open autocomplete</td></tr>
+    <tr><th>Data Shown</th><td>Current lat/lng</td></tr>
+    <tr><th>Source</th><td>app/(main)/(customer)/home-raster/index.tsx</td></tr>
+  </table>
+</div>
+
+</body>
+</html>

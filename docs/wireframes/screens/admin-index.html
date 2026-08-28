@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Screens Wireframe Index</title>
+  <style>
+    * { box-sizing: border-box; }
+ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; color: #333; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    th, td { padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 1px solid #eee; }
+    th { background: #fafafa; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.4px; color: #555; }
+    tr:hover { background: #f9f9f9; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #e8e8e8; color: #555; }
+    .badge-dashboard { background: #dbeafe; color: #1e40af; }
+    .badge-drivers { background: #d1fae5; color: #065f46; }
+    .badge-rides { background: #fef3c7; color: #92400e; }
+    .badge-packages { background: #fce7f3; color: #9d174d; }
+    .badge-config { background: #e0e7ff; color: #3730a3; }
+    .badge-monitoring { background: #ffedd5; color: #9a3412; }
+    .fw { color: #dc2626; font-weight: 700; }
+    a { color: #2563eb; text-decoration: none; font-size: 12px; }
+    a:hover { text-decoration: underline; }
+  </style>
+  </head>
+  <body>
+    <h1>Admin Screens Wireframe Index</h1>
+    <p class="subtitle">36 admin screens across 6 modules. IDs A-001 through A-036. [F] = framework-critical.</p>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Screen Name</th><th>Module</th><th>Variants</th><th>Framework-Critical</th><th>Wireframe</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>A-001</td><td>Admin Dashboard</td><td><span class="badge badge-dashboard">dashboard</span></td><td>3</td><td class="fw">[F]</td><td><a href="admin-dashboard.html">view</a></td></tr>
+        <tr><td>A-002</td><td>Live Ops</td><td><span class="badge badge-dashboard">dashboard</span></td><td>2</td><td class="fw">[F]</td><td><a href="admin-dashboard.html">view</a></td></tr>
+        <tr><td>A-003</td><td>Driver Approval Queue</td><td><span class="badge badge-drivers">drivers</span></td><td>5</td><td class="fw">[F]</td><td><a href="admin-drivers.html">view</a></td></tr>
+        <tr><td>A-004</td><td>Rider Management</td><td><span class="badge badge-drivers">drivers</span></td><td>2</td><td></td><td><a href="admin-drivers.html">view</a></td></tr>
+        <tr><td>A-005</td><td>Document Approval</td><td><span class="badge badge-drivers">drivers</span></td><td>3</td><td class="fw">[F]</td><td><a href="admin-drivers.html">view</a></td></tr>
+        <tr><td>A-006</td><td>Vehicle Models</td><td><span class="badge badge-drivers">drivers</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-drivers.html">view</a></td></tr>
+        <tr><td>A-007</td><td>Premium Allowlist</td><td><span class="badge badge-drivers">drivers</span></td><td>3</td><td></td><td><a href="admin-drivers.html">view</a></td></tr>
+        <tr><td>A-008</td><td>SOS Contacts</td><td><span class="badge badge-drivers">drivers</span></td><td>2</td><td></td><td><a href="admin-drivers.html">view</a></td></tr>
+        <tr><td>A-009</td><td>SOS Alerts</td><td><span class="badge badge-drivers">drivers</span></td><td>3</td><td></td><td><a href="admin-drivers.html">view</a></td></tr>
+        <tr><td>A-010</td><td>Support Tickets</td><td><span class="badge badge-rides">rides</span></td><td>4</td><td></td><td><a href="admin-rides.html">view</a></td></tr>
+        <tr><td>A-011</td><td>Lost Items</td><td><span class="badge badge-rides">rides</span></td><td>2</td><td></td><td><a href="admin-rides.html">view</a></td></tr>
+        <tr><td>A-012</td><td>Fare Disputes</td><td><span class="badge badge-rides">rides</span></td><td>3</td><td></td><td><a href="admin-rides.html">view</a></td></tr>
+        <tr><td>A-013</td><td>Events</td><td><span class="badge badge-rides">rides</span></td><td>4</td><td></td><td><a href="admin-rides.html">view</a></td></tr>
+        <tr><td>A-014</td><td>Broadcast Push</td><td><span class="badge badge-rides">rides</span></td><td>2</td><td></td><td><a href="admin-rides.html">view</a></td></tr>
+        <tr><td>A-015</td><td>Ride Passes</td><td><span class="badge badge-rides">rides</span></td><td>3</td><td></td><td><a href="admin-rides.html">view</a></td></tr>
+        <tr><td>A-016</td><td>Rider Intro Configs</td><td><span class="badge badge-rides">rides</span></td><td>3</td><td></td><td><a href="admin-rides.html">view</a></td></tr>
+        <tr><td>A-017</td><td>Call Packages</td><td><span class="badge badge-packages">packages</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-packages.html">view</a></td></tr>
+        <tr><td>A-018</td><td>Pricing Tiers</td><td><span class="badge badge-packages">packages</span></td><td>3</td><td class="fw">[F]</td><td><a href="admin-packages.html">view</a></td></tr>
+        <tr><td>A-019</td><td>Promo Codes</td><td><span class="badge badge-packages">packages</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-packages.html">view</a></td></tr>
+        <tr><td>A-020</td><td>Ride Preferences</td><td><span class="badge badge-packages">packages</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-packages.html">view</a></td></tr>
+        <tr><td>A-021</td><td>Point Offers</td><td><span class="badge badge-packages">packages</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-packages.html">view</a></td></tr>
+        <tr><td>A-022</td><td>Driver Incentives</td><td><span class="badge badge-packages">packages</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-packages.html">view</a></td></tr>
+        <tr><td>A-023</td><td>Referral Campaigns</td><td><span class="badge badge-packages">packages</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-packages.html">view</a></td></tr>
+        <tr><td>A-024</td><td>Platform Configuration</td><td><span class="badge badge-config">config</span></td><td>5</td><td class="fw">[F]</td><td><a href="admin-config.html">view</a></td></tr>
+        <tr><td>A-025</td><td>Operational Zones</td><td><span class="badge badge-config">config</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-config.html">view</a></td></tr>
+        <tr><td>A-026</td><td>City Boundaries</td><td><span class="badge badge-config">config</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-config.html">view</a></td></tr>
+        <tr><td>A-027</td><td>Fare Configuration</td><td><span class="badge badge-config">config</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-config.html">view</a></td></tr>
+        <tr><td>A-028</td><td>Tax Dashboard</td><td><span class="badge badge-config">config</span></td><td>3</td><td class="fw">[F]</td><td><a href="admin-config.html">view</a></td></tr>
+        <tr><td>A-029</td><td>Recovery &amp; Override</td><td><span class="badge badge-config">config</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-config.html">view</a></td></tr>
+        <tr><td>A-030</td><td>Onboarding Sample Media</td><td><span class="badge badge-config">config</span></td><td>3</td><td class="fw">[F]</td><td><a href="admin-config.html">view</a></td></tr>
+        <tr><td>A-031</td><td>Cancellation Policies</td><td><span class="badge badge-config">config</span></td><td>2</td><td></td><td><a href="admin-config.html">view</a></td></tr>
+        <tr><td>A-032</td><td>Monitoring &amp; Disputes</td><td><span class="badge badge-monitoring">monitoring</span></td><td>5</td><td class="fw">[F]</td><td><a href="admin-monitoring.html">view</a></td></tr>
+        <tr><td>A-033</td><td>Heat Monitor</td><td><span class="badge badge-monitoring">monitoring</span></td><td>3</td><td class="fw">[F]</td><td><a href="admin-monitoring.html">view</a></td></tr>
+        <tr><td>A-034</td><td>Pickup Analytics</td><td><span class="badge badge-monitoring">monitoring</span></td><td>3</td><td class="fw">[F]</td><td><a href="admin-monitoring.html">view</a></td></tr>
+        <tr><td>A-035</td><td>Trust &amp; Safety</td><td><span class="badge badge-monitoring">monitoring</span></td><td>4</td><td class="fw">[F]</td><td><a href="admin-monitoring.html">view</a></td></tr>
+        <tr><td>A-036</td><td>Zone P&amp;L</td><td><span class="badge badge-monitoring">monitoring</span></td><td>3</td><td class="fw">[F]</td><td><a href="admin-monitoring.html">view</a></td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:16px; font-size:12px; color:#666;">Total: 36 screens | Framework-critical: 21 | Modules: 6</p>
+  </body>
+  </html>

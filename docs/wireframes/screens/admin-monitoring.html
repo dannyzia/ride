@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Monitoring Module Wireframes</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; color: #333; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+    .flow { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .flow-title { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 12px; color: #555; }
+    .flow-box { display: inline-block; background: #e8e8e8; border: 2px solid #333; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; margin: 4px; }
+    .flow-arrow { display: inline-block; font-size: 18px; margin: 4px; color: #666; }
+    .screen { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .screen-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .screen-id { background: #333; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+    .screen-name { font-size: 16px; font-weight: 700; }
+    .screen-fw { background: #dc2626; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .wireframe { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .wf-box { border: 2px solid #333; background: #fafafa; padding: 10px; border-radius: 6px; font-size: 12px; }
+    .wf-box.primary { background: #e3f2fd; border-color: #1976d2; }
+    .wf-box.danger { background: #ffebee; border-color: #c62828; }
+    .wf-box.success { background: #e8f5e9; border-color: #2e7d32; }
+    .wf-box.warning { background: #fff3e0; border-color: #ef6c00; }
+    .wf-row { display: flex; gap: 8px; }
+    .wf-row > * { flex: 1; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { background: #fafafa; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; color: #555; width: 140px; }
+    td { color: #444; }
+    .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #e8e8e8; }
+  </style>
+</head>
+<body>
+  <h1>Admin Monitoring Module</h1>
+  <p class="subtitle">Screens: A-032 through A-036 | Flow: Live ops, dispatch, fare, pickup, trust/safety, zone P&L</p>
+
+  <div class="flow">
+    <div class="flow-title">Navigation Flow</div>
+    <span class="flow-box">Admin Layout</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-box">Monitoring (A-032)</span><span class="flow-arrow">→</span><span class="flow-box">Tabs: Logs / Chat / Economics</span><br>
+    <span class="flow-box">Heat Monitor (A-033)</span><span class="flow-arrow">→</span><span class="flow-box">Zone table + color scale</span><br>
+    <span class="flow-box">Pickup Analytics (A-034)</span><span class="flow-arrow">→</span><span class="flow-box">Filter + percentile chart</span><br>
+    <span class="flow-box">Trust & Safety (A-035)</span><span class="flow-arrow">→</span><span class="flow-box">Fraud flags + recalibration</span><br>
+    <span class="flow-box">Zone P&L (A-036)</span><span class="flow-arrow">→</span><span class="flow-box">Period + category breakdown</span>
+  </div>
+
+  <!-- A-032 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-032</span>
+      <span class="screen-name">Monitoring</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Monitoring"</div>
+      <div class="wf-row">
+        <div class="wf-box">Tabs: Dispatch Log, Chat Logs, Economics</div>
+      </div>
+      <div class="wf-box">Dispatch Log: Table: Time | Ride | Driver | Event | Zone | Detail</div>
+      <div class="wf-box">Chat Logs: Table: Time | Ride | Sender | Message | Status</div>
+      <div class="wf-box">Economics: Table: Date | Rides | Revenue ৳ | Commission ৳ | Tax ৳ | Net ৳</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-032 / Monitoring / monitoring</td></tr>
+      <tr><th>Purpose</th><td>Operational monitoring: dispatch events, chat, economics</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: tab switch, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Tab bar, AdminTable</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">success</span> tables</td></tr>
+      <tr><th>Actions</th><td>Tab switch, refresh</td></tr>
+      <tr><th>Data shown</th><td>dispatch_trace log rows; chat messages; daily economic aggregates</td></tr>
+      <tr><th>Source</th><td>app/admin/monitoring.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-033 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-033</span>
+      <span class="screen-name">Heat Monitor</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Heat Monitor"</div>
+      <div class="wf-row">
+        <div class="wf-box">Refresh button</div>
+        <div class="wf-box">Last refreshed: HH:MM:SS</div>
+      </div>
+      <div class="wf-box">Color scale: Low (blue) → Medium (yellow) → High (red)</div>
+      <div class="wf-box">Table: Zone | City | Score | Active Rides | Rating | Avg Wait | Updated</div>
+      <div class="wf-box warning">Auto-refresh every 60s</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-033 / Heat Monitor / monitoring</td></tr>
+      <tr><th>Purpose</th><td>Live zone heat scores for dispatch pressure monitoring</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Refresh button, timestamp, color legend, AdminTable</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">success</span> table, <span class="tag">auto-refresh</span> every 60s</td></tr>
+      <tr><th>Actions</th><td>Refresh, pause auto-refresh</td></tr>
+      <tr><th>Data shown</th><td>zone_id, zone_name, city, heat_score, active_rides, avg_rating, avg_wait_seconds, updated_at</td></tr>
+      <tr><th>Source</th><td>app/admin/heat-monitor.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-034 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-034</span>
+      <span class="screen-name">Pickup Analytics</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Pickup Analytics"</div>
+      <div class="wf-row">
+        <div class="wf-box">Select: Zone</div>
+        <div class="wf-box">Select: Category (All / Bike / Car / ...)</div>
+      </div>
+      <div class="wf-box">Percentile cards: P50 | P75 | P90 | P95 | P99 (meters)</div>
+      <div class="wf-box">Table: Sample Date | Count | P50 | P75 | P90 | P95 | P99</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-034 / Pickup Analytics / monitoring</td></tr>
+      <tr><th>Purpose</th><td>Pickup distance distribution by zone/category</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Zone selector, category selector, stat cards, AdminTable</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No samples", <span class="tag">success</span> cards + table</td></tr>
+      <tr><th>Actions</th><td>Change zone/category, refresh</td></tr>
+      <tr><th>Data shown</th><td>sample_date, sample_count, p50_m, p75_m, p90_m, p95_m, p99_m per zone/category</td></tr>
+      <tr><th>Source</th><td>app/admin/pickup-analytics.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-035 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-035</span>
+      <span class="screen-name">Trust & Safety</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Trust & Safety"</div>
+      <div class="wf-row">
+        <div class="wf-box">Tabs: Fraud Flags, Recalibration Queue</div>
+      </div>
+      <div class="wf-box">Fraud Flags: Table: Flag ID | Ride | Driver | Rider | Type | Status | Created | Actions</div>
+      <div class="wf-box">Recalibration Queue: Table: Queue ID | Ride | Action Required | Status | Created | Actions</div>
+      <div class="wf-box success">Actions: Dismiss, Escalate, Mark Resolved</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-035 / Trust & Safety / monitoring</td></tr>
+      <tr><th>Purpose</th><td>Fraud flag review + zone recalibration queue</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: tab switch, action, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Tab bar, AdminTables, action buttons (Dismiss/Escalate/Resolved)</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No flags/queue items", <span class="tag">success</span> tables</td></tr>
+      <tr><th>Actions</th><td>Dismiss, Escalate, Mark Resolved, refresh</td></tr>
+      <tr><th>Data shown</th><td>fraud_flags id, ride_id, driver_id, rider_id, flag_type, status, created_at; recalibration_queue id, ride_id, action_required, status, created_at</td></tr>
+      <tr><th>Source</th><td>app/admin/trust-safety.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-036 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-036</span>
+      <span class="screen-name">Zone P&L</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Zone P&L"</div>
+      <div class="wf-row">
+        <div class="wf-box">Select: Zone</div>
+        <div class="wf-box">Select: Period (7d / 30d / 90d / 1y)</div>
+      </div>
+      <div class="wf-box">Summary cards: Revenue ৳ | Commission ৳ | Tax ৳ | Net P&L ৳</div>
+      <div class="wf-box">Table: Category (Bike/Car/...) | Rides | Revenue | Commission | Tax | Net</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-036 / Zone P&L / monitoring</td></tr>
+      <tr><th>Purpose</th><td>Zone-level profit & loss by category</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Zone selector, period selector, summary stat cards, category breakdown table</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No data", <span class="tag">success</span> cards + table</td></tr>
+      <tr><th>Actions</th><td>Change zone/period, refresh</td></tr>
+      <tr><th>Data shown</th><td>revenue_bdt, commission_bdt, tax_bdt, net_pnl_bdt; per category vehicle_type, ride_count, revenue_bdt, commission_bdt, tax_bdt, net_bdt</td></tr>
+      <tr><th>Source</th><td>app/admin/zone-pnl.tsx</td></tr>
+    </table>
+  </div>
+</body>
+</html>

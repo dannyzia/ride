@@ -316,6 +316,13 @@
       "when": 1787500000000,
       "tag": "0045_seed_premium_allowlist",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1787550000000,
+      "tag": "0047_rbac_admin_roles",
+      "breakpoints": true
     }
   ]
 }

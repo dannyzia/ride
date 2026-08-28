@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Questions Annex</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 24px; color: #333; }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    a { color: #2563eb; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .subtitle { color: #666; font-size: 13px; margin: 0 0 18px; }
+    .back { font-size: 12px; margin-bottom: 16px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    th, td { padding: 9px 11px; text-align: left; font-size: 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { background: #fafafa; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; color: #555; }
+    tr:hover { background: #f9f9f9; }
+    .cat { font-weight: 700; white-space: nowrap; }
+    .impact { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+    .impact.high { background: #fee2e2; color: #b91c1c; }
+    .impact.med { background: #fef3c7; color: #92400e; }
+    .impact.low { background: #dcfce7; color: #166534; }
+    footer { margin-top: 20px; font-size: 11px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Open Questions Annex</h1>
+    <p class="subtitle">Screens and states that could not be accessed or fully verified during the wireframe documentation process.</p>
+    <a class="back" href="../index.html">&larr; Back to master index</a>
+
+    <table>
+      <thead>
+        <tr><th>Category</th><th>Screen / State</th><th>Why Unreachable</th><th>Impact</th><th>Recommended Action</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="cat">Role-gated</td>
+          <td>Admin dashboard, driver queue, config, packages, incentives, promos, preferences, referral campaigns, point offers, vehicle models, sample media, platform config, monitoring</td>
+          <td>Requires verified admin/driver role and RLS policies that could not be granted during documentation.</td>
+          <td><span class="impact high">High</span></td>
+          <td>Assign admin role in staging; run API route smoke tests with <code>requireRole</code> to verify each gated screen.</td>
+        </tr>
+        <tr>
+          <td class="cat">Permissions</td>
+          <td>Location picker, map search, notification opt-in, camera/document upload</td>
+          <td>OS-level permission dialogs are outside app control; static wireframes cannot trigger grant/deny flows.</td>
+          <td><span class="impact med">Medium</span></td>
+          <td>Capture iOS and Android permission states manually; add to test matrix (see TD-01).</td>
+        </tr>
+        <tr>
+          <td class="cat">Device-specific</td>
+          <td>Tablet layouts, iOS notch/safe-area, Android navigation bar, foldable split-screen</td>
+          <td>Documentation run on desktop; no physical tablets or emulators with varying DPI/aspect ratios.</td>
+          <td><span class="impact med">Medium</span></td>
+          <td>Test on iPhone SE, iPhone 15 Pro Max, Pixel 7, and a 10\" tablet; verify no overflow.</td>
+        </tr>
+        <tr>
+          <td class="cat">Edge states</td>
+          <td>Empty rides list, empty wallet, zero calls remaining, no nearby drivers, no vehicles available</td>
+          <td>Cannot seed negative or boundary data in production-like environments without fixtures.</td>
+          <td><span class="impact med">Medium</span></td>
+          <td>Add seeded fixtures for each empty state; document fallback UI and retry affordance.</td>
+        </tr>
+        <tr>
+          <td class="cat">Dynamic params</td>
+          <td>Ride detail <code>[rideId]</code>, payment receipt <code>[id]</code>, date-filtered screens</td>
+          <td>Dynamic segments depend on live DB records; no UUIDs available during static documentation.</td>
+          <td><span class="impact high">High</span></td>
+          <td>Create staging rides/payments; exercise every <code>[id]</code> route with real IDs.</td>
+        </tr>
+        <tr>
+          <td class="cat">Payment WebView</td>
+          <td>PortPos success, failure, pending, and callback verification flows</td>
+          <td>WebView requires live PortPos invoice; sandbox credentials unavailable for documentation.</td>
+          <td><span class="impact high">High</span></td>
+          <td>Use PortPos sandbox; assert callback signature, invoice matching, and wallet credit. See <code>lib/portpos.ts</code>.</td>
+        </tr>
+        <tr>
+          <td class="cat">WebSocket</td>
+          <td><code>ride:offer</code>, <code>fetch:confirm</code>, <code>ride:expired</code>, <code>ride:cancelled</code>, <code>location:update</code></td>
+          <td>WebSocket events require active dispatch chain and real-time socket connection not available in static docs.</td>
+          <td><span class="impact high">High</span></td>
+          <td>Run <code>utils-server</code> locally; simulate each event via test harness or Postman WebSocket client.</td>
+        </tr>
+        <tr>
+          <td class="cat">Deep links</td>
+          <td><code>/track</code>, ride share links, driver invite links</td>
+          <td>Deep links require app registration and OS intent handling; cannot be opened from browser docs.</td>
+          <td><span class="impact med">Medium</span></td>
+          <td>Register schemes in <code>app.json</code>; test via <code>adb shell am start</code> and XCUITest.</td>
+        </tr>
+        <tr>
+          <td class="cat">Offline</td>
+          <td>Network-loss banner, offline ride request queue, sync-on-reconnect</td>
+          <td>Cannot simulate sustained offline or flaky network from static documentation environment.</td>
+          <td><span class="impact med">Medium</span></td>
+          <td>Use airplane mode and Charles Proxy throttling; verify queue persistence and retry logic.</td>
+        </tr>
+        <tr>
+          <td class="cat">Permission denied</td>
+          <td>Location off fallback, notifications blocked, camera denied, storage denied</td>
+          <td>Denied states require pre-configuration of OS permissions; not reproducible in fresh emulator.</td>
+          <td><span class="impact med">Medium</span></td>
+          <td>Pre-configure denied permissions in test profiles; verify graceful degradation and re-prompt flow.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <footer>Generated 2026-08-26 &middot; Source: <code>docs/wireframes/</code> &middot; Linked from master index <a href="../index.html">docs/wireframes/index.html</a></footer>
+  </div>
+</body>
+</html>

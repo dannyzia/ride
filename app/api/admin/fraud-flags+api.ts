@@ -1,5 +1,5 @@
 import { db } from '@/src/db';
-import { fraudFlags, drivers, users } from '@/src/db/schema';
+import { fraudFlags, drivers, users, zoneRecalibrationQueue, zones } from '@/src/db/schema';
 import { eq, and, desc, sql, count } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -72,11 +72,35 @@ export async function GET(request: Request) {
       .limit(limit)
       .offset(offset);
 
+    // Zone recalibration queue (open items, newest first)
+    const recalRows = await db
+      .select({
+        id: zoneRecalibrationQueue.id,
+        zone_id: zoneRecalibrationQueue.zone_id,
+        zone_name: zones.name,
+        deviation_pct: zoneRecalibrationQueue.deviation_pct,
+        sample_count: zoneRecalibrationQueue.sample_count,
+        status: zoneRecalibrationQueue.status,
+        created_at: zoneRecalibrationQueue.created_at,
+      })
+      .from(zoneRecalibrationQueue)
+      .leftJoin(zones, eq(zoneRecalibrationQueue.zone_id, zones.id))
+      .orderBy(desc(zoneRecalibrationQueue.created_at));
+
     return Response.json({
-      flags: rows,
+      fraud_flags: rows,
       total: Number(totalRow?.total ?? 0),
       limit,
       offset,
+      recalibration_queue: recalRows.map((r) => ({
+        id: r.id,
+        zone_id: r.zone_id,
+        zone_name: r.zone_name,
+        deviation_pct: r.deviation_pct !== null ? Number(r.deviation_pct) : 0,
+        sample_count: r.sample_count,
+        status: r.status,
+        created_at: r.created_at,
+      })),
     });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard Module Wireframes</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; color: #333; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+    .flow { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .flow-title { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 12px; color: #555; }
+    .flow-box { display: inline-block; background: #e8e8e8; border: 2px solid #333; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; margin: 4px; }
+    .flow-arrow { display: inline-block; font-size: 18px; margin: 4px; color: #666; }
+    .screen { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .screen-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .screen-id { background: #333; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+    .screen-name { font-size: 16px; font-weight: 700; }
+    .screen-fw { background: #dc2626; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .wireframe { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .wf-box { border: 2px solid #333; background: #fafafa; padding: 10px; border-radius: 6px; font-size: 12px; }
+    .wf-box.primary { background: #e3f2fd; border-color: #1976d2; }
+    .wf-box.danger { background: #ffebee; border-color: #c62828; }
+    .wf-box.success { background: #e8f5e9; border-color: #2e7d32; }
+    .wf-box.warning { background: #fff3e0; border-color: #ef6c00; }
+    .wf-row { display: flex; gap: 8px; }
+    .wf-row > * { flex: 1; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { background: #fafafa; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; color: #555; width: 140px; }
+    td { color: #444; }
+    .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #e8e8e8; }
+  </style>
+</head>
+<body>
+  <h1>Admin Dashboard Module</h1>
+  <p class="subtitle">Screens: A-001, A-002 | Flow: Admin shell → Dashboard / Live Ops</p>
+
+  <div class="flow">
+    <div class="flow-title">Navigation Flow</div>
+    <span class="flow-box">Admin Layout</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-box">Dashboard (A-001)</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-box">Live Ops (A-002)</span>
+  </div>
+
+  <!-- A-001 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-001</span>
+      <span class="screen-name">Admin Dashboard</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Dashboard"</div>
+      <div class="wf-row">
+        <div class="wf-box">Stat Card<br>Active Drivers</div>
+        <div class="wf-box">Stat Card<br>Pending Approvals</div>
+        <div class="wf-box">Stat Card<br>Today's Rides</div>
+        <div class="wf-box">Stat Card<br>Today Commission</div>
+        <div class="wf-box">Stat Card<br>Pending Documents</div>
+      </div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-001 / Admin Dashboard / dashboard</td></tr>
+      <tr><th>Purpose</th><td>Operational overview with key KPI stat cards</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin layout default. Exit: navigate to other admin screens via sidebar.</td></tr>
+      <tr><th>UI elements</th><td>AdminShell header, 5x StatCard (label + value + color), loading spinner</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">success</span> 5 stat cards, <span class="tag">error</span> implicit (stats null)</td></tr>
+      <tr><th>Actions</th><td>None (read-only)</td></tr>
+      <tr><th>Data shown</th><td>active_drivers, pending_approvals, today_rides, today_commission_bdt, pending_documents</td></tr>
+      <tr><th>Source</th><td>app/admin/index.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-002 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-002</span>
+      <span class="screen-name">Live Ops</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Live Ops"</div>
+      <div class="wf-row">
+        <div class="wf-box">Stat Card<br>Active Drivers</div>
+        <div class="wf-box">Stat Card<br>Dispatching</div>
+        <div class="wf-box">Stat Card<br>Matched</div>
+        <div class="wf-box">Stat Card<br>In Progress</div>
+        <div class="wf-box">Stat Card<br>Completed (5m)</div>
+      </div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-002 / Live Ops / dashboard</td></tr>
+      <tr><th>Purpose</th><td>Real-time operational overview with auto-refresh</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin layout. Exit: sidebar navigation.</td></tr>
+      <tr><th>UI elements</th><td>AdminShell header, 5x StatCard, auto-refresh interval (5s)</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">success</span> 5 stat cards</td></tr>
+      <tr><th>Actions</th><td>None (read-only, auto-refreshes)</td></tr>
+      <tr><th>Data shown</th><td>active_drivers, dispatching, matched, in_progress, recent_completed</td></tr>
+      <tr><th>Source</th><td>app/admin/live-ops.tsx</td></tr>
+    </table>
+  </div>
+</body>
+</html>

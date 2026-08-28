@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ride — Shared Components Wireframe</title>
+<style>
+  :root { --bg:#f5f5f5; --surface:#ffffff; --border:#d4d4d4; --text:#262626; --muted:#737373; --accent:#525252; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); padding:32px; font-size:13px; line-height:1.4; }
+  h1 { font-size:22px; margin-bottom:4px; }
+  h2 { font-size:16px; margin:32px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--border); }
+  h3 { font-size:13px; margin:0 0 6px; }
+  .note { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:14px 16px; margin:16px 0 24px; }
+  .note strong { display:block; margin-bottom:6px; }
+  .component { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:24px; }
+  .meta-table { width:100%; border-collapse:collapse; margin-bottom:16px; font-size:12px; }
+  .meta-table td, .meta-table th { border:1px solid var(--border); padding:6px 10px; text-align:left; vertical-align:top; }
+  .meta-table th { background:#e5e5e5; width:120px; font-weight:600; }
+  .wireframe { border:1px dashed var(--border); border-radius:6px; padding:20px; background:#fafafa; display:flex; align-items:center; justify-content:center; min-height:80px; }
+  .wireframe.dark { background:#1a1a1a; }
+  .wireframe-row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+  .wireframe-row > * { flex:1; min-width:200px; }
+  .tag { display:inline-block; background:#e5e5e5; border:1px solid var(--border); border-radius:3px; padding:1px 6px; font-size:10px; margin:2px; }
+  .total { font-size:15px; font-weight:700; margin-bottom:16px; }
+  /* Wireframe primitive styles */
+  .wf-btn { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 20px; border-radius:22px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); font-size:13px; font-weight:600; }
+  .wf-btn.primary { background:#404040; color:#fff; border-color:#404040; }
+  .wf-btn.secondary { background:transparent; }
+  .wf-btn.danger { background:#dc2626; color:#fff; border-color:#dc2626; }
+  .wf-btn.success { background:#16a34a; color:#fff; border-color:#16a34a; }
+  .wf-btn.outline { background:transparent; border-color:#404040; }
+  .wf-btn.disabled { opacity:0.45; }
+  .wf-input { width:100%; border:1.5px solid var(--border); border-radius:10px; padding:10px 14px; font-size:13px; background:var(--surface); color:var(--text); }
+  .wf-input.focused { border-color:#404040; border-width:2px; }
+  .wf-card { border:1px solid var(--border); border-radius:12px; padding:14px; background:var(--surface); }
+  .wf-modal { border:2px solid var(--border); border-radius:14px; padding:20px; background:var(--surface); width:100%; max-width:360px; }
+  .wf-sheet { border:2px solid var(--border); border-radius:20px 20px 0 0; padding:18px; background:var(--surface); width:100%; }
+  .wf-toast { border-radius:20px; padding:10px 18px; background:#404040; color:#fff; font-size:12px; display:inline-flex; align-items:center; gap:6px; }
+  .wf-toast.success { background:#16a34a; }
+  .wf-toast.error { background:#dc2626; }
+  .wf-toast.info { background:#404040; }
+  .wf-skeleton { background:#d4d4d4; border-radius:4px; height:12px; margin:6px 0; animation:pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:0.6} 50%{opacity:1} }
+  .wf-map { background:#e5e5e5; border-radius:12px; min-height:120px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:12px; position:relative; overflow:hidden; }
+  .wf-badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; border:1px solid var(--border); }
+  .wf-badge.success { background:#dcfce7; }
+  .wf-badge.danger { background:#fee2e2; }
+  .wf-badge.info { background:#dbeafe; }
+  .wf-badge.amber { background:#fef3c7; }
+  .wf-badge.primary { background:#e5e5e5; }
+  .wf-badge.neutral { background:#f5f5f5; }
+  .wf-avatar { width:40px; height:40px; border-radius:50%; background:#404040; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; }
+  .wf-circle { width:12px; height:12px; border-radius:50%; background:var(--border); }
+  .wf-line { height:8px; background:#d4d4d4; border-radius:4px; }
+  .wf-bar { height:16px; background:#a3a3a3; border-radius:4px; }
+  .wf-divider { height:1px; background:var(--border); margin:8px 0; }
+  .wf-row { display:flex; align-items:center; gap:10px; padding:8px 0; }
+  .wf-pill { padding:4px 10px; border-radius:999px; font-size:11px; border:1px solid var(--border); background:var(--surface); }
+  .wf-icon { width:20px; height:20px; background:#a3a3a3; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; font-size:10px; color:#fff; }
+  .label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:4px; }
+  .small { font-size:11px; color:var(--muted); }
+  .count-badge { background:#404040; color:#fff; border-radius:999px; padding:2px 8px; font-size:11px; font-weight:700; }
+</style>
+</head>
+<body>
+
+<h1>Ride — Shared UI Components</h1>
+<div class="total">Total Components: <span class="count-badge">32</span></div>
+
+<div class="note">
+  <strong>What exists</strong>
+  The Ride project has a flat <code>components/</code> directory with shared building blocks used across rider, driver, and admin screens. Key modules: <code>components/</code> (root shared), <code>components/admin/</code> (admin-panel primitives), <code>components/auth/</code> (auth guards). Components are PascalCase .tsx files. All use the goRide theme tokens and support dark mode via <code>useIsDark()</code>. No third-party UI kit — all components are hand-built with React Native primitives.
+</div>
+
+<!-- ============ C-001: CustomButton ============ -->
+<h2>C-001 — CustomButton</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-001</td></tr>
+    <th>Name</th><td>CustomButton</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Primary action button with press-scale animation, icon slots, and semantic variants.</td></tr>
+    <th>Variants/States</th><td>primary (default), secondary, danger, success, outline, disabled</td></tr>
+    <th>Props/Inputs</th><td>onPress, disabled, title, bgVariant, textVariant, IconLeft, IconRight, className</td></tr>
+    <th>Typical Usage</th><td>Every screen — confirm, submit, cancel, destructive actions.</td></tr>
+    <th>Source</th><td>components/CustomButton.tsx</td></tr>
+  </table>
+  <div class="wireframe-row">
+    <div>
+      <div class="label">Primary</div>
+      <div class="wireframe"><span class="wf-btn primary">Continue</span></div>
+    </div>
+    <div>
+      <div class="label">Secondary</div>
+      <div class="wireframe"><span class="wf-btn secondary">Cancel</span></div>
+    </div>
+    <div>
+      <div class="label">Danger</div>
+      <div class="wireframe"><span class="wf-btn danger">Delete</span></div>
+    </div>
+    <div>
+      <div class="label">Success</div>
+      <div class="wireframe"><span class="wf-btn success">Confirm</span></div>
+    </div>
+    <div>
+      <div class="label">Outline</div>
+      <div class="wireframe"><span class="wf-btn outline">Back</span></div>
+    </div>
+    <div>
+      <div class="label">Disabled</div>
+      <div class="wireframe"><span class="wf-btn primary disabled">Submit</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-002: InputField ============ -->
+<h2>C-002 — InputField</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-002</td></tr>
+    <th>Name</th><td>InputField</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Text input with label, leading icon, focus state, and optional secure-entry toggle.</td></tr>
+    <th>Variants/States</th><td>default, focused, with-icon, secure-text (password toggle)</td></tr>
+    <th>Props/Inputs</th><td>label, labelStyle, icon, secureTextEntry, containerStyle, inputStyle, iconStyle, +TextInput props</td></tr>
+    <th>Typical Usage</th><td>Auth screens, search, form fields.</td></tr>
+    <th>Source</th><td>components/InputField.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div style="width:100%;max-width:340px;">
+      <div class="label">Phone Number</div>
+      <div class="wf-input" style="margin-bottom:12px;">Enter your phone</div>
+      <div class="label">Password</div>
+      <div class="wf-input">•••••••• <span style="float:right;color:var(--muted);">eye</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-003: Toast ============ -->
+<h2>C-003 — Toast</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-003</td></tr>
+    <th>Name</th><td>Toast / ToastHost</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Imperative non-blocking toast notification, bottom-anchored. Mount ToastHost once at root.</td></tr>
+    <th>Variants/States</th><td>success (default), info, error, visible, auto-dismiss (2200ms)</td></tr>
+    <th>Props/Inputs</th><td>showToast(message, type), ToastHost() — no props</td></tr>
+    <th>Typical Usage</th><td>Form submissions, errors, confirmations across all screens.</td></tr>
+    <th>Source</th><td>components/Toast.tsx</td></tr>
+  </table>
+  <div class="wireframe-row">
+    <div><div class="label">Success</div><div class="wireframe"><span class="wf-toast success">✓ Rating submitted</span></div></div>
+    <div><div class="label">Info</div><div class="wireframe"><span class="wf-toast info">ℹ Offer pending</span></div></div>
+    <div><div class="label">Error</div><div class="wireframe"><span class="wf-toast error">⚠ Something failed</span></div></div>
+  </div>
+</div>
+
+<!-- ============ C-004: Skeleton ============ -->
+<h2>C-004 — Skeleton</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-004</td></tr>
+    <th>Name</th><td>Skeleton</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Shimmer placeholder block for loading states.</td></tr>
+    <th>Variants/States</th><td>default (animated shimmer)</td></tr>
+    <th>Props/Inputs</th><td>width, height, className</td></tr>
+<th>Typical Usage</th><td>Wrapped by domain-specific skeletons (RideCardSkeleton, WalletSkeleton, NotificationSkeleton).</td></tr>
+    <th>Source</th><td>components/Skeleton.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div style="width:100%;max-width:300px;">
+      <div class="wf-skeleton" style="width:100%;height:14px;"></div>
+      <div class="wf-skeleton" style="width:80%;height:14px;"></div>
+      <div class="wf-skeleton" style="width:60%;height:14px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-005: Map ============ -->
+<h2>C-005 — Map</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-005</td></tr>
+    <th>Name</th><td>Map</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>MapLibreGL map with live user location, static snapshot (origin/destination + route), and hotspot overlay modes.</td></tr>
+    <th>Variants/States</th><td>live-gps, static-snapshot, hotspot-overlay, gps-loading</td></tr>
+    <th>Props/Inputs</th><td>origin?, destination?, route?, hotspots?</td></tr>
+    <th>Typical Usage</th><td>RideLayout, driver hotspot map, ride detail static view.</td></tr>
+    <th>Source</th><td>components/Map.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div class="wf-map" style="width:100%;min-height:140px;">
+      [Map View — Markers + Route Polyline]
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-006: RideCard ============ -->
+<h2>C-006 — RideCard</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-006</td></tr>
+    <th>Name</th><td>RideCard</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>History list item showing ride origin, destination, date, and driver.</td></tr>
+    <th>Variants/States</th><td>default (tappable)</td></tr>
+    <th>Props/Inputs</th><td>ride: RideData</td></tr>
+    <th>Typical Usage</th><td>Rider ride history list.</td></tr>
+    <th>Source</th><td>components/RideCard.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div class="wf-card" style="max-width:380px;">
+      <div class="wf-row"><div class="wf-icon" style="width:60px;height:60px;border-radius:8px;">map</div><div style="flex:1;">
+        <div class="wf-line" style="width:90%;"></div>
+        <div class="wf-line" style="width:70%;margin-top:6px;"></div>
+      </div></div>
+      <div class="wf-divider"></div>
+      <div class="wf-row"><span>Ride Date</span><span style="margin-left:auto;">Jun 15</span></div>
+      <div class="wf-row"><span>Driver</span><span style="margin-left:auto;">Karim U.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-007: Badge ============ -->
+<h2>C-007 — Badge</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-007</td></tr>
+    <th>Name</th><td>Badge</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Semantic status pill with uppercase label.</td></tr>
+    <th>Variants/States</th><td>success, danger, info, amber, primary, neutral</td></tr>
+    <th>Props/Inputs</th><td>text, variant?</td></tr>
+    <th>Typical Usage</th><td>Status indicators across screens.</td></tr>
+    <th>Source</th><td>components/Badge.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div class="wireframe">
+      <span class="wf-badge success">Active</span>
+      <span class="wf-badge danger">Blocked</span>
+      <span class="wf-badge info">Info</span>
+      <span class="wf-badge amber">Pending</span>
+      <span class="wf-badge primary">Primary</span>
+      <span class="wf-badge neutral">Neutral</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-008: Avatar ============ -->
+<h2>C-008 — Avatar</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-008</td></tr>
+    <th>Name</th><td>Avatar</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Remote image with initials-circle fallback.</td></tr>
+    <th>Variants/States</th><td>image-loaded, initials-fallback, with-border</td></tr>
+    <th>Props/Inputs</th><td>uri?, name?, size?, borderWidth?</td></tr>
+    <th>Typical Usage</th><td>User/driver/rider profile pictures.</td></tr>
+    <th>Source</th><td>components/Avatar.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div class="wf-avatar">KU</div>
+    <span style="margin-left:12px;color:var(--muted);">48px default, initials fallback</span>
+  </div>
+</div>
+
+<!-- ============ C-009: ErrorBanner ============ -->
+<h2>C-009 — ErrorBanner</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-009</td></tr>
+    <th>Name</th><td>ErrorBanner</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Retryable error banner with tinted surface and alert icon.</td></tr>
+    <th>Variants/States</th><td>error, warning, info, with-retry, retrying</td></tr>
+    <th>Props/Inputs</th><td>message, type?, onRetry?, retrying?</td></tr>
+    <th>Typical Usage</th><td>API error states, network failures.</td></tr>
+    <th>Source</th><td>components/ErrorBanner.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div style="width:100%;max-width:360px;border:1px solid #fca5a5;border-radius:10px;padding:12px;background:#fef2f2;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:16px;">⚠</span>
+      <span style="flex:1;color:#dc2626;font-size:13px;">Failed to load data</span>
+      <span style="color:#dc2626;font-weight:700;font-size:13px;">Retry</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-010: EmptyState ============ -->
+<h2>C-010 — EmptyState</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-010</td></tr>
+    <th>Name</th><td>EmptyState</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Centered empty-list placeholder with icon, title, subtitle, and optional action.</td></tr>
+    <th>Variants/States</th><td>default, with-action</td></tr>
+    <th>Props/Inputs</th><td>icon, iconSize?, title, subtitle?, actionLabel?, onAction?</td></tr>
+    <th>Typical Usage</th><td>Empty lists (rides, notifications, wallet transactions).</td></tr>
+    <th>Source</th><td>components/EmptyState.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div style="text-align:center;padding:24px;">
+      <div style="font-size:36px;color:#a3a3a3;">📋</div>
+      <div style="font-weight:600;margin-top:8px;">No rides yet</div>
+      <div style="font-size:12px;color:var(--muted);">Your ride history will appear here</div>
+      <div style="margin-top:14px;"><span class="wf-btn primary">Book a Ride</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-011: ProgressBar ============ -->
+<h2>C-011 — ProgressBar</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-011</td></tr>
+    <th>Name</th><td>ProgressBar</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Clamped percentage fill on a tinted track with optional label.</td></tr>
+    <th>Variants/States</th><td>0–100% fill, with-label</td></tr>
+    <th>Props/Inputs</th><td>current, total, height?, label?</td></tr>
+    <th>Typical Usage</th><td>Verification steps, package usage.</td></tr>
+    <th>Source</th><td>components/ProgressBar.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div style="width:100%;max-width:320px;">
+      <div style="height:8px;border-radius:999px;background:#dcfce7;overflow:hidden;"><div style="width:65%;height:100%;background:#404040;border-radius:999px;"></div></div>
+      <div class="small" style="margin-top:4px;">3 of 5 documents</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-012: SlideButton ============ -->
+<h2>C-012 — SlideButton</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-012</td></tr>
+    <th>Name</th><td>SlideButton</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Slide-to-confirm gesture button (PanResponder + Animated).</td></tr>
+    <th>Variants/States</th><td>idle, sliding, completed (snaps back)</td></tr>
+    <th>Props/Inputs</th><td>title, onComplete, bgColor?, textColor?</td></tr>
+    <th>Typical Usage</th><td>RideOfferSheet accept action.</td></tr>
+    <th>Source</th><td>components/SlideButton.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div style="width:85%;max-width:300px;height:56px;border-radius:28px;background:#404040;display:flex;align-items:center;padding:0 6px;position:relative;">
+      <span style="color:#fff;font-weight:600;margin:0 auto;">Slide to Accept</span>
+      <div style="width:48px;height:48px;border-radius:24px;background:#fff;display:flex;align-items:center;justify-content:center;">›</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-013: RadioGroup ============ -->
+<h2>C-013 — RadioGroup</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-013</td></tr>
+    <th>Name</th><td>RadioGroup</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Single-select radio list.</td></tr>
+    <th>Variants/States</th><td>selected, unselected, disabled</td></tr>
+    <th>Props/Inputs</th><td>options: RadioOption[], value, onChange, disabled?</td></tr>
+    <th>Typical Usage</th><td>Cancel reason, settings selection.</td></tr>
+    <th>Source</th><td>components/RadioGroup.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:14px;border:1.5px solid #404040;border-radius:10px;">
+        <div style="width:20px;height:20px;border-radius:50%;border:2px solid #404040;display:flex;align-items:center;justify-content:center;"><div style="width:10px;height:10px;border-radius:50%;background:#404040;"></div></div>
+        <span>Changed my mind</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px;border:1.5px solid var(--border);border-radius:10px;">
+        <div style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border);"></div>
+        <span>Driver not coming</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px;border:1.5px solid var(--border);border-radius:10px;">
+        <div style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border);"></div>
+        <span>Other</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-014: CheckboxGroup ============ -->
+<h2>C-014 — CheckboxGroup</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-014</td></tr>
+    <th>Name</th><td>CheckboxGroup</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Multi-select checkbox list with optional descriptions.</td></tr>
+    <th>Variants/States</th><td>checked, unchecked, disabled</td></tr>
+    <th>Props/Inputs</th><td>options: CheckboxOption[], selected, onToggle, disabled?</td></tr>
+    <th>Typical Usage</th><td>Vehicle preferences, filter options.</td></tr>
+    <th>Source</th><td>components/CheckboxGroup.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:14px;border:1.5px solid #404040;border-radius:10px;background:#f5f5f5;">
+        <div style="width:22px;height:22px;border-radius:4px;background:#404040;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;">✓</div>
+        <div><div>AC</div><div class="small">Air conditioned</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px;border:1.5px solid var(--border);border-radius:10px;">
+        <div style="width:22px;height:22px;border-radius:4px;border:2px solid var(--border);"></div>
+        <div><div>Female Driver</div><div class="small">Women preference</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-015: PinInput ============ -->
+<h2>C-015 — PinInput</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-015</td></tr>
+    <th>Name</th><td>PinInput</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>4-digit PIN entry with hidden auto-focusable TextInput driving rendered boxes.</td></tr>
+    <th>Variants/States</th><td>empty, filled, error, auto-focus</td></tr>
+    <th>Props/Inputs</th><td>value, onChange, length?, error?, autoFocus?, accessibilityLabel?</td></tr>
+    <th>Typical Usage</th><td>OTP verification, ride PIN confirmation.</td></tr>
+    <th>Source</th><td>components/PinInput.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <div style="width:56px;height:56px;border:2px solid #404040;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;">3</div>
+      <div style="width:56px;height:56px;border:2px solid #404040;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;">7</div>
+      <div style="width:56px;height:56px;border:2px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--muted);">•</div>
+      <div style="width:56px;height:56px;border:2px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--muted);">•</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-016: StatusBadge ============ -->
+<h2>C-016 — StatusBadge</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-016</td></tr>
+    <th>Name</th><td>StatusBadge</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Ride status pill (completed/cancelled/in_progress/scheduled).</td></tr>
+    <th>Variants/States</th><td>completed, cancelled, in_progress, scheduled, size-sm, size-md</td></tr>
+    <th>Props/Inputs</th><td>status, size?</td></tr>
+    <th>Typical Usage</th><td>Ride history, tracking.</td></tr>
+    <th>Source</th><td>components/StatusBadge.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <span class="wf-badge primary">Completed</span>
+    <span class="wf-badge danger">Cancelled</span>
+    <span class="wf-badge amber">In Progress</span>
+    <span class="wf-badge info">Scheduled</span>
+  </div>
+</div>
+
+<!-- ============ C-017: RideOfferSheet ============ -->
+<h2>C-017 — RideOfferSheet</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-017</td></tr>
+    <th>Name</th><td>RideOfferSheet</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Bottom sheet for incoming ride offers — rider info, fare, countdown ring, slide-to-accept + decline.</td></tr>
+    <th>Variants/States</th><td>visible, scheduled-badge, with-tip, with-preferences</td></tr>
+    <th>Props/Inputs</th><td>None — reads from useDriverFlowStore.activeOffer</td></tr>
+    <th>Typical Usage</th><td>Driver home screen offer overlay.</td></tr>
+    <th>Source</th><td>components/RideOfferSheet.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div class="wf-sheet" style="max-width:380px;">
+      <div class="wf-row">
+        <div class="wf-circle" style="width:44px;height:44px;background:#d4d4d4;display:flex;align-items:center;justify-content:center;font-size:10px;">⏱</div>
+        <div style="flex:1;"><strong>New Ride Offer</strong><br><span class="small">SCHEDULED</span></div>
+      </div>
+      <div class="wf-divider"></div>
+      <div class="wf-row"><div class="wf-avatar" style="width:36px;height:36px;font-size:13px;">R</div><div style="flex:1;">Rider<br><span class="small">★ 4.8</span></div><div style="font-size:20px;font-weight:700;">৳120</div></div>
+      <div class="wf-divider"></div>
+      <div class="wf-row"><span class="wf-pill">pickup 1.2km</span><span class="wf-pill">~4 min</span><span class="wf-pill">Lead: 1 call</span></div>
+      <div class="wf-divider"></div>
+      <div class="wf-row"><div class="wf-circle" style="width:8px;height:8px;background:#404040;border-radius:50%;"></div><span>Pickup location</span><span class="wf-pill" style="margin-left:auto;">Hot</span></div>
+      <div class="wf-row"><div class="wf-circle" style="width:8px;height:8px;background:#dc2626;border-radius:50%;"></div><span>Drop zone</span></div>
+      <div style="margin-top:14px;"><div class="wf-btn primary" style="border-radius:28px;width:100%;">Slide to Accept ›</div></div>
+      <div style="margin-top:8px;"><div class="wf-btn secondary" style="border-radius:28px;width:100%;">Decline</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-018: FareBreakdownSheet ============ -->
+<h2>C-018 — FareBreakdownSheet</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-018</td></tr>
+    <th>Name</th><td>FareBreakdownSheet</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Collapsible fare breakdown card — total always visible, detail rows expand on tap.</td></tr>
+    <th>Variants/States</th><td>collapsed, expanded, with-pickup-fee</td></tr>
+    <th>Props/Inputs</th><td>fareBreakdown: Record&lt;string, any&gt;</td></tr>
+    <th>Typical Usage</th><td>Ride detail, post-ride screens.</td></tr>
+    <th>Source</th><td>components/FareBreakdownSheet.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div class="wf-card" style="max-width:360px;">
+      <div class="wf-row" style="justify-content:space-between;"><strong>Total</strong><strong style="color:#404040;">৳250</strong></div>
+      <div class="wf-divider"></div>
+      <div class="wf-row" style="justify-content:space-between;"><span>Base fare</span><span>৳80</span></div>
+      <div class="wf-row" style="justify-content:space-between;"><span>Distance charge</span><span>৳120</span></div>
+      <div class="wf-row" style="justify-content:space-between;"><span>Pickup fee</span><span>৳50</span></div>
+      <div class="small" style="color:#d97706;">(adjusted for actual distance)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-019: AlternativesSheet ============ -->
+<h2>C-019 — AlternativesSheet</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-019</td></tr>
+    <th>Name</th><td>AlternativesSheet</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>"No drivers available" — suggests alternative vehicle types.</td></tr>
+    <th>Variants/States</th><td>visible, hidden (when no alternatives)</td></tr>
+    <th>Props/Inputs</th><td>visible, alternatives, onSelect, onCancel</td></tr>
+    <th>Typical Usage</th><td>Rider find-ride when primary vehicle has no drivers.</td></tr>
+    <th>Source</th><td>components/AlternativesSheet.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div class="wf-sheet" style="max-width:380px;">
+      <div style="text-align:center;margin-bottom:12px;"><strong>No drivers available</strong><br><span class="small">Try an alternative vehicle type</span></div>
+      <div class="wf-card"><div class="wf-row"><div><strong>Bike Standard</strong><br><span class="small">3 drivers nearby</span></div><div style="margin-left:auto;"><strong>৳80</strong><br><span class="tag">Select</span></div></div></div>
+      <div class="wf-card"><div class="wf-row"><div><strong>CNG</strong><br><span class="small">1 driver nearby</span></div><div style="margin-left:auto;"><strong>৳120</strong><br><span class="tag">Select</span></div></div></div>
+      <div class="wf-btn danger" style="border-radius:28px;width:100%;text-align:center;">Cancel Request</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-020: ScheduleRideSheet ============ -->
+<h2>C-020 — ScheduleRideSheet</h2>
+<div class="component">
+  <table class="meta-table">
+    <th>ID</th><td>C-020</td></tr>
+    <th>Name</th><td>ScheduleRideSheet</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Full date+time selection sheet for scheduling rides (Dhaka timezone, 7-day lead, 30-min minimum).</td></tr>
+    <th>Variants/States</th><td>date-selecting, time-selecting, overlap-error, loading-overlap, confirm-enabled, confirm-disabled</td></tr>
+    <th>Props/Inputs</th><td>onConfirm, onClose, initialDate?</td></tr>
+    <th>Typical Usage</th><td>Rider schedule-ride screen.</td></tr>
+    <th>Source</th><td>components/ScheduleRideSheet.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div class="wf-sheet" style="max-width:380px;">
+      <div class="wf-row" style="justify-content:space-between;"><span>✕</span><strong>Schedule Ride</span><span style="width:20px;"></span></div>
+      <div class="wf-row"><span class="wf-pill">Asia/Dhaka (UTC+6)</span></div>
+      <div class="label">Date</div>
+      <div class="wf-row"><span class="wf-pill" style="background:#404040;color:#fff;">Today 15</span><span class="wf-pill">Tomorrow 16</span><span class="wf-pill">Mon 17</span><span class="wf-pill">Tue 18</span></div>
+      <div class="label" style="margin-top:10px;">Time</div>
+      <div class="wf-row" style="flex-wrap:wrap;"><span class="wf-pill">14:00</span><span class="wf-pill" style="background:#404040;color:#fff;">14:30</span><span class="wf-pill">15:00</span><span class="wf-pill">15:30</span></div>
+      <div style="margin-top:12px;padding:10px;border:1px solid #a3a3a3;border-radius:8px;background:#f5f5f5;"><span style="font-size:12px;">⏱ Pickup at <strong>14:30, 15 Jun</strong></span></div>
+      <div class="wf-btn primary" style="border-radius:28px;width:100%;text-align:center;margin-top:14px;">Confirm Time</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-021: PickupFeeExplainerSheet ============ -->
+<h2>C-021 — PickupFeeExplainerSheet</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-021</td></tr>
+    <th>Name</th><td>PickupFeeExplainerSheet</td></tr>
+    <th>Module</th><td>shared-components</td></tr>
+    <th>Purpose</th><td>Modal explaining the pickup fee concept with illustration and dismiss-action (persisted via AsyncStorage).</td></tr>
+    <th>Variants/States</th><td>visible, hidden</td></tr>
+    <th>Props/Inputs</th><td>visible, onDismiss</td></tr>
+    <th>Typical Usage</th><td>Shown once to riders after first pickup-fee ride.</td></tr>
+    <th>Source</th><td>components/PickupFeeExplainerSheet.tsx</td></tr>
+  </table>
+  <div class="wireframe">
+    <div class="wf-modal" style="text-align:center;">
+      <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;"></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px;">
+        <div class="wf-circle" style="width:44px;height:44px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;">📍</div>
+        <div style="flex:1;height:2px;background:#d4d4d4;"></div>
+        <span style="font-size:24px;">🚗</span>
+        <div style="flex:1;height:2px;background:#d4d4d4;"></div>
+        <div class="wf-circle" style="width:44px;height:44px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;">🏁</div>
+      </div>
+      <div style="font-weight:700;margin-bottom:6px;">What is the pickup fee?</div>
+      <div class="small" style="margin-bottom:16px;line-height:1.5;">A small charge applied when the driver travels to reach your pickup point. It is already included in your fare total.</div>
+      <div class="wf-btn primary" style="width:100%;border-radius:22px;">Got it</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C-022: ChartBar ============ -->
+<h2>C-022 — ChartBar</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-022</td><th>Name</th><td>ChartBar</td></tr>
+    <tr><th>Module</th><td>shared-components</td><th>Purpose</th><td>Single-series vertical bar chart with axis labels and value tooltips.</td></tr>
+    <tr><th>Variants/States</th><td>default, grouped, highlighted-bar, empty</td><th>Props/Inputs</th><td>data:{label,value}[], maxValue?, highlightIndex?, barColor?</td></tr>
+    <tr><th>Typical Usage</th><td>Driver earnings history, heat analytics.</td><th>Source</th><td>components/ChartBar.tsx</td></tr>
+  </table>
+  <div class="wireframe"><div style="display:flex;align-items:flex-end;gap:14px;height:90px;"><div style="width:24px;height:30px;" class="wf-bar"></div><div style="width:24px;height:55px;" class="wf-bar"></div><div style="width:24px;height:80px;background:#404040;" class="wf-bar"></div><div style="width:24px;height:45px;" class="wf-bar"></div></div></div>
+</div>
+
+<!-- ============ C-023: ChartLine ============ -->
+<h2>C-023 — ChartLine</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-023</td><th>Name</th><td>ChartLine</td></tr>
+    <tr><th>Module</th><td>shared-components</td><th>Purpose</th><td>SVG line/area chart with optional gradient fill and point markers.</td></tr>
+    <tr><th>Variants/States</th><td>line, area, multi-series, with-markers, loading</td><th>Props/Inputs</th><td>data:number[], labels?, color?, areaFill?, height?</td></tr>
+    <tr><th>Typical Usage</th><td>Fare trends, demand curves, wallet balance over time.</td><th>Source</th><td>components/ChartLine.tsx</td></tr>
+  </table>
+  <div class="wireframe"><svg width="280" height="90" viewBox="0 0 280 90"><polyline points="10,70 70,50 130,60 190,30 250,20" fill="none" stroke="#404040" stroke-width="2"/><polyline points="10,70 70,50 130,60 190,30 250,20 250,90 10,90" fill="rgba(64,64,64,0.12)" stroke="none"/><circle cx="190" cy="30" r="3" fill="#404040"/><circle cx="250" cy="20" r="3" fill="#404040"/></svg></div>
+</div>
+
+<!-- ============ C-024: HeatmapOverlay ============ -->
+<h2>C-024 — HeatmapOverlay</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-024</td><th>Name</th><td>HeatmapOverlay</td></tr>
+    <tr><th>Module</th><td>shared-components</td><th>Purpose</th><td>Translucent demand heat blobs rendered over the map (zone_heat data).</td></tr>
+    <tr><th>Variants/States</th><td>low, medium, high, extreme (color intensity)</td><th>Props/Inputs</th><td>hotspots:{lat,lng,intensity}[], opacity?</td></tr>
+    <tr><th>Typical Usage</th><td>Driver hotspot map, rider find-ride demand view.</td><th>Source</th><td>components/HeatmapOverlay.tsx</td></tr>
+  </table>
+  <div class="wireframe"><div class="wf-map" style="width:100%;min-height:120px;"><div style="position:absolute;width:70px;height:70px;border-radius:50%;background:rgba(220,38,38,0.35);top:20px;left:40px;"></div><div style="position:absolute;width:50px;height:50px;border-radius:50%;background:rgba(234,179,8,0.35);top:50px;left:160px;"></div><div style="position:absolute;width:40px;height:40px;border-radius:50%;background:rgba(34,197,94,0.35);top:30px;left:220px;"></div></div></div>
+</div>
+
+<!-- ============ C-025: BarikoiAutocomplete ============ -->
+<h2>C-025 — BarikoiAutocomplete</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-025</td><th>Name</th><td>BarikoiAutocomplete</td></tr>
+    <tr><th>Module</th><td>shared-components</td><th>Purpose</th><td>Debounced Barikoi Places autocomplete input with suggestion list.</td></tr>
+    <tr><th>Variants/States</th><td>idle, typing, suggestions-open, selected, no-results, error</td><th>Props/Inputs</th><td>placeholder, onSelect, apiKey, initialValue?</td></tr>
+    <tr><th>Typical Usage</th><td>Pickup/drop selection, saved places, address entry.</td><th>Source</th><td>components/BarikoiAutocomplete.tsx</td></tr>
+  </table>
+  <div class="wireframe"><div style="width:100%;max-width:340px;"><div class="wf-input" style="margin-bottom:8px;">Gulshan 1</div><div class="wf-card" style="padding:8px;"><div class="wf-row" style="padding:6px 0;"><span class="wf-icon" style="width:18px;height:18px;font-size:9px;">📍</span> Gulshan-1, Dhaka</div><div class="wf-row" style="padding:6px 0;"><span class="wf-icon" style="width:18px;height:18px;font-size:9px;">📍</span> Gulshan-2, Dhaka</div></div></div></div>
+</div>
+
+<!-- ============ C-026: SOSButton ============ -->
+<h2>C-026 — SOSButton</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-026</td><th>Name</th><td>SOSButton</td></tr>
+    <tr><th>Module</th><td>shared-components</td><th>Purpose</th><td>Persistent emergency trigger with press-hold confirmation and trusted-contact notify.</td></tr>
+    <tr><th>Variants/States</th><td>idle, press-hold, confirming, triggered, resolved</td><th>Props/Inputs</th><td>onTrigger, contacts, label?</td></tr>
+    <tr><th>Typical Usage</th><td>Rider/driver trip screens, header emergency access.</td><th>Source</th><td>components/SOSButton.tsx</td></tr>
+  </table>
+  <div class="wireframe"><div style="width:64px;height:64px;border-radius:50%;background:#dc2626;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;box-shadow:0 0 0 6px rgba(220,38,38,0.2);">SOS</div><span style="margin-left:12px;color:var(--muted);">Press &amp; hold to alert</span></div>
+</div>
+
+<!-- ============ C-027: ThemeToggle ============ -->
+<h2>C-027 — ThemeToggle</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-027</td><th>Name</th><td>ThemeToggle</td></tr>
+    <tr><th>Module</th><td>shared-components</td><th>Purpose</th><td>Light/dark mode switch backed by goRide theme + useIsDark().</td></tr>
+    <tr><th>Variants/States</th><td>light, dark, system</td><th>Props/Inputs</th><td>value?, onChange?</td></tr>
+    <tr><th>Typical Usage</th><td>Settings theme screen, header quick toggle.</td><th>Source</th><td>components/ThemeToggle.tsx</td></tr>
+  </table>
+  <div class="wireframe"><div style="display:inline-flex;border:1.5px solid var(--border);border-radius:999px;padding:3px;"><span style="padding:5px 12px;border-radius:999px;background:#404040;color:#fff;font-size:11px;">☀ Light</span><span style="padding:5px 12px;border-radius:999px;font-size:11px;">🌙 Dark</span></div></div>
+</div>
+
+<!-- ============ C-028: PaymentWebView ============ -->
+<h2>C-028 — PaymentWebView</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-028</td><th>Name</th><td>PaymentWebView</td></tr>
+    <tr><th>Module</th><td>shared-components</td><th>Purpose</th><td>Embedded WebView for PortPos / gateway checkout with redirect+callback handling.</td></tr>
+    <tr><th>Variants/States</th><td>loading, processing, success-redirect, failure-redirect, timeout</td><th>Props/Inputs</th><td>url, onSuccess, onFailure, spinnerColor?</td></tr>
+    <tr><th>Typical Usage</th><td>Wallet top-up, package purchase, pass checkout.</td><th>Source</th><td>components/PaymentWebView.tsx</td></tr>
+  </table>
+  <div class="wireframe"><div style="width:100%;max-width:320px;border:1px solid var(--border);border-radius:10px;overflow:hidden;"><div class="wf-line" style="width:40%;margin:8px;"></div><div class="wf-skeleton" style="width:90%;margin:6px auto;"></div><div class="wf-skeleton" style="width:75%;margin:6px auto;"></div><div style="margin:12px;text-align:center;color:var(--muted);font-size:12px;">PortPos Secure Checkout…</div></div></div>
+</div>
+
+<!-- ============ C-029: NoDriversAvailableSheet ============ -->
+<h2>C-029 — NoDriversAvailableSheet</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-029</td><th>Name</th><td>NoDriversAvailableSheet</td></tr>
+    <tr><th>Module</th><td>shared-components</td><th>Purpose</th><td>Bottom sheet shown when no drivers match — offers retry, reschedule, or cancel.</td></tr>
+    <tr><th>Variants/States</th><td>visible, with-retry, with-reschedule, with-alternatives</td><th>Props/Inputs</th><td>onRetry, onReschedule, onCancel, vehicleType?</td></tr>
+    <tr><th>Typical Usage</th><td>Rider find-ride timeout.</td><th>Source</th><td>components/NoDriversAvailableSheet.tsx</td></tr>
+  </table>
+  <div class="wireframe"><div class="wf-sheet" style="max-width:380px;text-align:center;"><div style="font-size:34px;margin-bottom:8px;">🚗</div><div style="font-weight:700;">No drivers nearby</div><div class="small" style="margin:6px 0 14px;">We couldn't find a CNG right now</div><div class="wf-btn primary" style="border-radius:28px;width:100%;text-align:center;">Retry</div><div class="wf-btn secondary" style="border-radius:28px;width:100%;text-align:center;margin-top:8px;">Schedule for later</div><div class="wf-btn danger" style="border-radius:28px;width:100%;text-align:center;margin-top:8px;">Cancel</div></div></div>
+</div>
+
+<!-- ============ C-030: CancellationPoliciesSheet ============ -->
+<h2>C-030 — CancellationPoliciesSheet</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-030</td><th>Name</th><td>CancellationPoliciesSheet</td></tr>
+    <tr><th>Module</th><td>shared-components</td><th>Purpose</th><td>Read-only sheet listing cancellation fee rules and free-window before confirm.</td></tr>
+    <tr><th>Variants/States</th><td>visible, with-fee-estimate</td><th>Props/Inputs</th><td>vehicleType, onClose</td></tr>
+    <tr><th>Typical Usage</th><td>Pre-booking info, cancel-confirm step.</td><th>Source</th><td>components/CancellationPoliciesSheet.tsx</td></tr>
+  </table>
+  <div class="wireframe"><div class="wf-sheet" style="max-width:380px;"><strong>Cancellation Policy</strong><div class="wf-divider"></div><div class="wf-row"><span>Free cancel</span><span style="margin-left:auto;">within 2 min</span></div><div class="wf-row"><span>After pickup</span><span style="margin-left:auto;">৳30 fee</span></div><div class="wf-row"><span>No-show</span><span style="margin-left:auto;">full fare</span></div><div class="wf-btn primary" style="border-radius:28px;width:100%;text-align:center;margin-top:12px;">Got it</div></div></div>
+</div>
+
+<!-- ============ C-031: RateDriverSheet ============ -->
+<h2>C-031 — RateDriverSheet</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-031</td><th>Name</th><td>RateDriverSheet</td></tr>
+    <tr><th>Module</th><td>shared-components</td><th>Purpose</th><td>Post-trip star rating + tags + optional comment for the driver.</td></tr>
+    <tr><th>Variants/States</th><td>idle, rating, tagged, submitted, skip</td><th>Props/Inputs</th><td>driver, onSubmit, onSkip</td></tr>
+    <tr><th>Typical Usage</th><td>Rider trip-completed flow.</td><th>Source</th><td>components/RateDriverSheet.tsx</td></tr>
+  </table>
+  <div class="wireframe"><div class="wf-sheet" style="max-width:380px;text-align:center;"><div class="wf-avatar" style="margin:0 auto 8px;">R</div><strong>Rate your ride</strong><div style="font-size:26px;margin:10px 0;letter-spacing:4px;color:#f59e0b;">★ ★ ★ ★ ☆</div><div style="margin-top:8px;"><span class="wf-pill">Polite</span><span class="wf-pill">Clean car</span><span class="wf-pill">Safe drive</span></div><div class="wf-btn primary" style="border-radius:28px;width:100%;text-align:center;margin-top:14px;">Submit</div></div></div>
+</div>
+
+<!-- ============ C-032: DriverInfoSheet ============ -->
+<h2>C-032 — DriverInfoSheet</h2>
+<div class="component">
+  <table class="meta-table">
+    <tr><th>ID</th><td>C-032</td><th>Name</th><td>DriverInfoSheet</td></tr>
+    <tr><th>Module</th><td>shared-components</td><th>Purpose</th><td>Tappable sheet with driver identity, vehicle, rating, and contact/share actions.</td></tr>
+    <tr><th>Variants/States</th><td>visible, with-plate, with-SOS, loading</td><th>Props/Inputs</th><td>driverId, onCall?, onMessage?, onClose</td></tr>
+    <tr><th>Typical Usage</th><td>Rider en-route / in-trip driver details.</td><th>Source</th><td>components/DriverInfoSheet.tsx</td></tr>
+  </table>
+  <div class="wireframe"><div class="wf-sheet" style="max-width:380px;"><div class="wf-row"><div class="wf-avatar" style="width:48px;height:48px;">K</div><div style="flex:1;"><strong>Karim U.</strong><br><span class="small">★ 4.8 · 1,204 trips</span></div><span class="wf-badge info">CNG</span></div><div class="wf-divider"></div><div class="wf-row"><span class="small">DHAKA-METRO · KA 12-3456</span><span style="margin-left:auto;" class="small">White</span></div><div class="wf-row"><div class="wf-btn outline" style="flex:1;border-radius:22px;">Call</div><div class="wf-btn outline" style="flex:1;border-radius:22px;margin-left:8px;">Message</div></div></div></div>
+</div>
+
+</body>
+</html>

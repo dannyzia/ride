@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
     return Response.json({
       zones: zonesWithSuggest,
-      heat_backtest_correlation: heatBacktestCorrelation,
+      backtest_correlation: heatBacktestCorrelation,
       total: zonesWithSuggest.length,
     });
   } catch (err: unknown) {

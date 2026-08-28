@@ -196,7 +196,7 @@ const DISPATCH_FIELDS: FieldDef[] = [
   {
     key: "new_driver_priority_leads",
     label: "New Driver Priority Leads (N)",
-    helpText: "Number of priority leads. 0 = off until ops sets.",
+    helpText: "Number of priority leads. Default 10 — first 10 leads priority; 0 = off.",
     type: "number",
   },
   {

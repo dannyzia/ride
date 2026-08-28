@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ride — Driver Settings Wireframes (D-131..D-148)</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #ffffff;
+    color: #111827;
+    padding: 24px;
+    line-height: 1.45;
+  }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  .sub { color: #6b7280; font-size: 13px; margin: 0 0 24px; }
+  .total {
+    display: inline-block; background: #111827; color: #fff;
+    padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 14px;
+    margin-bottom: 24px;
+  }
+  .flow {
+    border: 1px solid #d1d5db; border-radius: 12px; padding: 18px;
+    margin-bottom: 32px; background: #f9fafb;
+  }
+  .flow h2 { color: #374151; }
+  .flow-row { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-bottom: 10px; }
+  .fnode {
+    border: 1px solid #6b7280; background: #fff; border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; min-width: 120px;
+  }
+  .fnode .id { font-weight: 700; color: #111827; display: block; }
+  .fnode .nm { color: #4b5563; }
+  .arrow { align-self: center; color: #6b7280; font-size: 18px; font-weight: 700; padding: 0 2px; }
+  .branch { border-left: 2px solid #9ca3af; padding-left: 14px; margin-left: 6px; }
+  .screen-block {
+    border: 1px solid #d1d5db; border-radius: 12px; padding: 18px;
+    margin-bottom: 24px; background: #fff;
+  }
+  .screen-block .sh {
+    font-size: 16px; font-weight: 700; border-bottom: 2px solid #111827;
+    padding-bottom: 6px; margin-bottom: 14px;
+  }
+  .fid { color: #374151; }
+  .ftag { display: inline-block; background: #111827; color: #fff; font-size: 11px;
+    padding: 2px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle; }
+  table.meta { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
+  table.meta th, table.meta td {
+    border: 1px solid #e5e7eb; padding: 7px 9px; text-align: left; vertical-align: top;
+  }
+  table.meta th { background: #f3f4f6; width: 130px; color: #374151; font-weight: 600; }
+  table.meta td { color: #1f2937; }
+  .wf {
+    border: 1px dashed #9ca3af; border-radius: 10px; padding: 14px;
+    background: #fafafa; max-width: 360px;
+  }
+  .wf .ph { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 8px;
+    border-bottom: 1px solid #d1d5db; padding-bottom: 4px; }
+  .box { border: 1px solid #9ca3af; background: #fff; border-radius: 6px;
+    padding: 8px; margin: 6px 0; font-size: 12px; color: #374151; }
+  .box.gray { background: #f3f4f6; }
+  .box.dark { background: #374151; color: #fff; }
+  .row { display: flex; gap: 6px; }
+  .row .box { flex: 1; }
+  .pill { display: inline-block; border: 1px solid #9ca3af; border-radius: 999px;
+    padding: 2px 8px; font-size: 11px; margin: 2px 2px 2px 0; background: #fff; }
+  .hr { height: 1px; background: #e5e7eb; margin: 8px 0; }
+  .modal { border: 2px solid #6b7280; border-radius: 12px; padding: 14px; background: #fff;
+    max-width: 320px; }
+  .scr { background: #e5e7eb; padding: 4px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<h1>Ride — Driver Settings Wireframes</h1>
+<p class="sub">Module: <strong>driver-settings</strong> · Source: <code>app/(main)/(rider)/settings/*</code> · Grayscale low-fidelity documentation of built screens. No redesign.</p>
+<div class="total">TOTAL SCREEN ROWS: 18 (D-131 — D-148)</div>
+
+<div class="flow">
+  <h2>Flow Diagram</h2>
+  <div class="flow-row">
+    <div class="fnode"><span class="id">D-131</span><span class="nm">Settings (hub)</span></div>
+  </div>
+  <div class="branch">
+    <div class="flow-row">
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-132</span><span class="nm">Account &amp; Security</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-133</span><span class="nm">Sign Out (modal)</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-134</span><span class="nm">Delete (modal)</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-138</span><span class="nm">Change Password</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-139</span><span class="nm">Password Success</span></div>
+    </div>
+    <div class="flow-row">
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-136</span><span class="nm">Auto-Accept (load)</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-137</span><span class="nm">Auto-Accept (form)</span></div>
+    </div>
+    <div class="flow-row">
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-135</span><span class="nm">Appearance</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-140</span><span class="nm">Language</span></div>
+    </div>
+    <div class="flow-row">
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-141</span><span class="nm">Notifications (load)</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-142</span><span class="nm">Notifications (prefs)</span></div>
+    </div>
+    <div class="flow-row">
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-143</span><span class="nm">Lost Items (load)</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-144</span><span class="nm">Lost Items (error)</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-145</span><span class="nm">Lost Items (empty)</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-146</span><span class="nm">Lost Items (list)</span></div>
+    </div>
+    <div class="flow-row">
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-147</span><span class="nm">Privacy Policy</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="fnode"><span class="id">D-148</span><span class="nm">Terms of Service</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="screen-block">
+  <div class="sh"><span class="fid">D-131</span> · Settings <span class="ftag">module: driver-settings</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>D-131</td></tr>
+    <tr><td>name</td><td>Settings</td></tr>
+    <tr><td>module</td><td>driver-settings</td></tr>
+    <tr><td>Purpose</td><td>Central hub listing all driver preferences, account, support and legal destinations; entrance to the settings subtree.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from driver home / profile (router.push to this route). Exit: Back button (router.back) returns to previous screen; list rows router.push to sub-screens.</td></tr>
+    <tr><td>UI elements</td><td>Header with chevron-back + "Settings" title. ThemeToggle component at top. Grouped section lists: Subscription (Packages, Minimum Rate, Payout Method), Preferences (Notifications, Auto-Accept, App Appearance, Language), Account (Account &amp; Security), Support (Lost Items, Support, Safety, Referral), Legal (Terms of Service, Privacy Policy). Each row = icon + label + chevron-forward.</td></tr>
+    <tr><td>States</td><td>No distinct loading/empty/error states — static list rendered from a constant array. Dark/light handled via useIsDark.</td></tr>
+    <tr><td>Actions</td><td>Tap "Settings" back (chevron-back) → router.back(). Tap ThemeToggle → toggles app theme. Tap any row → router.push to its route (e.g. /(main)/(rider)/settings/notifications).</td></tr>
+    <tr><td>Data shown</td><td>Static labels, icons (Ionicons glyph names) and section names hard-coded in SETTINGS array. No remote data.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(rider)/settings/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Settings</div>
+    <div class="box gray">[ Theme Toggle component ]</div>
+    <div class="box">SUBSCRIPTION</div>
+    <div class="box">▣ Packages          ›</div>
+    <div class="box">▣ Minimum Rate       ›</div>
+    <div class="box">▣ Payout Method      ›</div>
+    <div class="box">PREFERENCES</div>
+    <div class="box">▣ Notifications       ›</div>
+    <div class="box">▣ Auto-Accept        ›</div>
+    <div class="box">▣ App Appearance      ›</div>
+    <div class="box">▣ Language            ›</div>
+    <div class="box">ACCOUNT</div>
+    <div class="box">▣ Account &amp; Security  ›</div>
+    <div class="box">SUPPORT</div>
+    <div class="box">▣ Lost Items          ›</div>
+    <div class="box">▣ Support             ›</div>
+    <div class="box">▣ Safety              ›</div>
+    <div class="box">▣ Referral            ›</div>
+    <div class="box">LEGAL</div>
+    <div class="box">▣ Terms of Service    ›</div>
+    <div class="box">▣ Privacy Policy      ›</div>
+  </div>
+</div>
+
+<div class="screen-block">
+  <div class="sh"><span class="fid">D-132</span> · Account &amp; Security <span class="ftag">module: driver-settings</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>D-132</td></tr>
+    <tr><td>name</td><td>Account &amp; Security</td></tr>
+    <tr><td>module</td><td>driver-settings</td></tr>
+    <tr><td>Purpose</td><td>Shows account security summary and provides sign-out and account-deletion actions.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from D-131 Settings (Account &amp; Security row). Exit: Back → router.back(); "Security &amp; Login Info" → router.push change-password; Sign out / Delete open confirm modals (D-133 / D-134).</td></tr>
+    <tr><td>UI elements</td><td>Header: "Back" + "Account &amp; Security" title. Card "Security &amp; Login Info" (subtitle: Phone number &amp; login method). Card "Two-factor authentication" (subtitle: Not configured). Card "Sign out" (subtitle: Disconnect and return to the login screen). Card "Delete account" (red text; subtitle: Permanently remove your account and all data). Floating theme-toggle button top-right.</td></tr>
+    <tr><td>States</td><td>Default static cards. 2FA card always shows "Not configured". error text rendered inside the delete modal (D-134) only.</td></tr>
+    <tr><td>Actions</td><td>Tap Back → router.back(). Tap "Security &amp; Login Info" → router.push("/(main)/(rider)/settings/change-password"). Tap "Sign out" → opens Sign Out modal (D-133). Tap "Delete account" → opens Delete Account modal (D-134). Floating theme button → toggles light/dark.</td></tr>
+    <tr><td>Data shown</td><td>Static labels. No remote data fetched on this screen. 2FA status is hard-coded "Not configured".</td></tr>
+    <tr><td>Source</td><td>app/(main)/(rider)/settings/account-security/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">Back   Account &amp; Security        (◐)</div>
+    <div class="box">Security &amp; Login Info<hr/>Phone number &amp; login method</div>
+    <div class="box">Two-factor authentication<hr/>Not configured</div>
+    <div class="box">Sign out<hr/>Disconnect and return to the login screen</div>
+    <div class="box" style="color:#374151;border-color:#6b7280;">Delete account<hr/>Permanently remove your account and all data</div>
+  </div>
+</div>
+<!--SPLIT-->
+</body>
+</html>

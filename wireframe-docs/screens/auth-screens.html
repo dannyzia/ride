@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Screens - Wireframe Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        h1, h2, h3 { color: #333; }
+        .screen { border: 1px solid #ddd; margin-bottom: 30px; padding: 20px; border-radius: 5px; }
+        .screen-header { background-color: #f8f9fa; padding: 10px; margin: -20px -20px 20px -20px; border-bottom: 1px solid #ddd; }
+        .screen-id { font-weight: bold; color: #007bff; }
+        .screen-name { font-size: 1.2em; margin: 5px 0; }
+        .screen-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+        .meta-item { background: #f8f9fa; padding: 10px; border-radius: 3px; }
+        .meta-label { font-weight: bold; color: #495057; }
+        .meta-value { margin-top: 5px; }
+        .framework-critical { background-color: #fff3cd; border-left: 4px solid #ffc107; }
+        .states { margin: 15px 0; }
+        .state-tag { display: inline-block; background: #e9ecef; padding: 2px 8px; border-radius: 10px; font-size: 0.9em; margin-right: 5px; }
+        .actions { margin: 15px 0; }
+        .action-item { background: #d1ecf1; padding: 8px; margin: 5px 0; border-radius: 3px; }
+        .data-shown { margin: 15px 0; }
+        .data-item { background: #d4edda; padding: 8px; margin: 5px 0; border-radius: 3px; }
+        .wireframe-placeholder { width: 100%; height: 300px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; margin: 20px 0; color: #6c757d; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>Auth Screens</h1>
+    <p><em>Documented from codebase analysis - Rider app authentication flow</em></p>
+    
+    <!-- Phone Entry Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-001</div>
+            <div class="screen-name">Phone Entry</div>
+            <div class="screen-module">Auth</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Auth</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">App launch, deep link, logout</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Phone Entry Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>User enters their phone number to begin authentication process</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: App launch, deep link, logout<br>Exit: OTP Verify screen (on valid phone number)</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Phone number input field with country selector</li>
+                <li>Primary button: "Send OTP"</li>
+                <li>Text: "We'll send a one-time password to verify your number"</li>
+                <li>Link: "Having trouble receiving the code?"</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Phone number input - validates format</div>
+                <div class="action-item">Country selector - opens country list modal</div>
+                <div class="action-item">Send OTP button - navigates to OTP Verify screen</div>
+                <div class="action-item">Help link - shows troubleshooting modal</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Phone number (user input)</div>
+                <div class="data-item">Country code (from selector)</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(auth)/phone-entry.tsx</p>
+        </div>
+    </div>
+    
+    <!-- OTP Verify Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-002</div>
+            <div class="screen-name">OTP Verify</div>
+            <div class="screen-module">Auth</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Auth</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Phone Entry screen</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            OTP Verify Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>User enters the OTP received via SMS to verify their phone number</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Phone Entry screen<br>Exit: Register screen (new user) or Main app (existing user)</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>OTP input fields (typically 6 separate boxes)</li>
+                <li>Primary button: "Verify OTP"</li>
+                <li>Text: "We've sent a code to +880 XXX XXXXXX"</li>
+                <li>Link: "Resend OTP"</li>
+                <li>Link: "Edit phone number"</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">OTP input fields - auto-focus and validation</div>
+                <div class="action-item">Verify OTP button - validates code and proceeds</div>
+                <div class="action-item">Resend OTP - sends new OTP</div>
+                <div class="action-item">Edit phone number - returns to Phone Entry screen</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Phone number (masked)</div>
+                <div class="data-item">OTP code (user input)</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(auth)/otp-verify.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Register Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-003</div>
+            <div class="screen-name">Register</div>
+            <div class="screen-module">Auth</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Auth</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">OTP Verify screen</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Register Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>New user completes registration by providing additional profile information</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: OTP Verify screen<br>Exit: Main app home screen</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Name input field</li>
+                <li>Email input field (optional)</li>
+                <li>Password input field (optional)</li>
+                <li>Primary button: "Complete Registration"</li>
+                <li>Text: "Almost done! Tell us a bit about yourself"</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Name input - validates required field</div>
+                <div class="action-item">Email input - validates format if provided</div>
+                <div class="action-item">Password input - validates strength if provided</div>
+                <div class="action-item">Complete Registration button - creates user account</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Phone number (pre-filled, read-only)</div>
+                <div class="data-item">Name (user input)</div>
+                <div class="data-item">Email (user input, optional)</div>
+                <div class="data-item">Password (user input, optional)</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(auth)/register.tsx</p>
+        </div>
+    </div>
+</body>
+</html>

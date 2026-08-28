@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Config Module Wireframes</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; color: #333; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+    .flow { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .flow-title { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 12px; color: #555; }
+    .flow-box { display: inline-block; background: #e8e8e8; border: 2px solid #333; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; margin: 4px; }
+    .flow-arrow { display: inline-block; font-size: 18px; margin: 4px; color: #666; }
+    .screen { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .screen-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .screen-id { background: #333; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+    .screen-name { font-size: 16px; font-weight: 700; }
+    .screen-fw { background: #dc2626; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .wireframe { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .wf-box { border: 2px solid #333; background: #fafafa; padding: 10px; border-radius: 6px; font-size: 12px; }
+    .wf-box.primary { background: #e3f2fd; border-color: #1976d2; }
+    .wf-box.danger { background: #ffebee; border-color: #c62828; }
+    .wf-box.success { background: #e8f5e9; border-color: #2e7d32; }
+    .wf-box.warning { background: #fff3e0; border-color: #ef6c00; }
+    .wf-row { display: flex; gap: 8px; }
+    .wf-row > * { flex: 1; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { background: #fafafa; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; color: #555; width: 140px; }
+    td { color: #444; }
+    .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #e8e8e8; }
+  </style>
+</head>
+<body>
+  <h1>Admin Config Module</h1>
+  <p class="subtitle">Screens: A-024 through A-031 | Flow: Platform config, zones, boundaries, fare config, tax dashboard, recovery, sample media, cancellation policies</p>
+
+  <div class="flow">
+    <div class="flow-title">Navigation Flow</div>
+    <span class="flow-box">Admin Layout</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-box">Platform Config (A-024)</span><span class="flow-arrow">→</span><span class="flow-box">JSON + Toggles</span><br>
+    <span class="flow-box">Operational Zones (A-025)</span><span class="flow-arrow">→</span><span class="flow-box">CRUD + Activate</span><br>
+    <span class="flow-box">City Boundaries (A-026)</span><span class="flow-arrow">→</span><span class="flow-box">Polygon CRUD</span><br>
+    <span class="flow-box">Fare Config (A-027)</span><span class="flow-arrow">→</span><span class="flow-box">Pickup + Commission rules</span><br>
+    <span class="flow-box">Tax Dashboard (A-028)</span><span class="flow-arrow">→</span><span class="flow-box">Rate list + breakdown</span><br>
+    <span class="flow-box">Recovery (A-029)</span><span class="flow-arrow">→</span><span class="flow-box">Dispatch + Payment tools</span><br>
+    <span class="flow-box">Sample Media (A-030)</span><span class="flow-arrow">→</span><span class="flow-box">URL editor</span><br>
+    <span class="flow-box">Cancellation Policies (A-031)</span><span class="flow-arrow">→</span><span class="flow-box">Policy CRUD</span>
+  </div>
+
+  <!-- A-024 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-024</span>
+      <span class="screen-name">Platform Config</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Platform Config"</div>
+      <div class="wf-row">
+        <div class="wf-box">Toggles: Dispatch Toggle (ON/OFF), Database Maintenance, Rider App, Driver App, Registration</div>
+      </div>
+      <div class="wf-box">JSON Editor: platform_policies key-value pairs</div>
+      <div class="wf-box">JSON Editor: dispatch_config key-value pairs</div>
+      <div class="wf-box success">Button: Save All</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-024 / Platform Config / config</td></tr>
+      <tr><th>Purpose</th><td>Master on/off switches plus key-value platform config</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: save, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Toggle switches, JSON textareas, Save button</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">success</span> populated fields, <span class="tag">saving</span> spinner, <span class="tag">error</span> toast</td></tr>
+      <tr><th>Actions</th><td>Toggle dispatch/registration/app flags, edit JSON, Save All</td></tr>
+      <tr><th>Data shown</th><td>dispatch_enabled, database_maintenance, rider_app_enabled, driver_app_enabled, registration_enabled, platform_policies JSON, dispatch_config JSON</td></tr>
+      <tr><th>Source</th><td>app/admin/platform-config.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-025 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-025</span>
+      <span class="screen-name">Operational Zones</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Operational Zones"</div>
+      <div class="wf-row">
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box warning">Button: + New Zone</div>
+      </div>
+      <div class="wf-box">Table: Name | Bengali | Priority | Lat | Lng | City | Hexes | Heat History | Audit | Active | Actions</div>
+      <div class="wf-box success">CRUD Modal: Name, Bengali Label, Priority (1-99), Lat, Lng, City, Is Active, Activation Date</div>
+      <div class="wf-box danger">Confirm: Deactivate zone</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-025 / Operational Zones / config</td></tr>
+      <tr><th>Purpose</th><td>Zone definitions used for dispatch geofencing, fare, and heat</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, deactivate confirm, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Refresh button, New Zone button, AdminTable, AdminModal (AdminForm), deactivate confirm modal</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No zones yet", <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Refresh, New Zone, Edit, Deactivate, Activate (set date)</td></tr>
+      <tr><th>Data shown</th><td>id, name, name_bn, priority, center_lat, center_lng, city, active_hex_count, has_heat_history, has_fraud_audit, is_active, activated_at</td></tr>
+      <tr><th>Source</th><td>app/admin/zones.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-026 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-026</span>
+      <span class="screen-name">City Boundaries</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "City Boundaries"</div>
+      <div class="wf-row">
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box warning">Button: + New Boundary</div>
+      </div>
+      <div class="wf-box">Table: City | Area | Type | Vertices | Active | Created | Actions</div>
+      <div class="wf-box success">CRUD Modal: City, Area Name, Boundary Type select, GeoJSON textarea, Active toggle</div>
+      <div class="wf-box danger">Button: Restore (soft-delete undo)</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-026 / City Boundaries / config</td></tr>
+      <tr><th>Purpose</th><td>Intercity/city boundary polygon definitions</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, restore modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Refresh button, New Boundary button, AdminTable, AdminModal, restore modal</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No boundaries yet", <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Refresh, New Boundary, Edit, Soft delete, Restore</td></tr>
+      <tr><th>Data shown</th><td>id, city, area_name, boundary_type, vertex_count (derived), is_active, created_at, deleted_at</td></tr>
+      <tr><th>Source</th><td>app/admin/city-boundaries.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-027 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-027</span>
+      <span class="screen-name">Fare Config</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Fare Config"</div>
+      <div class="wf-row">
+        <div class="wf-box">Select: Zone</div>
+        <div class="wf-box">Select: Vehicle Type</div>
+      </div>
+      <div class="wf-box">Section: Pickup Fee | Enabled toggle, Fee Type select, Base Fee (৳), Distance (m), Min Fee (৳), Max Fee (৳)</div>
+      <div class="wf-box">Section: Commission Rules | Fee Type select, Enabled toggle, Base Amount (৳), Amount (৳), Percent (%)</div>
+      <div class="wf-box success">Button: Save Pickup Fee, Save Commission Rule</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-027 / Fare Config / config</td></tr>
+      <tr><th>Purpose</th><td>Pickup fee + commission rule editor per zone/vehicle</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: save, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Zone/vehicle selectors, Pickup fee form, Commission rule form, Save buttons</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> defaults, <span class="tag">success</span> populated, <span class="tag">saving</span> spinner, <span class="tag">error</span> toast</td></tr>
+      <tr><th>Actions</th><td>Select zone/vehicle, toggle pickup fee, save pickup fee, save commission rule</td></tr>
+      <tr><th>Data shown</th><td>pickup_fee_id, zone_id, vehicle_type, pickup_fee_enabled, fee_type, base_fee_bdt, distance_m, min_fee_bdt, max_fee_bdt; commission_rule_id, fee_type, enabled, base_amount_bdt, amount_bdt, percent</td></tr>
+      <tr><th>Source</th><td>app/admin/fare-config.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-028 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-028</span>
+      <span class="screen-name">Tax Dashboard</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Tax Dashboard"</div>
+      <div class="wf-row">
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box warning">Button: + New Tax Rate</div>
+      </div>
+      <div class="wf-box">Table: Name | Rate % | Effective From | Effective To | Type | Active | Actions</div>
+      <div class="wf-box">Section: Daily Tax Breakdown (Date, Total Fare, Tax Collected, Rides Count)</div>
+      <div class="wf-box success">CRUD Modal: Name, Rate %, Effective From, Effective To, Type select, Active toggle</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-028 / Tax Dashboard / config</td></tr>
+      <tr><th>Purpose</th><td>Tax rate management and daily tax collection view</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Refresh button, New Tax Rate button, AdminTable, AdminModal, TaxBreakdown table</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No tax rates", <span class="tag">success</span> tables, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Refresh, New Tax Rate, Edit, Toggle active</td></tr>
+      <tr><th>Data shown</th><td>tax_rate_id, name, rate_percent, effective_from, effective_to, type, is_active; daily breakdown: date, total_fare_bdt, total_tax_bdt, ride_count</td></tr>
+      <tr><th>Source</th><td>app/admin/tax-dashboard.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-029 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-029</span>
+      <span class="screen-name">Recovery</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Recovery"</div>
+      <div class="wf-row">
+        <div class="wf-box">Tabs: Dispatch, Payments</div>
+      </div>
+      <div class="wf-box">Dispatch: Status indicator, Button: Pause / Resume, Recent action log</div>
+      <div class="wf-box">Payments: Table: Event ID | Invoice | Amount | Status | Created | Actions</div>
+      <div class="wf-box success">Modal: Retry / Refund payment event</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-029 / Recovery / config</td></tr>
+      <tr><th>Purpose</th><td>Dispatch pause/resume + stuck payment recovery</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: action, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Tabs, dispatch pause/resume button, status indicator, AdminTable, retry/refund modal</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">success</span> populated, <span class="tag">saving</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Pause/Resume dispatch, retry payment, refund payment</td></tr>
+      <tr><th>Data shown</th><td>dispatch_status, action log; payment_events id, invoice_id, amount_bdt, status, created_at</td></tr>
+      <tr><th>Source</th><td>app/admin/recovery.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-030 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-030</span>
+      <span class="screen-name">Sample Media</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Sample Media"</div>
+      <div class="wf-row">
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box warning">Button: + New Media</div>
+      </div>
+      <div class="wf-box">Table: Type | Label | URL | Thumbnail</div>
+      <div class="wf-box success">CRUD Modal: Type select, Label, URL input, Preview thumbnail</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-030 / Sample Media / config</td></tr>
+      <tr><th>Purpose</th><td>Manage onboarding sample photo/video URLs for drivers</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Refresh button, New Media button, AdminTable, AdminModal, thumbnail preview</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No media yet", <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Refresh, New Media, Edit, Delete</td></tr>
+      <tr><th>Data shown</th><td>id, media_type, label, url, thumbnail_url, created_at</td></tr>
+      <tr><th>Source</th><td>app/admin/sample-media.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-031 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-031</span>
+      <span class="screen-name">Cancellation Policies</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Cancellation Policies"</div>
+      <div class="wf-row">
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box warning">Button: + New Policy</div>
+      </div>
+      <div class="wf-box">Table: Name | Min Time (min) | Fee ৳ | Free Periods/Day | Active | Actions</div>
+      <div class="wf-box success">CRUD Modal: Name, Min Minutes, Fee (৳), Free Cancellations/Day, Active toggle</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-031 / Cancellation Policies / config</td></tr>
+      <tr><th>Purpose</th><td>Define cancellation fee schedules</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Refresh button, New Policy button, AdminTable, AdminModal</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No policies yet", <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Refresh, New Policy, Edit, Toggle active</td></tr>
+      <tr><th>Data shown</th><td>id, name, min_minutes, fee_bdt, free_cancellations_per_day, is_active, created_at, updated_at</td></tr>
+      <tr><th>Source</th><td>app/admin/cancellation-policies.tsx</td></tr>
+    </table>
+  </div>
+</body>
+</html>

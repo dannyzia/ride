@@ -44,7 +44,14 @@ export const bodyTypeEnum = pgEnum("body_type", [
   "van",
   "minibus",
 ]);
-export const userRoleEnum = pgEnum("user_role", ["rider", "driver", "admin"]);
+export const userRoleEnum = pgEnum("user_role", [
+  "rider",
+  "driver",
+  "admin",
+  "owner",
+  "ops_manager",
+  "moderator",
+]);
 export const driverStatusEnum = pgEnum("driver_status", [
   "pending",
   "temporary",
@@ -280,6 +287,8 @@ export const users = pgTable(
     security_settings: jsonb("security_settings"),
     linked_accounts: jsonb("linked_accounts"),
     data_controls: jsonb("data_controls"),
+    // v6: whether the rider has seen the zone-fee explainer sheet
+    zone_fee_explained: boolean("zone_fee_explained").notNull().default(false),
     deleted_at: timestamptz("deleted_at"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
@@ -714,6 +723,15 @@ export const rides = pgTable(
     drop_zone_heat: text("drop_zone_heat"),
     route_polyline: text("route_polyline"),
     driver_cancel_within_200m: boolean("driver_cancel_within_200m").notNull().default(false),
+    // v6: zone fee charged to rider (100% to driver, no commission)
+    zone_fee_bdt: integer("zone_fee_bdt").notNull().default(0),
+    // v6: night multiplier applied at request/completion time (snapshot for audit)
+    night_mult_applied: numeric("night_mult_applied", { precision: 4, scale: 3 }).default('1.000'),
+    // v6 shadow: full V6FareBreakdown logged at request+completion (PATCH 1)
+    // Write-only during Stage 0, read-only during Stage 1 gate evaluation.
+    // Never displayed to rider or driver.
+    fare_v6_shadow: jsonb("fare_v6_shadow"),
+    fare_v6_shadow_computed_at: timestamptz("fare_v6_shadow_computed_at"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -817,6 +835,8 @@ export const dispatchOffers = pgTable(
     outcome: offerOutcomeEnum("outcome").notNull().default("delivered"),
     rejection_reason: varchar("rejection_reason", { length: 100 }),
     filtered_reason: varchar("filtered_reason", { length: 50 }),
+    // v6: routed ETA at offer time for dawdle baseline calibration
+    pickup_estimated_time_min: numeric("pickup_estimated_time_min", { precision: 7, scale: 2 }),
     created_at: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -1001,6 +1021,10 @@ export const pricing = pgTable(
     free_wait_minutes: integer("free_wait_minutes").notNull().default(3),
     wait_fee_per_minute_bdt: integer("wait_fee_per_minute_bdt").notNull().default(200),
     brta_fare_ceiling_bdt: integer("brta_fare_ceiling_bdt"),
+    // v6: base_km replaces flat base_fare_bdt as flag-fall distance equivalent
+    base_km: numeric("base_km", { precision: 10, scale: 2 }).notNull().default('0'),
+    // v6: initiation_minutes replaces hardcoded 4 — time paid during driver startup
+    initiation_minutes: integer("initiation_minutes").notNull().default(4),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -2185,6 +2209,9 @@ export const zoneHeat = pgTable("zone_heat", {
   live_ewma: numeric("live_ewma", { precision: 10, scale: 4 }).notNull().default("0"),
   tag: text("tag", { enum: ['hot', 'neutral', 'cold'] }).notNull().default('neutral'),
   idle_driver_count: integer("idle_driver_count").notNull().default(0),
+  // v6: median driver recovery time (dropoff → next accepted dispatch), minutes
+  recovery_time_min: numeric("recovery_time_min", { precision: 7, scale: 2 }),
+  recovery_sample_count: integer("recovery_sample_count").notNull().default(0),
   computed_at: timestamptz("computed_at").notNull().defaultNow(),
   updated_at: timestamptz("updated_at").notNull().defaultNow(),
 }, (t) => [
@@ -2213,6 +2240,11 @@ export const pickupDistanceSamples = pgTable("pickup_distance_samples", {
   firm_km: numeric("firm_km", { precision: 7, scale: 3 }),
   realized_km: numeric("realized_km", { precision: 7, scale: 3 }),
   charged: boolean("charged").notNull().default(false),
+  cap_was_binding: boolean("cap_was_binding"),
+  backstop_was_binding: boolean("backstop_was_binding"),
+  // v6: time dimension for dawdle guard and pickup fee v6
+  realized_time_min: numeric("realized_time_min", { precision: 7, scale: 2 }),
+  pickup_time_routed_min: numeric("pickup_time_routed_min", { precision: 7, scale: 2 }),
   created_at: timestamptz("created_at").notNull().defaultNow(),
 }, (t) => [
   index("pds_category_zone_time_idx").on(t.category, t.zone_id, t.created_at),
@@ -2254,4 +2286,102 @@ export const cancelSurveys = pgTable("cancel_surveys", {
   created_at: timestamptz("created_at").notNull().defaultNow(),
 }, (t) => [
   uniqueIndex("cancel_surveys_ride_unique").on(t.ride_id),
+]);
+
+// ══════════════════════════════════════════════════════════════════════
+// Fare Framework v6 — New Tables (Stage 0)
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Published monthly zone fee schedule.
+ * Structurally incapable of acting as a live multiplier:
+ * flat fee per zone × vehicle_category × effective_month.
+ * 100% to driver — not commission base.
+ */
+export const zoneFeeSchedule = pgTable("zone_fee_schedule", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  zone_id: uuid("zone_id").notNull().references(() => zones.id),
+  vehicle_category: text("vehicle_category").notNull(), // bike / cng / car
+  effective_month: date("effective_month").notNull(), // first day of month, e.g. '2026-09-01'
+  fee_bdt: integer("fee_bdt").notNull(), // flat fee in integer paisa, 0 = inactive
+  note: varchar("note", { length: 255 }),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("zfs_zone_cat_month_idx").on(t.zone_id, t.vehicle_category, t.effective_month),
+]);
+
+/**
+ * Driver recovery time observations (append-only).
+ * Written by: complete+api.ts (on ride completion, dropoff).
+ * Read by: scheduler job 42 (upserts zone_heat.recovery_time_min).
+ */
+export const zoneRecoverySamples = pgTable("zone_recovery_samples", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  zone_id: uuid("zone_id").notNull().references(() => zones.id),
+  driver_id: uuid("driver_id").notNull().references(() => drivers.id),
+  dropped_at: timestamptz("dropped_at").notNull(),
+  next_accepted_at: timestamptz("next_accepted_at"),
+  recovery_minutes: numeric("recovery_minutes", { precision: 7, scale: 2 }),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+}, (t) => [
+  index("zrs_zone_time_idx").on(t.zone_id, t.dropped_at),
+]);
+
+/**
+ * Trip time calibration samples (append-only).
+ * Written by: complete+api.ts (on ride completion).
+ * Read by: scheduler job 44 (billing-min + utilization), fare engine (time_rate calibration).
+ */
+export const tripTimeSamples = pgTable("trip_time_samples", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ride_id: uuid("ride_id").notNull().references(() => rides.id),
+  zone_id: uuid("zone_id").references(() => zones.id),
+  vehicle_type: text("vehicle_type").notNull(),
+  trip_km: numeric("trip_km", { precision: 7, scale: 3 }),
+  trip_minutes: numeric("trip_minutes", { precision: 7, scale: 2 }),
+  billed_minutes: integer("billed_minutes"), // effectiveRideTimeMin after wait subtraction
+  estimated_minutes: numeric("estimated_minutes", { precision: 7, scale: 2 }), // from estimate
+  night_mult_applied: numeric("night_mult_applied", { precision: 4, scale: 3 }),
+  start_hour_bdt: integer("start_hour_bdt"), // 0-23, hour of ride start in Asia/Dhaka
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+}, (t) => [
+  index("tts_zone_time_idx").on(t.zone_id, t.created_at),
+]);
+
+/**
+ * Config change audit log — every admin PATCH to platform_config is logged here.
+ * Written by: app/api/admin/config+api.ts (INSERT before PATCH) and
+ * app/api/admin/staff+api.ts (RBAC role changes, config_key 'rbac:user_role').
+ * actor_role records the 4-role admin family role of the actor at write time
+ * (nullable — legacy rows predate the RBAC rollout).
+ * Read by: admin config history UI + rollback actions.
+ */
+export const configAuditLog = pgTable("config_audit_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  config_key: varchar("config_key", { length: 100 }).notNull(),
+  old_value: varchar("old_value", { length: 500 }),
+  new_value: varchar("new_value", { length: 500 }),
+  admin_id: uuid("admin_id").notNull().references(() => users.id),
+  actor_role: varchar("actor_role", { length: 20 }),
+  changed_at: timestamptz("changed_at").notNull().defaultNow(),
+}, (t) => [
+  index("cal_key_time_idx").on(t.config_key, t.changed_at),
+]);
+
+/**
+ * Driver online session tracking (PATCH 4 — sole writer: utils-server/index.ts).
+ * Tracks online/idle minutes per driver for billed-min/day utilization denominator.
+ */
+export const driverSessions = pgTable("driver_sessions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  driver_id: uuid("driver_id").notNull().references(() => drivers.id),
+  session_start: timestamptz("session_start").notNull().defaultNow(),
+  session_end: timestamptz("session_end"),
+  online_minutes: integer("online_minutes"),
+  trips_completed: integer("trips_completed").notNull().default(0),
+  billed_minutes: integer("billed_minutes").notNull().default(0),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+}, (t) => [
+  index("ds_driver_time_idx").on(t.driver_id, t.session_start),
 ]);

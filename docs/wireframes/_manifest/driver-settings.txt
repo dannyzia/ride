@@ -1,0 +1,18 @@
+D-131 | Settings | app/(main)/(rider)/settings/index.tsx | driver-settings
+D-132 | Account & Security | app/(main)/(rider)/settings/account-security/index.tsx | driver-settings
+D-133 | Account & Security — Sign Out Confirm (modal) | app/(main)/(rider)/settings/account-security/index.tsx | driver-settings
+D-134 | Account & Security — Delete Account Confirm (modal) | app/(main)/(rider)/settings/account-security/index.tsx | driver-settings
+D-135 | Appearance | app/(main)/(rider)/settings/appearance/index.tsx | driver-settings
+D-136 | Auto-Accept Rides — Loading | app/(main)/(rider)/settings/auto-accept/index.tsx | driver-settings
+D-137 | Auto-Accept Rides — Settings | app/(main)/(rider)/settings/auto-accept/index.tsx | driver-settings
+D-138 | Change Password — Form | app/(main)/(rider)/settings/change-password/index.tsx | driver-settings
+D-139 | Change Password — Success | app/(main)/(rider)/settings/change-password/index.tsx | driver-settings
+D-140 | Language | app/(main)/(rider)/settings/language/index.tsx | driver-settings
+D-141 | Notifications — Loading | app/(main)/(rider)/settings/notifications/index.tsx | driver-settings
+D-142 | Notifications — Preferences | app/(main)/(rider)/settings/notifications/index.tsx | driver-settings
+D-143 | Lost Item Reports — Loading | app/(main)/(rider)/settings/lost-items/index.tsx | driver-settings
+D-144 | Lost Item Reports — Error | app/(main)/(rider)/settings/lost-items/index.tsx | driver-settings
+D-145 | Lost Item Reports — Empty | app/(main)/(rider)/settings/lost-items/index.tsx | driver-settings
+D-146 | Lost Item Reports — List | app/(main)/(rider)/settings/lost-items/index.tsx | driver-settings
+D-147 | Privacy Policy | app/(main)/(rider)/settings/privacy-policy/index.tsx | driver-settings
+D-148 | Terms of Service | app/(main)/(rider)/settings/terms-of-service/index.tsx | driver-settings

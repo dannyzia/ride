@@ -41,6 +41,21 @@ export default function FareBreakdownSheet({ fareBreakdown }: FareBreakdownSheet
   if (fareBreakdown.pickup_fee_final_bdt != null && fareBreakdown.pickup_fee_final_bdt > 0) {
     detailRows.push({ label: 'Pickup fee', amount_bdt: fareBreakdown.pickup_fee_final_bdt });
   }
+  // v6 Phase F: waiting charge from fare_breakdown (may differ from ride.wait_fee_bdt)
+  if (fareBreakdown.waiting_charge_bdt != null && fareBreakdown.waiting_charge_bdt > 0) {
+    detailRows.push({ label: 'Waiting charge', amount_bdt: fareBreakdown.waiting_charge_bdt });
+  }
+  // v6 Phase F: zone fee (100% to driver, not commission base)
+  if (fareBreakdown.zone_fee_bdt != null && fareBreakdown.zone_fee_bdt > 0) {
+    detailRows.push({ label: 'Zone fee', amount_bdt: fareBreakdown.zone_fee_bdt });
+  }
+  // v6 Phase F: night multiplier indicator (informational)
+  if (fareBreakdown.night_mult_applied != null && fareBreakdown.night_mult_applied > 1.0) {
+    detailRows.push({
+      label: `Night surcharge (${((fareBreakdown.night_mult_applied - 1) * 100).toFixed(0)}%)`,
+      amount_bdt: 0, // included in time/waiting charges above
+    });
+  }
 
   const totalRow: FareRow | null = fareBreakdown.total_bdt != null
     ? { label: 'Total', amount_bdt: fareBreakdown.total_bdt }

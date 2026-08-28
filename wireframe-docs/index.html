@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ride App Wireframe Documentation - Screen Inventory</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        h1, h2, h3 { color: #333; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 30px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .framework-critical { background-color: #fff3cd; }
+        .module-auth { border-left: 4px solid #007bff; }
+        .module-customer { border-left: 4px solid #28a745; }
+        .module-rider { border-left: 4px solid #ffc107; }
+        .module-admin { border-left: 4px solid #dc3545; }
+        .module-shared { border-left: 4px solid #6c757d; }
+        .status-inventory { background-color: #d4edda; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Ride App Wireframe Documentation</h1>
+    <div class="status-inventory">
+        <h2>Screen Inventory Status: IN PROGRESS</h2>
+        <p><strong>Total Screens Documented:</strong> 28 (Phase 1 in progress)</p>
+        <p><strong>Apps Covered:</strong> Rider (auth, main tabs, activity, profile/wallet), Driver (main tabs)</p>
+        <p><strong>Last Updated:</strong> 2026-08-27</p>
+        <p><strong>Access Sources:</strong> Code repository analysis</p>
+    </div>
+
+    <h2>Screen Inventory</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>App</th>
+                <th>Module</th>
+                <th>Variants</th>
+                <th>Entry Points</th>
+                <th>Framework Critical (F)</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Auth Screens -->
+            <tr class="module-auth">
+                <td>R-001</td>
+                <td>Phone Entry</td>
+                <td>Rider</td>
+                <td>Auth</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>App launch, deep link, logout</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-auth">
+                <td>R-002</td>
+                <td>OTP Verify</td>
+                <td>Rider</td>
+                <td>Auth</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>Phone Entry screen</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-auth">
+                <td>R-003</td>
+                <td>Register</td>
+                <td>Rider</td>
+                <td>Auth</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>OTP Verify screen</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+            
+            <!-- Rider Main Tabs -->
+            <tr class="module-rider framework-critical">
+                <td>R-004</td>
+                <td>Home</td>
+                <td>Rider</td>
+                <td>Main Tabs</td>
+                <td>4 (default, loading, empty, error)</td>
+                <td>App launch (after auth), bottom tab navigation</td>
+                <td>Yes</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider framework-critical">
+                <td>R-005</td>
+                <td>Find Ride</td>
+                <td>Rider</td>
+                <td>Main Tabs</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>Home screen search bar, deep link</td>
+                <td>Yes</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider framework-critical">
+                <td>R-006</td>
+                <td>Confirm Ride</td>
+                <td>Rider</td>
+                <td>Main Tabs</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>Find Ride screen</td>
+                <td>Yes</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider framework-critical">
+                <td>R-007</td>
+                <td>Ride Tracking</td>
+                <td>Rider</td>
+                <td>Main Tabs</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>Confirm Ride screen</td>
+                <td>Yes</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider">
+                <td>R-008</td>
+                <td>Rate Driver</td>
+                <td>Rider</td>
+                <td>Main Tabs</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>Ride Tracking screen (after dropoff)</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+            
+            <!-- Rider Activity Screens -->
+            <tr class="module-rider">
+                <td>R-009</td>
+                <td>Activity Overview</td>
+                <td>Rider</td>
+                <td>Activity</td>
+                <td>4 (default, loading, empty, error)</td>
+                <td>Bottom tab navigation</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider">
+                <td>R-010</td>
+                <td>Upcoming Rides</td>
+                <td>Rider</td>
+                <td>Activity</td>
+                <td>4 (default, loading, empty, error)</td>
+                <td>Activity Overview tab</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider">
+                <td>R-011</td>
+                <td>Completed Rides</td>
+                <td>Rider</td>
+                <td>Activity</td>
+                <td>4 (default, loading, empty, error)</td>
+                <td>Activity Overview tab</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider">
+                <td>R-012</td>
+                <td>Canceled Rides</td>
+                <td>Rider</td>
+                <td>Activity</td>
+                <td>4 (default, loading, empty, error)</td>
+                <td>Activity Overview tab</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider framework-critical">
+                <td>R-013</td>
+                <td>Ride Detail</td>
+                <td>Rider</td>
+                <td>Activity</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>Any activity list item, notification deep link</td>
+                <td>Yes</td>
+                <td>Documented</td>
+            </tr>
+            
+            <!-- Rider Profile & Wallet Screens -->
+            <tr class="module-rider">
+                <td>R-014</td>
+                <td>Profile</td>
+                <td>Rider</td>
+                <td>Profile</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>Bottom tab navigation, deep links</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider">
+                <td>R-015</td>
+                <td>Edit Profile</td>
+                <td>Rider</td>
+                <td>Profile</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>Profile screen</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider">
+                <td>R-016</td>
+                <td>Wallet</td>
+                <td>Rider</td>
+                <td>Wallet</td>
+                <td>4 (default, loading, empty, error)</td>
+                <td>Profile screen, bottom tab navigation</td>
+                <td>Yes</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider framework-critical">
+                <td>R-017</td>
+                <td>Top-Up Amount</td>
+                <td>Rider</td>
+                <td>Wallet</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>Wallet screen</td>
+                <td>Yes</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider framework-critical">
+                <td>R-018</td>
+                <td>Top-Up Confirmation</td>
+                <td>Rider</td>
+                <td>Wallet</td>
+                <td>4 (default, loading, error, success)</td>
+                <td>Top-Up Amount screen</td>
+                <td>Yes</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider">
+                <td>R-019</td>
+                <td>Top-Up Success</td>
+                <td>Rider</td>
+                <td>Wallet</td>
+                <td>4 (default, loading, empty, success)</td>
+                <td>Top-Up Confirmation screen</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+            <tr class="module-rider">
+                <td>R-020</td>
+                <td>Payment Methods</td>
+                <td>Rider</td>
+                <td>Wallet</td>
+                <td>4 (default, loading, empty, error)</td>
+                <td>Wallet screen</td>
+                <td>No</td>
+                <td>Documented</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Next Steps</h2>
+    <p>Phase 1: Screen Inventory - IN PROGRESS</p>
+    <p>Continue documenting remaining screens (Driver app, Admin panel, Shared components)</p>
+    <p>Once inventory is approved, proceed to Phase 2: Wireframe creation (batches of 20-25 screens)</p>
+</body>
+</html>>
+                <td>Documented</td

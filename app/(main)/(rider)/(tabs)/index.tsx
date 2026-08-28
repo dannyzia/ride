@@ -13,6 +13,7 @@ import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useCallLedgerStore } from "@/store/useCallLedgerStore";
 import { useRideOfferStore, useWSStore } from "@/store";
 import SOSButton from "@/components/SOSButton";
+import DriverPricingReference from "@/components/DriverPricingReference";
 import RideOfferSheet from "@/components/RideOfferSheet";
 import DriverStatsBar from "@/components/DriverStatsBar";
 import { showToast } from "@/components/Toast";
@@ -280,18 +281,29 @@ export default function DriverHome() {
         if (!res.ok) return;
         const data: {
           hotspots?: {
-            name: string;
+            zone_id: string;
+            zone_name: string;
             lat: number;
             lng: number;
-            intensity: number;
-            intensity_raw: number;
-            demand_count: number;
-            supply_count: number;
+            score: number;
+            tag: string;
+            idle_driver_count: number;
+            suggest_score: number;
           }[];
         } = await res.json();
         if (!active) return;
         setHotspotZones(
-          (data.hotspots ?? []).filter((h) => h.name && h.lat && h.lng),
+          (data.hotspots ?? [])
+            .filter((h) => h.zone_name && h.lat && h.lng)
+            .map((h) => ({
+              name: h.zone_name,
+              lat: h.lat,
+              lng: h.lng,
+              intensity: h.suggest_score,
+              intensity_raw: h.score,
+              demand_count: Math.round(h.score * 100),
+              supply_count: h.idle_driver_count,
+            })),
         );
       } catch {
         // Network error — card stays hidden until the next tick
@@ -1277,6 +1289,9 @@ export default function DriverHome() {
             online_hours={Math.round(stats.online_hours * 10) / 10}
             onPress={() => router.push("/(main)/(rider)/earnings")}
           />
+
+          {/* v6 pricing reference — only visible when fare_framework_stage >= stage1 */}
+          <DriverPricingReference />
         </View>
       </View>
 

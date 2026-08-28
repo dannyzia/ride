@@ -34,7 +34,7 @@ export async function GET(request: Request) {
 
         return {
           zone_id: row.zone_id,
-          name: row.name,
+          zone_name: row.name,
           lat: center.lat,
           lng: center.lng,
           score,

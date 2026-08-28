@@ -28,6 +28,9 @@ interface FareBreakdown {
   base_fare_bdt?: number | null;
   distance_charge_bdt?: number | null;
   time_charge_bdt?: number | null;
+  waiting_charge_bdt?: number | null;
+  zone_fee_bdt?: number | null;
+  night_mult_applied?: number | null;
   total_bdt?: number | null;
   pickup_fee_final_bdt?: number | null;
   pickup_trueup_delta_bdt?: number | null;
@@ -229,6 +232,21 @@ const RideDetailScreen = () => {
     ...(distance !== null ? [{ label: "Distance", value: distance }] : []),
     ...(time !== null ? [{ label: "Time", value: time }] : []),
     ...(wait !== null && wait > 0 ? [{ label: "Waiting Fee", value: wait }] : []),
+    // v6 Phase F: waiting charge from fare_breakdown (may differ from ride.wait_fee_bdt)
+    ...(fb.waiting_charge_bdt != null && fb.waiting_charge_bdt > 0 &&
+        (wait == null || wait === 0) ? [{ label: "Waiting charge", value: fb.waiting_charge_bdt }] : []),
+    // v6 Phase F: zone fee (100% to driver)
+    ...(fb.zone_fee_bdt != null && fb.zone_fee_bdt > 0
+      ? [{ label: "Zone fee", value: fb.zone_fee_bdt }]
+      : []),
+    // v6 Phase F: night multiplier indicator
+    ...(fb.night_mult_applied != null && fb.night_mult_applied > 1.0
+      ? [{
+          label: `Night surcharge (${((fb.night_mult_applied - 1) * 100).toFixed(0)}%)`,
+          value: 0,
+          note: "Included in time charges above",
+        }]
+      : []),
     ...(fb.pickup_fee_final_bdt != null && fb.pickup_fee_final_bdt > 0
       ? [{
           label: "Pickup Fee",

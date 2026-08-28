@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { pickupDistanceSamples, zones } from '@/src/db/schema';
-import { eq, and, gte, lte, sql, isNotNull } from 'drizzle-orm';
+import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
@@ -13,21 +13,32 @@ export async function GET(request: Request) {
     const dateFrom = url.searchParams.get('from');
     const dateTo = url.searchParams.get('to');
     const category = url.searchParams.get('category');
+    const daysBack = url.searchParams.get('days');
 
     const conditions = [];
-    if (dateFrom) {
-      const from = new Date(dateFrom);
-      if (Number.isNaN(from.getTime())) {
-        return Response.json({ error: 'validation_error', message: 'Invalid from date' }, { status: 400 });
+
+    // Support both explicit from/to and convenience days param
+    if (daysBack) {
+      const n = Number(daysBack);
+      if (Number.isFinite(n) && n > 0) {
+        const since = new Date(Date.now() - n * 86_400_000);
+        conditions.push(gte(pickupDistanceSamples.created_at, since));
       }
-      conditions.push(gte(pickupDistanceSamples.created_at, from));
-    }
-    if (dateTo) {
-      const to = new Date(dateTo);
-      if (Number.isNaN(to.getTime())) {
-        return Response.json({ error: 'validation_error', message: 'Invalid to date' }, { status: 400 });
+    } else {
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        if (Number.isNaN(from.getTime())) {
+          return Response.json({ error: 'validation_error', message: 'Invalid from date' }, { status: 400 });
+        }
+        conditions.push(gte(pickupDistanceSamples.created_at, from));
       }
-      conditions.push(lte(pickupDistanceSamples.created_at, to));
+      if (dateTo) {
+        const to = new Date(dateTo);
+        if (Number.isNaN(to.getTime())) {
+          return Response.json({ error: 'validation_error', message: 'Invalid to date' }, { status: 400 });
+        }
+        conditions.push(lte(pickupDistanceSamples.created_at, to));
+      }
     }
     if (category) {
       conditions.push(eq(pickupDistanceSamples.category, category));
@@ -42,15 +53,15 @@ export async function GET(request: Request) {
         zone_id: pickupDistanceSamples.zone_id,
         zone_name: zones.name,
         sample_count: sql<number>`count(*)::int`,
-        charged_count: sql<number>`count(*) filter (where ${pickupDistanceSamples.charged} = true)::int`,
-        charge_pct: sql<number>`round(count(*) filter (where ${pickupDistanceSamples.charged} = true) * 100.0 / nullif(count(*), 0), 2)`,
-        p50_realized: sql<string>`percentile_cont(0.50) within group (order by ${pickupDistanceSamples.realized_km})`,
-        p70_realized: sql<string>`percentile_cont(0.70) within group (order by ${pickupDistanceSamples.realized_km})`,
-        p75_realized: sql<string>`percentile_cont(0.75) within group (order by ${pickupDistanceSamples.realized_km})`,
-        p90_realized: sql<string>`percentile_cont(0.90) within group (order by ${pickupDistanceSamples.realized_km})`,
-        mean_quote_km: sql<string>`round(avg(${pickupDistanceSamples.quote_km})::numeric, 3)`,
-        mean_realized_km: sql<string>`round(avg(${pickupDistanceSamples.realized_km})::numeric, 3)`,
-        mean_deviation_pct: sql<string>`round(avg(case when ${pickupDistanceSamples.quote_km} > 0 then abs(${pickupDistanceSamples.realized_km} - ${pickupDistanceSamples.quote_km}) / ${pickupDistanceSamples.quote_km} * 100 else null end)::numeric, 2)`,
+        charge_incidence_pct: sql<number>`round(count(*) filter (where ${pickupDistanceSamples.charged} = true) * 100.0 / nullif(count(*), 0), 1)`,
+        p50: sql<string>`percentile_cont(0.50) within group (order by ${pickupDistanceSamples.realized_km})`,
+        p70: sql<string>`percentile_cont(0.70) within group (order by ${pickupDistanceSamples.realized_km})`,
+        p75: sql<string>`percentile_cont(0.75) within group (order by ${pickupDistanceSamples.realized_km})`,
+        p90: sql<string>`percentile_cont(0.90) within group (order by ${pickupDistanceSamples.realized_km})`,
+        quote_deviation_low: sql<number>`round(count(*) filter (where ${pickupDistanceSamples.quote_km} > 0 and ${pickupDistanceSamples.realized_km} > ${pickupDistanceSamples.quote_km}) * 100.0 / nullif(count(*), 0), 1)`,
+        quote_deviation_high: sql<number>`round(count(*) filter (where ${pickupDistanceSamples.quote_km} > 0 and ${pickupDistanceSamples.realized_km} < ${pickupDistanceSamples.quote_km}) * 100.0 / nullif(count(*), 0), 1)`,
+        cap_binding_pct: sql<number>`round(count(*) filter (where ${pickupDistanceSamples.cap_was_binding} = true) * 100.0 / nullif(count(*), 0), 1)`,
+        backstop_binding_pct: sql<number>`round(count(*) filter (where ${pickupDistanceSamples.backstop_was_binding} = true) * 100.0 / nullif(count(*), 0), 1)`,
       })
       .from(pickupDistanceSamples)
       .leftJoin(zones, eq(pickupDistanceSamples.zone_id, zones.id))
@@ -58,38 +69,45 @@ export async function GET(request: Request) {
       .groupBy(pickupDistanceSamples.category, pickupDistanceSamples.zone_id, zones.name)
       .orderBy(pickupDistanceSamples.category, zones.name);
 
-    // Overall summary
-    const [summary] = await db
+    // Unique categories and zones for summary
+    const [catRow] = await db
+      .select({ categories: sql<string[]>`array_agg(distinct ${pickupDistanceSamples.category})` })
+      .from(pickupDistanceSamples)
+      .where(whereClause);
+
+    const [zoneRow] = await db
+      .select({ zones: sql<string[]>`array_agg(distinct ${zones.name})` })
+      .from(pickupDistanceSamples)
+      .leftJoin(zones, eq(pickupDistanceSamples.zone_id, zones.id))
+      .where(whereClause);
+
+    const [summaryRow] = await db
       .select({
         total_samples: sql<number>`count(*)::int`,
-        total_charged: sql<number>`count(*) filter (where ${pickupDistanceSamples.charged} = true)::int`,
-        overall_charge_pct: sql<number>`round(count(*) filter (where ${pickupDistanceSamples.charged} = true) * 100.0 / nullif(count(*), 0), 2)`,
-        overall_mean_deviation: sql<string>`round(avg(case when ${pickupDistanceSamples.quote_km} > 0 then abs(${pickupDistanceSamples.realized_km} - ${pickupDistanceSamples.quote_km}) / ${pickupDistanceSamples.quote_km} * 100 else null end)::numeric, 2)`,
       })
       .from(pickupDistanceSamples)
       .where(whereClause);
 
     return Response.json({
       summary: {
-        total_samples: Number(summary?.total_samples ?? 0),
-        total_charged: Number(summary?.total_charged ?? 0),
-        overall_charge_pct: summary?.overall_charge_pct !== null ? Number(summary.overall_charge_pct) : null,
-        overall_mean_deviation_pct: summary?.overall_mean_deviation !== null ? Number(summary.overall_mean_deviation) : null,
+        total_samples: Number(summaryRow?.total_samples ?? 0),
+        categories: catRow?.categories ?? [],
+        zones: zoneRow?.zones ?? [],
       },
       distributions: rows.map((r) => ({
         category: r.category,
         zone_id: r.zone_id,
         zone_name: r.zone_name,
+        p50: r.p50 !== null ? Number(r.p50) : null,
+        p70: r.p70 !== null ? Number(r.p70) : null,
+        p75: r.p75 !== null ? Number(r.p75) : null,
+        p90: r.p90 !== null ? Number(r.p90) : null,
+        charge_incidence_pct: r.charge_incidence_pct !== null ? Number(r.charge_incidence_pct) : null,
+        quote_deviation_low: r.quote_deviation_low !== null ? Number(r.quote_deviation_low) : null,
+        quote_deviation_high: r.quote_deviation_high !== null ? Number(r.quote_deviation_high) : null,
         sample_count: Number(r.sample_count),
-        charged_count: Number(r.charged_count),
-        charge_pct: r.charge_pct !== null ? Number(r.charge_pct) : null,
-        p50_realized_km: r.p50_realized !== null ? Number(r.p50_realized) : null,
-        p70_realized_km: r.p70_realized !== null ? Number(r.p70_realized) : null,
-        p75_realized_km: r.p75_realized !== null ? Number(r.p75_realized) : null,
-        p90_realized_km: r.p90_realized !== null ? Number(r.p90_realized) : null,
-        mean_quote_km: r.mean_quote_km !== null ? Number(r.mean_quote_km) : null,
-        mean_realized_km: r.mean_realized_km !== null ? Number(r.mean_realized_km) : null,
-        mean_deviation_pct: r.mean_deviation_pct !== null ? Number(r.mean_deviation_pct) : null,
+        cap_binding_pct: r.cap_binding_pct !== null ? Number(r.cap_binding_pct) : null,
+        backstop_binding_pct: r.backstop_binding_pct !== null ? Number(r.backstop_binding_pct) : null,
       })),
     });
   } catch (err: unknown) {

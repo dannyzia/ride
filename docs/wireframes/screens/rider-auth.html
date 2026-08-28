@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Ride Auth Wireframes</title><style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;background:#f5f5f5;padding:10px;color:#111;font-size:11px}
+h1{font-size:15px;margin-bottom:8px}.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.c{background:#fff;border:1px solid #ddd;border-radius:6px;padding:8px}
+.w{background:#fafafa;border:1px dashed #bbb;border-radius:4px;padding:6px;min-height:90px}
+.b{background:#e5e5e5;border:1px solid #ccc;border-radius:3px;padding:2px 5px;margin:2px 0;font-size:10px}
+.p{background:#2563eb22;border-color:#2563eb}.d{background:#dc262622;border-color:#dc2626}
+table{width:100%;border-collapse:collapse;font-size:10px;margin-top:3px}
+th,td{border:1px solid #ddd;padding:2px 4px;text-align:left;vertical-align:top}
+th{background:#f0f0f0}.l{display:inline-block;background:#2563eb;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;margin-bottom:3px}
+</style></head><body>
+<h1>Ride — Auth Wireframes (R-001..R-012 + D-001..D-007)</h1>
+<div class="g">
+
+<div class="c"><div class="l">R-001 Phone Entry</div><div class="w">
+<div class="b">Logo + Ride</div><div class="b">Get Started</div>
+<div class="b p">+880 [1XXXXXXXXX]</div><div class="b p">[Rider | Driver]</div>
+<div class="b d">Error</div><div class="b p">Login</div><div class="b p">Register</div>
+</div><table><tr><th>Purpose</th><td>Entry point; identify user by phone</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: launch. Exit: login→OTP, register→OTP</td></tr>
+<tr><th>UI Elements</th><td>Logo, phone input, role pill, error, Login/Register</td></tr>
+<tr><th>States/Actions</th><td>loading, error, role. check-user API</td></tr>
+<tr><th>Source</th><td>app/(auth)/phone-entry.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">R-002 OTP Verify</div><div class="w">
+<div class="b">Verify OTP</div><div class="b">Sent to +8801XXXXXXXXX</div>
+<div class="b p">[ _ _ _ _ _ _ ]</div><div class="b d">Error</div>
+<div class="b p">Verify OTP</div><div class="b">Resend OTP</div>
+</div><table><tr><th>Purpose</th><td>Verify phone via 6-digit OTP</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: phone-entry. Exit: register</td></tr>
+<tr><th>UI Elements</th><td>Title, phone hint, OTP input, error, verify, resend</td></tr>
+<tr><th>States/Actions</th><td>sending, loading, error, sessionId. send-otp, verify-otp</td></tr>
+<tr><th>Source</th><td>app/(auth)/otp-verify.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">R-003 Register</div><div class="w">
+<div class="b">Complete Registration</div><div class="b p">Full Name</div>
+<div class="b p">Password (min 6)</div><div class="b p">Confirm Password</div>
+<div class="b d">Error</div><div class="b p">Register</div>
+</div><table><tr><th>Purpose</th><td>Create new rider/driver account</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: otp-verify. Exit: rider→enable-location, driver→(rider)</td></tr>
+<tr><th>UI Elements</th><td>Name, password, confirm, error, register button</td></tr>
+<tr><th>States/Actions</th><td>loading, error. POST /api/register, signInWithPassword</td></tr>
+<tr><th>Source</th><td>app/(auth)/register.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">R-004 Walkthrough 1</div><div class="w">
+<div class="b">[spacer]</div><div class="b" style="text-align:center">🚗</div>
+<div class="b">Welcome to Ride</div><div class="b">Book rides instantly...</div>
+<div class="b">● ○ ○</div><div class="b p">Next</div><div class="b">Skip</div>
+</div><table><tr><th>Purpose</th><td>Onboarding intro</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: launch/skip. Exit: walkthrough-2</td></tr>
+<tr><th>UI Elements</th><td>Illustration, title, description, dots, Next, Skip</td></tr>
+<tr><th>States/Actions</th><td>dot 1 active. Next/Skip navigation</td></tr>
+<tr><th>Source</th><td>app/(auth)/walkthrough-1.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">R-005 Walkthrough 2</div><div class="w">
+<div class="b">[spacer]</div><div class="b" style="text-align:center">🛡️</div>
+<div class="b">Safe & Reliable</div><div class="b">All drivers verified...</div>
+<div class="b">○ ● ○</div><div class="b p">Next</div><div class="b">Skip</div>
+</div><table><tr><th>Purpose</th><td>Onboarding — safety</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: walkthrough-1. Exit: walkthrough-3</td></tr>
+<tr><th>UI Elements</th><td>Shield icon, title, description, dots, Next, Skip</td></tr>
+<tr><th>States/Actions</th><td>dot 2 active. Next/Skip</td></tr>
+<tr><th>Source</th><td>app/(auth)/walkthrough-2.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">R-006 Walkthrough 3</div><div class="w">
+<div class="b">[spacer]</div><div class="b" style="text-align:center">💳</div>
+<div class="b">Pay with Ease</div><div class="b">Cash, bKash, Nagad...</div>
+<div class="b">○ ○ ●</div><div class="b p">Get Started</div>
+</div><table><tr><th>Purpose</th><td>Onboarding — payment</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: walkthrough-2. Exit: phone-entry</td></tr>
+<tr><th>UI Elements</th><td>Card icon, title, description, dots, Get Started</td></tr>
+<tr><th>States/Actions</th><td>dot 3 active. Get Started → phone-entry</td></tr>
+<tr><th>Source</th><td>app/(auth)/walkthrough-3.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">R-007 Welcome</div><div class="w">
+<div class="b">[spacer]</div><div class="b" style="text-align:center">Logo</div>
+<div class="b">Welcome to Ride</div><div class="b" style="text-align:center">🚗</div>
+<div class="b p">Sign In</div><div class="b p">Create Account</div>
+</div><table><tr><th>Purpose</th><td>Auth landing for new/returning users</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: launch. Exit: both → phone-entry</td></tr>
+<tr><th>UI Elements</th><td>Logo, title, illustration, Sign In, Create Account</td></tr>
+<tr><th>States/Actions</th><td>static. Navigate phone-entry</td></tr>
+<tr><th>Source</th><td>app/(auth)/welcome.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">R-008 Enable Location</div><div class="w">
+<div class="b">[theme toggle]</div><div class="b">[spacer]</div>
+<div class="b" style="text-align:center">📍</div>
+<div class="b">Allow Ride to access your location</div>
+<div class="b p">Allow</div><div class="b p">Not Now</div>
+</div><table><tr><th>Purpose</th><td>Request foreground location</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: register (rider). Exit: notifications-permission</td></tr>
+<tr><th>UI Elements</th><td>Theme toggle, icon, title, description, Allow/Not Now</td></tr>
+<tr><th>States/Actions</th><td>loading, granted/denied. requestForegroundPermissionsAsync</td></tr>
+<tr><th>Source</th><td>app/(auth)/enable-location.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">R-009 Notifications Permission</div><div class="w">
+<div class="b">[theme toggle]</div><div class="b">[spacer]</div>
+<div class="b" style="text-align:center">🔔</div>
+<div class="b">Allow Notifications</div>
+<div class="b">We'll send ride updates...</div>
+<div class="b p">Allow</div><div class="b p">Not Now</div>
+</div><table><tr><th>Purpose</th><td>Request push permission + register token</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: enable-location. Exit: services-hub</td></tr>
+<tr><th>UI Elements</th><td>Theme toggle, bell icon, title, description, Allow/Not Now</td></tr>
+<tr><th>States/Actions</th><td>busy, granted/denied. requestPermissionsAsync, POST /api/user/device</td></tr>
+<tr><th>Source</th><td>app/(auth)/notifications-permission.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">R-010 Login</div><div class="w">
+<div class="b">Welcome Back</div><div class="b p">+880 [1XXXXXXXXX]</div>
+<div class="b p">Password</div><div class="b d">Error</div>
+<div class="b p">Login</div><div class="b">Forgot Password?</div>
+</div><table><tr><th>Purpose</th><td>Authenticate existing user</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: phone-entry (exists). Exit: auth gate redirect</td></tr>
+<tr><th>UI Elements</th><td>Title, phone, password, error, Login, Forgot Password</td></tr>
+<tr><th>States/Actions</th><td>loading, error. supabase.auth.signInWithPassword</td></tr>
+<tr><th>Source</th><td>app/(auth)/login.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">R-011 Forgot Password</div><div class="w">
+<div class="b">Step: phone</div><div class="b p">+880 [1XXXXXXXXX]</div>
+<div class="b p">Send OTP</div><div class="b">Step: otp</div>
+<div class="b p">[ _ _ _ _ _ _ ]</div><div class="b p">Verify OTP</div>
+<div class="b">Change Phone</div><div class="b">Step: password</div>
+<div class="b p">New Password</div><div class="b p">Confirm Password</div>
+<div class="b p">Reset Password</div><div class="b d">Error</div>
+</div><table><tr><th>Purpose</th><td>Reset password via phone + OTP</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: login. Exit: login (with phone)</td></tr>
+<tr><th>UI Elements</th><td>3-step: phone, OTP, new+confirm password</td></tr>
+<tr><th>States/Actions</th><td>step, loading, error, sessionId. check-user, send-otp, verify-otp, reset-password</td></tr>
+<tr><th>Source</th><td>app/(auth)/forgot-password.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">R-012 Driver Enter OTP</div><div class="w">
+<div class="b">[theme toggle]</div><div class="b" style="text-align:center">Ride Pin</div>
+<div class="b">Enter the 4-digit Ride Pin...</div>
+<div class="b p">[ _ _ _ _ ]</div><div class="b d">Error (shake)</div>
+<div class="b p">Start Ride</div>
+</div><table><tr><th>Purpose</th><td>Driver enters rider PIN to start ride</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: ride accepted. Exit: success→finish-ride, fail→retry</td></tr>
+<tr><th>UI Elements</th><td>Theme toggle, title, hint, PinInput(4), error, Start Ride</td></tr>
+<tr><th>States/Actions</th><td>verifying, error, shake, ws. ws.send ride:start, listen ride:started/start_failed</td></tr>
+<tr><th>Source</th><td>app/(main)/(rider)/enter-otp/index.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">D-001 Driver Splash</div><div class="w">
+<div class="b" style="text-align:center;font-weight:bold;color:#2563eb">Ride Driver</div>
+<div class="b" style="text-align:center">Drive and earn with us</div>
+</div><table><tr><th>Purpose</th><td>Driver app splash</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: driver launch. Exit: auto→walkthrough-1 (2.5s)</td></tr>
+<tr><th>UI Elements</th><td>Brand text, tagline</td></tr>
+<tr><th>States/Actions</th><td>static, timed. setTimeout → walkthrough-1</td></tr>
+<tr><th>Source</th><td>app/(auth)/driver-splash.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">D-002 Driver Walkthrough 1</div><div class="w">
+<div class="b">[spacer]</div><div class="b" style="text-align:center">📞</div>
+<div class="b">Earn More</div><div class="b">Buy call packages...</div>
+<div class="b">● ○ ○</div><div class="b p">Next</div><div class="b">Skip</div>
+</div><table><tr><th>Purpose</th><td>Driver onboarding — earning</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: splash/skip. Exit: walkthrough-2</td></tr>
+<tr><th>UI Elements</th><td>Call icon, title, description, dots, Next, Skip</td></tr>
+<tr><th>States/Actions</th><td>dot 1 active. Next/Skip</td></tr>
+<tr><th>Source</th><td>app/(auth)/driver-walkthrough-1.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">D-003 Driver Walkthrough 2</div><div class="w">
+<div class="b">[spacer]</div><div class="b" style="text-align:center">⏱️</div>
+<div class="b">Flexible Hours</div><div class="b">Go online whenever...</div>
+<div class="b">○ ● ○</div><div class="b p">Next</div><div class="b">Skip</div>
+</div><table><tr><th>Purpose</th><td>Driver onboarding — hours</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: walkthrough-1. Exit: walkthrough-3</td></tr>
+<tr><th>UI Elements</th><td>Time icon, title, description, dots, Next, Skip</td></tr>
+<tr><th>States/Actions</th><td>dot 2 active. Next/Skip</td></tr>
+<tr><th>Source</th><td>app/(auth)/driver-walkthrough-2.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">D-004 Driver Walkthrough 3</div><div class="w">
+<div class="b">[spacer]</div><div class="b" style="text-align:center">🛡️</div>
+<div class="b">Safe & Secure</div><div class="b">Verified riders...</div>
+<div class="b">○ ○ ●</div><div class="b p">Get Started</div>
+</div><table><tr><th>Purpose</th><td>Driver onboarding — safety</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: walkthrough-2. Exit: driver-welcome</td></tr>
+<tr><th>UI Elements</th><td>Shield icon, title, description, dots, Get Started</td></tr>
+<tr><th>States/Actions</th><td>dot 3 active. Get Started → driver-welcome</td></tr>
+<tr><th>Source</th><td>app/(auth)/driver-walkthrough-3.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">D-005 Driver Welcome</div><div class="w">
+<div class="b">[spacer]</div><div class="b" style="text-align:center;color:#2563eb;font-weight:bold">Ride Driver</div>
+<div class="b" style="text-align:center">Start earning today...</div>
+<div class="b p">Driver Sign In</div><div class="b p">Driver Sign Up</div>
+</div><table><tr><th>Purpose</th><td>Driver auth landing</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: walkthrough-3. Exit: both → phone-entry</td></tr>
+<tr><th>UI Elements</th><td>Brand title, tagline, Sign In, Sign Up</td></tr>
+<tr><th>States/Actions</th><td>static. Navigate phone-entry (role=driver)</td></tr>
+<tr><th>Source</th><td>app/(auth)/driver-welcome.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">D-006 Driver Enable Location</div><div class="w">
+<div class="b">[spacer]</div><div class="b" style="text-align:center">📍</div>
+<div class="b">Enable Location</div><div class="b">Location is required...</div>
+<div class="b p">Allow</div><div class="b p">Not Now</div>
+</div><table><tr><th>Purpose</th><td>Request driver location permission</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: driver register. Exit: select-active-vehicle</td></tr>
+<tr><th>UI Elements</th><td>Location icon, title, description, Allow/Not Now</td></tr>
+<tr><th>States/Actions</th><td>loading. requestForegroundPermissionsAsync</td></tr>
+<tr><th>Source</th><td>app/(auth)/driver-enable-location.tsx</td></tr></table></div>
+
+<div class="c"><div class="l">D-007 Driver Notifications Permission</div><div class="w">
+<div class="b">[spacer]</div><div class="b" style="text-align:center">🔔</div>
+<div class="b">Allow Notifications</div><div class="b">Ride requests, payouts...</div>
+<div class="b p">Allow</div><div class="b p">Not Now</div>
+</div><table><tr><th>Purpose</th><td>Request driver push permission + register token</td></tr>
+<tr><th>Entry/Exit</th><td>Entry: driver-enable-location. Exit: (rider)/onboarding</td></tr>
+<tr><th>UI Elements</th><td>Bell icon, title, description, Allow/Not Now</td></tr>
+<tr><th>States/Actions</th><td>busy, granted/denied. requestPermissionsAsync, POST /api/user/device</td></tr>
+<tr><th>Source</th><td>app/(auth)/driver-notifications-permission.tsx</td></tr></table></div>
+
+</div></body></html>

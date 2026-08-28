@@ -79,7 +79,7 @@ All remaining GlideX dependencies are kept as-is. Key ones the AI must not accid
 - `react-native-maps` 1.20.1 — maps; keep as-is
 - `expo-location` ~18.1.4 — location; keep as-is
 - `expo-notifications` ~0.31.1 — push; keep as-is; extend for FCM data messages
-- `expo-secure-store` ~14.2.3 — secure storage; use for Firebase auth token persistence
+- `expo-secure-store` ~14.2.3 — secure storage; use for Supabase auth token persistence
 - `expo-image-picker` ~16.1.4 — keep; used for driver document photo upload
 - `lottie-react-native` ^7.2.2 — keep; used in loading states
 - `@gorhom/bottom-sheet` ^5.1.2 — keep; used in ride offer cards
@@ -94,7 +94,7 @@ All remaining GlideX dependencies are kept as-is. Key ones the AI must not accid
 - No Clerk imports anywhere. If you see `@clerk/*` in an existing file, remove it.
 - No Stripe imports anywhere. If you see `stripe` or `@stripe/*` in an existing file, remove it.
 - Payment credentials (BKASH_*, NAGAD_*, PORTPOS_*): server-side env vars only. Must not appear in `EXPO_PUBLIC_*` variables.
-- Call **deduction** logic: only in `utils-server/heartbeat.ts`. No other file writes `event_type='deduction'` rows to `call_ledger`. **Non-deduction writes** (`initial_load`, `credit`, `expiry_writeoff`) use `lib/activateSubscription.ts` which is callable from both Expo API routes and utils-server. The unified rule: deduction rows → `heartbeat.ts` only; all other event types → `activateSubscription.ts` only; no file writes `call_ledger` directly outside these two modules.
+- Call **deduction** logic: only in `utils-server/leadBilling.ts`. No other file writes `event_type='deduction'` rows to `call_ledger`. **Non-deduction writes** (`initial_load`, `credit`, `expiry_writeoff`) use `lib/activateSubscription.ts` which is callable from both Expo API routes and utils-server. The unified rule: deduction rows → `leadBilling.ts` only; all other event types → `activateSubscription.ts` only; no file writes `call_ledger` directly outside these two modules.
 - All timestamps: UTC. Store as PostgreSQL `timestamptz`. Never store local time.
 - No `console.log` in committed code. Use the project logger (`lib/logger.ts` — add this file).
 - All UI styling must use GoRide design tokens extracted from GoRide.css through `theme/goRide.ts`; hardcoded color/font/spacing literals in components are not allowed.
@@ -106,7 +106,7 @@ All remaining GlideX dependencies are kept as-is. Key ones the AI must not accid
 | Environment | Purpose | Notes |
 |-------------|---------|-------|
 | local | Development | `.env.local` (Expo), `.env` (utils-server). PortPos sandbox credentials. Supabase local dev (`supabase start`). |
-| staging | Pre-release | EAS build profile `preview`. Supabase staging project. bKash sandbox. |
+| staging | Pre-release | EAS build profile `preview`. Supabase staging project. PortPos sandbox. |
 | production | Live — Bangladesh | EAS build profile `production`. Manual deploy only. Supabase ap-southeast-1 (Singapore) project. |
 
 ---
@@ -115,8 +115,8 @@ All remaining GlideX dependencies are kept as-is. Key ones the AI must not accid
 
 - No Stripe, Clerk, or Resend usage anywhere in the codebase.
 - No direct PostgreSQL writes from the Expo client (all writes via API routes).
-- No call_ledger writes outside `utils-server/heartbeat.ts`.
+- No call_ledger writes outside `utils-server/leadBilling.ts`.
 - No hardcoded coordinates, zone polygons, or fare rates — all come from DB (`zones` and `pricing` tables).
 - No fare calculation on the client — always call `lib/fareCalc.ts` server-side; client displays the returned breakdown.
 - No raw SQL string interpolation — use Drizzle ORM parameterised queries only.
-- No synchronous calls to bKash/Nagad APIs inside the request/response cycle without timeout handling (max 10s timeout, fail gracefully).
+- No synchronous calls to PortPos APIs inside the request/response cycle without timeout handling (max 10s timeout, fail gracefully).

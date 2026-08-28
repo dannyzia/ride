@@ -25,6 +25,7 @@ import { colors, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import SOSButton from "@/components/SOSButton";
 import PinInput from "@/components/PinInput";
+import LiveMeter from "@/components/LiveMeter";
 import { isPinMismatch, PIN_REVERT_DELAY_MS } from "@/lib/pin";
 import { relativeTime } from "@/lib/time";
 
@@ -612,16 +613,13 @@ export default function RideTrackingScreen() {
         {/* ── IN PROGRESS ── */}
         {trackingState === "in_progress" && (
           <>
-            <View style={styles.tripHeader}>
-              <View>
-                <Text style={[styles.tripTimer, { color: textPrimary }]}>{formatTripTime(tripSeconds)}</Text>
-                <Text style={[styles.tripLabel, { color: textSecondary }]}>Trip time</Text>
-              </View>
-              <View style={{ alignItems: "flex-end" }}>
-                <Text style={[styles.farePreview, { color: textPrimary }]}>৳{(ride.fare_bdt / 100).toFixed(0)}</Text>
-                <Text style={[styles.tripLabel, { color: textSecondary }]}>Estimated fare</Text>
-              </View>
-            </View>
+            {/* v6 Phase F: LiveMeter replaces the old inline timer+fare */}
+            <LiveMeter
+              estimatePaisa={ride.fare_bdt}
+              startedAtMs={Date.now() - tripSeconds * 1000}
+              vehicleType={driver?.vehicle_type}
+              nightActive={false}
+            />
 
             <View style={[styles.addressRow, { borderColor: borderColor }]}>
               <View style={[styles.dot, { backgroundColor: colors.danger }]} />

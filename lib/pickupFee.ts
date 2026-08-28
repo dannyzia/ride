@@ -60,6 +60,59 @@ export function ratePerKmPaisa(perKmBdt: number, category: PickupCategory): numb
   return Math.round(perKmBdt * PICKUP_RATE_MULTIPLIER[category]);
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// Fare Framework v6 — Pickup fee (PATCH 3: pinned cap sequence)
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * v6 pickup fee — flat 1.0× (no category multiplier), two dimensions.
+ *
+ * Pinned formula (PATCH 3 — non-negotiable ordering):
+ *
+ *   billable_km = min(max(0, pickup_km − free_radius_km), cap_billable_km)
+ *   billable_min = max(0, pickup_min − free_pickup_min)
+ *   uncapped_fee = billable_km × km_rate + billable_min × time_rate
+ *   pickup_fee = min(uncapped_fee, round(fare_before_pickup × cap_pct / 100))
+ *
+ * Critical ordering constraints:
+ *   1. km cap applies to distance component ONLY — time is NEVER dropped
+ *   2. %-backstop applies to the WHOLE fee (km + time)
+ *   3. min() at outer level = backstop is final ceiling
+ *
+ * All values integer paisa. km_rate and time_rate are the trip rates
+ * (not modified — flat 1.0× basis).
+ */
+export function pickupFeeV6(p: {
+  pickupKm: number;
+  pickupMin: number;
+  freeRadiusKm: number;
+  freePickupMin: number;
+  kmRate: number; // paisa/km — trip km_rate, flat 1.0×
+  timeRate: number; // paisa/min — trip time_rate, flat 1.0×
+  capBillableKm: number;
+  capPct: number; // percent of fare_before_pickup, e.g. 25
+  fareBeforePickup: number; // paisa
+}): number {
+  const billableKm = Math.min(
+    Math.max(0, p.pickupKm - p.freeRadiusKm),
+    p.capBillableKm,
+  );
+  const billableMin = Math.max(0, p.pickupMin - p.freePickupMin);
+
+  // Distance term: km cap on distance ONLY — time never dropped
+  const distanceFee = Math.round(p.kmRate * billableKm);
+  // Time term: no dedicated cap beyond free allowance
+  const timeFee = Math.round(p.timeRate * billableMin);
+
+  // Whole fee = distance + time
+  const uncappedFee = distanceFee + timeFee;
+
+  // Single %-backstop on the whole fee (PATCH 3: not just distance)
+  const backstopLimit = Math.round((p.fareBeforePickup * p.capPct) / 100);
+
+  return Math.min(uncappedFee, backstopLimit);
+}
+
 /**
  * Reference distance over the sorted candidate-pool distances at the given
  * quantile (linear interpolation). Empty pool → 0. Used for the rider quote

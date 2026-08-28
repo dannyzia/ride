@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rider Main Tabs - Wireframe Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        h1, h2, h3 { color: #333; }
+        .screen { border: 1px solid #ddd; margin-bottom: 30px; padding: 20px; border-radius: 5px; }
+        .screen-header { background-color: #f8f9fa; padding: 10px; margin: -20px -20px 20px -20px; border-bottom: 1px solid #ddd; }
+        .screen-id { font-weight: bold; color: #007bff; }
+        .screen-name { font-size: 1.2em; margin: 5px 0; }
+        .screen-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+        .meta-item { background: #f8f9fa; padding: 10px; border-radius: 3px; }
+        .meta-label { font-weight: bold; color: #495057; }
+        .meta-value { margin-top: 5px; }
+        .framework-critical { background-color: #fff3cd; border-left: 4px solid #ffc107; }
+        .states { margin: 15px 0; }
+        .state-tag { display: inline-block; background: #e9ecef; padding: 2px 8px; border-radius: 10px; font-size: 0.9em; margin-right: 5px; }
+        .actions { margin: 15px 0; }
+        .action-item { background: #d1ecf1; padding: 8px; margin: 5px 0; border-radius: 3px; }
+        .data-shown { margin: 15px 0; }
+        .data-item { background: #d4edda; padding: 8px; margin: 5px 0; border-radius: 3px; }
+        .wireframe-placeholder { width: 100%; height: 300px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; margin: 20px 0; color: #6c757d; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>Rider Main App Tabs</h1>
+    <p><em>Documented from codebase analysis - Bottom navigation tabs for rider app</em></p>
+    
+    <!-- Rider Home Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-004</div>
+            <div class="screen-name">Home</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">App launch (after auth), bottom tab navigation</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">Yes</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Rider Home Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Main screen for requesting rides, displaying current location and nearby activity</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: App launch, bottom tab navigation<br>Exit: Find Ride screen, Profile, Wallet, etc.</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Map view showing current location</li>
+                <li>Search bar: "Where to?"</li>
+                <li>Current location indicator</li>
+                <li>Primary action button: "Set Pickup Location"</li>
+                <li>Quick access cards: Frequent destinations, Ride history</li>
+                <li>Bottom navigation: Home, Activity, Profile, Wallet</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Search bar - opens Find Ride screen</div>
+                <div class="action-item">Current location button - centers map on user location</div>
+                <div class="action-item">Set Pickup Location button - confirms pickup point</div>
+                <div class="action-item">Quick access cards - navigate to respective screens</div>
+                <div class="action-item">Bottom tab navigation - switches between app sections</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">User's current location (GPS)</div>
+                <div class="data-item">Map tiles (MapLibre with Barikoi)</div>
+                <div class="data-item">Frequent destinations (from user history)</div>
+                <div class="data-item">Recent ride activity</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/home/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Find Ride Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-005</div>
+            <div class="screen-name">Find Ride</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Home screen search bar, deep link</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">Yes</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Find Ride Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>User sets pickup and dropoff locations to request a ride</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Home screen search<br>Exit: Ride confirmation screen or back to home</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Two input fields: "Pickup location" and "Dropoff location"</li>
+                <li>Map view showing both locations</li>
+                <li>Primary button: "Request Ride"</li>
+                <li>Fare estimate display</li>
+                <li>Vehicle type selector</li>
+                <li>Reverse route button (swap pickup/dropoff)</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <<span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Pickup location input - opens autocomplete search</div>
+                <div class="action-item">Dropoff location input - opens autocomplete search</div>
+                <div class="action-item">Map interaction - adjust pin locations</div>
+                <div class="action-item">Vehicle type selector - opens vehicle options modal</div>
+                <div class="action-item">Reverse route button - swaps pickup and dropoff</div>
+                <div class="action-item">Request Ride button - initiates ride request process</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Pickup address (user selected or searched)</div>
+                <div class="data-item">Dropoff address (user selected or searched)</div>
+                <div class="data-item">Estimated fare and ETA</div>
+                <div class="data-item">Selected vehicle type</div>
+                <div class="data-item">Route preview on map</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/find-ride/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Confirm Ride Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-006</div>
+            <div class="screen-name">Confirm Ride</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Find Ride screen</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">Yes</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Confirm Ride Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Displays ride details before confirmation and shows driver matching process</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Find Ride screen<br>Exit: Ride tracking screen or back to find ride</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Ride summary card (pickup, dropoff, distance, ETA)</li>
+                <li>Fare breakdown</li>
+                <li>Vehicle type and specifications</li>
+                <li>Primary button: "Confirm Ride"</li>
+                <li>Cancel button</li>
+                <li>Driver matching animation/status</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Confirm Ride button - submits ride request to dispatch system</div>
+                <div class="action-item">Cancel button - returns to Find Ride screen</div>
+                <div class="action-item>Edit ride details - returns to Find Ride screen</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Pickup and dropoff addresses</div>
+                <div class="data-item">Distance and estimated time</div>
+                <div class="data-item">Base fare, taxes, and total estimate</div>
+                <div class="data-item">Vehicle type and license plate (when assigned)</div>
+                <div class="data-item">Driver name and rating (when assigned)</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/confirm-ride/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Ride Tracking Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-007</div>
+            <div class="screen-name">Ride Tracking</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Confirm Ride screen</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">Yes</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Ride Tracking Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Real-time tracking of assigned driver and ride progress</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Confirm Ride screen<br>Exit: Rate Driver screen or Ride completed</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Map view showing rider and driver locations</li>
+                <li>Driver information card (name, photo, vehicle, license plate)</li>
+                <li>ETA and distance to pickup</li>
+                <li>Status indicators: "Driver approaching", "Arrived", "In transit"</li>
+                <li>Action buttons: Contact driver, Share ride, Cancel ride</li>
+                <li>Bottom action bar: Emergency SOS, Trip issues</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Map interaction - follow driver or overview mode</div>
+                <div class="action-item">Contact driver button - initiates call or chat</div>
+                <div class="action-item">Share ride button - shares trip details</div>
+                <div class="action-item">Cancel ride button - shows cancellation confirmation</div>
+                <div class="action-item">Emergency SOS - activates emergency protocol</div>
+                <div class="action-item">Trip issues - opens issue reporting flow</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Driver location (real-time GPS)</div>
+                <div class="data-item">Rider location (real-time GPS)</div>
+                <div class="data-item">Route progress and remaining distance</div>
+                <div class="data-item">Driver name, rating, and vehicle details</div>
+                <div class="data-item">License plate and car model</div>
+                <div class="data-item">ETAs for pickup and dropoff</div>
+                <div class="data-item">Current ride status</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/ride-tracking/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Rate Driver Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-008</div>
+            <div class="screen-name">Rate Driver</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Ride Tracking screen (after dropoff)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Rate Driver Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Allows rider to rate the driver and provide feedback after ride completion</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Ride Tracking screen<br>Exit: Home screen or Ride history</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Driver information (name, photo, vehicle)</li>
+                <li>Star rating component (1-5 stars)</li>
+                <li>Text feedback area</li>
+                <li>Predefined quick feedback options (punctual, friendly, clean vehicle, etc.)</li>
+                <li>Primary button: "Submit Rating"</li>
+                <li>Skip rating option</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Star rating - selects rating value</div>
+                <div class="action-item">Feedback text input - enters comments</div>
+                <div class="action-item">Quick feedback buttons - selects predefined options</div>
+                <div class="action-item">Submit Rating button - saves rating and feedback</div>
+                <div class="action-item">Skip rating - proceeds without rating</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Driver name and photo</div>
+                <div class="data-item">Vehicle type and license plate</div>
+                <div class="data-item">Trip summary (distance, duration)</div>
+                <div class="data-item">Current rating average for driver</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/rate-driver/index.tsx</p>
+        </div>
+    </div>
+</body>
+</html>

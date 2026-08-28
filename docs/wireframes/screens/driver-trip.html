@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Driver Trip Wireframes (D-026 – D-030)</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f4f5; margin: 0; padding: 24px; color: #18181b; }
+  h1 { font-size: 18px; margin-bottom: 16px; }
+  h2 { font-size: 14px; margin: 18px 0 8px; color: #3b82f6; }
+  .screen { background: #fff; border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px; margin-bottom: 14px; }
+  .wf { display: flex; flex-direction: column; gap: 6px; }
+  .bar { height: 28px; background: #e4e4e7; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; color: #52525b; }
+  .bar.primary { background: #3b82f6; color: #fff; }
+  .bar.success { background: #22c55e; color: #fff; }
+  .bar.danger { background: #ef4444; color: #fff; }
+  .bar.amber { background: #f59e0b; color: #fff; }
+  .box { background: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 6px; padding: 8px; font-size: 11px; color: #52525b; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
+  th, td { border: 1px solid #e4e4e7; padding: 6px; text-align: left; vertical-align: top; }
+  th { background: #f4f4f5; }
+</style>
+</head>
+<body>
+<h1>Driver App — Trip Wireframes (D-026 – D-030)</h1>
+
+<h2>D-026 Find Customer (Reach Pickup)</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Ride Details</div>
+    <div class="box">Pickup: 12/A, Uttara · Destination: Gulshan-2</div>
+    <div class="box">Stops (1/3): Market, School, Mall</div>
+    <div class="bar">📞 Call · 🧭 Navigate · 💬 Chat</div>
+    <div class="box">Slide to Confirm Arrival [====------]</div>
+    <div class="row">
+      <div class="bar amber">Start Waiting Timer</div>
+      <div class="bar danger">Cancel Ride</div>
+    </div>
+    <div class="bar primary">Add Charge</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Navigate to pickup</td><td>Offer accepted</td><td>Enter OTP / No-show</td><td>Ride info, stops, action bar, slide button, timer</td><td>En route, arrived, waiting</td><td>Slide confirm, wait timer, cancel, call/chat</td><td>Pickup, dropoff, stops, distance</td><td>find-customer/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-027 Customer Navigation</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Navigation</div>
+    <div class="box" style="height:200px">Map with turn-by-turn directions from driver to pickup</div>
+    <div class="row"><div class="box">ETA: 4 min</div><div class="box">Distance: 1.2 km</div></div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Turn-by-turn navigation</td><td>Find Customer → Navigate</td><td>Back</td><td>Map, ETA, distance</td><td>Loading, navigating</td><td>Back</td><td>ETA, distance, coords</td><td>customer-navigation/[rideId].tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-028 Finish Ride</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Ride Details</div>
+    <div class="box">Pickup: 12/A, Uttara → Destination: Gulshan-2</div>
+    <div class="bar">📞 Call · 🧭 Navigate · 💬 Chat</div>
+    <div class="box">Slide to Confirm Drop-off [====------]</div>
+    <div class="bar primary">Add Charge</div>
+    <div class="box" style="text-align:center;padding:16px">✓ Ride Completed<br>Collect ৳250.00 cash</div>
+    <div class="box">Fare: ৳300 · Distance: 5.2 km · Duration: 18 min</div>
+    <div class="row"><div class="bar primary">Rate Rider</div><div class="bar">Back to Home</div></div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Complete ride & collect</td><td>Enter OTP → Trip</td><td>Rate Rider / Home</td><td>Ride info, action bar, slide button, completion modal</td><td>En route, completing, completed</td><td>Slide confirm, add charge, rate rider</td><td>Fare, distance, duration, cash to collect</td><td>finish-ride/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-029 Rate Rider</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Rate Rider</div>
+    <div class="row" style="justify-content:center"><div class="box" style="width:64px;height:64px;border-radius:50%;text-align:center">👤</div></div>
+    <div class="bar" style="justify-content:center;background:#fff;border:1px solid #e4e4e7">Rider</div>
+    <div class="row" style="justify-content:center">
+      <div class="bar amber">★</div><div class="bar amber">★</div><div class="bar amber">★</div><div class="bar amber">★</div><div class="bar">☆</div>
+    </div>
+    <div class="bar primary">Submit Rating</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Rate rider after trip</td><td>Finish Ride modal</td><td>Home (auto)</td><td>Avatar, 5-star selector, submit</td><td>Loading, error, success</td><td>Select stars, submit</td><td>Stars selected</td><td>rate-rider/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-030 Cancellation Reasons</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Cancel Ride</div>
+    <div class="box">Please select a reason for cancellation</div>
+    <div class="row"><div class="bar danger">●</div><div class="box">Rider no-show</div></div>
+    <div class="row"><div class="bar">○</div><div class="box">Wrong address shown</div></div>
+    <div class="row"><div class="bar">○</div><div class="box">Vehicle issue</div></div>
+    <div class="row"><div class="bar">○</div><div class="box">Personal emergency</div></div>
+    <div class="row"><div class="bar">○</div><div class="box">Other</div></div>
+    <div class="bar danger">Confirm Cancellation</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Cancel ride with reason</td><td>Find/Finish → Cancel</td><td>Home</td><td>Radio list, optional other input, confirm button</td><td>Loading, error, success</td><td>Select reason, confirm</td><td>Reasons list, ride_id</td><td>cancellation-reasons/index.tsx</td></tr>
+  </table>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Rides Module Wireframes</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; color: #333; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+    .flow { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .flow-title { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 12px; color: #555; }
+    .flow-box { display: inline-block; background: #e8e8e8; border: 2px solid #333; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; margin: 4px; }
+    .flow-arrow { display: inline-block; font-size: 18px; margin: 4px; color: #666; }
+    .screen { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .screen-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .screen-id { background: #333; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+    .screen-name { font-size: 16px; font-weight: 700; }
+    .screen-fw { background: #dc2626; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .wireframe { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .wf-box { border: 2px solid #333; background: #fafafa; padding: 10px; border-radius: 6px; font-size: 12px; }
+    .wf-box.primary { background: #e3f2fd; border-color: #1976d2; }
+    .wf-box.danger { background: #ffebee; border-color: #c62828; }
+    .wf-box.success { background: #e8f5e9; border-color: #2e7d32; }
+    .wf-box.warning { background: #fff3e0; border-color: #ef6c00; }
+    .wf-row { display: flex; gap: 8px; }
+    .wf-row > * { flex: 1; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { background: #fafafa; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; color: #555; width: 140px; }
+    td { color: #444; }
+    .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #e8e8e8; }
+  </style>
+</head>
+<body>
+  <h1>Admin Rides Module</h1>
+  <p class="subtitle">Screens: A-010 through A-016 | Flow: Support, disputes, events, broadcast, passes, intro configs</p>
+
+  <div class="flow">
+    <div class="flow-title">Navigation Flow</div>
+    <span class="flow-box">Admin Layout</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-box">Support (A-010)</span><span class="flow-arrow">→</span><span class="flow-box">Ticket Modal</span><br>
+    <span class="flow-box">Lost Items (A-011)</span><span class="flow-arrow">→</span><span class="flow-box">Detail Modal</span><br>
+    <span class="flow-box">Fare Disputes (A-012)</span><span class="flow-arrow">→</span><span class="flow-box">Dispute Modal</span><br>
+    <span class="flow-box">Events (A-013)</span><span class="flow-arrow">→</span><span class="flow-box">CRUD Modal</span><br>
+    <span class="flow-box">Broadcast (A-014)</span><br>
+    <span class="flow-box">Ride Passes (A-015)</span><span class="flow-arrow">→</span><span class="flow-box">CRUD Modal</span><br>
+    <span class="flow-box">Intro Configs (A-016)</span><span class="flow-arrow">→</span><span class="flow-box">CRUD Modal</span>
+  </div>
+
+  <!-- A-010 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-010</span>
+      <span class="screen-name">Support Tickets</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Support Tickets"</div>
+      <div class="wf-row">
+        <div class="wf-box">Filter: All</div>
+        <div class="wf-box">Filter: Open</div>
+        <div class="wf-box">Filter: In Progress</div>
+        <div class="wf-box">Filter: Resolved</div>
+        <div class="wf-box">Filter: Closed</div>
+      </div>
+      <div class="wf-box">Table: Date | Subject | User | Status | Priority</div>
+      <div class="wf-box success">Ticket Modal: Ticket info + Assign input + Replies list + Reply input + Internal/External toggle + Send</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-010 / Support Tickets / rides</td></tr>
+      <tr><th>Purpose</th><td>Manage rider & driver support requests with replies</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: ticket modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Status filter chips, AdminTable, AdminModal (ticket info, assign input, replies scroll, reply input, internal toggle, send button)</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> implicit, <span class="tag">success</span> table + modal, <span class="tag">sending</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Filter by status, Open ticket, Assign ticket (UUID input), Send reply (internal/external)</td></tr>
+      <tr><th>Data shown</th><td>tickets: id, user_id, assigned_to, category, subject, status, priority, created_at, user_name, user_phone; replies: id, author_id, is_internal, message, created_at</td></tr>
+      <tr><th>Source</th><td>app/admin/support.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-011 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-011</span>
+      <span class="screen-name">Lost Items</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Lost Items"</div>
+      <div class="wf-box">List card: Description | Status badge | Rider/Driver IDs | Mediation flag</div>
+      <div class="wf-box success">Detail Modal: Status, Rider ID, Driver ID, Driver response, Fee, Mark Mediated button</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-011 / Lost Items / rides</td></tr>
+      <tr><th>Purpose</th><td>All rider lost item reports with admin mediation</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: detail modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>FlatList of item cards, AdminModal with item details and Mark Mediated button</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No lost item reports", <span class="tag">success</span> list + modal</td></tr>
+      <tr><th>Actions</th><td>Tap item → detail modal, Mark Mediated</td></tr>
+      <tr><th>Data shown</th><td>id, rider_id, driver_id, item_description, status, driver_response, return_fee_bdt, admin_mediation</td></tr>
+      <tr><th>Source</th><td>app/admin/lost-items.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-012 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-012</span>
+      <span class="screen-name">Fare Disputes</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Fare Disputes"</div>
+      <div class="wf-row">
+        <div class="wf-box">Filter: All</div>
+        <div class="wf-box">Filter: Open</div>
+        <div class="wf-box">Filter: Under Review</div>
+        <div class="wf-box">Filter: Resolved</div>
+      </div>
+      <div class="wf-box">List card: Reason | Status badge | Claimed/Charged | Resolution</div>
+      <div class="wf-box success">Detail Modal: Ride, Claimed, Charged, Status, Note, Auto refund, Adjustment input + Approve/Reject</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-012 / Fare Disputes / rides</td></tr>
+      <tr><th>Purpose</th><td>Rider fare dispute arbitration queue</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: dispute modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Status filter chips, FlatList of dispute cards, AdminModal with dispute details, adjustment input, approve/reject buttons</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No disputes found", <span class="tag">success</span> list + modal</td></tr>
+      <tr><th>Actions</th><td>Filter by status, Tap dispute → detail, Approve refund (with optional adjustment), Reject</td></tr>
+      <tr><th>Data shown</th><td>id, ride_id, dispute_reason, status, claimed_fare_bdt, charged_fare_bdt, rider_note, auto_refund_bdt, final_resolution</td></tr>
+      <tr><th>Source</th><td>app/admin/fare-disputes.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-013 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-013</span>
+      <span class="screen-name">Events</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Events"</div>
+      <div class="wf-row">
+        <div class="wf-box">Search: "Search title or venue..."</div>
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box">Button: + New Event</div>
+      </div>
+      <div class="wf-box">Table: Title | Venue | Starts | Ends | Active | Actions</div>
+      <div class="wf-box success">CRUD Modal: Title, Description, Venue, Lat, Lng, Start, End, Active toggle</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-013 / Events / rides</td></tr>
+      <tr><th>Purpose</th><td>Event calendar for dispatch/heat-engine input (never affects fare)</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Search input, Refresh button, New Event button, AdminTable, AdminModal (AdminForm)</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No events yet", <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Search, Refresh, New Event, Edit, Toggle active, Deactivate</td></tr>
+      <tr><th>Data shown</th><td>id, title, description, venue, latitude, longitude, event_start, event_end, is_active</td></tr>
+      <tr><th>Source</th><td>app/admin/events.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-014 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-014</span>
+      <span class="screen-name">Broadcast Push</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Broadcast Push"</div>
+      <div class="wf-row">
+        <div class="wf-box">Target: All</div>
+        <div class="wf-box">Target: Rider</div>
+        <div class="wf-box">Target: Driver</div>
+      </div>
+      <div class="wf-box">Input: Title</div>
+      <div class="wf-box">Input: Message (multiline)</div>
+      <div class="wf-box warning">Button: Send Broadcast</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-014 / Broadcast Push / rides</td></tr>
+      <tr><th>Purpose</th><td>Send push notifications to app users</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: none (self-contained).</td></tr>
+      <tr><th>UI elements</th><td>Target chips (all/rider/driver), Title input, Message textarea, Send button</td></tr>
+      <tr><th>States</th><td><span class="tag">success</span> form, <span class="tag">sending</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Select target, Enter title, Enter message, Send broadcast</td></tr>
+      <tr><th>Data shown</th><td>target, title, message, sent count (in response)</td></tr>
+      <tr><th>Source</th><td>app/admin/broadcast.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-015 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-015</span>
+      <span class="screen-name">Ride Passes</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Ride Passes"</div>
+      <div class="wf-box warning">Button: + Add Pass</div>
+      <div class="wf-box">Table: Name | Price | Disc % | Days | Active | Actions</div>
+      <div class="wf-box success">CRUD Modal: Name, Price, Discount %, Max rides, Validity days</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-015 / Ride Passes / rides</td></tr>
+      <tr><th>Purpose</th><td>Create and manage rider pass types</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Add Pass button, AdminTable, AdminModal (form fields via AdminForm)</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> implicit, <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Add Pass, Edit, Delete (deactivate)</td></tr>
+      <tr><th>Data shown</th><td>id, name, description, price_bdt, discount_percent, max_rides, validity_days, is_active</td></tr>
+      <tr><th>Source</th><td>app/admin/ride-passes.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-016 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-016</span>
+      <span class="screen-name">Rider Intro Configs</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Intro Configs"</div>
+      <div class="wf-box warning">Button: + Add Config</div>
+      <div class="wf-box">Table: Zone | Ride # | Disc % | Max Disc | Daily Cap | Active | Actions</div>
+      <div class="wf-box success">CRUD Modal: Zone picker, Ride number, Discount %, Max discount, Daily cap, Effective from/to, Active toggle</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-016 / Rider Intro Configs / rides</td></tr>
+      <tr><th>Purpose</th><td>Configure intro incentive discounts per zone</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Add Config button, AdminTable, AdminModal (zone picker, numeric inputs, datetime inputs, active toggle)</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">success</span> table + modal, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Add Config, Edit, Delete (deactivate)</td></tr>
+      <tr><th>Data shown</th><td>id, zone_id, zone_name, ride_number, discount_percent, max_discount_bdt, daily_cap_bdt, effective_from, effective_to, is_active</td></tr>
+      <tr><th>Source</th><td>app/admin/rider-intro-configs.tsx</td></tr>
+    </table>
+  </div>
+</body>
+</html>

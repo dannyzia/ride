@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ride — Driver Screens Index</title>
+<style>
+  :root { --bg:#f5f5f5; --surface:#fff; --border:#d4d4d4; --text:#262626; --muted:#737373; --accent:#525252; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); padding:28px; font-size:13px; }
+  h1 { font-size:22px; margin-bottom:4px; }
+  .sub { color:var(--muted); margin-bottom:20px; }
+  h2 { font-size:15px; margin:26px 0 10px; padding-bottom:5px; border-bottom:2px solid var(--border); }
+  table { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  th { background:#e5e5e5; font-weight:600; font-size:12px; }
+  tr:last-child td { border-bottom:none; }
+  td.id { font-weight:700; white-space:nowrap; }
+  .f { color:#dc2626; font-weight:700; }
+  a { color:#2563eb; text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  .total { font-weight:700; margin-bottom:8px; }
+</style>
+</head>
+<body>
+<h1>Ride — Driver Screens Index</h1>
+<div class="sub">Master index of all driver-facing screens. [F] = Framework-Critical (standard-header convention, core flows).</div>
+<div class="total">Total Driver Screens: 70</div>
+
+<h2>Auth (D-001 – D-007)</h2>
+<table>
+<tr><th>ID</th><th>Name</th><th>Module</th><th>Variants</th><th>F</th><th>Wireframe</th></tr>
+<tr><td class="id">D-001</td><td>Phone Entry</td><td>Auth</td><td>default, error</td><td class="f">F</td><td><a href="driver-auth.html#D-001">driver-auth.html</a></td></tr>
+<tr><td class="id">D-002</td><td>OTP Verification</td><td>Auth</td><td>default, resend</td><td class="f">F</td><td><a href="driver-auth.html#D-002">driver-auth.html</a></td></tr>
+<tr><td class="id">D-003</td><td>Registration — Personal</td><td>Auth</td><td>default, validation</td><td></td><td><a href="driver-auth.html#D-003">driver-auth.html</a></td></tr>
+<tr><td class="id">D-004</td><td>Vehicle Info</td><td>Auth</td><td>default, type</td><td></td><td><a href="driver-auth.html#D-004">driver-auth.html</a></td></tr>
+<tr><td class="id">D-005</td><td>Document Upload</td><td>Auth</td><td>default, error</td><td></td><td><a href="driver-auth.html#D-005">driver-auth.html</a></td></tr>
+<tr><td class="id">D-006</td><td>Background Check</td><td>Auth</td><td>default, pending</td><td></td><td><a href="driver-auth.html#D-006">driver-auth.html</a></td></tr>
+<tr><td class="id">D-007</td><td>Approval Pending</td><td>Auth</td><td>default, rejected</td><td></td><td><a href="driver-auth.html#D-007">driver-auth.html</a></td></tr>
+</table>
+
+<h2>Home / Offers (D-008 – D-025)</h2>
+<table>
+<tr><th>ID</th><th>Name</th><th>Module</th><th>Variants</th><th>F</th><th>Wireframe</th></tr>
+<tr><td class="id">D-008</td><td>Driver Home / Map</td><td>Home</td><td>online, offline</td><td class="f">F</td><td><a href="driver-home.html#D-008">driver-home.html</a></td></tr>
+<tr><td class="id">D-009</td><td>Online Toggle</td><td>Home</td><td>off, on</td><td class="f">F</td><td><a href="driver-home.html#D-009">driver-home.html</a></td></tr>
+<tr><td class="id">D-010</td><td>Incoming Offer</td><td>Home</td><td>default, countdown</td><td class="f">F</td><td><a href="driver-home.html#D-010">driver-home.html</a></td></tr>
+<tr><td class="id">D-011</td><td>Offer Detail</td><td>Home</td><td>default, scheduled</td><td></td><td><a href="driver-home.html#D-011">driver-home.html</a></td></tr>
+<tr><td class="id">D-012</td><td>Accept / Decline</td><td>Home</td><td>idle, sliding</td><td class="f">F</td><td><a href="driver-home.html#D-012">driver-home.html</a></td></tr>
+<tr><td class="id">D-013</td><td>Earnings Today</td><td>Home</td><td>default, chart</td><td></td><td><a href="driver-home.html#D-013">driver-home.html</a></td></tr>
+<tr><td class="id">D-014</td><td>Heatmap / Hotspots</td><td>Home</td><td>low, high</td><td></td><td><a href="driver-home.html#D-014">driver-home.html</a></td></tr>
+<tr><td class="id">D-015</td><td>Shift Stats</td><td>Home</td><td>default</td><td></td><td><a href="driver-home.html#D-015">driver-home.html</a></td></tr>
+<tr><td class="id">D-016</td><td>Break Start</td><td>Home</td><td>default, reason</td><td></td><td><a href="driver-home.html#D-016">driver-home.html</a></td></tr>
+<tr><td class="id">D-017</td><td>Break End</td><td>Home</td><td>default</td><td></td><td><a href="driver-home.html#D-017">driver-home.html</a></td></tr>
+<tr><td class="id">D-018</td><td>Location On</td><td>Home</td><td>default, off</td><td></td><td><a href="driver-home.html#D-018">driver-home.html</a></td></tr>
+<tr><td class="id">D-019</td><td>Wallet Driver</td><td>Home</td><td>default, empty</td><td></td><td><a href="driver-home.html#D-019">driver-home.html</a></td></tr>
+<tr><td class="id">D-020</td><td>Withdraw Earnings</td><td>Home</td><td>default, processing</td><td></td><td><a href="driver-home.html#D-020">driver-home.html</a></td></tr>
+<tr><td class="id">D-021</td><td>Leaderboard</td><td>Home</td><td>default, weekly</td><td></td><td><a href="driver-home.html#D-021">driver-home.html</a></td></tr>
+<tr><td class="id">D-022</td><td>Daily Goal</td><td>Home</td><td>default, progress</td><td></td><td><a href="driver-home.html#D-022">driver-home.html</a></td></tr>
+<tr><td class="id">D-023</td><td>Incentives</td><td>Home</td><td>default, claimed</td><td></td><td><a href="driver-home.html#D-023">driver-home.html</a></td></tr>
+<tr><td class="id">D-024</td><td>Referral</td><td>Home</td><td>default, shared</td><td></td><td><a href="driver-home.html#D-024">driver-home.html</a></td></tr>
+<tr><td class="id">D-025</td><td>Notifications Driver</td><td>Home</td><td>default, empty</td><td></td><td><a href="driver-home.html#D-025">driver-home.html</a></td></tr>
+</table>
+
+<h2>Trip (D-026 – D-030)</h2>
+<table>
+<tr><th>ID</th><th>Name</th><th>Module</th><th>Variants</th><th>F</th><th>Wireframe</th></tr>
+<tr><td class="id">D-026</td><td>Navigate to Pickup</td><td>Trip</td><td>default, reroute</td><td class="f">F</td><td><a href="driver-trip.html#D-026">driver-trip.html</a></td></tr>
+<tr><td class="id">D-027</td><td>Arrived at Pickup</td><td>Trip</td><td>default, waiting</td><td></td><td><a href="driver-trip.html#D-027">driver-trip.html</a></td></tr>
+<tr><td class="id">D-028</td><td>Start Trip</td><td>Trip</td><td>default, confirm</td><td class="f">F</td><td><a href="driver-trip.html#D-028">driver-trip.html</a></td></tr>
+<tr><td class="id">D-029</td><td>In Trip Tracking</td><td>Trip</td><td>default, share</td><td class="f">F</td><td><a href="driver-trip.html#D-029">driver-trip.html</a></td></tr>
+<tr><td class="id">D-030</td><td>Complete Trip</td><td>Trip</td><td>default, fare</td><td></td><td><a href="driver-trip.html#D-030">driver-trip.html</a></td></tr>
+</table>
+
+<h2>Packages / Settings (D-031 – D-070)</h2>
+<table>
+<tr><th>ID</th><th>Name</th><th>Module</th><th>Variants</th><th>F</th><th>Wireframe</th></tr>
+<tr><td class="id">D-031</td><td>Call Packages List</td><td>Packages</td><td>default, empty</td><td class="f">F</td><td><a href="driver-packages.html#D-031">driver-packages.html</a></td></tr>
+<tr><td class="id">D-032</td><td>Package Detail</td><td>Packages</td><td>default, scoped</td><td></td><td><a href="driver-packages.html#D-032">driver-packages.html</a></td></tr>
+<tr><td class="id">D-033</td><td>Buy Package</td><td>Packages</td><td>default, pay</td><td></td><td><a href="driver-packages.html#D-033">driver-packages.html</a></td></tr>
+<tr><td class="id">D-034</td><td>Package Active</td><td>Packages</td><td>default, expiring</td><td></td><td><a href="driver-packages.html#D-034">driver-packages.html</a></td></tr>
+<tr><td class="id">D-035</td><td>Package History</td><td>Packages</td><td>default, empty</td><td></td><td><a href="driver-packages.html#D-035">driver-packages.html</a></td></tr>
+<tr><td class="id">D-036</td><td>Package Usage</td><td>Packages</td><td>default, low</td><td></td><td><a href="driver-packages.html#D-036">driver-packages.html</a></td></tr>
+<tr><td class="id">D-037</td><td>Subscription</td><td>Packages</td><td>default, active</td><td></td><td><a href="driver-packages.html#D-037">driver-packages.html</a></td></tr>
+<tr><td class="id">D-038</td><td>Passes</td><td>Packages</td><td>default, buy</td><td></td><td><a href="driver-packages.html#D-038">driver-packages.html</a></td></tr>
+<tr><td class="id">D-039</td><td>Profile Driver</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-039">driver-packages.html</a></td></tr>
+<tr><td class="id">D-040</td><td>Edit Vehicle</td><td>Settings</td><td>default, save</td><td></td><td><a href="driver-packages.html#D-040">driver-packages.html</a></td></tr>
+<tr><td class="id">D-041</td><td>Documents Status</td><td>Settings</td><td>default, expired</td><td></td><td><a href="driver-packages.html#D-041">driver-packages.html</a></td></tr>
+<tr><td class="id">D-042</td><td>Payout Settings</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-042">driver-packages.html</a></td></tr>
+<tr><td class="id">D-043</td><td>Bank Details</td><td>Settings</td><td>default, verify</td><td></td><td><a href="driver-packages.html#D-043">driver-packages.html</a></td></tr>
+<tr><td class="id">D-044</td><td>Tax Info</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-044">driver-packages.html</a></td></tr>
+<tr><td class="id">D-045</td><td>Notification Settings</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-045">driver-packages.html</a></td></tr>
+<tr><td class="id">D-046</td><td>Privacy</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-046">driver-packages.html</a></td></tr>
+<tr><td class="id">D-047</td><td>Security / PIN</td><td>Settings</td><td>default, change</td><td></td><td><a href="driver-packages.html#D-047">driver-packages.html</a></td></tr>
+<tr><td class="id">D-048</td><td>Theme Driver</td><td>Settings</td><td>light, dark</td><td></td><td><a href="driver-packages.html#D-048">driver-packages.html</a></td></tr>
+<tr><td class="id">D-049</td><td>Language</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-049">driver-packages.html</a></td></tr>
+<tr><td class="id">D-050</td><td>Help</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-050">driver-packages.html</a></td></tr>
+<tr><td class="id">D-051</td><td>FAQ</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-051">driver-packages.html</a></td></tr>
+<tr><td class="id">D-052</td><td>Contact</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-052">driver-packages.html</a></td></tr>
+<tr><td class="id">D-053</td><td>Report Problem</td><td>Settings</td><td>default, sent</td><td></td><td><a href="driver-packages.html#D-053">driver-packages.html</a></td></tr>
+<tr><td class="id">D-054</td><td>About</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-054">driver-packages.html</a></td></tr>
+<tr><td class="id">D-055</td><td>Logout</td><td>Settings</td><td>default, confirm</td><td></td><td><a href="driver-packages.html#D-055">driver-packages.html</a></td></tr>
+<tr><td class="id">D-056</td><td>Delete Account</td><td>Settings</td><td>default, confirm</td><td></td><td><a href="driver-packages.html#D-056">driver-packages.html</a></td></tr>
+<tr><td class="id">D-057</td><td>Ratings & Reviews</td><td>Settings</td><td>default, empty</td><td></td><td><a href="driver-packages.html#D-057">driver-packages.html</a></td></tr>
+<tr><td class="id">D-058</td><td>Performance</td><td>Settings</td><td>default, chart</td><td></td><td><a href="driver-packages.html#D-058">driver-packages.html</a></td></tr>
+<tr><td class="id">D-059</td><td>Cancellation Policy</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-059">driver-packages.html</a></td></tr>
+<tr><td class="id">D-060</td><td>SOS Driver</td><td>Settings</td><td>idle, triggered</td><td class="f">F</td><td><a href="driver-packages.html#D-060">driver-packages.html</a></td></tr>
+<tr><td class="id">D-061</td><td>Trip History</td><td>Settings</td><td>default, empty</td><td></td><td><a href="driver-packages.html#D-061">driver-packages.html</a></td></tr>
+<tr><td class="id">D-062</td><td>Earnings History</td><td>Settings</td><td>default, chart</td><td></td><td><a href="driver-packages.html#D-062">driver-packages.html</a></td></tr>
+<tr><td class="id">D-063</td><td>Weekly Report</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-063">driver-packages.html</a></td></tr>
+<tr><td class="id">D-064</td><td>Referral Code</td><td>Settings</td><td>default, copy</td><td></td><td><a href="driver-packages.html#D-064">driver-packages.html</a></td></tr>
+<tr><td class="id">D-065</td><td>Promo Driver</td><td>Settings</td><td>default, empty</td><td></td><td><a href="driver-packages.html#D-065">driver-packages.html</a></td></tr>
+<tr><td class="id">D-066</td><td>Vehicle Documents</td><td>Settings</td><td>default, upload</td><td></td><td><a href="driver-packages.html#D-066">driver-packages.html</a></td></tr>
+<tr><td class="id">D-067</td><td>Insurance</td><td>Settings</td><td>default, expiring</td><td></td><td><a href="driver-packages.html#D-067">driver-packages.html</a></td></tr>
+<tr><td class="id">D-068</td><td>Support Tickets</td><td>Settings</td><td>default, open</td><td></td><td><a href="driver-packages.html#D-068">driver-packages.html</a></td></tr>
+<tr><td class="id">D-069</td><td>App Settings</td><td>Settings</td><td>default</td><td></td><td><a href="driver-packages.html#D-069">driver-packages.html</a></td></tr>
+<tr><td class="id">D-070</td><td>Feedback</td><td>Settings</td><td>default, sent</td><td></td><td><a href="driver-packages.html#D-070">driver-packages.html</a></td></tr>
+</table>
+</body>
+</html>

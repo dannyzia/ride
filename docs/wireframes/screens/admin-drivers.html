@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Drivers Module Wireframes</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; color: #333; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+    .flow { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .flow-title { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 12px; color: #555; }
+    .flow-box { display: inline-block; background: #e8e8e8; border: 2px solid #333; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; margin: 4px; }
+    .flow-arrow { display: inline-block; font-size: 18px; margin: 4px; color: #666; }
+    .screen { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .screen-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .screen-id { background: #333; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+    .screen-name { font-size: 16px; font-weight: 700; }
+    .screen-fw { background: #dc2626; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .wireframe { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .wf-box { border: 2px solid #333; background: #fafafa; padding: 10px; border-radius: 6px; font-size: 12px; }
+    .wf-box.primary { background: #e3f2fd; border-color: #1976d2; }
+    .wf-box.danger { background: #ffebee; border-color: #c62828; }
+    .wf-box.success { background: #e8f5e9; border-color: #2e7d32; }
+    .wf-box.warning { background: #fff3e0; border-color: #ef6c00; }
+    .wf-row { display: flex; gap: 8px; }
+    .wf-row > * { flex: 1; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { background: #fafafa; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; color: #555; width: 140px; }
+    td { color: #444; }
+    .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #e8e8e8; }
+  </style>
+</head>
+<body>
+  <h1>Admin Drivers Module</h1>
+  <p class="subtitle">Screens: A-003 through A-009 | Flow: Admin shell → Driver queue, riders, docs, models, allowlist, SOS</p>
+
+  <div class="flow">
+    <div class="flow-title">Navigation Flow</div>
+    <span class="flow-box">Admin Layout</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-box">Queue (A-003)</span><span class="flow-arrow">→</span><span class="flow-box">Action Modal</span><span class="flow-arrow">→</span><span class="flow-box">Detail Modal</span><br>
+    <span class="flow-box">Riders (A-004)</span><span class="flow-arrow">→</span><span class="flow-box">Search</span><br>
+    <span class="flow-box">Documents (A-005)</span><span class="flow-arrow">→</span><span class="flow-box">Review Modal</span><br>
+    <span class="flow-box">Vehicle Models (A-006)</span><span class="flow-arrow">→</span><span class="flow-box">CRUD Modal</span><br>
+    <span class="flow-box">Premium Allowlist (A-007)</span><br>
+    <span class="flow-box">SOS Contacts (A-008)</span><span class="flow-arrow">→</span><span class="flow-box">Edit Modal</span><br>
+    <span class="flow-box">SOS Alerts (A-009)</span>
+  </div>
+
+  <!-- A-003 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-003</span>
+      <span class="screen-name">Driver Approval Queue</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Driver Approval Queue"</div>
+      <div class="wf-row">
+        <div class="wf-box">Tab: Pending</div>
+        <div class="wf-box">Tab: Temporary</div>
+        <div class="wf-box">Tab: Rejected</div>
+        <div class="wf-box">Tab: All</div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-box">KPI: Face match threshold</div>
+        <div class="wf-box">KPI: Overdue (standard)</div>
+        <div class="wf-box">KPI: Overdue (fast-track)</div>
+      </div>
+      <div class="wf-box">Table: Name | Phone | Vehicle | Status | Docs | Submitted | SLA | Actions</div>
+      <div class="wf-box danger">Action Modal: Approve / Reject / Suspend / Activate + reason textarea</div>
+      <div class="wf-box success">Detail Modal: Profile rows + Document grid</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-003 / Driver Approval Queue / drivers</td></tr>
+      <tr><th>Purpose</th><td>Review pending/temporary/rejected drivers with approve/reject/suspend/activate actions</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: modals (action, detail), sidebar to other screens.</td></tr>
+      <tr><th>UI elements</th><td>Status tabs (pending/temporary/rejected/all), KPI cards, AdminTable, AdminModal (action + detail), vehicle type chips, reason textarea</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No drivers", <span class="tag">success</span> table + modals, <span class="tag">submitting</span> spinner in modal footer</td></tr>
+      <tr><th>Actions</th><td>Tab filter, Refresh, Approve (with optional vehicle type adjust + final status), Reject (reason 10-500 chars), Suspend (reason), Activate, Upgrade, Downgrade, Close Account, Row tap → detail</td></tr>
+      <tr><th>Data shown</th><td>driver_id, name, phone, vehicle_type, status, submitted_at, provisional_expires_at, stage2_due_at, is_legacy_operator, vehicle_age_years, has_driver_photo, face_match_score, face_match_status, face_match_warning, documents (doc_type, status, storage_url, face_match_score), sla_hours, sla_threshold_hours, sla_breach</td></tr>
+      <tr><th>Source</th><td>app/admin/queue.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-004 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-004</span>
+      <span class="screen-name">Rider Management</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Rider Management"</div>
+      <div class="wf-box">Search input: "Search by name..."</div>
+      <div class="wf-box">Table: Name | Phone | Rides | Spent | Status | Joined</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-004 / Rider Management / drivers</td></tr>
+      <tr><th>Purpose</th><td>View and search rider accounts</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Search input, AdminTable (name, phone, total_rides, total_spent_bdt, account_status, created_at)</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">success</span> table, <span class="tag">empty</span> implicit</td></tr>
+      <tr><th>Actions</th><td>Search by name</td></tr>
+      <tr><th>Data shown</th><td>id, name, phone, email, account_status, total_rides, total_spent_bdt, fraud_score, last_ride_at, created_at</td></tr>
+      <tr><th>Source</th><td>app/admin/riders.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-005 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-005</span>
+      <span class="screen-name">Document Approval</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Document Approval"</div>
+      <div class="wf-box">Table: Submitted | Driver | Type | Actions (Review)</div>
+      <div class="wf-box success">Review Modal: Image preview + Approve / Reject buttons</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-005 / Document Approval / drivers</td></tr>
+      <tr><th>Purpose</th><td>Review pending driver documents and approve/reject</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: review modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>AdminTable, AdminModal with Image preview, Approve/Reject buttons, loading spinner for presigned URL</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">success</span> table + modal, <span class="tag">empty</span> "No pending documents"</td></tr>
+      <tr><th>Actions</th><td>Review (open modal), Approve, Reject</td></tr>
+      <tr><th>Data shown</th><td>id, driver_id, doc_type, status, storage_url, driver_name, created_at; presigned URL for image</td></tr>
+      <tr><th>Source</th><td>app/admin/documents.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-006 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-006</span>
+      <span class="screen-name">Vehicle Models</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Vehicle Models"</div>
+      <div class="wf-row">
+        <div class="wf-box">Search: "Search brand or model..."</div>
+        <div class="wf-box">Filter chips: All | Bike | Car | CNG ...</div>
+      </div>
+      <div class="wf-box">Table: Brand | Model | Year Range | Default Type | CC Range | Seats | Body Type | AC | Active | Actions</div>
+      <div class="wf-box success">CRUD Modal: Brand, Model, Year Start/End, Vehicle Type, CC Min/Max, Body Type, Seats, AC, Active</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-006 / Vehicle Models / drivers</td></tr>
+      <tr><th>Purpose</th><td>Admin CRUD for vehicle_models reference table used in driver onboarding</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Search input, type filter chips, AdminTable, AdminModal (AdminForm), Refresh button, New Model button</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No models yet", <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Search, filter by vehicle type, Refresh, New Model, Edit, Toggle active</td></tr>
+      <tr><th>Data shown</th><td>id, brand, model, year_start, year_end, default_vehicle_type, typical_cc_min, typical_cc_max, body_type, has_ac, passenger_seats, is_active, created_at, updated_at</td></tr>
+      <tr><th>Source</th><td>app/admin/vehicle-models.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-007 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-007</span>
+      <span class="screen-name">Premium Allowlist</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">Premium Allowlist</div>
+      <div class="wf-row">
+        <div class="wf-box">Input: Brand</div>
+        <div class="wf-box">Input: Model (optional)</div>
+      </div>
+      <div class="wf-box">Button: Add to Allowlist</div>
+      <div class="wf-row">
+        <div class="wf-box">Tab: Active</div>
+        <div class="wf-box">Tab: Inactive</div>
+        <div class="wf-box">Tab: All</div>
+      </div>
+      <div class="wf-box">List: Brand | Model | Status badge | Deactivate/Reactivate icon</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-007 / Premium Allowlist / drivers</td></tr>
+      <tr><th>Purpose</th><td>Manage brands/models that map to car_premium vehicle type</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: none (self-contained).</td></tr>
+      <tr><th>UI elements</th><td>Brand input, Model input, Add button, filter tabs, FlatList of entries with status badge and action icons</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No entries found", <span class="tag">success</span> list</td></tr>
+      <tr><th>Actions</th><td>Add brand/model, Deactivate, Reactivate, Filter by active/inactive/all</td></tr>
+      <tr><th>Data shown</th><td>id, brand, model, is_active, created_at</td></tr>
+      <tr><th>Source</th><td>app/admin/premium-allowlist.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-008 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-008</span>
+      <span class="screen-name">SOS Contacts</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "SOS Contacts"</div>
+      <div class="wf-box">List item: Label + Number | Edit | Delete</div>
+      <div class="wf-box success">Modal: Edit Contact — Label input + Phone input + Save</div>
+      <div class="wf-box warning">Button: + Add Contact</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-008 / SOS Contacts / drivers</td></tr>
+      <tr><th>Purpose</th><td>Manage emergency contact numbers shown in the driver app</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: edit modal.</td></tr>
+      <tr><th>UI elements</th><td>Contact list (label, number, Edit/Delete buttons), Add Contact button, AdminModal for add/edit</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">success</span> list, <span class="tag">empty</span> implicit (no contacts)</td></tr>
+      <tr><th>Actions</th><td>Add Contact, Edit, Delete, Save</td></tr>
+      <tr><th>Data shown</th><td>contacts array: label, number</td></tr>
+      <tr><th>Source</th><td>app/admin/sos-contacts.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-009 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-009</span>
+      <span class="screen-name">SOS Alerts</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "SOS Alerts"</div>
+      <div class="wf-row">
+        <div class="wf-box">Tab: All</div>
+        <div class="wf-box">Tab: Open</div>
+        <div class="wf-box">Tab: Acknowledged</div>
+        <div class="wf-box">Tab: Resolved</div>
+      </div>
+      <div class="wf-box">Table: Time | User | Role | Status | Message | Actions (Acknowledge)</div>
+      <div class="wf-box warning">Pagination: page controls</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-009 / SOS Alerts / drivers</td></tr>
+      <tr><th>Purpose</th><td>Emergency alerts from users with live WebSocket stream</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Status filter tabs, AdminTable with pagination, Acknowledge button per row, live SOS stream via WebSocket</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No alerts", <span class="tag">success</span> paginated table, <span class="tag">live</span> new alert toast + prepend</td></tr>
+      <tr><th>Actions</th><td>Filter by status, Acknowledge alert, pagination</td></tr>
+      <tr><th>Data shown</th><td>id, user_id, role, latitude, longitude, message, status, created_at, acknowledged_by, acknowledged_at</td></tr>
+      <tr><th>Source</th><td>app/admin/sos-alerts.tsx</td></tr>
+    </table>
+  </div>
+</body>
+</html>

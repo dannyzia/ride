@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ride — Rider Payment Wireframes (R-047..R-056)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#fff; color:#111827; padding:24px; line-height:1.45; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  h2 { font-size:16px; margin:0 0 12px; }
+  .sub { color:#6b7280; font-size:13px; margin:0 0 24px; }
+  .total { display:inline-block; background:#111827; color:#fff; padding:6px 12px; border-radius:8px; font-weight:700; font-size:14px; margin-bottom:24px; }
+  .screen-block { border:1px solid #d1d5db; border-radius:12px; padding:18px; margin-bottom:24px; background:#fff; }
+  .screen-block .sh { font-size:15px; font-weight:700; border-bottom:2px solid #111827; padding-bottom:6px; margin-bottom:14px; }
+  .fid { color:#374151; }
+  .ftag { display:inline-block; background:#111827; color:#fff; font-size:11px; padding:2px 8px; border-radius:6px; margin-left:8px; vertical-align:middle; }
+  table.meta { width:100%; border-collapse:collapse; margin-bottom:16px; font-size:13px; }
+  table.meta th, table.meta td { border:1px solid #e5e7eb; padding:7px 9px; text-align:left; vertical-align:top; }
+  table.meta th { background:#f3f4f6; width:130px; color:#374151; font-weight:600; }
+  table.meta td { color:#1f2937; }
+  .wf { border:1px dashed #9ca3af; border-radius:10px; padding:14px; background:#fafafa; max-width:360px; }
+  .wf .ph { font-size:13px; font-weight:700; color:#374151; margin-bottom:8px; border-bottom:1px solid #d1d5db; padding-bottom:4px; }
+  .box { border:1px solid #9ca3af; background:#fff; border-radius:6px; padding:8px; margin:6px 0; font-size:12px; color:#374151; }
+  .box.gray { background:#f3f4f6; }
+  .box.dark { background:#374151; color:#fff; }
+  .box.danger { background:#fef2f2; border-color:#ef4444; }
+  .box.success { background:#f0fdf4; border-color:#22c55e; }
+  .box.info { background:#eff6ff; border-color:#3b82f6; }
+  .box.warning { background:#fffbeb; border-color:#f59e0b; }
+  .row { display:flex; gap:6px; }
+  .row .box { flex:1; }
+  .hr { height:1px; background:#e5e7eb; margin:8px 0; }
+</style>
+</head>
+<body>
+<h1>Ride — Rider Payment Wireframes</h1>
+<p class="sub">Module: <strong>rider-payment</strong> · Source: <code>app/(main)/(customer)/(tabs)/</code> · Grayscale low-fidelity documentation of built screens. No redesign.</p>
+<div class="total">TOTAL SCREEN ROWS: 9 (R-047 — R-056)</div>
+
+<!-- R-047 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-047</span> · Wallet <span class="ftag">rider-payment</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-047</td></tr>
+    <tr><td>name</td><td>Wallet</td></tr>
+    <tr><td>module</td><td>rider-payment</td></tr>
+    <tr><td>Purpose</td><td>Rider wallet balance and recent transaction history under the Wallet tab.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from Wallet tab in bottom nav. Exit: back or navigate to sub-screens.</td></tr>
+    <tr><td>UI elements</td><td>Header: "Wallet". Balance card showing ৳ balance. Recent transactions list using TransactionRow component (type icon, title, date, amount). Loading skeleton, empty state. Refresh control.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">empty</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">success</span>.</td></tr>
+    <tr><td>Actions</td><td>Pull to refresh, tap transaction for details, navigate to top-up.</td></tr>
+    <tr><td>Data shown</td><td>Wallet balance, transaction list (type, title, date, amount).</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/(tabs)/wallet/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark" style="text-align:center;">Wallet Balance<br/>৳1,250</div>
+    <div class="box">Recent Transactions</div>
+    <div class="box">↗ Referral Reward    ৳+100    12 Aug</div>
+    <div class="box">↘ Ride Payment      ৳-350    11 Aug</div>
+    <div class="box">↗ Cashback Earned    ৳+25    10 Aug</div>
+    <div class="box gray">Pull to refresh</div>
+  </div>
+</div>
+
+<!-- R-048 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-048</span> · Top Up <span class="ftag">rider-payment</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-048</td></tr>
+    <tr><td>name</td><td>TopUp</td></tr>
+    <tr><td>module</td><td>rider-payment</td></tr>
+    <tr><td>Purpose</td><td>Enter a top-up amount for wallet recharge.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from Wallet or Settings. Exit: back or continue to method.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Top Up". Amount input with ৳ prefix. Preset chips: 200, 500, 1000, 2000. Continue button. Validation: minimum 50 BDT.</td></tr>
+    <tr><td>States</td><td>Static with input validation.</td></tr>
+    <tr><td>Actions</td><td>Select preset, enter custom amount, continue to payment method.</td></tr>
+    <tr><td>Data shown</td><td>Selected amount, preset options.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/(tabs)/settings/top-up/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Back  Top Up</div>
+    <div class="box">Enter Amount</div>
+    <div class="box gray">৳ [ 500 ]</div>
+    <div class="row">
+      <div class="box">৳200</div>
+      <div class="box">৳500</div>
+      <div class="box">৳1000</div>
+      <div class="box">৳2000</div>
+    </div>
+    <div class="box dark" style="text-align:center;">Continue</div>
+  </div>
+</div>
+
+<!-- R-049 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-049</span> · Top Up Method <span class="ftag">rider-payment</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-049</td></tr>
+    <tr><td>name</td><td>TopUpMethod</td></tr>
+    <tr><td>module</td><td>rider-payment</td></tr>
+    <tr><td>Purpose</td><td>Confirm amount and launch PortPos hosted payment webview.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from Top Up screen with amount param. Exit: on success → Top Up Success, on error → stay.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Payment". Amount display. "Pay Now" button. Loading spinner while creating payment event. If payment_url returned, renders PaymentWebView component. Error banner on failure.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">webview</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">error</span>.</td></tr>
+    <tr><td>Actions</td><td>Initiate payment, complete in webview, cancel webview.</td></tr>
+    <tr><td>Data shown</td><td>Amount to charge, payment method via webview.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/(tabs)/settings/top-up-method/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Back  Payment</div>
+    <div class="box">Amount<br/>৳500</div>
+    <div class="box dark" style="text-align:center;">Pay Now</div>
+    <div class="hr"></div>
+    <div class="box gray" style="min-height:100px;">[ PaymentWebView: PortPos hosted checkout ]</div>
+  </div>
+</div>
+
+<!-- R-050 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-050</span> · Top Up Success <span class="ftag">rider-payment</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-050</td></tr>
+    <tr><td>name</td><td>TopUpSuccess</td></tr>
+    <tr><td>module</td><td>rider-payment</td></tr>
+    <tr><td>Purpose</td><td>Confirmation screen after successful wallet top-up.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: after successful payment callback. Exit: View Transactions or Back to Home.</td></tr>
+    <tr><td>UI elements</td><td>Header with floating theme toggle. Large checkmark circle, "Top Up Successful" title, "৳{amount} has been added to your wallet", subtitle about using balance. Primary button: "View Transactions" → rides tab. Secondary button: "Back to Home" → home tab.</td></tr>
+    <tr><td>States</td><td>Static. No loading/error states.</td></tr>
+    <tr><td>Actions</td><td>Navigate to transactions, go home, toggle theme.</td></tr>
+    <tr><td>Data shown</td><td>Top-up amount param.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/(tabs)/settings/top-up-success/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box" style="text-align:center;">✓<br/>Top Up Successful<br/>৳500 has been added to your wallet.<br/>You can now use this balance for rides and packages.</div>
+    <div class="box dark" style="text-align:center;">View Transactions</div>
+    <div class="box" style="text-align:center;">Back to Home</div>
+  </div>
+</div>
+
+<!-- R-051 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-051</span> · Ride Pass <span class="ftag">rider-payment</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-051</td></tr>
+    <tr><td>name</td><td>RidePassPurchase</td></tr>
+    <tr><td>module</td><td>rider-payment</td></tr>
+    <tr><td>Purpose</td><td>Browse and purchase ride passes (subscriptions) via PortPos.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from Settings. Exit: back or purchase flow.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Ride Pass". Loading skeleton while fetching passes. Active subscription banner (if any). Pass cards: name, description, price, discount percent, max rides, validity days, Buy button. PaymentWebView on purchase. AnimatedCard component used.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">webview</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">error</span>.</td></tr>
+    <tr><td>Actions</td><td>Buy pass, complete payment in webview, view active subscription details.</td></tr>
+    <tr><td>Data shown</td><td>Pass catalog (name, price, discount, max rides, validity). Active subscription status.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/(tabs)/settings/ride-pass/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Back  Ride Pass</div>
+    <div class="box info">Active: Weekly Saver (3/8 rides used)</div>
+    <div class="box">Daily Commuter<br/>৳200 · 20% off · 1 ride/day · 30 days<br/>[Buy Now]</div>
+    <div class="box">Weekly Saver<br/>৳1,000 · 15% off · 8 rides · 7 days<br/>[Buy Now]</div>
+  </div>
+</div>
+
+<!-- R-052 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-052</span> · Add Payment <span class="ftag">rider-payment</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-052</td></tr>
+    <tr><td>name</td><td>AddPaymentMethod</td></tr>
+    <tr><td>module</td><td>rider-payment</td></tr>
+    <tr><td>Purpose</td><td>Placeholder screen for adding a saved card (coming soon).</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from Wallet or Settings. Exit: back.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Add Payment Method". Large card icon, "Coming Soon" title, description about PortPos hosted checkout and card security. Floating theme toggle top-right.</td></tr>
+    <tr><td>States</td><td>Static. No forms or data fetching.</td></tr>
+    <tr><td>Actions</td><td>Back, toggle theme.</td></tr>
+    <tr><td>Data shown</td><td>Static text only.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/(tabs)/settings/add-payment/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Back  Add Payment Method</div>
+    <div class="box" style="text-align:center;">[Card icon]<br/>Coming Soon<br/>Secure card payment via PortPos hosted checkout will be available soon.</div>
+  </div>
+</div>
+
+<!-- R-053 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-053</span> · Activity / Top Up <span class="ftag">rider-payment</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-053</td></tr>
+    <tr><td>name</td><td>ActivityTopUp</td></tr>
+    <tr><td>module</td><td>rider-payment</td></tr>
+    <tr><td>Purpose</td><td>Show wallet balance and recent top-up transactions in the Activity tab.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from Activity tab Top Up section. Exit: back to Activity.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Top Up". Wallet balance display. Recent transactions list (type, date, amount). Loading spinner, error text.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">error</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">success</span>.</td></tr>
+    <tr><td>Actions</td><td>Pull to refresh (implicit via fetch), navigate back.</td></tr>
+    <tr><td>Data shown</td><td>Wallet balance, transaction list with BDT amounts.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/(tabs)/activity/top-up/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Back  Top Up</div>
+    <div class="box">Wallet Balance<br/>৳1,250</div>
+    <div class="box">Recent Transactions</div>
+    <div class="box">↗ Top Up          ৳+500    10:30 AM</div>
+    <div class="box">↘ Ride Payment     ৳-350    09:15 AM</div>
+  </div>
+</div>
+
+<!-- R-054 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-054</span> · Activity / Top Up Details <span class="ftag">rider-payment</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-054</td></tr>
+    <tr><td>name</td><td>TopUpDetails</td></tr>
+    <tr><td>module</td><td>rider-payment</td></tr>
+    <tr><td>Purpose</td><td>Detailed view of a single top-up transaction.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from Activity Top Up list. Exit: back to Activity.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Top Up Details". Transaction Details card: Date, Method, Amount. "Download Receipt" button. Theme toggle top-right.</td></tr>
+    <tr><td>States</td><td>Static. No loading or error states.</td></tr>
+    <tr><td>Actions</td><td>Download receipt (placeholder), back, toggle theme.</td></tr>
+    <tr><td>Data shown</td><td>Date, payment method masked, amount.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/(tabs)/activity/top-up-details/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Back  Top Up Details</div>
+    <div class="box">Transaction Details</div>
+    <div class="box gray">Date: Today, 10:30 AM<br/>Method: Visa •••• 4242<br/>Amount: ৳500.00</div>
+    <div class="box" style="text-align:center;">Download Receipt</div>
+  </div>
+</div>
+
+<!-- R-055 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-055</span> · Activity / Share Receipt <span class="ftag">rider-payment</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-055</td></tr>
+    <tr><td>name</td><td>ActivityShareReceipt</td></tr>
+    <tr><td>module</td><td>rider-payment</td></tr>
+    <tr><td>Purpose</td><td>List recent receipts with share and download actions.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from Activity tab or ride-detail. Exit: back to Activity.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Share Receipt". Receipt cards: vehicle type, date/time, pickup, destination, fare. Row buttons: Share, Download. Empty state: "No recent receipts". Theme toggle top-right.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">empty</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">success</span>.</td></tr>
+    <tr><td>Actions</td><td>Share receipt, download receipt, back.</td></tr>
+    <tr><td>Data shown</td><td>Receipt list from useRiderStore.recentReceipts (vehicle, date, time, pickup, destination, fare).</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/(tabs)/activity/share-receipt/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Back  Share Receipt</div>
+    <div class="box">Bike Basic · 12 Aug, 10:30 AM<br/>From: 123 Main St<br/>To: 456 Office Rd<br/>Fare: ৳350</div>
+    <div class="row">
+      <div class="box" style="text-align:center;">Share</div>
+      <div class="box" style="text-align:center;">Download</div>
+    </div>
+    <div class="box gray" style="text-align:center;">No recent receipts</div>
+  </div>
+</div>
+
+</body>
+</html>

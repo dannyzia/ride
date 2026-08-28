@@ -178,6 +178,12 @@ const NAV: NavItem[] = [
     icon: "shield-check",
     group: "Operations",
   },
+  {
+    route: "/admin/fare-gate-metrics",
+    label: "Fare Gate Metrics",
+    icon: "gauge",
+    group: "Operations",
+  },
 
   {
     route: "/admin/platform-config",

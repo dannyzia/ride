@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driver Auth Screens - Ride Wireframes</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; padding: 24px; color: #333; }
+  h1 { font-size: 22px; margin-bottom: 8px; }
+  h2 { font-size: 18px; margin: 24px 0 12px; border-bottom: 2px solid #ddd; padding-bottom: 6px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+  .flow { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+  .flow-title { font-weight: 600; margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .flow-boxes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .flow-box { background: #e8e8e8; border: 1px solid #ccc; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; }
+  .flow-box.framework { background: #fff3cd; border-color: #ffc107; }
+  .flow-arrow { font-size: 18px; color: #999; }
+  .screen { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .screen-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .screen-title { font-weight: 700; font-size: 16px; }
+  .screen-id { background: #333; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+  .wireframe { background: #fafafa; border: 1px dashed #ccc; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+  .wf-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .wf-box { background: #e0e0e0; border: 1px solid #bbb; border-radius: 4px; padding: 8px 12px; font-size: 11px; text-align: center; min-width: 60px; }
+  .wf-box.text { background: #fff; border-style: solid; flex: 1; }
+  .wf-box.primary { background: #333; color: #fff; border-color: #333; }
+  .wf-box.secondary { background: #fff; border: 1px solid #999; }
+  .wf-box.icon { width: 48px; height: 48px; border-radius: 50%; background: #ddd; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .wf-spacer { flex: 1; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+  th { background: #f9f9f9; font-weight: 600; width: 140px; }
+  .tag { display: inline-block; background: #ffc107; color: #333; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 700; margin-left: 6px; }
+</style>
+</head>
+<body>
+
+<h1>Driver Auth Screens</h1>
+<p class="meta">Module: auth | Files: app/(auth)/driver-* | Screens: 7 | Framework-critical: 2</p>
+
+<h2>Flow Diagram</h2>
+<div class="flow">
+  <div class="flow-title">Auth Flow</div>
+  <div class="flow-boxes">
+    <div class="flow-box">Splash <span class="tag">[F]</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Walkthrough 1</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Walkthrough 2</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Walkthrough 3</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Welcome</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Enable Location <span class="tag">[F]</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Notifications</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Select Vehicle → Onboarding</div>
+  </div>
+</div>
+
+<h2>Screens</h2>
+
+<div class="screen">
+  <div class="screen-header">
+    <div class="screen-title">D-001 / Driver Splash <span class="tag">[F]</span></div>
+    <div class="screen-id">D-001</div>
+  </div>
+  <div class="wireframe">
+    <div class="wf-row" style="justify-content:center; flex-direction:column; gap:12px;">
+      <div class="wf-box icon" style="width:64px;height:64px;font-size:28px;">🚖</div>
+      <div class="wf-box primary" style="min-width:180px;">Ride Driver</div>
+      <div class="wf-box text" style="text-align:center;">Drive and earn with us</div>
+    </div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Brand splash screen shown on cold start</td></tr>
+    <tr><th>Entry / exit</th><td>Entry: app launch. Exit: auto-redirect to Walkthrough 1 after 2.5s</td></tr>
+    <tr><th>UI elements</th><td>App logo/brand mark, product name, tagline</td></tr>
+    <tr><th>States</th><td>Loading (timer active), auto-navigating</td></tr>
+    <tr><th>Actions</th><td>None — passive display only</td></tr>
+    <tr><th>Data shown</th><td>Static brand text and theme-aware background</td></tr>
+    <tr><th>Source</th><td>app/(auth)/driver-splash.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <div class="screen-header">
+    <div class="screen-title">D-002 / Driver Welcome</div>
+    <div class="screen-id">D-002</div>
+  </div>
+  <div class="wireframe">
+    <div class="wf-row" style="justify-content:center; flex-direction:column; gap:12px;">
+      <div class="wf-box icon" style="width:64px;height:64px;font-size:28px;">🚖</div>
+      <div class="wf-box primary" style="min-width:180px;">Ride Driver</div>
+      <div class="wf-box text" style="text-align:center;">Start earning today. Sign up or log in to continue.</div>
+      <div class="wf-spacer"></div>
+      <div class="wf-box primary" style="min-width:200px;">Driver Sign In</div>
+      <div class="wf-box secondary" style="min-width:200px;">Driver Sign Up</div>
+    </div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Entry point for new and returning drivers</td></tr>
+    <tr><th>Entry / exit</th><td>Entry: from Walkthrough 3 or skip. Exit: both buttons navigate to phone-entry auth</td></tr>
+    <tr><th>UI elements</th><td>Brand mark, title, subtitle, primary CTA (Sign In), secondary CTA (Sign Up)</td></tr>
+    <tr><th>States</th><td>Idle (default)</td></tr>
+    <tr><th>Actions</th><td>Tap "Driver Sign In" → phone-entry, Tap "Driver Sign Up" → phone-entry</td></tr>
+    <tr><th>Data shown</th><td>Static welcome copy</td></tr>
+    <tr><th>Source</th><td>app/(auth)/driver-welcome.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <div class="screen-header">
+    <div class="screen-title">D-003 / Driver Walkthrough 1</div>
+    <div class="screen-id">D-003</div>
+  </div>
+  <div class="wireframe">
+    <div class="wf-row" style="justify-content:center; flex-direction:column; gap:8px;">
+      <div class="wf-spacer"></div>
+      <div class="wf-box icon" style="width:120px;height:120px;border-radius:50%;margin:0 auto;">📞</div>
+      <div class="wf-box primary" style="min-width:200px;margin:0 auto;">Earn More</div>
+      <div class="wf-box text" style="text-align:center;max-width:280px;margin:0 auto;">Buy call packages and get matched with riders instantly.</div>
+      <div class="wf-row" style="justify-content:center; gap:6px;">
+        <div class="wf-box primary" style="width:12px;height:12px;padding:0;border-radius:50%;"></div>
+        <div class="wf-box" style="width:8px;height:8px;padding:0;border-radius:50%;"></div>
+        <div class="wf-box" style="width:8px;height:8px;padding:0;border-radius:50%;"></div>
+      </div>
+      <div class="wf-spacer"></div>
+      <div class="wf-box primary" style="min-width:200px;">Next</div>
+      <div class="wf-box text" style="text-align:center;color:#666;">Skip</div>
+    </div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Onboarding walkthrough — page 1 of 3</td></tr>
+    <tr><th>Entry / exit</th><td>Entry: from Splash. Exit: Next → Walkthrough 2; Skip → phone-entry</td></tr>
+    <tr><th>UI elements</th><td>Illustration placeholder, title, description, dot indicators, Next button, Skip link</td></tr>
+    <tr><th>States</th><td>Idle</td></tr>
+    <tr><th>Actions</th><td>Next (advance walkthrough), Skip (go to auth)</td></tr>
+    <tr><th>Data shown</th><td>Static walkthrough copy for "Earn More"</td></tr>
+    <tr><th>Source</th><td>app/(auth)/driver-walkthrough-1.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <div class="screen-header">
+    <div class="screen-title">D-004 / Driver Walkthrough 2</div>
+    <div class="screen-id">D-004</div>
+  </div>
+  <div class="wireframe">
+    <div class="wf-row" style="justify-content:center; flex-direction:column; gap:8px;">
+      <div class="wf-spacer"></div>
+      <div class="wf-box icon" style="width:120px;height:120px;border-radius:50%;margin:0 auto;">⏰</div>
+      <div class="wf-box primary" style="min-width:200px;margin:0 auto;">Flexible Hours</div>
+      <div class="wf-box text" style="text-align:center;max-width:280px;margin:0 auto;">Go online whenever you want. You are your own boss.</div>
+      <div class="wf-row" style="justify-content:center; gap:6px;">
+        <div class="wf-box" style="width:8px;height:8px;padding:0;border-radius:50%;"></div>
+        <div class="wf-box primary" style="width:12px;height:12px;padding:0;border-radius:50%;"></div>
+        <div class="wf-box" style="width:8px;height:8px;padding:0;border-radius:50%;"></div>
+      </div>
+      <div class="wf-spacer"></div>
+      <div class="wf-box primary" style="min-width:200px;">Next</div>
+      <div class="wf-box text" style="text-align:center;color:#666;">Skip</div>
+    </div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Onboarding walkthrough — page 2 of 3</td></tr>
+    <tr><th>Entry / exit</th><td>Entry: from Walkthrough 1. Exit: Next → Walkthrough 3; Skip → phone-entry</td></tr>
+    <tr><th>UI elements</th><td>Illustration placeholder, title, description, dot indicators, Next button, Skip link</td></tr>
+    <tr><th>States</th><td>Idle</td></tr>
+    <tr><th>Actions</th><td>Next (advance walkthrough), Skip (go to auth)</td></tr>
+    <tr><th>Data shown</th><td>Static walkthrough copy for "Flexible Hours"</td></tr>
+    <tr><th>Source</th><td>app/(auth)/driver-walkthrough-2.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <div class="screen-header">
+    <div class="screen-title">D-005 / Driver Walkthrough 3</div>
+    <div class="screen-id">D-005</div>
+  </div>
+  <div class="wireframe">
+    <div class="wf-row" style="justify-content:center; flex-direction:column; gap:8px;">
+      <div class="wf-spacer"></div>
+      <div class="wf-box icon" style="width:120px;height:120px;border-radius:50%;margin:0 auto;">🛡️</div>
+      <div class="wf-box primary" style="min-width:200px;margin:0 auto;">Safe & Secure</div>
+      <div class="wf-box text" style="text-align:center;max-width:280px;margin:0 auto;">Verified riders, transparent fares, SOS support built in.</div>
+      <div class="wf-row" style="justify-content:center; gap:6px;">
+        <div class="wf-box" style="width:8px;height:8px;padding:0;border-radius:50%;"></div>
+        <div class="wf-box" style="width:8px;height:8px;padding:0;border-radius:50%;"></div>
+        <div class="wf-box primary" style="width:12px;height:12px;padding:0;border-radius:50%;"></div>
+      </div>
+      <div class="wf-spacer"></div>
+      <div class="wf-box primary" style="min-width:200px;">Get Started</div>
+    </div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Onboarding walkthrough — final page</td></tr>
+    <tr><th>Entry / exit</th><td>Entry: from Walkthrough 2. Exit: Get Started → Welcome screen</td></tr>
+    <tr><th>UI elements</th><td>Illustration placeholder, title, description, dot indicators, CTA button</td></tr>
+    <tr><th>States</th><td>Idle</td></tr>
+    <tr><th>Actions</th><td>Get Started → driver-welcome</td></tr>
+    <tr><th>Data shown</th><td>Static walkthrough copy for "Safe & Secure"</td></tr>
+    <tr><th>Source</th><td>app/(auth)/driver-walkthrough-3.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <div class="screen-header">
+    <div class="screen-title">D-006 / Driver Enable Location <span class="tag">[F]</span></div>
+    <div class="screen-id">D-006</div>
+  </div>
+  <div class="wireframe">
+    <div class="wf-row" style="justify-content:center; flex-direction:column; gap:8px;">
+      <div class="wf-spacer"></div>
+      <div class="wf-box icon" style="width:64px;height:64px;border-radius:50%;margin:0 auto;">📍</div>
+      <div class="wf-box primary" style="min-width:220px;margin:0 auto;text-align:center;">Enable Location</div>
+      <div class="wf-box text" style="text-align:center;max-width:300px;margin:0 auto;">Location is required to receive ride requests and navigate.</div>
+      <div class="wf-spacer"></div>
+      <div class="wf-box primary" style="min-width:200px;">Allow</div>
+      <div class="wf-box secondary" style="min-width:200px;">Not Now</div>
+    </div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Request foreground location permission from the driver</td></tr>
+    <tr><th>Entry / exit</th><td>Entry: after Welcome sign-up/sign-in. Exit: Allow/Not Now → select-active-vehicle</td></tr>
+    <tr><th>UI elements</th><td>Location icon, title, description, Allow button, Not Now button</td></tr>
+    <tr><th>States</th><td>Idle, requesting permission</td></tr>
+    <tr><th>Actions</th><td>Allow (requests location permission), Not Now (skip)</td></tr>
+    <tr><th>Data shown</th><td>Static permission rationale copy</td></tr>
+    <tr><th>Source</th><td>app/(auth)/driver-enable-location.tsx</td></tr>
+  </table>
+</div>
+
+<div class="screen">
+  <div class="screen-header">
+    <div class="screen-title">D-007 / Driver Notifications Permission</div>
+    <div class="screen-id">D-007</div>
+  </div>
+  <div class="wireframe">
+    <div class="wf-row" style="justify-content:center; flex-direction:column; gap:8px;">
+      <div class="wf-spacer"></div>
+      <div class="wf-box icon" style="width:64px;height:64px;border-radius:50%;margin:0 auto;">🔔</div>
+      <div class="wf-box primary" style="min-width:220px;margin:0 auto;text-align:center;">Allow Notifications</div>
+      <div class="wf-box text" style="text-align:center;max-width:300px;margin:0 auto;">Ride requests, payouts, and promos delivered instantly. You can change this anytime in settings.</div>
+      <div class="wf-spacer"></div>
+      <div class="wf-box primary" style="min-width:200px;">Allow</div>
+      <div class="wf-box secondary" style="min-width:200px;">Not Now</div>
+    </div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><td>Request push notification permission and register device token</td></tr>
+    <tr><th>Entry / exit</th><td>Entry: after Enable Location. Exit: Allow/Not Now → onboarding</td></tr>
+    <tr><th>UI elements</th><td>Notification icon, title, description, Allow button, Not Now button</td></tr>
+    <tr><th>States</th><td>Idle, enabling (busy state on button)</td></tr>
+    <tr><th>Actions</th><td>Allow (requests notification permission, registers push token), Not Now (skip)</td></tr>
+    <tr><th>Data shown</th><td>Static permission rationale copy</td></tr>
+    <tr><th>Source</th><td>app/(auth)/driver-notifications-permission.tsx</td></tr>
+  </table>
+</div>
+
+</body>
+</html>

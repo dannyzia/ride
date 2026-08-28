@@ -185,3 +185,200 @@ export function haversineKm(
 export function paisaToTaka(paisa: number): number {
   return paisa / 100;
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// Fare Framework v6 — shadow engine (Stage 0: compute only, never bill)
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Extended pricing row for v6 — adds base_km and initiation_minutes.
+ * Falls back to base_fare_bdt when base_km=0 and initiation_minutes=0
+ * (backward compat with rows not yet migrated).
+ */
+export interface V6PricingRow {
+  base_fare_bdt: number;
+  base_km: number; // numeric(10,2)
+  initiation_minutes: number; // integer, default 4
+  per_km_bdt: number;
+  intercity_per_km_bdt?: number;
+  per_min_bdt: number;
+  floor_length_km: number;
+  floor_min: number;
+  brta_fare_ceiling_bdt?: number | null;
+  platform_commission_percent?: number | null;
+}
+
+/**
+ * v6 fare input — all integer paisa, all rates in paisa-per-unit.
+ * night_mult: 1.000 = disabled, e.g. 1.200 = 20% night surcharge.
+ * grace_min: from pricing.free_wait_minutes (single source of truth).
+ */
+export interface V6FareInput {
+  pricing: V6PricingRow;
+  trip_km: number; // distance_km (total)
+  ride_time_min: number; // effectiveRideTimeMin (after wait subtraction)
+  night_mult: number; // default 1.000 = disabled
+  grace_min: number; // from pricing.free_wait_minutes
+  wait_min: number; // chargeable wait minutes (0 at estimate)
+  pickup_fee_bdt: number; // 0 in Stage 0
+  zone_fee_bdt: number; // 0 in Stage 0
+  // Intercity split (same as v2)
+  inside_km?: number;
+  outside_km?: number;
+  origin_city?: string | null;
+  is_intercity?: boolean;
+}
+
+/**
+ * v6 fare breakdown — all terms exposed for transparency.
+ * Commission is 0% (subscription-only revenue); commission fields kept for
+ * backward compat with FareBreakdown consumers.
+ */
+export interface V6FareBreakdown {
+  // Base fare = base_km × km_rate + initiation_minutes × time_rate × night_mult
+  base_km_charge: number;
+  initiation_charge: number;
+  base_fare_bdt: number;
+
+  // Distance = km_rate × trip_km
+  distance_charge_bdt: number;
+  inside_charge_bdt: number;
+  outside_charge_bdt: number;
+
+  // Time = time_rate × trip_minutes × night_mult
+  time_charge_bdt: number;
+
+  // Waiting = waiting_rate × max(0, wait_min − grace_min) × night_mult
+  // waiting_rate = time_rate (locked)
+  waiting_charge_bdt: number;
+
+  // Add-ons
+  pickup_fee_bdt: number;
+  zone_fee_bdt: number;
+
+  // Totals
+  floor_fare_bdt: number;
+  total_bdt: number;
+
+  // Commission (always 0 in v6 — subscription-only revenue)
+  platform_commission_percent: number;
+  platform_commission_bdt: number;
+  driver_net_bdt: number;
+
+  // Metadata
+  night_mult_applied: number;
+  distance_km: number;
+  ride_time_min: number;
+  wait_fee_bdt: number; // total waiting fee in paisa (for display compat)
+  origin_city: string | null;
+  is_intercity: boolean;
+  inside_km: number;
+  outside_km: number;
+}
+
+/**
+ * Fare Framework v6 engine — computes fare using the v6 formula.
+ *
+ * v6 formula:
+ *   base_fare = base_km × km_rate + initiation_minutes × time_rate × night_mult
+ *   trip_time_charge = time_rate × trip_minutes × night_mult
+ *   waiting_charge = time_rate × max(0, wait_min − grace_min) × night_mult
+ *   distance_charge = km_rate × trip_km
+ *   total = base_fare + distance_charge + trip_time_charge + waiting_charge
+ *         + pickup_fee + zone_fee
+ *   driver_net = total − commission (0%)
+ *
+ * night_mult scope (PATCH 2 — applies to ALL time_rate terms):
+ *   APPLIES: trip_minutes term, base initiation term, waiting term
+ *   NEVER: km_rate, zone_fee, pickup fee distance component
+ *
+ * @deprecated during Stage 0 — v6 output goes to fare_v6_shadow only.
+ * Will become the billed engine at Stage 1 cutover.
+ */
+export function calculateV6Fare(input: V6FareInput): V6FareBreakdown {
+  const p = input.pricing;
+  const nm = input.night_mult;
+  const kmRate = p.per_km_bdt; // paisa/km
+  const timeRate = p.per_min_bdt; // paisa/min
+  const waitingRate = timeRate; // locked: same_as_time_rate
+
+  // ── Base fare ──
+  // If base_km=0 and initiation_minutes=0, fall back to legacy base_fare_bdt
+  // (backward compat with rows not yet migrated)
+  const baseKmCharge = Math.round(kmRate * p.base_km);
+  const initiationCharge = Math.round(timeRate * p.initiation_minutes * nm);
+  const baseFareBdt =
+    p.base_km === 0 && p.initiation_minutes === 0
+      ? p.base_fare_bdt
+      : baseKmCharge + initiationCharge;
+
+  // ── Distance ──
+  const intercityRate = p.intercity_per_km_bdt ?? 0;
+  const effectiveOutsideRate = intercityRate > 0 ? intercityRate : kmRate;
+  const insideKm = input.inside_km ?? input.trip_km;
+  const outsideKm = input.outside_km ?? 0;
+  const insideCharge = Math.round(kmRate * insideKm);
+  const outsideCharge = Math.round(effectiveOutsideRate * outsideKm);
+  const distanceCharge = insideCharge + outsideCharge;
+
+  // ── Time (PATCH 2: night_mult on trip_minutes) ──
+  const timeCharge = Math.round(timeRate * input.ride_time_min * nm);
+
+  // ── Waiting (PATCH 2: night_mult on waiting too) ──
+  const billableWaitMin = Math.max(0, input.wait_min - input.grace_min);
+  const waitingCharge = Math.round(waitingRate * billableWaitMin * nm);
+
+  // ── Computed total ──
+  const computedTotal =
+    baseFareBdt + distanceCharge + timeCharge + waitingCharge +
+    input.pickup_fee_bdt + input.zone_fee_bdt;
+
+  // ── Floor fare (same structure as v2, using base_fare_bdt as floor base) ──
+  const floorDistanceCharge = Math.round(kmRate * p.floor_length_km);
+  const floorTimeCharge = Math.round(timeRate * p.floor_min * nm);
+  const floorFare = baseFareBdt + floorDistanceCharge + floorTimeCharge;
+
+  // ── Final fare ──
+  const totalFare = Math.max(computedTotal, floorFare);
+
+  // ── Commission (0% in v6 — subscription-only revenue) ──
+  const commissionPct = p.platform_commission_percent ?? 0;
+  const platformFee =
+    commissionPct > 0 ? Math.round((totalFare * commissionPct) / 100) : 0;
+  const driverNet = totalFare - platformFee;
+
+  const totalDistanceKm = insideKm + outsideKm;
+
+  return {
+    base_km_charge: baseKmCharge,
+    initiation_charge: initiationCharge,
+    base_fare_bdt: baseFareBdt,
+    distance_charge_bdt: distanceCharge,
+    inside_charge_bdt: insideCharge,
+    outside_charge_bdt: outsideCharge,
+    time_charge_bdt: timeCharge,
+    waiting_charge_bdt: waitingCharge,
+    pickup_fee_bdt: input.pickup_fee_bdt,
+    zone_fee_bdt: input.zone_fee_bdt,
+    floor_fare_bdt: floorFare,
+    total_bdt: totalFare,
+    platform_commission_percent: commissionPct,
+    platform_commission_bdt: platformFee,
+    driver_net_bdt: driverNet,
+    night_mult_applied: nm,
+    distance_km: totalDistanceKm,
+    ride_time_min: input.ride_time_min,
+    wait_fee_bdt: waitingCharge,
+    origin_city: input.origin_city ?? null,
+    is_intercity: input.is_intercity ?? false,
+    inside_km: insideKm,
+    outside_km: outsideKm,
+  };
+}
+
+/**
+ * Backward-compat alias. During Stage 0, existing callers keep using this.
+ * After Stage 1 gate, this function and its FareBreakdown type are removed (R8).
+ * @deprecated Use calculateV6Fare for new code.
+ */
+export const calculateV2Fare = calculateFare;

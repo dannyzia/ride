@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ride — Rider Screens Index</title>
+<style>
+  :root { --bg:#f5f5f5; --surface:#fff; --border:#d4d4d4; --text:#262626; --muted:#737373; --accent:#525252; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); padding:28px; font-size:13px; }
+  h1 { font-size:22px; margin-bottom:4px; }
+  .sub { color:var(--muted); margin-bottom:20px; }
+  h2 { font-size:15px; margin:26px 0 10px; padding-bottom:5px; border-bottom:2px solid var(--border); }
+  table { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  th { background:#e5e5e5; font-weight:600; font-size:12px; }
+  tr:last-child td { border-bottom:none; }
+  td.id { font-weight:700; white-space:nowrap; }
+  .f { color:#dc2626; font-weight:700; }
+  a { color:#2563eb; text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  .total { font-weight:700; margin-bottom:8px; }
+</style>
+</head>
+<body>
+<h1>Ride — Rider Screens Index</h1>
+<div class="sub">Master index of all rider-facing screens. [F] = Framework-Critical (standard-header convention, core flows).</div>
+<div class="total">Total Rider Screens: 82</div>
+
+<h2>Auth (R-001 – R-018)</h2>
+<table>
+<tr><th>ID</th><th>Name</th><th>Module</th><th>Variants</th><th>F</th><th>Wireframe</th></tr>
+<tr><td class="id">R-001</td><td>Phone Entry</td><td>Auth</td><td>default, error</td><td class="f">F</td><td><a href="rider-auth.html#R-001">rider-auth.html</a></td></tr>
+<tr><td class="id">R-002</td><td>OTP Verification</td><td>Auth</td><td>default, resend, error</td><td class="f">F</td><td><a href="rider-auth.html#R-002">rider-auth.html</a></td></tr>
+<tr><td class="id">R-003</td><td>Registration — Personal Info</td><td>Auth</td><td>default, validation</td><td></td><td><a href="rider-auth.html#R-003">rider-auth.html</a></td></tr>
+<tr><td class="id">R-004</td><td>Registration — Address</td><td>Auth</td><td>default, map-pick</td><td></td><td><a href="rider-auth.html#R-004">rider-auth.html</a></td></tr>
+<tr><td class="id">R-005</td><td>Registration — Vehicle Preference</td><td>Auth</td><td>default</td><td></td><td><a href="rider-auth.html#R-005">rider-auth.html</a></td></tr>
+<tr><td class="id">R-006</td><td>Profile Photo Upload</td><td>Auth</td><td>default, crop</td><td></td><td><a href="rider-auth.html#R-006">rider-auth.html</a></td></tr>
+<tr><td class="id">R-007</td><td>Welcome / Onboarding</td><td>Auth</td><td>default</td><td></td><td><a href="rider-auth.html#R-007">rider-auth.html</a></td></tr>
+<tr><td class="id">R-008</td><td>Permissions Request</td><td>Auth</td><td>default</td><td></td><td><a href="rider-auth.html#R-008">rider-auth.html</a></td></tr>
+<tr><td class="id">R-009</td><td>Location Permission</td><td>Auth</td><td>default, denied</td><td></td><td><a href="rider-auth.html#R-009">rider-auth.html</a></td></tr>
+<tr><td class="id">R-010</td><td>Notification Permission</td><td>Auth</td><td>default, denied</td><td></td><td><a href="rider-auth.html#R-010">rider-auth.html</a></td></tr>
+<tr><td class="id">R-011</td><td>Terms & Privacy</td><td>Auth</td><td>default</td><td></td><td><a href="rider-auth.html#R-011">rider-auth.html</a></td></tr>
+<tr><td class="id">R-012</td><td>Login</td><td>Auth</td><td>default, error</td><td></td><td><a href="rider-auth.html#R-012">rider-auth.html</a></td></tr>
+<tr><td class="id">R-013</td><td>Forgot PIN</td><td>Auth</td><td>default, success</td><td></td><td><a href="rider-auth.html#R-013">rider-auth.html</a></td></tr>
+<tr><td class="id">R-014</td><td>Account Recovery</td><td>Auth</td><td>default</td><td></td><td><a href="rider-auth.html#R-014">rider-auth.html</a></td></tr>
+<tr><td class="id">R-015</td><td>Email Verification</td><td>Auth</td><td>default, pending</td><td></td><td><a href="rider-auth.html#R-015">rider-auth.html</a></td></tr>
+<tr><td class="id">R-016</td><td>KYC Start</td><td>Auth</td><td>default</td><td></td><td><a href="rider-auth.html#R-016">rider-auth.html</a></td></tr>
+<tr><td class="id">R-017</td><td>KYC Document Upload</td><td>Auth</td><td>default, error</td><td></td><td><a href="rider-auth.html#R-017">rider-auth.html</a></td></tr>
+<tr><td class="id">R-018</td><td>Account Created / Success</td><td>Auth</td><td>default</td><td></td><td><a href="rider-auth.html#R-018">rider-auth.html</a></td></tr>
+</table>
+
+<h2>Booking (R-019 – R-036)</h2>
+<table>
+<tr><th>ID</th><th>Name</th><th>Module</th><th>Variants</th><th>F</th><th>Wireframe</th></tr>
+<tr><td class="id">R-019</td><td>Home / Map</td><td>Booking</td><td>default, locating</td><td class="f">F</td><td><a href="rider-booking.html#R-019">rider-booking.html</a></td></tr>
+<tr><td class="id">R-020</td><td>Choose Destination</td><td>Booking</td><td>default, suggestions</td><td></td><td><a href="rider-booking.html#R-020">rider-booking.html</a></td></tr>
+<tr><td class="id">R-021</td><td>Select Vehicle Type</td><td>Booking</td><td>default, surge</td><td class="f">F</td><td><a href="rider-booking.html#R-021">rider-booking.html</a></td></tr>
+<tr><td class="id">R-022</td><td>Fare Estimate</td><td>Booking</td><td>default, loading</td><td></td><td><a href="rider-booking.html#R-022">rider-booking.html</a></td></tr>
+<tr><td class="id">R-023</td><td>Confirm Pickup</td><td>Booking</td><td>default, map-pin</td><td></td><td><a href="rider-booking.html#R-023">rider-booking.html</a></td></tr>
+<tr><td class="id">R-024</td><td>Schedule Ride</td><td>Booking</td><td>date, time, error</td><td></td><td><a href="rider-booking.html#R-024">rider-booking.html</a></td></tr>
+<tr><td class="id">R-025</td><td>Saved Places</td><td>Booking</td><td>default, empty</td><td></td><td><a href="rider-booking.html#R-025">rider-booking.html</a></td></tr>
+<tr><td class="id">R-026</td><td>Favorite Locations</td><td>Booking</td><td>default, add</td><td></td><td><a href="rider-booking.html#R-026">rider-booking.html</a></td></tr>
+<tr><td class="id">R-027</td><td>Find Ride (Searching)</td><td>Booking</td><td>default, searching</td><td class="f">F</td><td><a href="rider-booking.html#R-027">rider-booking.html</a></td></tr>
+<tr><td class="id">R-028</td><td>Driver Matching</td><td>Booking</td><td>default, matched</td><td></td><td><a href="rider-booking.html#R-028">rider-booking.html</a></td></tr>
+<tr><td class="id">R-029</td><td>No Drivers Available</td><td>Booking</td><td>default, retry</td><td></td><td><a href="rider-booking.html#R-029">rider-booking.html</a></td></tr>
+<tr><td class="id">R-030</td><td>Alternatives</td><td>Booking</td><td>default, select</td><td></td><td><a href="rider-booking.html#R-030">rider-booking.html</a></td></tr>
+<tr><td class="id">R-031</td><td>Offer Received</td><td>Booking</td><td>default, expired</td><td></td><td><a href="rider-booking.html#R-031">rider-booking.html</a></td></tr>
+<tr><td class="id">R-032</td><td>Ride Preferences</td><td>Booking</td><td>default</td><td></td><td><a href="rider-booking.html#R-032">rider-booking.html</a></td></tr>
+<tr><td class="id">R-033</td><td>Add Stop / Waypoint</td><td>Booking</td><td>default, list</td><td></td><td><a href="rider-booking.html#R-033">rider-booking.html</a></td></tr>
+<tr><td class="id">R-034</td><td>Promo Code Apply</td><td>Booking</td><td>default, applied</td><td></td><td><a href="rider-booking.html#R-034">rider-booking.html</a></td></tr>
+<tr><td class="id">R-035</td><td>Wallet Insufficient</td><td>Booking</td><td>default, topup</td><td></td><td><a href="rider-booking.html#R-035">rider-booking.html</a></td></tr>
+<tr><td class="id">R-036</td><td>Booking Confirmation</td><td>Booking</td><td>default, scheduled</td><td class="f">F</td><td><a href="rider-booking.html#R-036">rider-booking.html</a></td></tr>
+</table>
+
+<h2>Trip (R-037 – R-046)</h2>
+<table>
+<tr><th>ID</th><th>Name</th><th>Module</th><th>Variants</th><th>F</th><th>Wireframe</th></tr>
+<tr><td class="id">R-037</td><td>Driver En Route</td><td>Trip</td><td>default, ETA</td><td class="f">F</td><td><a href="rider-trip.html#R-037">rider-trip.html</a></td></tr>
+<tr><td class="id">R-038</td><td>Driver Arrived</td><td>Trip</td><td>default</td><td></td><td><a href="rider-trip.html#R-038">rider-trip.html</a></td></tr>
+<tr><td class="id">R-039</td><td>In Trip / Tracking</td><td>Trip</td><td>default, share</td><td class="f">F</td><td><a href="rider-trip.html#R-039">rider-trip.html</a></td></tr>
+<tr><td class="id">R-040</td><td>Trip Completed</td><td>Trip</td><td>default</td><td></td><td><a href="rider-trip.html#R-040">rider-trip.html</a></td></tr>
+<tr><td class="id">R-041</td><td>Rate Driver</td><td>Trip</td><td>idle, rated</td><td></td><td><a href="rider-trip.html#R-041">rider-trip.html</a></td></tr>
+<tr><td class="id">R-042</td><td>Trip Summary / Receipt</td><td>Trip</td><td>default, itemized</td><td></td><td><a href="rider-trip.html#R-042">rider-trip.html</a></td></tr>
+<tr><td class="id">R-043</td><td>Trip Cancelled</td><td>Trip</td><td>default, fee</td><td></td><td><a href="rider-trip.html#R-043">rider-trip.html</a></td></tr>
+<tr><td class="id">R-044</td><td>Share Trip Status</td><td>Trip</td><td>default, shared</td><td></td><td><a href="rider-trip.html#R-044">rider-trip.html</a></td></tr>
+<tr><td class="id">R-045</td><td>SOS / Emergency</td><td>Trip</td><td>idle, triggered</td><td class="f">F</td><td><a href="rider-trip.html#R-045">rider-trip.html</a></td></tr>
+<tr><td class="id">R-046</td><td>Trip Chat</td><td>Trip</td><td>default, empty</td><td></td><td><a href="rider-trip.html#R-046">rider-trip.html</a></td></tr>
+</table>
+
+<h2>Payment (R-047 – R-056)</h2>
+<table>
+<tr><th>ID</th><th>Name</th><th>Module</th><th>Variants</th><th>F</th><th>Wireframe</th></tr>
+<tr><td class="id">R-047</td><td>Wallet</td><td>Payment</td><td>default, empty</td><td class="f">F</td><td><a href="rider-payment.html#R-047">rider-payment.html</a></td></tr>
+<tr><td class="id">R-048</td><td>Add Money</td><td>Payment</td><td>default, processing</td><td></td><td><a href="rider-payment.html#R-048">rider-payment.html</a></td></tr>
+<tr><td class="id">R-049</td><td>Payment Methods</td><td>Payment</td><td>default, add</td><td></td><td><a href="rider-payment.html#R-049">rider-payment.html</a></td></tr>
+<tr><td class="id">R-050</td><td>Payment History</td><td>Payment</td><td>default, empty</td><td></td><td><a href="rider-payment.html#R-050">rider-payment.html</a></td></tr>
+<tr><td class="id">R-051</td><td>Apply Promo</td><td>Payment</td><td>default, applied</td><td></td><td><a href="rider-payment.html#R-051">rider-payment.html</a></td></tr>
+<tr><td class="id">R-052</td><td>Split Fare</td><td>Payment</td><td>default, invited</td><td></td><td><a href="rider-payment.html#R-052">rider-payment.html</a></td></tr>
+<tr><td class="id">R-053</td><td>Tip Driver</td><td>Payment</td><td>default, custom</td><td></td><td><a href="rider-payment.html#R-053">rider-payment.html</a></td></tr>
+<tr><td class="id">R-054</td><td>Refund Status</td><td>Payment</td><td>pending, done</td><td></td><td><a href="rider-payment.html#R-054">rider-payment.html</a></td></tr>
+<tr><td class="id">R-055</td><td>Transaction Detail</td><td>Payment</td><td>default</td><td></td><td><a href="rider-payment.html#R-055">rider-payment.html</a></td></tr>
+<tr><td class="id">R-056</td><td>Billing / Invoice</td><td>Payment</td><td>default, download</td><td></td><td><a href="rider-payment.html#R-056">rider-payment.html</a></td></tr>
+</table>
+
+<h2>Settings (R-057 – R-082)</h2>
+<table>
+<tr><th>ID</th><th>Name</th><th>Module</th><th>Variants</th><th>F</th><th>Wireframe</th></tr>
+<tr><td class="id">R-057</td><td>Profile</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-057">rider-settings.html</a></td></tr>
+<tr><td class="id">R-058</td><td>Edit Profile</td><td>Settings</td><td>default, save</td><td></td><td><a href="rider-settings.html#R-058">rider-settings.html</a></td></tr>
+<tr><td class="id">R-059</td><td>Addresses</td><td>Settings</td><td>default, empty</td><td></td><td><a href="rider-settings.html#R-059">rider-settings.html</a></td></tr>
+<tr><td class="id">R-060</td><td>Notifications Settings</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-060">rider-settings.html</a></td></tr>
+<tr><td class="id">R-061</td><td>Privacy Settings</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-061">rider-settings.html</a></td></tr>
+<tr><td class="id">R-062</td><td>Security / PIN</td><td>Settings</td><td>default, change</td><td></td><td><a href="rider-settings.html#R-062">rider-settings.html</a></td></tr>
+<tr><td class="id">R-063</td><td>Language</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-063">rider-settings.html</a></td></tr>
+<tr><td class="id">R-064</td><td>Theme</td><td>Settings</td><td>light, dark</td><td></td><td><a href="rider-settings.html#R-064">rider-settings.html</a></td></tr>
+<tr><td class="id">R-065</td><td>Help & Support</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-065">rider-settings.html</a></td></tr>
+<tr><td class="id">R-066</td><td>FAQs</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-066">rider-settings.html</a></td></tr>
+<tr><td class="id">R-067</td><td>Contact Us</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-067">rider-settings.html</a></td></tr>
+<tr><td class="id">R-068</td><td>Report Issue</td><td>Settings</td><td>default, sent</td><td></td><td><a href="rider-settings.html#R-068">rider-settings.html</a></td></tr>
+<tr><td class="id">R-069</td><td>About</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-069">rider-settings.html</a></td></tr>
+<tr><td class="id">R-070</td><td>Terms</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-070">rider-settings.html</a></td></tr>
+<tr><td class="id">R-071</td><td>Logout Confirm</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-071">rider-settings.html</a></td></tr>
+<tr><td class="id">R-072</td><td>Delete Account</td><td>Settings</td><td>default, confirm</td><td></td><td><a href="rider-settings.html#R-072">rider-settings.html</a></td></tr>
+<tr><td class="id">R-073</td><td>Refer & Earn</td><td>Settings</td><td>default, shared</td><td></td><td><a href="rider-settings.html#R-073">rider-settings.html</a></td></tr>
+<tr><td class="id">R-074</td><td>Coupons</td><td>Settings</td><td>default, empty</td><td></td><td><a href="rider-settings.html#R-074">rider-settings.html</a></td></tr>
+<tr><td class="id">R-075</td><td>Subscription / Passes</td><td>Settings</td><td>default, active</td><td></td><td><a href="rider-settings.html#R-075">rider-settings.html</a></td></tr>
+<tr><td class="id">R-076</td><td>Ride History</td><td>Settings</td><td>default, empty</td><td></td><td><a href="rider-settings.html#R-076">rider-settings.html</a></td></tr>
+<tr><td class="id">R-077</td><td>Scheduled Rides</td><td>Settings</td><td>default, empty</td><td></td><td><a href="rider-settings.html#R-077">rider-settings.html</a></td></tr>
+<tr><td class="id">R-078</td><td>Emergency Contacts</td><td>Settings</td><td>default, add</td><td></td><td><a href="rider-settings.html#R-078">rider-settings.html</a></td></tr>
+<tr><td class="id">R-079</td><td>Accessibility</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-079">rider-settings.html</a></td></tr>
+<tr><td class="id">R-080</td><td>Data & Storage</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-080">rider-settings.html</a></td></tr>
+<tr><td class="id">R-081</td><td>App Permissions</td><td>Settings</td><td>default</td><td></td><td><a href="rider-settings.html#R-081">rider-settings.html</a></td></tr>
+<tr><td class="id">R-082</td><td>Feedback</td><td>Settings</td><td>default, sent</td><td></td><td><a href="rider-settings.html#R-082">rider-settings.html</a></td></tr>
+</table>
+</body>
+</html>

@@ -128,10 +128,13 @@ export const FARE_FRAMEWORK_CONFIG_KEYS = [
   'driver_maint_per_km_cng',
   'driver_maint_per_km_car',
 
-  // Parking per km (paisa)
-  'parking_per_km_bike',
-  'parking_per_km_cng',
-  'parking_per_km_car',
+  // REV-4: bike joma three-tier monthly (owner ruling) — parking is owner-borne,
+  // recovered inside joma. Values are taka-scale like fuel_price_* (NOT paisa).
+  'joma_bike_eco_monthly_bdt', // 8000 BDT/month
+  'joma_bike_std_monthly_bdt', // 10000 BDT/month
+  'joma_bike_prem_monthly_bdt', // 12000 BDT/month
+  'joma_cng_daily_bdt', // 800 BDT/day
+  'joma_operating_days_per_month', // plain count (26)
 
   // Daily target per category (paisa)
   'daily_target_bdt_bike',
@@ -151,9 +154,9 @@ export const FARE_FRAMEWORK_CONFIG_KEYS = [
 
   // Pickup v6 (REV-3)
   'pickup_rate_basis', // 1.0 (locked — flat 1.0×, no multiplier)
-  'pickup_free_time_min_bike', // 3 min
-  'pickup_free_time_min_cng', // 4 min
-  'pickup_free_time_min_car', // 5 min
+  'pickup_free_time_min_bike', // 5 min (REV-4)
+  'pickup_free_time_min_cng', // 5 min (REV-4)
+  'pickup_free_time_min_car', // 10 min (REV-4)
 
   // Pickup v6 cap (backstop 25% — was 40% at old 0.75×)
   'pickup_cap_pct_of_fare_v6', // 25 (overrides v1's 40)
@@ -185,8 +188,8 @@ export const FARE_FRAMEWORK_DEFAULTS: Record<FareFrameworkConfigKey, string> = {
   pickup_measurement_enabled: 'true',
   pickup_fee_enabled: 'false',
   pickup_free_radius_km_bike: '1.0',
-  pickup_free_radius_km_cng: '1.2',
-  pickup_free_radius_km_car: '1.5',
+  pickup_free_radius_km_cng: '1.5', // REV-4: was 1.2
+  pickup_free_radius_km_car: '2.0', // REV-4: was 1.5
   pickup_rate_multiplier_bike: '0.75',
   pickup_rate_multiplier_cng: '0.80',
   pickup_rate_multiplier_car: '0.90',
@@ -208,7 +211,7 @@ export const FARE_FRAMEWORK_DEFAULTS: Record<FareFrameworkConfigKey, string> = {
   cold_drop_boost_decay_minutes: '15',
   return_lead_affinity_multiplier: '1.1',
   new_driver_priority_days: '7',
-  new_driver_priority_leads: '0',
+  new_driver_priority_leads: '10', // REV-4: was '0' (off) — first 10 leads priority
   heat_blend_baseline_weight: '0.4',
   heat_baseline_earnings_minutes: '60',
   heat_baseline_window_days: '28',
@@ -237,7 +240,7 @@ export const FARE_FRAMEWORK_DEFAULTS: Record<FareFrameworkConfigKey, string> = {
   night_mult_value: '1.000', // disabled
   night_schedule: '[]',
   fuel_price_octane_bdt: '145',
-  fuel_price_petrol_bdt: '145',
+  fuel_price_petrol_bdt: '140', // REV-4: was 145
   fuel_price_cng_bdt: '43',
   fuel_efficiency_bike_basic: '45',
   fuel_efficiency_bike_standard: '40',
@@ -251,9 +254,13 @@ export const FARE_FRAMEWORK_DEFAULTS: Record<FareFrameworkConfigKey, string> = {
   driver_maint_per_km_bike: '55',
   driver_maint_per_km_cng: '105',
   driver_maint_per_km_car: '345',
-  parking_per_km_bike: '10',
-  parking_per_km_cng: '15',
-  parking_per_km_car: '20',
+  // REV-4: bike joma three-tier monthly (taka-scale, like fuel_price_*) —
+  // parking keys removed (parking is owner-borne, recovered inside joma)
+  joma_bike_eco_monthly_bdt: '8000',
+  joma_bike_std_monthly_bdt: '10000',
+  joma_bike_prem_monthly_bdt: '12000',
+  joma_cng_daily_bdt: '800',
+  joma_operating_days_per_month: '26',
   daily_target_bdt_bike: '110000',
   daily_target_bdt_cng: '120000',
   daily_target_bdt_car: '125000',
@@ -265,9 +272,9 @@ export const FARE_FRAMEWORK_DEFAULTS: Record<FareFrameworkConfigKey, string> = {
   zone_fee_exit_threshold_min: '20',
   zone_fee_coverage_factor: '0.55',
   pickup_rate_basis: '1.0',
-  pickup_free_time_min_bike: '3',
-  pickup_free_time_min_cng: '4',
-  pickup_free_time_min_car: '5',
+  pickup_free_time_min_bike: '5', // REV-4: was 3
+  pickup_free_time_min_cng: '5', // REV-4: was 4
+  pickup_free_time_min_car: '10', // REV-4: was 5
   pickup_cap_pct_of_fare_v6: '25', // v6: was 40% at old 0.75×, tighter at 1.0×
   dawdle_time_median_threshold: '1.20',
   dawdle_time_p90_threshold: '1.40',

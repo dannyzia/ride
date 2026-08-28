@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sitemap &mdash; Ride Wireframe Navigation</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 24px; color: #333; }
+    .wrap { max-width: 1040px; margin: 0 auto; }
+    a { color: #2563eb; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .subtitle { color: #666; font-size: 13px; margin: 0 0 20px; }
+    .back { font-size: 12px; margin-bottom: 18px; display: inline-block; }
+    .app { background: #fff; border-radius: 10px; padding: 18px 22px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .app > h2 { font-size: 16px; margin: 0 0 12px; border-left: 4px solid #333; padding-left: 10px; }
+    .app.rider > h2 { border-color: #2563eb; }
+    .app.driver > h2 { border-color: #059669; }
+    .app.admin > h2 { border-color: #9d174d; }
+    .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+    .col h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; color: #777; margin: 0 0 6px; }
+    ul.tree { list-style: none; padding-left: 14px; margin: 0; font-size: 13px; }
+    ul.tree ul { list-style: none; padding-left: 16px; margin: 2px 0; border-left: 1px solid #e0e0e0; }
+    ul.tree li { padding: 2px 0; }
+    .entry { font-weight: 600; }
+    .note { font-size: 11px; color: #999; }
+    .tt { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: #666; }
+    .fw { color: #dc2626; font-weight: 700; font-size: 11px; }
+    .legend { font-size: 11px; color: #888; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Sitemap &mdash; Navigation Tree</h1>
+    <p class="subtitle">Full route hierarchy per app. Entry points and back-navigation patterns. <span class="fw">[F]</span> = framework-critical.</p>
+    <a class="back" href="../index.html">&larr; Back to master index</a>
+
+    <!-- RIDER -->
+    <div class="app rider">
+      <h2>Rider</h2>
+      <div class="cols">
+        <div class="col">
+          <h3>Auth &amp; Onboarding</h3>
+          <ul class="tree">
+            <li><span class="entry">Splash</span> <span class="note">(stub)</span>
+              <ul>
+                <li>Walkthrough (1&ndash;3)</li>
+                <li>Welcome / Sign up &rarr; OTP &rarr; Personal profile</li>
+                <li>Sign in &rarr; OTP</li>
+                <li>Enable location permission</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <div class="col">
+          <h3>Main Tabs</h3>
+          <ul class="tree">
+            <li><span class="entry">Home</span> <span class="tt">[F]</span>
+              <ul>
+                <li>Search destination &rarr; Set pickup</li>
+                <li>Available GoRide options &amp; fares <span class="fw">[F]</span></li>
+                <li>Apply promos / vouchers</li>
+                <li>Choose payment method <span class="fw">[F]</span></li>
+                <li>Confirm ride <span class="note">(surge banner &mdash; discrepancy)</span></li>
+              </ul>
+            </li>
+            <li><span class="entry">Activity</span>
+              <ul>
+                <li>Ongoing / Scheduled / Completed / Canceled / Top-up</li>
+                <li>Ride details (scheduled, completed, canceled &amp; refunded) <span class="tt">ride-detail/ = dead path</span></li>
+              </ul>
+            </li>
+            <li><span class="entry">Account &amp; Settings</span>
+              <ul>
+                <li>Top up (type amount &rarr; method &rarr; success)</li>
+                <li>Saved addresses (add / delete)</li>
+                <li>Settings: personal info, notifications, security, payments, appearance, help</li>
+                <li>Promos <span class="fw">[F]</span></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <div class="col">
+          <h3>Ride Lifecycle</h3>
+          <ul class="tree">
+            <li><span class="entry">Finding driver</span> &rarr; <span class="entry">Driver heading</span>
+              <ul>
+                <li>Driver info &middot; Chat &middot; Voice &middot; Video</li>
+                <li>Heading to destination &rarr; Arrived</li>
+                <li>Rate driver &rarr; Tip &rarr; Completed</li>
+                <li>Cancel ride (reason) &rarr; Canceled</li>
+              </ul>
+            </li>
+            <li><span class="entry">Schedule a ride</span>
+              <ul>
+                <li>Options &amp; fares (post-promo) &rarr; Scheduling &rarr; Scheduled</li>
+                <li><span class="note">overlap poll 404 tolerated</span></li>
+              </ul>
+            </li>
+            <li><span class="entry">Share receipt</span></li>
+          </ul>
+        </div>
+      </div>
+      <p class="legend">Entry: Splash &rarr; (auth) &rarr; Home. Back-nav: header chevron / system back; modals dismiss to parent; bottom tabs persist.</p>
+    </div>
+
+    <!-- DRIVER -->
+    <div class="app driver">
+      <h2>Driver</h2>
+      <div class="cols">
+        <div class="col">
+          <h3>Auth &amp; Onboarding</h3>
+          <ul class="tree">
+            <li><span class="entry">Driver Auth</span> <span class="tt">driver-auth</span>
+              <ul>
+                <li>Phone entry &rarr; OTP &rarr; Register</li>
+                <li>Document upload &rarr; Vehicle model select</li>
+                <li>PIN setup (driver-side PIN_ENTRY) <span class="note">rider PIN_ENTRY voided</span></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <div class="col">
+          <h3>Main Tabs</h3>
+          <ul class="tree">
+            <li><span class="entry">Home / Offers</span> <span class="fw">[F]</span>
+              <ul>
+                <li>Offer list &middot; Offer detail &middot; Accept/Reject</li>
+                <li>Auto-accept toggle <span class="note">(settings)</span></li>
+              </ul>
+            </li>
+            <li><span class="entry">Earnings</span> <span class="tt">earnings-tab</span>
+              <ul>
+                <li>Ledger &middot; Daily / Weekly &middot; Payouts</li>
+                <li><span class="note">goal regression removed</span></li>
+              </ul>
+            </li>
+            <li><span class="entry">Ride flow</span>
+              <ul>
+                <li>Navigating &rarr; In-progress &rarr; Completed</li>
+                <li>Chat with rider</li>
+              </ul>
+            </li>
+            <li><span class="entry">Settings</span> <span class="tt">driver-settings</span>
+              <ul>
+                <li>Account &amp; Security, Password, Language</li>
+                <li>Notifications, Appearance, Auto-Accept</li>
+                <li>Lost Items (reported&rarr;resolved|unresolved)</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <div class="col">
+          <h3>Safety &amp; Misc</h3>
+          <ul class="tree">
+            <li><span class="entry">SOS</span>
+              <ul>
+                <li>SOS trigger &rarr; WS broadcast (admin:sos implemented F-15)</li>
+                <li>Cooldown config <span class="note">(read-but-dead)</span></li>
+              </ul>
+            </li>
+            <li><span class="entry">Wallet / Top-up</span> <span class="note">(settings/top-up, not PaymentWebView)</span></li>
+            <li><span class="entry">ScheduleRideSheet</span></li>
+          </ul>
+        </div>
+      </div>
+      <p class="legend">Entry: Driver Auth &rarr; Home/Offers. Back-nav: header chevron / system back; tab bar persists across lifecycle.</p>
+    </div>
+
+    <!-- ADMIN -->
+    <div class="app admin">
+      <h2>Admin</h2>
+      <div class="cols">
+        <div class="col">
+          <h3>Shell Tabs</h3>
+          <ul class="tree">
+            <li><span class="entry">Dashboard</span> <span class="tt">admin-dashboard</span> <span class="fw">[F]</span>
+              <ul><li>Admin Dashboard (A-001) &middot; Live Ops (A-002)</li></ul>
+            </li>
+            <li><span class="entry">Drivers</span> <span class="tt">admin-drivers</span> <span class="fw">[F]</span>
+              <ul><li>Approval Queue, Rider Mgmt, Document Approval, Vehicle Models, Premium Allowlist, SOS Contacts/Alerts</li></ul>
+            </li>
+          </ul>
+        </div>
+        <div class="col">
+          <h3>Ops &amp; Commerce</h3>
+          <ul class="tree">
+            <li><span class="entry">Rides</span> <span class="tt">admin-rides</span>
+              <ul><li>Support Tickets, Lost Items, Fare Disputes, Events, Broadcast Push, Passes, Rider Intro</li></ul>
+            </li>
+            <li><span class="entry">Packages</span> <span class="tt">admin-packages</span> <span class="fw">[F]</span>
+              <ul><li>Call Packages, Pricing Tiers, Promo Codes, Ride Preferences, Point Offers, Incentives, Referral Campaigns</li></ul>
+            </li>
+          </ul>
+        </div>
+        <div class="col">
+          <h3>Config &amp; Monitoring</h3>
+          <ul class="tree">
+            <li><span class="entry">Config</span> <span class="tt">admin-config</span> <span class="fw">[F]</span>
+              <ul><li>Platform Config, Operational Zones, City Boundaries, Fare Config, Tax, Recovery, Sample Media, Cancellation Policies</li></ul>
+            </li>
+            <li><span class="entry">Monitoring</span> <span class="tt">admin-monitoring</span> <span class="fw">[F]</span>
+              <ul><li>Monitoring &amp; Disputes, Heat Monitor, Pickup Analytics, Trust &amp; Safety, Zone P&amp;L</li></ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <p class="legend">Entry: admin layout default &rarr; Dashboard. Back-nav: persistent sidebar; sub-pages return to module list via breadcrumb.</p>
+    </div>
+
+    <a class="back" href="../index.html">&larr; Back to master index</a>
+  </div>
+</body>
+</html>

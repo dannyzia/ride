@@ -1,6 +1,6 @@
 // Auth: verifySupabaseToken via requireRole
 import { db } from '../../../src/db';
-import { platformConfig } from '../../../src/db/schema';
+import { platformConfig, configAuditLog } from '../../../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireRole } from '../../../lib/auth';
 import { z } from 'zod';
@@ -395,8 +395,21 @@ export async function PATCH(req: Request) {
       return Response.json({ error: 'validation_failed', message: validationErrors.join('; ') }, { status: 400 });
     }
 
+    // Phase D: config audit — log every change before applying
     for (const { key, value } of body.updates) {
       if (!ALLOWED_KEYS.has(key)) continue;
+      // Read old value for audit
+      const [oldRow] = await db.select({ value: platformConfig.value })
+        .from(platformConfig)
+        .where(eq(platformConfig.key, key))
+        .limit(1);
+      // Insert audit log BEFORE the update
+      await db.insert(configAuditLog).values({
+        config_key: key,
+        old_value: oldRow?.value ?? null,
+        new_value: value,
+        admin_id: admin.id,
+      });
       await db.update(platformConfig)
         .set({ value, updated_at: new Date() })
         .where(eq(platformConfig.key, key));

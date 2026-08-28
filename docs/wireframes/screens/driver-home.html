@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Driver Home Wireframes (D-008 – D-025)</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f4f5; margin: 0; padding: 24px; color: #18181b; }
+  h1 { font-size: 18px; margin-bottom: 16px; }
+  h2 { font-size: 14px; margin: 18px 0 8px; color: #3b82f6; }
+  .screen { background: #fff; border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px; margin-bottom: 14px; }
+  .wf { display: flex; flex-direction: column; gap: 6px; }
+  .bar { height: 28px; background: #e4e4e7; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; color: #52525b; }
+  .bar.primary { background: #3b82f6; color: #fff; }
+  .bar.success { background: #22c55e; color: #fff; }
+  .bar.danger { background: #ef4444; color: #fff; }
+  .bar.amber { background: #f59e0b; color: #fff; }
+  .box { background: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 6px; padding: 8px; font-size: 11px; color: #52525b; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
+  th, td { border: 1px solid #e4e4e7; padding: 6px; text-align: left; vertical-align: top; }
+  th { background: #f4f4f5; }
+  .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; background: #dbeafe; color: #1e40af; font-size: 10px; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>Driver App — Home & Support Wireframes (D-008 – D-025)</h1>
+
+<h2>D-008 Hotspot Map</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Hotspot Map</div>
+    <div class="box" style="height:120px">Map with zone markers (hot/neutral/cold)</div>
+    <div class="row"><div class="box">Zones: 8</div><div class="box">Idle Drivers: 12</div><div class="box">Top Suggest: 85%</div></div>
+    <div class="box">Zone chips: Uttara (High · 3 idle), Dhanmondi (Moderate)</div>
+    <div class="bar primary">Refresh</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Show demand heatmap</td><td>Home → Hotspots</td><td>Back</td><td>Map, stats ribbon, zone strip, legend</td><td>Loading, error, empty, populated</td><td>Refresh, select zone, toggle theme</td><td>Zone name, tag, suggest score, idle count</td><td>hotspot-map/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-009 Select Active Vehicle</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Your Vehicle</div>
+    <div class="box">Vehicle card: Toyota Premio · DHAKA-METRO-KA-1234 · Car Comfort [ACTIVE]</div>
+    <div class="box">Info: You can only register one vehicle. Contact support to change it.</div>
+    <div class="bar primary">Continue</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Confirm registered vehicle</td><td>Onboarding / Home</td><td>Tabs / Add Vehicle</td><td>Vehicle list, active badge, notice, CTA</td><td>Loading, empty, populated</td><td>Continue, Add Vehicle</td><td>Model, plate, type, active status</td><td>select-active-vehicle.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-010 Rider No-Show</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Rider No-Show</div>
+    <div class="row"><div class="box" style="text-align:center;padding:20px">⏱ 00:00<br><small>Elapsed wait</small></div></div>
+    <div class="box">Rider did not appear. Waiting time is running.</div>
+    <div class="bar danger">Cancel & charge fee</div>
+    <div class="bar">Wait more</div>
+    <div class="bar" style="color:#3b82f6">Cancel ride instead</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Handle rider no-show</td><td>En-route → timer</td><td>Home</td><td>Timer, cancel button, wait button</td><td>Waiting, elapsed</td><td>Cancel & fee, Wait more, Cancel ride</td><td>Elapsed seconds, fee amount</td><td>rider-no-show/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-011 Break Mode</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Break Mode</div>
+    <div class="row"><div class="box" style="text-align:center;padding:20px">☕<br>00:00:00<br><small>Total break time</small></div></div>
+    <div class="box">On a break. You won't receive ride requests.</div>
+    <div class="bar danger">End Break</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Toggle driver break</td><td>Home</td><td>Home</td><td>Animated icon, timer, end button</td><td>Loading, active</td><td>End break</td><td>Elapsed break time</td><td>break-mode/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-012 Verification Status</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Verification Status</div>
+    <div class="box" style="text-align:center"><div class="bar success" style="margin:0 auto;width:60px">✓</div><br>Account Approved!</div>
+    <div class="box">Document Summary: Approved 8/12 · Pending 2 · Rejected 1 · Missing 1</div>
+    <div class="bar primary">Go to Home</div>
+    <div class="bar">Contact Support</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Show KYC status</td><td>Onboarding complete</td><td>Tabs (approved)</td><td>Status card, doc summary, actions</td><td>Pending, approved, rejected, suspended, error</td><td>Refresh, Re-upload, Contact Support</td><td>Status, doc counts, rejection reason</td><td>verification/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-013 Safety</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Safety</div>
+    <div class="bar danger">National Emergency 999</div>
+    <div class="bar danger">National Helpline 16263</div>
+    <div class="box">Manage your trusted contacts →</div>
+    <div class="box">1. Share your trip</div>
+    <div class="box">2. Verify the rider</div>
+    <div class="box">3. Trust your instincts</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Safety resources & tips</td><td>Settings → Safety</td><td>Back</td><td>Emergency numbers, contacts link, tips list</td><td>Static</td><td>Call, navigate to contacts</td><td>Emergency numbers, safety tips</td><td>safety/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-014 Report Issue (Trip)</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Report Issue</div>
+    <div class="box">Issue category</div>
+    <div class="bar primary">○ Rider misconduct</div>
+    <div class="bar">○ Wrong pickup location</div>
+    <div class="bar">○ Safety concern</div>
+    <div class="box">Description (optional)</div>
+    <div class="bar primary">Submit Report</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Report trip-specific issue</td><td>Find Customer → Need Help</td><td>Home</td><td>Category radio list, description input, submit</td><td>Loading, error, success</td><td>Select category, submit</td><td>Categories, ride_id</td><td>trip-issue/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-015 Report Issue (General)</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Report Issue</div>
+    <div class="box">Select issue type</div>
+    <div class="row">
+      <div class="bar primary">App bug</div>
+      <div class="bar">Payment</div>
+      <div class="bar">Rider</div>
+    </div>
+    <div class="row">
+      <div class="bar">Safety</div>
+      <div class="bar">Map</div>
+      <div class="bar">Other</div>
+    </div>
+    <div class="box">Description (optional)</div>
+    <div class="bar primary">Submit Report</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Report general app issue</td><td>Support → Report issue</td><td>Home</td><td>Chip grid, description input, submit</td><td>Loading, error, success</td><td>Select type, submit</td><td>Issue categories</td><td>report-issue/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-016 Support</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Support</div>
+    <div class="box">FAQ →</div>
+    <div class="box">Contact support →</div>
+    <div class="box">Report an issue →</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Support hub</td><td>Settings → Support</td><td>Sub-screens</td><td>List of support options</td><td>Static</td><td>Navigate to FAQ, contact, report</td><td>Support categories</td><td>support/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-017 Contact Support</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Contact Support</div>
+    <div class="box">Category: [Select a category ▼]</div>
+    <div class="box">Subject: [Brief summary]</div>
+    <div class="box">Description: [Detail…] 0/2000</div>
+    <div class="box">Attachment: [Tap to add screenshot]</div>
+    <div class="bar primary">Submit Ticket</div>
+    <div class="box" style="text-align:center">✓ Ticket Submitted</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Create support ticket</td><td>Support hub</td><td>Back / Success</td><td>Category picker, subject, message, attachment</td><td>Form, success, error</td><td>Submit ticket</td><td>Ticket categories, char count</td><td>contact-support/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-018 FAQ</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← FAQ</div>
+    <div class="box">[🔍 Search FAQs...]</div>
+    <div class="row"><div class="bar primary">All</div><div class="bar">Payments</div><div class="bar">Rides</div></div>
+    <div class="box">▼ How do I purchase a package?</div>
+    <div class="box">▶ What is the minimum rate?</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Browse FAQs</td><td>Support hub</td><td>Back</td><td>Search, category chips, expandable list</td><td>Loading, empty, results</td><td>Search, filter, expand</td><td>Q&A pairs</td><td>faq/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-019 Insurance</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Insurance Coverage</div>
+    <div class="box" style="text-align:center">🛡<br>Partner insurance information</div>
+    <div class="box">✓ You are covered · Policy: POL-123456</div>
+    <div class="box">Coverage item 1: Accident</div>
+    <div class="box">Coverage item 2: Theft</div>
+    <div class="bar primary">📞 Claims & Support</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>View insurance info</td><td>Settings / Menu</td><td>Back</td><td>Status, policy number, coverage list, call support</td><td>Loading, error, covered/not</td><td>Call support</td><td>Provider, policy, coverage items</td><td>insurance/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-020 Minimum Rate</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Minimum Rate</div>
+    <div class="box">How it works: Set your minimum per-km rate.</div>
+    <div class="box">Slider: [=====-----] ৳2.50/km</div>
+    <div class="box">Current: ৳2.00/km (80% of system)</div>
+    <div class="bar primary">Save Rate</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Set min per-km rate</td><td>Settings</td><td>Back</td><td>Info card, slider, comparison, save button</td><td>Loading, error, configured</td><td>Adjust slider, save</td><td>System rate, current rate, bounds</td><td>min-rate/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-021 Driver Home (Tabs)</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar primary">Go Online</div>
+    <div class="row"><div class="box">Earnings<br><b>৳0</b></div><div class="box">Rating<br><b>4.8</b></div></div>
+    <div class="box">Map (bottom sheet: Ride Details / Need Help)</div>
+    <div class="row">
+      <div class="bar">🏠 Home</div>
+      <div class="bar">📊 Earnings</div>
+      <div class="bar">📦 Packages</div>
+      <div class="bar">👤 Profile</div>
+    </div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Driver home / go online</td><td>Login / Verification</td><td>Sub-screens</td><td>Go online button, map, bottom sheet, tabs</td><td>Online, offline, on ride</td><td>Go online, navigate tabs</td><td>Earnings, rating, ride offers</td><td>(tabs) index</td></tr>
+  </table>
+</div>
+
+<h2>D-022 Driver Profile</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Profile</div>
+    <div class="row" style="align-items:center"><div class="box" style="width:48px;height:48px;border-radius:50%">Avatar</div><div class="box">Driver Name<br>4.8 · 120 rides</div></div>
+    <div class="box">Edit Profile →</div>
+    <div class="box">Documents →</div>
+    <div class="box">Vehicle Management →</div>
+    <div class="box">Earnings →</div>
+    <div class="box">Settings →</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Profile hub</td><td>Profile tab</td><td>Sub-screens</td><td>Avatar, stats, menu list</td><td>Static</td><td>Navigate to sub-screens</td><td>Name, rating, rides</td><td>personal-profile/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-023 Edit Profile</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Edit Profile</div>
+    <div class="box">[📷 Change photo]</div>
+    <div class="box">Full Name: [Driver Name]</div>
+    <div class="box">Phone: +880 1xxx (read-only)</div>
+    <div class="box">Email: [driver@ex.com]</div>
+    <div class="box">City: [Dhaka]</div>
+    <div class="bar primary">Save Changes</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>Edit driver profile</td><td>Profile → Edit</td><td>Profile</td><td>Photo picker, name, email, city inputs, save</td><td>Loading, saving, error</td><td>Pick photo, edit fields, save</td><td>Name, phone, email, city</td><td>edit-profile/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-024 Onboarding</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Driver Onboarding</div>
+    <div class="box">Step 1/7 — Profile</div>
+    <div class="box">Name + Photo upload</div>
+    <div class="bar primary">Continue</div>
+    <div class="box">Step 2/7 — Vehicle (body type, brand, model, year, plate, engine CC, seats)</div>
+    <div class="box">Step 3/7 — Vehicle Documents (7 uploads)</div>
+    <div class="box">Step 4/7 — Driver Documents (4 uploads)</div>
+    <div class="box">Step 5/7 — Rideshare Experience (legacy screenshots)</div>
+    <div class="box">Step 6/7 — Payout (bKash)</div>
+    <div class="box">Step 7/7 — Review & Consent</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>New driver onboarding</td><td>Register</td><td>Verification</td><td>7-step wizard, progress bar, pickers, uploads, consent</td><td>Step 1-7, loading, error, modals</td><td>Next/Back, upload, submit</td><td>Profile, vehicle, docs, payout</td><td>onboarding/index.tsx</td></tr>
+  </table>
+</div>
+
+<h2>D-025 Documents</h2>
+<div class="screen">
+  <div class="wf">
+    <div class="bar">← Documents</div>
+    <div class="box">Driver Documents</div>
+    <div class="row"><div class="box">NID Front [Verified]</div><div class="box">NID Back [Pending]</div></div>
+    <div class="row"><div class="box">License Front [Verified]</div><div class="box">License Back [Missing]</div></div>
+    <div class="box">Vehicle Documents</div>
+    <div class="row"><div class="box">Reg Front [Verified]</div><div class="box">Reg Back [Rejected]</div></div>
+    <div class="box">Rejection reason: Blurry image</div>
+  </div>
+  <table>
+    <tr><th>Purpose</th><th>Entry</th><th>Exit</th><th>UI Elements</th><th>States</th><th>Actions</th><th>Data Shown</th><th>Source</th></tr>
+    <tr><td>View document status</td><td>Profile → Documents</td><td>Back</td><td>Grouped lists, status badges, retry link</td><td>Loading, error, empty, populated</td><td>Refresh, go to onboarding</td><td>Doc type, status, rejection reason</td><td>documents/index.tsx</td></tr>
+  </table>
+</div>
+
+</body>
+</html>

@@ -79,6 +79,10 @@ export interface PickupTrueupResult {
   deltaBdt: number | null;
   firmKm: number | null;
   realizedKm: number | null;
+  /** Whether the km cap was binding on the realized fee. */
+  capWasBinding: boolean;
+  /** Whether the %-of-fare backstop was binding on the realized fee. */
+  backstopWasBinding: boolean;
 }
 
 function parseNumericOrNull(value: string | null): number | null {
@@ -104,6 +108,8 @@ export function computePickupTrueup(
       deltaBdt: null,
       firmKm,
       realizedKm,
+      capWasBinding: false,
+      backstopWasBinding: false,
     };
   }
 
@@ -114,6 +120,8 @@ export function computePickupTrueup(
     deltaBdt: null,
     firmKm,
     realizedKm,
+    capWasBinding: false,
+    backstopWasBinding: false,
   };
 
   const feeFirm = ridePickup.pickup_fee_firm_bdt;
@@ -132,17 +140,17 @@ export function computePickupTrueup(
     // Missing confidence → 0 (low) → the guard freezes at firm.
     const confidence =
       parseNumericOrNull(ridePickup.pickup_realized_confidence) ?? 0;
+    const chargeableKm = computeFeeKm(realizedKm, ctx.freeRadiusKm);
+    const ratePaisa = ratePerKmPaisa(ctx.zonePerKmBdt, ctx.category);
+    const uncappedFee = pickupFeePaisa(chargeableKm, ratePaisa, ctx.capBillableKm);
+    // Cap binding: the km cap reduced the fee (chargeableKm > capBillableKm).
+    result.capWasBinding = chargeableKm > ctx.capBillableKm;
     // Ruling 18: backstop re-checked against the completion-recalculated
     // trip fare (actual time), not the request-time quote.
-    const feeFromRealized = applyBackstop(
-      pickupFeePaisa(
-        computeFeeKm(realizedKm, ctx.freeRadiusKm),
-        ratePerKmPaisa(ctx.zonePerKmBdt, ctx.category),
-        ctx.capBillableKm,
-      ),
-      ctx.recalculatedTripFareBdt,
-      ctx.backstopPct,
-    );
+    const backstopLimit = Math.round((ctx.recalculatedTripFareBdt * ctx.backstopPct) / 100);
+    const feeFromRealized = applyBackstop(uncappedFee, ctx.recalculatedTripFareBdt, ctx.backstopPct);
+    // Backstop binding: the %-of-fare backstop reduced the fee.
+    result.backstopWasBinding = uncappedFee > backstopLimit;
     finalFee = finalPickupFeePaisa({
       feeFirm,
       feeFromRealized,

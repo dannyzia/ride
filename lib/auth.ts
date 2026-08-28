@@ -24,14 +24,19 @@ export const verifySupabaseToken = verifyAuth;
 
 type DbUser = { id: string; role: string };
 
+/** The 4-role admin family (owner ruling REV-4). Owner is the superuser. */
+export type AdminRole = 'owner' | 'admin' | 'ops_manager' | 'moderator';
+
+export type AnyRole = 'rider' | 'driver' | AdminRole;
+
 /**
- * Curried factory: requireRole(role) returns a middleware function.
+ * Curried factory: requireAnyRole(roles) returns a middleware function.
  * The middleware takes a Request and returns { supabaseUser, dbUser }.
+ * Passes if dbUser.role is one of `roles`.
  *
- * Usage: await requireRole('admin')(request)
- *        const { user: admin } = await requireRole('admin')(request)
+ * Usage: await requireAnyRole(['admin', 'owner'])(request)
  */
-export function requireRole(role: 'rider' | 'driver' | 'admin') {
+export function requireAnyRole(roles: Array<'rider' | 'driver' | 'admin' | AdminRole>) {
   return async (request: Request): Promise<{ supabaseUser: User; dbUser: DbUser }> => {
     const supabaseUser = await resolveToken(request);
 
@@ -41,7 +46,21 @@ export function requireRole(role: 'rider' | 'driver' | 'admin') {
       .eq('auth_uid', supabaseUser.id)
       .single();
 
-    if (!dbUser || dbUser.role !== role) throw Object.assign(new Error('Forbidden'), { status: 403 });
+    if (!dbUser || !roles.includes(dbUser.role as AnyRole)) {
+      throw Object.assign(new Error('Forbidden'), { status: 403 });
+    }
     return { supabaseUser, dbUser };
   };
+}
+
+/**
+ * Curried factory: requireRole(role) returns a middleware function.
+ * The middleware takes a Request and returns { supabaseUser, dbUser }.
+ * Exact-match role check against users.role.
+ *
+ * Usage: await requireRole('admin')(request)
+ *        const { user: admin } = await requireRole('admin')(request)
+ */
+export function requireRole(role: 'rider' | 'driver' | 'admin') {
+  return requireAnyRole([role]);
 }

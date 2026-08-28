@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rider Activity Screens - Wireframe Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        h1, h2, h3 { color: #333; }
+        .screen { border: 1px solid #ddd; margin-bottom: 30px; padding: 20px; border-radius: 5px; }
+        .screen-header { background-color: #f8f9fa; padding: 10px; margin: -20px -20px 20px -20px; border-bottom: 1px solid #ddd; }
+        .screen-id { font-weight: bold; color: #007bff; }
+        .screen-name { font-size: 1.2em; margin: 5px 0; }
+        .screen-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+        .meta-item { background: #f8f9fa; padding: 10px; border-radius: 3px; }
+        .meta-label { font-weight: bold; color: #495057; }
+        .meta-value { margin-top: 5px; }
+        .framework-critical { background-color: #fff3cd; border-left: 4px solid #ffc107; }
+        .states { margin: 15px 0; }
+        .state-tag { display: inline-block; background: #e9ecef; padding: 2px 8px; border-radius: 10px; font-size: 0.9em; margin-right: 5px; }
+        .actions { margin: 15px 0; }
+        .action-item { background: #d1ecf1; padding: 8px; margin: 5px 0; border-radius: 3px; }
+        .data-shown { margin: 15px 0; }
+        .data-item { background: #d4edda; padding: 8px; margin: 5px 0; border-radius: 3px; }
+        .wireframe-placeholder { width: 100%; height: 300px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; margin: 20px 0; color: #6c757d; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>Rider Activity Screens</h1>
+    <p><em>Documented from codebase analysis - Ride history and activity tracking</em></p>
+    
+    <!-- Activity Overview Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-009</div>
+            <div class="screen-name">Activity Overview</div>
+            <div class="screen-module">Activity</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Activity</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Bottom tab navigation</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Activity Overview Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Overview of ride history with tabs for different ride statuses</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Bottom tab navigation<br>Exit: Specific activity category screens</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Tab bar: All, Upcoming, Completed, Canceled</li>
+                <li>List of ride cards grouped by date</li>
+                <li>Empty state illustration and message</li>
+                <li>Refresh indicator</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Tab selection - filters rides by status</div>
+                <div class="action-item">Ride card tap - opens ride detail screen</div>
+                <div class="action-item">Pull to refresh - reloads activity data</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Ride date and time</div>
+                <div class="data-item">Pickup and dropoff locations</div>
+                <div class="data-item">Ride status icon and text</div>
+                <div class="data-item">Fare amount</div>
+                <div class="data-item">Vehicle type</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/activity/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Upcoming Rides Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-010</div>
+            <div class="screen-name">Upcoming Rides</div>
+            <div class="screen-module">Activity</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Activity</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Activity Overview tab</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Upcoming Rides Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Displays scheduled rides that are yet to occur</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Activity Overview > Upcoming tab<br>Exit: Ride detail screen</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>List of scheduled ride cards</li>
+                <li>Each card shows: date, time, pickup→dropoff, status</li>
+                <li>Empty state: "No upcoming rides"</li>
+                <li>Action buttons on cards: Cancel, Edit, Share</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Ride card tap - opens ride detail screen</div>
+                <div class="action-item">Cancel button - shows cancellation confirmation</div>
+                <div class="action-item">Edit button - opens schedule ride modification</div>
+                <div class="action-item">Share button - shares ride details</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Scheduled date and time</div>
+                <div class="data-item">Pickup and dropoff addresses</div>
+                <div class="data-item">Estimated fare</div>
+                <div class="data-item">Vehicle type selected</div>
+                <div class="data-item">Current status (scheduled, confirmed, etc.)</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/activity/activity-scheduled/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Completed Rides Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-011</div>
+            <div class="screen-name">Completed Rides</div>
+            <div class="screen-module">Activity</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Activity</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Activity Overview tab</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Completed Rides Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Displays ride history for completed trips</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Activity Overview > Completed tab<br>Exit: Ride detail screen, Share receipt</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>List of completed ride cards with receipt-like appearance</li>
+                <li>Each card shows: date, route, fare, rating status</li>
+                <li>Empty state: "No completed rides"</li>
+                <li>Action buttons: Rate driver, Share receipt, Report issue</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Ride card tap - opens ride detail screen</div>
+                <div class="action-item">Rate driver button - opens rating screen</div>
+                <div class="action-item">Share receipt button - generates shareable receipt</div>
+                <div class="action-item">Report issue button - opens issue reporting flow</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Completion date and time</div>
+                <div class="data-item">Pickup and dropoff locations</div>
+                <div class="data-item">Actual fare charged</div>
+                <div class="data-item">Distance and duration</div>
+                <div class="data-item">Driver rating (if given)</div>
+                <div class="data-item">Vehicle type used</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/activity/activity-completed/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Canceled Rides Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-012</div>
+            <div class="screen-name">Canceled Rides</div>
+            <div class="screen-module">Activity</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Activity</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Activity Overview tab</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Canceled Rides Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Displays ride history for canceled trips</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Activity Overview > Canceled tab<br>Exit: Ride detail screen</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>List of canceled ride cards</li>
+                <li>Each card shows: date, route, cancellation reason, refund status</li>
+                <li>Empty state: "No canceled rides"</li>
+                <li>Action buttons: View details, Rebook similar ride</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Ride card tap - opens ride detail screen</div>
+                <div class="action-item">Rebook button - opens find ride with pre-filled locations</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Cancellation date and time</div>
+                <div class="data-item">Pickup and dropoff locations</div>
+                <div class="data-item">Cancellation reason (user or system)</div>
+                <div class="data-item">Refund amount and status</div>
+                <div class="data-item">Any cancellation fees applied</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/activity/activity-canceled/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Ride Detail Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-013</div>
+            <div class="screen-name">Ride Detail</div>
+            <div class="screen-module">Activity</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Activity</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Any activity list item, notification deep link</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">Yes</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Ride Detail Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Displays comprehensive details of a specific ride</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Activity lists, notifications<br>Exit: Back to activity list</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Ride header: date, time, status badge</li>
+                <li>Route summary with map preview</li>
+                <li>Fare breakdown section</li>
+                <li>Driver information card</li>
+                <li>Vehicle details</li>
+                <li>Timeline of ride events</li>
+                <li>Action buttons: Share, Rebook, Report issue</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Share button - generates shareable ride summary</div>
+                <div class="action-item">Rebook button - opens find ride with pre-filled locations</div>
+                <div class="action-item">Report issue button - opens issue reporting flow</div>
+                <div class="action-item">Timeline expansion - shows/hides detailed events</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Exact pickup and dropoff timestamps</div>
+                <div class="data-item">Actual route taken (map polyline)</div>
+                <div class="data-item">Total distance and duration</div>
+                <div class="data-item">Complete fare breakdown (base, waiting, tolls, etc.)</div>
+                <div class="data-item">Driver name, rating, and photo</div>
+                <div class="data-item">Vehicle type, license plate, color</div>
+                <div class="data-item">Pickup and dropoff addresses (full)</div>
+                <div class="data-item">Any applied promotions or discounts</div>
+                <div class="data-item">Rating given to driver (if any)</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/activity/activity-detail/[rideId].tsx</p>
+        </div>
+    </div>
+</body>
+</html>

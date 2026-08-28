@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ride · Wireframe Documentation v2</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:#f2f2f2;margin:0;padding:32px;color:#333}
+.wrap{max-width:1020px;margin:0 auto}
+h1{font-size:24px;margin:0 0 4px}
+.sub{color:#666;font-size:13px;margin:0 0 24px}
+.meta{background:#fff;border-radius:10px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:13px;margin-bottom:24px}
+.meta td{padding:4px 14px 4px 0;vertical-align:top;color:#444}
+.meta td:first-child{font-weight:600;color:#222;white-space:nowrap}
+h2{font-size:15px;text-transform:uppercase;letter-spacing:.5px;color:#555;margin:28px 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.mod{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);border-top:4px solid #333;font-size:13px}
+.mod.rider{border-top-color:#2563eb}.mod.driver{border-top-color:#059669}.mod.admin{border-top-color:#9d174d}.mod.shared{border-top-color:#555}
+.mod h3{margin:0 0 4px;font-size:14px}
+.mod .ids{color:#888;font-size:11px;margin-bottom:8px}
+.mod .stat{margin:6px 0}
+.mod a.done{display:inline-block;margin-top:8px;font-weight:600;color:#2563eb;text-decoration:none;font-size:13px}
+.mod a.done:hover{text-decoration:underline}
+.queued{color:#aaa;font-size:12px;display:inline-block;margin-top:8px}
+.pill{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;background:#e5e7eb;color:#374151}
+.pill.F{background:#fee2e2;color:#dc2626}
+.legend{background:#fff;border-radius:10px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:13px;line-height:1.65}
+.legend code{background:#f3f4f6;padding:1px 5px;border-radius:4px;font-size:12px}
+footer{margin-top:28px;font-size:11px;color:#999;text-align:center}
+.totals{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:13px;margin-bottom:20px}
+.totals th,.totals td{padding:9px 14px;text-align:left;border-bottom:1px solid #eee}
+.totals th{background:#fafafa;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:#666}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Ride App — Wireframe Documentation <span style="color:#888;font-weight:400">(v2 rebuild)</span></h1>
+<p class="sub">Documentation of what IS built. Low-fi grayscale. Each screen's data table cites <code>file:line</code> in the repo.</p>
+
+<div class="legend">
+<strong>Capture record</strong> · Source of record: code repo (<code>staging @ 9387b0d</code>) · Mobile app: Ride v1.0.4 · Expo SDK 53 · Device baseline (locked): Android 13 mid-range + iOS 16, light &amp; dark · Captured: 2026-08-27<br><br>
+<strong>ID grammar</strong> (approved): series R/D/A/C continuous · states attach suffixes <code>-L</code> loading, <code>-E</code> empty, <code>-X</code> error, <code>-S</code> success page, <code>-PM</code> permission prompt, <code>.M#</code> modal, <code>.B#</code> bottom sheet, <code>.S#</code> wizard step-layout — suffixes never consume numbers.<br>
+<strong>State framing convention:</strong> a state whose CONTENT differs (list empty, banner, dialog) gets its own wireframe frame; spinner-only deltas are drawn as an annotated inset inside the base frame but still hold their own inventory row.<br>
+<strong>Fidelity flags:</strong> everything is as-built. Runtime-only unverifiable states carry <code>&#8224;</code>. Findings that look off go to the discrepancy/open-questions annexes — never altered here.
+</div>
+
+<table class="totals">
+<tr><th>App</th><th>Primary rows</th><th>Framework-critical</th><th>Batches delivered</th></tr>
+<tr><td><span class="pill">Rider R-001…R-084</span></td><td>84</td><td>booking/trip cluster</td><td id="b-rider">Batch 1: auth (21 layouts)</td></tr>
+<tr><td><span class="pill">Driver D-001…D-069</span></td><td>69</td><td>offer/pickup/bill/subscriptions</td><td id="b-driver">— queued</td></tr>
+<tr><td><span class="pill">Admin A-001…A-038</span></td><td>38</td><td>v6 ops dashboards (F-op)</td><td id="b-admin">— queued</td></tr>
+<tr><td><span class="pill">Shared C-001…C-021</span></td><td>21</td><td>explainer sheets ×2</td><td id="b-shared">distributed per host batch</td></tr>
+<tr><td><strong>Total primaries</strong></td><td><strong>212</strong></td><td colspan="2">state/overlay expansion continues per approved full-depth policy</td></tr>
+</table>
+
+<h2>Modules</h2>
+<div class="grid">
+  <div class="mod rider"><h3>Rider · Auth</h3><div class="ids">R-001…R-011 (+variants)</div>
+    <div class="stat">11 primaries · 10 variant/sub-layouts · 21 layouts</div>
+    <a class="done" href="screens/rider-auth.html">Open rider-auth.html →</a></div>
+  <div class="mod rider"><h3>Rider · Launcher &amp; Tabs</h3><div class="ids">R-012…R-030</div><span class="queued">queued — Batch 2 candidate</span></div>
+  <div class="mod rider"><h3>Rider · Settings</h3><div class="ids">R-031…R-058</div><span class="queued">queued</span></div>
+  <div class="mod rider"><h3>Rider · Booking / Trip</h3><div class="ids">R-059…R-084 · contains R-066, R-077 (F)</div><span class="queued">queued — framework-critical core</span></div>
+  <div class="mod driver"><h3>Driver · Auth</h3><div class="ids">D-001…D-007</div><span class="queued">queued</span></div>
+  <div class="mod driver"><h3>Driver · Shared/Tabs + Flows A/B/C</h3><div class="ids">D-008…D-069 · offer overlay host D-012 (F)</div><span class="queued">queued</span></div>
+  <div class="mod admin"><h3>Admin · Ops Panel</h3><div class="ids">A-001…A-038 · F-op: zones/zon-pnl/fare-config/heat-monitor/pickup-analytics/fare-gate-metrics/trust-safety/platform-config</div><span class="queued">queued</span></div>
+  <div class="mod shared"><h3>Shared Components &amp; Web Screens</h3><div class="ids">C-001…C-021 · C-005/C-006/C-011 are framework-critical</div><span class="queued">hosted-sections land with their batches; C-file compiles progressively</span></div>
+</div>
+
+<h2>Annexes</h2>
+<div class="grid">
+  <div class="mod shared"><h3>Sitemap / navigation tree</h3><span class="queued">written after ≥2 modules exist</span></div>
+  <div class="mod shared"><h3>Discrepancy log (UI vs Fare Framework v6)</h3><span class="queued">seeded DLOG-01/02 · formal annex Phase 3</span></div>
+  <div class="mod shared"><h3>Open UI questions</h3><span class="queued">runtime access pending</span></div>
+</div>
+
+<footer>
+Legacy generation <code>docs/wireframes/</code> frozen 2026-08-27 by owner ruling — superseded, retained for history, not referenced for truth.<br>
+Rules honored: no invented screens · inventory never altered by findings (delta goes to changelog) · every wireframe carries a Source file:line citation.
+</footer>
+</div>
+</body>
+</html>

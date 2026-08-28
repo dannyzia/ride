@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rider · Auth module — Ride wireframes</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:#f2f2f2;margin:0;padding:28px;color:#333;font-size:13px}
+.wrap{max-width:1060px;margin:0 auto}
+h1{font-size:21px;margin:0}h2{font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:#555;margin:30px 0 8px}
+.sub{color:#666;margin:4px 0 20px}
+.crumbbar{background:#fff;border-radius:10px;padding:10px 14px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:22px;font-size:12px;line-height:1.7}
+.flow{background:#fff;border-radius:10px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.08);overflow-x:auto}
+.frow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.fb{border:1.6px solid #444;border-radius:8px;padding:7px 12px;background:#fafafa;font-size:12px;font-weight:600;white-space:nowrap}
+.fb.state{border-style:dashed;background:#fff}
+.fb.exit{background:#e8e8e8;border-color:#777}
+.fb.pm{border-style:dotted}
+.fa{color:#333;font-weight:700}
+.flbl{font-size:10px;color:#777}
+.sec{background:#fff;border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:26px}
+.scrhead{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:14px;gap:10px;flex-wrap:wrap}
+.scrhead h3{margin:0;font-size:16px}
+.tagrow span{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;background:#ececec;color:#444;margin-left:6px}
+.two{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.phone{width:240px;min-width:240px;border:2px solid #444;border-radius:20px;padding:14px 12px 16px;background:#fdfdfd;position:relative;height:430px;display:flex;flex-direction:column}
+.p-spacer{flex:1}
+.bx{border:1px solid #999;background:#fff;padding:6px 8px;text-align:center;font-size:11px;border-radius:5px;margin:5px 0;color:#333}
+.btn{border:1.6px solid #222;background:#dcdcdc;font-weight:700;border-radius:16px;padding:8px}
+.btn.sec{background:#fff;border-style:dashed}
+.inp{border:1px solid #999;text-align:left;border-radius:7px;color:#666}
+.inp b{float:right;font-weight:600;color:#888}
+.pillgrp{display:flex;gap:5px}
+.pillgrp .bx{flex:1;margin:0}
+.on{background:#bbb;font-weight:700}
+.cir{width:96px;height:96px;border-radius:50%;border:1.5px solid #999;background:#efefef;margin:6px auto;display:flex;align-items:center;justify-content:center;font-size:22px;color:#666}
+.dots{text-align:center;font-size:13px;letter-spacing:6px;color:#444}
+.mini{font-size:9.5px;color:#888;line-height:1.35;padding:2px 4px}
+.tgl{position:absolute;top:10px;right:10px;width:22px;height:22px;border:1px solid #999;border-radius:50%;font-size:10px;display:flex;align-items:center;justify-content:center;color:#777}
+.errband{border:1.6px double #c62828;background:#f5f5f5;color:#c62828!important}
+.inset{position:absolute;left:10px;right:10px;top:150px;border:1.4px dashed #555;border-radius:8px;background:#fff;padding:8px 10px;font-size:10.5px;color:#444;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.doc{flex:1;min-width:400px;border-collapse:collapse;font-size:12px}
+.doc th{background:#fafafa;text-transform:uppercase;font-size:10px;letter-spacing:.4px;color:#666;text-align:left;padding:6px 10px;border-bottom:1px solid #eee;width:120px;vertical-align:top}
+.doc td{padding:6px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;line-height:1.5}
+code{background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px}
+.varhdr{font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.4px;margin:14px 0 6px;border-top:1px dashed #ddd;padding-top:10px}
+.frames{display:flex;gap:16px;flex-wrap:wrap}
+footer{margin-top:26px;font-size:11px;color:#999;text-align:center;line-height:1.7}
+.note{font-size:11px;color:#856404;background:#fffbe6;border:1px solid #f1e3a3;border-radius:6px;padding:6px 10px;margin-top:10px}
+.idchip{font-family:monospace;background:#111;color:#fff;padding:2px 7px;border-radius:5px;font-size:11px;margin-right:6px}
+.fbadge{display:inline-block;padding:2px 8px;border-radius:10px;background:#fee;color:#b91c1c;font-size:11px;margin-left:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Rider · Auth module <span style="color:#888;font-weight:400">· Batch 1 of wireframe documentation v2</span></h1>
+<p class="sub">Captured 2026-08-27 · repo <code>staging @ 9387b0d</code> · app v1.0.4 SDK53 · source of record: code (runtime-only items marked †)</p>
+
+<div class="crumbbar"><strong>Module files covered:</strong> <code>app/(auth)/{welcome, walkthrough-1..3, login, forgot-password, phone-entry, otp-verify, register, enable-location, notifications-permission}.tsx</code> · feeding context: <code>app/index.tsx</code> (splash router), <code>app/(auth)/_layout.tsx</code><br>
+<strong>Coverage:</strong> 11 primary screens · 12 state/step layouts · <strong>23 rendered layouts</strong> documented. Floating theme toggle ◐ is applied at the module-stack level to every auth screen except driver-splash (<code>(auth)/_layout.tsx:14-33,42</code>).</div>
+
+<h2>Module flow diagram</h2>
+<div class="flow">
+  <div class="frow"><span class="flbl">COLD START → SPLASH ROUTER (C-021 · app/index.tsx)</span></div>
+  <div class="frow">
+    <span class="fb">Splash: logo anim “Your ride, your way”<br><span class="flbl">1.5s hold, then /api/auth/verify-token</span></span>
+    <span class="fa">→ no session</span><span class="fb">R-001 Welcome</span>
+    <span class="fa">→ 401/403 or users-row missing</span><span class="fb">R-007 Phone Entry</span>
+    <span class="fa">→ role=driver</span><span class="fb exit">(main)/(rider) tabs</span>
+    <span class="fa">· role=rider</span><span class="fb exit">R-013 Services Hub</span>
+    <span class="fa">→ 5xx / network fail</span><span class="fb state">Splash error: “Retry” tap-point</span>
+  </div>
+  <div class="frow"><span class="flbl">SIGN-IN</span></div>
+  <div class="frow">
+    <span class="fb">R-001 Welcome</span><span class="fa">→ Sign In / Create Account <span class="flbl">(both → phone-entry)</span></span><span class="fb">R-007 Phone Entry</span>
+    <span class="fa">→ Login (check exists)</span><span class="fb">R-005 Login</span><span class="fa">→ success</span><span class="fb exit">role redirect †</span>
+  </div>
+  <div class="frow"><span class="flbl">REGISTER</span></div>
+  <div class="frow">
+    <span class="fb">R-007 Phone Entry (Role pill Rider|Driver)</span><span class="fa">→ Register, new phone</span><span class="fb">R-008 OTP Verify</span><span class="fa">→ verified</span><span class="fb">R-009 Register (Complete)</span>
+    <span class="fa">→ driver</span><span class="fb exit">(main)/(rider)</span>
+    <span class="fa">· rider</span><span class="fb">R-010 Enable Location</span><span class="fa">→ Allow / Not Now</span><span class="fb">R-011 Notifications</span><span class="fa">→ allow/now</span><span class="fb exit">R-013 Services Hub</span>
+  </div>
+  <div class="frow"><span class="flbl">WALKTHROUGH (manual entry only † — no auto-first-run hook)</span></div>
+  <div class="frow">
+    <span class="fb">R-002 W1</span><span class="fa">→ Next</span><span class="fb">R-003 W2</span><span class="fa">→ Next</span><span class="fb">R-004 W3</span><span class="fa">→ Get Started</span><span class="fb">R-007</span>
+    <span class="fa">· Skip(W1/W2)→</span><span class="fb">R-007</span>
+  </div>
+  <div class="frow"><span class="flbl">PASSWORD RECOVERY (single route, 3 layouts)</span></div>
+  <div class="frow">
+    <span class="fb">R-005 Login</span><span class="fa">→ Forgot Password?</span><span class="fb">R-006 step-phone</span><span class="fa">→ Send OTP (known acct)</span><span class="fb">R-006.S2 otp</span><span class="fa">→ Verify</span><span class="fb">R-006.S3 new password</span><span class="fa">→ ok</span><span class="fb exit">R-005 Login (prefilled)</span>
+  </div>
+</div>
+
+<!-- ==================== R-001 ==================== -->
+<div class="sec" id="r-001">
+  <div class="scrhead"><h3><span class="idchip">R-001</span>Welcome</h3>
+    <span class="tagrow"><span>app · rider(auth)</span><span>app/(auth)/welcome.tsx · 76 lines</span></span></div>
+  <div class="two">
+    <div class="phone">
+      <div class="tgl">◐</div>
+      <div class="p-spacer"></div>
+      <div class="cir">LOGO<br>car◊<span style="display:block;font-size:9px">logo.png 96px rounded</span></div>
+      <div class="bx" style="border:none;font-weight:700;font-size:13px">Welcome to Ride</div>
+      <div class="mini">Your ride, your way. Get started in seconds.</div>
+      <div class="p-spacer"></div>
+      <div class="bx btn">Sign In</div>
+      <div class="bx btn sec">Create Account</div>
+      <div class="p-spacer"></div>
+    </div>
+    <table class="doc">
+      <tr><th>Purpose</th><td>Brand entry point shown to signed-out users.</td></tr>
+      <tr><th>Entry / Exit</th><td>In: no Supabase session at cold start (<code>app/index.tsx:83-87</code>). Out: both buttons → <code>/(auth)/phone-entry</code>.</td></tr>
+      <tr><th>UI elements</th><td>Logo image (rounded-xl) · H1 “Welcome to Ride” · copy “Your ride, your way. Get started in seconds.” · tinted circle w/ car icon · primary “Sign In” · secondary “Create Account” · layout theme toggle.</td></tr>
+      <tr><th>States</th><td>default only — no data fetch.</td></tr>
+      <tr><th>Actions</th><td>“Sign In” → phone-entry (<code>:64-67</code>) · “Create Account” → phone-entry, identical target (<code>:68-72</code>) → quirk Q-AUTH-1 (no distinct register intent here; downstream phone-entry differentiates).</td></tr>
+      <tr><th>Data shown</th><td>Static copy only; logo asset assets/logo/logo.png.</td></tr>
+      <tr><th>Source</th><td><code>app/(auth)/welcome.tsx:22-45</code> content · <code>:63-73</code> buttons · screenshot: none (code-documented).</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== R-002..004 ==================== -->
+<div class="sec" id="r-walkthrough">
+  <div class="scrhead"><h3><span class="idchip">R-002 / R-003 / R-004</span>Walkthrough 1 · 2 · 3</h3>
+    <span class="tagrow"><span>app · rider(auth)</span><span>walkthrough-{1,2,3}.tsx · 83 / 83 / 75 lines</span></span></div>
+  <div class="two">
+    <div class="frames">
+      <div class="phone" style="height:360px">
+        <div class="tgl">◐</div><div class="p-spacer"></div>
+        <div class="cir" style="width:80px;height:80px">car▸</div>
+        <div class="bx" style="border:none;font-weight:700;font-size:13px">Welcome to Ride</div>
+        <div class="mini">Book rides instantly with verified drivers near you.</div>
+        <div class="dots">● ◦ ◦</div>
+        <div class="p-spacer"></div>
+        <div class="bx btn">Next</div>
+        <div class="mini" style="text-align:center;text-decoration:underline">Skip</div>
+      </div>
+      <div class="phone" style="height:360px">
+        <div class="tgl">◐</div><div class="p-spacer"></div>
+        <div class="cir" style="width:80px;height:80px">shield</div>
+        <div class="bx" style="border:none;font-weight:700;font-size:13px">Safe &amp; Reliable</div>
+        <div class="mini">All drivers are verified. Share your trip with trusted contacts.</div>
+        <div class="dots">◦ ● ◦</div>
+        <div class="p-spacer"></div>
+        <div class="bx btn">Next</div>
+        <div class="mini" style="text-align:center;text-decoration:underline">Skip</div>
+      </div>
+      <div class="phone" style="height:360px">
+        <div class="tgl">◐</div><div class="p-spacer"></div>
+        <div class="cir" style="width:80px;height:80px">card</div>
+        <div class="bx" style="border:none;font-weight:700;font-size:13px">Pay with Ease</div>
+        <div class="mini">Cash, bKash, Nagad — pay your driver however you prefer.</div>
+        <div class="dots">◦ ◦ ●</div>
+        <div class="p-spacer"></div>
+        <div class="bx btn">Get Started</div>
+      </div>
+    </div>
+    <table class="doc">
+      <tr><th>Purpose</th><td>Three-page value pitch (bookings / safety / payments) before auth entry.</td></tr>
+      <tr><th>Entry / Exit</th><td>No auto-first-run hook — only direct URL/manual nav † (<code>app/index.tsx</code> routes splash straight to welcome; grep found no push into walkthrough). Chain W1→W2→W3. Skip (W1,W2) → phone-entry. “Get Started” → phone-entry (<code>walkthrough-3.tsx:70</code>).</td></tr>
+      <tr><th>UI elements</th><td>Tinted circle + large Ionicons glyph per page (car / shield / card) · H1 title · body copy · 3-dot progress indicator (active dot enlarged + colored) · primary button Next/Next/Get Started · text-link “Skip” on pages 1–2 only.</td></tr>
+      <tr><th>States</th><td>default only (static).</td></tr>
+      <tr><th>Actions</th><td>Next chain (<code>w1:70, w2:70</code>) · Skip → phone-entry (<code>w1:76, w2:76</code>) · Get Started → phone-entry (<code>w3:70</code>). Slide-from-right stack transition.</td></tr>
+      <tr><th>Data shown</th><td>Static marketing copy only.</td></tr>
+      <tr><th>Source</th><td><code>walkthrough-1.tsx:22-61</code>, <code>2.tsx:22-61</code>, <code>3.tsx:22-61</code> (art/title/dots) · buttons <code>:67-80</code> / `<code>:67-80</code> / <code>:67-72</code>. Screenshots: none.</td></tr>
+    </table>
+  </div>
+  <div class="note">Annexed: (1) no programmatic first-run entry to walkthrough → Open-Q AUTH-2; (2) page-3 copy lists bKash/Nagad while payments run through the PortPos gateway — wording only, documented as-is.</div>
+</div>
+
+<!-- ==================== R-005 ==================== -->
+<div class="sec" id="r-005">
+  <div class="scrhead"><h3><span class="idchip">R-005</span>Login</h3><span class="fbadge">root shared · rider+driver</span>
+    <span class="tagrow"><span>app · rider(auth)</span><span>login.tsx · 156 lines</span></span></div>
+  <div class="two">
+    <div class="frames">
+      <div class="phone">
+        <div style="font-weight:800;font-size:14px;margin-bottom:2px">Welcome Back</div>
+        <div class="mini" style="margin-bottom:10px">Enter your phone number and password to login</div>
+        <div class="bx inp">+880&nbsp;<b>1XXXXXXXXX</b></div>
+        <div class="bx inp">••••••••</div>
+        <div class="bx btn">Login</div>
+        <div class="mini" style="text-align:center;color:#2563eb;font-weight:700;text-decoration:underline;margin-top:8px">Forgot Password?</div>
+        <span class="flbl" style="text-align:center;display:block;margin-top:8px">R-005 · default</span>
+      </div>
+      <div class="phone" style="height:360px">
+        <div style="font-weight:800;font-size:14px">Welcome Back</div>
+        <div class="bx inp">+880 1712345678</div>
+        <div class="bx inp">••••••••</div>
+        <div class="inset" style="top:120px"><span class="flbl">BUSY (-L)</span><br>button: <b>“Logging in...”</b> disabled<br><span style="color:#888">spinner inside CustomButton</span></div>
+        <div class="bx btn">Logging in…</div>
+        <div class="mini" style="text-align:center;text-decoration:underline">Forgot Password?</div>
+        <span class="flbl" style="text-align:center;display:block">R-005-L inset</span>
+      </div>
+      <div class="phone errband" style="height:360px">
+        <div style="font-weight:800;font-size:14px">Welcome Back</div>
+        <div class="bx inp">+880 1712345678</div>
+        <div class="bx inp">••••••••</div>
+        <div class="bx" style="border:none;color:#c62828;font-weight:700">“Invalid login credentials”<br><span style="font-size:9px;color:#888">(supabase error string shown verbatim)</span></div>
+        <div class="bx btn">Login</div>
+        <div class="mini" style="text-align:center;text-decoration:underline">Forgot Password?</div>
+        <span style="position:absolute;bottom:-20px;left:6px;font-size:10px;color:#c62828;font-weight:700">▲ R-005-X error state</span>
+      </div>
+    </div>
+    <table class="doc">
+      <tr><th>Purpose</th><td>Password sign-in for existing accounts (both roles share this screen).</td></tr>
+      <tr><th>Entry / Exit</th><td>In: phone-entry “Login” after existence check (<code>phone-entry.tsx:54-55</code>); <code>?phone=</code> param prefill stripped via <code>stripCountryCode()</code> (<code>login.tsx:11-15,18-19</code>). Out: success → handled by root auth-gate, no manual navigation (<code>:60</code>) · Forgot Password? → R-006.</td></tr>
+      <tr><th>UI elements</th><td>H1 “Welcome Back” · helper copy · [+880] prefixed digits input (phone-pad, maxLen 10) · masked password · primary button Login / busy “Logging in...” · link “Forgot Password?”.</td></tr>
+      <tr><th>States (rows)</th><td><b>R-005</b> default · <b>R-005-L</b> busy label swap (inset) · <b>R-005-X</b> inline danger error (independent frame). Client validations here too: “Enter a valid phone number”, “Password must be at least 6 characters” (<code>:35-43</code>). No empty-state branch exists (inventory corrected).</td></tr>
+      <tr><th>Actions</th><td>Typing in either input clears the error (<code>:104</code>) · Login → <code>supabase.auth.signInWithPassword</code>, error surfaced verbatim (<code>:49-58</code>) · Forgot Password? → push forgot-password (<code>:143-153</code>).</td></tr>
+      <tr><th>Data shown</th><td>Inputs + error only — post-login redirect is global.</td></tr>
+      <tr><th>Source</th><td><code>app/(auth)/login.tsx:69-135</code> layout/inputs · <code>:137-141</code> button · <code>:143-153</code> link. Screenshot: none.</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== R-006 ==================== -->
+<div class="sec" id="r-006">
+  <div class="scrhead"><h3><span class="idchip">R-006</span>Forgot Password — wizard (3 layouts, one route)</h3><span class="fbadge">one route · three layouts</span>
+    <span class="tagrow"><span>app · rider(auth)</span><span>forgot-password.tsx · 313 lines</span></span></div>
+  <div class="two">
+    <div class="frames">
+      <div class="phone" style="height:300px">
+        <div style="font-weight:800;font-size:13px">Forgot Password</div>
+        <div class="mini" style="margin-bottom:8px">Enter your phone number to receive OTP</div>
+        <div class="bx inp">+880&nbsp;<b>1XXXXXXXXX</b></div>
+        <div class="bx btn">Send OTP</div>
+        <span class="flbl" style="text-align:center;display:block">R-006 (step-phone)</span>
+      </div>
+      <div class="phone" style="height:300px">
+        <div style="font-weight:800;font-size:13px">Verify OTP</div>
+        <div class="mini" style="margin-bottom:8px">Enter the OTP sent to your phone</div>
+        <div class="bx inp"><b>Enter 6-digit OTP</b></div>
+        <div class="bx btn">Verify OTP</div>
+        <div class="mini" style="text-align:center;color:#2563eb;font-weight:700;text-decoration:underline">Change Phone Number</div>
+        <span class="flbl" style="text-align:center;display:block">R-006.S2 (step-otp)</span>
+      </div>
+      <div class="phone errband" style="height:330px">
+        <div style="font-weight:800;font-size:13px">Reset Password</div>
+        <div class="mini" style="margin-bottom:8px">Enter your new password</div>
+        <div class="bx inp">New Password</div>
+        <div class="bx inp">Confirm New Password</div>
+        <div class="bx btn">Reset Password</div>
+        <div class="bx" style="border:none;color:#c62828;font-weight:700;font-size:10px">“Passwords do not match” / reset failures</div>
+        <span style="position:absolute;bottom:-20px;left:6px;font-size:10px;color:#c62828;font-weight:700">▲ R-006.S3 (-X variant inline)</span>
+      </div>
+    </div>
+    <table class="doc">
+      <tr><th>Purpose</th><td>Self-service password reset guarded by SMS OTP + account existence pre-check.</td></tr>
+      <tr><th>Entry / Exit</th><td>In: Login “Forgot Password?”. Back-vol: “Change Phone Number” (otp step) returns to step-phone. Exit on success: <code>router.replace login?phone={fullPhone}</code> prefilled (<code>:152</code>). No success page.</td></tr>
+      <tr><th>UI elements</th><td>Heading + helper copy swap per step (<code>:166-175</code>). phone: [+ prefixed digits + “Send OTP”; otp: single text input maxLen 6 + “Verify OTP” + “Change Phone Number”; password: two masked inputs + “Reset Password”.</td></tr>
+      <tr><th>States (rows)</th><td><b>R-006</b> · <b>R-006.S2</b> · <b>R-006.S3</b> layouts. Every step carries −L (ActivityIndicator replaces label, grey bg) and −X (danger banner): “No account found with this phone number” (<code>:50</code>), “Invalid OTP” (<code>:111</code>), length/mismatch (<code>:125-133</code>).</td></tr>
+      <tr><th>Actions</th><td>Send OTP → POST /api/auth/check-user (existence gate) then send-otp, store sessionId (<code>:31-75</code>) · Verify → verify-otp, ok → password step (<code>:102-115</code>) · Change phone → step-phone (<code>:248</code>) · Reset → reset-password, ok → login prefilled (<code>:139-152</code>).</td></tr>
+      <tr><th>Data shown</th><td>sessionId in memory only.</td></tr>
+      <tr><th>Source</th><td><code>app/(auth)/forgot-password.tsx:161-213</code> phone · <code>:215-254</code> otp · <code>:256-303</code> password · <code>:166-175</code> headers. Screenshot: none.</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== R-007 ==================== -->
+<div class="sec" id="r-007">
+  <div class="scrhead"><h3><span class="idchip">R-007</span>Phone Entry</h3>
+    <span class="tagrow"><span>app · rider(auth)</span><span>phone-entry.tsx · 226 lines</span></span></div>
+  <div class="two">
+    <div class="frames">
+      <div class="phone">
+        <div style="font-weight:800;font-size:15px">Ride</div>
+        <div class="mini" style="margin-bottom:10px">Your ride, your way</div>
+        <div style="font-weight:800;font-size:14px;margin-top:4px;margin-bottom:2px">Get Started</div>
+        <div class="mini" style="margin-bottom:10px">Enter your phone number to continue</div>
+        <div class="bx inp">+880&nbsp;<b>1XXXXXXXXX</b></div>
+        <div class="pillgrp"><div class="bx on">Rider</div><div class="bx">Driver</div></div>
+        <div class="bx btn">Login</div>
+        <div class="bx btn sec">Register</div>
+        <span class="flbl" style="text-align:center;display:block">R-007 · default (role=Rider selected)</span>
+        <span class="flbl" style="text-align:center;display:block">busy(-L): both buttons disabled, labels swap/spinner</span>
+      </div>
+      <div class="phone errband" style="height:360px">
+        <div style="font-weight:800;font-size:14px">Get Started</div>
+        <div class="bx inp">+880 1712345678</div>
+        <div class="bx" style="border:none;color:#c62828;font-weight:700;font-size:10px">“No account found with this phone number. Tap Register to create one.”<br><span style="font-size:9px;color:#888">login lookup w/ existing=false (varies for register path: exists=true → “An account with this phone already exists. Please login.”)</span></div>
+        <div class="bx btn">Login</div>
+        <div class="bx btn sec">Register</div>
+        <span style="position:absolute;bottom:-20px;left:6px;font-size:10px;color:#c62828;font-weight:700">▲ R-007-X error state</span>
+      </div>
+    </div>
+    <table class="doc">
+      <tr><th>Purpose</th><td>Primary OTP-based auth gate: resolve phone + role, branch existing/new-user.</td></tr>
+      <tr><th>Entry / Exit</th><td>In: splash (401/users-missing), welcome (both buttons), walkthrough skips/Get Started. Out: “Login” existing → R-005 login?phone ; “Register” new → R-008 otp-verify?phone&role (rider|driver) — chosen role is carried forward.</td></tr>
+      <tr><th>UI elements</th><td>Wordmark “Ride” + tagline · H1 “Get Started” · [+880] digits-only input (maxLen 10) · segmented role pill Rider|Driver (selected = filled) · primary “Login” · secondary “Register”.</td></tr>
+      <tr><th>States (rows)</th><td><b>R-007</b> default · <b>R-007-L</b> busy (both buttons call <code>/api/auth/check-user</code>; disabled + spinner via button label swap) · <b>R-007-X</b> inline error (independent frame) — messages per path above.</td></tr>
+      <tr><th>Actions</th><td>Role pill toggles <code>rider|driver</code> (<code>:170-203</code>) · Login → check-user; ok&exists → login&phone (<code>:36-58</code>) ; no account → inline error (<code>:57</code>) · Register → check-user; exists → inline error (<code>:96</code>) ; new → otp-verify&role (<code>:98</code>) · typing clears error.</td></tr>
+      <tr><th>Data shown</th><td>phone &amp; role held in component state → passed as URL params downstream.</td></tr>
+      <tr><th>Source</th><td><code>app/(auth)/phone-entry.tsx:108-205</code> layout · <code>:26-65</code> login flow · <code>:67-99</code> register flow · <code>:170-203</code> pill. Screenshot: none.</td></tr>
+    </table>
+  </div>
+  <div class="note">Both flows share <code>/api/auth/check-user</code>; Login vs Register expose the existence verdict as different inline messages (not different screens).</div>
+</div>
+
+<!-- ==================== R-008 ==================== -->
+<div class="sec" id="r-008">
+  <div class="scrhead"><h3><span class="idchip">R-008</span>OTP Verify</h3>
+    <span class="tagrow"><span>app · rider(auth)</span><span>otp-verify.tsx · 169 lines</span></span></div>
+  <div class="two">
+    <div class="phone">
+      <div style="font-weight:800;font-size:14px;margin-bottom:2px">Verify OTP</div>
+      <div class="mini" style="margin-bottom:10px">Enter the 6-digit code sent to +880…</div>
+      <div class="bx inp"><b>Enter 6-digit OTP</b></div>
+      <div class="bx btn">Verify OTP</div>
+      <div class="mini" style="text-align:center;color:#2563eb;font-weight:700;text-decoration:underline">Resend OTP</div>
+      <span class="flbl" style="text-align:center;display:block;margin-top:8px">R-008 · default (auto-sends OTP on mount)</span>
+      <div class="inset" style="top:150px"><span class="flbl">BUSY (-L)</span><br>Verify button: <b>“Verifying...”</b><br><span style="color:#888">Send-OTP busy also disables buttons</span></div>
+    </div>
+    <table class="doc">
+      <tr><th>Purpose</th><td>Confirm the 6-digit SMS OTP to prove phone ownership during registration.</td></tr>
+      <tr><th>Entry / Exit</th><td>In: R-007 Register (verified=false) with <code>?phone&role</code>. OTP auto-sent on mount (once, guard ref). Out: verified → <code>/(auth)/register?phone&role</code>.</td></tr>
+      <tr><th>UI elements</th><td>H1 “Verify OTP” · helper “Enter the 6-digit code sent to {phone}” · single text input, number-pad, maxLen 6 (not segmented cells) · primary “Verify OTP” · link “Resend OTP”.</td></tr>
+      <tr><th>States (rows)</th><td><b>R-008</b> default · <b>R-008-L</b> busy (verify spinner + send spinner; <code>:150-152</code>) · <b>R-008-X</b> inline danger (e.g. “Invalid OTP”, send-fail). No explicit empty state; TD-01 manual-entry fallback is exactly this screen.</td></tr>
+      <tr><th>Actions</th><td>Auto <code>send-otp</code> on mount storing sessionId (<code>:31-64</code>) · Verify → length gate then <code>verify-otp</code>; ok → register (<code>:66-101</code>) · Resend OTP refires send (<code>:155-166</code>).</td></tr>
+      <tr><th>Data shown</th><td>Phone echoed in helper; role forwarded untouched.</td></tr>
+      <tr><th>Source</th><td><code>app/(auth)/otp-verify.tsx:106-139</code> markup · <code>:60-64</code> autosend · <code>:149-153</code> button · <code>:155-166</code> resend. Screenshot: none.</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== R-009 ==================== -->
+<div class="sec" id="r-009">
+  <div class="scrhead"><h3><span class="idchip">R-009</span>Register (Complete Registration)</h3>
+    <span class="tagrow"><span>app · rider(auth)</span><span>register.tsx · 171 lines</span></span></div>
+  <div class="two">
+    <div class="phone">
+      <div style="font-weight:800;font-size:14px">Complete Registration</div>
+      <div class="mini" style="margin-bottom:8px">Enter your details to create your account</div>
+      <div class="bx inp">Full Name</div>
+      <div class="bx inp">Password (min 6 characters)</div>
+      <div class="bx inp">Confirm Password</div>
+      <div class="bx btn">Register</div>
+      <span class="flbl" style="text-align:center;display:block">R-009 · default (busy: “Registering…” disabled)</span>
+    </div>
+    <table class="doc">
+      <tr><th>Purpose</th><td>Create the account row + Supabase auth identity for a phone-verified user (both roles).</td></tr>
+      <tr><th>Entry / Exit</th><td>In: otp-verify success with phone&role. Out (success): driver → <code>/(main)/(rider)</code> · rider → <code>/(auth)/enable-location</code> (<code>:81-85</code>). AWS-gate failure → login prefilled with message (<code>:74-78</code>).</td></tr>
+      <tr><th>UI elements</th><td>H1 “Complete Registration” · helper · Full Name · Password (secure) · Confirm Password (secure) · primary “Register”.</td></tr>
+      <tr><th>States (rows)</th><td><b>R-009</b> default · <b>R-009-L</b> busy (“Registering…”, disabled) · <b>R-009-X</b> inline danger banner (validation + server errors).</td></tr>
+      <tr><th>Actions</th><td>Client gates: name ≥2 / pass ≥6 / match (<code>:30-43</code>) · POST /api/register → <code>supabase.auth.signInWithPassword</code> → role redirect (<code>:49-85</code>).</td></tr>
+      <tr><th>Data shown</th><td>name, password (sent once); phone/role from URL params.</td></tr>
+      <tr><th>Source</th><td><code>app/(auth)/register.tsx:93-170</code> layout · <code>:108-153</code> inputs · <code>:164-167</code> button. Screenshot: none.</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== R-010 ==================== -->
+<div class="sec" id="r-010">
+  <div class="scrhead"><h3><span class="idchip">R-010</span>Enable Location</h3><span class="fbadge">permission-gated</span>
+    <span class="tagrow"><span>app · rider(auth)</span><span>enable-location.tsx · 121 lines</span></span></div>
+  <div class="two">
+    <div class="frames">
+      <div class="phone">
+        <div class="tgl">◐</div>
+        <div class="p-spacer"></div>
+        <div class="cir" style="width:72px;height:72px">pin</div>
+        <div class="bx" style="border:none;font-weight:700;font-size:14px">Allow Ride to access your location</div>
+        <div class="mini">We need your location to find drivers near you.</div>
+        <div class="p-spacer"></div>
+        <div class="bx btn">Allow</div>
+        <div class="bx btn sec">Not Now</div>
+        <div class="p-spacer"></div>
+      </div>
+      <div class="phone pm" style="height:320px">
+        <div class="osdlg" style="margin:8px auto 0">⚙ SYSTEM PROMPT († OS-owned)<br><b>Allow Ride to access this device\u2019s location?</b><br><span style="color:#888">only while using / while in-use / deny</span>
+          <div style="display:flex;gap:6px;margin-top:6px"><span class="bx" style="flex:1">Deny</span><span class="bx on" style="flex:1">Allow</span></div>
+        </div>
+        <div class="p-spacer"></div>
+        <div class="bx btn">Allow</div>
+        <div class="bx btn sec">Not Now</div>
+        <span style="position:absolute;bottom:-20px;left:6px;font-size:10px">R-010-PM dotted frame = OS permission dialog</span>
+      </div>
+      <div class="phone" style="height:340px">
+        <div class="osdlg" style="margin:0 auto;border-style:dotted">⚙ <b>SETTINGS PROMPT (owned Alert)</b> <span class="flbl">shown when previously denied or request denied</span><br>“Ride needs your location to find drivers near you. Please enable location access in Settings.”<br>
+          <div style="display:flex;gap:6px;margin-top:6px"><span class="bx" style="flex:1">Not Now</span><span class="bx on" style="flex:1">Open Settings</span></div>
+        </div>
+        <div class="p-spacer"></div>
+        <div class="bx btn">Allow</div>
+        <div class="bx btn sec">Not Now</div>
+        <span style="position:absolute;bottom:-20px;left:6px;font-size:10px">R-010-SettingsAlert · owned cross-platform Alert</span>
+      </div>
+    </div>
+    <table class="doc">
+      <tr><th>Purpose</th><td>Acquire foreground location permission as the rider-onboarding step before notifications.</td></tr>
+      <tr><th>Entry / Exit</th><td>In: R-009 register success (rider). Out (any path): → R-011 notifications-permission (<code>:36,:60</code>).</td></tr>
+      <tr><th>UI elements</th><td>Theme toggle · location-pin circle · title · copy · primary “Allow” · secondary “Not Now”. Runtime adds OS dialog and an owned App-Settings <code>Alert</code> (<code>:17-26</code>).</td></tr>
+      <tr><th>States (rows)</th><td><b>R-010</b> base · R-010-PM dotted (OS dialog, †) · R-010-SettingsAlert (owned, denied-path) — each is a distinct counted layout.</td></tr>
+      <tr><th>Actions</th><td>Allow → perm check; granted → next; denied → settings alert; else request (<code>:38-58</code>) · Not Now → next anyway (<code>:60</code>).</td></tr>
+      <tr><th>Data shown</th><td>Permission status only.</td></tr>
+      <tr><th>Source</th><td><code>app/(auth)/enable-location.tsx:36-58</code> logic · <code>:17-26</code> alert · <code>:62-118</code> markup. Screenshot: none.</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== R-011 ==================== -->
+<div class="sec" id="r-011">
+  <div class="scrhead"><h3><span class="idchip">R-011</span>Notifications Permission</h3><span class="fbadge">push-registration</span>
+    <span class="tagrow"><span>app · rider(auth)</span><span>notifications-permission.tsx · 140 lines</span></span></div>
+  <div class="two">
+    <div class="phone">
+      <div class="tgl">◐</div>
+      <div class="p-spacer"></div>
+      <div class="cir" style="width:72px;height:72px">bell</div>
+      <div class="mini" style="font-weight:700;font-size:14px;color:#333">Allow Notifications</div>
+      <div class="mini">We\u2019ll send you ride updates, promo offers, and important alerts.</div>
+      <div class="p-spacer"></div>
+      <div class="bx btn">Allow</div>
+      <div class="bx btn sec">Not Now</div>
+      <div class="p-spacer"></div>
+    </div>
+    <table class="doc">
+      <tr><th>Purpose</th><td>Request push permission + register Expo push token and stable device id.</td></tr>
+      <tr><th>Entry / Exit</th><td>In: R-010. Out (Allow or Not Now): → <code>/(main)/(customer)/services-hub</code> (rider lands on Services Hub, not Home) (<code>:75,:78</code>).</td></tr>
+      <tr><th>UI elements</th><td>Theme toggle · bell circle · “Allow Notifications” · copy · primary “Allow” (busy “Enabling…” disabled) · secondary “Not Now”.</td></tr>
+      <tr><th>States (rows)</th><td><b>R-011</b> default · <b>R-011-L</b> busy label-swap · R-011-PM († OS dialog). No error row — token reg is silent/best-effort (<code>:57-60</code>).</td></tr>
+      <tr><th>Actions</th><td>Allow → <code>registerPushToken()</code> (perm + Expo token + POST /api/user/device) → services-hub (<code>:71-75</code>) · Not Now → skip (<code>:78</code>).</td></tr>
+      <tr><th>Data shown</th><td>device_id held in AsyncStorage <code>@rider_device_id</code> (<code>:16,20-31</code>).</td></tr>
+      <tr><th>Source</th><td><code>app/(auth)/notifications-permission.tsx:20-60</code> push · <code>:71-79</code> handlers · <code>:80-137</code> markup. Screenshot: none.</td></tr>
+    </table>
+  </div>
+  <div class="note">Rider post-auth target confirmed as Services Hub (R-013) — carries into downstream flows.</div>
+</div>
+
+<h2>Batch 1 annex · auth-specific</h2>
+<div class="sec">
+  <p style="margin:0 0 8px;font-weight:700">Findings (full log <code>../notes.md</code>; v6 discrepancies live in the Phase 3 annex)</p>
+  <ul style="margin:0;padding-left:18px;line-height:1.75">
+    <li><b>Q-AUTH-1</b> Welcome “Sign In” / “Create Account” are identical routes (<code>welcome.tsx:64-72</code>).</li>
+    <li><b>Q-AUTH-2</b> No in-app entry into walkthroughs (R-002..004) — URL-only †.</li>
+    <li><b>Q-AUTH-3</b> Register routes drivers straight to <code>/(main)/(rider)</code> — no driver permission steps in this flow (<code>register.tsx:81-85</code>).</li>
+    <li><b>Copy</b> Walkthrough-3 lists bKash/Nagad options while bookings settle via PortPos — as-built.</li>
+    <li>All OTP entry is a single field (maxLen 6) — not segmented cells.</li>
+  </ul>
+</div>
+
+<footer>
+Rider · Auth module — 23 rendered layouts across 11 IDs. Source: repo staging @ 9387b0d (per-screen file:line in tables). Runtime-only † from source.<br>
+Inventory corrections in notes.md · module index: <a href="../index.html">index.html</a>.
+</footer>

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ride — Rider Trip Wireframes (R-037..R-046)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#fff; color:#111827; padding:24px; line-height:1.45; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  h2 { font-size:16px; margin:0 0 12px; }
+  .sub { color:#6b7280; font-size:13px; margin:0 0 24px; }
+  .total { display:inline-block; background:#111827; color:#fff; padding:6px 12px; border-radius:8px; font-weight:700; font-size:14px; margin-bottom:24px; }
+  .screen-block { border:1px solid #d1d5db; border-radius:12px; padding:18px; margin-bottom:24px; background:#fff; }
+  .screen-block .sh { font-size:15px; font-weight:700; border-bottom:2px solid #111827; padding-bottom:6px; margin-bottom:14px; }
+  .fid { color:#374151; }
+  .ftag { display:inline-block; background:#111827; color:#fff; font-size:11px; padding:2px 8px; border-radius:6px; margin-left:8px; vertical-align:middle; }
+  table.meta { width:100%; border-collapse:collapse; margin-bottom:16px; font-size:13px; }
+  table.meta th, table.meta td { border:1px solid #e5e7eb; padding:7px 9px; text-align:left; vertical-align:top; }
+  table.meta th { background:#f3f4f6; width:130px; color:#374151; font-weight:600; }
+  table.meta td { color:#1f2937; }
+  .wf { border:1px dashed #9ca3af; border-radius:10px; padding:14px; background:#fafafa; max-width:360px; }
+  .wf .ph { font-size:13px; font-weight:700; color:#374151; margin-bottom:8px; border-bottom:1px solid #d1d5db; padding-bottom:4px; }
+  .box { border:1px solid #9ca3af; background:#fff; border-radius:6px; padding:8px; margin:6px 0; font-size:12px; color:#374151; }
+  .box.gray { background:#f3f4f6; }
+  .box.dark { background:#374151; color:#fff; }
+  .box.danger { background:#fef2f2; border-color:#ef4444; }
+  .box.success { background:#f0fdf4; border-color:#22c55e; }
+  .box.info { background:#eff6ff; border-color:#3b82f6; }
+  .box.warning { background:#fffbeb; border-color:#f59e0b; }
+  .row { display:flex; gap:6px; }
+  .row .box { flex:1; }
+  .hr { height:1px; background:#e5e7eb; margin:8px 0; }
+</style>
+</head>
+<body>
+<h1>Ride — Rider Trip Wireframes</h1>
+<p class="sub">Module: <strong>rider-trip</strong> · Source: <code>app/(main)/(customer)/</code> · Grayscale low-fidelity documentation of built screens. No redesign.</p>
+<div class="total">TOTAL SCREEN ROWS: 10 (R-037 — R-046)</div>
+
+<!-- R-037 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-037</span> · Ride Tracking <span class="ftag">rider-trip</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-037</td></tr>
+    <tr><td>name</td><td>RideTracking</td></tr>
+    <tr><td>module</td><td>rider-trip</td></tr>
+    <tr><td>Purpose</td><td>Live map + bottom sheet showing driver ETA, vehicle info, and ride actions.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: after driver accepts. Exit: back to home, or auto on cancel.</td></tr>
+    <tr><td>UI elements</td><td>Full-screen map with route line, pickup/destination pins, driver dot. Top bar: back, status badge (Driver en route / Arrived / On trip / Complete), theme toggle, share. SOS button. Bottom card: driver avatar/name/rating, vehicle model/color/plate/type badge, pickup address, action row (Call, Chat, Cancel). Arrived state shows 4-digit PIN entry + Copy PIN. In-progress shows trip timer + estimated fare. Complete shows fare + Rate Driver button. Reconnecting banner when socket drops.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span> spinner, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">en_route</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">arrived</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">in_progress</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">complete</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">error</span> not-found.</td></tr>
+    <tr><td>Actions</td><td>Call driver, Chat, Cancel ride, Share ride, Copy PIN, Rate Driver, Theme toggle.</td></tr>
+    <tr><td>Data shown</td><td>Ride status, ETA, trip timer, fare preview, driver info, vehicle info, pickup/destination addresses.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/ride-tracking/[ride_id].tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹  [Driver en route]  [◐] [⤤]</div>
+    <div class="box gray" style="min-height:140px;">[ Map: pickup pin — route line — driver dot — destination pin ]</div>
+    <div class="box">Driver Avatar  Name ⭐ 4.8 · 120 trips    5 min away</div>
+    <div class="box">🚗 White Toyota Axio · CBA-1234  [bike_basic]</div>
+    <div class="box">● 123 Main St, Dhaka</div>
+    <div class="row">
+      <div class="box">📞 Call</div>
+      <div class="box">💬 Chat</div>
+      <div class="box danger">✕ Cancel</div>
+    </div>
+    <div class="box warning">🔒 PIN: [ 1 ] [ 2 ] [ 3 ] [ 4 ]  [Copy PIN]</div>
+  </div>
+</div>
+
+<!-- R-038 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-038</span> · Rate Driver <span class="ftag">rider-trip</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-038</td></tr>
+    <tr><td>name</td><td>RateDriver</td></tr>
+    <tr><td>module</td><td>rider-trip</td></tr>
+    <tr><td>Purpose</td><td>Post-ride rating and optional tip for the driver.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from ride-tracking complete state or services-hub. Exit: submit → services-hub.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Rate your driver". Driver avatar initial, name, vehicle type, plate. 5-star rating row. Preset tip chips (20, 50, 100 BDT) + custom tip input. Block/Unblock driver toggle. Submit button. Loading/error states.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span> driver fetch, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">submitting</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">error</span>.</td></tr>
+    <tr><td>Actions</td><td>Select stars, select/customize tip, block/unblock driver, submit rating.</td></tr>
+    <tr><td>Data shown</td><td>Driver name, vehicle type, plate, avatar. Rating count, tip presets.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/rate-driver/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">Back   Rate your driver</div>
+    <div class="box" style="text-align:center;">[Avatar] Driver Name<br/><span style="color:#6b7280;">bike_plus · CBA-1234</span></div>
+    <div class="box" style="text-align:center;">⭐ ⭐ ⭐ ⭐ ⭐</div>
+    <div class="box">Add a tip</div>
+    <div class="row">
+      <div class="box">৳20</div>
+      <div class="box">৳50</div>
+      <div class="box">৳100</div>
+    </div>
+    <div class="box gray">Custom amount [    ]</div>
+    <div class="box">[Block Driver]</div>
+    <div class="box dark" style="text-align:center;">Submit Rating</div>
+  </div>
+</div>
+
+<!-- R-039 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-039</span> · Driver Info <span class="ftag">rider-trip</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-039</td></tr>
+    <tr><td>name</td><td>DriverInfo</td></tr>
+    <tr><td>module</td><td>rider-trip</td></tr>
+    <tr><td>Purpose</td><td>Quick view of assigned driver details with call and chat actions.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from ride-tracking bottom sheet or ride-detail. Exit: back.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Driver Information". Large avatar initial, driver name, rating + vehicle type row. Two full-width buttons: Call (primary), Chat (outline). Floating theme toggle top-right.</td></tr>
+    <tr><td>States</td><td>Static; no loading/empty states.</td></tr>
+    <tr><td>Actions</td><td>Call driver (tel:), open chat for ride.</td></tr>
+    <tr><td>Data shown</td><td>Driver name, rating, vehicle type.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/driver-info/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Back  Driver Information        (◐)</div>
+    <div class="box" style="text-align:center;">[Avatar D]<br/>Driver Name<br/>⭐ 4.8 · bike_plus</div>
+    <div class="row">
+      <div class="box dark" style="text-align:center;">Call</div>
+      <div class="box" style="text-align:center;">Chat</div>
+    </div>
+  </div>
+</div>
+
+<!-- R-040 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-040</span> · Emergency SOS <span class="ftag">rider-trip</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-040</td></tr>
+    <tr><td>name</td><td>EmergencySOS</td></tr>
+    <tr><td>module</td><td>rider-trip</td></tr>
+    <tr><td>Purpose</td><td>Send emergency alert to admin and call emergency services.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: SOS button on ride-tracking, Help & Support, or emergency-contacts. Exit: resolve alert or back.</td></tr>
+    <tr><td>UI elements</td><td>Default view: large red SOS icon, "Emergency SOS" title, "Tap for immediate help", "Send SOS & Call 999" primary button, queued offline banner. Active alert view: shield icon, "Active SOS Alert" title, status badge (Active/Acknowledged), time-ago, Resolve Alert, Share Live Location, Report Safety Issue buttons. Confirm modal before sending. Loading spinner while checking alerts.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">default</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">active</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">confirm</span> modal.</td></tr>
+    <tr><td>Actions</td><td>Send SOS (calls 999 + posts /api/sos/alert), resolve alert, share location SMS, report safety issue.</td></tr>
+    <tr><td>Data shown</td><td>Alert status, time since creation, offline queue banner.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/emergency-sos/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box" style="text-align:center;border-color:#ef4444;">🛡️<br/>Emergency SOS<br/><span style="color:#6b7280;">Tap for immediate help</span></div>
+    <div class="box danger" style="text-align:center;">Send SOS & Call 999</div>
+    <div class="box warning">☁️ Alert queued — will send when online</div>
+    <div class="hr"></div>
+    <div class="box" style="text-align:center;border-color:#ef4444;">🛡️<br/>Active SOS Alert<br/>● Active · 2m ago</div>
+    <div class="box danger" style="text-align:center;">Resolve Alert</div>
+    <div class="box">Share Live Location</div>
+    <div class="box">Report Safety Issue</div>
+  </div>
+</div>
+
+<!-- R-041 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-041</span> · Fare Dispute <span class="ftag">rider-trip</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-041</td></tr>
+    <tr><td>name</td><td>FareDispute</td></tr>
+    <tr><td>module</td><td>rider-trip</td></tr>
+    <tr><td>Purpose</td><td>Submit a fare dispute for a completed ride within 48h window.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from ride-detail (within 48h of completion). Exit: back to ride-detail.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Fare Dispute". Ride summary card (date, origin, destination, fare). Form: expected fare input, dispute reason picker (route longer, wrong vehicle, wait fee unfair, other), details textarea (20-1000 chars). Submit button. Loading skeleton, error text.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">error</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">submitting</span>.</td></tr>
+    <tr><td>Actions</td><td>Pick reason, enter fare + details, submit dispute.</td></tr>
+    <tr><td>Data shown</td><td>Ride origin/destination/fare/date. Reason options, character counter.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/fare-dispute/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Back  Fare Dispute</div>
+    <div class="box gray">Ride: 12 Aug 2026<br/>Home → Office  ·  ৳350</div>
+    <div class="box">Expected fare ৳[    ]</div>
+    <div class="box">Reason<br/>[ Route was longer than expected ▼ ]</div>
+    <div class="box gray">Details (min 20 chars)<br/>[                    ]<br/>[                    ]</div>
+    <div class="box dark" style="text-align:center;">Submit Dispute</div>
+  </div>
+</div>
+
+<!-- R-042 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-042</span> · Report Issue <span class="ftag">rider-trip</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-042</td></tr>
+    <tr><td>name</td><td>ReportIssue</td></tr>
+    <tr><td>module</td><td>rider-trip</td></tr>
+    <tr><td>Purpose</td><td>File a general support ticket for ride-related issues.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from ride-detail, settings, or Help & Support. Exit: back or success.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Report Issue". Category picker (Driver behaviour, Route issue, Fare dispute, Safety concern, Lost item, Technical issue, Other). Description textarea (20-500 chars). Submit button. Success view with checkmark and "Back to Home".</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">submitting</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">success</span>.</td></tr>
+    <tr><td>Actions</td><td>Pick category, enter description, submit ticket.</td></tr>
+    <tr><td>Data shown</td><td>Category chips, character counter, success confirmation.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/report-issue/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Back  Report Issue</div>
+    <div class="box">Category<br/>[ Driver behaviour ▼ ]</div>
+    <div class="box gray">Describe your issue (min 20 chars)<br/>[                    ]<br/>[                    ]</div>
+    <div class="box dark" style="text-align:center;">Submit</div>
+    <div class="hr"></div>
+    <div class="box success" style="text-align:center;">✓ Issue reported<br/>Back to Home</div>
+  </div>
+</div>
+
+<!-- R-043 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-043</span> · Ride Detail <span class="ftag">rider-trip</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-043</td></tr>
+    <tr><td>name</td><td>RideDetail</td></tr>
+    <tr><td>module</td><td>rider-trip</td></tr>
+    <tr><td>Purpose</td><td>Full breakdown of a past ride: route, fare, driver, actions.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from activity history. Exit: back.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Ride Details". Status badge. Map preview (route or stylized card). Route info: origin → destination, date/time. Fare breakdown card: base fare, distance, time, wait fee, tip, discount, total. Driver card: name, rating, vehicle, plate. Action buttons: Report Issue, Fare Dispute (only within 48h), Share Receipt. Loading skeleton.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">error</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">success</span>.</td></tr>
+    <tr><td>Actions</td><td>Report issue, dispute fare, share receipt.</td></tr>
+    <tr><td>Data shown</td><td>Ride status, addresses, date, fare breakdown, driver info, tip/discount.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/ride-detail/[ride_id].tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹ Back  Ride Details</div>
+    <div class="box gray" style="min-height:80px;">[ Map preview ]</div>
+    <div class="box">[Completed]</div>
+    <div class="box">Home → Office<br/>12 Aug 2026, 10:30 AM</div>
+    <div class="box">Fare Breakdown<br/>Base ৳150 · Distance ৳120 · Time ৳50<br/>Wait fee ৳20 · Tip ৳30 · Discount -৳20<br/><b>Total ৳350</b></div>
+    <div class="box">Driver: John Doe ⭐ 4.8<br/>White Toyota · CBA-1234</div>
+    <div class="row">
+      <div class="box">Report Issue</div>
+      <div class="box">Fare Dispute</div>
+      <div class="box">Share</div>
+    </div>
+  </div>
+</div>
+
+<!-- R-044 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-044</span> · Chat / [rideId] <span class="ftag">rider-trip</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-044</td></tr>
+    <tr><td>name</td><td>CustomerChatRoute</td></tr>
+    <tr><td>module</td><td>rider-trip</td></tr>
+    <tr><td>Purpose</td><td>In-app chat with the driver during an active ride.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from ride-tracking or driver-info Chat button. Exit: back.</td></tr>
+    <tr><td>UI elements</td><td>Header: back + "Chat with {name}". Reuses shared ChatScreen component: message list (bubbles left/right), text input row (attach, input, send). Loading spinner while fetching ride context. Error state if ride details fail.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">loading</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">error</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">ready</span>.</td></tr>
+    <tr><td>Actions</td><td>Send message, attach photo, call driver, back.</td></tr>
+    <tr><td>Data shown</td><td>Message history, other user name, ride active flag.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/chat/[rideId].tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">‹  Chat with Driver Name</div>
+    <div class="box gray" style="min-height:120px;">Driver: Hello, I am outside<br/>You: Coming down<br/>Driver: Ok</div>
+    <div class="row">
+      <div class="box">📎</div>
+      <div class="box" style="flex:4;">Type a message...</div>
+      <div class="box dark">Send</div>
+    </div>
+  </div>
+</div>
+
+<!-- R-045 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-045</span> · Add Tip <span class="ftag">rider-trip</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-045</td></tr>
+    <tr><td>name</td><td>AddTip</td></tr>
+    <tr><td>module</td><td>rider-trip</td></tr>
+    <tr><td>Purpose</td><td>Add an optional cash tip to the driver after ride completion.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: from services-hub or rate-driver. Exit: skip → services-hub, submit → services-hub.</td></tr>
+    <tr><td>UI elements</td><td>Header: Back + "Add Tip". Driver avatar initial, name. Preset tip chips (0, 20, 50, 100 BDT) + custom tip input. Submit button. Loading spinner during submission. Error text.</td></tr>
+    <tr><td>States</td><td><span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">submitting</span>, <span class="box gray" style="display:inline-block;padding:2px 8px;font-size:11px;">error</span>.</td></tr>
+    <tr><td>Actions</td><td>Select preset/custom tip, submit, skip.</td></tr>
+    <tr><td>Data shown</td><td>Driver name, tip presets.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/add-tip/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box dark">Back   Add Tip</div>
+    <div class="box" style="text-align:center;">[Avatar D]<br/>Driver Name</div>
+    <div class="box">Tip Amount</div>
+    <div class="row">
+      <div class="box">৳0</div>
+      <div class="box">৳20</div>
+      <div class="box">৳50</div>
+      <div class="box">৳100</div>
+    </div>
+    <div class="box gray">Custom amount [    ]</div>
+    <div class="box dark" style="text-align:center;">Add Tip</div>
+  </div>
+</div>
+
+<!-- R-046 -->
+<div class="screen-block">
+  <div class="sh"><span class="fid">R-046</span> · User Arrived <span class="ftag">rider-trip</span></div>
+  <table class="meta">
+    <tr><th>Field</th><th>Content</th></tr>
+    <tr><td>ID</td><td>R-046</td></tr>
+    <tr><td>name</td><td>UserArrived</td></tr>
+    <tr><td>module</td><td>rider-trip</td></tr>
+    <tr><td>Purpose</td><td>Confirmation screen shown when driver marks rider as arrived at pickup.</td></tr>
+    <tr><td>Entry / exit</td><td>Entry: via ride:arrived WebSocket event. Exit: rate driver or skip to home.</td></tr>
+    <tr><td>UI elements</td><td>Header with floating theme toggle. Large location icon, "You have arrived" title, subtitle with driver name. Primary button: "Rate your driver" → rate-driver. Secondary button: "Skip" → home tab.</td></tr>
+    <tr><td>States</td><td>Static. No loading/error states.</td></tr>
+    <tr><td>Actions</td><td>Rate driver, skip to home, toggle theme.</td></tr>
+    <tr><td>Data shown</td><td>Driver name from activeRide.</td></tr>
+    <tr><td>Source</td><td>app/(main)/(customer)/user-arrived/index.tsx</td></tr>
+  </table>
+  <div class="wf">
+    <div class="ph">Wireframe</div>
+    <div class="box" style="text-align:center;">📍<br/>You have arrived<br/><span style="color:#6b7280;">Hope you enjoyed the ride with Driver Name.</span></div>
+    <div class="box dark" style="text-align:center;">Rate your driver</div>
+    <div class="box" style="text-align:center;">Skip</div>
+  </div>
+</div>
+
+</body>
+</html>

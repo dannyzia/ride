@@ -54,6 +54,8 @@ describe('computePickupTrueup — fee-off (Stage 0, ruling 16)', () => {
     expect(r.deltaBdt).toBeNull();
     expect(r.firmKm).toBe(3);
     expect(r.realizedKm).toBe(4);
+    expect(r.capWasBinding).toBe(false);
+    expect(r.backstopWasBinding).toBe(false);
   });
 
   test('defensive: firm state without a firm fee charges nothing', () => {
@@ -120,6 +122,8 @@ describe('computePickupTrueup — realized data paths', () => {
     const r = computePickupTrueup(firmRide(), BASE_CTX);
     expect(r.finalFeeBdt).toBe(1125);
     expect(r.deltaBdt).toBe(225);
+    expect(r.capWasBinding).toBe(true);  // chargeable 3.5 km > cap 2.0 km
+    expect(r.backstopWasBinding).toBe(false); // uncapped fee 2034 < backstop limit 5100
   });
 
   test('downward: realized below firm → uncapped rider-favorable adjustment', () => {
@@ -130,6 +134,8 @@ describe('computePickupTrueup — realized data paths', () => {
     );
     expect(r.finalFeeBdt).toBe(872);
     expect(r.deltaBdt).toBe(-28);
+    expect(r.capWasBinding).toBe(false); // chargeable 1.5 km < cap 2.0 km
+    expect(r.backstopWasBinding).toBe(false); // uncapped fee 872 < backstop limit 5100
   });
 
   test('realized 0 km → final fee 0, not firm', () => {
@@ -139,6 +145,8 @@ describe('computePickupTrueup — realized data paths', () => {
     );
     expect(r.finalFeeBdt).toBe(0);
     expect(r.deltaBdt).toBe(-900);
+    expect(r.capWasBinding).toBe(false); // chargeable 0 km
+    expect(r.backstopWasBinding).toBe(false); // fee 0
   });
 });
 
@@ -152,6 +160,8 @@ describe('computePickupTrueup — backstop re-check (ruling 18)', () => {
     });
     expect(r.finalFeeBdt).toBe(800);
     expect(r.deltaBdt).toBe(-100);
+    expect(r.capWasBinding).toBe(true); // chargeable 3.5 km > cap 2.0 km
+    expect(r.backstopWasBinding).toBe(true); // uncapped fee 2034 > backstop limit 800
   });
 
   test('backstop clamp applies before the upward 1.25× cap', () => {
@@ -168,6 +178,8 @@ describe('computePickupTrueup — backstop re-check (ruling 18)', () => {
     // 40% of 12750 = 5100 > 1162 → backstop not binding.
     const r = computePickupTrueup(firmRide(), BASE_CTX);
     expect(r.finalFeeBdt).toBe(1125); // only the 1.25× cap binds
+    expect(r.capWasBinding).toBe(true); // chargeable 3.5 km > cap 2.0 km
+    expect(r.backstopWasBinding).toBe(false); // uncapped fee 2034 < backstop limit 5100
   });
 });
 
@@ -183,6 +195,8 @@ describe('computePickupTrueup — state gating & sample harvesting', () => {
       expect(r.insertSample).toBe(false);
       expect(r.finalFeeBdt).toBeNull();
       expect(r.deltaBdt).toBeNull();
+      expect(r.capWasBinding).toBe(false);
+      expect(r.backstopWasBinding).toBe(false);
     },
   );
 

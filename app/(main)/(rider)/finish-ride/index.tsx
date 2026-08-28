@@ -35,6 +35,10 @@ interface CompletionSummary {
   rider_payable_bdt?: number;
   wallet_debit_bdt?: number;
   cash_to_collect_bdt?: number;
+  // v6 Phase F: additional fare components
+  zone_fee_bdt?: number;
+  waiting_charge_bdt?: number;
+  night_mult_applied?: number;
 }
 
 const FinishRide = () => {
@@ -239,7 +243,7 @@ const FinishRide = () => {
         return;
       }
       const data: {
-        fare_breakdown?: { total_bdt?: number; distance_km?: number; ride_time_min?: number };
+        fare_breakdown?: { total_bdt?: number; distance_km?: number; ride_time_min?: number; zone_fee_bdt?: number; waiting_charge_bdt?: number; night_mult_applied?: number };
         total_bdt?: number;
         ride_time_min?: number;
         upfront_tip_forfeited_bdt?: number;
@@ -256,6 +260,10 @@ const FinishRide = () => {
         rider_payable_bdt: data.rider_payable_bdt ?? undefined,
         wallet_debit_bdt: data.wallet_debit_bdt ?? undefined,
         cash_to_collect_bdt: data.cash_to_collect_bdt ?? undefined,
+        // v6 Phase F
+        zone_fee_bdt: fb.zone_fee_bdt ?? undefined,
+        waiting_charge_bdt: fb.waiting_charge_bdt ?? undefined,
+        night_mult_applied: fb.night_mult_applied ?? undefined,
       });
       setCompletedRideId(activeRideId);
       removeRideOffer(activeRideId);
@@ -542,6 +550,45 @@ const FinishRide = () => {
               <Text style={labelStyle}>Duration</Text>
               <Text style={valueStyle}>{durationText}</Text>
             </View>
+            {/* v6 Phase F: zone fee */}
+            {(completion?.zone_fee_bdt ?? 0) > 0 && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: spacing.sm,
+                }}
+              >
+                <Text style={labelStyle}>Zone fee</Text>
+                <Text style={valueStyle}>৳{((completion?.zone_fee_bdt ?? 0) / 100).toFixed(2)}</Text>
+              </View>
+            )}
+            {/* v6 Phase F: waiting charge */}
+            {(completion?.waiting_charge_bdt ?? 0) > 0 && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: spacing.sm,
+                }}
+              >
+                <Text style={labelStyle}>Waiting charge</Text>
+                <Text style={valueStyle}>৳{((completion?.waiting_charge_bdt ?? 0) / 100).toFixed(2)}</Text>
+              </View>
+            )}
+            {/* v6 Phase F: night mult indicator */}
+            {(completion?.night_mult_applied ?? 1.0) > 1.0 && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: spacing.sm,
+                }}
+              >
+                <Text style={labelStyle}>Night surcharge</Text>
+                <Text style={[valueStyle, { color: colors.amber }]}>+{(((completion?.night_mult_applied ?? 1.0) - 1) * 100).toFixed(0)}%</Text>
+              </View>
+            )}
           </View>
 
           <CustomButton

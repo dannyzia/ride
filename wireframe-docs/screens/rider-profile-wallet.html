@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rider Profile & Wallet - Wireframe Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        h1, h2, h3 { color: #333; }
+        .screen { border: 1px solid #ddd; margin-bottom: 30px; padding: 20px; border-radius: 5px; }
+        .screen-header { background-color: #f8f9fa; padding: 10px; margin: -20px -20px 20px -20px; border-bottom: 1px solid #ddd; }
+        .screen-id { font-weight: bold; color: #007bff; }
+        .screen-name { font-size: 1.2em; margin: 5px 0; }
+        .screen-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+        .meta-item { background: #f8f9fa; padding: 10px; border-radius: 3px; }
+        .meta-label { font-weight: bold; color: #495057; }
+        .meta-value { margin-top: 5px; }
+        .framework-critical { background-color: #fff3cd; border-left: 4px solid #ffc107; }
+        .states { margin: 15px 0; }
+        .state-tag { display: inline-block; background: #e9ecef; padding: 2px 8px; border-radius: 10px; font-size: 0.9em; margin-right: 5px; }
+        .actions { margin: 15px 0; }
+        .action-item { background: #d1ecf1; padding: 8px; margin: 5px 0; border-radius: 3px; }
+        .data-shown { margin: 15px 0; }
+        .data-item { background: #d4edda; padding: 8px; margin: 5px 0; border-radius: 3px; }
+        .wireframe-placeholder { width: 100%; height: 300px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; margin: 20px 0; color: #6c757d; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>Rider Profile & Wallet Screens</h1>
+    <p><em>Documented from codebase analysis - User profile management and wallet/payment systems</em></p>
+    
+    <!-- Profile Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-014</div>
+            <div class="screen-name">Profile</div>
+            <div class="screen-module">Profile</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Profile</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Bottom tab navigation, deep links</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Profile Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>User profile management and account settings</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Bottom tab navigation<br>Exit: Edit profile, settings screens</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>User avatar/profile picture</li>
+                <li>Display name and phone number</li>
+                <li>Account status and verification badges</li>
+                <li>Quick stats: total rides, total spent, member since</li>
+                <li>Action buttons: Edit profile, Wallet, Settings</li>
+                <li>Logout button at bottom</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Edit profile button - opens profile editing screen</div>
+                <div class="action-item">Wallet button - opens wallet overview</div>
+                <div class="action-item">Settings button - opens settings menu</div>
+                <div class="action-item">Logout button - shows logout confirmation</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">User's display name</div>
+                <div class="data-item">Phone number (masked)</div>
+                <div class="data-item">Account creation date</div>
+                <div class="data-item>Total number of rides taken</div>
+                <div class="data-item">Total amount spent on rides</div>
+                <div class="data-item">Current wallet balance (if applicable)</div>
+                <div class="data-item">Verification status (email, phone, ID)</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/profile/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Edit Profile Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-015</div>
+            <div class="screen-name">Edit Profile</div>
+            <div class="screen-module">Profile</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Profile</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Profile screen</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Edit Profile Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Allows user to edit their profile information</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Profile screen<br>Exit: Profile screen (with updated info)</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Avatar upload/tap to change</li>
+                <li>Name input field</li>
+                <li>Phone number display (usually read-only)</li>
+                <li>Email input field</li>
+                <li>Date of birth input</li>
+                <li>Gender selection</li>
+                <li>Primary button: "Save Changes"</li>
+                <li>Cancel button</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Avatar tap - opens image picker/camera</div>
+                <div.class="action-item">Name input - validates and saves</div>
+                <div class="action-item">Email input - validates format</div>
+                <div class="action-item">Date of birth input - age validation</div>
+                <div class="action-item">Gender selection - updates preference</div>
+                <div class="action-item">Save Changes button - validates and saves profile</div>
+                <div class="action-item">Cancel button - discards changes</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Current avatar/image</div>
+                <div class="data-item">Current name</div>
+                <div class="data-item">Phone number (read-only)</div>
+                <div class="data-item">Current email (if set)</div>
+                <div class="data-item">Current date of birth (if set)</div>
+                <div class="data-item">Current gender setting</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/profile/edit-profile/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Wallet Overview Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-016</div>
+            <div class="screen-name">Wallet</div>
+            <div class="screen-module">Wallet</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Wallet</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Profile screen, bottom tab navigation</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">Yes</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Wallet Overview Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Displays wallet balance, transaction history, and top-up options</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Profile screen, bottom tab<br>Exit: Top-up, transaction detail, payment methods</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Wallet balance display (prominent)</li>
+                <li>Recent transaction list</li>
+                <li>Top-up button</li>
+                <li>Payment methods button</li>
+                <li>Transaction filters: All, Credits, Debits</li>
+                <li>Empty state illustration</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Wallet balance tap - shows detailed breakdown</div>
+                <div class="action-item">Transaction item tap - opens transaction detail</div>
+                <div class="action-item">Top-up button - opens top-up amount selection</div>
+                <div class="action-item">Payment methods - opens saved payment methods</div>
+                <div class="action-item">Filter tabs - changes transaction list view</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Current wallet balance (in BDT)</div>
+                <div class="data-item">Recent transaction date and description</div>
+                <div class="data-item">Transaction amount (+/-)</div>
+                <div class="data-item">Transaction status (completed, pending, failed)</div>
+                <div class="data-item">Payment method used for each transaction</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/wallet/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Top-Up Amount Selection Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-017</div>
+            <div class="screen-name">Top-Up Amount</div>
+            <div class="screen-module">Wallet</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Wallet</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Wallet screen</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">Yes</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Top-Up Amount Selection Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Allows user to select amount to add to their wallet</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Wallet screen<br>Exit: Top-up confirmation or payment method selection</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Preset amount buttons: ৳100, ৳200, ৳500, ৳1000</li>
+                <li>Custom amount input field</li>
+                <li>Current wallet balance display</li>
+                <li>Primary button: "Continue"</li>
+                <li>Cancel button</li>
+                <li>Note about minimum top-up amount</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Preset amount button - selects that amount</div>
+                <div class="action-item">Custom amount input - accepts user-entered value</div>
+                <div class="action-item">Continue button - proceeds to payment method</div>
+                <div class="action-item">Cancel button - returns to wallet</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Current wallet balance</div>
+                <div class="data-item">Selected top-up amount</div>
+                <div class="data-item">New balance after top-up</div>
+                <div class="data-item">Minimum top-up amount requirement</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/wallet/top-up/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Top-Up Confirmation Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">R-018</div>
+            <div class="screen-name">Top-Up Confirmation</div>
+            <div class="screen-module">Wallet</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Rider</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Wallet</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, error, success)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Top-Up Amount screen</div

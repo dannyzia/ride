@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discrepancy Log &mdash; UI vs Fare Framework v6</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 24px; color: #333; }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    a { color: #2563eb; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .subtitle { color: #666; font-size: 13px; margin: 0 0 18px; }
+    .back { font-size: 12px; margin-bottom: 16px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    th, td { padding: 9px 11px; text-align: left; font-size: 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { background: #fafafa; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; color: #555; }
+    tr:hover { background: #f9f9f9; }
+    .sid { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; white-space: nowrap; }
+    .ref { font-family: ui-monospace, Menlo, Consolas, monospace; color: #555; white-space: nowrap; }
+    .sev { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+    .sev.high { background: #fee2e2; color: #b91c1c; }
+    .sev.med { background: #fef3c7; color: #92400e; }
+    .sev.low { background: #dcfce7; color: #166534; }
+    .ok { color: #166534; font-weight: 600; }
+    footer { margin-top: 20px; font-size: 11px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Discrepancy Log</h1>
+    <p class="subtitle">Where built UI diverges from Ride Fare Framework v6. <span class="sev high">High</span> = blocking/broken &middot; <span class="sev med">Medium</span> = missing feature &middot; <span class="sev low">Low</span> = cosmetic / resolved.</p>
+    <a class="back" href="../index.html">&larr; Back to master index</a>
+
+    <table>
+      <thead>
+        <tr><th>Screen ID</th><th>v6 &sect; Ref</th><th>Missing / Different</th><th>Sev</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="sid">R-HOME</td><td class="ref">&sect; dispatch / search</td>
+          <td>Home <code>handleBook</code> was unwired (fake search). <span class="ok">Resolved per audit H-3.</span></td>
+          <td><span class="sev low">Low</span></td>
+        </tr>
+        <tr>
+          <td class="sid">R-DISPUTE</td><td class="ref">&sect; disputes</td>
+          <td>48h client-side dispute gate not implemented; server returns <code>422</code> only. No local time-window enforcement.</td>
+          <td><span class="sev med">Medium</span></td>
+        </tr>
+        <tr>
+          <td class="sid">R-SPLASH</td><td class="ref">&sect; onboarding / splash</td>
+          <td>Splash is a stub &mdash; no logo, no animation, no auth/session check before routing.</td>
+          <td><span class="sev med">Medium</span></td>
+        </tr>
+        <tr>
+          <td class="sid">R-CONFIRM</td><td class="ref">&sect; fare / surge</td>
+          <td>Surge banner shown in confirm-ride, premature before vehicle selection (surge fully removed).</td>
+          <td><span class="sev med">Medium</span></td>
+        </tr>
+        <tr>
+          <td class="sid">R-HOME-NAV</td><td class="ref">doc 03 R2.5#1</td>
+          <td>Inbox / Referral nav chips present but explicitly forbidden by doc 03 R2.5#1.</td>
+          <td><span class="sev med">Medium</span></td>
+        </tr>
+        <tr>
+          <td class="sid">D-PAYWEB</td><td class="ref">&sect; payments / topup</td>
+          <td>PaymentWebView topup routes to <code>wallet</code>; real target is <code>settings/top-up</code>.</td>
+          <td><span class="sev med">Medium</span></td>
+        </tr>
+        <tr>
+          <td class="sid">R-PIN</td><td class="ref">&sect; auth</td>
+          <td>Rider <code>PIN_ENTRY</code> state exists but is voided &mdash; PIN is driver-side only.</td>
+          <td><span class="sev low">Low</span></td>
+        </tr>
+        <tr>
+          <td class="sid">R-DETAIL</td><td class="ref">&sect; activity</td>
+          <td><code>ride-detail/</code> path is a dead route (no screen mounted).</td>
+          <td><span class="sev low">Low</span></td>
+        </tr>
+        <tr>
+          <td class="sid">D-LOST</td><td class="ref">&sect; lost-items</td>
+          <td>Lost-items statuses are fictional; real enum is <code>reported&rarr;resolved|unresolved</code>.</td>
+          <td><span class="sev med">Medium</span></td>
+        </tr>
+        <tr>
+          <td class="sid">A-SOS</td><td class="ref">&sect; safety</td>
+          <td>SOS WS broadcast to <code>admin:sos</code>. <span class="ok">Implemented per F-15.</span></td>
+          <td><span class="sev low">Low</span></td>
+        </tr>
+        <tr>
+          <td class="sid">D-EARNINGS</td><td class="ref">&sect; driver earnings</td>
+          <td>Earnings goal widget regression &mdash; removed during earnings-tab rebuild.</td>
+          <td><span class="sev med">Medium</span></td>
+        </tr>
+        <tr>
+          <td class="sid">R-PROMO</td><td class="ref">&sect; promos</td>
+          <td><code>apply-promos</code> sends <code>{code}</code> but redeem API requires <code>vehicle_type+pickup</code> &rarr; <code>400</code>. Broken.</td>
+          <td><span class="sev high">High</span></td>
+        </tr>
+        <tr>
+          <td class="sid">D-SOS-CD</td><td class="ref">&sect; safety</td>
+          <td>SOS cooldown config is read but has no effect (dead path).</td>
+          <td><span class="sev low">Low</span></td>
+        </tr>
+        <tr>
+          <td class="sid">R-SCHED</td><td class="ref">&sect; scheduling</td>
+          <td>ScheduleRideSheet polls nonexistent <code>/api/ride/schedule/overlap</code>; <code>404</code> tolerated. Overlap guard absent.</td>
+          <td><span class="sev med">Medium</span></td>
+        </tr>
+        <tr>
+          <td class="sid">SYS-SENTINEL</td><td class="ref">&sect; zones / sentinel</td>
+          <td>Sentinel retains nil-UUID zone writes; no <code>503</code> mapping for zone-service outage.</td>
+          <td><span class="sev med">Medium</span></td>
+        </tr>
+        <tr>
+          <td class="sid">A-CONFIG</td><td class="ref">&sect; platform_config</td>
+          <td><code>platform_config</code> keys are NOT in admin <code>ALLOWED_KEYS</code> &mdash; cannot be set via admin panel. Blocking.</td>
+          <td><span class="sev high">High</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <footer>16 discrepancies &middot; High: 2 &middot; Medium: 11 &middot; Low (resolved/cosmetic): 3. Source: codebase context &amp; AGENTS.md.</footer>
+  </div>
+</body>
+</html>

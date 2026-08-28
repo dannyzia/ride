@@ -33,6 +33,7 @@ const TARGET_ZONE_ID =
 
 // ── Hardcoded BD default pricing (fare system v2) ──────────────────────────
 // All values in integer paisa. Source: seed-pricing.js + admin panel defaults.
+// free_wait_minutes REV-4: bike/cng 1 min, car 2 min (car_compact sentinel stays 0).
 interface PricingDefaults {
   base_fare_bdt: number;
   per_km_bdt: number;
@@ -55,7 +56,7 @@ const BD_DEFAULTS: Record<VehicleTypeEnum, PricingDefaults> = {
     floor_length_km: "2.00",
     floor_min: 10,
     platform_commission_percent: "15.00",
-    free_wait_minutes: 3,
+    free_wait_minutes: 1,
     wait_fee_per_minute_bdt: 200,
     brta_fare_ceiling_bdt: null,
   },
@@ -67,7 +68,7 @@ const BD_DEFAULTS: Record<VehicleTypeEnum, PricingDefaults> = {
     floor_length_km: "2.00",
     floor_min: 10,
     platform_commission_percent: "15.00",
-    free_wait_minutes: 3,
+    free_wait_minutes: 1,
     wait_fee_per_minute_bdt: 200,
     brta_fare_ceiling_bdt: null,
   },
@@ -79,7 +80,7 @@ const BD_DEFAULTS: Record<VehicleTypeEnum, PricingDefaults> = {
     floor_length_km: "2.00",
     floor_min: 10,
     platform_commission_percent: "15.00",
-    free_wait_minutes: 3,
+    free_wait_minutes: 1,
     wait_fee_per_minute_bdt: 200,
     brta_fare_ceiling_bdt: null,
   },
@@ -91,7 +92,7 @@ const BD_DEFAULTS: Record<VehicleTypeEnum, PricingDefaults> = {
     floor_length_km: "3.00",
     floor_min: 15,
     platform_commission_percent: "15.00",
-    free_wait_minutes: 3,
+    free_wait_minutes: 1,
     wait_fee_per_minute_bdt: 200,
     brta_fare_ceiling_bdt: null,
   },
@@ -116,7 +117,7 @@ const BD_DEFAULTS: Record<VehicleTypeEnum, PricingDefaults> = {
     floor_length_km: "4.00",
     floor_min: 20,
     platform_commission_percent: "15.00",
-    free_wait_minutes: 3,
+    free_wait_minutes: 2,
     wait_fee_per_minute_bdt: 200,
     brta_fare_ceiling_bdt: null,
   },
@@ -128,7 +129,7 @@ const BD_DEFAULTS: Record<VehicleTypeEnum, PricingDefaults> = {
     floor_length_km: "4.00",
     floor_min: 20,
     platform_commission_percent: "15.00",
-    free_wait_minutes: 3,
+    free_wait_minutes: 2,
     wait_fee_per_minute_bdt: 200,
     brta_fare_ceiling_bdt: null,
   },
@@ -140,7 +141,7 @@ const BD_DEFAULTS: Record<VehicleTypeEnum, PricingDefaults> = {
     floor_length_km: "4.00",
     floor_min: 20,
     platform_commission_percent: "15.00",
-    free_wait_minutes: 3,
+    free_wait_minutes: 2,
     wait_fee_per_minute_bdt: 200,
     brta_fare_ceiling_bdt: null,
   },
@@ -152,7 +153,7 @@ const BD_DEFAULTS: Record<VehicleTypeEnum, PricingDefaults> = {
     floor_length_km: "4.00",
     floor_min: 20,
     platform_commission_percent: "15.00",
-    free_wait_minutes: 3,
+    free_wait_minutes: 2,
     wait_fee_per_minute_bdt: 200,
     brta_fare_ceiling_bdt: null,
   },

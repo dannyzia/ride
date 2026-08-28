@@ -16,8 +16,7 @@
  *   - Nested savepoints: each row is wrapped in its own savepoint so a
  *     single bad row rolls back without killing the entire 950-row batch.
  */
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-require("dotenv").config({ path: ".env.local" });
+import "./_load-env";
 import { db } from "../src/db";
 import { vehicleModels } from "../src/db/schema";
 import { eq, and, sql, isNull } from "drizzle-orm";

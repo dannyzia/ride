@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Main Tabs - Wireframe Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        h1, h2, h3 { color: #333; }
+        .screen { border: 1px solid #ddd; margin-bottom: 30px; padding: 20px; border-radius: 5px; }
+        .screen-header { background-color: #f8f9fa; padding: 10px; margin: -20px -20px 20px -20px; border-bottom: 1px solid #ddd; }
+        .screen-id { font-weight: bold; color: #007bff; }
+        .screen-name { font-size: 1.2em; margin: 5px 0; }
+        .screen-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+        .meta-item { background: #f8f9fa; padding: 10px; border-radius: 3px; }
+        .meta-label { font-weight: bold; color: #495057; }
+        .meta-value { margin-top: 5px; }
+        .framework-critical { background-color: #fff3cd; border-left: 4px solid #ffc107; }
+        .states { margin: 15px 0; }
+        .state-tag { display: inline-block; background: #e9ecef; padding: 2px 8px; border-radius: 10px; font-size: 0.9em; margin-right: 5px; }
+        .actions { margin: 15px 0; }
+        .action-item { background: #d1ecf1; padding: 8px; margin: 5px 0; border-radius: 3px; }
+        .data-shown { margin: 15px 0; }
+        .data-item { background: #d4edda; padding: 8px; margin: 5px 0; border-radius: 3px; }
+        .wireframe-placeholder { width: 100%; height: 300px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; margin: 20px 0; color: #6c757d; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>Driver Main App Tabs</h1>
+    <p><em>Documented from codebase analysis - Bottom navigation tabs for driver app</em></p>
+    
+    <!-- Driver Home Screen -->
+    <div class="screen">
+        <div class="screen-header">
+            <div class="screen-id">D-001</div>
+            <div class="screen-name">Home</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta">
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Driver</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">App launch (after auth), bottom tab navigation</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">Yes</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder">
+            Driver Home Screen Wireframe
+        </div>
+        
+        <div class="screen-content">
+            <h3>Purpose</h3>
+            <p>Main screen for drivers to see ride offers and manage availability</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: App launch, bottom tab navigation<br>Exit: Offer details, Profile, Earnings, etc.</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Availability toggle switch (Online/Offline)</li>
+                <li>Current status and earnings today</li>
+                <li>Active ride offer card (when available)</li>
+                <li>Offer details: pickup→dropoff, vehicle type, fare estimate</li>
+                <li>Action buttons: Accept, Decline</li>
+                <li>Bottom navigation: Home, Active Subscription, Earnings, Profile</li>
+                <li>Heat map overlay showing demand areas</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Availability toggle - switches online/offline status</div>
+                <div class="action-item">Offer card tap - expands to show full offer details</div>
+                <div class="action-item">Accept button - accepts the ride offer</div>
+                <div class="action-item">Decline button - declines the ride offer</div>
+                <div class="action-item">Bottom tab navigation - switches between app sections</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown">
+                <div class="data-item">Driver's online/offline status</div>
+                <div class="data-item">Today's earnings and rides completed</div>
+                <div class="data-item">Active ride offer (when available)</div>
+                <div class="data-item">Pickup and dropoff locations</div>
+                <div class="data-item">Estimated fare and ETA</div>
+                <div class="data-item">Required vehicle type</div>
+                <div class="data-item">Distance to pickup</div>
+                <div class="data-item">Heat map intensity (demand level)</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/home/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Active Subscription Screen -->
+    <div class="screen">
+        <div class="screen-header>
+            <div class="screen-id">D-002</div>
+            <div class="screen-name">Active Subscription</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta>
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Driver</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Bottom tab navigation</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">Yes</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder>
+            Active Subscription Screen Wireframe
+        </div>
+        
+        <div class="screen-content>
+            <h3>Purpose</h3>
+            <p>Displays driver's active call package subscription details</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Bottom tab navigation<br>Exit: Subscription management, Package store</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Subscription card: package name, validity period</li>
+                <li>Calls remaining display (prominent)</li>
+                <li>Daily usage statistics</li>
+                <li>Renewal date and auto-renew toggle</li>
+                <li>Action buttons: Renew now, Buy more packages</li>
+                <li>Usage history graph or chart</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states">
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions">
+                <div class="action-item">Renew now button - initiates subscription renewal</div>
+                <div class="action-item">Buy more packages - opens package store</div>
+                <div class="action-item">Auto-renew toggle - enables/disables automatic renewal</div>
+                <div class="action-item">Usage history tap - shows detailed breakdown</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown>
+                <div class="data-item">Active package name and type</div>
+                <div class="data-item">Calls remaining / total calls in package</div>
+                <div class="data-item">Subscription start and end dates</div>
+                <div class="data-item">Daily average usage</div>
+                <div class="data-item">Renewal date and cost</div>
+                <div class="data-item">Auto-renewal status</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/active-subscription/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Earnings Screen -->
+    <div class="screen>
+        <div class="screen-header>
+            <div class="screen-id">D-003</div>
+            <div class="screen-name">Earnings</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta>
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Driver</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Bottom tab navigation</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder>
+            Earnings Screen Wireframe
+        </div>
+        
+        <div class="screen-content>
+            <h3>Purpose</h3>
+            <p>Displays driver's earnings breakdown and transaction history</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Bottom tab navigation<br>Exit: Earnings detail, Payment methods</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Total earnings display (today, week, month)</li>
+                <li>Earnings breakdown by source (rides, bonuses, etc.)</li>
+                <li>Transaction list with dates and amounts</li>
+                <li>Filters: Today, Week, Month, Custom range</li>
+                <li>Export statement button</li>
+                <li>Empty state illustration</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states>
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions>
+                <div class="action-item">Time period filter - changes earnings display</div>
+                <div class="action-item">Transaction item tap - opens earning detail</div>
+                <div class="action-item">Export statement - generates PDF/CSV statement</div>
+                <div class="action-item">Refresh button - updates earnings data</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown>
+                <div class="data-item">Total earnings (today, week, month, lifetime)</div>
+                <div class="data-item">Earnings from completed rides</div>
+                <div class="data-item">Earnings from bonuses/incentives</div>
+                <div class="data-item">Earnings from referrals</div>
+                <div class="data-item">Withdrawals and fees</div>
+                <div class="data-item">Average earnings per ride</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/earnings/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Driver Profile Screen -->
+    <div class="screen>
+        <div class="screen-header>
+            <div class="screen-id">D-004</div>
+            <div class="screen-name">Profile</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta>
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Driver</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Bottom tab navigation</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder>
+            Driver Profile Screen Wireframe
+        </div>
+        
+        <div class="screen-content>
+            <h3>Purpose</h3>
+            <p>Driver profile management and verification status</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Bottom tab navigation<br>Exit: Edit profile, Settings, Documents</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Driver avatar/profile picture</li>
+                <li>Display name and phone number</li>
+                <li>Verification badges (ID, license, insurance)</li>
+                <li>Rating and review statistics</li>
+                <li>Stats: total rides, acceptance rate, completion rate</li>
+                <li>Action buttons: Edit profile, Documents, Settings</li>
+                <li>Logout button at bottom</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states>
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions>
+                <div class="action-item">Edit profile button - opens profile editing screen</div>
+                <div class="action-item">Documents button - opens document management</div>
+                <div class="action-item">Settings button - opens settings menu</div>
+                <div class="action-item">Logout button - shows logout confirmation</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown>
+                <div class="data-item">Driver's display name</div>
+                <div class="data-item">Phone number (masked)</div>
+                <div class="data-item">Verification status (ID, license, insurance)</div>
+                <div class="data-item">Overall rating (out of 5)</div>
+                <div class="data-item">Total number of completed rides</div>
+                <div class="data-item">Acceptance rate percentage</div>
+                <div class="data-item">Completion rate percentage</div>
+                <div class="data-item">Current status (active, suspended, etc.)</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/profile/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Edit Driver Profile Screen -->
+    <div class="screen>
+        <div class="screen-header>
+            <div class="screen-id">D-005</div>
+            <div class="screen-name">Edit Profile</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta>
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Driver</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Profile screen</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder>
+            Edit Driver Profile Screen Wireframe
+        </div>
+        
+        <div class="screen-content>
+            <h3>Purpose</h3>
+            <p>Allows driver to edit their profile information</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Profile screen<br>Exit: Profile screen (with updated info)</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>Avatar upload/tap to change</li>
+                <li>Name input field</li>
+                <li>Phone number display (usually read-only)</li>
+                <li>Email input field</li>
+                <li>Date of birth input</li>
+                <li>Gender selection</li>
+                <li>Primary button: "Save Changes"</li>
+                <li>Cancel button</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states>
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">error</span>
+                <span class="state-tag">success</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions>
+                <div class="action-item">Avatar tap - opens image picker/camera</div>
+                <div class="action-item">Name input - validates and saves</div>
+                <div class="action-item">Email input - validates format</div>
+                <div class="action-item">Date of birth input - age validation</div>
+                <div class="action-item">Gender selection - updates preference</div>
+                <div class="action-item">Save Changes button - validates and saves profile</div>
+                <div class="action-item">Cancel button - discards changes</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown>
+                <div class="data-item">Current avatar/image</div>
+                <div class="data-item">Current name</div>
+                <div class="data-item">Phone number (read-only)</div>
+                <div class="data-item">Current email (if set)</div>
+                <div class="data-item">Current date of birth (if set)</div>
+                <div class="data-item">Current gender setting</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/profile/edit-profile/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Documents Screen -->
+    <div class="screen>
+        <div class="screen-header>
+            <div class="screen-id">D-006</div>
+            <div class="screen-name">Documents</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta>
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Driver</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Profile screen</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder>
+            Documents Screen Wireframe
+        </div>
+        
+        <div class="screen-content>
+            <h3>Purpose</h3>
+            <p>Manages driver's verification documents (ID, license, insurance)</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Profile screen<br>Exit: Document detail, Add document</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>List of document types with status indicators</li>
+                <li>Each document: name, status (approved, pending, expired), expiry date</li>
+                <li>Action buttons: View, Renew, Upload</li>
+                <li>Add document button (+)</li>
+                <li>Overall verification status banner</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states>
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions>
+                <div class="action-item">Document item tap - opens document detail</div>
+                <div class="action-item">Renew button - opens document renewal process</div>
+                <div class="action-item">Upload button - opens file picker for document</div>
+                <div class="action-item">Add document button - opens document type selection</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown>
+                <div class="data-item">Document type (National ID, Driver's License, etc.)</div>
+                <div class="data-item">Document status (approved, pending, expired, rejected)</div>
+                <div class="data-item">Expiry date (if applicable)</div>
+                <div class="data-item">Upload date</div>
+                <div class="data-item">Verification notes or rejection reason</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/documents/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Vehicle Management Screen -->
+    <div class="screen>
+        <div class="screen-header>
+            <div class="screen-id">D-007</div>
+            <div class="screen-name">Vehicle Management</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta>
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Driver</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Profile screen</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div class="meta-value">No</div>
+            </div>
+        </div>
+        
+        <div class="wireframe-placeholder>
+            Vehicle Management Screen Wireframe
+        </div>
+        
+        <div class="screen-content>
+            <h3>Purpose</h3>
+            <p>Manages driver's registered vehicles</p>
+            
+            <h3>Entry / Exit</h3>
+            <p>Entry: Profile screen<br>Exit: Vehicle detail, Add vehicle</p>
+            
+            <h3>UI Elements</h3>
+            <ul>
+                <li>List of registered vehicles</li>
+                <li>Each vehicle: type, make/model, license plate, status</li>
+                <li>Active vehicle indicator</li>
+                <li>Action buttons: Select active, Edit, Remove</li>
+                <li>Add vehicle button (+)</li>
+                <li>Vehicle requirements display</li>
+            </ul>
+            
+            <h3>States</h3>
+            <div class="states>
+                <span class="state-tag">default</span>
+                <span class="state-tag">loading</span>
+                <span class="state-tag">empty</span>
+                <span class="state-tag">error</span>
+            </div>
+            
+            <h3>Actions</h3>
+            <div class="actions>
+                <div class="action-item">Vehicle item tap - opens vehicle detail</div>
+                <div class="action-item">Select active - sets vehicle as primary for offers</div>
+                <div class="action-item">Edit button - opens vehicle editor</div>
+                <div class="action-item">Remove button - removes vehicle from profile</div>
+                <div class="action-item">Add vehicle button - opens vehicle registration form</div>
+            </div>
+            
+            <h3>Data Shown</h3>
+            <div class="data-shown>
+                <div class="data-item">Vehicle type (bike, car, CNG, etc.)</div>
+                <div class="data-item">Make and model</div>
+                <div class="data-item">License plate number</div>
+                <div class="data-item">Vehicle color</div>
+                <div class="data-item">Registration expiry date</div>
+                <div class="data-item">Current status (active, inactive, pending)</div>
+                <div class="data-item">Whether set as active vehicle</div>
+            </div>
+            
+            <h3>Source</h3>
+            <p>Code: app/(main)/(rider)/(tabs)/vehicle-management/index.tsx</p>
+        </div>
+    </div>
+    
+    <!-- Settings Screen -->
+    <div class="screen>
+        <div class="screen-header>
+            <div class="screen-id">D-008</div>
+            <div class="screen-name">Settings</div>
+            <div class="screen-module">Main Tabs</div>
+        </div>
+        
+        <div class="screen-meta>
+            <div class="meta-item">
+                <div class="meta-label">App</div>
+                <div class="meta-value">Driver</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Module</div>
+                <div class="meta-value">Main Tabs</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Variant Count</div>
+                <div class="meta-value">4 (default, loading, empty, error)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Entry Points</div>
+                <div class="meta-value">Profile screen</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Framework Critical (F)</div>
+                <div

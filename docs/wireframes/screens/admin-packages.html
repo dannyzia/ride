@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Packages Module Wireframes</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; color: #333; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+    .flow { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .flow-title { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 12px; color: #555; }
+    .flow-box { display: inline-block; background: #e8e8e8; border: 2px solid #333; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; margin: 4px; }
+    .flow-arrow { display: inline-block; font-size: 18px; margin: 4px; color: #666; }
+    .screen { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .screen-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .screen-id { background: #333; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+    .screen-name { font-size: 16px; font-weight: 700; }
+    .screen-fw { background: #dc2626; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .wireframe { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .wf-box { border: 2px solid #333; background: #fafafa; padding: 10px; border-radius: 6px; font-size: 12px; }
+    .wf-box.primary { background: #e3f2fd; border-color: #1976d2; }
+    .wf-box.danger { background: #ffebee; border-color: #c62828; }
+    .wf-box.success { background: #e8f5e9; border-color: #2e7d32; }
+    .wf-box.warning { background: #fff3e0; border-color: #ef6c00; }
+    .wf-row { display: flex; gap: 8px; }
+    .wf-row > * { flex: 1; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { background: #fafafa; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; color: #555; width: 140px; }
+    td { color: #444; }
+    .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #e8e8e8; }
+  </style>
+</head>
+<body>
+  <h1>Admin Packages Module</h1>
+  <p class="subtitle">Screens: A-017 through A-023 | Flow: Packages, pricing, promos, preferences, offers, incentives, referrals</p>
+
+  <div class="flow">
+    <div class="flow-title">Navigation Flow</div>
+    <span class="flow-box">Admin Layout</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-box">Call Packages (A-017)</span><span class="flow-arrow">→</span><span class="flow-box">CRUD Modal</span><br>
+    <span class="flow-box">Pricing Tiers (A-018)</span><span class="flow-arrow">→</span><span class="flow-box">Edit Modal</span><br>
+    <span class="flow-box">Promo Codes (A-019)</span><span class="flow-arrow">→</span><span class="flow-box">CRUD Modal</span><br>
+    <span class="flow-box">Ride Preferences (A-020)</span><span class="flow-arrow">→</span><span class="flow-box">CRUD Modal</span><br>
+    <span class="flow-box">Point Offers (A-021)</span><span class="flow-arrow">→</span><span class="flow-box">CRUD Modal</span><br>
+    <span class="flow-box">Driver Incentives (A-022)</span><span class="flow-arrow">→</span><span class="flow-box">CRUD Modal</span><br>
+    <span class="flow-box">Referral Campaigns (A-023)</span><span class="flow-arrow">→</span><span class="flow-box">CRUD Modal</span>
+  </div>
+
+  <!-- A-017 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-017</span>
+      <span class="screen-name">Call Packages</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Call Packages"</div>
+      <div class="wf-row">
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box warning">Button: + New Package</div>
+      </div>
+      <div class="wf-box">Table: Name | Calls | Days | Price | Trial | Daily Cap | Vehicle | Active | Actions</div>
+      <div class="wf-box success">CRUD Modal: Name, Calls, Duration, Price (৳), Daily Cap, Trial toggle, Active toggle, Vehicle Type select</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-017 / Call Packages / packages</td></tr>
+      <tr><th>Purpose</th><td>Admin CRUD for driver subscription packages</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Refresh button, New Package button, AdminTable, AdminModal (AdminForm), Deactivate confirm modal</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No packages yet", <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Refresh, New Package, Edit, Toggle active, Deactivate</td></tr>
+      <tr><th>Data shown</th><td>id, name, call_count, duration_days, price_bdt (paisa, display ৳), is_trial, daily_cap, is_active, vehicle_type, created_at, updated_at</td></tr>
+      <tr><th>Source</th><td>app/admin/packages.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-018 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-018</span>
+      <span class="screen-name">Pricing Tiers</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Pricing Tiers"</div>
+      <div class="wf-box">Button: Refresh</div>
+      <div class="wf-box">Table: Vehicle Type | Zone | Base Fare | Per KM | Per Min | Commission | Floor KM | Floor Min | BRTA Ceiling | Actions</div>
+      <div class="wf-box success">Edit Modal: Vehicle Type (read-only), Zone (read-only), Base Fare (৳), Per KM (৳), Per Min (৳), Floor KM, Floor Min, Commission %, BRTA Ceiling (৳), Active toggle</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-018 / Pricing Tiers / packages</td></tr>
+      <tr><th>Purpose</th><td>Per-vehicle base fare, distance rate, and waiting rate editor</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: edit modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Refresh button, AdminTable, AdminModal with read-only vehicle/zone rows and AdminForm</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No pricing rows yet", <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Refresh, Edit pricing row</td></tr>
+      <tr><th>Data shown</th><td>id, zone_id, vehicle_type, base_fare_bdt (paisa), per_km_bdt, per_min_bdt, floor_length_km, floor_min, platform_commission_percent, brta_fare_ceiling_bdt, is_active</td></tr>
+      <tr><th>Source</th><td>app/admin/pricing.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-019 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-019</span>
+      <span class="screen-name">Promo Codes</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Promo Codes"</div>
+      <div class="wf-row">
+        <div class="wf-box">Search: "Search code or title..."</div>
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box warning">Button: + New Promo</div>
+      </div>
+      <div class="wf-box">Table: Code | Title | Discount | Max Uses | Max/Rider | Interval | Active | Valid From | Expires | Actions</div>
+      <div class="wf-box success">CRUD Modal: Code, Title, Description, Discount Type select, Discount Value, Max Uses, Max/Rider, Usage Interval, Max Discount (৳), Min Spend (৳), Valid From, Expires At, Active toggle</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-019 / Promo Codes / packages</td></tr>
+      <tr><th>Purpose</th><td>Admin CRUD for rider-facing discount codes</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, deactivate confirm modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Search input, Refresh button, New Promo button, AdminTable, AdminModal (AdminForm)</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No promos yet", <span class="tag">success</span> filtered table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Search, Refresh, New Promo, Edit, Toggle active, Deactivate</td></tr>
+      <tr><th>Data shown</th><td>promo_id, code, title, description, discount_type, discount_value (percent or paisa), max_uses, max_uses_per_rider, usage_interval, max_discount_bdt, min_spend_bdt, valid_from, expires_at, is_active, times_used</td></tr>
+      <tr><th>Source</th><td>app/admin/promos.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-020 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-020</span>
+      <span class="screen-name">Ride Preferences</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Ride Preferences"</div>
+      <div class="wf-row">
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box warning">Button: + New Preference</div>
+      </div>
+      <div class="wf-box">Table: Key | English Label | Bengali Label | Surcharge | Affects Matching | Active | Actions</div>
+      <div class="wf-box success">CRUD Modal: Key, English Label, Bengali Label, Icon, Surcharge (৳), Affects Matching toggle, Active toggle</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-020 / Ride Preferences / packages</td></tr>
+      <tr><th>Purpose</th><td>Admin CRUD for optional rider add-ons (e.g. Quiet ride, Pet friendly)</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, delete confirm modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Refresh button, New Preference button, AdminTable, AdminModal (AdminForm), delete confirm modal</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No preferences yet", <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Refresh, New Preference, Edit, Toggle active, Delete (soft-deactivate)</td></tr>
+      <tr><th>Data shown</th><td>id, name (key), display_label_en, display_label_bn, icon, charge_bdt (paisa), affects_matching, is_active, created_at, updated_at</td></tr>
+      <tr><th>Source</th><td>app/admin/preferences.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-021 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-021</span>
+      <span class="screen-name">Point Offers</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Point Offers"</div>
+      <div class="wf-row">
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box warning">Button: + New Offer</div>
+      </div>
+      <div class="wf-box">Table: Title | Points | Reward Type | Reward Value | Active | Created | Actions</div>
+      <div class="wf-box success">CRUD Modal: Title, Points Required, Reward Type select, Reward Value (paisa or package_id), Active toggle</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-021 / Point Offers / packages</td></tr>
+      <tr><th>Purpose</th><td>Admin CRUD for loyalty point redemption offers</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, deactivate confirm modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Refresh button, New Offer button, AdminTable, AdminModal (AdminForm), deactivate confirm modal</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No offers yet", <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Refresh, New Offer, Edit, Toggle active, Deactivate</td></tr>
+      <tr><th>Data shown</th><td>id, title, points_required, reward_type (package_grant|wallet_credit), reward_value (package_id UUID or paisa), is_active, created_at, updated_at</td></tr>
+      <tr><th>Source</th><td>app/admin/point-offers.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-022 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-022</span>
+      <span class="screen-name">Driver Incentives</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Driver Incentives"</div>
+      <div class="wf-row">
+        <div class="wf-box">Chips: All | Active | Inactive</div>
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box warning">Button: + New Incentive</div>
+      </div>
+      <div class="wf-box">Table: Name | Target / Metric | Reward | Vehicle Filter | Active | Valid Window | Actions</div>
+      <div class="wf-box success">CRUD Modal: Name, Description, Target Metric select, Target Value, Reward Calls, Vehicle Type Filter, Starts At, Ends At, Active toggle</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-022 / Driver Incentives / packages</td></tr>
+      <tr><th>Purpose</th><td>Performance-based reward programs for drivers</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, deactivate confirm modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Filter chips (all/active/inactive), Refresh button, New Incentive button, AdminTable, AdminModal (AdminForm)</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No incentives match", <span class="tag">success</span> filtered table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Filter, Refresh, New Incentive, Edit, Toggle active, Deactivate</td></tr>
+      <tr><th>Data shown</th><td>id, name, description, target_metric, target_value, reward_calls, vehicle_type_filter, starts_at, ends_at, is_active</td></tr>
+      <tr><th>Source</th><td>app/admin/incentives.tsx</td></tr>
+    </table>
+  </div>
+
+  <!-- A-023 -->
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-id">A-023</span>
+      <span class="screen-name">Referral Campaigns</span>
+      <span class="screen-fw">[F]</span>
+    </div>
+    <div class="wireframe">
+      <div class="wf-box primary" style="text-align:center; font-weight:700;">AdminShell: "Referral Campaigns"</div>
+      <div class="wf-row">
+        <div class="wf-box">Button: Refresh</div>
+        <div class="wf-box warning">Button: + New Campaign</div>
+      </div>
+      <div class="wf-box">Table: Name | Referrer % | Referee % | Max/Referrer | Max Total | Active | Created | Actions</div>
+      <div class="wf-box success">CRUD Modal: Name, Referrer Reward %, Referee Reward %, Max Uses/Referrer, Max Uses Total (blank=∞), Active toggle</div>
+    </div>
+    <table>
+      <tr><th>ID / name / module</th><td>A-023 / Referral Campaigns / packages</td></tr>
+      <tr><th>Purpose</th><td>Driver referral reward programs (only one active at a time)</td></tr>
+      <tr><th>Entry / exit</th><td>Entry: admin sidebar. Exit: CRUD modal, deactivate confirm modal, sidebar.</td></tr>
+      <tr><th>UI elements</th><td>Refresh button, New Campaign button, AdminTable, AdminModal (AdminForm), deactivate confirm modal</td></tr>
+      <tr><th>States</th><td><span class="tag">loading</span> spinner, <span class="tag">empty</span> "No campaigns yet", <span class="tag">success</span> table, <span class="tag">submitting</span> spinner</td></tr>
+      <tr><th>Actions</th><td>Refresh, New Campaign, Edit, Toggle active (warns if another active), Deactivate</td></tr>
+      <tr><th>Data shown</th><td>id, name, referrer_reward_percent, referee_reward_percent, max_uses_per_referrer, max_uses_per_campaign, is_active, created_at, updated_at</td></tr>
+      <tr><th>Source</th><td>app/admin/referral-campaigns.tsx</td></tr>
+    </table>
+  </div>
+</body>
+</html>
