@@ -105,6 +105,7 @@ describe('T-A9 — config audit log on PATCH', () => {
       old_value: 'false',
       new_value: 'true',
       admin_id: 'admin-uuid-1111',
+      actor_role: 'admin',
     });
   });
 
@@ -123,6 +124,7 @@ describe('T-A9 — config audit log on PATCH', () => {
       config_key: TEST_KEY,
       old_value: null,
       new_value: 'true',
+      actor_role: 'admin',
     });
   });
 
