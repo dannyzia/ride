@@ -19,12 +19,25 @@ import { teardownAdminSocket } from "@/lib/adminSocket";
 import { authCleanup } from "@/lib/authCleanup";
 import { colors } from "@/theme/goRide";
 
+import type { AdminRole } from "@/lib/auth";
+
 interface NavItem {
   route: string;
   label: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   group: "Operations" | "Catalogs" | "Programs" | "Config" | "Finance";
+  /** Roles that can see this item. Omit = all admin roles. */
+  roles?: AdminRole[];
 }
+
+// Role-restricted nav items. Omit `roles` = visible to all admin roles.
+// Maps to REV-5 permission matrix: admin.read / verification.write /
+// catalog.write / config.write / finance.write / support.write /
+// review.write / safety.write.
+const OWNER_ADMIN: AdminRole[] = ["owner", "admin"];
+const OWNER_ADMIN_OPS: AdminRole[] = ["owner", "admin", "ops_manager"];
+const OWNER_OPS: AdminRole[] = ["owner", "ops_manager"];
+const OWNER_OPS_MOD: AdminRole[] = ["owner", "ops_manager", "moderator"];
 
 const NAV: NavItem[] = [
   // Operations
@@ -33,18 +46,63 @@ const NAV: NavItem[] = [
     label: "Driver Queue",
     icon: "account-clock",
     group: "Operations",
+    roles: OWNER_ADMIN_OPS, // verification.write
   },
   {
     route: "/admin/monitoring",
     label: "Monitoring",
     icon: "chart-line",
     group: "Operations",
+    // admin.read — all roles
   },
   {
     route: "/admin/recovery",
     label: "Recovery",
     icon: "alert-circle",
     group: "Operations",
+    roles: OWNER_ADMIN_OPS, // verification.write
+  },
+  {
+    route: "/admin/lost-items",
+    label: "Lost Items",
+    icon: "magnify-close",
+    group: "Operations",
+    roles: OWNER_ADMIN_OPS, // support.write
+  },
+  {
+    route: "/admin/fare-disputes",
+    label: "Fare Disputes",
+    icon: "scale-balance",
+    group: "Operations",
+    roles: OWNER_OPS, // review.write
+  },
+  {
+    route: "/admin/broadcast",
+    label: "Broadcast",
+    icon: "bullhorn",
+    group: "Operations",
+    roles: OWNER_ADMIN_OPS, // support.write
+  },
+  {
+    route: "/admin/heat-monitor",
+    label: "Heat Monitor",
+    icon: "fire",
+    group: "Operations",
+    roles: OWNER_OPS, // review.write
+  },
+  {
+    route: "/admin/trust-safety",
+    label: "Trust & Safety",
+    icon: "shield-check",
+    group: "Operations",
+    roles: OWNER_OPS_MOD, // safety.write
+  },
+  {
+    route: "/admin/fare-gate-metrics",
+    label: "Fare Gate Metrics",
+    icon: "gauge",
+    group: "Operations",
+    roles: OWNER_OPS, // review.write
   },
 
   // Catalogs
@@ -53,38 +111,42 @@ const NAV: NavItem[] = [
     label: "Call Packages",
     icon: "package-variant-closed",
     group: "Catalogs",
+    roles: OWNER_ADMIN, // catalog.write
   },
   {
     route: "/admin/zones",
     label: "Zones",
     icon: "map-marker-radius",
     group: "Catalogs",
+    roles: OWNER_ADMIN, // catalog.write
   },
   {
     route: "/admin/pricing",
     label: "Pricing",
     icon: "currency-bdt",
     group: "Catalogs",
+    roles: OWNER_ADMIN, // catalog.write
   },
   {
     route: "/admin/city-boundaries",
     label: "City Boundaries",
     icon: "map-outline",
     group: "Catalogs",
-  },
-
-  // Trust & Safety
-  {
-    route: "/admin/lost-items",
-    label: "Lost Items",
-    icon: "magnify-close",
-    group: "Operations",
+    roles: OWNER_ADMIN, // catalog.write
   },
   {
-    route: "/admin/fare-disputes",
-    label: "Fare Disputes",
-    icon: "scale-balance",
-    group: "Operations",
+    route: "/admin/ride-passes",
+    label: "Ride Passes",
+    icon: "ticket-account",
+    group: "Catalogs",
+    roles: OWNER_ADMIN, // catalog.write
+  },
+  {
+    route: "/admin/sample-media",
+    label: "Sample Media",
+    icon: "image-multiple",
+    group: "Catalogs",
+    roles: OWNER_ADMIN, // catalog.write
   },
 
   // Programs
@@ -93,56 +155,49 @@ const NAV: NavItem[] = [
     label: "Incentives",
     icon: "trophy",
     group: "Programs",
+    roles: OWNER_ADMIN, // catalog.write
   },
   {
     route: "/admin/promos",
     label: "Promo Codes",
     icon: "ticket-percent",
     group: "Programs",
+    roles: OWNER_ADMIN, // catalog.write
   },
   {
     route: "/admin/preferences",
     label: "Preferences",
     icon: "tune-vertical",
     group: "Programs",
+    roles: OWNER_ADMIN, // catalog.write
   },
   {
     route: "/admin/referral-campaigns",
     label: "Referral Campaigns",
     icon: "account-multiple-plus",
     group: "Programs",
+    roles: OWNER_ADMIN, // catalog.write
   },
   {
     route: "/admin/point-offers",
     label: "Point Offers",
     icon: "star-circle",
     group: "Programs",
+    roles: OWNER_ADMIN, // catalog.write
   },
   {
     route: "/admin/events",
     label: "Events",
     icon: "calendar-star",
     group: "Programs",
+    roles: OWNER_ADMIN_OPS, // support.write
   },
   {
     route: "/admin/vehicle-models",
     label: "Vehicle Models",
     icon: "car-multiple",
     group: "Programs",
-  },
-
-  // Config
-  {
-    route: "/admin/ride-passes",
-    label: "Ride Passes",
-    icon: "ticket-account",
-    group: "Catalogs",
-  },
-  {
-    route: "/admin/broadcast",
-    label: "Broadcast",
-    icon: "bullhorn",
-    group: "Operations",
+    roles: OWNER_ADMIN, // catalog.write
   },
 
   // Finance
@@ -151,57 +206,37 @@ const NAV: NavItem[] = [
     label: "Tax Dashboard",
     icon: "file-chart",
     group: "Finance",
+    roles: OWNER_ADMIN, // finance.write
   },
   {
     route: "/admin/zone-pnl",
     label: "Zone P&L",
     icon: "chart-pie",
     group: "Finance",
+    roles: OWNER_ADMIN, // finance.write
   },
   {
     route: "/admin/pickup-analytics",
     label: "Pickup Analytics",
     icon: "chart-bar",
     group: "Finance",
+    roles: OWNER_OPS, // review.write
   },
 
-  // Operations — Fare Framework
-  {
-    route: "/admin/heat-monitor",
-    label: "Heat Monitor",
-    icon: "fire",
-    group: "Operations",
-  },
-  {
-    route: "/admin/trust-safety",
-    label: "Trust & Safety",
-    icon: "shield-check",
-    group: "Operations",
-  },
-  {
-    route: "/admin/fare-gate-metrics",
-    label: "Fare Gate Metrics",
-    icon: "gauge",
-    group: "Operations",
-  },
-
+  // Config
   {
     route: "/admin/platform-config",
     label: "Platform Config",
     icon: "cog",
     group: "Config",
+    roles: OWNER_ADMIN, // config.write
   },
   {
     route: "/admin/fare-config",
     label: "Fare Config",
     icon: "cash-multiple",
     group: "Config",
-  },
-  {
-    route: "/admin/sample-media",
-    label: "Sample Media",
-    icon: "image-multiple",
-    group: "Config",
+    roles: OWNER_ADMIN, // config.write
   },
 ];
 
@@ -278,7 +313,12 @@ export function AdminShell({
       </View>
 
       {GROUP_ORDER.map((group) => {
-        const items = NAV.filter((n) => n.group === group);
+        const items = NAV.filter((n) => {
+          if (n.group !== group) return false;
+          if (!n.roles) return true; // no restriction
+          if (!adminRole) return false; // role not loaded yet
+          return n.roles.includes(adminRole as AdminRole);
+        });
         if (!items.length) return null;
         return (
           <View key={group} style={styles.navGroup}>
