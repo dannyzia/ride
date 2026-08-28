@@ -229,11 +229,26 @@ export function AdminShell({
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [width, setWidth] = useState(Dimensions.get("window").width);
+  const [adminRole, setAdminRole] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = () => setWidth(Dimensions.get("window").width);
     const sub = Dimensions.addEventListener("change", handler);
     return () => sub.remove();
+  }, []);
+
+  // Fetch admin role on mount for sidebar badge.
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase!.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase!
+        .from("users")
+        .select("role")
+        .eq("auth_uid", user.id)
+        .maybeSingle();
+      if (data?.role) setAdminRole(data.role);
+    })();
   }, []);
 
   const isDesktop = width >= 1024;
@@ -255,6 +270,11 @@ export function AdminShell({
     >
       <View style={styles.sidebarHeader}>
         <Text style={styles.brand}>Ride Admin</Text>
+        {adminRole && (
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>{adminRole.replace('_', ' ')}</Text>
+          </View>
+        )}
       </View>
 
       {GROUP_ORDER.map((group) => {
@@ -365,7 +385,22 @@ const styles = StyleSheet.create({
   },
   sidebarDrawer: { width: 280, backgroundColor: "#181A20", height: "100%" },
   sidebarScroll: { flex: 1 },
-  sidebarHeader: { paddingHorizontal: 20, paddingVertical: 16 },
+  sidebarHeader: { paddingHorizontal: 20, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  roleBadge: {
+    backgroundColor: "rgba(12, 194, 95, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(12, 194, 95, 0.30)",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  roleBadgeText: {
+    color: colors.primary,
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
   brand: {
     color: colors.adminAccent,
     fontFamily: "Jakarta-Bold",
