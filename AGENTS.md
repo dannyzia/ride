@@ -186,6 +186,9 @@ Never cache. Read from DB at every request. Admin changes via `PATCH /api/admin/
 ### Timestamps
 Always UTC `timestamptz`. Convert to `Asia/Dhaka` only at display. Use `lib/time.ts` → `nextBdtMidnightUtc()` for Dhaka midnight calculations (e.g., `daily_reset_at`).
 
+### Copy Truth Rule (owner ruling 2026-08-28)
+No UI text, config description, or admin guidance may reference behavior that isn't live — including planned, fenced, or scheduled behavior. If it's not on disk, the text either omits it or says "ships with Stage 1." Applies to rider-facing copy, driver surfaces, admin guidance, and config field descriptions. Copy is verified against disk state before shipping, same as code claims.
+
 ### Validation & Errors
 - Zod at every API route boundary before any DB/service call. Use `parsed.data` after `safeParse`, never raw request body.
 - POST/PUT/PATCH bodies: use `parseJsonBody(request, schema)` from `lib/parseBody.ts` — it handles body reading + Zod validation and returns a `{ ok, response }` discriminated union. Never call `await request.json()` directly.

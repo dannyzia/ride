@@ -30,7 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 For the most up-to-date command reference, critical rules, and architecture map, see **AGENTS.md**. This file focuses on implementation methodology, source of truth hierarchy, and what has changed from the original GlideX codebase.
 
-Model-chain orchestration (Owner / Architect / Orchestrator / Planning-Coding roles, verification protocol, rulings-beat-artifacts) is defined in **AGENTS.md § Model Chain & Orchestration** — it applies to every model working in this repo.
+Model-chain orchestration (Owner / Architect / Orchestrator / Planning-Coding roles, verification protocol, rulings-beat-artifacts) is defined in **AGENTS.md § Model Chain & Orchestration** — it applies to every model working in this repo. The Copy Truth Rule (AGENTS.md § Critical Rules) binds all user-facing text: no copy references non-live behavior.
 
 ## Implementation Methodology
 
