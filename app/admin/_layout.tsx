@@ -12,6 +12,8 @@ import { supabase } from "@/lib/supabase";
 import { AntDesign } from "@expo/vector-icons";
 import { logger } from "@/lib/logger";
 import { AdminToastProvider } from "@/components/admin/AdminToast";
+import { ADMIN_ROLES } from "@/lib/adminRbac";
+import type { AdminRole } from "@/lib/auth";
 
 const STACK_OPTS = {
   headerShown: false,
@@ -58,19 +60,18 @@ export default function AdminLayout() {
         .eq("auth_uid", uid)
         .maybeSingle();
 
-      if (profile?.role === "admin") {
+      if (profile && ADMIN_ROLES.includes(profile.role as AdminRole)) {
         setIsAdmin(true);
         setChecking(false);
         return;
       }
 
-      if (profile && profile.role !== "admin") {
-        // User exists but role is wrong
+      if (profile && !ADMIN_ROLES.includes(profile.role as AdminRole)) {
+        // User exists but role is not an admin-family role
         setIsAdmin(false);
         setAuthError(
           `Signed in as ${email}, but your database role is "${profile.role}".\n\n` +
-            `Run this SQL in the Supabase SQL Editor:\n\n` +
-            `UPDATE users SET role = 'admin' WHERE auth_uid = '${uid}';`,
+            `Contact the owner to be granted panel access.`,
         );
         setChecking(false);
         return;
@@ -85,7 +86,7 @@ export default function AdminLayout() {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.exists && data.role === "admin") {
+          if (data.exists && ADMIN_ROLES.includes(data.role)) {
             setIsAdmin(true);
             setChecking(false);
             return;
@@ -94,7 +95,7 @@ export default function AdminLayout() {
             setIsAdmin(false);
             setAuthError(
               `Signed in as ${email}, but role is "${data.role}".\n\n` +
-                `Run this SQL in Supabase:\n\nUPDATE users SET role = 'admin' WHERE auth_uid = '${uid}';`,
+                `Contact the owner to be granted panel access.`,
             );
             setChecking(false);
             return;
@@ -102,10 +103,8 @@ export default function AdminLayout() {
           // data.exists === false → user not in DB
           setIsAdmin(false);
           setAuthError(
-            `Signed in as ${email}, but you don't exist in the users table yet.\n\n` +
-              `Run this SQL in the Supabase SQL Editor:\n\n` +
-              `INSERT INTO users (auth_uid, phone, name, role)\n` +
-              `VALUES ('${uid}', '0000000000', 'Admin', 'admin');`,
+            `Signed in as ${email}, but no admin account was found.\n\n` +
+              `Contact the owner to be granted panel access.`,
           );
           setChecking(false);
           return;
@@ -119,18 +118,13 @@ export default function AdminLayout() {
       if (profileError) {
         setAuthError(
           `Signed in as ${email} (auth UID: ${uid}).\n\n` +
-            `The database query was blocked (likely RLS policy) and the server API is not reachable.\n\n` +
-            `To fix, run this SQL in the Supabase SQL Editor:\n\n` +
-            `INSERT INTO users (auth_uid, phone, name, role)\n` +
-            `VALUES ('${uid}', '0000000000', 'Admin', 'admin');\n\n` +
-            `And make sure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in Render.`,
+            `The database query was blocked (likely RLS policy) and the server ` +
+            `API is not reachable. Contact the owner to be granted panel access.`,
         );
       } else {
         setAuthError(
-          `Signed in as ${email}, but no matching row was found in the users table.\n\n` +
-            `Run this SQL in the Supabase SQL Editor:\n\n` +
-            `INSERT INTO users (auth_uid, phone, name, role)\n` +
-            `VALUES ('${uid}', '0000000000', 'Admin', 'admin');`,
+          `Signed in as ${email}, but no admin account was found.\n\n` +
+            `Contact the owner to be granted panel access.`,
         );
       }
       setChecking(false);

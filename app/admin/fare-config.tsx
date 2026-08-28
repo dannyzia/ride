@@ -17,7 +17,9 @@ import {
   computeCarRates,
   type TierFuelParams,
 } from "@/lib/tierRateDerivation";
-import { type VehicleTypeEnum, VEHICLE_TYPES } from "@/lib/vehicleTypes";
+import { type VehicleTypeEnum, VEHICLE_TYPES, PICKUP_CATEGORY } from "@/lib/vehicleTypes";
+import type { AdminRole } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 interface ConfigItem {
   key: string;
@@ -279,52 +281,103 @@ const DAWDLE_FIELDS: FieldDef[] = [
   },
 ];
 
-// ── REV-6: Fuel engine setup (G-2a / G-2c / G-2d) ──
-// Fuel config keys fetched from platform_config for the setup banner.
-const FUEL_DISPLAY_KEYS = [
+// ── REV-6: Fuel engine setup (G-2a / G-2c / G-2d / ROUND-13) ──
+// All fuel/joma/target config keys fetched from platform_config.
+const FUEL_CONFIG_KEYS = [
+  // Global fuel prices
   "fuel_price_octane_bdt",
   "fuel_price_petrol_bdt",
   "fuel_price_cng_bdt",
+  // Per-tier fuel efficiency
+  "fuel_efficiency_bike_basic",
+  "fuel_efficiency_bike_standard",
+  "fuel_efficiency_bike_plus",
+  "fuel_efficiency_cng",
+  "fuel_efficiency_car_compact",
+  "fuel_efficiency_car_economy",
+  "fuel_efficiency_car_comfort",
+  "fuel_efficiency_car_premium",
+  "fuel_efficiency_car_xl",
+  // Driver maintenance per km
+  "driver_maint_per_km_bike",
+  "driver_maint_per_km_cng",
+  "driver_maint_per_km_car",
+  // Daily targets
+  "daily_target_bdt_bike",
+  "daily_target_bdt_cng",
+  "daily_target_bdt_car",
+  // Expected billed minutes
+  "expected_billed_minutes_bike",
+  "expected_billed_minutes_cng",
+  "expected_billed_minutes_car",
+  // Joma recovery
+  "joma_monthly_bdt_bike_eco",
+  "joma_monthly_bdt_bike_std",
+  "joma_monthly_bdt_bike_prem",
+  "joma_daily_bdt_cng",
+  "joma_operating_days_per_month",
 ] as const;
 
-// Tier categories for derived required-gross display.
-// Each entry: label, vehicle types in that category, and which compute function.
-interface TierDisplay {
+// Per-vehicle-type tier display — expanded to all 9 types per ROUND-13 Item 3.
+interface VehicleTierDisplay {
+  vehicleType: VehicleTypeEnum;
   label: string;
-  vehicleTypes: VehicleTypeEnum[];
+  category: string;
   compute: (p: TierFuelParams) => { km_rate: number; time_rate: number };
-  maintPerKm: number;
 }
 
-const TIER_DISPLAY: TierDisplay[] = [
-  {
-    label: "Bike",
-    vehicleTypes: ["bike_basic", "bike_standard", "bike_plus"],
-    compute: computeBikeOrCngRates,
-    maintPerKm: 55,
-  },
-  {
-    label: "CNG",
-    vehicleTypes: ["cng"],
-    compute: computeBikeOrCngRates,
-    maintPerKm: 105,
-  },
-  {
-    label: "Car",
-    vehicleTypes: [
-      "car_compact",
-      "car_economy",
-      "car_comfort",
-      "car_premium",
-      "car_xl",
-    ],
-    compute: computeCarRates,
-    maintPerKm: 345,
-  },
-];
+const VEHICLE_TIER_DISPLAY: VehicleTierDisplay[] = (
+  VEHICLE_TYPES.map((vt) => {
+    const cat = PICKUP_CATEGORY[vt.key];
+    return {
+      vehicleType: vt.key,
+      label: vt.display_en,
+      category: cat,
+      compute: cat === "car" ? computeCarRates : computeBikeOrCngRates,
+    };
+  })
+);
 
 function formatPaisaTaka(paisa: number): string {
   return `${Math.round(paisa / 100)}`;
+}
+
+// Fuel price key for each category.
+const FUEL_PRICE_KEY: Record<string, string> = {
+  bike: "fuel_price_petrol_bdt",
+  cng: "fuel_price_cng_bdt",
+  car: "fuel_price_octane_bdt",
+};
+
+// Maintain key pattern: driver_maint_per_km_{category}.
+const MAINT_KEY: Record<string, string> = {
+  bike: "driver_maint_per_km_bike",
+  cng: "driver_maint_per_km_cng",
+  car: "driver_maint_per_km_car",
+};
+
+const DAILY_TARGET_KEY: Record<string, string> = {
+  bike: "daily_target_bdt_bike",
+  cng: "daily_target_bdt_cng",
+  car: "daily_target_bdt_car",
+};
+
+const BILLED_MINUTES_KEY: Record<string, string> = {
+  bike: "expected_billed_minutes_bike",
+  cng: "expected_billed_minutes_cng",
+  car: "expected_billed_minutes_car",
+};
+
+// Joma key per vehicle type.
+function jomaKeyForType(vt: VehicleTypeEnum): string | null {
+  const cat = PICKUP_CATEGORY[vt];
+  if (cat === "cng") return "joma_daily_bdt_cng";
+  if (cat === "bike") {
+    if (vt === "bike_plus") return "joma_monthly_bdt_bike_prem";
+    if (vt === "bike_standard") return "joma_monthly_bdt_bike_std";
+    return "joma_monthly_bdt_bike_eco";
+  }
+  return null; // car — back-solve, no joma term
 }
 
 const PER_KM_BDT: Record<string, number> = {
@@ -340,8 +393,18 @@ export default function FareConfigScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // REV-6: Fuel config values fetched for the setup banner + derived rates.
-  const [fuelValues, setFuelValues] = useState<Record<string, string>>({});
+  // REV-6: Fuel config values — read + edit for fare engine setup.
+  const [fuelServer, setFuelServer] = useState<Record<string, string>>({});
+  const [fuelEdits, setFuelEdits] = useState<Record<string, string>>({});
+  const [savingFuel, setSavingFuel] = useState(false);
+
+  // ROUND-13: Admin role for RBAC-tier gating.
+  const [adminRole, setAdminRole] = useState<AdminRole | null>(null);
+
+  const isEditor = useMemo(
+    () => adminRole === "owner" || adminRole === "admin",
+    [adminRole],
+  );
 
   const allFields = useMemo(
     () => [...PICKUP_FIELDS, ...DISPATCH_FIELDS, ...DAWDLE_FIELDS],
@@ -350,10 +413,21 @@ export default function FareConfigScreen() {
 
   const fetchConfig = useCallback(async () => {
     setLoading(true);
-    const { data, error, status } = await adminFetch<ConfigResponse>(
-      "/api/admin/config",
-      { method: "GET" },
-    );
+    const [configRes, roleRes] = await Promise.all([
+      adminFetch<ConfigResponse>("/api/admin/config", { method: "GET" }),
+      // Fetch current user role from supabase (client-side, same pattern as layout).
+      (async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+        const { data } = await supabase
+          .from("users")
+          .select("role")
+          .eq("auth_uid", user.id)
+          .maybeSingle();
+        return data?.role as AdminRole | null;
+      })(),
+    ]);
+    const { data, error, status } = configRes;
     if (error || !data) {
       if (status !== 0) {
         toast.show(`Failed to load config: ${error ?? "unknown"}`, "error");
@@ -365,12 +439,13 @@ export default function FareConfigScreen() {
     const fuelMap: Record<string, string> = {};
     for (const r of data.config ?? []) {
       if (allFields.some((f) => f.key === r.key)) map[r.key] = r.value;
-      if (FUEL_DISPLAY_KEYS.includes(r.key as typeof FUEL_DISPLAY_KEYS[number])) {
+      if (FUEL_CONFIG_KEYS.includes(r.key as typeof FUEL_CONFIG_KEYS[number])) {
         fuelMap[r.key] = r.value;
       }
     }
     setServerValues(map);
-    setFuelValues(fuelMap);
+    setFuelServer(fuelMap);
+    setFuelEdits({ ...fuelMap });
     const editsMap: Record<string, string> = {};
     for (const f of allFields) {
       if (map[f.key] !== undefined) {
@@ -378,6 +453,7 @@ export default function FareConfigScreen() {
       }
     }
     setEdits(editsMap);
+    setAdminRole(roleRes);
     setLoading(false);
   }, [toast, allFields]);
 
@@ -398,29 +474,56 @@ export default function FareConfigScreen() {
 
   const hasChanges = dirtyKeys.size > 0;
 
-  // REV-6 G-2c: Compute derived required-gross per tier from fuel config.
-  const derivedTiers = useMemo(() => {
-    return TIER_DISPLAY.map((tier) => {
-      const params = getDefaultFuelParams(tier.vehicleTypes[0]);
-      // Override fuel price from admin-entered values if available.
-      const fuelKey =
-        tier.label === "Bike"
-          ? "fuel_price_petrol_bdt"
-          : tier.label === "CNG"
-            ? "fuel_price_cng_bdt"
-            : "fuel_price_octane_bdt";
-      const adminFuel = Number(fuelValues[fuelKey]);
+  // ROUND-13 Item 3: Compute derived required-gross per vehicle type.
+  const derivedVehicles = useMemo(() => {
+    return VEHICLE_TIER_DISPLAY.map((tier) => {
+      const cat = tier.category;
+      const params = getDefaultFuelParams(tier.vehicleType);
+      // Override fuel price from admin-entered value.
+      const adminFuel = Number(fuelEdits[FUEL_PRICE_KEY[cat]] ?? 0);
       if (adminFuel > 0) {
         params.fuel_price_bdt_per_unit = Math.round(adminFuel * 100);
       }
+      // Override maint from admin.
+      const adminMaint = Number(fuelEdits[MAINT_KEY[cat]] ?? 0);
+      if (adminMaint > 0) {
+        params.driver_maint_per_km = Math.round(adminMaint * 100);
+      }
+      // Override daily target from admin.
+      const adminTarget = Number(fuelEdits[DAILY_TARGET_KEY[cat]] ?? 0);
+      if (adminTarget > 0) {
+        params.daily_target_bdt = Math.round(adminTarget * 100);
+      }
+      // Override billed minutes from admin.
+      const adminBilled = Number(fuelEdits[BILLED_MINUTES_KEY[cat]] ?? 0);
+      if (adminBilled > 0) {
+        params.expected_billed_minutes = adminBilled;
+      }
+      // Override joma from admin.
+      const jomaK = jomaKeyForType(tier.vehicleType);
+      if (jomaK) {
+        const adminJoma = Number(fuelEdits[jomaK] ?? 0);
+        if (cat === "cng") {
+          params.joma_daily_bdt = adminJoma > 0 ? adminJoma : params.joma_daily_bdt;
+        } else {
+          params.joma_monthly_bdt = adminJoma > 0 ? adminJoma : params.joma_monthly_bdt;
+        }
+      }
+      // Override efficiency from admin.
+      const effKey = `fuel_efficiency_${tier.vehicleType}` as string;
+      const adminEff = Number(fuelEdits[effKey] ?? 0);
+      if (adminEff > 0) {
+        params.fuel_efficiency_km_per_unit = adminEff;
+      }
+      // Compute derived rates.
       const rates = tier.compute(params);
-      // required_gross ≈ fuel/km + maint/km + joma/km + target (paisa)
+      // required_gross ≈ (fuel/km + maint/km + joma/km) × daily_km + target (paisa)
       const fuelPerKm = Math.round(
         (params.fuel_price_bdt_per_unit * 100) /
           params.fuel_efficiency_km_per_unit,
       );
       const jomaPerKmVal =
-        tier.label === "Car"
+        cat === "car"
           ? 0
           : Math.round(
               ((params.joma_monthly_bdt ?? 0) * 100) /
@@ -432,16 +535,66 @@ export default function FareConfigScreen() {
       const requiredGrossPaisa = totalPerKm * dailyKm + params.daily_target_bdt;
       const requiredGrossTaka = Math.round(requiredGrossPaisa / 100);
       return {
+        vehicleType: tier.vehicleType,
         label: tier.label,
-        vehicleTypes: tier.vehicleTypes,
-        fuelPriceBDT: adminFuel > 0 ? adminFuel : params.fuel_price_bdt_per_unit / 100,
+        category: cat,
         fuelPerKmPaisa: fuelPerKm,
         maintPerKmPaisa: params.driver_maint_per_km,
         dailyTargetBDT: params.daily_target_bdt / 100,
         requiredGrossBDT: requiredGrossTaka,
       };
     });
-  }, [fuelValues]);
+  }, [fuelEdits]);
+
+  // Fuel config dirty check.
+  const fuelDirtyKeys = useMemo(
+    () =>
+      FUEL_CONFIG_KEYS.filter((k) => fuelEdits[k] !== fuelServer[k]),
+    [fuelEdits, fuelServer],
+  );
+  const hasFuelChanges = fuelDirtyKeys.length > 0;
+
+  const handleSaveFuel = async () => {
+    if (!hasFuelChanges) {
+      toast.show("No fuel changes to save", "info");
+      return;
+    }
+    const updates: { key: string; value: string }[] = [];
+    for (const k of fuelDirtyKeys) {
+      const val = fuelEdits[k] ?? "";
+      const n = Number(val);
+      if (!Number.isFinite(n) || n < 0) {
+        toast.show(`${k} must be a positive number`, "error");
+        return;
+      }
+      updates.push({ key: k, value: val });
+    }
+    if (updates.length === 0) return;
+    setSavingFuel(true);
+    const { data, error, status } = await adminFetch<ConfigResponse>(
+      "/api/admin/config",
+      { method: "PATCH", body: JSON.stringify({ updates }) },
+    );
+    if (error || !data) {
+      if (status !== 0) {
+        toast.show(`Fuel save failed: ${error ?? "unknown"}`, "error");
+      } else {
+        toast.show("Fuel save failed: network error", "error");
+      }
+      setSavingFuel(false);
+      return;
+    }
+    const map: Record<string, string> = {};
+    for (const r of data.config ?? []) {
+      if (FUEL_CONFIG_KEYS.includes(r.key as typeof FUEL_CONFIG_KEYS[number])) {
+        map[r.key] = r.value;
+      }
+    }
+    setFuelServer(map);
+    setFuelEdits({ ...map });
+    toast.show("Fuel config saved", "success");
+    setSavingFuel(false);
+  };
 
   const handleSave = async () => {
     if (!hasChanges) {
@@ -645,7 +798,7 @@ export default function FareConfigScreen() {
         </View>
       ) : (
         <View style={{ gap: 20 }}>
-          {/* ── REV-6: Fare Engine Setup (G-2a ordering hint + G-2c derived rates + G-2d pending states) ── */}
+          {/* ── REV-6 + ROUND-13: Fare Engine Setup ── */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <View style={{ flex: 1 }}>
@@ -656,6 +809,19 @@ export default function FareConfigScreen() {
                   Stage-0-gated by design.
                 </Text>
               </View>
+              {isEditor && (
+                <Pressable
+                  style={[styles.saveBtn, (!hasFuelChanges || savingFuel) && styles.btnDisabled]}
+                  onPress={handleSaveFuel}
+                  disabled={!hasFuelChanges || savingFuel}
+                >
+                  {savingFuel ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>Save Fuel</Text>
+                  )}
+                </Pressable>
+              )}
             </View>
 
             {/* G-2a: Fuel price banner */}
@@ -668,7 +834,7 @@ export default function FareConfigScreen() {
               </Text>
             </View>
 
-            {/* Fuel prices display (read-only, sourced from platform_config) */}
+            {/* Fuel prices + efficiency + targets — editable for admin/owner, read-only for others */}
             <View style={{ marginTop: 12 }}>
               <Text style={styles.fieldLabel}>Fuel Prices (BDT/L or BDT/m³)</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
@@ -681,35 +847,83 @@ export default function FareConfigScreen() {
                 ).map((f) => (
                   <View key={f.key} style={styles.fieldRow}>
                     <Text style={styles.fieldLabel}>{f.label}</Text>
-                    <Text style={styles.fuelValue}>
-                      {fuelValues[f.key] ?? "—"} BDT/L
-                    </Text>
+                    {isEditor ? (
+                      <TextInput
+                        style={styles.input}
+                        value={fuelEdits[f.key] ?? ""}
+                        onChangeText={(v) => setFuelEdits((p) => ({ ...p, [f.key]: v }))}
+                        placeholder="0"
+                        placeholderTextColor={colors.textDisabledDark}
+                        keyboardType="decimal-pad"
+                      />
+                    ) : (
+                      <Text style={styles.fuelValue}>
+                        {fuelEdits[f.key] ?? "—"} BDT/L
+                      </Text>
+                    )}
                   </View>
                 ))}
               </View>
             </View>
 
-            {/* G-2c: Derived required-gross per tier + spot-check prompt */}
+            {/* Tier data: efficiency, maintenance, target, billed minutes — per category */}
+            {isEditor && (
+              <View style={{ marginTop: 16 }}>
+                <Text style={styles.fieldLabel}>Tier Data</Text>
+                <Text style={styles.helpText}>
+                  Per-category fuel efficiency, driver maintenance, daily target,
+                  and expected billed minutes.
+                </Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
+                  {(
+                    [
+                      { cat: "bike", label: "Bike", effKey: "fuel_efficiency_bike_basic" },
+                      { cat: "cng", label: "CNG", effKey: "fuel_efficiency_cng" },
+                      { cat: "car", label: "Car", effKey: "fuel_efficiency_car_compact" },
+                    ] as const
+                  ).map(({ cat, label, effKey }) => (
+                    <View key={cat} style={styles.tierDataCard}>
+                      <Text style={styles.fieldLabel}>{label}</Text>
+                      {(
+                        [
+                          { fieldKey: effKey, label: "Efficiency (km/L)" },
+                          { fieldKey: MAINT_KEY[cat], label: "Maint (BDT/km)" },
+                          { fieldKey: DAILY_TARGET_KEY[cat], label: "Daily Target (BDT)" },
+                          { fieldKey: BILLED_MINUTES_KEY[cat], label: "Billed Minutes" },
+                        ]
+                      ).map((f) => (
+                        <View key={f.fieldKey} style={styles.fieldRow}>
+                          <Text style={styles.fieldLabel}>{f.label}</Text>
+                          <TextInput
+                            style={styles.input}
+                            value={fuelEdits[f.fieldKey] ?? ""}
+                            onChangeText={(v) => setFuelEdits((p) => ({ ...p, [f.fieldKey]: v }))}
+                            placeholder="0"
+                            placeholderTextColor={colors.textDisabledDark}
+                            keyboardType="decimal-pad"
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* G-2c: Derived required-gross per vehicle type + spot-check prompt */}
             <View style={{ marginTop: 16 }}>
-              <Text style={styles.fieldLabel}>Derived Tier Rates (spot-check)</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
-                {derivedTiers.map((tier) => (
-                  <View key={tier.label} style={styles.tierCard}>
-                    <Text style={styles.tierLabel}>{tier.label}</Text>
-                    <Text style={styles.tierValue}>
-                      ~৳{tier.requiredGrossBDT}/day
+              <Text style={styles.fieldLabel}>Derived Rates per Vehicle Type</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                {derivedVehicles.map((vt) => (
+                  <View key={vt.vehicleType} style={styles.vehicleTypeCard}>
+                    <Text style={styles.vehicleTypeLabel}>{vt.label}</Text>
+                    <Text style={styles.vehicleTypeGross}>
+                      ~৳{vt.requiredGrossBDT}/day
                     </Text>
-                    <Text style={styles.tierDetail}>
-                      fuel ৳{formatPaisaTaka(tier.fuelPerKmPaisa)}/km + maint
-                      ৳{formatPaisaTaka(tier.maintPerKmPaisa)}/km + target
-                      ৳{tier.dailyTargetBDT}
-                    </Text>
-                    <Text style={styles.tierVehicleTypes}>
-                      {tier.vehicleTypes
-                        .map((v) =>
-                          VEHICLE_TYPES.find((vt) => vt.key === v)?.display_en ?? v,
-                        )
-                        .join(", ")}
+                    <Text style={styles.vehicleTypeDetail}>
+                      fuel ৳{formatPaisaTaka(vt.fuelPerKmPaisa)}/km · maint
+                      ৳{formatPaisaTaka(vt.maintPerKmPaisa)}/km · target
+                      ৳{vt.dailyTargetBDT}
                     </Text>
                   </View>
                 ))}
@@ -920,39 +1134,41 @@ const styles = StyleSheet.create({
     fontFamily: "Jakarta-Bold",
     fontSize: 13,
   },
-  tierCard: {
+  tierDataCard: {
     backgroundColor: "#181A20",
     borderWidth: 1,
     borderColor: "#2A2D35",
     borderRadius: 8,
     padding: 12,
-    width: 220,
-    gap: 4,
+    width: 280,
+    gap: 8,
   },
-  tierLabel: {
+  vehicleTypeCard: {
+    backgroundColor: "#181A20",
+    borderWidth: 1,
+    borderColor: "#2A2D35",
+    borderRadius: 8,
+    padding: 10,
+    width: 180,
+    gap: 2,
+  },
+  vehicleTypeLabel: {
     color: colors.textSecondaryDark,
     fontFamily: "Jakarta-SemiBold",
-    fontSize: 11,
+    fontSize: 10,
     textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
-  tierValue: {
+  vehicleTypeGross: {
     color: colors.adminAccent,
     fontFamily: "Jakarta-Bold",
-    fontSize: 18,
+    fontSize: 16,
   },
-  tierDetail: {
-    color: colors.textDisabledDark,
-    fontFamily: "Jakarta-Regular",
-    fontSize: 11,
-    marginTop: 2,
-  },
-  tierVehicleTypes: {
+  vehicleTypeDetail: {
     color: colors.textDisabledDark,
     fontFamily: "Jakarta-Regular",
     fontSize: 10,
-    marginTop: 4,
-    fontStyle: "italic",
+    marginTop: 2,
   },
   spotCheckPrompt: {
     color: colors.textSecondaryDark,

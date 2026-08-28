@@ -117,6 +117,44 @@ const ALLOWED_KEYS = new Set([
   'night_mult_value',
   'night_schedule',
   'pickup_cap_pct_of_fare_v6',
+
+  // Fare engine — fuel prices (admin-tier, editable via fare-config)
+  'fuel_price_octane_bdt',
+  'fuel_price_petrol_bdt',
+  'fuel_price_cng_bdt',
+
+  // Fare engine — per-tier fuel efficiency (km/L or km/m³)
+  'fuel_efficiency_bike_basic',
+  'fuel_efficiency_bike_standard',
+  'fuel_efficiency_bike_plus',
+  'fuel_efficiency_cng',
+  'fuel_efficiency_car_compact',
+  'fuel_efficiency_car_economy',
+  'fuel_efficiency_car_comfort',
+  'fuel_efficiency_car_premium',
+  'fuel_efficiency_car_xl',
+
+  // Fare engine — driver maintenance per km (paisa)
+  'driver_maint_per_km_bike',
+  'driver_maint_per_km_cng',
+  'driver_maint_per_km_car',
+
+  // Fare engine — daily target per tier (paisa)
+  'daily_target_bdt_bike',
+  'daily_target_bdt_cng',
+  'daily_target_bdt_car',
+
+  // Fare engine — expected billed minutes per tier
+  'expected_billed_minutes_bike',
+  'expected_billed_minutes_cng',
+  'expected_billed_minutes_car',
+
+  // Fare engine — joma recovery (taka-scale)
+  'joma_monthly_bdt_bike_eco',
+  'joma_monthly_bdt_bike_std',
+  'joma_monthly_bdt_bike_prem',
+  'joma_daily_bdt_cng',
+  'joma_operating_days_per_month',
 ]);
 
 const BOOLEAN_KEYS = new Set([
@@ -373,6 +411,36 @@ function validateKeyValue(key: string, value: string): string | null {
   // Night multiplier: 1.0–3.0
   if (key === 'night_mult_value') {
     if (v < 1.0 || v > 3.0) return `${key} must be between 1.0 and 3.0`;
+  }
+
+  // Fare engine — fuel prices (BDT, positive)
+  if (key.startsWith('fuel_price_')) {
+    if (v <= 0) return `${key} must be > 0 (BDT per litre or m³)`;
+  }
+
+  // Fare engine — fuel efficiency (km/L or km/m³, positive)
+  if (key.startsWith('fuel_efficiency_')) {
+    if (v <= 0) return `${key} must be > 0 (km per litre or m³)`;
+  }
+
+  // Fare engine — driver maintenance per km (paisa, positive)
+  if (key.startsWith('driver_maint_per_km_')) {
+    if (v <= 0) return `${key} must be > 0 (paisa per km)`;
+  }
+
+  // Fare engine — daily target (paisa, positive)
+  if (key.startsWith('daily_target_bdt_')) {
+    if (v <= 0) return `${key} must be > 0 (paisa per day)`;
+  }
+
+  // Fare engine — expected billed minutes (positive integer)
+  if (key.startsWith('expected_billed_minutes_')) {
+    if (!Number.isInteger(v) || v <= 0) return `${key} must be a positive integer (minutes)`;
+  }
+
+  // Fare engine — joma (taka-scale, non-negative)
+  if (key.startsWith('joma_')) {
+    if (v < 0) return `${key} must be >= 0 (BDT)`;
   }
 
   return null;
