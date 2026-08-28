@@ -10,11 +10,6 @@
 /** The library's real module shape, derived from its TypeScript types. */
 export type MapLibreModule = typeof import("@maplibre/maplibre-react-native");
 
-// This require() runs once at module load time and is cached by Node.js/RN
-// module system. Any subsequent import from this file reuses the same module
-// instance. `unknown` keeps the CJS/ESM interop honest — resolveModule narrows.
-const raw: unknown = require("@maplibre/maplibre-react-native");
-
 function hasMapView(m: unknown): m is MapLibreModule {
   return !!m && typeof m === "object" && "MapView" in m;
 }
@@ -29,5 +24,13 @@ function resolveModule(m: unknown): MapLibreModule | null {
   return null;
 }
 
-const MapLibreGL = resolveModule(raw);
+let MapLibreGL: MapLibreModule | null = null;
+
+try {
+  const raw: unknown = require("@maplibre/maplibre-react-native");
+  MapLibreGL = resolveModule(raw);
+} catch {
+  MapLibreGL = null;
+}
+
 export default MapLibreGL;
