@@ -2351,8 +2351,8 @@ export const tripTimeSamples = pgTable("trip_time_samples", {
 
 /**
  * Config change audit log — every admin PATCH to platform_config is logged here.
- * Written by: app/api/admin/config+api.ts (INSERT before PATCH) and
- * app/api/admin/staff+api.ts (RBAC role changes, config_key 'rbac:user_role').
+ * Written by: app/api/admin/config+api.ts (INSERT before PATCH).
+ * actor_role records the 4-role admin family role of the actor at write time.
  * actor_role records the 4-role admin family role of the actor at write time
  * (nullable — legacy rows predate the RBAC rollout).
  * Read by: admin config history UI + rollback actions.

@@ -66,35 +66,19 @@ describe('T-A7 — joma per km', () => {
 });
 
 describe('T-A7 — bike/CNG rate derivation', () => {
-  test('bike: km_rate = fuel + maint + parking; time_rate = target / billed_min', () => {
+  test('bike: km_rate = fuel + maint + joma; time_rate = target / billed_min', () => {
     const params = getDefaultFuelParams('bike_standard');
     const { km_rate, time_rate } = computeBikeOrCngRates(params);
 
-    // fuel = round(14500 × 100 / 45) = round(32222) = 32222
-    // But wait — getDefaultFuelParams returns fuel_price_bdt_per_unit = 14500
-    // The comment says "145 BDT/L octane" and the value is 14500 (paisa)
-    // fuelCostPerKm(14500, 45) = round(14500 * 100 / 45) = 32222
-    // Hmm, that seems like the fuel_price is in paisa already, but fuelCostPerKm
-    // multiplies by 100 again. Let me re-read the function...
-    //
-    // Actually the function comment says "BDT→paisa for fuel_price" but the
-    // params say fuel_price_bdt_per_unit = 14500 and the type doc says "paisa/litre".
-    // The function does: Math.round((fuelPrice * 100) / fuelEfficiency)
-    // So it treats fuelPrice as BDT and multiplies by 100 to get paisa.
-    // But 14500 is already paisa (145 BDT × 100). So the function would compute:
-    // 14500 × 100 / 45 = 32222 → this is paisa² per km, which is wrong.
-    //
-    // This is actually a known issue — the function name says "BDT→paisa" but
-    // the config stores prices already in paisa. For the test, let's use BDT values:
-    const kmRate = fuelCostPerKm(145, 45) + params.driver_maint_per_km + params.parking_per_km;
-    const timeRate = Math.round((params.daily_target_bdt * 100) / params.expected_billed_minutes);
+    // REV-4: parking removed (owner-borne, recovered inside joma)
+    // fuel = fuelCostPerKm(14000, 45) = round(14000 * 100 / 45) = 31111
+    // maint = 55, joma = jomaPerKmFromParams(8000/month, 26 days, 100 km) = round(8000*100/(26*100)) = 308
+    const expectedFuel = fuelCostPerKm(params.fuel_price_bdt_per_unit, params.fuel_efficiency_km_per_unit);
+    const expectedJoma = Math.round((8000 * 100) / (26 * 100));
+    expect(km_rate).toBe(expectedFuel + params.driver_maint_per_km + expectedJoma);
+    // time = round(110000 * 100 / 240) = round(45833) = 45833
+    expect(time_rate).toBe(Math.round((params.daily_target_bdt * 100) / params.expected_billed_minutes));
 
-    // fuel = 322, maint = 55, parking = 10 → km_rate = 387
-    expect(kmRate).toBe(322 + 55 + 10);
-    // time = round(110000 × 100 / 240) = round(45833) = 45833
-    expect(timeRate).toBe(Math.round((110000 * 100) / 240));
-
-    // km_rate > 0 and time_rate > 0
     expect(km_rate).toBeGreaterThan(0);
     expect(time_rate).toBeGreaterThan(0);
   });
@@ -125,7 +109,7 @@ describe('T-A7 — car rate derivation', () => {
 describe('T-A7 — getDefaultFuelParams', () => {
   test('bike_standard returns bike defaults', () => {
     const p = getDefaultFuelParams('bike_standard');
-    expect(p.fuel_price_bdt_per_unit).toBe(14500);
+    expect(p.fuel_price_bdt_per_unit).toBe(14000); // REV-4: 140 BDT/L petrol
     expect(p.fuel_efficiency_km_per_unit).toBe(45); // bike category default
   });
 
@@ -143,6 +127,6 @@ describe('T-A7 — getDefaultFuelParams', () => {
 
   test('unknown vehicle type falls back to bike', () => {
     const p = getDefaultFuelParams('unknown_type');
-    expect(p.fuel_price_bdt_per_unit).toBe(14500); // bike default
+    expect(p.fuel_price_bdt_per_unit).toBe(14000); // REV-4: bike default
   });
 });
