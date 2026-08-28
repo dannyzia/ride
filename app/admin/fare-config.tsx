@@ -554,6 +554,27 @@ export default function FareConfigScreen() {
   );
   const hasFuelChanges = fuelDirtyKeys.length > 0;
 
+  const handleExportCsv = () => {
+    const lines: string[] = ["key,value"];
+    for (const k of FUEL_CONFIG_KEYS) {
+      lines.push(`${k},${fuelEdits[k] ?? ""}`);
+    }
+    lines.push("");
+    lines.push("vehicle_type,required_gross_bdt_per_day,fuel_per_km_paisa,maint_per_km_paisa,daily_target_bdt");
+    for (const vt of derivedVehicles) {
+      lines.push(`${vt.vehicleType},${vt.requiredGrossBDT},${vt.fuelPerKmPaisa},${vt.maintPerKmPaisa},${vt.dailyTargetBDT}`);
+    }
+    const csv = lines.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fare-engine-config-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.show("CSV exported", "success");
+  };
+
   const handleSaveFuel = async () => {
     if (!hasFuelChanges) {
       toast.show("No fuel changes to save", "info");
@@ -810,17 +831,25 @@ export default function FareConfigScreen() {
                 </Text>
               </View>
               {isEditor && (
-                <Pressable
-                  style={[styles.saveBtn, (!hasFuelChanges || savingFuel) && styles.btnDisabled]}
-                  onPress={handleSaveFuel}
-                  disabled={!hasFuelChanges || savingFuel}
-                >
-                  {savingFuel ? (
-                    <ActivityIndicator color={colors.white} size="small" />
-                  ) : (
-                    <Text style={styles.saveBtnText}>Save Fuel</Text>
-                  )}
-                </Pressable>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Pressable
+                    style={styles.ghostBtn}
+                    onPress={handleExportCsv}
+                  >
+                    <Text style={styles.ghostBtnText}>Export CSV</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.saveBtn, (!hasFuelChanges || savingFuel) && styles.btnDisabled]}
+                    onPress={handleSaveFuel}
+                    disabled={!hasFuelChanges || savingFuel}
+                  >
+                    {savingFuel ? (
+                      <ActivityIndicator color={colors.white} size="small" />
+                    ) : (
+                      <Text style={styles.saveBtnText}>Save Fuel</Text>
+                    )}
+                  </Pressable>
+                </View>
               )}
             </View>
 
