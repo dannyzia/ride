@@ -958,12 +958,34 @@ export default function FareConfigScreen() {
                     </View>
                   </View>
 
-                  {/* Car card — no joma (back-solve) */}
+                  {/* Car card — per-vehicle-type efficiency + shared maint/target */}
                   <View style={styles.tierDataCard}>
                     <Text style={styles.fieldLabel}>Car</Text>
+                    <Text style={styles.fieldLabel}>Fuel Efficiency per Type (km/L)</Text>
                     {(
                       [
-                        { fieldKey: "fuel_efficiency_car_compact", label: "Efficiency (km/L)" },
+                        { fieldKey: "fuel_efficiency_car_compact", label: "Compact" },
+                        { fieldKey: "fuel_efficiency_car_economy", label: "Economy" },
+                        { fieldKey: "fuel_efficiency_car_comfort", label: "Comfort" },
+                        { fieldKey: "fuel_efficiency_car_premium", label: "Premium" },
+                        { fieldKey: "fuel_efficiency_car_xl", label: "XL" },
+                      ]
+                    ).map((f) => (
+                      <View key={f.fieldKey} style={styles.fieldRow}>
+                        <Text style={styles.fieldLabel}>{f.label}</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={fuelEdits[f.fieldKey] ?? ""}
+                          onChangeText={(v) => setFuelEdits((p) => ({ ...p, [f.fieldKey]: v }))}
+                          placeholder="0"
+                          placeholderTextColor={colors.textDisabledDark}
+                          keyboardType="decimal-pad"
+                        />
+                      </View>
+                    ))}
+                    <View style={{ height: 1, backgroundColor: "#2A2D35", marginVertical: 4 }} />
+                    {(
+                      [
                         { fieldKey: MAINT_KEY["car"], label: "Maint (BDT/km)" },
                         { fieldKey: DAILY_TARGET_KEY["car"], label: "Daily Target (BDT)" },
                         { fieldKey: BILLED_MINUTES_KEY["car"], label: "Billed Minutes" },
