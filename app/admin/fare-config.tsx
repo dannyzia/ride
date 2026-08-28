@@ -11,6 +11,13 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
+import {
+  getDefaultFuelParams,
+  computeBikeOrCngRates,
+  computeCarRates,
+  type TierFuelParams,
+} from "@/lib/tierRateDerivation";
+import { type VehicleTypeEnum, VEHICLE_TYPES } from "@/lib/vehicleTypes";
 
 interface ConfigItem {
   key: string;
@@ -272,6 +279,54 @@ const DAWDLE_FIELDS: FieldDef[] = [
   },
 ];
 
+// ── REV-6: Fuel engine setup (G-2a / G-2c / G-2d) ──
+// Fuel config keys fetched from platform_config for the setup banner.
+const FUEL_DISPLAY_KEYS = [
+  "fuel_price_octane_bdt",
+  "fuel_price_petrol_bdt",
+  "fuel_price_cng_bdt",
+] as const;
+
+// Tier categories for derived required-gross display.
+// Each entry: label, vehicle types in that category, and which compute function.
+interface TierDisplay {
+  label: string;
+  vehicleTypes: VehicleTypeEnum[];
+  compute: (p: TierFuelParams) => { km_rate: number; time_rate: number };
+  maintPerKm: number;
+}
+
+const TIER_DISPLAY: TierDisplay[] = [
+  {
+    label: "Bike",
+    vehicleTypes: ["bike_basic", "bike_standard", "bike_plus"],
+    compute: computeBikeOrCngRates,
+    maintPerKm: 55,
+  },
+  {
+    label: "CNG",
+    vehicleTypes: ["cng"],
+    compute: computeBikeOrCngRates,
+    maintPerKm: 105,
+  },
+  {
+    label: "Car",
+    vehicleTypes: [
+      "car_compact",
+      "car_economy",
+      "car_comfort",
+      "car_premium",
+      "car_xl",
+    ],
+    compute: computeCarRates,
+    maintPerKm: 345,
+  },
+];
+
+function formatPaisaTaka(paisa: number): string {
+  return `${Math.round(paisa / 100)}`;
+}
+
 const PER_KM_BDT: Record<string, number> = {
   bike: 25,
   cng: 35,
@@ -284,6 +339,9 @@ export default function FareConfigScreen() {
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // REV-6: Fuel config values fetched for the setup banner + derived rates.
+  const [fuelValues, setFuelValues] = useState<Record<string, string>>({});
 
   const allFields = useMemo(
     () => [...PICKUP_FIELDS, ...DISPATCH_FIELDS, ...DAWDLE_FIELDS],
@@ -304,10 +362,15 @@ export default function FareConfigScreen() {
       return;
     }
     const map: Record<string, string> = {};
+    const fuelMap: Record<string, string> = {};
     for (const r of data.config ?? []) {
       if (allFields.some((f) => f.key === r.key)) map[r.key] = r.value;
+      if (FUEL_DISPLAY_KEYS.includes(r.key as typeof FUEL_DISPLAY_KEYS[number])) {
+        fuelMap[r.key] = r.value;
+      }
     }
     setServerValues(map);
+    setFuelValues(fuelMap);
     const editsMap: Record<string, string> = {};
     for (const f of allFields) {
       if (map[f.key] !== undefined) {
@@ -334,6 +397,51 @@ export default function FareConfigScreen() {
   }, [allFields, edits, serverValues]);
 
   const hasChanges = dirtyKeys.size > 0;
+
+  // REV-6 G-2c: Compute derived required-gross per tier from fuel config.
+  const derivedTiers = useMemo(() => {
+    return TIER_DISPLAY.map((tier) => {
+      const params = getDefaultFuelParams(tier.vehicleTypes[0]);
+      // Override fuel price from admin-entered values if available.
+      const fuelKey =
+        tier.label === "Bike"
+          ? "fuel_price_petrol_bdt"
+          : tier.label === "CNG"
+            ? "fuel_price_cng_bdt"
+            : "fuel_price_octane_bdt";
+      const adminFuel = Number(fuelValues[fuelKey]);
+      if (adminFuel > 0) {
+        params.fuel_price_bdt_per_unit = Math.round(adminFuel * 100);
+      }
+      const rates = tier.compute(params);
+      // required_gross ≈ fuel/km + maint/km + joma/km + target (paisa)
+      const fuelPerKm = Math.round(
+        (params.fuel_price_bdt_per_unit * 100) /
+          params.fuel_efficiency_km_per_unit,
+      );
+      const jomaPerKmVal =
+        tier.label === "Car"
+          ? 0
+          : Math.round(
+              ((params.joma_monthly_bdt ?? 0) * 100) /
+                ((params.operating_days_per_month ?? 26) *
+                  (params.estimated_daily_km ?? 1)),
+            );
+      const totalPerKm = fuelPerKm + params.driver_maint_per_km + jomaPerKmVal;
+      const dailyKm = params.estimated_daily_km ?? 100;
+      const requiredGrossPaisa = totalPerKm * dailyKm + params.daily_target_bdt;
+      const requiredGrossTaka = Math.round(requiredGrossPaisa / 100);
+      return {
+        label: tier.label,
+        vehicleTypes: tier.vehicleTypes,
+        fuelPriceBDT: adminFuel > 0 ? adminFuel : params.fuel_price_bdt_per_unit / 100,
+        fuelPerKmPaisa: fuelPerKm,
+        maintPerKmPaisa: params.driver_maint_per_km,
+        dailyTargetBDT: params.daily_target_bdt / 100,
+        requiredGrossBDT: requiredGrossTaka,
+      };
+    });
+  }, [fuelValues]);
 
   const handleSave = async () => {
     if (!hasChanges) {
@@ -537,6 +645,115 @@ export default function FareConfigScreen() {
         </View>
       ) : (
         <View style={{ gap: 20 }}>
+          {/* ── REV-6: Fare Engine Setup (G-2a ordering hint + G-2c derived rates + G-2d pending states) ── */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Fare Engine Setup</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Entry order: 1) Fuel prices 2) Tier data 3) Verify derived
+                  rates. Pending fields (backstop, zone fees) are
+                  Stage-0-gated by design.
+                </Text>
+              </View>
+            </View>
+
+            {/* G-2a: Fuel price banner */}
+            <View style={styles.infoBanner}>
+              <Text style={styles.infoBannerText}>
+                Enter fuel prices BEFORE entering tier data — rates are derived
+                from price × efficiency. If fuel prices change later, re-enter
+                tier data to refresh derived rates (automatic refresh ships with
+                the Stage 1 engine cutover).
+              </Text>
+            </View>
+
+            {/* Fuel prices display (read-only, sourced from platform_config) */}
+            <View style={{ marginTop: 12 }}>
+              <Text style={styles.fieldLabel}>Fuel Prices (BDT/L or BDT/m³)</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
+                {(
+                  [
+                    { key: "fuel_price_octane_bdt", label: "Octane (Car)" },
+                    { key: "fuel_price_petrol_bdt", label: "Petrol (Bike)" },
+                    { key: "fuel_price_cng_bdt", label: "CNG" },
+                  ] as const
+                ).map((f) => (
+                  <View key={f.key} style={styles.fieldRow}>
+                    <Text style={styles.fieldLabel}>{f.label}</Text>
+                    <Text style={styles.fuelValue}>
+                      {fuelValues[f.key] ?? "—"} BDT/L
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* G-2c: Derived required-gross per tier + spot-check prompt */}
+            <View style={{ marginTop: 16 }}>
+              <Text style={styles.fieldLabel}>Derived Tier Rates (spot-check)</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
+                {derivedTiers.map((tier) => (
+                  <View key={tier.label} style={styles.tierCard}>
+                    <Text style={styles.tierLabel}>{tier.label}</Text>
+                    <Text style={styles.tierValue}>
+                      ~৳{tier.requiredGrossBDT}/day
+                    </Text>
+                    <Text style={styles.tierDetail}>
+                      fuel ৳{formatPaisaTaka(tier.fuelPerKmPaisa)}/km + maint
+                      ৳{formatPaisaTaka(tier.maintPerKmPaisa)}/km + target
+                      ৳{tier.dailyTargetBDT}
+                    </Text>
+                    <Text style={styles.tierVehicleTypes}>
+                      {tier.vehicleTypes
+                        .map((v) =>
+                          VEHICLE_TYPES.find((vt) => vt.key === v)?.display_en ?? v,
+                        )
+                        .join(", ")}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.spotCheckPrompt}>
+                Spot-check: Bike required gross should land near BDT ~1,680/day
+                (owner 275 + target 850 + fuel/maintenance ~460). If the derived
+                number is far off, re-check the entered values.
+              </Text>
+            </View>
+
+            {/* G-2d: Pending-by-design field states */}
+            <View style={{ marginTop: 16 }}>
+              <Text style={styles.fieldLabel}>Stage-Gated Fields</Text>
+              <View style={{ gap: 8, marginTop: 8 }}>
+                <View style={styles.pendingFieldRow}>
+                  <Text style={styles.pendingFieldLabel}>Backstop Cap (% of fare)</Text>
+                  <View style={styles.pendingTag}>
+                    <Text style={styles.pendingTagText}>
+                      Requires Stage 0 calibration data — do not set a default.
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.pendingFieldRow}>
+                  <Text style={styles.pendingFieldLabel}>Churn Alarm Thresholds</Text>
+                  <View style={styles.pendingTag}>
+                    <Text style={styles.pendingTagText}>
+                      Monitor thresholds — inactive until Stage 0 dashboard.
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.pendingFieldRow}>
+                  <Text style={styles.pendingFieldLabel}>Zone-Fee Schedule</Text>
+                  <View style={styles.pendingTag}>
+                    <Text style={styles.pendingTagText}>
+                      No zones learned yet — schedule unlocks after Stage 0
+                      recovery data.
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+
           {renderSection(
             "Pickup Fee Configuration",
             "Measurement toggle, fee master toggle, free radii, caps, and trace settings.",
@@ -683,6 +900,97 @@ const styles = StyleSheet.create({
     fontFamily: "Jakarta-Regular",
     fontSize: 11,
     lineHeight: 16,
+  },
+  // REV-6: Fare engine setup section
+  infoBanner: {
+    backgroundColor: "rgba(12, 194, 95, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(12, 194, 95, 0.25)",
+    borderRadius: 8,
+    padding: 12,
+  },
+  infoBannerText: {
+    color: colors.primary,
+    fontFamily: "Jakarta-Regular",
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  fuelValue: {
+    color: colors.adminAccent,
+    fontFamily: "Jakarta-Bold",
+    fontSize: 13,
+  },
+  tierCard: {
+    backgroundColor: "#181A20",
+    borderWidth: 1,
+    borderColor: "#2A2D35",
+    borderRadius: 8,
+    padding: 12,
+    width: 220,
+    gap: 4,
+  },
+  tierLabel: {
+    color: colors.textSecondaryDark,
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  tierValue: {
+    color: colors.adminAccent,
+    fontFamily: "Jakarta-Bold",
+    fontSize: 18,
+  },
+  tierDetail: {
+    color: colors.textDisabledDark,
+    fontFamily: "Jakarta-Regular",
+    fontSize: 11,
+    marginTop: 2,
+  },
+  tierVehicleTypes: {
+    color: colors.textDisabledDark,
+    fontFamily: "Jakarta-Regular",
+    fontSize: 10,
+    marginTop: 4,
+    fontStyle: "italic",
+  },
+  spotCheckPrompt: {
+    color: colors.textSecondaryDark,
+    fontFamily: "Jakarta-Regular",
+    fontSize: 12,
+    marginTop: 10,
+    lineHeight: 18,
+  },
+  // G-2d: Pending-by-design field states
+  pendingFieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#181A20",
+    borderWidth: 1,
+    borderColor: "#2A2D35",
+    borderRadius: 8,
+    padding: 12,
+    gap: 12,
+  },
+  pendingFieldLabel: {
+    color: colors.textSecondaryDark,
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 12,
+    flexShrink: 1,
+  },
+  pendingTag: {
+    backgroundColor: "rgba(255, 183, 77, 0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 183, 77, 0.25)",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  pendingTagText: {
+    color: colors.amber,
+    fontFamily: "Jakarta-Regular",
+    fontSize: 11,
   },
   saveBtn: {
     backgroundColor: colors.adminAccent,
