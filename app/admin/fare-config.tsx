@@ -515,8 +515,8 @@ export default function FareConfigScreen() {
       if (adminEff > 0) {
         params.fuel_efficiency_km_per_unit = adminEff;
       }
-      // Compute derived rates.
-      const rates = tier.compute(params);
+      // Compute derived rates (km_rate/time_rate not used directly — required_gross computed below).
+      const _rates = tier.compute(params);
       // required_gross ≈ (fuel/km + maint/km + joma/km) × daily_km + target (paisa)
       const fuelPerKm = Math.round(
         (params.fuel_price_bdt_per_unit * 100) /
@@ -872,40 +872,135 @@ export default function FareConfigScreen() {
                 <Text style={styles.fieldLabel}>Tier Data</Text>
                 <Text style={styles.helpText}>
                   Per-category fuel efficiency, driver maintenance, daily target,
-                  and expected billed minutes.
+                  expected billed minutes, and joma recovery.
                 </Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
-                  {(
-                    [
-                      { cat: "bike", label: "Bike", effKey: "fuel_efficiency_bike_basic" },
-                      { cat: "cng", label: "CNG", effKey: "fuel_efficiency_cng" },
-                      { cat: "car", label: "Car", effKey: "fuel_efficiency_car_compact" },
-                    ] as const
-                  ).map(({ cat, label, effKey }) => (
-                    <View key={cat} style={styles.tierDataCard}>
-                      <Text style={styles.fieldLabel}>{label}</Text>
-                      {(
-                        [
-                          { fieldKey: effKey, label: "Efficiency (km/L)" },
-                          { fieldKey: MAINT_KEY[cat], label: "Maint (BDT/km)" },
-                          { fieldKey: DAILY_TARGET_KEY[cat], label: "Daily Target (BDT)" },
-                          { fieldKey: BILLED_MINUTES_KEY[cat], label: "Billed Minutes" },
-                        ]
-                      ).map((f) => (
-                        <View key={f.fieldKey} style={styles.fieldRow}>
-                          <Text style={styles.fieldLabel}>{f.label}</Text>
-                          <TextInput
-                            style={styles.input}
-                            value={fuelEdits[f.fieldKey] ?? ""}
-                            onChangeText={(v) => setFuelEdits((p) => ({ ...p, [f.fieldKey]: v }))}
-                            placeholder="0"
-                            placeholderTextColor={colors.textDisabledDark}
-                            keyboardType="decimal-pad"
-                          />
-                        </View>
-                      ))}
+                  {/* Bike card — with per-tier joma overrides */}
+                  <View style={styles.tierDataCard}>
+                    <Text style={styles.fieldLabel}>Bike</Text>
+                    {(
+                      [
+                        { fieldKey: "fuel_efficiency_bike_basic", label: "Efficiency (km/L)" },
+                        { fieldKey: MAINT_KEY["bike"], label: "Maint (BDT/km)" },
+                        { fieldKey: DAILY_TARGET_KEY["bike"], label: "Daily Target (BDT)" },
+                        { fieldKey: BILLED_MINUTES_KEY["bike"], label: "Billed Minutes" },
+                      ]
+                    ).map((f) => (
+                      <View key={f.fieldKey} style={styles.fieldRow}>
+                        <Text style={styles.fieldLabel}>{f.label}</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={fuelEdits[f.fieldKey] ?? ""}
+                          onChangeText={(v) => setFuelEdits((p) => ({ ...p, [f.fieldKey]: v }))}
+                          placeholder="0"
+                          placeholderTextColor={colors.textDisabledDark}
+                          keyboardType="decimal-pad"
+                        />
+                      </View>
+                    ))}
+                    <View style={{ height: 1, backgroundColor: "#2A2D35", marginVertical: 4 }} />
+                    <Text style={styles.fieldLabel}>Joma Recovery (BDT/month)</Text>
+                    {(
+                      [
+                        { fieldKey: "joma_monthly_bdt_bike_eco", label: "Eco (bike_basic)" },
+                        { fieldKey: "joma_monthly_bdt_bike_std", label: "Standard (bike_standard)" },
+                        { fieldKey: "joma_monthly_bdt_bike_prem", label: "Premium (bike_plus)" },
+                      ]
+                    ).map((f) => (
+                      <View key={f.fieldKey} style={styles.fieldRow}>
+                        <Text style={styles.fieldLabel}>{f.label}</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={fuelEdits[f.fieldKey] ?? ""}
+                          onChangeText={(v) => setFuelEdits((p) => ({ ...p, [f.fieldKey]: v }))}
+                          placeholder="0"
+                          placeholderTextColor={colors.textDisabledDark}
+                          keyboardType="decimal-pad"
+                        />
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* CNG card — with joma daily */}
+                  <View style={styles.tierDataCard}>
+                    <Text style={styles.fieldLabel}>CNG</Text>
+                    {(
+                      [
+                        { fieldKey: "fuel_efficiency_cng", label: "Efficiency (km/m³)" },
+                        { fieldKey: MAINT_KEY["cng"], label: "Maint (BDT/km)" },
+                        { fieldKey: DAILY_TARGET_KEY["cng"], label: "Daily Target (BDT)" },
+                        { fieldKey: BILLED_MINUTES_KEY["cng"], label: "Billed Minutes" },
+                      ]
+                    ).map((f) => (
+                      <View key={f.fieldKey} style={styles.fieldRow}>
+                        <Text style={styles.fieldLabel}>{f.label}</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={fuelEdits[f.fieldKey] ?? ""}
+                          onChangeText={(v) => setFuelEdits((p) => ({ ...p, [f.fieldKey]: v }))}
+                          placeholder="0"
+                          placeholderTextColor={colors.textDisabledDark}
+                          keyboardType="decimal-pad"
+                        />
+                      </View>
+                    ))}
+                    <View style={{ height: 1, backgroundColor: "#2A2D35", marginVertical: 4 }} />
+                    <View style={styles.fieldRow}>
+                      <Text style={styles.fieldLabel}>Joma (BDT/day)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={fuelEdits["joma_daily_bdt_cng"] ?? ""}
+                        onChangeText={(v) => setFuelEdits((p) => ({ ...p, joma_daily_bdt_cng: v }))}
+                        placeholder="0"
+                        placeholderTextColor={colors.textDisabledDark}
+                        keyboardType="decimal-pad"
+                      />
                     </View>
-                  ))}
+                  </View>
+
+                  {/* Car card — no joma (back-solve) */}
+                  <View style={styles.tierDataCard}>
+                    <Text style={styles.fieldLabel}>Car</Text>
+                    {(
+                      [
+                        { fieldKey: "fuel_efficiency_car_compact", label: "Efficiency (km/L)" },
+                        { fieldKey: MAINT_KEY["car"], label: "Maint (BDT/km)" },
+                        { fieldKey: DAILY_TARGET_KEY["car"], label: "Daily Target (BDT)" },
+                        { fieldKey: BILLED_MINUTES_KEY["car"], label: "Billed Minutes" },
+                      ]
+                    ).map((f) => (
+                      <View key={f.fieldKey} style={styles.fieldRow}>
+                        <Text style={styles.fieldLabel}>{f.label}</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={fuelEdits[f.fieldKey] ?? ""}
+                          onChangeText={(v) => setFuelEdits((p) => ({ ...p, [f.fieldKey]: v }))}
+                          placeholder="0"
+                          placeholderTextColor={colors.textDisabledDark}
+                          keyboardType="decimal-pad"
+                        />
+                      </View>
+                    ))}
+                    <Text style={styles.helpText}>
+                      Car joma uses 50% net back-solve — no separate field.
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Shared: operating days per month */}
+                <View style={{ marginTop: 8, width: 320, maxWidth: "100%" }}>
+                  <Text style={styles.fieldLabel}>Operating Days per Month</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={fuelEdits["joma_operating_days_per_month"] ?? ""}
+                    onChangeText={(v) => setFuelEdits((p) => ({ ...p, joma_operating_days_per_month: v }))}
+                    placeholder="26"
+                    placeholderTextColor={colors.textDisabledDark}
+                    keyboardType="decimal-pad"
+                  />
+                  <Text style={styles.helpText}>
+                    Used to convert monthly joma to per-km rate. Default 26.
+                  </Text>
                 </View>
               </View>
             )}
