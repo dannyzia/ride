@@ -150,9 +150,9 @@ const ALLOWED_KEYS = new Set([
   'expected_billed_minutes_car',
 
   // Fare engine — joma recovery (taka-scale)
-  'joma_monthly_bdt_bike_eco',
-  'joma_monthly_bdt_bike_std',
-  'joma_monthly_bdt_bike_prem',
+  'joma_bike_eco_monthly_bdt',
+  'joma_bike_std_monthly_bdt',
+  'joma_bike_prem_monthly_bdt',
   'joma_daily_bdt_cng',
   'joma_operating_days_per_month',
 ]);

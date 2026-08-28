@@ -100,21 +100,19 @@ describe('Derived required-gross — all 9 vehicle types', () => {
 
       const { km_rate, time_rate } = compute(params);
 
-      // Required gross = (fuel/km + maint/km + joma/km) × daily_km + target
-      const fuelPerKm = Math.round(
-        (params.fuel_price_bdt_per_unit * 100) / params.fuel_efficiency_km_per_unit,
-      );
-      const jomaPerKmVal =
+      // AU-7: All params are taka. Compute required_gross in taka.
+      const fuelPerKmTaka =
+        params.fuel_efficiency_km_per_unit > 0
+          ? params.fuel_price_bdt_per_unit / params.fuel_efficiency_km_per_unit
+          : 0;
+      const jomaPerKmTaka =
         cat === 'car'
           ? 0
-          : Math.round(
-              ((params.joma_monthly_bdt ?? 0) * 100) /
-                ((params.operating_days_per_month ?? 26) * (params.estimated_daily_km ?? 1)),
-            );
-      const totalPerKm = fuelPerKm + params.driver_maint_per_km + jomaPerKmVal;
+          : (params.joma_monthly_bdt ?? 0) /
+            ((params.operating_days_per_month ?? 26) * (params.estimated_daily_km ?? 1));
+      const totalPerKmTaka = fuelPerKmTaka + params.driver_maint_per_km + jomaPerKmTaka;
       const dailyKm = params.estimated_daily_km ?? 100;
-      const requiredGrossPaisa = totalPerKm * dailyKm + params.daily_target_bdt;
-      const requiredGrossTaka = Math.round(requiredGrossPaisa / 100);
+      const requiredGrossTaka = totalPerKmTaka * dailyKm + params.daily_target_bdt;
 
       // Sanity: required gross must be positive and finite
       expect(requiredGrossTaka).toBeGreaterThan(0);
@@ -124,8 +122,13 @@ describe('Derived required-gross — all 9 vehicle types', () => {
       expect(km_rate).toBeGreaterThan(0);
       expect(time_rate).toBeGreaterThan(0);
 
+      // AU-7 anchor: bike_std required-gross must land ~1,600–2,000 BDT/day
+      if (vt === 'bike_standard') {
+        expect(requiredGrossTaka).toBeGreaterThanOrEqual(1600);
+        expect(requiredGrossTaka).toBeLessThanOrEqual(2000);
+      }
+
       // The required gross must be consistent: higher fuel price → higher gross
-      // (This verifies the formula is monotonic in fuel price.)
       const paramsHi = getDefaultFuelParams(vt);
       paramsHi.fuel_price_bdt_per_unit *= 2;
       const ratesHi = compute(paramsHi);
@@ -213,18 +216,62 @@ describe('Fuel config keys — consistency with tierRateDerivation', () => {
     }
   });
 
-  test('bike default fuel price is 14000 paisa (140 BDT/L petrol)', () => {
+  test('bike default fuel price is 140 taka/L petrol', () => {
     const params = getDefaultFuelParams('bike_basic');
-    expect(params.fuel_price_bdt_per_unit).toBe(14000);
+    expect(params.fuel_price_bdt_per_unit).toBe(140);
   });
 
-  test('cng default fuel price is 4300 paisa (43 BDT/m³)', () => {
+  test('cng default fuel price is 43 taka/m³', () => {
     const params = getDefaultFuelParams('cng');
-    expect(params.fuel_price_bdt_per_unit).toBe(4300);
+    expect(params.fuel_price_bdt_per_unit).toBe(43);
   });
 
-  test('car default fuel price is 14500 paisa (145 BDT/L octane)', () => {
+  test('car default fuel price is 145 taka/L octane', () => {
     const params = getDefaultFuelParams('car_compact');
-    expect(params.fuel_price_bdt_per_unit).toBe(14500);
+    expect(params.fuel_price_bdt_per_unit).toBe(145);
+  });
+});
+
+// ── AU-7: Units consistency — config-default → displayed-value ──
+
+describe('Units consistency — config-default to displayed-value for all 9 types', () => {
+  test.each(VEHICLE_TYPES.map((v) => v.key))(
+    '%s: all TierFuelParams money fields are taka (not paisa)',
+    (vt) => {
+      const params = getDefaultFuelParams(vt);
+      // fuel_price: taka (should be 1–500, not 100–50000)
+      expect(params.fuel_price_bdt_per_unit).toBeGreaterThan(1);
+      expect(params.fuel_price_bdt_per_unit).toBeLessThan(500);
+      // driver_maint: taka (should be 0.01–20, not 1–2000)
+      expect(params.driver_maint_per_km).toBeGreaterThan(0.01);
+      expect(params.driver_maint_per_km).toBeLessThan(20);
+      // daily_target: taka (should be 100–10000, not 10000–1000000)
+      expect(params.daily_target_bdt).toBeGreaterThan(100);
+      expect(params.daily_target_bdt).toBeLessThan(10000);
+      // joma: taka (should be 100–50000, not 10000–5000000)
+      const cat = PICKUP_CATEGORY[vt];
+      if (cat === 'bike') {
+        expect(params.joma_monthly_bdt).toBeGreaterThanOrEqual(100);
+        expect(params.joma_monthly_bdt).toBeLessThanOrEqual(50000);
+      } else if (cat === 'cng') {
+        expect(params.joma_daily_bdt).toBeGreaterThanOrEqual(100);
+        expect(params.joma_daily_bdt).toBeLessThanOrEqual(50000);
+      }
+    },
+  );
+
+  test('fuelCostPerKm converts taka to paisa correctly', () => {
+    // fuel=140 taka, eff=45 → 311 paisa/km; maint=55; joma=(8000*100)/(26*100)=308
+    // km_rate = 311 + 55 + 308 = 674 paisa/km
+    const rates = computeBikeOrCngRates(getDefaultFuelParams('bike_basic'));
+    expect(rates.km_rate).toBeGreaterThan(600);
+    expect(rates.km_rate).toBeLessThan(800);
+  });
+
+  test('time_rate converts taka target to paisa per minute', () => {
+    // 1100 taka/day ÷ 240 min = 4.58 taka/min = 458 paisa/min
+    const rates = computeBikeOrCngRates(getDefaultFuelParams('bike_basic'));
+    expect(rates.time_rate).toBeGreaterThan(400);
+    expect(rates.time_rate).toBeLessThan(600);
   });
 });

@@ -70,13 +70,15 @@ describe('T-A7 — bike/CNG rate derivation', () => {
     const params = getDefaultFuelParams('bike_standard');
     const { km_rate, time_rate } = computeBikeOrCngRates(params);
 
-    // REV-4: parking removed (owner-borne, recovered inside joma)
-    // fuel = fuelCostPerKm(14000, 45) = round(14000 * 100 / 45) = 31111
-    // maint = 55, joma = jomaPerKmFromParams(8000/month, 26 days, 100 km) = round(8000*100/(26*100)) = 308
+    // AU-7: params are taka. Engine converts maint to paisa internally.
+    // fuel = fuelCostPerKm(140, 45) = round(140 * 100 / 45) = 311 paisa
+    // maint = round(0.55 * 100) = 55 paisa
+    // joma = round(8000 * 100 / (26 * 100)) = 308 paisa
     const expectedFuel = fuelCostPerKm(params.fuel_price_bdt_per_unit, params.fuel_efficiency_km_per_unit);
     const expectedJoma = Math.round((8000 * 100) / (26 * 100));
-    expect(km_rate).toBe(expectedFuel + params.driver_maint_per_km + expectedJoma);
-    // time = round(110000 * 100 / 240) = round(45833) = 45833
+    const expectedMaint = Math.round(params.driver_maint_per_km * 100);
+    expect(km_rate).toBe(expectedFuel + expectedMaint + expectedJoma);
+    // time = round(1100 taka * 100 / 240 min) = 458 paisa/min
     expect(time_rate).toBe(Math.round((params.daily_target_bdt * 100) / params.expected_billed_minutes));
 
     expect(km_rate).toBeGreaterThan(0);
@@ -109,24 +111,24 @@ describe('T-A7 — car rate derivation', () => {
 describe('T-A7 — getDefaultFuelParams', () => {
   test('bike_standard returns bike defaults', () => {
     const p = getDefaultFuelParams('bike_standard');
-    expect(p.fuel_price_bdt_per_unit).toBe(14000); // REV-4: 140 BDT/L petrol
+    expect(p.fuel_price_bdt_per_unit).toBe(140); // REV-4: 140 BDT/L petrol
     expect(p.fuel_efficiency_km_per_unit).toBe(45); // bike category default
   });
 
   test('cng returns CNG defaults', () => {
     const p = getDefaultFuelParams('cng');
-    expect(p.fuel_price_bdt_per_unit).toBe(4300);
+    expect(p.fuel_price_bdt_per_unit).toBe(43);
     expect(p.fuel_efficiency_km_per_unit).toBe(20);
   });
 
   test('car_economy returns car defaults', () => {
     const p = getDefaultFuelParams('car_economy');
-    expect(p.fuel_price_bdt_per_unit).toBe(14500);
+    expect(p.fuel_price_bdt_per_unit).toBe(145);
     expect(p.fuel_efficiency_km_per_unit).toBe(12);
   });
 
   test('unknown vehicle type falls back to bike', () => {
     const p = getDefaultFuelParams('unknown_type');
-    expect(p.fuel_price_bdt_per_unit).toBe(14000); // REV-4: bike default
+    expect(p.fuel_price_bdt_per_unit).toBe(140); // REV-4: bike default
   });
 });

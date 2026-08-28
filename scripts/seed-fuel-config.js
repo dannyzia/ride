@@ -30,15 +30,15 @@ const KEYS = [
   ['fuel_efficiency_car_premium',   '10'],
   ['fuel_efficiency_car_xl',        '13'],
 
-  // ── Driver maintenance per km (BDT) ──
-  ['driver_maint_per_km_bike', '0.55'],  // 55 paisa/km
-  ['driver_maint_per_km_cng',  '1.05'],  // 105 paisa/km
-  ['driver_maint_per_km_car',  '3.45'],  // 345 paisa/km
+  // ── Driver maintenance per km (paisa, canonical from fareFrameworkConfig.ts) ──
+  ['driver_maint_per_km_bike', '55'],    // 55 paisa/km = 0.55 taka
+  ['driver_maint_per_km_cng',  '105'],   // 105 paisa/km = 1.05 taka
+  ['driver_maint_per_km_car',  '345'],   // 345 paisa/km = 3.45 taka
 
-  // ── Daily target per tier (BDT) ──
-  ['daily_target_bdt_bike', '1100'],     // 1100 BDT/day
-  ['daily_target_bdt_cng',  '1200'],     // 1200 BDT/day
-  ['daily_target_bdt_car',  '1250'],     // 1250 BDT/day
+  // ── Daily target per tier (paisa, canonical from fareFrameworkConfig.ts) ──
+  ['daily_target_bdt_bike', '110000'],   // 110000 paisa = 1100 taka/day
+  ['daily_target_bdt_cng',  '120000'],   // 120000 paisa = 1200 taka/day
+  ['daily_target_bdt_car',  '125000'],   // 125000 paisa = 1250 taka/day
 
   // ── Expected billed minutes per tier ──
   ['expected_billed_minutes_bike', '240'],
@@ -46,9 +46,9 @@ const KEYS = [
   ['expected_billed_minutes_car',  '200'],
 
   // ── Joma recovery (BDT) ──
-  ['joma_monthly_bdt_bike_eco',  '8000'],   // bike_basic
-  ['joma_monthly_bdt_bike_std',  '10000'],  // bike_standard
-  ['joma_monthly_bdt_bike_prem', '12000'],  // bike_plus
+  ['joma_bike_eco_monthly_bdt',  '8000'],   // bike_basic
+  ['joma_bike_std_monthly_bdt',  '10000'],  // bike_standard
+  ['joma_bike_prem_monthly_bdt', '12000'],  // bike_plus
   ['joma_daily_bdt_cng',         '800'],    // CNG (BDT/day)
 
   // ── Shared ──

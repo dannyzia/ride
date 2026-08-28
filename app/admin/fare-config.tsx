@@ -311,9 +311,9 @@ const FUEL_CONFIG_KEYS = [
   "expected_billed_minutes_cng",
   "expected_billed_minutes_car",
   // Joma recovery
-  "joma_monthly_bdt_bike_eco",
-  "joma_monthly_bdt_bike_std",
-  "joma_monthly_bdt_bike_prem",
+  "joma_bike_eco_monthly_bdt",
+  "joma_bike_std_monthly_bdt",
+  "joma_bike_prem_monthly_bdt",
   "joma_daily_bdt_cng",
   "joma_operating_days_per_month",
 ] as const;
@@ -373,9 +373,9 @@ function jomaKeyForType(vt: VehicleTypeEnum): string | null {
   const cat = PICKUP_CATEGORY[vt];
   if (cat === "cng") return "joma_daily_bdt_cng";
   if (cat === "bike") {
-    if (vt === "bike_plus") return "joma_monthly_bdt_bike_prem";
-    if (vt === "bike_standard") return "joma_monthly_bdt_bike_std";
-    return "joma_monthly_bdt_bike_eco";
+    if (vt === "bike_plus") return "joma_bike_prem_monthly_bdt";
+    if (vt === "bike_standard") return "joma_bike_std_monthly_bdt";
+    return "joma_bike_eco_monthly_bdt";
   }
   return null; // car — back-solve, no joma term
 }
@@ -479,27 +479,28 @@ export default function FareConfigScreen() {
     return VEHICLE_TIER_DISPLAY.map((tier) => {
       const cat = tier.category;
       const params = getDefaultFuelParams(tier.vehicleType);
-      // Override fuel price from admin-entered value.
+      // AU-7: All params are taka. DB stores paisa for maint/target — convert at boundary.
+      // Fuel price: DB stores taka (140), engine expects taka — pass directly.
       const adminFuel = Number(fuelEdits[FUEL_PRICE_KEY[cat]] ?? 0);
       if (adminFuel > 0) {
-        params.fuel_price_bdt_per_unit = Math.round(adminFuel * 100);
+        params.fuel_price_bdt_per_unit = adminFuel;
       }
-      // Override maint from admin.
-      const adminMaint = Number(fuelEdits[MAINT_KEY[cat]] ?? 0);
-      if (adminMaint > 0) {
-        params.driver_maint_per_km = Math.round(adminMaint * 100);
+      // Maint: DB stores paisa (55), engine expects taka — convert paisa→taka.
+      const adminMaintPaisa = Number(fuelEdits[MAINT_KEY[cat]] ?? 0);
+      if (adminMaintPaisa > 0) {
+        params.driver_maint_per_km = adminMaintPaisa / 100;
       }
-      // Override daily target from admin.
-      const adminTarget = Number(fuelEdits[DAILY_TARGET_KEY[cat]] ?? 0);
-      if (adminTarget > 0) {
-        params.daily_target_bdt = Math.round(adminTarget * 100);
+      // Daily target: DB stores paisa (110000), engine expects taka — convert paisa→taka.
+      const adminTargetPaisa = Number(fuelEdits[DAILY_TARGET_KEY[cat]] ?? 0);
+      if (adminTargetPaisa > 0) {
+        params.daily_target_bdt = adminTargetPaisa / 100;
       }
       // Override billed minutes from admin.
       const adminBilled = Number(fuelEdits[BILLED_MINUTES_KEY[cat]] ?? 0);
       if (adminBilled > 0) {
         params.expected_billed_minutes = adminBilled;
       }
-      // Override joma from admin.
+      // Joma: DB stores taka (8000), engine expects taka — pass directly.
       const jomaK = jomaKeyForType(tier.vehicleType);
       if (jomaK) {
         const adminJoma = Number(fuelEdits[jomaK] ?? 0);
@@ -515,33 +516,28 @@ export default function FareConfigScreen() {
       if (adminEff > 0) {
         params.fuel_efficiency_km_per_unit = adminEff;
       }
-      // Compute derived rates (km_rate/time_rate not used directly — required_gross computed below).
-      const _rates = tier.compute(params);
-      // required_gross ≈ (fuel/km + maint/km + joma/km) × daily_km + target (paisa)
-      const fuelPerKm = Math.round(
-        (params.fuel_price_bdt_per_unit * 100) /
-          params.fuel_efficiency_km_per_unit,
-      );
-      const jomaPerKmVal =
+      // required_gross in taka (engine params are all taka, engine converts internally).
+      const fuelPerKmTaka =
+        params.fuel_efficiency_km_per_unit > 0
+          ? params.fuel_price_bdt_per_unit / params.fuel_efficiency_km_per_unit
+          : 0;
+      const jomaPerKmTaka =
         cat === "car"
           ? 0
-          : Math.round(
-              ((params.joma_monthly_bdt ?? 0) * 100) /
-                ((params.operating_days_per_month ?? 26) *
-                  (params.estimated_daily_km ?? 1)),
-            );
-      const totalPerKm = fuelPerKm + params.driver_maint_per_km + jomaPerKmVal;
+          : (params.joma_monthly_bdt ?? 0) /
+            ((params.operating_days_per_month ?? 26) *
+              (params.estimated_daily_km ?? 1));
+      const totalPerKmTaka = fuelPerKmTaka + params.driver_maint_per_km + jomaPerKmTaka;
       const dailyKm = params.estimated_daily_km ?? 100;
-      const requiredGrossPaisa = totalPerKm * dailyKm + params.daily_target_bdt;
-      const requiredGrossTaka = Math.round(requiredGrossPaisa / 100);
+      const requiredGrossTaka = totalPerKmTaka * dailyKm + params.daily_target_bdt;
       return {
         vehicleType: tier.vehicleType,
         label: tier.label,
         category: cat,
-        fuelPerKmPaisa: fuelPerKm,
-        maintPerKmPaisa: params.driver_maint_per_km,
-        dailyTargetBDT: params.daily_target_bdt / 100,
-        requiredGrossBDT: requiredGrossTaka,
+        fuelPerKmTaka: Math.round(fuelPerKmTaka * 100) / 100,
+        maintPerKmTaka: Math.round(params.driver_maint_per_km * 100) / 100,
+        dailyTargetBDT: params.daily_target_bdt,
+        requiredGrossBDT: Math.round(requiredGrossTaka),
       };
     });
   }, [fuelEdits]);
@@ -560,9 +556,9 @@ export default function FareConfigScreen() {
       lines.push(`${k},${fuelEdits[k] ?? ""}`);
     }
     lines.push("");
-    lines.push("vehicle_type,required_gross_bdt_per_day,fuel_per_km_paisa,maint_per_km_paisa,daily_target_bdt");
+    lines.push("vehicle_type,required_gross_taka_per_day,fuel_per_km_taka,maint_per_km_taka,daily_target_taka");
     for (const vt of derivedVehicles) {
-      lines.push(`${vt.vehicleType},${vt.requiredGrossBDT},${vt.fuelPerKmPaisa},${vt.maintPerKmPaisa},${vt.dailyTargetBDT}`);
+      lines.push(`${vt.vehicleType},${vt.requiredGrossBDT},${vt.fuelPerKmTaka},${vt.maintPerKmTaka},${vt.dailyTargetBDT}`);
     }
     const csv = lines.join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -931,9 +927,9 @@ export default function FareConfigScreen() {
                     <Text style={styles.fieldLabel}>Joma Recovery (BDT/month)</Text>
                     {(
                       [
-                        { fieldKey: "joma_monthly_bdt_bike_eco", label: "Eco (bike_basic)" },
-                        { fieldKey: "joma_monthly_bdt_bike_std", label: "Standard (bike_standard)" },
-                        { fieldKey: "joma_monthly_bdt_bike_prem", label: "Premium (bike_plus)" },
+                        { fieldKey: "joma_bike_eco_monthly_bdt", label: "Eco (bike_basic)" },
+                        { fieldKey: "joma_bike_std_monthly_bdt", label: "Standard (bike_standard)" },
+                        { fieldKey: "joma_bike_prem_monthly_bdt", label: "Premium (bike_plus)" },
                       ]
                     ).map((f) => (
                       <View key={f.fieldKey} style={styles.fieldRow}>
@@ -1067,8 +1063,8 @@ export default function FareConfigScreen() {
                       ~৳{vt.requiredGrossBDT}/day
                     </Text>
                     <Text style={styles.vehicleTypeDetail}>
-                      fuel ৳{formatPaisaTaka(vt.fuelPerKmPaisa)}/km · maint
-                      ৳{formatPaisaTaka(vt.maintPerKmPaisa)}/km · target
+                      fuel ৳{vt.fuelPerKmTaka.toFixed(2)}/km · maint
+                      ৳{vt.maintPerKmTaka.toFixed(2)}/km · target
                       ৳{vt.dailyTargetBDT}
                     </Text>
                   </View>
