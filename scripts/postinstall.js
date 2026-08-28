@@ -101,8 +101,20 @@ function installShims() {
 }
 
 // ---------------------------------------------------------------------------
+// Step 3: install git hooks (best-effort; not a fatal error)
+// ---------------------------------------------------------------------------
+function installGitHooks() {
+  try {
+    require("./install-hooks.js");
+  } catch (err) {
+    log("warning: git hook install skipped:", err.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Run
 // ---------------------------------------------------------------------------
 applyPatches();
 installShims();
+installGitHooks();
 log("done");

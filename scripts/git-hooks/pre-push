@@ -1,0 +1,21 @@
+#!/bin/sh
+# Pre-push hook — full web export gate (~2-3 min)
+# Blocks push if expo export fails (catches native module breakage).
+#
+# Install: node scripts/install-hooks.js
+
+set -e
+
+echo "⏳ Pre-push: web export check (~2-3 min)..."
+
+npx expo export --platform web
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ Web export failed — push blocked."
+  echo "   Native module breakage detected. Check the error above."
+  echo "   If the failing module is native-only, create a .web.ts platform-split."
+  echo "   See: utils/maplibreLoader.web.ts for the pattern."
+  exit 1
+fi
+
+echo "✅ Web export passed."

@@ -6,7 +6,7 @@ services:
     branch: implementation
     plan: free
     region: singapore
-    buildCommand: npm install && npx expo export --platform web
+    buildCommand: npm ci && npx expo export --platform web
     startCommand: node server.js
     autoDeploy: true
     # ───────────────────────────────────────────────────────────

@@ -1,0 +1,27 @@
+#!/bin/sh
+# Pre-commit hook — fast gate: lint + tsc (~10-15s)
+# Blocks commit on errors. Full web export runs in pre-push hook.
+#
+# Install: node scripts/install-hooks.js
+
+set -e
+
+echo "⏳ Pre-commit: lint + tsc..."
+
+# Lint (zero errors)
+echo "  → Linting..."
+npx cross-env ESLINT_USE_FLAT_CONFIG=false eslint . --quiet
+if [ $? -ne 0 ]; then
+  echo "❌ Lint failed — commit blocked."
+  exit 1
+fi
+
+# Type check
+echo "  → Type checking..."
+npx tsc --noEmit
+if [ $? -ne 0 ]; then
+  echo "❌ Type check failed — commit blocked."
+  exit 1
+fi
+
+echo "✅ Pre-commit passed."
