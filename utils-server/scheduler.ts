@@ -1198,8 +1198,8 @@ export function startScheduler(): void {
                 SELECT COALESCE(SUM(duration_minutes), 0) / 60.0 as hours
                 FROM driver_online_sessions
                 WHERE driver_id = ${row.driverId}
-                  AND went_online_at >= ${incentive.starts_at}
-                  AND (went_offline_at IS NULL OR went_offline_at <= ${incentive.ends_at})
+                  AND went_online_at >= ${incentive.starts_at.toISOString()}
+                  AND (went_offline_at IS NULL OR went_offline_at <= ${incentive.ends_at.toISOString()})
               `);
               newProgress = Number(hours ?? 0);
               break;
@@ -1225,8 +1225,8 @@ export function startScheduler(): void {
                 	ROW_NUMBER() OVER (PARTITION BY outcome ORDER BY sent_at) as grp
                   FROM dispatch_offers
                   WHERE driver_id = ${row.driverId}
-                    AND sent_at >= ${incentive.starts_at}
-                    AND sent_at <= ${incentive.ends_at}
+                    AND sent_at >= ${incentive.starts_at.toISOString()}
+                    AND sent_at <= ${incentive.ends_at.toISOString()}
                 )
                 SELECT MAX(COUNT(*)) OVER (PARTITION BY grp) as "maxStreak"
                 FROM ordered

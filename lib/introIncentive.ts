@@ -61,7 +61,7 @@ export async function getIntroDiscount(
       and(
         eq(rides.zone_id, zoneId),
         sql`${rides.applied_discount_type} = 'intro'`,
-        sql`${rides.created_at} >= ${dayStart} AND ${rides.created_at} < ${dayEnd}`,
+        sql`${rides.created_at} >= ${dayStart.toISOString()} AND ${rides.created_at} < ${dayEnd.toISOString()}`,
       ),
     );
   const dailySpent = Number(spent ?? 0);
