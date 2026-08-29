@@ -127,7 +127,7 @@ export default function HomeScreen() {
   const [requesting, setRequesting] = useState(false);
 
   const isDark = useIsDark();
-  const { language, setTheme } = useAppearance();
+  const { language } = useAppearance();
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -715,13 +715,6 @@ export default function HomeScreen() {
         <Ionicons name="alert-circle" size={20} color={colors.white} />
       </TouchableOpacity>
 
-      {/* Theme toggle */}
-      <TouchableOpacity
-        style={[styles.themeToggleBtn, { backgroundColor: surfaceBg, borderColor: borderColor }]}
-        onPress={() => setTheme(isDark ? "light" : "dark")}
-      >
-        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
-      </TouchableOpacity>
 
 
       {/* Bottom Sheet (custom absolute-positioned sheet, no third-party sheet lib) */}
@@ -1050,23 +1043,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     zIndex: 100,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  themeToggleBtn: {
-    position: "absolute",
-    top: 60,
-    right: 72,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 100,
-    borderWidth: 1,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,

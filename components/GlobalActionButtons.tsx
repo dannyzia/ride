@@ -15,7 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, usePathname } from "expo-router";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { colors, spacing, radii } from "@/theme/goRide";
 import Constants from "expo-constants";
 import * as Location from "expo-location";
@@ -253,6 +253,13 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
 
   const isCooldownActive = cooldownRemaining > 0;
 
+  // Theme toggle
+  const { theme, setTheme } = useAppearance();
+
+  const toggleTheme = useCallback(() => {
+    setTheme(isDark ? "light" : "dark");
+  }, [isDark, setTheme]);
+
   // Admin gets hamburger only — no SOS
   const showSos = role !== "admin";
 
@@ -275,6 +282,30 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
           hitSlop={12}
         >
           <Ionicons name="menu" size={20} color={textPrimary} />
+        </Pressable>
+      </View>
+
+      {/* ── Theme toggle (top-right) ── */}
+      <View
+        style={[
+          styles.themeContainer,
+          {
+            top: insets.top + spacing.sm,
+            right: spacing.lg,
+          },
+        ]}
+        pointerEvents="box-none"
+      >
+        <Pressable
+          onPress={toggleTheme}
+          style={[styles.themeFab, { backgroundColor: fabBg, borderColor: fabBorder }]}
+          hitSlop={12}
+        >
+          <Ionicons
+            name={isDark ? "sunny-outline" : "moon-outline"}
+            size={20}
+            color={textPrimary}
+          />
         </Pressable>
       </View>
 
@@ -489,6 +520,25 @@ const styles = StyleSheet.create({
     zIndex: 999,
     elevation: 999,
     pointerEvents: "box-none",
+  },
+  themeContainer: {
+    position: "absolute",
+    zIndex: 999,
+    elevation: 999,
+    pointerEvents: "box-none",
+  },
+  themeFab: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   hamburgerFab: {
     width: 48,
