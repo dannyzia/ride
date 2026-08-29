@@ -1,4 +1,4 @@
-import { Slot } from "expo-router";
+import { Stack } from "expo-router";
 import { View } from "react-native";
 import GlobalActionButtons from "@/components/GlobalActionButtons";
 
@@ -11,7 +11,7 @@ import GlobalActionButtons from "@/components/GlobalActionButtons";
 export default function MainLayout() {
   return (
     <View style={{ flex: 1 }}>
-      <Slot />
+      <Stack screenOptions={{ headerShown: false }} />
       <GlobalActionButtons />
     </View>
   );
