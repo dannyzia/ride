@@ -23,7 +23,6 @@ import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 import { colors, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
-import SOSButton from "@/components/SOSButton";
 import PinInput from "@/components/PinInput";
 import LiveMeter from "@/components/LiveMeter";
 import { isPinMismatch, PIN_REVERT_DELAY_MS } from "@/lib/pin";
@@ -498,8 +497,6 @@ export default function RideTrackingScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* SOS Button */}
-      <SOSButton />
 
       {/* Bottom Card */}
       <View style={[styles.bottomCard, { backgroundColor: surfaceBg, borderColor: borderColor }]}>

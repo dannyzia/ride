@@ -12,7 +12,6 @@ import { useDriverStore } from "@/store/useDriverStore";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useCallLedgerStore } from "@/store/useCallLedgerStore";
 import { useRideOfferStore, useWSStore } from "@/store";
-import SOSButton from "@/components/SOSButton";
 import DriverPricingReference from "@/components/DriverPricingReference";
 import RideOfferSheet from "@/components/RideOfferSheet";
 import DriverStatsBar from "@/components/DriverStatsBar";
@@ -1295,8 +1294,6 @@ export default function DriverHome() {
         </View>
       </View>
 
-      {/* SOS Button — always enabled; offline alerts are queued for retry */}
-      <SOSButton />
 
       {/* Ride Offer Sheet */}
       <RideOfferSheet />

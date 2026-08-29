@@ -28,7 +28,6 @@ import { logger } from "@/lib/logger";
 import { getVehicleTypesByCategory, getVehicleType, VEHICLE_CATEGORIES, VEHICLE_TYPES, VehicleTypeEnum, VehicleIconName, VehicleCategoryDef } from "@/lib/vehicleTypes";
 import { colors, shadows } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
-import { FloatingNavMenu } from "@/components/FloatingNavMenu";
 import FareBreakdownSheet from "@/components/FareBreakdownSheet";
 import CustomButton from "@/components/CustomButton";
 import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
@@ -724,8 +723,6 @@ export default function HomeScreen() {
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
 
-      {/* Hamburger Menu */}
-      <FloatingNavMenu variant="customer" />
 
       {/* Bottom Sheet (custom absolute-positioned sheet, no third-party sheet lib) */}
       <Animated.View
