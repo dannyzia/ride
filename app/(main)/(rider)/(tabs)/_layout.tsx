@@ -1,14 +1,11 @@
 import { Tabs } from "expo-router";
 import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import OfflineIndicator from "@/components/OfflineIndicator";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { useDriverStore } from "@/store/useDriverStore";
-
-const TAB_HEIGHT = 64;
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const isDark = useIsDark();
@@ -101,22 +98,14 @@ function WalletIcon({ focused }: { focused: boolean }) {
 }
 
 export default function DriverTabLayout() {
-  const insets = useSafeAreaInsets();
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={{ flex: 1 }}>
-        <OfflineIndicator />
+    <View style={{ flex: 1 }}>
+      <OfflineIndicator />
         <Tabs
           screenOptions={{
             headerShown: false,
             tabBarStyle: {
-              height: TAB_HEIGHT + insets.bottom,
-              paddingBottom: insets.bottom,
-              paddingTop: 0,
-              borderTopWidth: 0,
-              elevation: 0,
-              backgroundColor: colors.white,
+              display: "none",
             },
             tabBarShowLabel: false,
           }}
@@ -160,6 +149,5 @@ export default function DriverTabLayout() {
           />
         </Tabs>
       </View>
-    </GestureHandlerRootView>
   );
 }

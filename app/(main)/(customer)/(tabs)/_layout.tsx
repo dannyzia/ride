@@ -9,9 +9,7 @@ import {
 } from "react-native";
 import type { GestureResponderEvent } from "react-native";
 import { icons } from "@/constants/data";
-import { FloatingNavMenu } from "@/components/FloatingNavMenu";
 import OfflineIndicator from "@/components/OfflineIndicator";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const TabIcon = ({
   focused,
@@ -61,8 +59,7 @@ const TabBarButton = ({
 
 export default function TabsLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
       <OfflineIndicator />
       <Tabs
         initialRouteName="home/index"
@@ -102,8 +99,6 @@ export default function TabsLayout() {
           />
         ))}
       </Tabs>
-      <FloatingNavMenu variant="customer" />
     </View>
-    </GestureHandlerRootView>
   );
 }
