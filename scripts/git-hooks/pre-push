@@ -1,11 +1,22 @@
 #!/bin/sh
-# Pre-push hook — full web export gate (~2-3 min)
-# Blocks push if expo export fails (catches native module breakage).
+# Pre-push hook — type check + native import check + web export
+# Blocks push on type errors, risky imports, or export failures.
 #
 # Install: node scripts/install-hooks.js
 
 set -e
 
+# Type check (full project, ~1-2 min)
+echo "⏳ Pre-push: type checking..."
+npx tsc --noEmit
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ Type check failed — push blocked."
+  exit 1
+fi
+echo "✅ Type check passed."
+
+# Native import safety check
 echo "⏳ Pre-push: native import check..."
 node scripts/check-web-imports.js
 if [ $? -ne 0 ]; then

@@ -1,27 +1,27 @@
 #!/bin/sh
-# Pre-commit hook — fast gate: lint + tsc (~10-15s)
-# Blocks commit on errors. Full web export runs in pre-push hook.
+# Pre-commit hook — lint only staged files (~3-5s)
+# Blocks commit on lint errors. Type check + web export run in pre-push.
 #
 # Install: node scripts/install-hooks.js
 
 set -e
 
-echo "⏳ Pre-commit: lint + tsc..."
+echo "⏳ Pre-commit: lint staged files..."
 
-# Lint (zero errors)
-echo "  → Linting..."
-npx cross-env ESLINT_USE_FLAT_CONFIG=false eslint . --quiet
+# Get staged .ts/.tsx/.js/.jsx files (only those still on disk)
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx)$')
+
+if [ -z "$STAGED_FILES" ]; then
+  echo "✅ No staged JS/TS files — skipping lint."
+  exit 0
+fi
+
+echo "  → Linting $(echo "$STAGED_FILES" | wc -l | tr -d ' ') file(s)..."
+echo "$STAGED_FILES" | xargs npx cross-env ESLINT_USE_FLAT_CONFIG=false eslint --quiet
 if [ $? -ne 0 ]; then
   echo "❌ Lint failed — commit blocked."
   exit 1
 fi
 
-# Type check
-echo "  → Type checking..."
-npx tsc --noEmit
-if [ $? -ne 0 ]; then
-  echo "❌ Type check failed — commit blocked."
-  exit 1
-fi
-
 echo "✅ Pre-commit passed."
+echo "   (tsc + web export run at push time — pre-push hook)"
