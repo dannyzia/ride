@@ -80,6 +80,7 @@ const NATIVE_ONLY = new Set([]);
 
 // Node-only packages that must NEVER appear in client-reachable code.
 // These cause Metro UnableToResolveError (e.g. ws → stream).
+// Keep in sync with metro.config.js NODE_BLOCKLIST.
 const NODE_ONLY = new Set([
   "ws",
   "stream",
@@ -92,6 +93,11 @@ const NODE_ONLY = new Set([
   "http",
   "https",
   "child_process",
+  "dns",
+  "http2",
+  "dgram",
+  "cluster",
+  "worker_threads",
 ]);
 
 function findNativeImports() {
