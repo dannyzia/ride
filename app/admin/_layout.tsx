@@ -12,8 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { AntDesign } from "@expo/vector-icons";
 import { logger } from "@/lib/logger";
 import { AdminToastProvider } from "@/components/admin/AdminToast";
-import { ADMIN_ROLES } from "@/lib/adminRbac";
-import type { AdminRole } from "@/lib/auth";
+import { ADMIN_ROLES, type AdminRole } from "@/lib/adminRoles";
 
 const STACK_OPTS = {
   headerShown: false,

@@ -1,5 +1,7 @@
 import { supabaseAdmin } from './supabaseServer';
 import type { User } from '@supabase/supabase-js';
+import type { AdminRole } from './adminRoles';
+export type { AdminRole } from './adminRoles';
 
 async function resolveToken(request: Request) {
   const authHeader = request.headers.get('Authorization') ?? '';
@@ -23,9 +25,6 @@ export async function verifyAuth(request: Request) {
 export const verifySupabaseToken = verifyAuth;
 
 type DbUser = { id: string; role: string };
-
-/** The 4-role admin family (owner ruling REV-4). Owner is the superuser. */
-export type AdminRole = 'owner' | 'admin' | 'ops_manager' | 'moderator';
 
 export type AnyRole = 'rider' | 'driver' | AdminRole;
 

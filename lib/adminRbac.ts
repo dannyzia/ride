@@ -22,8 +22,11 @@
  * Subsequent owner accounts: promote existing admin via the same SQL or via
  * a staff-management endpoint (not yet built — deferred to Stage-1).
  */
-import { requireAnyRole, type AdminRole } from './auth';
+import { requireAnyRole } from './auth';
+import type { AdminRole } from './adminRoles';
 import type { User } from '@supabase/supabase-js';
+
+export type { AdminRole } from './adminRoles';
 
 /** All members of the admin family. */
 export const ADMIN_ROLES: AdminRole[] = ['owner', 'admin', 'ops_manager', 'moderator'];
