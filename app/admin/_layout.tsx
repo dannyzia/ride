@@ -10,6 +10,7 @@ import { Stack, router, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { AntDesign } from "@expo/vector-icons";
+import GlobalActionButtons from "@/components/GlobalActionButtons";
 import { logger } from "@/lib/logger";
 import { AdminToastProvider } from "@/components/admin/AdminToast";
 import { ADMIN_ROLES, type AdminRole } from "@/lib/adminRoles";
@@ -198,10 +199,13 @@ export default function AdminLayout() {
   // Stack auto-discovers any new admin/*.tsx route. We just supply shared opts.
   return (
     <AdminToastProvider>
-      <Stack screenOptions={STACK_OPTS}>
-        <Stack.Screen name="index" options={{ title: "Admin" }} />
-        <Stack.Screen name="login" options={{ title: "Admin Login" }} />
-      </Stack>
+      <View style={{ flex: 1 }}>
+        <Stack screenOptions={STACK_OPTS}>
+          <Stack.Screen name="index" options={{ title: "Admin" }} />
+          <Stack.Screen name="login" options={{ title: "Admin Login" }} />
+        </Stack>
+        <GlobalActionButtons />
+      </View>
     </AdminToastProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Modal,
+  Platform,
   FlatList,
   Linking,
   Alert,
@@ -16,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, usePathname } from "expo-router";
 import { useIsDark } from "@/lib/useAppearance";
-import { colors, spacing, radii } from "@/theme/goRide";
+import { colors } from "@/theme/goRide";
 import Constants from "expo-constants";
 import * as Location from "expo-location";
 import { logger } from "@/lib/logger";
@@ -24,82 +25,108 @@ import { supabase } from "@/lib/supabase";
 import { enqueueSosAlert } from "@/lib/sosQueue";
 import NetInfo from "@react-native-community/netinfo";
 
-// ─── Types ────────────────────────────────────────────────────────
+// ─── Role Detection ───────────────────────────────────────────────
 
-type IconName = keyof typeof Ionicons.glyphMap;
-type ButtonRole = "customer" | "driver" | "admin";
+type UserRole = "customer" | "driver" | "admin" | "none";
+
+function useUserRole(): UserRole {
+  const pathname = usePathname();
+  if (pathname.startsWith("/(main)/(customer)")) return "customer";
+  if (pathname.startsWith("/(main)/(rider)")) return "driver";
+  if (pathname.startsWith("/admin")) return "admin";
+  return "none";
+}
+
+// ─── Nav Items ────────────────────────────────────────────────────
 
 interface NavItem {
   route: string;
   label: string;
-  icon: IconName;
+  icon: keyof typeof Ionicons.glyphMap;
   group: string;
 }
+
+const CUSTOMER_ITEMS: NavItem[] = [
+  { route: "/(main)/(customer)/services-hub", label: "Services Hub", icon: "grid", group: "Ride" },
+  { route: "/(main)/(customer)/(tabs)/home/index", label: "Home", icon: "home", group: "Ride" },
+  { route: "/(main)/(customer)/find-ride", label: "Book Ride", icon: "car", group: "Ride" },
+  { route: "/(main)/(customer)/schedule-ride", label: "Schedule Ride", icon: "calendar", group: "Ride" },
+  { route: "/(main)/(customer)/(tabs)/rides/index", label: "My Rides", icon: "time", group: "Activity" },
+  { route: "/(main)/(customer)/(tabs)/inbox/index", label: "Inbox", icon: "mail", group: "Activity" },
+  { route: "/(main)/(customer)/referral", label: "Referrals", icon: "people", group: "Activity" },
+  { route: "/(main)/(customer)/(tabs)/profile/index", label: "Profile", icon: "person", group: "Account" },
+  { route: "/(main)/(customer)/(tabs)/wallet/index", label: "Wallet", icon: "wallet", group: "Account" },
+  { route: "/(main)/(customer)/(tabs)/settings/index", label: "Settings", icon: "settings", group: "Account" },
+  { route: "/(main)/(customer)/apply-promos", label: "Promos", icon: "ticket", group: "Account" },
+  { route: "/(main)/(customer)/emergency-sos", label: "Emergency SOS", icon: "warning", group: "Safety" },
+];
+
+const DRIVER_ITEMS: NavItem[] = [
+  { route: "/(main)/(rider)/(tabs)/index", label: "Home", icon: "home", group: "Main" },
+  { route: "/(main)/(rider)/(tabs)/earning/index", label: "Earnings", icon: "cash", group: "Main" },
+  { route: "/(main)/(rider)/(tabs)/activity/index", label: "Activity", icon: "time", group: "Main" },
+  { route: "/(main)/(rider)/(tabs)/wallet/index", label: "Wallet", icon: "wallet", group: "Main" },
+  { route: "/(main)/(rider)/(tabs)/profile/index", label: "Profile", icon: "person", group: "Account" },
+  { route: "/(main)/(rider)/settings", label: "Settings", icon: "settings", group: "Account" },
+  { route: "/(main)/(rider)/packages", label: "Packages", icon: "cube", group: "Programs" },
+  { route: "/(main)/(rider)/incentives", label: "Incentives", icon: "trophy", group: "Programs" },
+  { route: "/(main)/(rider)/call-ledger", label: "Call Ledger", icon: "clipboard", group: "Programs" },
+  { route: "/(main)/(rider)/hotspot-map", label: "Hotspot Map", icon: "map", group: "Programs" },
+  { route: "/(main)/(rider)/documents", label: "Documents", icon: "document-text", group: "Compliance" },
+  { route: "/(main)/(rider)/verification", label: "Verification", icon: "checkmark-circle", group: "Compliance" },
+];
+
+const ADMIN_ITEMS: NavItem[] = [
+  { route: "/admin", label: "Dashboard", icon: "speedometer", group: "Admin" },
+  { route: "/admin/queue", label: "Driver Queue", icon: "people", group: "Admin" },
+  { route: "/admin/monitoring", label: "Monitoring", icon: "pulse", group: "Admin" },
+  { route: "/admin/platform-config", label: "Platform Config", icon: "cog", group: "Admin" },
+  { route: "/admin/fare-config", label: "Fare Config", icon: "cash", group: "Admin" },
+];
+
+const GROUP_ORDER_CUSTOMER = ["Ride", "Activity", "Account", "Safety"];
+const GROUP_ORDER_DRIVER = ["Main", "Account", "Programs", "Compliance"];
+const GROUP_ORDER_ADMIN = ["Admin"];
+
+// ─── SOS ──────────────────────────────────────────────────────────
 
 interface SOSContact {
   label: string;
   number: string;
 }
 
-// ─── Menu items ───────────────────────────────────────────────────
-
-const CUSTOMER_ITEMS: NavItem[] = [
-  { route: "/(main)/(customer)/(tabs)/home/index", label: "Home", icon: "home-outline", group: "Ride" },
-  { route: "/(main)/(customer)/find-ride", label: "Book Ride", icon: "car-outline", group: "Ride" },
-  { route: "/(main)/(customer)/schedule-ride", label: "Schedule Ride", icon: "calendar-outline", group: "Ride" },
-  { route: "/(main)/(customer)/(tabs)/rides/index", label: "My Rides", icon: "time-outline", group: "Activity" },
-  { route: "/(main)/(customer)/(tabs)/wallet/index", label: "Wallet", icon: "wallet-outline", group: "Activity" },
-  { route: "/(main)/(customer)/(tabs)/chat/index", label: "Inbox", icon: "chatbubble-outline", group: "Activity" },
-  { route: "/(main)/(customer)/(tabs)/profile/index", label: "Profile", icon: "person-outline", group: "Account" },
-  { route: "/(main)/(customer)/(tabs)/settings/index", label: "Settings", icon: "settings-outline", group: "Account" },
-  { route: "/(main)/(customer)/apply-promos", label: "Promos", icon: "pricetag-outline", group: "Account" },
-  { route: "/(main)/(customer)/emergency-sos", label: "Emergency SOS", icon: "alert-circle-outline", group: "Safety" },
-];
-
-const DRIVER_ITEMS: NavItem[] = [
-  { route: "/(main)/(rider)/(tabs)/index", label: "Home", icon: "home-outline", group: "Main" },
-  { route: "/(main)/(rider)/(tabs)/earning/index", label: "Earnings", icon: "cash-outline", group: "Main" },
-  { route: "/(main)/(rider)/(tabs)/activity/index", label: "Activity", icon: "time-outline", group: "Main" },
-  { route: "/(main)/(rider)/(tabs)/wallet/index", label: "Wallet", icon: "wallet-outline", group: "Main" },
-  { route: "/(main)/(rider)/(tabs)/profile/index", label: "Profile", icon: "person-outline", group: "Account" },
-  { route: "/(main)/(rider)/settings", label: "Settings", icon: "settings-outline", group: "Account" },
-  { route: "/(main)/(rider)/packages", label: "Packages", icon: "cube-outline", group: "Programs" },
-  { route: "/(main)/(rider)/incentives", label: "Incentives", icon: "trophy-outline", group: "Programs" },
-  { route: "/(main)/(rider)/call-ledger", label: "Call Ledger", icon: "clipboard-outline", group: "Programs" },
-  { route: "/(main)/(rider)/documents", label: "Documents", icon: "document-text-outline", group: "Compliance" },
-  { route: "/(main)/(rider)/verification", label: "Verification", icon: "checkmark-circle-outline", group: "Compliance" },
-];
-
-const GROUP_ORDER_CUSTOMER = ["Ride", "Activity", "Account", "Safety"];
-const GROUP_ORDER_DRIVER = ["Main", "Account", "Programs", "Compliance"];
-
-// ─── SOS constants ────────────────────────────────────────────────
-
 const SOS_API_URL = Constants.expoConfig?.extra?.serverUrl ?? "";
 const SOS_COOLDOWN_SECONDS = 5;
 
 // ─── Component ────────────────────────────────────────────────────
 
-interface GlobalActionButtonsProps {
-  role: ButtonRole;
-  /** Ride ID for SOS alert correlation (available on ride-tracking screens). */
-  rideId?: string;
-}
-
-export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) {
-  const insets = useSafeAreaInsets();
+export default function GlobalActionButtons() {
+  const role = useUserRole();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
   const isDark = useIsDark();
+
+  // ── Theme tokens (Pattern A) ──
+  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
+  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  const textMuted = isDark ? colors.textDisabledDark : colors.textDisabledLight;
+  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const overlayBg = isDark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.4)";
+  const activeBg = isDark ? "rgba(12,194,95,0.15)" : colors.primaryLight;
+  const activeText = colors.primary;
+  const fabBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  const fabBorder = isDark ? colors.borderDark : colors.borderLight;
+  const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   // ── Hamburger state ──
   const [menuOpen, setMenuOpen] = useState(false);
 
   // ── SOS state ──
-  const [sosVisible, setSosVisible] = useState(false);
-  const [contacts, setContacts] = useState<SOSContact[]>([]);
+  const [sosOpen, setSosOpen] = useState(false);
+  const [sosContacts, setSosContacts] = useState<SOSContact[]>([]);
   const [sosLoading, setSosLoading] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [queued, setQueued] = useState(false);
+  const [sosSending, setSosSending] = useState(false);
+  const [sosQueued, setSosQueued] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -109,26 +136,29 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
     };
   }, []);
 
-  // ── Theme tokens ──
-  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
-  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
-  const textMuted = isDark ? colors.textDisabledDark : colors.textDisabledLight;
-  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
-  const overlayBg = isDark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.4)";
-  const activeBg = isDark ? "rgba(12,194,95,0.10)" : colors.primaryLight;
-  const activeText = colors.primary;
-  const fabBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
-  const fabBorder = isDark ? colors.borderDark : colors.borderLight;
-  const borderColor = isDark ? colors.borderDark : colors.borderLight;
+  // ── All hooks MUST be before any early return (rules-of-hooks) ──
 
-  // ── Menu items by role ──
-  const items = role === "customer" ? CUSTOMER_ITEMS : DRIVER_ITEMS;
-  const groupOrder = role === "customer" ? GROUP_ORDER_CUSTOMER : GROUP_ORDER_DRIVER;
+  // ── Nav items by role ──
+  const navItems = useMemo(() => {
+    if (role === "customer") return CUSTOMER_ITEMS;
+    if (role === "driver") return DRIVER_ITEMS;
+    if (role === "admin") return ADMIN_ITEMS;
+    return [];
+  }, [role]);
 
-  const grouped = groupOrder.reduce<Record<string, NavItem[]>>((acc, group) => {
-    acc[group] = items.filter((i) => i.group === group);
-    return acc;
-  }, {});
+  const groupOrder = useMemo(() => {
+    if (role === "customer") return GROUP_ORDER_CUSTOMER;
+    if (role === "driver") return GROUP_ORDER_DRIVER;
+    if (role === "admin") return GROUP_ORDER_ADMIN;
+    return [];
+  }, [role]);
+
+  const grouped = useMemo(() => {
+    return groupOrder.reduce<Record<string, NavItem[]>>((acc, group) => {
+      acc[group] = navItems.filter((i) => i.group === group);
+      return acc;
+    }, {});
+  }, [groupOrder, navItems]);
 
   // ── Navigation ──
   const navigateTo = useCallback((route: string) => {
@@ -162,18 +192,18 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
       );
       return;
     }
-    setSosVisible(true);
+    setSosOpen(true);
     setSosLoading(true);
     try {
       const res = await fetch(`${SOS_API_URL}/api/sos/contacts`);
       if (res.ok) {
         const data = await res.json();
-        setContacts(data.contacts ?? []);
+        setSosContacts(data.contacts ?? []);
       } else {
-        setContacts([{ label: "National Emergency", number: "999" }]);
+        setSosContacts([{ label: "National Emergency", number: "999" }]);
       }
     } catch {
-      setContacts([{ label: "National Emergency", number: "999" }]);
+      setSosContacts([{ label: "National Emergency", number: "999" }]);
     } finally {
       setSosLoading(false);
     }
@@ -181,8 +211,8 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
 
   const handleSosSelect = useCallback(
     async (contact: SOSContact) => {
-      if (sending) return;
-      setSending(true);
+      if (sosSending) return;
+      setSosSending(true);
       try {
         let lat = 0;
         let lng = 0;
@@ -207,7 +237,7 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
         } else {
           Alert.alert("SOS", `Call ${contact.label}: ${contact.number}`);
         }
-        setSosVisible(false);
+        setSosOpen(false);
 
         // Fire alert best-effort in background
         try {
@@ -215,20 +245,23 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
           if (net.isConnected !== true) {
             const result = await enqueueSosAlert({ lat, lng });
             if (result.queued) {
-              setQueued(true);
+              setSosQueued(true);
               logger.info("[SOS] alert queued (offline)", { id: result.id, lat, lng });
             }
           } else {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
             if (token) {
-              await fetch(`${SOS_API_URL}/api/sos/alert`, {
+              const endpoint = role === "driver"
+                ? `${SOS_API_URL}/api/driver/sos-alert`
+                : `${SOS_API_URL}/api/sos/alert`;
+              await fetch(endpoint, {
                 method: "POST",
                 headers: {
                   Authorization: `Bearer ${token}`,
                   "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ lat, lng, ride_id: rideId }),
+                body: JSON.stringify({ lat, lng }),
               }).catch(() => {});
             }
           }
@@ -240,79 +273,77 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
       } catch (err) {
         logger.error("[SOS] error", err);
       } finally {
-        setSending(false);
+        setSosSending(false);
       }
     },
-    [sending, rideId, startCooldown],
+    [sosSending, role, startCooldown],
   );
 
   const handleSosDismiss = useCallback(() => {
-    setSosVisible(false);
-    setQueued(false);
+    setSosOpen(false);
+    setSosQueued(false);
   }, []);
 
-  const isCooldownActive = cooldownRemaining > 0;
+  // ── If no role, render nothing ──
+  if (role === "none") return null;
 
-  // Admin gets hamburger only — no SOS
+  const isCooldownActive = cooldownRemaining > 0;
   const showSos = role !== "admin";
+
+  // ── Positioning: both on bottom-right, stacked vertically ──
+  const SOS_BOTTOM = insets.bottom + 24;
+  const HAMBURGER_BOTTOM = SOS_BOTTOM + 56 + 12; // SOS height (56) + 12px gap
+  const BUTTON_RIGHT = 16;
+
+  // ── Menu title by role ──
+  const menuTitle = role === "customer" ? "Menu" : role === "driver" ? "Driver Menu" : "Admin Menu";
 
   return (
     <>
-      {/* ── Hamburger (top-left) ── */}
-      <View
+      {/* ═══ HAMBURGER BUTTON (above SOS, bottom-right) ═══ */}
+      <Pressable
+        onPress={() => setMenuOpen(true)}
         style={[
-          styles.hamburgerContainer,
+          styles.hamburgerBtn,
           {
-            top: insets.top + spacing.sm,
-            left: spacing.lg,
+            bottom: HAMBURGER_BOTTOM,
+            right: BUTTON_RIGHT,
+            backgroundColor: fabBg,
+            borderColor: fabBorder,
           },
         ]}
-        pointerEvents="box-none"
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
-        <Pressable
-          onPress={() => setMenuOpen(true)}
-          style={[styles.hamburgerFab, { backgroundColor: fabBg, borderColor: fabBorder }]}
-          hitSlop={12}
-        >
-          <Ionicons name="menu" size={20} color={textPrimary} />
-        </Pressable>
-      </View>
+        <Ionicons name="menu" size={24} color={textPrimary} />
+      </Pressable>
 
-      {/* ── SOS (bottom-right) ── */}
+      {/* ═══ SOS BUTTON (below hamburger, bottom-right) ═══ */}
       {showSos && (
-        <View
+        <TouchableOpacity
+          onPress={handleSosOpen}
+          disabled={isCooldownActive}
+          activeOpacity={0.8}
           style={[
-            styles.sosContainer,
+            styles.sosBtn,
             {
-              bottom: insets.bottom + spacing["2xl"],
-              right: spacing.lg,
+              bottom: SOS_BOTTOM,
+              right: BUTTON_RIGHT,
+              backgroundColor: isCooldownActive
+                ? isDark ? colors.textDisabledDark : colors.textDisabledLight
+                : colors.danger,
             },
           ]}
-          pointerEvents="box-none"
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <TouchableOpacity
-            onPress={handleSosOpen}
-            disabled={isCooldownActive}
-            activeOpacity={0.8}
-            style={[
-              styles.sosFab,
-              {
-                backgroundColor: isCooldownActive
-                  ? isDark ? colors.textDisabledDark : colors.textDisabledLight
-                  : colors.danger,
-              },
-            ]}
-          >
-            {cooldownRemaining > 0 ? (
-              <Text style={styles.sosCountdown}>{cooldownRemaining}</Text>
-            ) : (
-              <Ionicons name="shield" size={28} color={colors.white} />
-            )}
-          </TouchableOpacity>
-        </View>
+          {cooldownRemaining > 0 ? (
+            <Text style={styles.sosCountdown}>{cooldownRemaining}</Text>
+          ) : (
+            <Ionicons name="shield" size={24} color={colors.white} />
+          )}
+        </TouchableOpacity>
       )}
 
-      {/* ── Menu Drawer ── */}
+      {/* ═══ HAMBURGER MENU MODAL ═══ */}
       <Modal
         visible={menuOpen}
         transparent
@@ -327,12 +358,12 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
             style={[styles.drawer, { backgroundColor: surfaceBg }]}
             onStartShouldSetResponder={() => true}
           >
-            <View style={styles.drawerHeader}>
+            <View style={[styles.drawerHeader, { borderBottomColor: borderColor }]}>
               <Text style={[styles.drawerTitle, { color: textPrimary }]}>
-                Navigation
+                {menuTitle}
               </Text>
               <Pressable onPress={() => setMenuOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={20} color={textSecondary} />
+                <Ionicons name="close" size={24} color={textSecondary} />
               </Pressable>
             </View>
 
@@ -363,18 +394,21 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
                         >
                           <Ionicons
                             name={item.icon}
-                            size={20}
+                            size={22}
                             color={isActive ? activeText : textSecondary}
                           />
                           <Text
                             style={[
                               styles.navItemLabel,
                               { color: isActive ? activeText : textSecondary },
-                              isActive && styles.navItemLabelActive,
+                              isActive && { fontFamily: "Jakarta-SemiBold" },
                             ]}
                           >
                             {item.label}
                           </Text>
+                          {isActive && (
+                            <Ionicons name="chevron-forward" size={18} color={activeText} />
+                          )}
                         </Pressable>
                       );
                     })}
@@ -386,9 +420,9 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
         </Pressable>
       </Modal>
 
-      {/* ── SOS Contact Sheet ── */}
+      {/* ═══ SOS BOTTOM SHEET ═══ */}
       <Modal
-        visible={sosVisible}
+        visible={sosOpen}
         transparent
         animationType="slide"
         onRequestClose={handleSosDismiss}
@@ -398,65 +432,71 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
           onPress={handleSosDismiss}
         >
           <View
-            style={[styles.sosSheet, { backgroundColor: surfaceBg, paddingBottom: insets.bottom + spacing.lg }]}
+            style={[
+              styles.sosSheet,
+              {
+                backgroundColor: surfaceBg,
+                paddingBottom: insets.bottom + 24,
+              },
+            ]}
             onStartShouldSetResponder={() => true}
           >
-            {/* Drag handle */}
             <View style={[styles.dragHandle, { backgroundColor: borderColor }]} />
 
-            <View style={styles.sosSheetHeader}>
-              <Ionicons name="shield" size={24} color={colors.danger} />
-              <Text style={[styles.sosSheetTitle, { color: textPrimary }]}>
+            <View style={styles.sosTitleRow}>
+              <View style={styles.sosIconCircle}>
+                <Ionicons name="shield" size={24} color={colors.white} />
+              </View>
+              <Text style={[styles.sosTitle, { color: textPrimary }]}>
                 Emergency Contacts
               </Text>
             </View>
 
             {sosLoading ? (
-              <ActivityIndicator size="large" color={colors.danger} />
-            ) : contacts.length === 0 ? (
-              <Text
-                style={[
-                  styles.sosEmpty,
-                  { color: textSecondary },
-                ]}
-              >
+              <ActivityIndicator size="large" color={colors.danger} style={{ marginVertical: 32 }} />
+            ) : sosContacts.length === 0 ? (
+              <Text style={[styles.sosEmpty, { color: textSecondary }]}>
                 No emergency contacts configured.
               </Text>
             ) : (
               <FlatList
-                data={contacts}
+                data={sosContacts}
                 keyExtractor={(_, index) => index.toString()}
+                scrollEnabled={false}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     onPress={() => handleSosSelect(item)}
-                    disabled={sending}
+                    disabled={sosSending}
                     activeOpacity={0.7}
-                    style={styles.sosContactRow}
+                    style={[
+                      styles.sosContactRow,
+                      { backgroundColor: isDark ? "rgba(227,29,28,0.10)" : colors.primaryLight },
+                    ]}
                   >
                     <View style={styles.sosContactIcon}>
-                      <Ionicons name="call" size={20} color={colors.white} />
+                      <Ionicons name="call" size={18} color={colors.white} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.sosContactName, { color: textPrimary }]}>
+                      <Text style={[styles.sosContactLabel, { color: textPrimary }]}>
                         {item.label}
                       </Text>
                       <Text style={[styles.sosContactNumber, { color: textSecondary }]}>
                         {item.number}
                       </Text>
                     </View>
-                    {sending ? (
+                    {sosSending ? (
                       <ActivityIndicator size="small" color={colors.danger} />
                     ) : (
-                      <Ionicons name="chevron-forward" size={24} color={textSecondary} />
+                      <Ionicons name="chevron-forward" size={20} color={textSecondary} />
                     )}
                   </TouchableOpacity>
                 )}
               />
             )}
 
-            {queued && (
+            {sosQueued && (
               <View style={styles.sosQueuedBanner}>
-                <Ionicons name="cloud-offline-outline" size={16} color={colors.amber} style={{ marginRight: spacing.xs }} />
+                <Ionicons name="cloud-offline-outline" size={16} color={colors.amber} style={{ marginRight: 4 }} />
                 <Text style={styles.sosQueuedText}>
                   Alert queued — will send when online
                 </Text>
@@ -465,9 +505,9 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
 
             <TouchableOpacity
               onPress={handleSosDismiss}
-              disabled={sending}
+              disabled={sosSending}
               activeOpacity={0.7}
-              style={[styles.sosCancelButton, { borderColor }]}
+              style={[styles.sosCancelBtn, { borderColor }]}
             >
               <Text style={[styles.sosCancelText, { color: textSecondary }]}>
                 Cancel
@@ -483,46 +523,37 @@ export function GlobalActionButtons({ role, rideId }: GlobalActionButtonsProps) 
 // ─── Styles ───────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // Hamburger
-  hamburgerContainer: {
+  // ── Hamburger Button ──
+  hamburgerBtn: {
     position: "absolute",
-    zIndex: 999,
-    elevation: 999,
-    pointerEvents: "box-none",
-  },
-
-  hamburgerFab: {
     width: 48,
     height: 48,
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    shadowColor: colors.black,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
+    zIndex: 999,
   },
 
-  // SOS
-  sosContainer: {
+  // ── SOS Button ──
+  sosBtn: {
     position: "absolute",
-    zIndex: 999,
-    elevation: 999,
-    pointerEvents: "box-none",
-  },
-  sosFab: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.black,
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    zIndex: 999,
   },
   sosCountdown: {
     color: colors.white,
@@ -531,21 +562,21 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
 
-  // Backdrop
+  // ── Backdrop ──
   backdrop: {
     flex: 1,
   },
 
-  // Menu drawer
+  // ── Drawer ──
   drawer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    maxHeight: "70%",
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    shadowColor: colors.black,
+    maxHeight: "75%",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
@@ -555,66 +586,63 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(128,128,128,0.2)",
   },
   drawerTitle: {
     fontFamily: "Jakarta-Bold",
-    fontSize: 18,
+    fontSize: 20,
   },
   drawerScroll: {
     flex: 1,
   },
   drawerScrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    paddingBottom: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
   },
   navGroup: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   navGroupTitle: {
     fontFamily: "Jakarta-SemiBold",
-    fontSize: 10,
+    fontSize: 11,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
+    letterSpacing: 0.8,
     paddingHorizontal: 12,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   navItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: radii.sm,
+    gap: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 2,
   },
   navItemLabel: {
     fontFamily: "Jakarta-Regular",
-    fontSize: 14,
+    fontSize: 15,
     flex: 1,
   },
-  navItemLabelActive: {
-    fontFamily: "Jakarta-SemiBold",
-  },
 
-  // SOS sheet
+  // ── SOS Sheet ──
   sosSheet: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    maxHeight: 400,
-    shadowColor: colors.black,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    maxHeight: "60%",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 12,
   },
@@ -623,32 +651,39 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     alignSelf: "center",
-    marginBottom: spacing.lg,
+    marginBottom: 16,
   },
-  sosSheetHeader: {
+  sosTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.lg,
+    marginBottom: 20,
   },
-  sosSheetTitle: {
+  sosIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.danger,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  sosTitle: {
     fontFamily: "Jakarta-Bold",
-    fontSize: 18,
-    marginLeft: spacing.sm,
+    fontSize: 20,
   },
   sosEmpty: {
     fontFamily: "Jakarta-Regular",
-    fontSize: 14,
+    fontSize: 15,
     textAlign: "center",
-    paddingVertical: spacing.xl,
+    paddingVertical: 32,
   },
   sosContactRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.lg,
-    backgroundColor: colors.primaryLight,
-    marginBottom: spacing.sm,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    marginBottom: 10,
   },
   sosContactIcon: {
     width: 40,
@@ -657,24 +692,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: spacing.md,
+    marginRight: 14,
   },
-  sosContactName: {
-    fontFamily: "Jakarta-Bold",
+  sosContactLabel: {
+    fontFamily: "Jakarta-SemiBold",
     fontSize: 16,
   },
   sosContactNumber: {
     fontFamily: "Jakarta-Regular",
     fontSize: 14,
+    marginTop: 2,
   },
   sosQueuedBanner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
     backgroundColor: colors.amberLight,
   },
   sosQueuedText: {
@@ -682,10 +718,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.amber,
   },
-  sosCancelButton: {
-    marginTop: spacing.md,
-    paddingVertical: spacing.md,
-    borderRadius: radii.pill,
+  sosCancelBtn: {
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
   },
