@@ -59,7 +59,6 @@ const KNOWN_SAFE = new Set([
   "nativewind",
   "tailwindcss",
   "h3-js",
-  "ws",
   "zod",
   "zustand",
   "react-native-gifted-chat", // has Platform.OS checks, works on web
@@ -78,6 +77,22 @@ const KNOWN_SAFE = new Set([
 // Packages known to lack web support (need .web.ts stubs or platform guards).
 // @maplibre/maplibre-react-native is handled by utils/maplibreLoader.web.ts
 const NATIVE_ONLY = new Set([]);
+
+// Node-only packages that must NEVER appear in client-reachable code.
+// These cause Metro UnableToResolveError (e.g. ws → stream).
+const NODE_ONLY = new Set([
+  "ws",
+  "stream",
+  "buffer",
+  "fs",
+  "path",
+  "crypto",
+  "net",
+  "tls",
+  "http",
+  "https",
+  "child_process",
+]);
 
 function findNativeImports() {
   const SEARCH_DIRS = ["app", "components", "lib", "store", "utils"];
@@ -160,9 +175,84 @@ function hasWebSupport(pkgName) {
   }
 }
 
+function findNodeOnlyImports() {
+  const SEARCH_DIRS = ["app", "components", "lib", "store", "utils"];
+  const IMPORT_RE = /from\s+["']([^"']+)["']/g;
+  const imports = [];
+
+  function walkDir(dir) {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === "node_modules" || entry.name === ".git") continue;
+        walkDir(fullPath);
+      } else if (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx")) {
+        scanFile(fullPath);
+      }
+    }
+  }
+
+  function scanFile(filePath) {
+    // Skip test files — not bundled into client
+    if (filePath.includes("__tests__") || filePath.includes(".test.")) return;
+    // Skip +api.ts files — server-only, not in client bundle
+    if (filePath.includes("+api.ts")) return;
+    // Skip known server-only files in lib/ (only imported by API routes)
+    const rel = path.relative(ROOT, filePath).replace(/\\/g, "/");
+    const SERVER_ONLY = [
+      "lib/portpos.ts",
+      "lib/supabaseServer.ts",
+      "lib/adminRbac.ts",
+      "lib/auth.ts",
+    ];
+    if (SERVER_ONLY.includes(rel)) return;
+
+    const content = fs.readFileSync(filePath, "utf8");
+    const lines = content.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      // Skip import type — erased by Babel, not in client bundle
+      if (/import\s+type\s/.test(lines[i])) continue;
+      let match;
+      IMPORT_RE.lastIndex = 0;
+      while ((match = IMPORT_RE.exec(lines[i])) !== null) {
+        const pkg = match[1];
+        const pkgName = pkg.startsWith("@")
+          ? pkg.split("/").slice(0, 2).join("/")
+          : pkg.split("/")[0];
+        if (NODE_ONLY.has(pkgName)) {
+          imports.push({
+            file: path.relative(ROOT, filePath),
+            line: String(i + 1),
+            package: pkgName,
+          });
+        }
+      }
+    }
+  }
+
+  for (const dir of SEARCH_DIRS) {
+    walkDir(path.join(ROOT, dir));
+  }
+  return imports;
+}
+
 function main() {
   console.log("Checking native module imports for web export safety...\n");
 
+  // Check 1: Node-only packages in client-reachable code (hard error)
+  const nodeImports = findNodeOnlyImports();
+  if (nodeImports.length > 0) {
+    console.log("BLOCKED — Node-only packages found in client-reachable code:");
+    for (const imp of nodeImports) {
+      console.log("  " + imp.file + ":" + imp.line + " — import '" + imp.package + "'");
+    }
+    console.log("\nNode packages cause Metro UnableToResolveError.");
+    console.log("Fix: move import to server-only code, use import type, or create a .web.ts stub.");
+    process.exit(1);
+  }
+
+  // Check 2: Native packages without .web.js files
   const imports = findNativeImports();
 
   if (imports.length === 0) {
