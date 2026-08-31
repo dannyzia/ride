@@ -28,6 +28,23 @@ export function unregisterBidder(userId: string) {
 }
 
 /**
+ * Get all connected bidder user IDs (for activation job broadcasts).
+ */
+export function getConnectedBidderIds(): string[] {
+  return Array.from(bidderSockets.keys());
+}
+
+/**
+ * Send a message to a specific bidder.
+ */
+export function sendToBidder(userId: string, event: string, payload: unknown): void {
+  const ws = bidderSockets.get(userId);
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ type: event, ...(payload as Record<string, unknown>) }));
+  }
+}
+
+/**
  * Send to all members of a fleet.
  */
 export function sendToFleet(

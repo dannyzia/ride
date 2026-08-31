@@ -2403,5 +2403,45 @@ export function startScheduler(): void {
     }
   }, 30_000);
 
-  logger.info("[scheduler] started (52 jobs)");
+  // ════════════════════════════════════════════════════════════════
+  // MARKETPLACE — F46 ACTIVATION SEAM (Jobs 54-55)
+  // ════════════════════════════════════════════════════════════════
+
+  // Job 54 — Rental activation: broadcast new broadcasting requests to eligible fleets
+  let rentalActivationRunning = false;
+  setInterval(async () => {
+    if (rentalActivationRunning) return;
+    try {
+      rentalActivationRunning = true;
+      const { activateRentalRequests } = await import('../utils-server/activationJobs');
+      const count = await activateRentalRequests();
+      if (count > 0) {
+        logger.info('[scheduler] job 54 rental activation', { broadcasts: count });
+      }
+    } catch (e) {
+      logger.error('[scheduler] job 54 rental activation error', e);
+    } finally {
+      rentalActivationRunning = false;
+    }
+  }, 4_000); // 4-second interval for fast activation
+
+  // Job 55 — Delivery activation: broadcast new pending requests to eligible couriers
+  let deliveryActivationRunning = false;
+  setInterval(async () => {
+    if (deliveryActivationRunning) return;
+    try {
+      deliveryActivationRunning = true;
+      const { activateDeliveryRequests } = await import('../utils-server/activationJobs');
+      const count = await activateDeliveryRequests();
+      if (count > 0) {
+        logger.info('[scheduler] job 55 delivery activation', { broadcasts: count });
+      }
+    } catch (e) {
+      logger.error('[scheduler] job 55 delivery activation error', e);
+    } finally {
+      deliveryActivationRunning = false;
+    }
+  }, 4_000); // 4-second interval for fast activation
+
+  logger.info("[scheduler] started (55 jobs)");
 }
