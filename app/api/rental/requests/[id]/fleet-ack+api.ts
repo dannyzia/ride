@@ -8,7 +8,7 @@ import { rentalRequests, awardedBidAssignments, rentalRequestEvents } from "@/sr
 import { requireFleetMember } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
@@ -40,7 +40,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       .where(
         and(
           eq(awardedBidAssignments.request_id, id),
-          eq(awardedBidAssignments.released_at, null as unknown as Date),
+          isNull(awardedBidAssignments.released_at),
         ),
       )
       .limit(1);

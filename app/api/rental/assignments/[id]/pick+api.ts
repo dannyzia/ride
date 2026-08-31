@@ -4,13 +4,13 @@
  * Sets confirmation_deadline_at = now()+60min (clock unfreeze).
  */
 import { db } from "@/src/db";
-import { awardedBidAssignments, rentalRequests, rentalRequestEvents, drivers, vehicles } from "@/src/db/schema";
+import { awardedBidAssignments, rentalRequests, rentalRequestEvents, drivers, vehicles, deliveryLegs } from "@/src/db/schema";
 import { requireFleetMember } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull, inArray } from "drizzle-orm";
 
 const pickSchema = z.object({
   driver_user_id: z.string().uuid(),
@@ -100,7 +100,8 @@ export async function POST(request: Request, { id }: { id: string }) {
       .where(eq(drivers.id, driverRows[0].id))
       .for("update");
 
-    // Check no active rental assignment for this driver
+    // §B.7 Check 1: no active rental assignment (join parent + filter status)
+    const activeRentalStatuses = ["awarded", "confirmed"] as const;
     const activeAssignments = await db
       .select({ id: awardedBidAssignments.id })
       .from(awardedBidAssignments)
@@ -108,14 +109,35 @@ export async function POST(request: Request, { id }: { id: string }) {
       .where(
         and(
           eq(awardedBidAssignments.assigned_driver_user_id, result.data.driver_user_id),
-          eq(awardedBidAssignments.released_at, null as unknown as Date),
+          isNull(awardedBidAssignments.released_at),
+          inArray(rentalRequests.status, activeRentalStatuses),
         ),
       )
       .limit(1);
 
     if (activeAssignments.length > 0 && activeAssignments[0].id !== id) {
       return Response.json(
-        { error: "driver_already_committed", message: "Driver has an active commitment" },
+        { error: "driver_already_committed", message: "Driver has an active rental commitment" },
+        { status: 409 },
+      );
+    }
+
+    // §B.7 Check 2: no active delivery leg for this driver
+    const activeDeliveryStates = ["pending", "assigned", "picked_up", "in_transit"] as const;
+    const [activeDeliveryLeg] = await db
+      .select({ id: deliveryLegs.id })
+      .from(deliveryLegs)
+      .where(
+        and(
+          eq(deliveryLegs.courier_user_id, result.data.driver_user_id),
+          inArray(deliveryLegs.leg_state, activeDeliveryStates),
+        ),
+      )
+      .limit(1);
+
+    if (activeDeliveryLeg) {
+      return Response.json(
+        { error: "driver_already_committed", message: "Driver has an active delivery commitment" },
         { status: 409 },
       );
     }

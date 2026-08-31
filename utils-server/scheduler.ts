@@ -2353,5 +2353,55 @@ export function startScheduler(): void {
     }
   }, 60_000);
 
-  logger.info("[scheduler] started (50 jobs)");
+  // ════════════════════════════════════════════════════════════════
+  // MARKETPLACE — PHASE 3: DELIVERY
+  // ════════════════════════════════════════════════════════════════
+
+  // Job 51 — Delivery TTL sweep (expire pending requests past deadline)
+  let deliveryTtlRunning = false;
+  setInterval(async () => {
+    if (deliveryTtlRunning) return;
+    try {
+      deliveryTtlRunning = true;
+      const { db } = await import('../src/db');
+      const { deliveryRequests } = await import('../src/db/schema');
+      const { eq, and, lt } = await import('drizzle-orm');
+
+      const now = new Date();
+      // Expire pending requests past their bidding deadline
+      await db
+        .update(deliveryRequests)
+        .set({ status: 'cancelled', cancelled_at: now, cancel_reason: 'deadline_expired' })
+        .where(
+          and(
+            eq(deliveryRequests.status, 'pending'),
+            lt(deliveryRequests.deadline_at, now),
+          ),
+        );
+    } catch (e) {
+      logger.error('[scheduler] job 51 delivery TTL sweep error', e);
+    } finally {
+      deliveryTtlRunning = false;
+    }
+  }, 60_000);
+
+  // Job 52 — Courier stale presence sweep (>90s since last_seen_at → offline)
+  let courierStaleRunning = false;
+  setInterval(async () => {
+    if (courierStaleRunning) return;
+    try {
+      courierStaleRunning = true;
+      const { sweepStaleCouriers } = await import('../utils-server/deliveryHandler');
+      const count = await sweepStaleCouriers();
+      if (count > 0) {
+        logger.info('[scheduler] job 52 courier stale sweep', { markedOffline: count });
+      }
+    } catch (e) {
+      logger.error('[scheduler] job 52 courier stale sweep error', e);
+    } finally {
+      courierStaleRunning = false;
+    }
+  }, 30_000);
+
+  logger.info("[scheduler] started (52 jobs)");
 }

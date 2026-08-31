@@ -2949,6 +2949,29 @@ export const shopRfqs = pgTable("shop_rfqs", {
 // MARKETPLACE — PHASE 2: CAR RENTAL BIDDING
 // ══════════════════════════════════════════════════════════════════════
 
+export const courierTypeEnum = pgEnum("courier_type", [
+  "parcel",
+  "food",
+]);
+
+export const deliveryStatusEnum = pgEnum("delivery_status", [
+  "pending",
+  "assigned",
+  "picked_up",
+  "in_transit",
+  "delivered",
+  "failed",
+  "cancelled",
+]);
+
+export const deliveryVehicleTypeEnum = pgEnum("delivery_vehicle_type", [
+  "bike",
+  "cng",
+  "car",
+  "van",
+  "truck",
+]);
+
 export const rentalCategoryEnum = pgEnum("rental_category", [
   "car_rental",
   "truck_rental",
@@ -3135,4 +3158,114 @@ export const rentalRequestEvents = pgTable("rental_request_events", {
   // Append-only: no updated_at.
 }, (t) => [
   index("rental_request_events_req_idx").on(t.request_id, t.created_at),
+]);
+
+// ══════════════════════════════════════════════════════════════
+// Phase 3 — Delivery (couriers, delivery_requests, delivery_bids, delivery_legs)
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * Courier capability table (F29 — ruling 5, ruling 11).
+ * One user may hold BOTH a parcel row and a food row: UNIQUE (user_id, courier_type).
+ * Parcel couriers = driver-role + active vehicle (Pathao model).
+ * Food heroes = any account, no vehicle (Foodpanda model).
+ */
+export const couriers = pgTable("couriers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  user_id: uuid("user_id").notNull().references((): any => users.id),
+  courier_type: courierTypeEnum("courier_type").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("active"), // active | suspended
+  // Food-hero presence (no drivers row for them; parcel couriers use drivers.*)
+  is_online: boolean("is_online").notNull().default(false),
+  last_lat: numeric("last_lat", { precision: 10, scale: 7 }),
+  last_lng: numeric("last_lng", { precision: 10, scale: 7 }),
+  last_seen_at: timestamptz("last_seen_at"),
+  completed_count: integer("completed_count").notNull().default(0), // F39 trust signal
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  // F44/ruling 11: dual capabilities allowed — one parcel + one food per account
+  uniqueIndex("couriers_user_type_idx").on(t.user_id, t.courier_type),
+  index("couriers_type_status_idx").on(t.courier_type, t.status),
+]);
+
+/**
+ * Delivery request — A→B courier leg.
+ * source_shop_order_id (F20): nullable; set when created by shopDeliveryBridge for food delivery.
+ */
+export const deliveryRequests = pgTable("delivery_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  created_by_user_id: uuid("created_by_user_id").notNull().references((): any => users.id),
+  source_shop_order_id: uuid("source_shop_order_id").references((): any => shopOrders.id), // F20
+  status: deliveryStatusEnum("status").notNull().default("pending"),
+  pickup_address: text("pickup_address").notNull(),
+  pickup_lat: numeric("pickup_lat", { precision: 9, scale: 6 }).notNull(),
+  pickup_lng: numeric("pickup_lng", { precision: 9, scale: 6 }).notNull(),
+  dropoff_address: text("dropoff_address").notNull(),
+  dropoff_lat: numeric("dropoff_lat", { precision: 9, scale: 6 }).notNull(),
+  dropoff_lng: numeric("dropoff_lng", { precision: 9, scale: 6 }).notNull(),
+  package_description: text("package_description"),
+  package_weight_kg: integer("package_weight_kg"),
+  required_vehicle_type: deliveryVehicleTypeEnum("required_vehicle_type"),
+  declared_fee_bdt: integer("declared_fee_bdt"), // customer budget
+  quoted_fee_bdt: integer("quoted_fee_bdt"), // winning bid price
+  accepted_bid_id: uuid("accepted_bid_id"),
+  accepted_at: timestamptz("accepted_at"),
+  picked_up_at: timestamptz("picked_up_at"),
+  delivered_at: timestamptz("delivered_at"),
+  cancelled_at: timestamptz("cancelled_at"),
+  cancel_reason: text("cancel_reason"),
+  cancelled_by: varchar("cancelled_by", { length: 10 }),
+  deadline_at: timestamptz("deadline_at").notNull(), // bidding deadline
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("delivery_requests_creator_idx").on(t.created_by_user_id),
+  index("delivery_requests_status_idx").on(t.status),
+  index("delivery_requests_deadline_idx").on(t.deadline_at)
+    .where(sql`status = 'pending'`),
+]);
+
+/**
+ * Delivery bid — courier-submitted quote.
+ * Partial unique: UNIQUE(request_id, courier_user_id) WHERE status='active' (F3 — withdraw+resubmit).
+ */
+export const deliveryBids = pgTable("delivery_bids", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  request_id: uuid("request_id").notNull().references(() => deliveryRequests.id, { onDelete: "cascade" }),
+  courier_user_id: uuid("courier_user_id").notNull().references((): any => users.id),
+  vehicle_type: deliveryVehicleTypeEnum("vehicle_type"),
+  quoted_fee_bdt: integer("quoted_fee_bdt").notNull(),
+  quoted_eta_minutes: integer("quoted_eta_minutes"),
+  status: varchar("status", { length: 20 }).notNull().default("active"), // active|won|lost|withdrawn
+  submitted_at: timestamptz("submitted_at").notNull().defaultNow(),
+  settled_at: timestamptz("settled_at"),
+}, (t) => [
+  // F3: partial unique — allows withdraw+resubmit
+  uniqueIndex("delivery_bids_active_courier_idx")
+    .on(t.request_id, t.courier_user_id)
+    .where(sql`status = 'active'`),
+  index("delivery_bids_courier_status_idx").on(t.courier_user_id, t.status),
+]);
+
+/**
+ * Delivery leg — tracks the courier's trip lifecycle.
+ * F42: index (courier_user_id, leg_state) for §B.7 scans.
+ */
+export const deliveryLegs = pgTable("delivery_legs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  request_id: uuid("request_id").notNull().references(() => deliveryRequests.id, { onDelete: "cascade" }),
+  courier_user_id: uuid("courier_user_id").notNull().references((): any => users.id),
+  leg_state: deliveryStatusEnum("leg_state").notNull().default("pending"),
+  started_at: timestamptz("started_at"),
+  picked_up_at: timestamptz("picked_up_at"),
+  delivered_at: timestamptz("delivered_at"),
+  pod_url: text("pod_url"), // proof of delivery
+  failure_reason: text("failure_reason"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  // F42: hot-path index for §B.7 scans
+  index("delivery_legs_courier_state_idx").on(t.courier_user_id, t.leg_state),
+  index("delivery_legs_request_idx").on(t.request_id),
 ]);

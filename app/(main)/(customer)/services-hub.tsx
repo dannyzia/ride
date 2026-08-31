@@ -211,6 +211,40 @@ export default function ServicesHub() {
           </TouchableOpacity>
         </View>
 
+        {/* Delivery */}
+        <View className="flex-row justify-between mb-4">
+          <TouchableOpacity
+            className="rounded-2xl p-5 items-center"
+            style={{
+              width: "48%",
+              backgroundColor: surfaceBg,
+              borderWidth: 1,
+              borderColor: borderColor,
+            }}
+            onPress={() => router.push("/(main)/(customer)/(delivery)")}
+            activeOpacity={0.8}
+          >
+            <View
+              className="w-14 h-14 rounded-full items-center justify-center mb-3"
+              style={{ backgroundColor: colors.primary + "18" }}
+            >
+              <Ionicons name="bicycle" size={28} color={colors.primary} />
+            </View>
+            <Text
+              className="text-base font-JakartaBold"
+              style={{ color: textPrimary }}
+            >
+              Delivery
+            </Text>
+            <Text
+              className="text-xs font-Jakarta mt-1 text-center"
+              style={{ color: textSecondary }}
+            >
+              Send a package
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Spacer for future services */}
         <View className="h-20" />
       </ScrollView>

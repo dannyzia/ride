@@ -195,3 +195,57 @@ export function requireFleetMarketplaceAccess() {
     };
   };
 }
+
+// ══════════════════════════════════════════════════════════════
+// requireCourier (Phase 3 — E.5b, F29)
+// ══════════════════════════════════════════════════════════════
+
+export interface CourierAuthResult {
+  supabaseUser: User;
+  dbUser: { id: string; role: string };
+  courier: { id: string; courier_type: string; status: string };
+  driver: { id: string; vehicle_type: string } | null;
+}
+
+/**
+ * Curried guard: requireCourier(type) ensures:
+ * 1. Valid Supabase token
+ * 2. Active couriers row for (user, type)
+ * 3. For 'parcel': user ALSO has an active drivers row with vehicle
+ * 4. For 'food': any account, no vehicle check
+ */
+export function requireCourier(type: 'parcel' | 'food') {
+  return async (request: Request): Promise<CourierAuthResult> => {
+    const supabaseUser = await verifySupabaseToken(request);
+
+    const { data: dbUser } = await supabaseAdmin
+      .from('users')
+      .select('id, role')
+      .eq('auth_uid', supabaseUser.id)
+      .maybeSingle();
+    if (!dbUser) throw Object.assign(new Error('Forbidden'), { status: 403 });
+
+    const { data: courier } = await supabaseAdmin
+      .from('couriers')
+      .select('id, courier_type, status')
+      .eq('user_id', dbUser.id)
+      .eq('courier_type', type)
+      .maybeSingle();
+    if (!courier || courier.status !== 'active') throw Object.assign(new Error('Forbidden'), { status: 403, message: 'courier_required' });
+
+    let driver: { id: string; vehicle_type: string } | null = null;
+    if (type === 'parcel') {
+      // Pathao model: parcel couriers must be drivers with a vehicle
+      const { data: d } = await supabaseAdmin
+        .from('drivers')
+        .select('id, vehicle_type, status')
+        .eq('user_id', dbUser.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (!d) throw Object.assign(new Error('Forbidden'), { status: 403, message: 'driver_required_for_parcel' });
+      driver = d as { id: string; vehicle_type: string };
+    }
+
+    return { supabaseUser, dbUser, courier, driver };
+  };
+}

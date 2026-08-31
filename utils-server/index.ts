@@ -1509,6 +1509,22 @@ wss.on("connection", (ws: WebSocket) => {
         break;
       }
 
+      case "delivery": {
+        try {
+          const { handleDeliveryMessage } = await import("./deliveryHandler");
+          handleDeliveryMessage(
+            ws,
+            `${domain}:${action}`,
+            msg.payload as Record<string, unknown> ?? {},
+            (target, event, payload) => send(target, { type: event, ...(payload as Record<string, unknown>) }),
+          );
+        } catch (err) {
+          logger.error("[ws] delivery handler error", err);
+          send(ws, { type: "error", message: "delivery_handler_error" });
+        }
+        break;
+      }
+
       default:
         send(ws, { type: "error", message: `unknown_type: ${type}` });
     }
