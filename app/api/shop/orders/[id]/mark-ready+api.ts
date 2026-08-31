@@ -50,13 +50,29 @@ export async function POST(request: Request, { id }: { id: string }) {
       })
       .where(eq(shopOrders.id, id));
 
-    // Phase 4: if food + delivery, trigger shopDeliveryBridge.createFromShopOrder()
-    // For now, the bridge is a stub — no-op until Phase 4 wires it.
+    // Phase 4: food delivery orders → create delivery request via bridge (F8)
     if (order.category === "food" && order.fulfillment === "delivery") {
-      logger.info(
-        "[shop/mark-ready] food delivery order ready — bridge will be wired in Phase 4",
-        { orderId: id },
-      );
+      const { createFromShopOrder } = await import("@/lib/shopDeliveryBridge");
+      const delivery = await createFromShopOrder({
+        id: order.id,
+        rider_user_id: order.rider_user_id,
+        shop_id: order.shop_id,
+        delivery_address: order.delivery_address,
+        delivery_lat: order.delivery_lat,
+        delivery_lng: order.delivery_lng,
+        rider_notes: order.rider_notes,
+        subtotal_bdt: order.subtotal_bdt,
+        total_bdt: order.total_bdt,
+      });
+
+      if (delivery) {
+        logger.info("[shop/mark-ready] food delivery bridge created", {
+          orderId: id,
+          deliveryRequestId: delivery.id,
+        });
+        // Note: shop:delivery_created WS event will be emitted by the deliveryHandler
+        // when the delivery request is broadcast to couriers.
+      }
     }
 
     return Response.json({ message: "Order marked ready" });

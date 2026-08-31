@@ -13,6 +13,7 @@ import {
   deliveryLegs,
   awardedBidAssignments,
   rentalRequests,
+  shopOrders,
   drivers,
   couriers,
   users,
@@ -188,6 +189,27 @@ export async function POST(request: Request, { id }: { id: string }) {
           leg_state: 'assigned',
         })
         .returning();
+
+      // F40: if this is a food delivery order (has source_shop_order_id),
+      // write delivery_fee_bdt and recompute total_bdt in the same tx.
+      if (req.source_shop_order_id) {
+        const [shopOrder] = await tx
+          .select()
+          .from(shopOrders)
+          .where(eq(shopOrders.id, req.source_shop_order_id))
+          .limit(1);
+
+        if (shopOrder) {
+          const newTotal = shopOrder.subtotal_bdt + bid.quoted_fee_bdt;
+          await tx.update(shopOrders)
+            .set({
+              delivery_fee_bdt: bid.quoted_fee_bdt,
+              total_bdt: newTotal,
+              updated_at: new Date(),
+            })
+            .where(eq(shopOrders.id, req.source_shop_order_id));
+        }
+      }
 
       return { request: updated, bid, leg };
     });
