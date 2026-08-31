@@ -1,6 +1,11 @@
 #!/bin/sh
-# Pre-push hook — type check + native import check + web export
-# Blocks push on type errors, risky imports, or export failures.
+# Pre-push hook — type check + native import check.
+# Blocks push on type errors or Node-only imports in client-reachable code.
+#
+# Web export gate REMOVED (owner ruling 2026-08-31): the project has outgrown
+# the Render web deployment at this stage; a full `expo export --platform web`
+# per push cost 25+ min and blocked the pipeline. Restore it if web deploy
+# returns (was: `npx expo export --platform web`).
 #
 # Install: node scripts/install-hooks.js
 
@@ -16,7 +21,7 @@ if [ $? -ne 0 ]; then
 fi
 echo "✅ Type check passed."
 
-# Native import safety check
+# Native import safety check (fast; still guards Metro native bundles)
 echo "⏳ Pre-push: native import check..."
 node scripts/check-web-imports.js
 if [ $? -ne 0 ]; then
@@ -26,16 +31,4 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-echo "⏳ Pre-push: web export check (~2-3 min)..."
-
-npx expo export --platform web
-if [ $? -ne 0 ]; then
-  echo ""
-  echo "❌ Web export failed — push blocked."
-  echo "   Native module breakage detected. Check the error above."
-  echo "   If the failing module is native-only, create a .web.ts platform-split."
-  echo "   See: utils/maplibreLoader.web.ts for the pattern."
-  exit 1
-fi
-
-echo "✅ Web export passed."
+echo "✅ Pre-push checks passed."

@@ -9,7 +9,9 @@ set -e
 echo "⏳ Pre-commit: lint staged files..."
 
 # Get staged .ts/.tsx/.js/.jsx files (only those still on disk)
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx)$')
+# `|| true`: grep exits 1 when nothing matches (e.g. docs-only or shell-only
+# commits) and set -e would otherwise kill the hook before the skip check.
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx)$' || true)
 
 if [ -z "$STAGED_FILES" ]; then
   echo "✅ No staged JS/TS files — skipping lint."
