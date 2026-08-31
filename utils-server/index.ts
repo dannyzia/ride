@@ -308,7 +308,7 @@ function sendToRider(userId: string, msg: Record<string, unknown>) {
   if (client) send(client.ws, msg);
 }
 
-function sendToUser(userId: string, msg: Record<string, unknown>) {
+export function sendToUser(userId: string, msg: Record<string, unknown>) {
   const riderClient = connectedRiders.get(userId);
   if (riderClient) {
     send(riderClient.ws, msg);

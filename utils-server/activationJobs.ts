@@ -24,10 +24,12 @@ import { getConnectedBidderIds, sendToBidder } from './rentalHandler';
 import { getEligibleFleets } from './rentalDispatchChain';
 import { broadcastToCouriers, sendToCourier } from './deliveryHandler';
 import { sendNotification } from '../lib/notify';
+import { sendToUser } from './index';
 
 // ── Job 54: Rental activation ────────────────────────────────────────────
 
-let rentalWatermark: Date = new Date();
+// Epoch-initialized: on restart, re-broadcast all still-active rows (crash recovery TD-15)
+let rentalWatermark: Date = new Date(0);
 
 /**
  * Scan for broadcasting rental requests newer than watermark,
@@ -124,7 +126,8 @@ export async function activateRentalRequests(): Promise<number> {
 
 // ── Job 55: Delivery activation ──────────────────────────────────────────
 
-let deliveryWatermark: Date = new Date();
+// Epoch-initialized: on restart, re-broadcast all still-active rows (crash recovery TD-15)
+let deliveryWatermark: Date = new Date(0);
 
 /**
  * Scan for pending delivery requests newer than watermark,
@@ -167,9 +170,9 @@ export async function activateDeliveryRequests(): Promise<number> {
     broadcastCount++;
 
     // F24: if food delivery (has source_shop_order_id), emit shop:delivery_created
+    // to the customer via the rider/driver registry (sendToUser) + lib/notify fallback
     if (req.source_shop_order_id) {
       try {
-        // Get the shop order to find the customer's user_id
         const [shopOrder] = await db
           .select({ rider_user_id: shopOrders.rider_user_id })
           .from(shopOrders)
@@ -177,13 +180,26 @@ export async function activateDeliveryRequests(): Promise<number> {
           .limit(1);
 
         if (shopOrder) {
-          sendToCourier(shopOrder.rider_user_id, 'shop:delivery_created', {
+          const payload = {
+            type: 'shop:delivery_created',
             order_id: req.source_shop_order_id,
             delivery_request_id: req.id,
-          });
+          };
+
+          // Try WS first via rider/driver registry
+          sendToUser(shopOrder.rider_user_id, payload);
+
+          // Always send push notification as well (user may not be on WS)
+          await sendNotification(
+            shopOrder.rider_user_id,
+            'default',
+            'Your order is being delivered',
+            'A courier has been assigned to your food order',
+            { order_id: req.source_shop_order_id, type: 'delivery_created' },
+          );
         }
       } catch (err) {
-        logger.warn('[activation] shop:delivery_created push failed', {
+        logger.warn('[activation] shop:delivery_created failed', {
           request_id: req.id,
           err,
         });
