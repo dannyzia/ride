@@ -323,6 +323,20 @@
       "when": 1787550000000,
       "tag": "0047_rbac_admin_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1788155377908,
+      "tag": "0048_marketplace_shops",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1788155378000,
+      "tag": "0049_marketplace_rental",
+      "breakpoints": true
     }
   ]
 }

@@ -50,7 +50,8 @@ export type AdminPermission =
   | 'price.write' // pricing rows, packages (launch prices/base_km/package prices) — owner only
   | 'finance.write' // refunds, payment recovery, tax reports — owner, admin
   | 'support.write' // tickets, lost-items, broadcast, events — owner, admin, ops_manager
-  | 'staff.manage'; // user management, RBAC assignment — owner, admin
+  | 'staff.manage' // user management, RBAC assignment — owner, admin
+  | 'marketplace.write'; // shops, rental, delivery, ambulance admin CRUD — owner, admin
 
 const PERMISSION_ROLES: Record<AdminPermission, AdminRole[]> = {
   'admin.read': ['owner', 'admin', 'ops_manager', 'moderator'],
@@ -63,6 +64,7 @@ const PERMISSION_ROLES: Record<AdminPermission, AdminRole[]> = {
   'finance.write': ['owner', 'admin'],
   'support.write': ['owner', 'admin', 'ops_manager'],
   'staff.manage': ['owner', 'admin'],
+  'marketplace.write': ['owner', 'admin'],
 };
 
 /** True if `role` holds `permission`. Owner passes every check (superuser). */

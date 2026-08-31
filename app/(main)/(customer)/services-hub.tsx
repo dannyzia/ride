@@ -140,6 +140,77 @@ export default function ServicesHub() {
           })}
         </View>
 
+        {/* Marketplace services */}
+        <Text
+          className="text-lg font-JakartaSemiBold mt-6 mb-4"
+          style={{ color: textPrimary }}
+        >
+          Marketplace
+        </Text>
+        <View className="flex-row flex-wrap gap-3">
+          <TouchableOpacity
+            className="rounded-2xl p-5 items-center"
+            style={{
+              width: "48%",
+              backgroundColor: surfaceBg,
+              borderWidth: 1,
+              borderColor: borderColor,
+            }}
+            onPress={() => router.push("/(main)/(customer)/(shops)")}
+            activeOpacity={0.8}
+          >
+            <View
+              className="w-14 h-14 rounded-full items-center justify-center mb-3"
+              style={{ backgroundColor: colors.primary + "18" }}
+            >
+              <Ionicons name="storefront" size={28} color={colors.primary} />
+            </View>
+            <Text
+              className="text-base font-JakartaBold"
+              style={{ color: textPrimary }}
+            >
+              Shops
+            </Text>
+            <Text
+              className="text-xs font-Jakarta mt-1 text-center"
+              style={{ color: textSecondary }}
+            >
+              Browse & order
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="rounded-2xl p-5 items-center"
+            style={{
+              width: "48%",
+              backgroundColor: surfaceBg,
+              borderWidth: 1,
+              borderColor: borderColor,
+            }}
+            onPress={() => router.push("/(main)/(customer)/(rental-marketplace)")}
+            activeOpacity={0.8}
+          >
+            <View
+              className="w-14 h-14 rounded-full items-center justify-center mb-3"
+              style={{ backgroundColor: colors.amber + "18" }}
+            >
+              <Ionicons name="car-sport" size={28} color={colors.amber} />
+            </View>
+            <Text
+              className="text-base font-JakartaBold"
+              style={{ color: textPrimary }}
+            >
+              Rental
+            </Text>
+            <Text
+              className="text-xs font-Jakarta mt-1 text-center"
+              style={{ color: textSecondary }}
+            >
+              Live bidding
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Spacer for future services */}
         <View className="h-20" />
       </ScrollView>

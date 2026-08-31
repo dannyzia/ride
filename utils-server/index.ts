@@ -1474,6 +1474,41 @@ wss.on("connection", (ws: WebSocket) => {
         break;
       }
 
+      /* ── Rental marketplace ──────────────────────────────────── */
+      case "rental": {
+        try {
+          const { handleRentalMessage } = await import("./rentalHandler");
+          handleRentalMessage(
+            ws,
+            `${domain}:${action}`,
+            msg.payload as Record<string, unknown> ?? {},
+            (target, event, payload) => send(target, { type: event, ...(payload as Record<string, unknown>) }),
+            { userId: client.userId },
+          );
+        } catch (err) {
+          logger.error("[ws] rental handler error", err);
+          send(ws, { type: "error", message: "rental_handler_error" });
+        }
+        break;
+      }
+
+      /* ── Shop marketplace ─────────────────────────────────────── */
+      case "shop": {
+        try {
+          const { handleShopMessage } = await import("./shopHandler");
+          handleShopMessage(
+            ws,
+            `${domain}:${action}`,
+            msg.payload as Record<string, unknown> ?? {},
+            (target, event, payload) => send(target, { type: event, ...(payload as Record<string, unknown>) }),
+          );
+        } catch (err) {
+          logger.error("[ws] shop handler error", err);
+          send(ws, { type: "error", message: "shop_handler_error" });
+        }
+        break;
+      }
+
       default:
         send(ws, { type: "error", message: `unknown_type: ${type}` });
     }

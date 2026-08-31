@@ -2234,5 +2234,124 @@ export function startScheduler(): void {
     }
   }, 30_000);
 
-  logger.info("[scheduler] started (45 jobs)");
+  // ════════════════════════════════════════════════════════════════
+  // MARKETPLACE — PHASE 1: SHOPS
+  // ════════════════════════════════════════════════════════════════
+
+  // Job 49 — Shop order auto-cancel (pending too long)
+  let shopOrderAutoCancelRunning = false;
+  setInterval(async () => {
+    if (shopOrderAutoCancelRunning) return;
+    try {
+      shopOrderAutoCancelRunning = true;
+      const { shopOrders } = await import('../src/db/schema');
+      const { eq, and, isNull, lt } = await import('drizzle-orm');
+
+      // Read timeout from platform_config (default 10 min)
+      const timeoutRows = await db
+        .select({ value: platformConfig.value })
+        .from(platformConfig)
+        .where(eq(platformConfig.key, 'shop_order_pending_timeout_minutes'))
+        .limit(1);
+      const timeoutMin = parseInt(timeoutRows[0]?.value ?? '10') || 10;
+      const cutoff = new Date(Date.now() - timeoutMin * 60 * 1000);
+
+      // Cancel pending orders older than timeout
+      await db
+        .update(shopOrders)
+        .set({
+          status: 'cancelled',
+          cancelled_at: new Date(),
+          cancel_reason: 'auto_cancelled_timeout',
+          updated_at: new Date(),
+        })
+        .where(
+          and(
+            eq(shopOrders.status, 'pending'),
+            lt(shopOrders.created_at, cutoff),
+          ),
+        );
+    } catch (e) {
+      logger.error('[scheduler] job 49 shop order auto-cancel error', e);
+    } finally {
+      shopOrderAutoCancelRunning = false;
+    }
+  }, 60_000);
+
+  // Job 50 — Shop RFQ expiry
+  let shopRfqExpiryRunning = false;
+  setInterval(async () => {
+    if (shopRfqExpiryRunning) return;
+    try {
+      shopRfqExpiryRunning = true;
+      const { shopRfqs } = await import('../src/db/schema');
+      const { and, lt, inArray } = await import('drizzle-orm');
+
+      const now = new Date();
+      await db
+        .update(shopRfqs)
+        .set({ status: 'expired', updated_at: now })
+        .where(
+          and(
+            lt(shopRfqs.expires_at, now),
+            inArray(shopRfqs.status, ['open', 'quoted']),
+          ),
+        );
+    } catch (e) {
+      logger.error('[scheduler] job 50 shop RFQ expiry error', e);
+    } finally {
+      shopRfqExpiryRunning = false;
+    }
+  }, 60_000);
+
+  // ════════════════════════════════════════════════════════════════
+  // MARKETPLACE — PHASE 2: CAR RENTAL
+  // ════════════════════════════════════════════════════════════════
+
+  // Job 46 — Rental soft-deadline sweep (expired / no_bidders / reselect lapsed)
+  let rentalDeadlineSweepRunning = false;
+  setInterval(async () => {
+    if (rentalDeadlineSweepRunning) return;
+    try {
+      rentalDeadlineSweepRunning = true;
+      const { sweepDeadlines } = await import('../utils-server/rentalDispatchChain');
+      await sweepDeadlines();
+    } catch (e) {
+      logger.error('[scheduler] job 46 rental deadline sweep error', e);
+    } finally {
+      rentalDeadlineSweepRunning = false;
+    }
+  }, 30_000);
+
+  // Job 47 — Rental assignment SLA + fleet-ack timeout
+  let rentalSlaSweepRunning = false;
+  setInterval(async () => {
+    if (rentalSlaSweepRunning) return;
+    try {
+      rentalSlaSweepRunning = true;
+      const { sweepAssignmentSla } = await import('../utils-server/rentalDispatchChain');
+      await sweepAssignmentSla();
+    } catch (e) {
+      logger.error('[scheduler] job 47 rental SLA sweep error', e);
+    } finally {
+      rentalSlaSweepRunning = false;
+    }
+  }, 30_000);
+
+  // Job 48 — Rental confirmation deadline sweep (customer_overslept)
+  let rentalConfirmSweepRunning = false;
+  setInterval(async () => {
+    if (rentalConfirmSweepRunning) return;
+    try {
+      rentalConfirmSweepRunning = true;
+      const { sweepConfirmationDeadlines } = await import('../utils-server/rentalDispatchChain');
+      await sweepConfirmationDeadlines();
+    } catch (e) {
+      logger.error('[scheduler] job 48 rental confirm sweep error', e);
+    } finally {
+      rentalConfirmSweepRunning = false;
+    }
+  }, 60_000);
+
+  logger.info("[scheduler] started (50 jobs)");
 }

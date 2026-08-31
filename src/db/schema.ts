@@ -2775,3 +2775,364 @@ export const externalEntityMappings = pgTable("external_entity_mappings", {
   index("eem_integration_idx").on(t.integration_id),
   index("eem_provider_entity_idx").on(t.provider, t.external_entity_type),
 ]);
+
+// ══════════════════════════════════════════════════════════════════════
+// MARKETPLACE — PHASE 1: SHOPS
+// ══════════════════════════════════════════════════════════════════════
+
+export const shopOrderStatusEnum = pgEnum("shop_order_status", [
+  "pending",
+  "accepted",
+  "preparing",
+  "ready_for_pickup",
+  "out_for_delivery",
+  "delivered",
+  "cancelled",
+  "refunded",
+]);
+
+export const shopMemberRoleEnum = pgEnum("shop_member_role", [
+  "OWNER",
+  "MANAGER",
+  "STAFF",
+]);
+
+export const shopRfqStatusEnum = pgEnum("shop_rfq_status", [
+  "open",
+  "quoted",
+  "awarded",
+  "declined",
+  "expired",
+  "cancelled",
+]);
+
+/**
+ * Shops — fixed-price product catalogs + RFQ services.
+ * No fleet dependency. Soft-deleted via deleted_at.
+ */
+export const shops = pgTable("shops", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  owner_user_id: uuid("owner_user_id").notNull().references((): any => users.id),
+  name: varchar("name", { length: 150 }).notNull(),
+  slug: varchar("slug", { length: 150 }).notNull().unique(),
+  description: text("description"),
+  logo_url: text("logo_url"),
+  banner_url: text("banner_url"),
+  phone: varchar("phone", { length: 20 }),
+  address_line: text("address_line"),
+  lat: numeric("lat", { precision: 9, scale: 6 }),
+  lng: numeric("lng", { precision: 9, scale: 6 }),
+  status: varchar("status", { length: 20 }).notNull().default("active"), // active | suspended | closed
+  is_verified: boolean("is_verified").notNull().default(false),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  deleted_at: timestamptz("deleted_at"),
+}, (t) => [
+  index("shops_owner_idx").on(t.owner_user_id),
+  index("shops_status_idx").on(t.status),
+]);
+
+/**
+ * Shop staff membership.
+ * offboarding = set removed_at; re-add if ever needed.
+ */
+export const shopMembers = pgTable("shop_members", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  shop_id: uuid("shop_id").notNull().references(() => shops.id),
+  user_id: uuid("user_id").notNull().references(() => users.id),
+  role: shopMemberRoleEnum("role").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  joined_at: timestamptz("joined_at").notNull().defaultNow(),
+  removed_at: timestamptz("removed_at"),
+}, (t) => [
+  uniqueIndex("shop_members_unique_idx").on(t.shop_id, t.user_id),
+  index("shop_members_user_idx").on(t.user_id),
+  index("shop_members_shop_idx").on(t.shop_id),
+]);
+
+/**
+ * Shop products — fixed-price items and RFQ services.
+ * Money: price_bdt = integer paisa (BDT).
+ */
+export const shopProducts = pgTable("shop_products", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  shop_id: uuid("shop_id").notNull().references(() => shops.id),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  price_bdt: integer("price_bdt").notNull(),
+  currency: varchar("currency", { length: 5 }).notNull().default("BDT"),
+  stock: integer("stock").notNull().default(0),
+  image_urls: jsonb("image_urls").notNull().default('[]'),
+  category: varchar("category", { length: 50 }),
+  is_active: boolean("is_active").notNull().default(true),
+  is_rfq: boolean("is_rfq").notNull().default(false),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  deleted_at: timestamptz("deleted_at"),
+}, (t) => [
+  index("shop_products_shop_idx").on(t.shop_id),
+  index("shop_products_active_idx").on(t.shop_id, t.is_active),
+]);
+
+/**
+ * Shop orders — fixed-price purchases and food delivery.
+ * delivery_fee_bdt: nullable; set by courier-bid-accept for food delivery (F40).
+ * fulfillment: 'delivery' (default) | 'pickup' (ruling 12).
+ */
+export const shopOrders = pgTable("shop_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  shop_id: uuid("shop_id").notNull().references(() => shops.id),
+  rider_user_id: uuid("rider_user_id").notNull().references(() => users.id),
+  status: shopOrderStatusEnum("status").notNull().default("pending"),
+  subtotal_bdt: integer("subtotal_bdt").notNull(),
+  delivery_fee_bdt: integer("delivery_fee_bdt"),
+  total_bdt: integer("total_bdt").notNull(),
+  category: varchar("category", { length: 30 }).notNull().default("general"), // general | food
+  fulfillment: varchar("fulfillment", { length: 20 }).notNull().default("delivery"), // delivery | pickup
+  delivery_address: text("delivery_address"),
+  delivery_lat: numeric("delivery_lat", { precision: 9, scale: 6 }),
+  delivery_lng: numeric("delivery_lng", { precision: 9, scale: 6 }),
+  rider_notes: text("rider_notes"),
+  shop_notes: text("shop_notes"),
+  accepted_at: timestamptz("accepted_at"),
+  prepared_at: timestamptz("prepared_at"),
+  ready_at: timestamptz("ready_at"),
+  picked_up_at: timestamptz("picked_up_at"),
+  delivered_at: timestamptz("delivered_at"),
+  cancelled_at: timestamptz("cancelled_at"),
+  cancel_reason: text("cancel_reason"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("shop_orders_shop_idx").on(t.shop_id),
+  index("shop_orders_rider_idx").on(t.rider_user_id),
+  index("shop_orders_status_idx").on(t.status),
+]);
+
+/** Line items within a shop order. */
+export const shopOrderItems = pgTable("shop_order_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  order_id: uuid("order_id").notNull().references(() => shopOrders.id, { onDelete: "cascade" }),
+  product_id: uuid("product_id").notNull().references(() => shopProducts.id),
+  quantity: integer("quantity").notNull().default(1),
+  unit_price_bdt: integer("unit_price_bdt").notNull(),
+  line_total_bdt: integer("line_total_bdt").notNull(),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+});
+
+/**
+ * Shop RFQs — request-for-quote on RFQ-flagged products (services).
+ */
+export const shopRfqs = pgTable("shop_rfqs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  shop_id: uuid("shop_id").notNull().references(() => shops.id),
+  rider_user_id: uuid("rider_user_id").notNull().references(() => users.id),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  status: shopRfqStatusEnum("status").notNull().default("open"),
+  quoted_price_bdt: integer("quoted_price_bdt"),
+  quoted_notes: text("quoted_notes"),
+  quoted_at: timestamptz("quoted_at"),
+  awarded_at: timestamptz("awarded_at"),
+  expires_at: timestamptz("expires_at").notNull(),
+  cancelled_at: timestamptz("cancelled_at"),
+  cancel_reason: text("cancel_reason"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("shop_rfqs_shop_idx").on(t.shop_id),
+  index("shop_rfqs_rider_idx").on(t.rider_user_id),
+  index("shop_rfqs_status_idx").on(t.status),
+]);
+
+// ══════════════════════════════════════════════════════════════════════
+// MARKETPLACE — PHASE 2: CAR RENTAL BIDDING
+// ══════════════════════════════════════════════════════════════════════
+
+export const rentalCategoryEnum = pgEnum("rental_category", [
+  "car_rental",
+  "truck_rental",
+  "ambulance_scheduled",
+]);
+
+export const rentalUrgencyEnum = pgEnum("rental_urgency", [
+  "standard",
+  "alarm",
+]);
+
+export const rentalRequestStatusEnum = pgEnum("rental_request_status", [
+  "broadcasting",
+  "collecting",
+  "awarded",
+  "confirmed",
+  "completed",
+  "cancelled",
+  "expired",
+  "no_bidders",
+]);
+
+export const rentalBidStatusEnum = pgEnum("rental_bid_status", [
+  "active",
+  "withdrawn",
+  "superseded",
+  "won",
+  "lost",
+  "expired",
+]);
+
+export const rentalVehicleTypeEnum = pgEnum("rental_vehicle_type", [
+  "pickup",
+  "mini_truck",
+  "medium_truck",
+  "heavy_truck",
+  "trailer",
+  "van",
+  "ambulance_basic",
+  "ambulance_advanced",
+]);
+
+/**
+ * Rental request — customer-initiated RFQ for car/truck/ambulance-scheduled.
+ * State machine: broadcasting → collecting → awarded → confirmed → completed.
+ * Cancelled/expired/no_bidders are terminal.
+ */
+export const rentalRequests = pgTable("rental_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  category: rentalCategoryEnum("category").notNull(),
+  urgency: rentalUrgencyEnum("urgency").notNull().default("standard"),
+  rider_user_id: uuid("rider_user_id").notNull().references((): any => users.id),
+  status: rentalRequestStatusEnum("status").notNull().default("broadcasting"),
+  pickup_address: text("pickup_address").notNull(),
+  pickup_lat: numeric("pickup_lat", { precision: 9, scale: 6 }).notNull(),
+  pickup_lng: numeric("pickup_lng", { precision: 9, scale: 6 }).notNull(),
+  dropoff_address: text("dropoff_address").notNull(),
+  dropoff_lat: numeric("dropoff_lat", { precision: 9, scale: 6 }).notNull(),
+  dropoff_lng: numeric("dropoff_lng", { precision: 9, scale: 6 }).notNull(),
+  cargo_tags: text("cargo_tags").array(),
+  cargo_weight_kg: integer("cargo_weight_kg"),
+  cargo_volume_m3: numeric("cargo_volume_m3", { precision: 10, scale: 3 }),
+  cargo_description: text("cargo_description"),
+  requested_vehicle_type: rentalVehicleTypeEnum("requested_vehicle_type"),
+  // Ambulance-scheduled only
+  patient_condition: text("patient_condition"),
+  requires_paramedic: boolean("requires_paramedic"),
+  service_level: varchar("service_level", { length: 5 }), // CHECK IN ('BLS','ALS') enforced in handler
+  // Bidding
+  bidding_window_seconds: integer("bidding_window_seconds").notNull().default(1200),
+  soft_deadline_at: timestamptz("soft_deadline_at").notNull(),
+  // Award
+  awarded_bid_id: uuid("awarded_bid_id").references((): any => rentalBids.id),
+  awarded_at: timestamptz("awarded_at"), // F34: NEVER cleared on demotion
+  reselect_deadline_at: timestamptz("reselect_deadline_at"), // F39: set at demotion
+  confirmation_deadline_at: timestamptz("confirmation_deadline_at"), // F4: NULL while pending
+  fleet_ack_at: timestamptz("fleet_ack_at"), // F45: tracking-fork ack
+  confirmed_at: timestamptz("confirmed_at"),
+  tracking_required: boolean("tracking_required").notNull().default(false),
+  negotiated_terms: text("negotiated_terms"),
+  cancelled_at: timestamptz("cancelled_at"),
+  cancel_reason: text("cancel_reason"),
+  cancelled_by: varchar("cancelled_by", { length: 10 }), // rider|fleet|system|admin
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("rental_requests_rider_idx").on(t.rider_user_id),
+  index("rental_requests_status_idx").on(t.status),
+  index("rental_requests_cat_status_idx").on(t.category, t.status),
+  // Partial indexes for scheduler job deadline sweeps (jobs 46-48)
+  index("rental_requests_soft_deadline_idx")
+    .on(t.soft_deadline_at)
+    .where(sql`status IN ('broadcasting','collecting') AND awarded_at IS NULL`),
+  index("rental_requests_reselect_idx")
+    .on(t.reselect_deadline_at)
+    .where(sql`status = 'collecting' AND reselect_deadline_at IS NOT NULL`),
+  index("rental_requests_confirm_idx")
+    .on(t.confirmation_deadline_at)
+    .where(sql`status = 'awarded' AND confirmation_deadline_at IS NOT NULL`),
+]);
+
+/**
+ * Rental bid — fleet-submitted quote for a rental request.
+ * Partial unique: UNIQUE(request_id, fleet_id) WHERE status='active'.
+ */
+export const rentalBids = pgTable("rental_bids", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  request_id: uuid("request_id").notNull().references(() => rentalRequests.id, { onDelete: "cascade" }),
+  submitted_by_user_id: uuid("submitted_by_user_id").notNull().references((): any => users.id),
+  fleet_id: uuid("fleet_id").notNull().references(() => fleets.id),
+  driver_user_id: uuid("driver_user_id").references((): any => users.id),
+  vehicle_id: uuid("vehicle_id").references((): any => vehicles.id),
+  vehicle_type: rentalVehicleTypeEnum("vehicle_type").notNull(),
+  quoted_price_bdt: integer("quoted_price_bdt").notNull(),
+  quoted_notes: text("quoted_notes"),
+  status: rentalBidStatusEnum("status").notNull().default("active"),
+  submitted_at: timestamptz("submitted_at").notNull().defaultNow(),
+  withdrawn_at: timestamptz("withdrawn_at"),
+  withdrawn_by_user_id: uuid("withdrawn_by_user_id").references((): any => users.id),
+  expired_at: timestamptz("expired_at"),
+  settled_at: timestamptz("settled_at"),
+}, (t) => [
+  // Partial unique: one active bid per (request, fleet) — allows withdraw+resubmit (spec F35)
+  uniqueIndex("rental_bids_active_fleet_idx")
+    .on(t.request_id, t.fleet_id)
+    .where(sql`status = 'active'`),
+  index("rental_bids_fleet_status_idx").on(t.fleet_id, t.status),
+]);
+
+/**
+ * Awarded bid assignment — tracks the driver-pick lifecycle.
+ * Partial unique (F36): UNIQUE(request_id) WHERE released_at IS NULL.
+ * Demote→re-award appends a NEW row (history preserved).
+ */
+export const awardedBidAssignments = pgTable("awarded_bid_assignments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  request_id: uuid("request_id").notNull().references(() => rentalRequests.id, { onDelete: "cascade" }),
+  winning_bid_id: uuid("winning_bid_id").notNull().references((): any => rentalBids.id),
+  fleet_id: uuid("fleet_id").notNull().references(() => fleets.id),
+  assigned_driver_user_id: uuid("assigned_driver_user_id").references((): any => users.id),
+  assigned_vehicle_id: uuid("assigned_vehicle_id").references((): any => vehicles.id),
+  assigned_by_user_id: uuid("assigned_by_user_id").references((): any => users.id),
+  assignment_deadline_at: timestamptz("assignment_deadline_at").notNull(),
+  assigned_at: timestamptz("assigned_at"),
+  released_at: timestamptz("released_at"),
+  release_reason: varchar("release_reason", { length: 30 }), // sla_timeout|fleet_cancelled|customer_cancelled
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  // F36: at most one LIVE assignment per request — partial allows demote→re-award (spec §B.0)
+  uniqueIndex("awarded_bid_assignments_live_idx")
+    .on(t.request_id)
+    .where(sql`released_at IS NULL`),
+]);
+
+/**
+ * Fleet service zones — H3 cells defining a fleet's broadcast eligibility.
+ * resolution 8 (~740m); a fleet with no ACTIVE rows is global (receives everything).
+ */
+export const fleetServiceZones = pgTable("fleet_service_zones", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  fleet_id: uuid("fleet_id").notNull().references(() => fleets.id, { onDelete: "cascade" }),
+  h3_cell: varchar("h3_cell", { length: 20 }).notNull(),
+  resolution: smallint("resolution").notNull().default(8),
+  is_active: boolean("is_active").notNull().default(true),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("fleet_service_zones_fleet_cell_idx").on(t.fleet_id, t.h3_cell),
+  index("fleet_service_zones_fleet_idx").on(t.fleet_id),
+  index("fleet_service_zones_active_idx").on(t.fleet_id, t.is_active),
+]);
+
+/**
+ * Rental request events — append-only audit log (F21).
+ * Exempt from updated_at.
+ */
+export const rentalRequestEvents = pgTable("rental_request_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  request_id: uuid("request_id").notNull().references(() => rentalRequests.id, { onDelete: "cascade" }),
+  event_type: varchar("event_type", { length: 50 }).notNull(),
+  payload: jsonb("payload").notNull().default('{}'),
+  created_by: uuid("created_by").references((): any => users.id),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  // Append-only: no updated_at.
+}, (t) => [
+  index("rental_request_events_req_idx").on(t.request_id, t.created_at),
+]);

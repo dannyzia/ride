@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { platformConfig } from '@/src/db/schema';
-import { inArray } from 'drizzle-orm';
+import { inArray, eq } from 'drizzle-orm';
 
 /**
  * Plan 05 feature-gate keys in platform_config.
@@ -36,10 +36,6 @@ const DEFAULTS: Record<Plan05ConfigKey, string> = {
  * Batch-fetch multiple platform_config keys in one query.
  * Returns an object keyed by config key, with the DB value or the
  * built-in default if the row is missing.
- *
- * Usage:
- *   const cfg = await getPlan05Config(['sos_cooldown_seconds', 'schedule_min_lead_minutes']);
- *   const cooldownMs = cfg.sos_cooldown_seconds * 1000;
  */
 export async function getPlan05Config<K extends Plan05ConfigKey>(
   keys: K[],
@@ -59,7 +55,6 @@ export async function getPlan05Config<K extends Plan05ConfigKey>(
 
 /**
  * Fetch a single platform_config key with a typed default.
- * Prefer the batch `getPlan05Config` when reading 2+ keys.
  */
 export async function getPlan05Value<K extends Plan05ConfigKey>(
   key: K,
@@ -83,11 +78,66 @@ export async function getPlan05Int<K extends Plan05ConfigKey>(
 
 /**
  * Convenience: parse a boolean config key ("true"/"false").
- * Admin toggles zone_multi_active_enabled to gate the Zone Foundation.
  */
 export async function getPlan05Bool<K extends Plan05ConfigKey>(
   key: K,
 ): Promise<boolean> {
   const raw = await getPlan05Value(key);
   return raw.toLowerCase() === 'true';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// MARKETPLACE — generic vertical helpers
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Check if a marketplace vertical is enabled.
+ * Falls back to `false` when the key is absent from platform_config.
+ */
+export async function isVerticalEnabled(key: string): Promise<boolean> {
+  try {
+    const rows = await db
+      .select({ value: platformConfig.value })
+      .from(platformConfig)
+      .where(eq(platformConfig.key, key))
+      .limit(1);
+
+    const val = rows[0]?.value;
+    if (!val) return false;
+    return val === 'true' || val === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Read a platform_config value, returning the fallback if absent.
+ */
+export async function getConfigValue(
+  key: string,
+  fallback: string,
+): Promise<string> {
+  try {
+    const rows = await db
+      .select({ value: platformConfig.value })
+      .from(platformConfig)
+      .where(eq(platformConfig.key, key))
+      .limit(1);
+
+    return rows[0]?.value ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Read a platform_config value as integer, returning the fallback if absent/NaN.
+ */
+export async function getConfigInt(
+  key: string,
+  fallback: number,
+): Promise<number> {
+  const raw = await getConfigValue(key, String(fallback));
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : fallback;
 }
