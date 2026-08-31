@@ -12,7 +12,7 @@
 const mockMappingRows: Record<string, unknown>[] = [];
 
 function mockChainSelect() {
-  const chain: Record<string, unknown> = {};
+  const chain: Record<PropertyKey, unknown> = {};
   chain.select = jest.fn().mockReturnValue(chain);
   chain.from = jest.fn().mockReturnValue(chain);
   chain.where = jest.fn().mockReturnValue(chain);
@@ -35,7 +35,7 @@ function mockChainSelect() {
 }
 
 function mockChainInsert() {
-  const chain: Record<string, unknown> = {};
+  const chain: Record<PropertyKey, unknown> = {};
   chain.insert = jest.fn().mockReturnValue(chain);
   chain.values = jest.fn().mockImplementation((vals: Record<string, unknown>) => {
     // Store the mapping in our mock rows
