@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
-import { drivers, users, subscriptions, pricing, platformConfig } from '@/src/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { drivers, users, subscriptions, pricing, platformConfig, driverOnlineSessions, rides } from '@/src/db/schema';
+import { eq, and, inArray, isNull, desc } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { isAllowedStorageUrl } from '@/lib/storageUrl';
@@ -49,6 +49,32 @@ export async function GET(request: Request) {
       .where(and(eq(subscriptions.driver_id, driver.id), eq(subscriptions.status, 'active')))
       .limit(1);
 
+    // Active online session (went_offline_at IS NULL = zombie or live)
+    const [activeSession] = await db
+      .select({ id: driverOnlineSessions.id, went_online_at: driverOnlineSessions.went_online_at })
+      .from(driverOnlineSessions)
+      .where(
+        and(
+          eq(driverOnlineSessions.driver_id, driver.id),
+          isNull(driverOnlineSessions.went_offline_at),
+        ),
+      )
+      .orderBy(desc(driverOnlineSessions.went_online_at))
+      .limit(1);
+
+    // Current active ride (not completed / cancelled / expired)
+    const [currentRide] = await db
+      .select({ id: rides.id, status: rides.status })
+      .from(rides)
+      .where(
+        and(
+          eq(rides.driver_id, driver.id),
+          inArray(rides.status, ['matched', 'driver_arriving', 'driver_arrived', 'in_progress']),
+        ),
+      )
+      .orderBy(desc(rides.created_at))
+      .limit(1);
+
     return Response.json({
       driver: {
         ...driver,
@@ -56,8 +82,20 @@ export async function GET(request: Request) {
         phone: user.phone,
         email: user.email,
         profile_image_url: user.profile_image_url,
+        // numeric columns arrive from postgres.js as strings — convert at the
+        // API boundary or clients calling .toFixed() on them crash
+        // ("x.toFixed is not a function (it is undefined)").
+        rating: driver.rating != null ? Number(driver.rating) : null,
+        acceptance_rate: driver.acceptance_rate != null ? Number(driver.acceptance_rate) : null,
         calls_remaining: activeSub?.calls_remaining ?? 0,
         subscription: activeSub ?? null,
+        // Session + ride recovery fields (for zombie session detection on mount)
+        has_active_session: !!activeSession,
+        session_started_at: activeSession?.went_online_at ?? null,
+        current_ride_id: currentRide?.id ?? null,
+        current_ride_status: currentRide?.status ?? null,
+        on_break: driver.on_break,
+        break_started_at: driver.break_started_at,
       },
     });
 
@@ -143,9 +181,15 @@ export async function PATCH(request: Request) {
       await db.update(users).set(userUpdates).where(eq(users.id, user.id));
     }
 
-    // Re-fetch to return updated state
+    // Re-fetch to return updated state (numeric cols converted — see GET)
     const [updated] = await db.select().from(drivers).where(eq(drivers.id, driver.id)).limit(1);
-    return Response.json({ driver: updated });
+    return Response.json({
+      driver: {
+        ...updated,
+        rating: updated.rating != null ? Number(updated.rating) : null,
+        acceptance_rate: updated.acceptance_rate != null ? Number(updated.acceptance_rate) : null,
+      },
+    });
 
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });

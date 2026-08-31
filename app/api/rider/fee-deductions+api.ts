@@ -1,6 +1,6 @@
 import { db } from "@/src/db";
 import { users, riderFeeDeductions } from "@/src/db/schema";
-import { eq, and, sql, asc } from "drizzle-orm";
+import { eq, and, gt, sql, asc } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
@@ -33,7 +33,9 @@ export async function GET(request: Request) {
         and(
           eq(riderFeeDeductions.rider_id, dbUser.id),
           sql`${riderFeeDeductions.status} IN ('pending', 'partially_collected')`,
-          sql`${riderFeeDeductions.expires_at} > ${now}`,
+          // gt() (typed column comparison) so drizzle maps the Date — raw
+          // sql-template params pass Dates through unmapped and crash Bind.
+          gt(riderFeeDeductions.expires_at, now),
         ),
       )
       .orderBy(asc(riderFeeDeductions.created_at));

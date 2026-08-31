@@ -1,0 +1,36 @@
+# Maestro flow: Segment 2 — Rider (read the PIN, wait for completion).
+# This flow's main job is to capture the PIN so the driver flow (s2-driver.yaml)
+# can be re-run with --env RIDE_PIN=<value>. It also rides the passenger's UI
+# to completion (the rider sees "Driver Found!" → "Ride in progress" → "Ride Complete!").
+# Run: maestro test --device-id 24261JEGR10296 segments/s2-rider.yaml
+# IMPORTANT: the test runner must READ the 4-digit PIN from the rider screen
+# (assertVisible + log) before invoking s2-driver.yaml with --env RIDE_PIN.
+
+appId: com.ride.bd
+name: S2 Rider — capture PIN + ride to completion
+---
+- extendedWaitUntil:
+    visible: "Driver Found!"
+    timeout: 60000
+# The "Tell your driver your Ride Pin" screen shows a 4-digit code. Maestro can't
+# read arbitrary text into a variable on this build, so the runner must visually
+# capture it. Assert the screen is present and stop; the runner then invokes
+# the driver flow with the captured PIN.
+- assertVisible: "Tell your driver your Ride Pin"
+# Wait for the ride to start (driver entered the PIN).
+- extendedWaitUntil:
+    visible: "Ride in progress"
+    timeout: 60000
+# Wait for completion (driver dropped off).
+- extendedWaitUntil:
+    visible: "Ride Complete!"
+    timeout: 120000
+# Optionally rate the driver: 5 stars + Submit. (Tune selectors on first run.)
+- tapOn:
+    text: "Rate Driver"
+    optional: true
+- extendedWaitUntil:
+    visible: "5"
+    timeout: 5000
+- tapOn: "Submit Rating"
+    optional: true

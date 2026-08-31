@@ -34,6 +34,13 @@ export interface MapHotspot {
   intensity: number;
 }
 
+interface VehicleMarker {
+  id: string;
+  lat: number;
+  lng: number;
+  vehicle_type: string;
+}
+
 interface MapProps {
   /** Static snapshot mode: when `origin` is provided, the map renders
    *  origin/destination markers (+ optional route line) instead of the live
@@ -47,6 +54,10 @@ interface MapProps {
    *  the map renders a demand-heat circle per zone and fits the camera to
    *  their bounding box. Used by the driver hotspot map. */
   hotspots?: MapHotspot[];
+  /** Vehicle markers for nearby drivers — rendered as green dots. */
+  vehicleMarkers?: VehicleMarker[];
+  /** Called when user taps the map with { lat, lng }. */
+  onMapPress?: (coords: { lat: number; lng: number }) => void;
 }
 
 /** Linear interpolation between two #RRGGBB colors. */
@@ -66,7 +77,7 @@ function heatColor(intensity: number): string {
   return lerpHex(colors.amber, colors.danger, (t - 0.5) * 2);
 }
 
-const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
+const Map = ({ origin, destination, route, hotspots, vehicleMarkers, onMapPress }: MapProps = {}) => {
   const cameraRef = useRef<ComponentRef<MapLibreModule["Camera"]>>(null);
 
   const isDark = useIsDark();
@@ -91,8 +102,12 @@ const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
     }
   }, [isStatic, userLatitude, userLongitude]);
 
-  const handleMapInteraction = () => {
+  const handleMapInteraction = (e: any) => {
     Keyboard.dismiss();
+    if (onMapPress && e?.geometry?.coordinates) {
+      const [lng, lat] = e.geometry.coordinates;
+      onMapPress({ lat, lng });
+    }
   };
 
   // Hotspot mode drives the camera from the zone bounding box, not GPS.
@@ -322,6 +337,33 @@ const Map = ({ origin, destination, route, hotspots }: MapProps = {}) => {
                 resizeMode="contain"
               />
             </PointAnnotation>
+          )}
+          {/* Vehicle markers — green dots for nearby drivers */}
+          {vehicleMarkers && vehicleMarkers.length > 0 && ShapeSource && (
+            <ShapeSource
+              id="vehicle-markers"
+              shape={{
+                type: "FeatureCollection" as const,
+                features: vehicleMarkers.map((m) => ({
+                  type: "Feature" as const,
+                  geometry: { type: "Point" as const, coordinates: [m.lng, m.lat] },
+                  properties: { id: m.id },
+                })),
+              }}
+            >
+              {CircleLayer && (
+                <CircleLayer
+                  id="vehicle-markers-layer"
+                  style={{
+                    circleColor: colors.primary,
+                    circleRadius: 6,
+                    circleStrokeColor: "#FFFFFF",
+                    circleStrokeWidth: 2,
+                    circleOpacity: 0.9,
+                  }}
+                />
+              )}
+            </ShapeSource>
           )}
         </MapViewLib>
       ) : (

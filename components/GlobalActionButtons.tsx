@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,13 +12,15 @@ import {
   Linking,
   Alert,
   ActivityIndicator,
+  PanResponder,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, usePathname } from "expo-router";
+import { router, usePathname, useSegments } from "expo-router";
 import { useIsDark } from "@/lib/useAppearance";
+import { API_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
-import Constants from "expo-constants";
 import * as Location from "expo-location";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
@@ -30,10 +32,17 @@ import NetInfo from "@react-native-community/netinfo";
 type UserRole = "customer" | "driver" | "admin" | "none";
 
 function useUserRole(): UserRole {
-  const pathname = usePathname();
-  if (pathname.startsWith("/(main)/(customer)")) return "customer";
-  if (pathname.startsWith("/(main)/(rider)")) return "driver";
-  if (pathname.startsWith("/admin")) return "admin";
+  // Widen the typed tuple the same way app/admin/_layout.tsx does — this
+  // component is rendered from multiple layout depths.
+  const segments = useSegments() as readonly string[];
+  // Segments carry route-group literals ("(main)", "(customer)", ...) on
+  // every platform — the same mechanism the root auth gate uses. usePathname
+  // group formatting varies, so it is only used for drawer active-state.
+  if (segments[0] === "admin") return "admin";
+  if (segments[0] === "(main)") {
+    if (segments[1] === "(rider)") return "driver";
+    return "customer"; // (customer) is the default (main) child
+  }
   return "none";
 }
 
@@ -53,12 +62,11 @@ const CUSTOMER_ITEMS: NavItem[] = [
   { route: "/(main)/(customer)/schedule-ride", label: "Schedule Ride", icon: "calendar", group: "Ride" },
   { route: "/(main)/(customer)/(tabs)/rides/index", label: "My Rides", icon: "time", group: "Activity" },
   { route: "/(main)/(customer)/(tabs)/inbox/index", label: "Inbox", icon: "mail", group: "Activity" },
-  { route: "/(main)/(customer)/referral", label: "Referrals", icon: "people", group: "Activity" },
+  { route: "/(main)/(customer)/(tabs)/referral/index", label: "Referrals", icon: "people", group: "Activity" },
   { route: "/(main)/(customer)/(tabs)/profile/index", label: "Profile", icon: "person", group: "Account" },
   { route: "/(main)/(customer)/(tabs)/wallet/index", label: "Wallet", icon: "wallet", group: "Account" },
   { route: "/(main)/(customer)/(tabs)/settings/index", label: "Settings", icon: "settings", group: "Account" },
   { route: "/(main)/(customer)/apply-promos", label: "Promos", icon: "ticket", group: "Account" },
-  { route: "/(main)/(customer)/emergency-sos", label: "Emergency SOS", icon: "warning", group: "Safety" },
 ];
 
 const DRIVER_ITEMS: NavItem[] = [
@@ -74,6 +82,7 @@ const DRIVER_ITEMS: NavItem[] = [
   { route: "/(main)/(rider)/hotspot-map", label: "Hotspot Map", icon: "map", group: "Programs" },
   { route: "/(main)/(rider)/documents", label: "Documents", icon: "document-text", group: "Compliance" },
   { route: "/(main)/(rider)/verification", label: "Verification", icon: "checkmark-circle", group: "Compliance" },
+  { route: "/(main)/(rider)/vehicle-management", label: "Vehicles", icon: "car", group: "Compliance" },
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
@@ -84,7 +93,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { route: "/admin/fare-config", label: "Fare Config", icon: "cash", group: "Admin" },
 ];
 
-const GROUP_ORDER_CUSTOMER = ["Ride", "Activity", "Account", "Safety"];
+const GROUP_ORDER_CUSTOMER = ["Ride", "Activity", "Account"];
 const GROUP_ORDER_DRIVER = ["Main", "Account", "Programs", "Compliance"];
 const GROUP_ORDER_ADMIN = ["Admin"];
 
@@ -95,8 +104,28 @@ interface SOSContact {
   number: string;
 }
 
-const SOS_API_URL = Constants.expoConfig?.extra?.serverUrl ?? "";
+// API base follows the app-wide resolver in lib/config.ts (dev LAN IP,
+// emulator loopback, or EXPO_PUBLIC_SERVER_URL in production).
+const SOS_API_URL = API_URL;
 const SOS_COOLDOWN_SECONDS = 5;
+
+// ─── Floating button stack geometry / drag ─────────────────────────
+// Both buttons are the same size and sit in one draggable stack:
+// hamburger ABOVE SOS with a fixed gap. The stack position is the
+// top-left of the hamburger; dragging either button moves the pair.
+const BTN_SIZE = 48;
+const BTN_GAP = 12;
+const EDGE_RIGHT = 16; // default distance from the right screen edge
+const EDGE_BOTTOM = 24; // default distance from the bottom safe area
+const DRAG_THRESHOLD = 10; // movement (px) before a touch becomes a drag
+const DRAG_CLAMP = 8; // minimum distance from screen edges while dragging
+
+// Survives remounts (customer ↔ driver ↔ admin layouts) within a session.
+// Stored as an offset from the bottom-right corner, NOT an absolute
+// top-left: an absolute position cached under different window metrics
+// (nav-bar inset changes, rotation, taskbar appearance) can land off-screen
+// and clip the SOS button behind system UI — the offset re-anchors itself.
+let cachedStackOffset: { fromRight: number; fromBottom: number } | null = null;
 
 // ─── Component ────────────────────────────────────────────────────
 
@@ -137,6 +166,88 @@ export default function GlobalActionButtons() {
   }, []);
 
   // ── All hooks MUST be before any early return (rules-of-hooks) ──
+
+  // ── Draggable stack position (hamburger top-left anchor) ──
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const hasSos = role !== "admin";
+  const stackHeight = hasSos ? BTN_SIZE * 2 + BTN_GAP : BTN_SIZE;
+
+  // The buttons must clear the system nav bar (Android 3-button / gesture).
+  // SafeAreaProvider is wired at app root, but insets.bottom is unreliable
+  // on Android (edge-to-edge gating, gesture vs 3-button, pre-15). 64dp
+  // covers a Pixel-6a-style 3-button nav bar with 8dp+ breathing room.
+  const bottomInset = Math.max(insets.bottom, Platform.OS === "android" ? 64 : 0);
+
+  const clampPos = useCallback(
+    (x: number, y: number) => {
+      const maxX = Math.max(windowWidth - BTN_SIZE - DRAG_CLAMP, DRAG_CLAMP);
+      const maxY = Math.max(
+        windowHeight - bottomInset - stackHeight - DRAG_CLAMP,
+        insets.top + DRAG_CLAMP,
+      );
+      return {
+        x: Math.min(Math.max(x, DRAG_CLAMP), maxX),
+        y: Math.min(Math.max(y, insets.top + DRAG_CLAMP), maxY),
+      };
+    },
+    [windowWidth, windowHeight, insets.top, bottomInset, stackHeight],
+  );
+
+  const [stackPos, setStackPos] = useState(() => {
+    if (cachedStackOffset) {
+      return {
+        x: windowWidth - cachedStackOffset.fromRight - BTN_SIZE,
+        y: windowHeight - cachedStackOffset.fromBottom - stackHeight,
+      };
+    }
+    return {
+      x: windowWidth - EDGE_RIGHT - BTN_SIZE,
+      y: windowHeight - bottomInset - EDGE_BOTTOM - stackHeight,
+    };
+  });
+
+  // Keep a ref mirror + module cache current for the PanResponder closures
+  // and for the next mount of this component.
+  const stackPosRef = useRef(stackPos);
+  const clampPosRef = useRef(clampPos);
+  useEffect(() => {
+    stackPosRef.current = stackPos;
+    cachedStackOffset = {
+      fromRight: windowWidth - stackPos.x - BTN_SIZE,
+      fromBottom: windowHeight - stackPos.y - stackHeight,
+    };
+  }, [stackPos, windowWidth, windowHeight, stackHeight]);
+  useEffect(() => {
+    clampPosRef.current = clampPos;
+  }, [clampPos]);
+
+  // Re-clamp when the window/insets change (rotation, mount with a cached
+  // position from a differently-sized stack). Layout effect so an
+  // out-of-bounds cached position is corrected before the first paint —
+  // otherwise the stack flashes in (and can stay) behind the nav bar.
+  useLayoutEffect(() => {
+    setStackPos((p) => clampPos(p.x, p.y));
+  }, [clampPos]);
+
+  // Drag: claim the gesture (capture phase) only after real movement, so
+  // plain taps still reach the child Pressable/TouchableOpacity press.
+  const dragStart = useRef({ x: 0, y: 0 });
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponderCapture: (_e, g) =>
+        Math.abs(g.dx) > DRAG_THRESHOLD || Math.abs(g.dy) > DRAG_THRESHOLD,
+      onPanResponderGrant: () => {
+        dragStart.current = { ...stackPosRef.current };
+      },
+      onPanResponderMove: (_e, g) => {
+        const next = clampPosRef.current(
+          dragStart.current.x + g.dx,
+          dragStart.current.y + g.dy,
+        );
+        setStackPos(next);
+      },
+    }),
+  ).current;
 
   // ── Nav items by role ──
   const navItems = useMemo(() => {
@@ -252,9 +363,10 @@ export default function GlobalActionButtons() {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
             if (token) {
-              const endpoint = role === "driver"
-                ? `${SOS_API_URL}/api/driver/sos-alert`
-                : `${SOS_API_URL}/api/sos/alert`;
+              // T-1: /api/sos/alert is the canonical endpoint and serves BOTH
+              // riders and drivers (a separate /api/driver/sos-alert route
+              // does not exist).
+              const endpoint = `${SOS_API_URL}/api/sos/alert`;
               await fetch(endpoint, {
                 method: "POST",
                 headers: {
@@ -276,7 +388,7 @@ export default function GlobalActionButtons() {
         setSosSending(false);
       }
     },
-    [sosSending, role, startCooldown],
+    [sosSending, startCooldown],
   );
 
   const handleSosDismiss = useCallback(() => {
@@ -288,59 +400,67 @@ export default function GlobalActionButtons() {
   if (role === "none") return null;
 
   const isCooldownActive = cooldownRemaining > 0;
-  const showSos = role !== "admin";
-
-  // ── Positioning: both on bottom-right, stacked vertically ──
-  const SOS_BOTTOM = insets.bottom + 24;
-  const HAMBURGER_BOTTOM = SOS_BOTTOM + 56 + 12; // SOS height (56) + 12px gap
-  const BUTTON_RIGHT = 16;
+  const showSos = hasSos;
 
   // ── Menu title by role ──
   const menuTitle = role === "customer" ? "Menu" : role === "driver" ? "Driver Menu" : "Admin Menu";
 
   return (
     <>
-      {/* ═══ HAMBURGER BUTTON (above SOS, bottom-right) ═══ */}
-      <Pressable
-        onPress={() => setMenuOpen(true)}
-        style={[
-          styles.hamburgerBtn,
-          {
-            bottom: HAMBURGER_BOTTOM,
-            right: BUTTON_RIGHT,
-            backgroundColor: fabBg,
-            borderColor: fabBorder,
-          },
-        ]}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      {/* ═══ HAMBURGER BUTTON (top of the draggable stack) ═══ */}
+      <View
+        {...panResponder.panHandlers}
+        style={[styles.dragWrapper, { left: stackPos.x, top: stackPos.y }]}
       >
-        <Ionicons name="menu" size={24} color={textPrimary} />
-      </Pressable>
-
-      {/* ═══ SOS BUTTON (below hamburger, bottom-right) ═══ */}
-      {showSos && (
-        <TouchableOpacity
-          onPress={handleSosOpen}
-          disabled={isCooldownActive}
-          activeOpacity={0.8}
+        <Pressable
+          onPress={() => setMenuOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Open menu"
           style={[
-            styles.sosBtn,
+            styles.hamburgerBtn,
             {
-              bottom: SOS_BOTTOM,
-              right: BUTTON_RIGHT,
-              backgroundColor: isCooldownActive
-                ? isDark ? colors.textDisabledDark : colors.textDisabledLight
-                : colors.danger,
+              backgroundColor: fabBg,
+              borderColor: fabBorder,
             },
           ]}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          {cooldownRemaining > 0 ? (
-            <Text style={styles.sosCountdown}>{cooldownRemaining}</Text>
-          ) : (
-            <Ionicons name="shield" size={24} color={colors.white} />
-          )}
-        </TouchableOpacity>
+          <Ionicons name="menu" size={24} color={textPrimary} />
+        </Pressable>
+      </View>
+
+      {/* ═══ SOS BUTTON (bottom of the draggable stack, same 48dp size) ═══ */}
+      {showSos && (
+        <View
+          {...panResponder.panHandlers}
+          style={[
+            styles.dragWrapper,
+            { left: stackPos.x, top: stackPos.y + BTN_SIZE + BTN_GAP },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={handleSosOpen}
+            disabled={isCooldownActive}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Emergency SOS"
+            style={[
+              styles.sosBtn,
+              {
+                backgroundColor: isCooldownActive
+                  ? isDark ? colors.textDisabledDark : colors.textDisabledLight
+                  : colors.danger,
+              },
+            ]}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            {cooldownRemaining > 0 ? (
+              <Text style={styles.sosCountdown}>{cooldownRemaining}</Text>
+            ) : (
+              <Ionicons name="shield" size={24} color={colors.white} />
+            )}
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* ═══ HAMBURGER MENU MODAL ═══ */}
@@ -523,11 +643,20 @@ export default function GlobalActionButtons() {
 // ─── Styles ───────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // ── Hamburger Button ──
-  hamburgerBtn: {
+  // ── Draggable wrapper (one per button, absolute-positioned) ──
+  // Both buttons are 48x48 (owner-ruling: equal size). Hardcoded so the
+  // spec value is visible at the style level and cannot drift via BTN_SIZE.
+  dragWrapper: {
     position: "absolute",
     width: 48,
     height: 48,
+    zIndex: 999,
+  },
+
+  // ── Hamburger Button (48x48) ──
+  hamburgerBtn: {
+    width: "100%",
+    height: "100%",
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
@@ -540,12 +669,11 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
 
-  // ── SOS Button ──
+  // ── SOS Button (48x48, same as hamburger) ──
   sosBtn: {
-    position: "absolute",
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: "100%",
+    height: "100%",
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
@@ -558,7 +686,7 @@ const styles = StyleSheet.create({
   sosCountdown: {
     color: colors.white,
     fontFamily: "Jakarta-Bold",
-    fontSize: 18,
+    fontSize: 16,
     fontVariant: ["tabular-nums"],
   },
 

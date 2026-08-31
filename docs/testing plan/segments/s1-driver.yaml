@@ -1,0 +1,48 @@
+# Maestro flow: Segment 1 — Driver (login + go online + accept the rider's offer).
+# Authored from the codebase. Stops at the "Slide to Confirm Arrival" screen
+# (Segment 2 takes the ride through PIN → start → drop-off).
+# Run: maestro test --device-id 9a76528e segments/s1-driver.yaml
+# Pre-req: s1-rider.yaml has been started and the ride is in 'pending'/'dispatching'.
+
+appId: com.ride.bd
+name: S1 Driver — login + go online + accept offer
+env:
+  DRIVER_PHONE: "1700000001"
+  DRIVER_PASSWORD: "test1234"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Get Started"
+    timeout: 30000
+- tapOn:
+    text: "1XXXXXXXXX"
+- inputText: ${DRIVER_PHONE}
+- tapOn: "Login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn: "Password"
+- inputText: ${DRIVER_PASSWORD}
+- tapOn: "Login"
+# Wait for Driver Home — "Calls Remaining" is the canonical marker (master prompt §7 phase A).
+- extendedWaitUntil:
+    visible: "Calls Remaining"
+    timeout: 20000
+# Go Online. The toggle button is a system-prompted dialog → accept the permission.
+- tapOn: "Go Online"
+# iOS-style "Allow While Using App" / Android "Allow" permission dialog.
+- tapOn: "While using the app"
+- extendedWaitUntil:
+    visible: "Go Offline"
+    timeout: 15000
+# Wait for the rider's offer to land on this driver. Timeout 30s (dispatch is fast).
+- extendedWaitUntil:
+    visible: "New Ride Offer"
+    timeout: 30000
+# Accept. S1 ends here — the next screen is "Slide to Confirm Arrival" (S2 territory).
+- tapOn: "Accept"
+- extendedWaitUntil:
+    visible: "Slide"
+    timeout: 10000
+# STOP. Driver flow for Segment 2 takes over from here (arrival slide → PIN → start → drop-off).

@@ -16,7 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { icons } from "@/constants/data";
 import { useCustomer } from "@/store";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { getBarikoiAutocompleteUrl } from "@/lib/useBarikoiMapStyle";
 import { logger } from "@/lib/logger";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
@@ -47,7 +47,9 @@ const AutocompletePage = () => {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
-  const { userLatitude, userLongitude, setDestinationLocation } = useCustomer();
+  const { userLatitude, userLongitude, setUserLocation, setDestinationLocation } = useCustomer();
+  const { type, stopIndex } = useLocalSearchParams<{ type?: string; stopIndex?: string }>();
+  const locationType = type === "from" ? "from" : type === "stop" ? "stop" : "to";
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -56,13 +58,35 @@ const AutocompletePage = () => {
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
-  const handleDestinationPress = (location: {
+  const handleLocationPress = (location: {
     latitude: number;
     longitude: number;
     address: string;
   }) => {
-    setDestinationLocation(location);
-    router.push("/(main)/find-ride");
+    // Import rider store dynamically to avoid circular deps.
+    // router.back() must wait for the store update so home screen
+    // renders with the correct data on first render.
+    import("@/store/useRiderStore").then(({ useRiderStore }) => {
+      const store = useRiderStore.getState();
+
+      if (locationType === "from") {
+        setUserLocation(location);
+        store.setPickup(location.address, location.latitude, location.longitude);
+        store.setPickupCoords({ lat: location.latitude, lng: location.longitude });
+      } else if (locationType === "stop" && stopIndex != null) {
+        const idx = parseInt(stopIndex, 10);
+        if (!isNaN(idx)) {
+          const next = [...store.stops];
+          next[idx] = { lat: location.latitude, lng: location.longitude, address: location.address };
+          store.setStops(next);
+        }
+      } else {
+        setDestinationLocation(location);
+        store.setDropoffCoords({ lat: location.latitude, lng: location.longitude });
+        store.setDropoff(location.address, location.latitude, location.longitude);
+      }
+      router.back();
+    });
   };
 
   useEffect(() => {
@@ -130,7 +154,7 @@ const AutocompletePage = () => {
       place.name ||
       query;
 
-    handleDestinationPress({ latitude: lat, longitude: lng, address });
+    handleLocationPress({ latitude: lat, longitude: lng, address });
     setQuery(address);
     setSuggestions([]);
   };
@@ -171,7 +195,8 @@ const AutocompletePage = () => {
             style={{ tintColor: textSecondary }}
           />
           <TextInput
-            placeholder="Search destination..."
+            autoFocus
+            placeholder={locationType === "from" ? "Search pickup..." : locationType === "stop" ? "Search stop..." : "Search destination..."}
             placeholderTextColor={textSecondary}
             value={query}
             onChangeText={setQuery}

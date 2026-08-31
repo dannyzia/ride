@@ -4,9 +4,10 @@ import GlobalActionButtons from "@/components/GlobalActionButtons";
 
 /**
  * Root layout for all rider/driver screens.
- * Provides hamburger (bottom-right, above SOS) + SOS (bottom-right)
- * across every screen — tab screens, stack screens, modals, everything.
- * Role detected internally via usePathname.
+ * GlobalActionButtons (hamburger stacked ABOVE the SOS button, both
+ * bottom-right) renders as a sibling of the Stack so every screen under
+ * app/(main)/(customer)/ and app/(main)/(rider)/ inherits both buttons.
+ * The flex:1 View wrapper is required for absolute-positioned siblings.
  */
 export default function MainLayout() {
   return (

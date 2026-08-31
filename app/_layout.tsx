@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Platform, View, ActivityIndicator, Appearance } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useFonts } from "expo-font";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import * as Application from "expo-application";
@@ -18,6 +19,7 @@ import { colors } from "@/theme/goRide";
 import { processQueue } from "@/lib/sosQueue";
 import NetInfo from "@react-native-community/netinfo";
 import { routeNotification } from "@/lib/notificationRouter";
+import { useOtaBackgroundPolling } from "@/lib/otaBackgroundUpdate";
 
 const isWeb = Platform.OS === "web";
 
@@ -55,6 +57,10 @@ export default function RootLayout() {
   }, [segments]);
   const [initializing, setInitializing] = useState(true);
   const [splashVisible, setSplashVisible] = useState(!isWeb);
+
+  // Silent background OTA polling (no UI, no reload — applies on next cold
+  // boot). Interval runs only while the driver is online/account-active.
+  useOtaBackgroundPolling();
 
   const [fontsLoaded] = useFonts({
     "Jakarta-Bold": require("../assets/fonts/PlusJakartaSans-Bold.ttf"),
@@ -302,9 +308,11 @@ export default function RootLayout() {
   }
 
   return (
-    <ErrorBoundary>
-      <Slot />
-      <ToastHost />
-    </ErrorBoundary>
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <Slot />
+        <ToastHost />
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }

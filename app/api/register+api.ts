@@ -1,7 +1,7 @@
 // [public]
 import { z } from "zod";
 import { db } from "../../src/db";
-import { users, drivers } from "../../src/db/schema";
+import { users, drivers, fleets, fleetMembers } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
 import { supabaseAdmin } from "../../lib/supabaseServer";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -65,8 +65,30 @@ export async function POST(request: Request) {
         .returning();
 
       if (role === "driver") {
+        // Universal fleet model (spec §onboarding_flow_change): every driver
+        // is the OWNER of an implicit solo NATIVE fleet from registration.
+        // Invisible to a solo driver; fleet UI only appears when they later
+        // add a second vehicle/driver.
+        const [fleet] = await tx
+          .insert(fleets)
+          .values({
+            owner_user_id: user.id,
+            name: `${name.trim()} Fleet`,
+            fleet_type: "NATIVE",
+            status: "ACTIVE",
+          })
+          .returning({ id: fleets.id });
+
+        await tx.insert(fleetMembers).values({
+          fleet_id: fleet.id,
+          user_id: user.id,
+          role: "OWNER",
+          status: "active",
+        });
+
         await tx.insert(drivers).values({
           user_id: user.id,
+          fleet_id: fleet.id,
           vehicle_type: vehicle_type ?? "bike_basic",
           status: "pending",
         });

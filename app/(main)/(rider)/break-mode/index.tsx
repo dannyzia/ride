@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { API_URL } from "@/lib/config";
+import { useDriverStore } from "@/store/useDriverStore";
 import {
   View,
   Text,
@@ -195,6 +196,8 @@ export default function BreakMode() {
         setError(data?.message || "Failed to end break — please try again");
         return;
       }
+      // Sync store state after successful break end
+      useDriverStore.getState().setOnBreak(false, null);
       router.back();
     } catch (err) {
       logger.error("BreakMode end failed", err);

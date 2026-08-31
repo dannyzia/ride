@@ -129,7 +129,9 @@ export default function ProfileScreen() {
     profileData?.full_name || driver?.name || "Driver";
   const displayVehicle =
     profileData?.vehicle_type || driver?.vehicle_type || "";
-  const displayRating = profileData?.rating ?? driver?.rating ?? 0;
+  // Number(): rating is numeric in pg — it can arrive as a string ("4.70"),
+  // and "4.70".toFixed crashes the render. Coerce instead of trusting the wire.
+  const displayRating = Number(profileData?.rating ?? driver?.rating ?? 0);
   const displayRides =
     profileData?.completed_rides ?? driver?.completed_rides_count ?? 0;
 

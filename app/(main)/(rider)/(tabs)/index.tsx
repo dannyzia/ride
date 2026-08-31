@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Alert, Animated, StyleSheet, AccessibilityInfo } from "react-native";
+import { View, Text, TouchableOpacity, Alert, Animated, StyleSheet, AccessibilityInfo, ActivityIndicator, AppState, type AppStateStatus } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { API_URL, WS_URL } from "@/lib/config";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,7 +6,6 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Location from "expo-location";
-import ReactNativeModal from "react-native-modal";
 import { supabase } from "@/lib/supabase";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
@@ -16,10 +15,9 @@ import DriverPricingReference from "@/components/DriverPricingReference";
 import RideOfferSheet from "@/components/RideOfferSheet";
 import DriverStatsBar from "@/components/DriverStatsBar";
 import { showToast } from "@/components/Toast";
-import ThemeToggle from "@/components/ThemeToggle";
 import ScreenLabel from "@/components/ScreenLabel";
 import { colors, spacing, radii } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import MapLibreGL from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { logger } from "@/lib/logger";
@@ -78,16 +76,22 @@ export default function DriverHome() {
     activeSubscription,
     isOnline,
     wsConnected,
+    sessionId,
+    onBreak,
     setDriver,
     setActiveSubscription,
     setIsOnline,
     setWsConnected,
+    setSessionId,
+    setOnBreak,
+    clearSession,
   } = useDriverStore();
   const { addRideOffer, removeRideOffer, setActiveRideId } = useRideOfferStore();
   const { activeOffer, setActiveOffer, setAcceptedDropoff } =
     useDriverFlowStore();
 
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
   const mapStyleUrl = useBarikoiMapStyle(isDark);
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -116,8 +120,11 @@ export default function DriverHome() {
     rating: 0,
     acceptance_rate: 0,
   });
-  const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  // Session recovery state
+  const [isCheckingSession, setIsCheckingSession] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
 
   const markerPulseAnim = useRef(new Animated.Value(1)).current;
   const goOnlinePulse = useRef(new Animated.Value(0)).current;
@@ -186,6 +193,96 @@ export default function DriverHome() {
     return () => loops.forEach((l) => l.stop());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, reduceMotion]);
+
+  // ── Session recovery on mount + foreground ──────────────────────
+  const lastCheckRef = useRef(0);
+
+  const recoverSession = useCallback(async (showOverlay: boolean) => {
+    // Don't interrupt an active ride flow
+    const flowStore = useDriverFlowStore.getState();
+    const driverStore = useDriverStore.getState();
+    if (flowStore.activeOffer || driverStore.currentRideId) return;
+
+    // Debounce: don't re-check within 5s of the last check
+    const now = Date.now();
+    if (now - lastCheckRef.current < 5000) return;
+    lastCheckRef.current = now;
+
+    if (showOverlay) setIsCheckingSession(true);
+    setSessionError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      const res = await fetch(`${API_URL}/api/driver/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const d = data.driver;
+      if (!d) return;
+
+      // CASE 1: Active ride → navigate to the correct ride screen
+      if (d.current_ride_id && d.current_ride_status) {
+        driverStore.setCurrentRideId(d.current_ride_id);
+        if (['matched', 'driver_arriving'].includes(d.current_ride_status)) {
+          router.replace("/(main)/(rider)/find-customer");
+          return;
+        }
+        if (d.current_ride_status === 'driver_arrived') {
+          router.replace(`/(main)/(rider)/enter-otp?rideId=${d.current_ride_id}`);
+          return;
+        }
+        if (d.current_ride_status === 'in_progress') {
+          router.replace(`/(main)/(rider)/finish-ride?rideId=${d.current_ride_id}`);
+          return;
+        }
+      }
+
+      // CASE 2: On break → navigate to break mode
+      if (d.on_break) {
+        driverStore.setOnBreak(true, d.break_started_at);
+        router.replace("/(main)/(rider)/break-mode");
+        return;
+      }
+
+      // CASE 3: Active session (zombie or live) but no ride → resume online
+      if (d.has_active_session) {
+        driverStore.setIsOnline(true);
+        if (d.session_started_at) {
+          driverStore.setSessionId(d.session_started_at);
+        }
+        return;
+      }
+
+      // CASE 4: Truly offline → ensure state matches
+      driverStore.setIsOnline(false);
+      driverStore.setSessionId(null);
+    } catch (err) {
+      logger.error('[driver] session recovery failed:', err instanceof Error ? err.message : err);
+      if (showOverlay) setSessionError('Could not check your session. Pull down to retry.');
+    } finally {
+      if (showOverlay) setIsCheckingSession(false);
+    }
+  }, []);
+
+  // Recovery on mount — show overlay
+  useEffect(() => {
+    recoverSession(true);
+  }, [recoverSession]);
+
+  // Recovery when app returns to foreground — silent (no overlay)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if (next === 'active') recoverSession(false);
+    });
+    return () => sub.remove();
+  }, [recoverSession]);
 
   // Immediate GPS request on mount (don't wait for heartbeat interval)
   useEffect(() => {
@@ -339,10 +436,11 @@ export default function DriverHome() {
         const type = msg.type as string;
 
         if (type === "auth:ok") {
+          logger.info('[ws] auth:ok — connected');
           setWsConnected(true);
           await loadDriverProfile();
         } else if (type === "auth:error") {
-          logger.warn("[ws] auth error:", msg.message);
+          logger.error('[ws] auth:error:', msg.message);
         } else if (type === "ride:offer") {
           const pickupAddr = msg.pickup?.address ?? "";
           // Phase D / Stage 2 destination reveal: pre-accept the payload
@@ -475,7 +573,10 @@ export default function DriverHome() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       const userId = session?.user?.id;
-      if (!token || !userId) return;
+      if (!token || !userId) {
+        logger.warn('[ws] connect: no token or userId, skipping');
+        return;
+      }
 
       // Reuse our own authenticated socket if present (e.g. returning Home
       // after a ride) so we never spin up a duplicate connection. H-1:
@@ -507,9 +608,11 @@ export default function DriverHome() {
         useWSStore.getState().resetWebSocket();
       }
 
+      logger.info('[ws] connecting to', WS_URL);
       ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
+        logger.info('[ws] connected to', WS_URL);
         reconnectAttempts = 0;
         useWSStore.getState().setWebSocket(ws, "driver", userId);
         ws.send(
@@ -523,18 +626,27 @@ export default function DriverHome() {
 
       ws.onmessage = (ev) => driverHomeMessageHandler?.(ev);
 
-      ws.onclose = () => {
+      ws.onclose = (ev) => {
+        logger.warn('[ws] closed:', ev.code, ev.reason || 'no reason');
         setWsConnected(false);
         setLastOnlineAt(new Date());
         // Exponential backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s
+        // After 10 attempts (~5 min), stop retrying and show error
+        if (reconnectAttempts >= 10) {
+          logger.error('[ws] gave up after', reconnectAttempts, 'attempts');
+          setSessionError('Cannot reach the server. Pull down to retry.');
+          return;
+        }
         const delay =
           Math.min(1000 * Math.pow(2, reconnectAttempts), 30_000) +
           Math.random() * 1000;
         reconnectAttempts++;
+        logger.info('[ws] reconnecting in', Math.round(delay), 'ms, attempt', reconnectAttempts);
         reconnectRef.current = setTimeout(connect, delay);
       };
 
-      ws.onerror = () => {
+      ws.onerror = (ev) => {
+        logger.error('[ws] error:', ev);
         // onclose will fire after this
       };
     }
@@ -653,9 +765,20 @@ export default function DriverHome() {
       );
 
       if (res.ok) {
+        const data = await res.json();
         setIsOnline(newState);
+        if (data.session_id) setSessionId(data.session_id);
+        if (data.resumed) {
+          logger.info('[driver] zombie session resumed');
+        }
       } else {
         const err = await res.json();
+        // Zombie session still detected (shouldn't happen after A.1 fix,
+        // but handle gracefully): show recovery dialog
+        if (res.status === 409) {
+          setShowRecoveryDialog(true);
+          return;
+        }
         Alert.alert(
           "Cannot go online",
           err.message ?? "Check your subscription status.",
@@ -665,6 +788,29 @@ export default function DriverHome() {
       Alert.alert("Error", "Network error. Please try again.");
     }
   };
+
+  const handleForceEndSession = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      const res = await fetch(`${API_URL}/api/driver/session/force-end`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Force end failed');
+
+      setShowRecoveryDialog(false);
+      clearSession();
+      showToast('Session ended', 'info');
+    } catch (err) {
+      logger.error('[driver] force-end failed:', err instanceof Error ? err.message : err);
+      setSessionError('Could not end session. Try again.');
+    }
+  }, [clearSession]);
 
   // Map dimming: OFFLINE = 30%, RIDE_OFFER = 40%, ONLINE = none
   const dimOpacity = activeOffer ? 0.4 : isOnline ? 0 : 0.3;
@@ -956,56 +1102,10 @@ export default function DriverHome() {
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-            {/* WS state chip — live connected/reconnecting indicator. The
-                drop is visible here immediately, before/regardless of the
-                offline overlay's "Last connected" caption. */}
-            <View
-              accessibilityLabel={
-                wsConnected ? "Connected to server" : "Reconnecting to server"
-              }
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 5,
-                borderRadius: radii.pill,
-                paddingHorizontal: spacing.sm + 2,
-                paddingVertical: 5,
-                backgroundColor: wsConnected
-                  ? "rgba(56, 161, 105, 0.12)"
-                  : "rgba(245, 158, 11, 0.14)",
-              }}
-            >
-              {wsConnected ? (
-                <View
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: colors.success,
-                  }}
-                />
-              ) : (
-                <Ionicons
-                  name="cloud-offline-outline"
-                  size={12}
-                  color={colors.amber}
-                />
-              )}
-              <Text
-                style={{
-                  fontFamily: "Jakarta-SemiBold",
-                  fontSize: 12,
-                  color: wsConnected ? colors.success : colors.amber,
-                }}
-              >
-                {wsConnected ? "Connected" : "Reconnecting…"}
-              </Text>
-            </View>
-
             <TouchableOpacity
-              onPress={() => setThemeModalVisible(true)}
+              onPress={() => setTheme(isDark ? "light" : "dark")}
               accessibilityRole="button"
-              accessibilityLabel="Appearance settings"
+              accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
               style={{
                 width: 36,
                 height: 36,
@@ -1018,59 +1118,51 @@ export default function DriverHome() {
               }}
             >
               <Ionicons
-                name={isDark ? "moon-outline" : "sunny-outline"}
+                name={isDark ? "sunny-outline" : "moon-outline"}
                 size={18}
                 color={textPrimary}
               />
             </TouchableOpacity>
 
             {isOnline ? (
-              <TouchableOpacity
-                onPress={toggleOnline}
-                accessibilityRole="button"
-                accessibilityLabel="Go offline"
-                style={{
-                  borderWidth: 1.5,
-                  borderColor: colors.danger,
-                  borderRadius: radii.pill,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.xs + 2,
-                  backgroundColor: surfaceBg,
-                }}
-              >
-                <Text
+              <View style={{ flexDirection: "row", gap: spacing.xs }}>
+                <TouchableOpacity
+                  onPress={() => router.push("/(main)/(rider)/break-mode")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Take a break"
                   style={{
-                    fontFamily: "Jakarta-Bold",
-                    fontSize: 14,
-                    color: colors.danger,
+                    width: 36, height: 36, borderRadius: 18,
+                    backgroundColor: colors.amber,
+                    alignItems: "center", justifyContent: "center",
                   }}
                 >
-                  Go Offline
-                </Text>
-              </TouchableOpacity>
+                  <Ionicons name="cafe-outline" size={18} color={colors.white} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={toggleOnline}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go offline"
+                  style={{
+                    width: 36, height: 36, borderRadius: 18,
+                    backgroundColor: colors.danger,
+                    alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="power" size={18} color={colors.white} />
+                </TouchableOpacity>
+              </View>
             ) : (
               <TouchableOpacity
                 onPress={() => router.push("/(main)/(rider)/break-mode")}
                 accessibilityRole="button"
                 accessibilityLabel="Take a break"
                 style={{
-                  borderWidth: 1.5,
-                  borderColor: borderColor,
-                  borderRadius: radii.pill,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.xs + 2,
-                  backgroundColor: surfaceBg,
+                  width: 36, height: 36, borderRadius: 18,
+                  backgroundColor: colors.amber,
+                  alignItems: "center", justifyContent: "center",
                 }}
               >
-                <Text
-                  style={{
-                    fontFamily: "Jakarta-Bold",
-                    fontSize: 14,
-                    color: textPrimary,
-                  }}
-                >
-                  Take a Break
-                </Text>
+                <Ionicons name="cafe-outline" size={18} color={colors.white} />
               </TouchableOpacity>
             )}
           </View>
@@ -1298,16 +1390,91 @@ export default function DriverHome() {
       {/* Ride Offer Sheet */}
       <RideOfferSheet />
 
-      {/* Appearance toggle */}
-      <ReactNativeModal
-        isVisible={themeModalVisible}
-        onBackdropPress={() => setThemeModalVisible(false)}
-        onBackButtonPress={() => setThemeModalVisible(false)}
-      >
-        <View style={{ width: "91%", alignSelf: "center" }}>
-          <ThemeToggle />
+      {/* ═══ Session Recovery Dialog ═══ */}
+      {showRecoveryDialog && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 100 }]}
+        >
+          <View
+            style={{
+              width: '85%',
+              backgroundColor: surfaceBg,
+              borderRadius: 16,
+              padding: 24,
+              borderWidth: 1,
+              borderColor,
+            }}
+          >
+            <View style={{ alignItems: 'center', marginBottom: 16 }}>
+              <View
+                style={{
+                  width: 56, height: 56, borderRadius: 28,
+                  backgroundColor: isDark ? colors.surfaceElevatedDark : colors.primaryLight,
+                  alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+                }}
+              >
+                <Ionicons name="alert-circle" size={28} color={colors.amber} />
+              </View>
+              <Text style={{ fontFamily: 'Jakarta-Bold', fontSize: 18, color: textPrimary, textAlign: 'center' }}>
+                Active Session Found
+              </Text>
+            </View>
+            <Text style={{ fontFamily: 'Jakarta-Regular', fontSize: 14, color: textSecondary, textAlign: 'center', marginBottom: 24 }}>
+              You have an active session from earlier. Resume working or end it to start fresh.
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setShowRecoveryDialog(false);
+                setIsOnline(true);
+                // WS reconnect happens via existing effect
+              }}
+              style={{ backgroundColor: colors.primary, borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}
+            >
+              <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 16, color: colors.white }}>Resume Working</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleForceEndSession}
+              style={{ backgroundColor: surfaceBg, borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.danger }}
+            >
+              <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 16, color: colors.danger }}>End Session</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </ReactNativeModal>
+      )}
+
+      {/* ═══ Loading Overlay (session check) ═══ */}
+      {isCheckingSession && (
+        <View
+          style={[StyleSheet.absoluteFill, {
+            backgroundColor: isDark ? 'rgba(24,26,32,0.9)' : 'rgba(248,250,252,0.9)',
+            justifyContent: 'center', alignItems: 'center', zIndex: 50,
+          }]}
+        >
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ fontFamily: 'Jakarta-Medium', fontSize: 14, color: textSecondary, marginTop: 12 }}>
+            Checking your session...
+          </Text>
+        </View>
+      )}
+
+      {/* ═══ Error Banner ═══ */}
+      {sessionError && (
+        <View
+          style={{
+            position: 'absolute', top: 60, left: 16, right: 16,
+            backgroundColor: isDark ? colors.surfaceElevatedDark : colors.bgLight,
+            borderRadius: 12, padding: 16, borderWidth: 1, borderColor: colors.danger,
+            zIndex: 40, flexDirection: 'row', alignItems: 'center',
+          }}
+        >
+          <Ionicons name="warning-outline" size={20} color={colors.danger} style={{ marginRight: 12 }} />
+          <Text style={{ fontFamily: 'Jakarta-Medium', fontSize: 14, color: textPrimary, flex: 1 }}>
+            {sessionError}
+          </Text>
+          <TouchableOpacity onPress={() => recoverSession(true)}>
+            <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 14, color: colors.primary }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

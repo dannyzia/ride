@@ -61,6 +61,9 @@ export async function POST(request: Request) {
 
     // Manage driver_online_sessions
     if (is_online) {
+      // Zombie session recovery: if a session exists with went_offline_at IS NULL
+      // (app crash / OS kill / network failure between go-online and go-offline),
+      // resume it instead of rejecting with 409.
       const [existingSession] = await db
         .select()
         .from(driverOnlineSessions)
@@ -71,9 +74,6 @@ export async function POST(request: Request) {
           ),
         )
         .limit(1);
-      if (existingSession) {
-        return Response.json({ error: 'already_online', message: 'You already have an active session' }, { status: 409 });
-      }
 
       const [activeSub] = await db
         .select({ id: subscriptions.id })
@@ -88,6 +88,27 @@ export async function POST(request: Request) {
       if (!activeSub) {
         return Response.json({ error: 'no_active_subscription', message: 'No active subscription found' }, { status: 403 });
       }
+
+      if (existingSession) {
+        // Zombie session found — resume it (update subscription if changed)
+        await db
+          .update(driverOnlineSessions)
+          .set({ subscription_id: activeSub.id })
+          .where(eq(driverOnlineSessions.id, existingSession.id));
+
+        logger.info('[driver/status] zombie session resumed', {
+          userId: user.id,
+          sessionId: existingSession.id,
+        });
+        return Response.json({
+          success: true,
+          is_online: true,
+          resumed: true,
+          session_id: existingSession.id,
+        });
+      }
+
+      // No existing session — create new one
       await db.insert(driverOnlineSessions).values({
         driver_id: driver.id,
         subscription_id: activeSub.id,

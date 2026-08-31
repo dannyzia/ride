@@ -37,8 +37,14 @@ async function getDriverDailyStats(
 
   // Sum of online-session durations clipped to the window.
   // Active sessions (went_offline_at NULL) count up to now().
+  // Window bounds are interpolated as ISO strings with an explicit
+  // ::timestamptz cast: drizzle maps Date only through typed column
+  // comparisons (gte/lt), not raw sql-template params — a raw Date reaches
+  // postgres.js's Bind as an untyped param and throws
+  // "The \"string\" argument must be of type string… Received an instance of
+  // Date" (verified by tmp diagnostic 2026-08-29).
   const [sessionAgg] = await db.select({
-    online_hours: sql<string | null>`COALESCE(SUM(GREATEST(0, EXTRACT(EPOCH FROM (LEAST(COALESCE(${driverOnlineSessions.went_offline_at}, NOW()), ${windowEnd}) - GREATEST(${driverOnlineSessions.went_online_at}, ${windowStart})))) / 3600.0), 0)`,
+    online_hours: sql<string | null>`COALESCE(SUM(GREATEST(0, EXTRACT(EPOCH FROM (LEAST(COALESCE(${driverOnlineSessions.went_offline_at}, NOW()), ${windowEnd.toISOString()}::timestamptz) - GREATEST(${driverOnlineSessions.went_online_at}, ${windowStart.toISOString()}::timestamptz)))) / 3600.0), 0)`,
   })
     .from(driverOnlineSessions)
     .where(and(

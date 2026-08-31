@@ -135,6 +135,13 @@ const NAV: NavItem[] = [
     roles: OWNER_ADMIN, // catalog.write
   },
   {
+    route: "/admin/fleets",
+    label: "Fleets",
+    icon: "car-multiple",
+    group: "Catalogs",
+    roles: OWNER_ADMIN_OPS, // admin.read / catalog.write
+  },
+  {
     route: "/admin/ride-passes",
     label: "Ride Passes",
     icon: "ticket-account",
@@ -221,6 +228,20 @@ const NAV: NavItem[] = [
     icon: "chart-bar",
     group: "Finance",
     roles: OWNER_OPS, // review.write
+  },
+  {
+    route: "/admin/fleet-plans",
+    label: "Fleet Plans",
+    icon: "credit-card-outline",
+    group: "Finance",
+    roles: OWNER_ADMIN, // catalog.write
+  },
+  {
+    route: "/admin/fleet-billing",
+    label: "Fleet Billing",
+    icon: "receipt",
+    group: "Finance",
+    roles: OWNER_ADMIN, // admin.read
   },
 
   // Config

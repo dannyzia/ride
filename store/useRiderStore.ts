@@ -5,6 +5,9 @@ import type { VehicleTypeEnum } from "@/lib/vehicleTypes";
 
 export type VehicleType = VehicleTypeEnum;
 
+export type BookingStep = 'LOCATIONS' | 'FARES';
+export type VehicleCategory = 'bike' | 'cng' | 'car' | 'large_car';
+
 export type DiscountType = "intro" | "promo" | "pass" | "wallet" | "none";
 
 export interface DiscountOption {
@@ -112,6 +115,11 @@ interface RiderState {
     minSpendBdt: number | null;
   } | null;
   stops: { lat: number; lng: number; address: string }[];
+  // New booking flow fields
+  bookingStep: BookingStep;
+  selectedCategory: VehicleCategory | null;
+  estimateLoading: boolean;
+  estimateError: string | null;
   setSelectedVehicleType: (vt: VehicleType | null) => void;
   setEstimates: (estimates: FareEstimate[]) => void;
   setEstimating: (v: boolean) => void;
@@ -144,6 +152,11 @@ interface RiderState {
   setSelectedDiscount: (discount: { type: DiscountType; amount_bdt: number } | null) => void;
   setStagedPromo: (promo: RiderState["stagedPromo"]) => void;
   setStops: (stops: { lat: number; lng: number; address: string }[]) => void;
+  setBookingStep: (step: BookingStep) => void;
+  setSelectedCategory: (cat: VehicleCategory | null) => void;
+  setEstimateLoading: (loading: boolean) => void;
+  setEstimateError: (error: string | null) => void;
+  resetBooking: () => void;
 }
 
 export interface ScheduledRide {
@@ -264,6 +277,10 @@ const initialRiderState = {
   selectedDiscount: null,
   stagedPromo: null,
   stops: [],
+  bookingStep: 'LOCATIONS' as BookingStep,
+  selectedCategory: null,
+  estimateLoading: false,
+  estimateError: null,
 };
 
 export const useRiderStore = create<RiderState>((set, get) => ({
@@ -290,13 +307,17 @@ export const useRiderStore = create<RiderState>((set, get) => ({
       promoCode: null,
       promoDiscountBdt: 0,
       selectedPrefIds: [],
-  appliedPromo: null,
-  pickupCoords: null,
-  dropoffCoords: null,
-  selectedDiscount: null,
-  stagedPromo: null,
-  stops: [],
-  }),
+      appliedPromo: null,
+      pickupCoords: null,
+      dropoffCoords: null,
+      selectedDiscount: null,
+      stagedPromo: null,
+      stops: [],
+      bookingStep: 'LOCATIONS' as BookingStep,
+      selectedCategory: null,
+      estimateLoading: false,
+      estimateError: null,
+    }),
   setActiveRide: (ride) => set({ activeRide: ride }),
   patchActiveRide: (patch) =>
     set((s) => ({
@@ -357,8 +378,24 @@ export const useRiderStore = create<RiderState>((set, get) => ({
    setPickupCoords: (coords) => set({ pickupCoords: coords }),
   setDropoffCoords: (coords) => set({ dropoffCoords: coords }),
   setSelectedDiscount: (discount) => set({ selectedDiscount: discount }),
-  setStagedPromo: (promo) => set({ stagedPromo: promo }),
-  setStops: (stops) => set({ stops }),
+  setStagedPromo: (promo) => set({ stagedPromo: promo }),  setStops: (stops) => set({ stops }),
+  setBookingStep: (step) => set({ bookingStep: step }),
+  setSelectedCategory: (cat) => set({ selectedCategory: cat }),
+  setEstimateLoading: (loading) => set({ estimateLoading: loading }),
+  setEstimateError: (error) => set({ estimateError: error }),
+  resetBooking: () => set({
+    bookingStep: 'LOCATIONS' as BookingStep,
+    selectedCategory: null,
+    selectedVehicleType: null,
+    estimates: [],
+    estimateLoading: false,
+    estimateError: null,
+    stops: [],
+    selectedDiscount: null,
+    scheduledAt: null,
+  }),
+
+
 
   reset: () => {
     estimateCache = null;

@@ -1,21 +1,25 @@
 # Ride — Full Feature Inventory
+> v18 — 2026-08-31 03:48 UTC: Fleet universal model (portal + APIs + admin screens — MOSTLY UNCOMMITTED, see §3b). Fare Framework v6.4 Stage 0 (shadow mode) complete: zone fee (flat monthly schedule), zone recovery hysteresis, night multiplier, REV-4 per-tier rate derivation, fuel engine (per-bike-tier joma), zone fee explainer; scheduler 41→45 jobs. Admin RBAC (4 roles) wired into all 64 admin routes (migration 0047). GlobalActionButtons replaces FloatingNavMenu+SOSButton; SOS offline queue (lib/sosQueue.ts). Driver zombie-session force-end + silent background OTA. fare-gate-metrics admin screen. Tests relocated to root `tests/`.
 > v17 — 2026-08-25: Ride Fare Framework v1 COMPLETE. Surge fully removed; sequential dispatch + debit-on-offer live; heat engine (zone_heat, Lever 0/1/2/3); pickup fee 3-state lifecycle (measurement live, charge gated by `pickup_fee_enabled`); fraud protocol (dawdle, off-platform, cancel-rate, heat manipulation); ~50 fare framework config keys; 4 new admin screens (fare-config, heat-monitor, pickup-analytics, trust-safety); new scheduler jobs 37–41.
 > Core app + P4 Phases 1-3 + Multi-Stop + Tip + Trust & Quality + UI Rethink Plans 01–04 + Plan 05 (Waves 0–3 mostly in; Wave-4 driver leftovers — see §6/§9).
-> Schema: ~97 tables, ~32 enums. Fare Framework v1 added: zone_heat, zone_heat_history, pickup_distance_samples, fraud_flags, zone_recalibration_queue, cancel_surveys. 171+ API route files.
+> Schema: ~106 tables, ~41 enums. Fare Framework v1 added: zone_heat, zone_heat_history, pickup_distance_samples, fraud_flags, zone_recalibration_queue, cancel_surveys. v6.4 Stage 0 added: zone_fee_schedule, zone_recovery_samples, trip_time_samples, config_audit_log, driver_online_sessions. Fleet model added: fleets, fleet_members, fleet_vehicle_assignments, fleet_subscription_plans, fleet_subscriptions, fleet_billing_transactions, fleet_alerts, audit_logs, fleet_integrations, integration_sync_jobs, external_entity_mappings. 205 API route files. Scheduler: 45 jobs.
 > P5 Growth features (Gamification, Safety, AI Demand, Weather) — saved for post-launch.
 >
 > Minor caveats (non-blocking):
+> - **Fleet portal + fleet/admin-fleet APIs + fleet libs are UNCOMMITTED** (working tree only; schema push `d99c089` is committed) — see §3b
+> - **Fare Framework v6 is Stage 0 (shadow)**: v6 fares computed but NOT charged; rider-quoted fares still v2 (`fare_framework_stage='stage0'`); zone fee + night multiplier inert until enabled — see §4
+> - SOS: config cooldown (`sos_cooldown_seconds`) still read but never time-applied server-side; client has a 5s debounce + offline queue (lib/sosQueue.ts); active-SOS polling still not implemented
 > - rate-driver: driver_id fallback uses ride UUID if driver_id undefined (dormant)
 > - driver lost-items: return_method uses z.string() instead of z.enum (admin route uses the proper enum)
 > - Payment callback: purpose='rider_pass' + null pass_id edge case (both fields always set together)
 > - Apply-promos screen sends `{code}` only; redeem API requires vehicle_type + pickup coords → 400 as written (contract mismatch)
-> - SOS cooldown config (`sos_cooldown_seconds`) is read but never time-applied — dedupe is any-open-alert, not 15-min window
 > - Schedule overlap semantics implemented: `lib/scheduleUtils.ts` checkRideOverlap + `app/api/ride/schedule/overlap+api.ts` client-side check
 > - Zone sentinel nil-UUID writes removed; callers map `zones_not_configured` → 503, `outside_zone` → 422
 > - All 6 Plan-05 `platform_config` keys admin-settable via `PATCH /api/admin/config` with range validation; `zone_multi_active_enabled` seeded as false
 > - 6 built-but-unwired shared components: ProgressBar, Badge, Avatar, CheckboxGroup, HeatmapOverlay, MinRateSlider
 > - Driver earnings-goal UI REMOVED from tree (was YES at v13; earnings-tab rebuild dropped it) — regression, see §2 #15
 > - Pickup fee Stage 1 (charge) gated by `pickup_fee_enabled` config — code complete, disabled until activated
+> - Test files relocated from scattered `__tests__/` folders to root `tests/` mirror (uncommitted move)
 
 ---
 
@@ -43,6 +47,7 @@
 | **Ride Request & Booking** | | | | |
 | 15 | Destination autocomplete (Barikoi) | YES | YES | YES |
 | 16 | Find ride (From/To + Use Current Location) | YES | YES | YES |
+| 16a | Nearby driver markers on home map | YES (`POST /api/ride/nearby-markers` — UNCOMMITTED) | YES | YES — H3 K-ring (k=30) query returns nearby online drivers by vehicle type; home map renders markers |
 | 17 | Ride estimate (8 vehicle types + heat tag + pass discount) | YES | YES | YES — heat score tags (hot/neutral/cold) replace surge; rider pass discount applied; `quote_valid_until` (5 min) on estimate response. No surge fields remain. |
 | 18 | Vehicle selection (Bike Basic → Car XL) | YES | YES | YES |
 | 19 | Promo code apply | YES | Partial | Partial — `lib/discountEngine.ts` + staged-promo server flow done (`promo/redeem` stages via `lib/promoCache.ts`, consumed in ride tx); **apply-promos screen contract bug**: sends `{code}` only while API requires vehicle_type + pickup coords → 400 |
@@ -51,6 +56,7 @@
 | 22 | Scheduled ride (conditional endpoint + push reminder) | YES (`ride/schedule`) | YES | YES — "schedule for later" branches to `ride/schedule` (config-driven +30m/+7d bounds); `ride-scheduled` confirmation; `components/ScheduleRideSheet.tsx` (Dhaka tz, client bounds mirror, overlap poll tolerating missing endpoint); scheduler promotes to dispatch + T-60m/T-15m reminder push (idempotent) + cutoff cancellation. NOTE: schedule-ride + no-drivers-available routes are REFERENCED (FloatingNavMenu, finding-driver) — retained; scheduling-user-ride + schedule-ride-after-promo are true orphans |
 | 23 | Book for someone else (toggle + name/phone + SMS) | YES | YES | YES — in confirm-ride; SMS via dpRelay sendSms (schedule-path validation still loose: no phone regex/self-phone/consent) |
 | 24 | ~~Surge consent banner~~ | **REMOVED** | — | — | Surge fully removed from codebase. Heat score tags (hot/neutral/cold) replace surge multiplier; no rider consent banner needed. |
+| 24a | Zone fee explainer (first-ride sheet) | YES (`POST /api/user/zone-fee-explained` — UNCOMMITTED) | YES | YES — `components/ZoneFeeExplainerSheet.tsx` shown once in confirm-ride; `users.zone_fee_explained` flag set on dismiss; Stage-0 explainer copy |
 | 25 | Rider pass / ride pass (weekly/monthly discount) | YES (`rider/passes`) | YES | YES — PortPos purchase (PaymentWebView purpose='rider_pass'), pass discount in estimate (multi-leg), rides_used progress bar (rides_used/max_rides, unlimited fallback), auto-expiry, admin CRUD |
 | 25a | Upfront tip (preset ৳0/20/50/100) | YES | YES | YES — slider in confirm-ride, tip badge in RideOfferSheet, added to driver payout (no commission) |
 | 25b | Multi-stop rides (max 2 stops) | YES (`ride/[id]/stops`) | YES | YES — BarikoiAutocomplete stop inputs (confirm-ride owns stops — L14; home's dead stop inputs deleted, H-3), multi-leg distance in estimate, driver stop list + complete button, WS payload includes stops |
@@ -181,7 +187,9 @@
 | 60 | App language | Partial (i18n real) | Partial | YES — driver language screen calls i18n.changeLanguage but does NOT persist; bn strings real, sweep pending |
 | 61 | Driver schedule | YES | YES | YES |
 | 62 | MinRateSlider (min per-km rate) | YES (`GET /api/driver/slider-config`, `PATCH driver/me` w/ validateDriverMinPerKm) | Partial | Partial — `components/MinRateSlider.tsx` + slider-config API exist but have ZERO importers; no min-rate settings screen (Plan 05 v2.1 Phase 4 D9 pending) |
-| 62a | Vehicle management (docs expiry badges + type change) | YES (`vehicle-type-change`) | YES | YES — registration / fitness / tax-token rows; valid `successLight`, <30d `amberLight`, expired `dangerLight` badges; type-change via eligibility-gated endpoint with auto-offline guard |
+| 62a | Vehicle management (docs expiry badges + type change) | YES (`vehicle-type-change`) | YES | YES — registration / fitness / tax-token rows; valid `successLight`, <30d `amberLight`, expired `dangerLight` badges; type-change via eligibility-gated endpoint with auto-offline guard. v18: vehicle classification now routed through `lib/fleetAssignment.assignVehicleToDriver` (authoritative `fleet_vehicle_assignments` row + active-pointer cache sync — UNCOMMITTED) |
+| 62c | Zombie session recovery (force-end) | YES (`POST /api/driver/session/force-end` — UNCOMMITTED) | YES | YES — `driver_online_sessions` + `useDriverStore` session fields (`sessionId`/`onBreak`/`breakStartedAt`/`clearSession`); recovery flow force-closes open sessions, resets `is_online`/`on_break` |
+| 62d | Silent background OTA updates | YES (EAS Update infra) | YES | YES — `lib/otaBackgroundUpdate.ts` (UNCOMMITTED): pre-downloads JS updates ONLY while driver online + account active; cold boots stay instant (`fallbackToCacheTimeout: 0`) |
 | 62b | Insurance (M-24) | YES (`GET /api/driver/insurance`) | YES | YES — platform_config `driver_insurance` (admin-editable, never cached, Zod-validated, default fallback); covered status, policy number, coverage cards, support call |
 | **Future / Partial** | | | | |
 | 63 | Auto-accept (high-rated drivers) | YES | YES | YES — dispatch reads `auto_accept_enabled` + `auto_accept_radius_meters` (gated rating ≥ 4.8, default 500m); settings screen loads GET me + PATCHes both fields (Zod 100–5000m) — IMPLEMENTED (was schema-only at v13) |
@@ -191,7 +199,7 @@
 
 ## 3. Admin
 
-> Web-only panel. 37 .tsx files (36 screens + `_layout`), all wired. `monitoring.tsx` consolidates dispatch-log / ride-chat / driver-economics (3 tabs); `login.tsx` is the login screen (`index.tsx` = dashboard). Phase F16 added: `fare-config`, `heat-monitor`, `pickup-analytics`, `trust-safety`.
+> Web-only panel. 42 .tsx files (41 screens + `_layout`), all wired. `monitoring.tsx` consolidates dispatch-log / ride-chat / driver-economics (3 tabs); `login.tsx` is the login screen (`index.tsx` = dashboard). Phase F16 added: `fare-config`, `heat-monitor`, `pickup-analytics`, `trust-safety`. v18 added: `fare-gate-metrics` + RBAC enforcement on ALL admin routes (REV-5); fleet admin screens (`fleets`, `fleet-plans`, `fleet-billing` — UNCOMMITTED).
 
 | SL | Feature | Backend | Frontend | Wiring |
 |----|---------|---------|----------|--------|
@@ -232,21 +240,48 @@
 | 35 | Heat monitor | YES (`GET /api/admin/heat-monitor`) | YES | YES — heat-monitor.tsx; real-time zone heat scores + history |
 | 36 | Pickup analytics | YES (`GET /api/admin/pickup-analytics`) | YES | YES — pickup-analytics.tsx; distance samples, true-up stats, dawdle rates |
 | 37 | Trust & safety (fraud flags) | YES (`GET/PATCH /api/admin/fraud-flags`) | YES | YES — trust-safety.tsx; fraud flag management (dawdle, off-platform, cancel-rate, heat manipulation) |
+| 38 | Admin RBAC enforcement (REV-5) | YES (`lib/adminRbac.ts` on all 64 admin routes) | — (server-enforced) | YES — 4-role family: owner (superuser) / admin / ops_manager / moderator; 10-permission map (`admin.read` … `staff.manage`, `price.write` owner-only); owner-only config keys + pickup-allowance guardrails (±0.25km/±1min) per-key in config API; owner seeded via SQL only (no self-escalation); migration 0047; `lib/adminRoles.ts` zero-dep client-safe type |
+| 39 | Role-based sidebar + role badge | YES (role from `me` fetch) | YES | YES — AdminShell filters nav groups by role (619c8fc); owner/admin/ops_manager/moderator badge in sidebar header (3188d94); config-audit test asserts actor_role |
+| 40 | Fare gate metrics (Stage-gate dashboard) | YES (`GET /api/admin/fare-gate-metrics`) | YES | YES — fare-gate-metrics.tsx; per-metric green/red/calibration_needed vs admin-adjustable thresholds; gates Fare Framework v6 Stage 1 promotion |
+| 41 | Fleet admin screens | YES (`/api/admin/fleets`, `/api/admin/fleet-plans`, `/api/admin/fleet-billing` — UNCOMMITTED) | YES | YES — fleets.tsx, fleet-plans.tsx, fleet-billing.tsx; fleet CRUD, subscription plans, billing transactions — see §3b |
+
+---
+
+## 3b. Fleet (Universal Fleet Model + Fleet Manager Portal)
+
+> **STATUS: WORKING TREE ONLY (uncommitted)** except the schema push (`d99c089`, 2026-08-31) which added the fleet tables + `source_type` columns to `src/db/schema.ts`.
+> Universal model: every driver owns exactly one fleet (`drivers.fleet_id` NOT NULL; solo drivers get an implicit solo NATIVE fleet at registration — `app/api/register+api.ts` — or via `scripts/fleet-backfill.ts`). `vehicles.fleet_id` NOT NULL. The strict 1:1 driver↔vehicle unique index is DROPPED (`docs/vehicle-model-decision.md`); `fleet_vehicle_assignments` is the authoritative append-only assignment source (partial unique indexes enforce single active row per vehicle/driver).
+> Fleet staff roles (OWNER|MANAGER|DISPATCHER|ACCOUNTANT|VIEWER) live EXCLUSIVELY in `fleet_members` — NEVER `users.role`. Money = integer paisa.
+
+| SL | Feature | Backend | Frontend | Wiring |
+|----|---------|---------|----------|--------|
+| 1 | Fleet portal app surface (`app/(main)/(fleet)/`) | YES | YES | YES — tab bar: Dashboard / Finance / More (+ Operations); detail screens `drivers/[id]`, `vehicles/[id]`, `trips/[id]`; `alerts.tsx`, `assign.tsx`, `subscription.tsx`; `components/fleet/FleetScreen.tsx` + `FleetTabBar.tsx` |
+| 2 | Current-mode switching (RIDER / DRIVER / FLEET) | — (local state only) | YES | YES — `store/useFleetStore.ts` `activeMode`; switching NEVER logs out, NEVER re-authenticates, NEVER mutates immutable `users.role`; server truth = active `fleet_members` row |
+| 3 | Fleet dashboard / finance / operations / more | YES (`/api/fleet/dashboard`, `/finance`, `/trips`+[id], `/drivers`, `/vehicles`, `/alerts`, `/assignments`, `/staff`, `/subscription`, `/limits`, `/plans`, `/integrations`) | YES | YES — all guarded by `requireFleetMember(fleetId, allowedRoles?)` (`lib/auth.ts`): Supabase token → users row → ACTIVE `fleet_members` row (+ role check) → 403 on miss; fleetId bound into the curried guard so URL-param cross-fleet tampering is structurally impossible |
+| 4 | Vehicle assignment (authoritative + pointer cache) | YES (`lib/fleetAssignment.ts`) | YES | YES — sole writer of `fleet_vehicle_assignments` + denormalized `vehicles.driver_id` / `drivers.vehicle_id` / `drivers.vehicle_type` pointers, same transaction; `lib/fleetLimits.ts` enforces subscription plan limits before add (no active subscription = open access; NULL field = unenforced); driver `vehicles` classification routes through it |
+| 5 | Fleet auth helpers (client) | — | YES | YES — `lib/fleetAuth.ts` (`getAuthHeaders` / `requireAuthHeaders`) |
+| 6 | Fleet subscription plans + billing | YES (`/api/admin/fleet-plans`, `/api/admin/fleet-billing`) | YES | YES — admin CRUD screens (fleets.tsx / fleet-plans.tsx / fleet-billing.tsx); paisa money fields |
+| 7 | Fleet alerts | YES (`/api/fleet/alerts` + `fleet_alerts` table) | YES | YES — alerts screen |
+| 8 | External ride-platform integrations | YES (`/api/fleet/webhook` + `lib/integrations/`: baseAdapter, mockRidePlatform, syncEngine, webhookHandler) | — | YES — `fleet_integrations` + `integration_sync_jobs` + `external_entity_mappings` tables; `users.source_type` ('native' \| 'external_api') + loyalty `point_source_type`; sync-dedup + plan-limit + cross-fleet tests in `tests/api/fleet/`, `tests/api/fleets/` |
 
 ---
 
 ## 4. Backend Summary
 
-- **171 API route files** across `app/api/` — Plan 05 additions: `GET /api/sos/active`, `POST /api/sos/resolve`, `GET /api/driver/insurance`; earlier: `POST /api/sos/alert`, `POST /api/driver/vehicle-type-change`, `GET /api/driver/slider-config`, `GET /api/driver/hotspots` (never a `heatmap` route)
+- **205 API route files** across `app/api/` — v18 additions: `POST /api/user/zone-fee-explained`, `GET /api/admin/fare-gate-metrics`, `POST /api/driver/session/force-end`, `POST /api/ride/nearby-markers`, 14 routes under `/api/fleet/*` + `/api/fleets/[id]`, 4 admin fleet routes (fleet set UNCOMMITTED); Plan 05 additions: `GET /api/sos/active`, `POST /api/sos/resolve`, `GET /api/driver/insurance`; earlier: `POST /api/sos/alert`, `POST /api/driver/vehicle-type-change`, `GET /api/driver/slider-config`, `GET /api/driver/hotspots` (never a `heatmap` route)
 - **~97 tables, ~32 enums** (Fare Framework v1 added 6 tables: zone_heat, zone_heat_history, pickup_distance_samples, fraud_flags, zone_recalibration_queue, cancel_surveys)
 - **Zone foundation (Plan 05 §8): DONE** — Z-1 ✓ (0042), Z-2/Z-3 ✓ (`lib/zone.ts` `getZoneForLocation`: multi-zone gated by fresh `zone_multi_active_enabled` read, smallest-polygon-first, 60s TTL cache + `invalidateZoneCache`, 503/422 semantics), Z-4 ✓ (`utils-server/index.ts` heartbeat stamps driver zone via `getZoneForLocation(lat, lng)` + 3-beat hysteresis), Z-5 ✓ (admin multi-activation), Z-6 ✓ (`lib/forecast.ts` hourly upserts), Z-7 ✓ (`scripts/zone-hygiene.ts` — Zone Gate PASS/FAIL), Z-8 ✓ (`scripts/zone-seed-pricing.ts` — BD defaults for all 8 vehicle types, reference-zone clone, `--zone`/`--force`/`--dry-run` flags, upsert). all 6 Plan-05 keys admin-settable via config API + UI; `zone_multi_active_enabled` seeded as false
-- **WebSocket server** (utils-server): heartbeat-gated call deduction, H3 indexing; scheduler now **39 jobs** — adds SOS auto-resolve (60s tick, 30-min cutoff, `sos:auto_resolved` push), scheduled-ride cutoff cancellation (past `dispatch_window_end`), demand-forecast writer, stalled-pending re-dispatch, heat_backtest_correlation (job 37, weekly), dawdle detection (job 38), zone recalibration (job 39), response ladder (job 40), decline monitoring (job 41). Auto-redispatch on DRIVER cancel NOT implemented (stale matched rides get cancelled, nothing re-dispatches). Admin socket registry + `POST /internal/sos/alert` broadcast (F-15)
+- **WebSocket server** (utils-server): heartbeat-gated call deduction, H3 indexing; scheduler now **45 jobs** — v17 added SOS auto-resolve (60s tick, 30-min cutoff, `sos:auto_resolved` push), scheduled-ride cutoff cancellation, demand-forecast writer, stalled-pending re-dispatch, heat_backtest_correlation (37, weekly), dawdle detection (38), zone recalibration (39), response ladder (40), decline monitoring (41); **v18 added 42 zone recovery (60s, upserts `zone_heat.recovery_time_min`), 43 zone fee schedule (monthly), 44 billed-min aggregation (daily), 45 fuel recompute (30s)**. Raw-SQL templates fixed to pass ISO strings (not Date objects); job 44/45 no-op bugs fixed. Auto-redispatch on DRIVER cancel NOT implemented (stale matched rides get cancelled, nothing re-dispatches). Admin socket registry + `POST /internal/sos/alert` broadcast (F-15)
 - **SOS lifecycle**: insert `open` → creator-only `resolve` OR 30-min scheduler auto-resolve; SMS to `user_emergency_contacts` (best-effort + 1 retry; SOS-only hourly circuit breaker in `lib/dprelay.ts` — OTP unaffected); push to user + admin; 201 on new insert; dedupe = any-open-per-user/per-ride (cooldown config read but not time-applied)
 - **Cancellation**: `lib/cancellation.ts` (DB-driven policy tiers); cancel-preview full contract (`fee_bdt`/`free_until`/`server_now`/`policy`/`ride_status`/`reason_required`); atomic cancel (conditional UPDATE in tx, 409 loser) + fee event via `lib/paymentEvents.ts` in-tx
 - **Scheduling**: config-driven +30m/+7d bounds (`schedule_min_lead_minutes`/`schedule_max_lead_days`); estimate carries `quote_valid_until` (5 min); overlap-window semantics via `lib/scheduleUtils.ts` + `/api/ride/schedule/overlap`; book-for-other hardening (regex/self-phone/consent/5-per-hour SMS limit) pending, quote in schedule response pending
 - **Discount engine**: `lib/discountEngine.ts` (intro/promo/pass/wallet options — rider-SELECTABLE, pass-first precedence NOT enforced); staged promos via `lib/promoCache.ts` (in-memory 10-min TTL, single-instance documented); consumed + cleared only on ride-tx success
 - **platform_config**: `lib/platformConfig.ts` with 6 Plan-05 keys (`sos_cooldown_seconds`, `sos_auto_resolve_seconds`, `schedule_min_lead_minutes`, `schedule_max_lead_days`, `cancel_grace_period_seconds`, `zone_multi_active_enabled`), always fresh-read; all 6 admin-settable via `PATCH /api/admin/config` with range validation + UI toggle; `zone_multi_active_enabled` seeded as `false`
 - **Fare Framework v1 (Phase F16)**: Surge fully removed (no tables/columns/code/UI). Heat engine replaces surge: `zone_heat` + `zone_heat_history` tables, EWMA demand/supply scoring (0–1), heat tags (hot/neutral/cold), Lever 0 (baseline) / Lever 1 (live EWMA) / Lever 2 (cold-drop boost, temporary multiplier ~15 min decay) / Lever 3 (return-lead affinity, pickup zone matches recent cold drop zone). Pickup fee 3-state lifecycle: range (estimate at request) → firm (Barikoi route distance at accept) → trued (completion, 1.25× cap down, uncapped up). Gated by `pickup_fee_enabled` config. Fraud protocol: `fraud_flags` table + dawdle guard (inflated realized/firm ratio, rolling 30 charged pickups, zone-relative thresholds), off-platform detection, cancel-rate monitoring, heat manipulation detection. `cancel_surveys` for structured post-cancel feedback. `zone_recalibration_queue` for heat backtest adjustments. ~50 fare framework keys in `platform_config` (admin-editable via `PATCH /api/admin/config`). 4 new admin screens: `fare-config`, `heat-monitor`, `pickup-analytics`, `trust-safety`. New scheduler jobs: 37 (heat_backtest_correlation, weekly), 38 (dawdle detection), 39 (zone recalibration), 40 (response ladder), 41 (decline monitoring). New lib files: `pickupFee.ts`, `pickupQuote.ts`, `pickupTrueup.ts`, `fareFrameworkConfig.ts`. New utils-server files: `leadBilling.ts`, `dispatchChain.ts`, `coldDrop.ts`, `trace.ts`, `firmQuote.ts`, `barikoiRoute.ts`, `polyline.ts`, `offPlatform.ts`. `BARIKOI_API_KEY` now required in utils-server/.env.
+- **Fare Framework v6.4 Stage 0 (shadow mode)**: `fare_framework_stage='stage0'` — v6 fares are computed in shadow for telemetry/gating WITHOUT touching rider-quoted v2 fares (`shadow-isolation` test). New engines: **zone fee** (`lib/zoneFee.ts` — published flat monthly schedule `zone_fee_schedule` per zone × vehicle_category × effective_month; structurally incapable of acting as a live multiplier; driver receives 100%, not commission base; derivation ≈ recovery_time_min × time_rate × coverage_factor 0.55; gated by `zone_fee_enabled=false`); **zone recovery** (`lib/zoneRecovery.ts` — median driver recovery per zone from `zone_recovery_samples` written at ride completion; >30 min → cold (fee applies), <20 min → warm (retires), 10-min hysteresis band; scheduler job 42); **night multiplier** (`lib/nightSchedule.ts` — config JSON schedule + `night_mult_value`, applies ONLY to time_rate terms, ships disabled); **per-tier rate derivation** (`lib/tierRateDerivation.ts`, REV-4 — bike/CNG stack bottom-up fuel/km + driver_maint/km + joma/km, parking owner-borne inside joma; car back-solves from `daily_target`, owner takes 50% of net; AU-6/7: all tier params in taka, engine converts to paisa); **fuel engine** (`lib/fuelConfig.ts` — global fuel prices + per-tier efficiency in platform_config, per-bike-tier joma overrides, seeded via `scripts/seed-fuel-config.js`, admin "Fare Engine Setup" section in fare-config with CSV export). Rider surfaces: `ZoneFeeExplainerSheet` (first-run, `users.zone_fee_explained`), `PickupFeeExplainerSheet` wired into confirm-ride; driver: `DriverPricingReference` (stage-gated v6 formula card, `GET /api/driver/pricing-reference`). New tables: `zone_fee_schedule`, `zone_recovery_samples`, `trip_time_samples`, `config_audit_log`. Stage-gate metrics dashboard (admin fare-gate-metrics) gates Stage 1 promotion.
+- **Admin RBAC (REV-4/REV-5)**: `lib/adminRbac.ts` — owner (superuser, passes every check) / admin / ops_manager / moderator; 10-permission map (admin.read, safety.write, review.write, verification.write, config.write, catalog.write, price.write [owner-only], finance.write, support.write, staff.manage); wired into ALL 64 admin routes; owner-only config keys + pickup-allowance guardrails (±0.25km / ±1min) enforced per-key in config API; NO self-escalation endpoint (first owner via SQL); migration `0047_rbac_admin_roles.sql`; `lib/adminRoles.ts` is the zero-dep client-safe type module (Metro client-bundle safe)
+- **Fleet backend (universal fleet model — UNCOMMITTED except schema)**: `drivers.fleet_id` / `vehicles.fleet_id` NOT NULL; `fleet_vehicle_assignments` authoritative (append-only, single-active partial unique indexes); denormalized pointers written ONLY via `lib/fleetAssignment.ts` in-transaction; `requireFleetMember(fleetId, allowedRoles?)` curried guard in `lib/auth.ts`; `lib/fleetLimits.ts` plan-limit enforcement; 14 `/api/fleet/*` routes + `/api/fleets/[id]` + 4 admin fleet routes; external ride-platform integrations via `lib/integrations/` (baseAdapter, mockRidePlatform sync engine, webhook handler) + `fleet_integrations` / `integration_sync_jobs` / `external_entity_mappings` tables; `scripts/fleet-backfill.ts` solo-fleet backfill, `scripts/verify-fleet-schema.ts`
+- **Driver resilience**: zombie-session recovery (`driver_online_sessions` + `POST /api/driver/session/force-end` + `useDriverStore` session fields — UNCOMMITTED); silent background OTA (`lib/otaBackgroundUpdate.ts` — EAS Update pre-download while driver online + active, instant cold boot via `fallbackToCacheTimeout: 0` — UNCOMMITTED)
 - **Push notifications**: Expo Push Service — ride:matched + scheduled reminders + admin broadcasts + `sos:auto_resolved` + cutoff notifications
 - **PortPos** unified payment gateway — purpose-tagged payment events (`ride` / `wallet_topup` / `driver_package` / `rider_pass`); `PaymentResultScreen` auto-returns via `ride://` scheme from hosted result page
 - **SMS** (dpRelay): OTP + book-for-others + SOS (scoped breaker) + phone normalization
@@ -258,20 +293,50 @@
 
 ## 5. Schema Summary
 
-**~97 tables** (67 at migration 0028; growth through Fare Framework v1) including all additions:
+**~106 tables, ~41 enums** (67 at migration 0028; growth through Fare Framework v1 + v6.4 Stage 0 + fleet model) including all additions:
 - P3: `surgeCurrent`, `surgeHistory`, `cancellationPolicies`
 - P4 Phase 2: `driverCommutePreferences`, `riderPasses`, `riderSubscriptions`, `rideExtraCharges`
 - P4 Phase 3: `taxRates`, `taxLedgers`, `dailyTaxSummaries`, `accountingAccounts`, `accountingEntries`, `accountingEntryLines`
 - Multi-Stop + Tip: `rideStops` + `rides.upfront_tip_bdt`
 - Trust & Quality: `lostItems`, `fareDisputes`, `driverBlocklists`, `ridePhotos`
 - Fare Framework v1: `zoneHeat`, `zoneHeatHistory`, `pickupDistanceSamples`, `fraudFlags`, `zoneRecalibrationQueue`, `cancelSurveys`
+- Fare Framework v6.4 Stage 0: `zoneFeeSchedule`, `zoneRecoverySamples`, `tripTimeSamples`, `configAuditLog`, `driverOnlineSessions`
+- Fleet model: `fleets`, `fleetMembers`, `fleetVehicleAssignments`, `fleetSubscriptionPlans`, `fleetSubscriptions`, `fleetBillingTransactions`, `fleetAlerts`, `auditLogs`, `fleetIntegrations`, `integrationSyncJobs`, `externalEntityMappings`
 - Column additions: `payment_events.purpose` + `pass_id`, `rides.reminder_sent` + `reminder_60_sent` + `wait_*` + `upfront_tip_bdt`, `notifications.idempotency_key`, `pricing.free_wait_minutes` + `wait_fee_per_minute_bdt`, `drivers.auto_accept_*`, `point_offers.points_required` + `reward_*`, `promo_codes.target_role` + `metric`
+- v18 columns: `users.source_type` ('native' | 'external_api') + `users.zone_fee_explained`, `users.fleet_id`, `drivers.fleet_id` (NOT NULL), `vehicles.fleet_id` (NOT NULL), loyalty `source_type` (`point_source_type` enum); 1:1 driver↔vehicle unique index DROPPED (fleet assignments replace it)
 - Migration 0042 (Zone Z-1): `DROP INDEX zones_one_active` + `zones_active_idx` + `demand_forecasts_zone_hour_idx` (unique) + `demand_forecasts_hour_idx` + `rides_zone_created_idx`
+- Migration 0047 (RBAC): admin role family support (owner / admin / ops_manager / moderator)
 - Post-migration: triggers (daily tax summary, account balance, commute updated_at) + seed data (4 tax rates + 14 chart of accounts) + GRANT statements
 
 ---
 
 ## 6. Fix Verification Logs
+
+### v18 Fleet + Fare v6.4 Stage 0 + Admin RBAC (verified against working tree 2026-08-31)
+| Feature | Status | Key detail |
+|---------|--------|------------|
+| Fleet universal model | DONE (UNCOMMITTED) | `drivers.fleet_id`/`vehicles.fleet_id` NOT NULL; solo NATIVE fleet at registration/backfill; `fleet_vehicle_assignments` authoritative; pointers written only via `lib/fleetAssignment.ts` in-tx; 1:1 driver↔vehicle index dropped. Schema push committed (`d99c089`); libs/APIs/screens uncommitted. |
+| Fleet portal (`app/(main)/(fleet)/`) | DONE (UNCOMMITTED) | Dashboard/Finance/Operations/More tabs + drivers/vehicles/trips detail + alerts/assign/subscription; `useFleetStore` local-mode switch (never mutates `users.role`). |
+| Fleet APIs + admin fleet screens | DONE (UNCOMMITTED) | 14 `/api/fleet/*` routes + `/api/fleets/[id]` + `/api/admin/fleets|fleet-plans|fleet-billing`; `requireFleetMember` curried guard; plan-limit enforcement (`lib/fleetLimits.ts`). |
+| External ride-platform integrations | DONE (UNCOMMITTED) | `lib/integrations/` (baseAdapter, mockRidePlatform, syncEngine, webhookHandler) + `/api/fleet/webhook` + 3 tables; `users.source_type`; sync-dedup/plan-limit/cross-fleet tests. |
+| Fare Framework v6.4 Stage 0 (shadow) | DONE | `fare_framework_stage='stage0'`; v6 computed in shadow, rider-quoted v2 untouched; shadow-isolation test. |
+| Zone fee engine | DONE (gated) | `lib/zoneFee.ts` — flat monthly `zone_fee_schedule`, driver gets 100%, coverage factor 0.55 derivation; `zone_fee_enabled=false`. |
+| Zone recovery tracking | DONE | `lib/zoneRecovery.ts` — 30/20-min hysteresis ±10-min band; samples at completion; job 42 upserts `zone_heat.recovery_time_min`. |
+| Night multiplier | DONE (disabled) | `lib/nightSchedule.ts` — config JSON, time-rate terms only, ships at 1.000. |
+| Per-tier rate derivation (REV-4) | DONE | `lib/tierRateDerivation.ts` — bike/CNG bottom-up (fuel+maint+joma), car back-solve from daily_target (owner 50% net), parking inside joma; AU-6/7 taka convention. |
+| Fuel engine + Fare Engine Setup | DONE | `lib/fuelConfig.ts` + REV-6 sections in fare-config (fuel prices, per-tier efficiency, per-bike-tier joma overrides, CSV export); seeded. |
+| Zone fee + pickup fee explainers | DONE | ZoneFeeExplainerSheet wired in confirm-ride (first-run flag); PickupFeeExplainerSheet wired into rider flow (ffeb422). |
+| fare-gate-metrics dashboard | DONE | Admin screen + API; green/red/calibration_needed vs thresholds; gates Stage 1. |
+| Scheduler jobs 42–45 | DONE | 42 zone recovery (60s), 43 zone fee monthly, 44 billed-min daily, 45 fuel recompute (30s); ISO-string raw-SQL fixes; job 44/45 bug fixes. |
+| Admin RBAC (REV-5) | DONE | 4 roles, 10-permission map, wired into all 64 admin routes; owner-only keys + pickup guardrails; migration 0047; no self-escalation. |
+| Admin sidebar role filtering + badge | DONE | AdminShell filters nav by role; role badge in sidebar header. |
+| GlobalActionButtons | DONE | FloatingNavMenu + SOSButton deleted; draggable hamburger (stacked above SOS, bottom-right) mounted in `app/(main)/_layout.tsx` Stack sibling; rider/driver/admin role-aware; theme-toggle attempt reverted. |
+| SOS offline queue | DONE | `lib/sosQueue.ts` — user-scoped AsyncStorage queue, reconnect replay w/ exponential backoff, dedupe; 5s client debounce. Active-SOS polling + server cooldown still open (§9). |
+| Driver zombie-session recovery | DONE (UNCOMMITTED) | `driver_online_sessions` + `POST /api/driver/session/force-end` + `useDriverStore` session fields. |
+| Silent background OTA | DONE (UNCOMMITTED) | `lib/otaBackgroundUpdate.ts` — pre-download while online+active; instant cold boot preserved. |
+| Nearby driver markers | DONE (UNCOMMITTED) | `POST /api/ride/nearby-markers` (H3 k=30 ring); wired into customer home map. |
+| Tests relocation + CI gates | DONE | All `__tests__/` folders → root `tests/` mirror (uncommitted move); `.maestro/smoke-app-launch.yaml`; `scripts/check-web-imports.js` native-module web validator + Metro Node-stdlib blocklist; git hooks (pre-commit fast, tsc at pre-push); maplibre platform-split; Render deploy verification (`verify-render-deploy.sh`). |
+| LiveMeter component | BUILT, UNWIRED | Display-only in-progress ride fare meter (Stage 0 shows request-time estimate; Stage 1 will use `ride:progress` WS) — zero importers. |
 
 ### v17 Ride Fare Framework v1 (Phase F16 — verified 2026-08-25)
 | Feature | Status | Key detail |
@@ -445,15 +510,18 @@ Implemented by coding model, verified through 3 audit rounds. All code from `doc
 | Zone cleanup: remove nil-UUID sentinel writes (estimate/request/schedule), map `zones_not_configured` → 503 at callers | High | DONE — sentinel removed; all callers use validatePickupZone with 503/422 |
 | `zone_multi_active_enabled` admin-settable + seeded (defaults false → multi-zone path dormant) | High | DONE — added to config+api.ts ALLOWED_KEYS + seed-platform-config.js |
 | Apply-promos ↔ redeem API contract fix (screen sends `{code}`; API requires vehicle_type + pickup coords) | High | 400 as written — promo apply flow broken at the screen |
-| SOS cooldown enforcement (time-bound dedupe vs any-open-alert) + SOS screen offline retry / active polling | Medium | Config value read but dead; screen fire-and-forget |
+| SOS offline retry | Medium | **DONE** — `lib/sosQueue.ts` AsyncStorage queue + reconnect replay (backoff, dedupe) + 5s client debounce |
+| SOS server-side cooldown enforcement (time-bound dedupe vs any-open-alert) + SOS active-alert polling | Medium | Config value still read but dead; active-polling still not implemented |
 | Schedule overlap-window semantics + overlap API | Medium | DONE — overlap check via lib/scheduleUtils.ts + /api/ride/schedule/overlap; book-for-other hardening + quote pending |
 | Auto-redispatch on driver cancellation | Medium | Scheduler cancels stale matched rides but nothing re-dispatches |
 | Driver earnings goal — restore or formally drop | Medium | REGRESSION: UI absent (earnings-tab rebuild); breakdown API remains |
 | Payout-method GET + payout-methods management screen (D10) | Medium | POST exists only (onboarding capture) |
 | Min-rate settings screen (D9, reuse MinRateSlider + slider-config) | Medium | Component + API have zero importers |
 | Pass-first discount precedence (currently rider-selectable) | Low | Engine exists; precedence not enforced |
+| Commit the fleet work (portal + APIs + libs + admin screens + auth guard + tests relocation) | **High** | All working-tree only — one `d99c089`-successor commit needed before any deploy |
+| Fare Framework v6 Stage 1 promotion | High (gated) | Blocked on fare-gate-metrics thresholds going green; zone fee + night mult + pickup charge stay inert until then |
 | Orphan route deletion: scheduling-user-ride, schedule-ride-after-promo | Low | True orphans (schedule-ride + no-drivers-available are referenced — KEEP) |
-| Unwire-or-wire: ProgressBar, Badge, Avatar, CheckboxGroup, HeatmapOverlay, MinRateSlider components | Low | Built, zero importers |
+| Unwire-or-wire: ProgressBar, Badge, Avatar, CheckboxGroup, HeatmapOverlay, MinRateSlider, LiveMeter components | Low | Built, zero importers (LiveMeter is Stage-1 gated on `ride:progress` WS events) |
 | i18n sweep (bn strings real; only 2 screens consume; driver language choice not persisted) | Low | `i18n/` system live |
 | Deep linking with expo-linking (promo→apply-promos, push→ride-tracking; dep present, imported nowhere) | Low | Only `ride://` manual use in PaymentResultScreen |
 | Instant pay / payout history | Deferred | Separate withdrawal epic (Plan 05 Q3) |

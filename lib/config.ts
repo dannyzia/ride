@@ -44,10 +44,17 @@ function resolveApiUrl(): string {
 
 // ── Resolve WebSocket URL ─────────────────────────────────────
 function resolveWsUrl(): string {
+  // 1. If DEV_LAN_IP is set, use it (physical devices on same WiFi)
   if (DEV_LAN_IP) {
     return `ws://${DEV_LAN_IP}:3001`;
   }
+
+  // 2. If env var is set to a production domain, use it
   if (isProdUrl(ENV_WS)) return ENV_WS;
+
+  // 3. Fallback: emulator uses 10.0.2.2, dev machine uses localhost
+  //    Note: on physical devices without DEV_LAN_IP, ws://localhost:3001
+  //    points to the PHONE, not the dev machine — set DEV_LAN_IP instead.
   return isAndroidEmulator() ? "ws://10.0.2.2:3001" : "ws://localhost:3001";
 }
 

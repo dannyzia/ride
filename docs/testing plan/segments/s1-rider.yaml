@@ -1,0 +1,66 @@
+# Maestro flow: Segment 1 — Rider (login + request ride).
+# Authored from the codebase (app/(auth)/phone-entry.tsx, login.tsx, ride request flow).
+# Run natively: maestro test --device-id 24261JEGR10296 segments/s1-rider.yaml
+# Source of truth: docs/testing plan/SEGMENT-TESTS.md §2 + master-testing-prompt.md §7 (phases A,C).
+
+appId: com.ride.bd
+name: S1 Rider — login + request ride (Banani → Savar, Bike Plus)
+env:
+  RIDER_PHONE: "1613249520"
+  RIDER_PASSWORD: "test1234"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Get Started"
+    timeout: 30000
+# Phone-entry: type the 10 digits (the +880 prefix is hard-coded; the field strips it).
+- tapOn:
+    text: "1XXXXXXXXX"
+- inputText: ${RIDER_PHONE}
+# Login (the phone-entry screen's "Login" button calls check-user then routes to /(auth)/login).
+- tapOn: "Login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+# Phone is pre-filled on /login. Just type the password and tap Login.
+- tapOn: "Password"
+- inputText: ${RIDER_PASSWORD}
+- tapOn: "Login"
+# Wait for the home screen — assert via "Search destination" placeholder.
+- extendedWaitUntil:
+    visible: "Search destination"
+    timeout: 20000
+# Request a ride: destination = Savar (intercity → is_intercity=true → 2× per-km).
+- tapOn: "Search destination"
+- inputText: "Savar"
+- extendedWaitUntil:
+    visible: "Savar"
+    timeout: 10000
+- tapOn: "Savar"
+# Origin: tap the "Use Current Location" / "Use Dhaka Center" primary CTA.
+- extendedWaitUntil:
+    visible: "Find now"
+    timeout: 10000
+- tapOn: "Find now"
+# Vehicle selection — Bike Plus.
+- extendedWaitUntil:
+    visible: "Bike Plus"
+    timeout: 10000
+- tapOn: "Bike Plus"
+# Confirm + request.
+- extendedWaitUntil:
+    visible: "Confirm Ride"
+    timeout: 10000
+- tapOn: "Confirm Ride"
+- extendedWaitUntil:
+    visible: "Request Ride"
+    timeout: 10000
+- tapOn: "Request Ride"
+# Wait for dispatch to start.
+- extendedWaitUntil:
+    visible: "Finding"
+    timeout: 15000
+# Capture ride_id from DB (out of band) — the segment prompt requires it for S2.
+# Run after this flow:
+#   SELECT id FROM rides ORDER BY created_at DESC LIMIT 1;

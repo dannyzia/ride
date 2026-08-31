@@ -29,6 +29,20 @@ let MapLibreGL: MapLibreModule | null = null;
 try {
   const raw: unknown = require("@maplibre/maplibre-react-native");
   MapLibreGL = resolveModule(raw);
+  if (MapLibreGL) {
+    // Silence the single known cosmetic noise: in-flight tile/glyph/sprite
+    // requests canceled when the map view unmounts or the camera moves
+    // (library already demotes this exact message from "warning" → "info"
+    // internally — see its effectiveLevel). Everything else, including all
+    // other [info] lines, all warnings, and all errors, keeps its default
+    // console output. The callback contract: return true to swallow.
+    MapLibreGL.Logger.setLogCallback((log: { message: string; level: string; tag?: string }) => {
+      if (log.tag === "Mbgl-HttpRequest" && log.message.startsWith("Request failed due to a permanent error: Canceled")) {
+        return true;
+      }
+      return false;
+    });
+  }
 } catch {
   MapLibreGL = null;
 }

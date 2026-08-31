@@ -1,0 +1,55 @@
+# Maestro flow: Segment 2 — Driver (arrive → PIN → start → drop-off → complete).
+# Pre-req: s1-driver.yaml finished on this device; rider is showing "Driver Found!"
+# and the 4-digit PIN. Read the PIN from the rider device, then:
+#   maestro test --device-id 9a76528e --env RIDE_PIN=<4 digits> segments/s2-driver.yaml
+# Authored from the codebase (slide-to-confirm = drag, PIN verify in app).
+
+appId: com.ride.bd
+name: S2 Driver — arrive + PIN + start + drop-off
+env:
+  RIDE_PIN: "0000"
+---
+# S2 assumes the app is already on the "Slide to Confirm Arrival" screen
+# (post s1-driver.yaml). If app was relaunched, re-run s1-driver.yaml first.
+- extendedWaitUntil:
+    visible: "Slide"
+    timeout: 15000
+# DRAG the slide handle left → right. Coordinates approximate — tune after first run.
+# (Maestro swipe is a drag, not a tap — confirmed in TEST-ENGINEER-PROMPT §5 rule 3.)
+- swipe:
+    start: { x: 100, y: 1900 }
+    end: { x: 980, y: 1900 }
+    duration: 800
+- extendedWaitUntil:
+    visible: "Ride Pin"
+    timeout: 15000
+# Wrong-pin check first (TEST-ENGINEER-PROMPT §5 rule 5: "Wrong-pin check (once)").
+- tapOn:
+    id: "ride-pin-input"   # if a testID exists; otherwise tap by placeholder text
+    optional: true
+- inputText: "0000"
+- tapOn: "Verify"
+- extendedWaitUntil:
+    visible: "Incorrect Ride Pin"
+    timeout: 8000
+# Now type the REAL PIN passed in via --env.
+- clearInput
+- inputText: ${RIDE_PIN}
+- tapOn: "Verify"
+# "Starting..." → "Slide to Confirm Drop-off" (or the ride-in-progress screen).
+- extendedWaitUntil:
+    visible: "Slide to Confirm Drop-off"
+    timeout: 20000
+- swipe:
+    start: { x: 100, y: 1900 }
+    end: { x: 980, y: 1900 }
+    duration: 800
+# "Ride Completed" modal → "Browse Home" returns to Driver Home.
+- extendedWaitUntil:
+    visible: "Ride Completed"
+    timeout: 10000
+- tapOn: "Browse Home"
+# Back on Driver Home — assert Calls Remaining decremented.
+- extendedWaitUntil:
+    visible: "Calls Remaining"
+    timeout: 10000

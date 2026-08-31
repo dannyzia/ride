@@ -111,8 +111,11 @@ export async function GET(request: Request) {
 
     const vehicleRegByDriver = new Map<string, Date | null>();
     for (const v of vehicleRows) {
+      // Unassigned pool vehicles (driver_id NULL under the fleet model) carry
+      // no per-driver registration date.
+      if (v.driver_id === null) continue;
       vehicleRegByDriver.set(
-        v.driver_id,
+        v.driver_id as string,
         v.registration_date ? new Date(v.registration_date) : null,
       );
     }

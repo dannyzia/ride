@@ -1,0 +1,26 @@
+# smoke-app-launch — connectivity smoke ONLY (not flow generation)
+# Purpose: prove device -> Metro -> app JS chain end to end.
+# Full flow generation remains gated on the wireframe Phase 1 screen inventory.
+appId: com.ride.bd
+name: smoke-app-launch
+---
+- launchApp:
+    clearState: false
+
+# Dev-launcher intercept: select the Metro server exposed via adb reverse
+- runFlow:
+    when:
+      visible: "Development servers"
+    commands:
+      - tapOn: "http://localhost:8081"
+
+# Wait out first bundle; dev-launcher must be gone = app JS took over
+- extendedWaitUntil:
+    notVisible: "Development servers"
+    timeout: 120000
+
+# No bundler error screen
+- assertNotVisible: "There was a problem loading the project"
+
+# No runtime RedBox
+- assertNotVisible: "Uncaught Error"

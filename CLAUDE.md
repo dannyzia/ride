@@ -30,7 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 For the most up-to-date command reference, critical rules, and architecture map, see **AGENTS.md**. This file focuses on implementation methodology, source of truth hierarchy, and what has changed from the original GlideX codebase.
 
-Model-chain orchestration (Owner / Architect / Orchestrator / Planning-Coding roles, verification protocol, rulings-beat-artifacts) is defined in **AGENTS.md § Model Chain & Orchestration** — it applies to every model working in this repo. The Copy Truth Rule (AGENTS.md § Critical Rules) binds all user-facing text: no copy references non-live behavior.
+Model-chain orchestration (Owner / Architect / Orchestrator / Planning-Coding roles, verification protocol, rulings-beat-artifacts) is defined in **AGENTS.md § Model Chain & Orchestration** — it applies to every model working in this repo. The Copy Truth Rule (AGENTS.md § Critical Rules) binds all user-facing text: no copy references non-live behavior. The File Cross-Reference Convention (AGENTS.md § Critical Rules) binds every AI-written artifact: header block + concrete path anchors, not loose pointers.
 
 ## Implementation Methodology
 
@@ -150,6 +150,8 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 ```
 
 ## Architecture Map
+
+- **Fleet Management (universal fleet model, 2026-08):** every driver owns exactly one fleet (`drivers.fleet_id` NOT NULL; solo drivers get an implicit solo NATIVE fleet at registration or via `scripts/fleet-backfill.ts`). `vehicles.fleet_id` NOT NULL. The strict 1:1 driver↔vehicle unique index is DROPPED (`docs/vehicle-model-decision.md` resolved); `fleet_vehicle_assignments` is the authoritative assignment source (append-only, single active row per vehicle/driver), and `vehicles.driver_id` / `drivers.vehicle_id` / `drivers.vehicle_type` are denormalized active-pointer caches written ONLY through `lib/fleetAssignment.ts` in the same transaction. Dispatch (`utils-server/dispatch.ts`) untouched. Fleet tables: `fleets`, `fleet_members`, `fleet_vehicle_assignments`, `fleet_subscription_plans`, `fleet_subscriptions`, `fleet_billing_transactions`, `fleet_alerts`, `audit_logs` — fleet roles live in `fleet_members`, NOT `users.role`; all fleet money fields are integer paisa. **Fleet authorization (Phase 2):** `requireFleetMember(fleetId, allowedRoles?)` in `lib/auth.ts` scopes any fleet route to one fleet (active `fleet_members` row + optional role gate; 403 on cross-fleet). Client "Current Mode" switching is local-only via `store/useFleetStore.ts` (`activeMode`).
 
 ### Route Structure (Expo Router)
 - `app/(auth)/` — Auth screens (phone-entry → otp-verify → register). **Supabase phone OTP**.
@@ -333,6 +335,16 @@ See `docs/Plan/18-KNOWN-ISSUES.md` before fixing bugs. Key issues:
 - **Dispatch invariants (Phase D — sequential dispatch, debit-on-offer)** that must always pass: (1) exactly one outstanding offer per ride at any time, (2) single deduction per `(ride_id, driver_id)`, (3) `calls_remaining = 0` drivers never in candidate pool, (4) daily cap exceeded drivers never in candidate pool, (5) no driver receives the same offer twice, (6) every offered driver has a `call_ledger` deduction row regardless of outcome, (7) declined/expired offer → next candidate offered, (8) rider cancel mid-chain → chain aborts, no further offers, no refunds, (9) re-dispatch → previously billed drivers not re-billed, (10) billing atomicity — `dispatch_offers` row + deduction commit in ONE transaction.
 - **Payment invariants**: (1) same idempotency key → exactly one `payment_events` row, (2) duplicate callback activates subscription exactly once, (3) failed activation → `compensation_queue` entry within 30 seconds.
 - Test templates: `docs/Plan/22-TEST-TEMPLATES.md`.
+
+### ExecBro live device verification — use when available
+
+For UI-flow changes (screens, navigation, floating buttons, sheets, theme toggles), code-trace + tsc/lint is the floor, not the ceiling. If the `execbro` MCP server is connected AND Metro (`npx expo start`) plus an emulator/simulator are running:
+
+1. `scan_metro` to connect to the app
+2. Verify on-device: `android_screenshot`/`ios_screenshot` + `tap` for interactions, `get_screen_state` for structure, `get_logs` for runtime errors, `get_network_requests` for API calls
+3. State what was device-verified in the session report — screenshots beat assumptions
+
+If execbro is NOT connected or no device/Metro is running: say so to Zia in the final report ("device verification skipped — no execbro/device available") and finish with code-trace + lint/tsc (+ Maestro where flows exist). Never block delivery waiting for a device.
 
 ## Graph Maintenance
 

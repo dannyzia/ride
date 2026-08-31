@@ -11,15 +11,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import ReactNativeModal from "react-native-modal";
 import { API_URL } from "@/lib/config";
 import { relativeTime } from "@/lib/time";
 import { colors, radii, spacing } from "@/theme/goRide";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import Map, { type MapHotspot } from "@/components/Map";
-import ThemeToggle from "@/components/ThemeToggle";
 interface HotspotRow {
   zone_id: string;
   zone_name: string;
@@ -36,12 +34,12 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
 export default function HotspotMapScreen() {
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
   const [hotspots, setHotspots] = useState<HotspotRow[] | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [selectedZone, setSelectedZone] = useState<HotspotRow | null>(null);
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -150,9 +148,9 @@ export default function HotspotMapScreen() {
           Hotspot Map
         </Text>
         <TouchableOpacity
-          onPress={() => setThemeModalVisible(true)}
+          onPress={() => setTheme(isDark ? "light" : "dark")}
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
           hitSlop={8}
         >
           <Ionicons
@@ -556,17 +554,6 @@ export default function HotspotMapScreen() {
           </View>
         )}
       </View>
-
-      {/* Appearance toggle */}
-      <ReactNativeModal
-        isVisible={themeModalVisible}
-        onBackdropPress={() => setThemeModalVisible(false)}
-        onBackButtonPress={() => setThemeModalVisible(false)}
-      >
-        <View style={{ width: "91%", alignSelf: "center" }}>
-          <ThemeToggle />
-        </View>
-      </ReactNativeModal>
     </SafeAreaView>
   );
 }

@@ -21,9 +21,16 @@ export default {
       backgroundColor: "#181A20",
     },
     updates: {
-      enabled: true,
-      // EAS Update project URL — required for OTA delivery. Without it the
-      // client never checks for updates and `eas update` pushes are inert.
+      // 2026-08-31: temporarily disabled — the on-device dev client (com.ride.bd)
+      // was built before expo-updates was bumped to a version that eagerly
+      // calls requireNativeModule('ExpoUpdates') at JS eval time, so the
+      // native module is missing in the installed binary and the bundle
+      // throws "Cannot find native module 'ExpoUpdates'" on first load.
+      // Dev-only unblock: disable updates so the JS never imports it. The
+      // production path (EAS / Render) uses a freshly-built client that
+      // includes the native module, so this can be flipped back to true
+      // (or gated per-profile) when the native dev client is rebuilt.
+      enabled: false,
       url: "https://u.expo.dev/3293078f-d655-46b9-8a03-c45b2fab2c2d",
       fallbackToCacheTimeout: 0,
     },

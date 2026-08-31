@@ -23,6 +23,10 @@ import { supabase } from "@/lib/supabase";
 
 const POLL_INTERVAL_MS = 10000;
 const MAX_EMPTY_POLLS = 12;
+const WS_CONNECT_TIMEOUT = 30000;
+const FINDING_TIMEOUT = 120000;
+
+type FindingState = 'searching' | 'ws_timeout' | 'no_drivers';
 
 interface Alternative {
   vehicle_type: VehicleType;
@@ -48,6 +52,8 @@ export default function FindingDriver() {
   const [error, setError] = useState(false);
   const [prolongedEmpty, setProlongedEmpty] = useState(false);
   const [alternatives, setAlternatives] = useState<Alternative[] | null>(null);
+  const [findingState, setFindingState] = useState<FindingState>('searching');
+  const driverFound = useRef(false);
   const emptyPollCount = useRef(0);
 
   const goToTracking = useCallback((rideId: string) => {
@@ -83,6 +89,27 @@ export default function FindingDriver() {
   // the live rider socket via sendToRider (no subscription needed); depends on
   // the store socket so a self-healing reconnect re-attaches.
   const ws = useWSStore((s) => s.ws);
+
+  // Timeout effects — after ws is declared
+  useEffect(() => {
+    const wsTimeout = setTimeout(() => {
+      if (!ws && findingState === 'searching') {
+        setFindingState('ws_timeout');
+      }
+    }, WS_CONNECT_TIMEOUT);
+
+    const findingTimeout = setTimeout(() => {
+      if (!driverFound.current && findingState === 'searching') {
+        setFindingState('no_drivers');
+      }
+    }, FINDING_TIMEOUT);
+
+    return () => {
+      clearTimeout(wsTimeout);
+      clearTimeout(findingTimeout);
+    };
+  }, [ws, findingState]);
+
   useEffect(() => {
     if (!ws) return;
     const handler = (event: MessageEvent) => {
@@ -97,6 +124,7 @@ export default function FindingDriver() {
         msg.ride_id &&
         COMMITTED_STATUSES.includes(msg.status ?? "")
       ) {
+        driverFound.current = true;
         goToTracking(msg.ride_id);
       } else if (msg.type === "ride:expired" && msg.ride_id) {
         router.replace("/(main)/(customer)/no-drivers-available");
@@ -275,46 +303,106 @@ export default function FindingDriver() {
           borderTopColor: borderColor,
         }}
       >
-        <View className="items-center mb-6">
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text
-            className="text-[20px] font-JakartaBold mt-4"
-            style={{ color: textPrimary }}
-          >
-            Finding your driver...
-          </Text>
-          <Text
-            className="text-sm font-Jakarta text-center mt-2"
-            style={{ color: textSecondary }}
-          >
-            {prolongedEmpty
-              ? "Drivers are busy — keep waiting or try another vehicle type"
-              : "Searching for nearby drivers…"}
-          </Text>
-        </View>
+        {findingState === 'searching' ? (
+          <>
+            <View className="items-center mb-6">
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text
+                className="text-[20px] font-JakartaBold mt-4"
+                style={{ color: textPrimary }}
+              >
+                Finding your driver...
+              </Text>
+              <Text
+                className="text-sm font-Jakarta text-center mt-2"
+                style={{ color: textSecondary }}
+              >
+                {prolongedEmpty
+                  ? "Drivers are busy — keep waiting or try another vehicle type"
+                  : "Searching for nearby drivers…"}
+              </Text>
+            </View>
 
-        {/* Nearby count + ETA — only shown on success with count > 0 */}
-        {showCountEta && (
-          <View
-            className="rounded-2xl p-4 mb-6"
-            style={{ backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }}
-          >
-            <View className="flex-row items-center mb-2">
-              <Ionicons name="car" size={20} color={colors.primary} />
-              <Text className="ml-2 text-base font-JakartaSemiBold" style={{ color: textPrimary }}>
-                {count} nearby driver{count !== 1 ? "s" : ""}
+            {/* Nearby count + ETA */}
+            {showCountEta && (
+              <View
+                className="rounded-2xl p-4 mb-6"
+                style={{ backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }}
+              >
+                <View className="flex-row items-center mb-2">
+                  <Ionicons name="car" size={20} color={colors.primary} />
+                  <Text className="ml-2 text-base font-JakartaSemiBold" style={{ color: textPrimary }}>
+                    {count} nearby driver{count !== 1 ? "s" : ""}
+                  </Text>
+                </View>
+                <View className="flex-row items-center">
+                  <Ionicons name="time" size={20} color={colors.primary} />
+                  <Text className="ml-2 text-base font-Jakarta" style={{ color: textSecondary }}>
+                    Estimated wait: {eta} min
+                  </Text>
+                </View>
+              </View>
+            )}
+          </>
+        ) : findingState === 'ws_timeout' ? (
+          <View className="items-center mb-6">
+            <Ionicons name="cloud-offline-outline" size={48} color={colors.amber} />
+            <Text
+              className="text-[20px] font-JakartaBold mt-4"
+              style={{ color: textPrimary }}
+            >
+              Connection issue
+            </Text>
+            <Text
+              className="text-sm font-Jakarta text-center mt-2"
+              style={{ color: textSecondary }}
+            >
+              Could not connect to the server. Check your network and try again.
+            </Text>
+            <TouchableOpacity
+              className="rounded-full py-3 px-8 mt-4"
+              style={{ backgroundColor: colors.primary }}
+              onPress={() => {
+                setFindingState('searching');
+                driverFound.current = false;
+              }}
+            >
+              <Text className="text-base font-JakartaBold" style={{ color: colors.white }}>
+                Retry
               </Text>
-            </View>
-            <View className="flex-row items-center">
-              <Ionicons name="time" size={20} color={colors.primary} />
-              <Text className="ml-2 text-base font-Jakarta" style={{ color: textSecondary }}>
-                Estimated wait: {eta} min
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View className="items-center mb-6">
+            <Ionicons name="car-outline" size={48} color={colors.amber} />
+            <Text
+              className="text-[20px] font-JakartaBold mt-4"
+              style={{ color: textPrimary }}
+            >
+              No drivers nearby
+            </Text>
+            <Text
+              className="text-sm font-Jakarta text-center mt-2"
+              style={{ color: textSecondary }}
+            >
+              No drivers available right now. Try again in a few minutes or choose a different vehicle type.
+            </Text>
+            <TouchableOpacity
+              className="rounded-full py-3 px-8 mt-4"
+              style={{ backgroundColor: colors.primary }}
+              onPress={() => {
+                setFindingState('searching');
+                driverFound.current = false;
+              }}
+            >
+              <Text className="text-base font-JakartaBold" style={{ color: colors.white }}>
+                Try Again
               </Text>
-            </View>
+            </TouchableOpacity>
           </View>
         )}
 
-        {/* Cancel Booking */}
+        {/* Cancel Booking — always visible */}
         <TouchableOpacity
           className="rounded-full py-4 items-center border"
           style={{ borderColor: colors.danger }}

@@ -130,6 +130,8 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 
 ## Architecture Map
 
+- **Fleet Management (universal fleet model, 2026-08):** every driver owns exactly one fleet (`drivers.fleet_id` NOT NULL; solo drivers get an implicit solo NATIVE fleet at registration — `app/api/register+api.ts` — or via `scripts/fleet-backfill.ts`). `vehicles.fleet_id` NOT NULL. The strict 1:1 driver↔vehicle unique index is DROPPED (`docs/vehicle-model-decision.md` resolved); `fleet_vehicle_assignments` is the authoritative assignment source (append-only, single active row per vehicle/driver via partial unique indexes), and `vehicles.driver_id` / `drivers.vehicle_id` / `drivers.vehicle_type` are DENORMALIZED active-pointer caches written ONLY through `lib/fleetAssignment.ts` in the same transaction. Dispatch (`utils-server/dispatch.ts`) is untouched — it filters on `drivers.vehicle_type` as before. Fleet tables: `fleets`, `fleet_members`, `fleet_vehicle_assignments`, `fleet_subscription_plans`, `fleet_subscriptions`, `fleet_billing_transactions`, `fleet_alerts`, `audit_logs` (fleet roles live in `fleet_members`, NOT `users.role`; money = integer paisa).
+
 - `app/(auth)/` — Auth screens (phone-entry → otp-verify → register)
 - `app/(main)/(customer)/` — Rider screens (keep folder name `(customer)`, rider is a display label)
 - `app/(main)/(rider)/` — Driver screens (folder name `(rider)` is legacy — contains driver flows, do not rename)
@@ -168,6 +170,8 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 ### Auth
 Supabase phone OTP. Client uses `lib/supabase.ts` (`EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY`). Server uses `lib/supabaseServer.ts` (`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`). Protected API routes call `verifySupabaseToken(request)` or `requireRole(request, role)` from `lib/auth.ts`. **No exceptions.** No `x-user-id` header substitution.
 
+**Fleet authorization (Phase 2):** fleet staff roles (`OWNER|MANAGER|DISPATCHER|ACCOUNTANT|VIEWER`) live EXCLUSIVELY in `fleet_members` — never `users.role` (which stays immutable/singular). Use `requireFleetMember(fleetId, allowedRoles?)` from `lib/auth.ts` to scope any fleet route to a specific fleet: it verifies the Supabase token, looks up the users row, asserts an ACTIVE `fleet_members` row for `(user, fleetId)` (and an allowed role when constrained), then throws 403 on any miss. Because `fleetId` is bound into the curried guard, URL-param tampering for cross-fleet access is structurally impossible. E.g. `app/api/fleets/[id]+api.ts`. Client switches its "Current Mode" entirely in local state via `store/useFleetStore.ts` (`activeMode`) — never a logout, never a `users.role` mutation.
+
 ### Vehicle Types
 9 lowercase values: `bike_basic`, `bike_standard`, `bike_plus`, `cng`, `car_compact`, `car_economy`, `car_comfort`, `car_premium`, `car_xl`. Import Zod enum from `lib/vehicleTypes.ts` — never define inline. Old values (`MOTORCYCLE`, `CNG_AUTO_RICKSHAW`, `CAR`, `MICROBUS`) are removed. `car_compact` sits between `cng` and `car_economy` in tier order.
 
@@ -188,6 +192,26 @@ Always UTC `timestamptz`. Convert to `Asia/Dhaka` only at display. Use `lib/time
 
 ### Copy Truth Rule (owner ruling 2026-08-28)
 No UI text, config description, or admin guidance may reference behavior that isn't live — including planned, fenced, or scheduled behavior. If it's not on disk, the text either omits it or says "ships with Stage 1." Applies to rider-facing copy, driver surfaces, admin guidance, and config field descriptions. Copy is verified against disk state before shipping, same as code claims.
+
+### File Cross-Reference Convention (AI-to-AI program, owner ruling 2026-08-28)
+
+This program is almost entirely AI ↔ AI with Zia as the bus (copy-paste operator). Files written for model consumption are the norm, not the exception. Every such artifact MUST open with an AI-reader header block:
+
+```
+**Purpose:**     <one line: what this file is, when to read it>
+**Owner:**       <Architect / Coding / Testing model / Zia — which role keeps it current>
+**Status:**      <ACTIVE / IN-PROGRESS / PENDING / SUPERSEDED>
+**Source of truth:** <path, if this file ISN'T the source>
+**Related (concrete paths):**
+  - <path 1> — <one-line what it is>
+  - <path 2> — <one-line what it is>
+**Last verified:** <ISO date, by which role, how>
+**How to update:** <one-line rule for keeping this file fresh>
+```
+
+**Cross-references must be concrete.** When an artifact references another, use `§<section> of <full path>` — never "see the plan," "the docs say," or any loose pointer a model has to re-discover. Cross-refs that don't resolve are failures; the model on the other end won't be able to follow the chain.
+
+**This applies to:** `.kilo/plans/*.md` files (plan + handoff), `docs/testing plan/*.md` (testing plans + reports), the canonical docs (`Ride Fare Framework v6.md`, TLDR), the build script, the bring-up script, AGENTS.md itself. The "decision log" / "round notes" pattern in the handoff file is the working example.
 
 ### Validation & Errors
 - Zod at every API route boundary before any DB/service call. Use `parsed.data` after `safeParse`, never raw request body.
@@ -284,6 +308,16 @@ Full reference: `docs/Plan/11-ENV-VARS.md`.
 - **Dispatch invariants (Phase D — sequential dispatch, debit-on-offer)** that must always pass: (1) exactly one outstanding offer per ride at any time, (2) single deduction per `(ride_id, driver_id)`, (3) `calls_remaining = 0` drivers never in candidate pool, (4) daily cap exceeded drivers never in candidate pool, (5) no driver receives the same offer twice, (6) every offered driver has a `call_ledger` deduction row regardless of outcome (accept/reject/expire/auto-accept), (7) declined/expired offer → next candidate offered, (8) rider cancel mid-chain → chain aborts, no further offers, no refunds, (9) re-dispatch → previously billed drivers not re-billed, (10) billing atomicity — `dispatch_offers` row + deduction commit in ONE transaction.
 - **Payment invariants**: (1) same idempotency key → exactly one `payment_events` row, (2) duplicate callback activates subscription exactly once, (3) failed activation → `compensation_queue` entry within 30 seconds.
 - Test templates: `docs/Plan/22-TEST-TEMPLATES.md`.
+
+### ExecBro live device verification — use when available
+
+For UI-flow changes (screens, navigation, floating buttons, sheets, theme toggles), code-trace + tsc/lint is the floor, not the ceiling. If the `execbro` MCP server is connected AND Metro (`npx expo start`) plus an emulator/simulator are running:
+
+1. `scan_metro` to connect to the app
+2. Verify on-device: `android_screenshot`/`ios_screenshot` + `tap` for interactions, `get_screen_state` for structure, `get_logs` for runtime errors, `get_network_requests` for API calls
+3. State what was device-verified in the session report — screenshots beat assumptions
+
+If execbro is NOT connected or no device/Metro is running: say so to Zia in the final report ("device verification skipped — no execbro/device available") and finish with code-trace + lint/tsc (+ Maestro where flows exist). Never block delivery waiting for a device.
 
 ### Maestro / UI-flow testing — mandatory pre-reads
 Before generating, editing, or evaluating ANY Maestro YAML flow file, read in full:

@@ -4,7 +4,6 @@ import { SuccessCheckmark } from "@/components/SuccessCheckmark";
 import TollParkingModal from "@/components/TollParkingModal";
 import DriverActionBar from "@/components/DriverActionBar";
 import RideInfoCard from "@/components/RideInfoCard";
-import ThemeToggle from "@/components/ThemeToggle";
 import {
   View,
   Text,
@@ -24,7 +23,7 @@ import { supabase } from "@/lib/supabase";
 import ReactNativeModal from "react-native-modal";
 import CustomButton from "@/components/CustomButton";
 import RideLayout from "@/components/RideLayout";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { Ionicons } from "@expo/vector-icons";
 
 interface CompletionSummary {
@@ -45,6 +44,7 @@ const FinishRide = () => {
   const router = useRouter();
   const { user } = useSession();
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
@@ -57,7 +57,6 @@ const FinishRide = () => {
   const { ws } = useWSStore();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showTollModal, setShowTollModal] = useState(false);
-  const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [completion, setCompletion] = useState<CompletionSummary | null>(null);
   const [completedRideId, setCompletedRideId] = useState<string | null>(null);
   const lastLocationRef = useRef<Location.LocationObject | null>(null);
@@ -614,9 +613,9 @@ const FinishRide = () => {
 
       {/* Appearance toggle (top-right, beside RideLayout's back button) */}
       <TouchableOpacity
-        onPress={() => setThemeModalVisible(true)}
+        onPress={() => setTheme(isDark ? "light" : "dark")}
         accessibilityRole="button"
-        accessibilityLabel="Appearance settings"
+        accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
         style={{
           position: "absolute",
           top: 64,
@@ -633,20 +632,11 @@ const FinishRide = () => {
         }}
       >
         <Ionicons
-          name={isDark ? "moon-outline" : "sunny-outline"}
+          name={isDark ? "sunny-outline" : "moon-outline"}
           size={18}
           color={textPrimary}
         />
       </TouchableOpacity>
-      <ReactNativeModal
-        isVisible={themeModalVisible}
-        onBackdropPress={() => setThemeModalVisible(false)}
-        onBackButtonPress={() => setThemeModalVisible(false)}
-      >
-        <View style={{ width: "91%", alignSelf: "center" }}>
-          <ThemeToggle />
-        </View>
-      </ReactNativeModal>
     </>
   );
 };

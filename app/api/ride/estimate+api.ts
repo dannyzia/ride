@@ -73,10 +73,12 @@ export async function POST(request: Request) {
     let totalDistanceKm = route?.distanceKm ?? haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
 
     // ── Multi-leg distance when stops are provided ──────────────────────
-    if (stops && stops.length > 0) {
+    // Filter out stops with 0,0 coords (unset) to avoid haversine to Null Island
+    const validStops = (stops ?? []).filter(s => s.lat !== 0 && s.lng !== 0);
+    if (validStops.length > 0) {
       const waypoints = [
         { lat: pickup_lat, lng: pickup_lng },
-        ...stops,
+        ...validStops,
         { lat: dropoff_lat, lng: dropoff_lng },
       ];
       let multiLegKm = 0;

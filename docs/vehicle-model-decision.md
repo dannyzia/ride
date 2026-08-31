@@ -1,8 +1,18 @@
 # Vehicle Model Decision (C5)
 
-> **Status:** BLOCKED — requires Product decision before implementation.
-> **Date:** 2026-08-22
+> **Status:** RESOLVED — Universal fleet model (Option A per Zia ruling 2026-08-16, implemented 2026-08-30 Phase 1). Multi-vehicle per driver within a fleet is LIVE at the data layer.
+> **Date:** 2026-08-22 (created) · 2026-08-30 (resolved + implemented)
 > **Owner:** Product / Engineering
+
+## Resolution (2026-08-30, Phase 1 implemented)
+
+- `vehicles_driver_id_idx` (unique on `vehicles.driver_id`) is DROPPED; `vehicles.driver_id` is now a NULLABLE denormalized cache (NULL = unassigned pool vehicle).
+- `drivers.fleet_id` and `vehicles.fleet_id` are NOT NULL (universal backfill via `scripts/fleet-backfill.ts`; new drivers get a solo NATIVE fleet at registration in `app/api/register+api.ts`).
+- `fleet_vehicle_assignments` is the authoritative assignment source (append-only; single active row per vehicle AND per driver enforced by partial unique indexes `fva_vehicle_active_idx` / `fva_driver_active_idx` WHERE unassigned_at IS NULL).
+- `drivers.vehicle_id` / `drivers.vehicle_type` remain the active-pointer caches — dispatch (`utils-server/dispatch.ts`) unchanged.
+- Assignment writes go ONLY through `lib/fleetAssignment.ts` (`assignVehicleToDriver` / `unassignVehicle`, single transaction).
+- Fleet tables added: `fleets`, `fleet_members`, `fleet_vehicle_assignments`, `fleet_subscription_plans`, `fleet_subscriptions`, `fleet_billing_transactions`, `fleet_alerts`, `audit_logs`. Spec: `docs/FeatureList/New Feature Plan/Fleet Management/06-FLEET-MANAGEMENT-V5-by-Claude.xml` §database.MVP1.
+
 
 ## Context
 

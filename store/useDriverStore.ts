@@ -37,12 +37,20 @@ export interface DriverState {
   activeOffer: ActiveOffer | null;
   currentRideId: string | null;
   wsConnected: boolean;
+  // Session recovery fields (for zombie session detection)
+  sessionId: string | null;
+  onBreak: boolean;
+  breakStartedAt: string | null;
   setDriver: (driver: DriverState['driver']) => void;
   setActiveSubscription: (sub: DriverState['activeSubscription']) => void;
   setIsOnline: (online: boolean) => void;
   setActiveOffer: (offer: ActiveOffer | null) => void;
   setCurrentRideId: (id: string | null) => void;
   setWsConnected: (connected: boolean) => void;
+  setSessionId: (id: string | null) => void;
+  setOnBreak: (onBreak: boolean, startedAt?: string | null) => void;
+  /** Clear ephemeral session state (keep driver profile + subscription) */
+  clearSession: () => void;
   reset: () => void;
 }
 
@@ -53,6 +61,9 @@ const initialState = {
   activeOffer: null,
   currentRideId: null,
   wsConnected: false,
+  sessionId: null,
+  onBreak: false,
+  breakStartedAt: null,
 };
 
 export const useDriverStore = create<DriverState>((set) => ({
@@ -64,5 +75,18 @@ export const useDriverStore = create<DriverState>((set) => ({
   setActiveOffer: (activeOffer) => set({ activeOffer }),
   setCurrentRideId: (currentRideId) => set({ currentRideId }),
   setWsConnected: (wsConnected) => set({ wsConnected }),
+  setSessionId: (sessionId) => set({ sessionId }),
+  setOnBreak: (onBreak, breakStartedAt) =>
+    set({ onBreak, breakStartedAt: breakStartedAt ?? null }),
+  clearSession: () =>
+    set({
+      isOnline: false,
+      activeOffer: null,
+      currentRideId: null,
+      wsConnected: false,
+      sessionId: null,
+      onBreak: false,
+      breakStartedAt: null,
+    }),
   reset: () => set(initialState),
 }));

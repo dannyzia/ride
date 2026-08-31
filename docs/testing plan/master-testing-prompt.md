@@ -24,8 +24,8 @@ You are **not** a developer. Do **not** modify code, run migrations, deploy, or 
 
 | Item | Value |
 |---|---|
-| Rider device | `emulator-5554` (Medium_Phone) |
-| Driver device | `emulator-5556` (Pixel_6a) |
+| Rider device | PRIMARY: `24261JEGR10296` (Pixel 6a, physical) · BACKUP: `emulator-5554` (Medium_Phone) |
+| Driver device | PRIMARY: `9a76528e` (POCO X3, physical) · BACKUP: `emulator-5556` (Pixel_6a) |
 | App id | `com.ride.bd` |
 | WebSocket server | `http://localhost:3001` (dispatch on `ws://localhost:3001`) |
 | Metro / Expo | running (`npx expo start --dev-client`) |
@@ -74,7 +74,7 @@ Run these before starting. If any fails, **stop and report** rather than startin
    ```
    → `status='active'`, `vehicle_type='bike_plus'`, and an active subscription with `calls_remaining > 0`.
 3. **Active zone** covers Dhaka; **active "Dhaka" city boundary** contains Banani but **not** Savar; **pricing** for `bike_plus` has `intercity_per_km_bdt = 2 × per_km_bdt`.
-4. **Emulator GPS** set to a Dhaka point on both devices (`geo fix` takes **longitude latitude** order):
+4. **GPS** — physical phones: real GPS, keep them near a window (8s timeout + Barikoi fallback). Emulators only: set a Dhaka point on both (`geo fix` takes **longitude latitude** order):
    ```
    adb -s emulator-5554 emu geo fix 90.4125 23.8103
    adb -s emulator-5556 emu geo fix 90.4125 23.8103
@@ -112,7 +112,7 @@ Run these before starting. If any fails, **stop and report** rather than startin
 
 ## 7. Phases (execute A → I)
 
-> Convention: **[R]** = Rider device (5554), **[D]** = Driver device (5556), **[DB]** = Supabase SQL Editor probe.
+> Convention: **[R]** = Rider device, **[D]** = Driver device (physical serials per §2; `5554`/`5556` when running emulator backups), **[DB]** = Supabase SQL Editor probe.
 
 ### Phase A — Login (both devices)
 - Password login per §3 on each device; skip if already on Home.

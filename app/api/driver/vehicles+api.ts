@@ -12,6 +12,7 @@ import {
   type VehicleTypeEnum,
 } from '@/lib/vehicleTypes';
 import { resolveVehicleType, ManualReviewRequiredError, EligibilityError } from '@/lib/resolveVehicleType';
+import { assignVehicleToDriver } from '@/lib/fleetAssignment';
 import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
@@ -117,6 +118,7 @@ export async function POST(request: Request) {
 
     const [driver] = await db.select({
       id: drivers.id,
+      fleet_id: drivers.fleet_id,
       completed_rides_count: drivers.completed_rides_count,
       rating: drivers.rating,
     })
@@ -188,8 +190,16 @@ export async function POST(request: Request) {
         modelCreated = inserted.length > 0;
       }
 
+      // Fleet model: the driver's owning fleet is guaranteed by the universal
+      // backfill / registration (drivers.fleet_id NOT NULL).
+      if (!driver.fleet_id) {
+        throw new EligibilityError('Driver has no fleet — run scripts/fleet-backfill.ts');
+      }
+      const driverFleetId = driver.fleet_id;
+
       const [vehicleRow] = await tx.insert(vehicles).values({
         driver_id: driver.id,
+        fleet_id: driverFleetId,
         vehicle_type: vehicle_type as never,
         manufacturer: brand,
         model,
@@ -204,30 +214,19 @@ export async function POST(request: Request) {
         registration_date: `${registration_year}-01-01`,
         fitness_expires_at: toDateStr(oneYearAhead),
         tax_token_expires_at: toDateStr(oneYearAhead),
-      }).onConflictDoUpdate({
-        target: vehicles.driver_id,
-        set: {
-          vehicle_type: vehicle_type as never,
-          manufacturer: brand,
-          model,
-          manufacturing_year: registration_year,
-          engine_cc: engine_cc ?? existingModel?.typical_cc_min ?? null,
-          body_type: (body_type ?? existingModel?.body_type ?? null) as never,
-          passenger_seats: number_of_seats ?? 4,
-          registration_number: registration_plate.toUpperCase(),
-          registration_date: `${registration_year}-01-01`,
-          updated_at: now,
-        },
       }).returning();
 
-      // Keep driver's dispatch-facing type and vehicle link in sync
-      await tx.update(drivers)
-        .set({
-          vehicle_type: vehicle_type as never,
-          vehicle_id: vehicleRow.id,
-          updated_at: now,
-        })
-        .where(eq(drivers.id, driver.id));
+      // Authoritative assignment row + active-pointer cache sync
+      // (fleet_vehicle_assignments + vehicles.driver_id + drivers.vehicle_id/
+      // vehicle_type) in the same transaction. Replaces the old upsert on the
+      // dropped 1:1 unique index. This also closes any prior active
+      // assignment for the driver (vehicle replacement).
+      await assignVehicleToDriver(tx, {
+        fleet_id: driverFleetId,
+        vehicle_id: vehicleRow.id,
+        driver_id: driver.id,
+        reason: 'vehicle_registration',
+      });
 
       return { vehicle: vehicleRow, model_created: modelCreated };
     });

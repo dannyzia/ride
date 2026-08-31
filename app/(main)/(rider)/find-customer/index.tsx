@@ -6,7 +6,6 @@ import { useRouter } from "expo-router";
 import SlideButton from "@/components/SlideButton";
 import DriverActionBar from "@/components/DriverActionBar";
 import RideInfoCard from "@/components/RideInfoCard";
-import ThemeToggle from "@/components/ThemeToggle";
 import { useDriver, useRideOfferStore, useWSStore } from "@/store";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useSession } from "@/lib/session";
@@ -17,9 +16,8 @@ import RideLayout from "@/components/RideLayout";
 import Map from "@/components/Map";
 import { fetchRouteGeometry } from "@/lib/routeGeometry";
 import TollParkingModal from "@/components/TollParkingModal";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { Ionicons } from "@expo/vector-icons";
-import ReactNativeModal from "react-native-modal";
 
 // Route-line refetch policy for the pickup map (master plan §7.2): the
 // location watch ticks every 10s, so the Barikoi route fetch is throttled to
@@ -53,6 +51,7 @@ const calculateDistance = (
 const ReachCustomer = () => {
   const router = useRouter();
   const isDark = useIsDark();
+  const { setTheme } = useAppearance();
 
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
@@ -81,7 +80,6 @@ const ReachCustomer = () => {
   const [waitLoading, setWaitLoading] = useState(false);
   const waitIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showTollModal, setShowTollModal] = useState(false);
-  const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [stops, setStops] = useState<{ id: string; address: string }[]>([]);
   const [currentStopIdx, setCurrentStopIdx] = useState(0);
   // Decoded driver-to-pickup polyline for the map route line ([lat, lng] pairs).
@@ -636,9 +634,9 @@ const ReachCustomer = () => {
 
       {/* Appearance toggle (top-right, beside RideLayout's back button) */}
       <TouchableOpacity
-        onPress={() => setThemeModalVisible(true)}
+        onPress={() => setTheme(isDark ? "light" : "dark")}
         accessibilityRole="button"
-        accessibilityLabel="Appearance settings"
+        accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
         style={{
           position: "absolute",
           top: 64,
@@ -655,20 +653,11 @@ const ReachCustomer = () => {
         }}
       >
         <Ionicons
-          name={isDark ? "moon-outline" : "sunny-outline"}
+          name={isDark ? "sunny-outline" : "moon-outline"}
           size={18}
           color={textPrimary}
         />
       </TouchableOpacity>
-      <ReactNativeModal
-        isVisible={themeModalVisible}
-        onBackdropPress={() => setThemeModalVisible(false)}
-        onBackButtonPress={() => setThemeModalVisible(false)}
-      >
-        <View style={{ width: "91%", alignSelf: "center" }}>
-          <ThemeToggle />
-        </View>
-      </ReactNativeModal>
 
       <TollParkingModal visible={showTollModal} rideId={activeRideId} onClose={() => setShowTollModal(false)} />
 

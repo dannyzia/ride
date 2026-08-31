@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -8,78 +8,39 @@ import {
   Alert,
   StyleSheet,
   StatusBar,
-  useWindowDimensions,
+  TextInput,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  runOnJS,
-} from "react-native-reanimated";
-import { GestureHandlerRootView, Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
+import BottomSheet, {
+  BottomSheetScrollView,
+  BottomSheetBackdrop,
+} from "@gorhom/bottom-sheet";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Map from "@/components/Map";
+import { fetchRouteGeometry } from "@/lib/routeGeometry";
 import { useCustomer } from "@/store";
-import { useRiderStore } from "@/store/useRiderStore";
+import {
+  useRiderStore,
+  type BookingStep,
+  type VehicleCategory,
+  type FareEstimate,
+  getCachedEstimates,
+  setCachedEstimates,
+} from "@/store/useRiderStore";
+import {
+  VEHICLE_CATEGORIES,
+  VEHICLE_TYPES,
+  type VehicleTypeEnum,
+  type VehicleIconName,
+} from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
-import { getVehicleTypesByCategory, getVehicleType, VEHICLE_CATEGORIES, VEHICLE_TYPES, VehicleTypeEnum, VehicleIconName, VehicleCategoryDef } from "@/lib/vehicleTypes";
-import { colors, shadows } from "@/theme/goRide";
+import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
-import FareBreakdownSheet from "@/components/FareBreakdownSheet";
-import CustomButton from "@/components/CustomButton";
-import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
-import { icons } from "@/constants/data";
 
-type HomeState = "idle" | "destination" | "pickup" | "vehicle" | "confirm";
-
-type SheetSnap = "peek" | "half" | "full";
-
-interface SheetSnapDef {
-  snaps: SheetSnap[];
-  percent: Partial<Record<SheetSnap, number>>;
-}
-
-// Custom sheet snap table (percent of window height). snaps[0] is the resting
-// snap for the state, mirroring the previous BottomSheet index={0} behavior.
-// No "finding" state: handoff to confirm-ride owns the search (audit H-3).
-const SHEET_SNAPS: Record<HomeState, SheetSnapDef> = {
-  idle: { snaps: ["peek", "half"], percent: { peek: 18, half: 30 } },
-  destination: { snaps: ["full"], percent: { full: 92 } },
-  pickup: { snaps: ["half"], percent: { half: 35 } },
-  vehicle: { snaps: ["half", "full"], percent: { half: 50, full: 80 } },
-  confirm: { snaps: ["half", "full"], percent: { half: 70, full: 90 } },
-};
-
-interface VehicleOption {
-  key: VehicleTypeEnum;
-  label: string;
-  eta: number;
-  fare: number;
-  seats: number;
-  hasAc: boolean | null;
-  icon: VehicleIconName;
-}
-
-interface EstimateOption {
-  vehicle_type: VehicleTypeEnum;
-  display_en: string;
-  display_bn: string;
-  seats: number;
-  total_bdt: number;
-  eta_minutes: number;
-}
-
-interface SavedPlace {
-  id: string;
-  label: string;
-  address: string;
-  lat: number;
-  lng: number;
-}
-
+// ── Vehicle icons per type ───────────────────────────────────────
 const VEHICLE_ICONS: Record<VehicleTypeEnum, VehicleIconName> = {
   bike_basic: "bicycle",
   bike_standard: "bicycle",
@@ -91,6 +52,27 @@ const VEHICLE_ICONS: Record<VehicleTypeEnum, VehicleIconName> = {
   car_premium: "car",
   car_xl: "bus",
 };
+
+interface SavedPlace {
+  id: string;
+  label: string;
+  address: string;
+  lat: number;
+  lng: number;
+}
+
+// ── Category → vehicle type prefix mapping ───────────────────────
+function getTypesForCategory(cat: VehicleCategory): VehicleTypeEnum[] {
+  if (cat === "bike") return ["bike_basic", "bike_standard", "bike_plus"];
+  if (cat === "cng") return ["cng"];
+  if (cat === "car")
+    return ["car_compact", "car_economy", "car_comfort", "car_premium"];
+  if (cat === "large_car") return ["car_xl"];
+  return [];
+}
+
+const SNAP_POINTS = ["50%", "70%"];
+
 export default function HomeScreen() {
   const {
     service,
@@ -112,131 +94,109 @@ export default function HomeScreen() {
     vehicle_type?: string;
   }>();
 
-  const [homeState, setHomeState] = useState<HomeState>("idle");
-  const [pickup, setPickup] = useState<SavedPlace | null>(null);
-  const [destination, setDestination] = useState<SavedPlace | null>(null);
-  // Real data (audit H-3): saved places from GET /api/rider/addresses,
-  // recents from GET /api/ride/get-all — previously permanently-empty arrays.
-  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
-  const [recentPlaces, setRecentPlaces] = useState<SavedPlace[]>([]);
-  const [destListTab, setDestListTab] = useState<"recent" | "saved">("recent");
-  const [vehicleOptions, setVehicleOptions] = useState<VehicleOption[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleTypeEnum | null>(null);
-  const [fareBreakdown, setFareBreakdown] = useState<{ key: string; label: string; eta: number; fare: number; seats: number; hasAc: boolean | null; icon: VehicleIconName; total_bdt?: number } | null>(null);
-  const [loadingFare, setLoadingFare] = useState(false);
-  const [requesting, setRequesting] = useState(false);
-
   const isDark = useIsDark();
   const { language, setTheme } = useAppearance();
+
+  // ── Theme tokens ───────────────────────────────────────────────
+  const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
-  const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
-  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
-  const textDisabled = isDark ? colors.textDisabledDark : colors.textDisabledLight;
+  const textPrimary = isDark
+    ? colors.textPrimaryDark
+    : colors.textPrimaryLight;
+  const textSecondary = isDark
+    ? colors.textSecondaryDark
+    : colors.textSecondaryLight;
+  const textDisabled = isDark
+    ? colors.textDisabledDark
+    : colors.textDisabledLight;
 
-  const { userLatitude, userLongitude, userAddress, setUserLocation, setDestinationLocation } = useCustomer();
-  const { setPickup: setRiderPickup, setDropoff: setRiderDropoff, setPickupCoords, setDropoffCoords, setSelectedVehicleType } = useRiderStore();
-
-  // Rebook prefill: rides / ride-detail push rebook_* params; home honors them by
-  // prefilling pickup + destination (with real coords) and jumping to pickup confirm.
-  useEffect(() => {
-    if (!rebook_origin || !rebook_dest) return;
-    const parseCoord = (v?: string): number | null => {
-      const n = v ? parseFloat(v) : NaN;
-      return Number.isFinite(n) && n !== 0 ? n : null;
-    };
-    const originLat = parseCoord(rebook_origin_lat);
-    const originLng = parseCoord(rebook_origin_lng);
-    const destLat = parseCoord(rebook_dest_lat);
-    const destLng = parseCoord(rebook_dest_lng);
-    // Stale link without coords — fall through to the normal flow.
-    if (originLat === null || originLng === null || destLat === null || destLng === null) return;
-    setPickup({
-      id: "rebook-pickup",
-      label: "Pickup",
-      address: rebook_origin,
-      lat: originLat,
-      lng: originLng,
-    });
-    setDestination({
-      id: "rebook-dest",
-      label: "Destination",
-      address: rebook_dest,
-      lat: destLat,
-      lng: destLng,
-    });
-    setDestinationLocation({ latitude: destLat, longitude: destLng, address: rebook_dest });
-    setHomeState("pickup");
-  }, [
-    rebook_origin,
-    rebook_dest,
-    rebook_origin_lat,
-    rebook_origin_lng,
-    rebook_dest_lat,
-    rebook_dest_lng,
+  // ── Stores ─────────────────────────────────────────────────────
+  const {
+    userLatitude,
+    userLongitude,
+    userAddress,
+    setUserLocation,
     setDestinationLocation,
-  ]);
+  } = useCustomer();
+  const {
+    bookingStep,
+    setBookingStep,
+    selectedCategory,
+    setSelectedCategory,
+    selectedVehicleType,
+    setSelectedVehicleType,
+    estimates,
+    setEstimates,
+    estimateLoading,
+    setEstimateLoading,
+    estimateError,
+    setEstimateError,
+    pickupCoords,
+    setPickupCoords,
+    dropoffCoords,
+    setDropoffCoords,
+    stops,
+    setStops,
+    setPickup: setRiderPickup,
+    setDropoff: setRiderDropoff,
+    setSelectedVehicleType: setRiderVehicleType,
+    setSearchingRideId,
+    setRideStatus,
+  } = useRiderStore();
 
-  const { height: windowHeight } = useWindowDimensions();
-  const [sheetSnap, setSheetSnap] = useState<SheetSnap>("peek");
-  const sheetHeight = useSharedValue(0);
-  const sheetTranslateY = useSharedValue(0);
-  const dragStartTranslateY = useSharedValue(0);
+  // ── Local state ────────────────────────────────────────────────
+  const [pickup, setPickup] = useState<SavedPlace | null>(null);
+  const [destination, setDestination] = useState<SavedPlace | null>(null);
+  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
+  const [recentPlaces, setRecentPlaces] = useState<SavedPlace[]>([]);
+  const [requesting, setRequesting] = useState(false);
+  // stops are managed via useRiderStore (accessible via autocomplete for stop type)
+  const [vehicleMarkers, setVehicleMarkers] = useState<
+    { id: string; lat: number; lng: number; vehicle_type: string }[]
+  >([]);
+  const [showSavePlace, setShowSavePlace] = useState(false);
+  const [savePlaceLabel, setSavePlaceLabel] = useState("");
+  const [selectedPromo, setSelectedPromo] = useState<{
+    type: string;
+    amount_bdt: number;
+    description: string;
+  } | null>(null);
+  const [mapPinCoords, setMapPinCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapPinAddress, setMapPinAddress] = useState("");
+  const [mapPinLoading, setMapPinLoading] = useState(false);
+  const [routeGeo, setRouteGeo] = useState<[number, number][] | null>(null);
+  const [pickupEta, setPickupEta] = useState<number | null>(null);
+  const [nearbyCount, setNearbyCount] = useState<number>(0);
 
-  const snapDef = SHEET_SNAPS[homeState];
-  const sheetMaxHeight = (Math.max(...snapDef.snaps.map((s) => snapDef.percent[s] ?? 0)) / 100) * windowHeight;
-  const snapTranslateYs = snapDef.snaps.map(
-    (s) => sheetMaxHeight - ((snapDef.percent[s] ?? 0) / 100) * windowHeight
+  const sheetRef = useRef<BottomSheet>(null);
+
+  // ── Derived state ──────────────────────────────────────────────
+  const hasRoute = !!(
+    pickupCoords &&
+    dropoffCoords &&
+    pickupCoords.lat !== 0 &&
+    dropoffCoords.lat !== 0
   );
 
-  const snapTo = useCallback((snap: SheetSnap) => {
-    setSheetSnap(snap);
-  }, []);
+  // Estimates filtered to current category
+  const categoryEstimates = useMemo(() => {
+    if (!selectedCategory || !estimates.length) return [];
+    const typeKeys = getTypesForCategory(selectedCategory);
+    return estimates.filter((e) => typeKeys.includes(e.vehicle_type as VehicleTypeEnum));
+  }, [estimates, selectedCategory]);
 
-  // Entering a booking state rests the sheet at that state's first snap,
-  // matching the previous declarative snapPoints + index={0} behavior.
-  useEffect(() => {
-    setSheetSnap(SHEET_SNAPS[homeState].snaps[0]);
-  }, [homeState]);
+  const selectedEstimate = useMemo(
+    () =>
+      estimates.find((e) => e.vehicle_type === selectedVehicleType) ?? null,
+    [estimates, selectedVehicleType],
+  );
 
-  useEffect(() => {
-    const def = SHEET_SNAPS[homeState];
-    const maxHeight = (Math.max(...def.snaps.map((s) => def.percent[s] ?? 0)) / 100) * windowHeight;
-    const percent = def.percent[sheetSnap] ?? def.percent[def.snaps[0]] ?? 0;
-    sheetHeight.value = withTiming(maxHeight, { duration: 250 });
-    sheetTranslateY.value = withTiming(maxHeight - (percent / 100) * windowHeight, { duration: 250 });
-  }, [homeState, sheetSnap, windowHeight, sheetHeight, sheetTranslateY]);
+  const vehicleDef = selectedVehicleType
+    ? VEHICLE_TYPES.find((v) => v.key === selectedVehicleType)
+    : null;
 
-  const sheetAnimatedStyle = useAnimatedStyle(() => ({
-    height: sheetHeight.value,
-    transform: [{ translateY: sheetTranslateY.value }],
-  }));
-
-  const sheetPanGesture = Gesture.Pan()
-    .minDistance(4)
-    .onStart(() => {
-      dragStartTranslateY.value = sheetTranslateY.value;
-    })
-    .onUpdate((event) => {
-      const minTranslateY = Math.min(...snapTranslateYs);
-      const maxTranslateY = Math.max(...snapTranslateYs);
-      const next = dragStartTranslateY.value + event.translationY;
-      sheetTranslateY.value = Math.min(Math.max(next, minTranslateY), maxTranslateY);
-    })
-    .onEnd(() => {
-      let nearest = snapTranslateYs[0];
-      for (const target of snapTranslateYs) {
-        if (Math.abs(target - sheetTranslateY.value) < Math.abs(nearest - sheetTranslateY.value)) {
-          nearest = target;
-        }
-      }
-      sheetTranslateY.value = withTiming(nearest, { duration: 200 });
-      const snapIndex = snapTranslateYs.indexOf(nearest);
-      if (snapIndex >= 0) {
-        runOnJS(snapTo)(snapDef.snaps[snapIndex]);
-      }
-    });
-
+  // ── Init: set pickup from GPS ──────────────────────────────────
   useEffect(() => {
     if (userLatitude && userLongitude && !pickup) {
       setPickup({
@@ -246,18 +206,91 @@ export default function HomeScreen() {
         lat: userLatitude,
         lng: userLongitude,
       });
+      setPickupCoords({ lat: userLatitude, lng: userLongitude });
     }
   }, [userLatitude, userLongitude, userAddress]);
 
-  // Audit H-3: populate saved + recent destinations with real data. Saved
-  // places come from the rider's address book; recents are deduped dropoffs
-  // of completed rides. Both lists were permanently empty before, which left
-  // the destination state with nothing to tap.
+  // ── Init: set category from service param ──────────────────────
+  useEffect(() => {
+    if (service) {
+      const cat = VEHICLE_CATEGORIES.find((c) => c.key === service);
+      if (cat) setSelectedCategory(cat.key as VehicleCategory);
+    }
+  }, [service]);
+
+  // ── Rebook prefill ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!rebook_origin || !rebook_dest) return;
+    const parseCoord = (v?: string): number | null => {
+      const n = v ? parseFloat(v) : NaN;
+      return Number.isFinite(n) && n !== 0 ? n : null;
+    };
+    const oLat = parseCoord(rebook_origin_lat);
+    const oLng = parseCoord(rebook_origin_lng);
+    const dLat = parseCoord(rebook_dest_lat);
+    const dLng = parseCoord(rebook_dest_lng);
+    if (!oLat || !oLng || !dLat || !dLng) return;
+
+    setPickup({
+      id: "rebook-pickup",
+      label: "Pickup",
+      address: rebook_origin,
+      lat: oLat,
+      lng: oLng,
+    });
+    setPickupCoords({ lat: oLat, lng: oLng });
+    setDestination({
+      id: "rebook-dest",
+      label: "Destination",
+      address: rebook_dest,
+      lat: dLat,
+      lng: dLng,
+    });
+    setDropoffCoords({ lat: dLat, lng: dLng });
+    setBookingStep("FARES");
+    sheetRef.current?.snapToIndex(1);
+  }, [rebook_origin, rebook_dest]);
+
+  // ── Sync local pickup from rider store (autocomplete sets store directly) ──
+  useEffect(() => {
+    if (pickupCoords && pickupCoords.lat !== 0) {
+      const store = useRiderStore.getState();
+      if (store.pickupAddress && (!pickup || pickup.lat !== pickupCoords.lat || pickup.lng !== pickupCoords.lng)) {
+        setPickup({
+          id: "pickup",
+          label: "Pickup",
+          address: store.pickupAddress,
+          lat: pickupCoords.lat,
+          lng: pickupCoords.lng,
+        });
+      }
+    }
+  }, [pickupCoords?.lat, pickupCoords?.lng]);
+
+  // ── Sync local destination from rider store (autocomplete sets store directly) ──
+  useEffect(() => {
+    if (dropoffCoords && dropoffCoords.lat !== 0) {
+      const store = useRiderStore.getState();
+      if (store.dropoffAddress && (!destination || destination.lat !== dropoffCoords.lat || destination.lng !== dropoffCoords.lng)) {
+        setDestination({
+          id: "dest",
+          label: "Destination",
+          address: store.dropoffAddress,
+          lat: dropoffCoords.lat,
+          lng: dropoffCoords.lng,
+        });
+      }
+    }
+  }, [dropoffCoords?.lat, dropoffCoords?.lng]);
+
+  // ── Fetch saved + recent places ────────────────────────────────
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) return;
         const headers = { Authorization: `Bearer ${token}` };
@@ -269,7 +302,15 @@ export default function HomeScreen() {
         if (!active) return;
 
         if (addrRes.ok) {
-          const data: { addresses?: { id: string; label: string; address: string; lat: string; lng: string }[] } = await addrRes.json();
+          const data: {
+            addresses?: {
+              id: string;
+              label: string;
+              address: string;
+              lat: string;
+              lng: string;
+            }[];
+          } = await addrRes.json();
           const places: SavedPlace[] = (data.addresses ?? [])
             .map((a) => ({
               id: a.id,
@@ -297,17 +338,27 @@ export default function HomeScreen() {
           for (const r of data.data ?? []) {
             if (!r.destination_address || r.status !== "completed") continue;
             if (seen.has(r.destination_address)) continue;
-            const lat = r.destination_latitude ? parseFloat(r.destination_latitude) : NaN;
-            const lng = r.destination_longitude ? parseFloat(r.destination_longitude) : NaN;
+            const lat = r.destination_latitude
+              ? parseFloat(r.destination_latitude)
+              : NaN;
+            const lng = r.destination_longitude
+              ? parseFloat(r.destination_longitude)
+              : NaN;
             if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
             seen.add(r.destination_address);
-            places.push({ id: r.ride_id, label: "Recent", address: r.destination_address, lat, lng });
+            places.push({
+              id: r.ride_id,
+              label: "Recent",
+              address: r.destination_address,
+              lat,
+              lng,
+            });
             if (places.length >= 5) break;
           }
           if (active) setRecentPlaces(places);
         }
       } catch (e) {
-        logger.error("[home] saved/recent destinations fetch failed", e);
+        logger.error("[home] saved/recent fetch failed", e);
       }
     })();
     return () => {
@@ -315,799 +366,1341 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const fetchEstimate = useCallback(async () => {
-    if (!pickup || !destination) return;
-    setLoadingFare(true);
+  // ── Fetch estimates when both coords valid ─────────────────────
+  const fetchEstimates = useCallback(async () => {
+    if (!pickupCoords || !dropoffCoords) return;
+    if (pickupCoords.lat === 0 || dropoffCoords.lat === 0) return;
+
+    const cached = getCachedEstimates(
+      pickupCoords.lat,
+      pickupCoords.lng,
+      dropoffCoords.lat,
+      dropoffCoords.lng,
+    );
+    if (cached) {
+      setEstimates(cached);
+      return;
+    }
+
+    setEstimateLoading(true);
+    setEstimateError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      const body = {
-        pickup_lat: pickup.lat,
-        pickup_lng: pickup.lng,
-        dropoff_lat: destination.lat,
-        dropoff_lng: destination.lng,
-        // Stops belong to confirm-ride's sheet (L14 caps at 2) — home's
-        // dead stop inputs were deleted (audit H-3).
-        stops: [],
-      };
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token ?? "";
       const res = await fetch(`${API_URL}/api/ride/estimate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          pickup_lat: pickupCoords.lat,
+          pickup_lng: pickupCoords.lng,
+          dropoff_lat: dropoffCoords.lat,
+          dropoff_lng: dropoffCoords.lng,
+          stops: stops.length > 0 ? stops : undefined,
+        }),
       });
       const data = await res.json();
-      const rawService = service ?? "car";
-      const serviceKey = VEHICLE_CATEGORIES.some((c) => c.key === rawService) ? rawService : "car";
-      const categoryKeys = getVehicleTypesByCategory(serviceKey as VehicleCategoryDef["key"]);
-      const estimates: EstimateOption[] = data.estimates || [];
-      const options: VehicleOption[] = categoryKeys
-        .map((def) => estimates.find((e) => e.vehicle_type === def.key))
-        .filter((e): e is { vehicle_type: VehicleTypeEnum; display_en: string; display_bn: string; seats: number; total_bdt: number; eta_minutes: number } => !!e)
-        .map((e) => {
-          const def = VEHICLE_TYPES.find((v) => v.key === e.vehicle_type);
-          return {
-            key: e.vehicle_type,
-            label: language === "bn" ? (e.display_bn ?? def?.display_bn ?? e.vehicle_type) : (e.display_en ?? def?.display_en ?? e.vehicle_type),
-            eta: e.eta_minutes || 5,
-            fare: e.total_bdt || 0,
-            seats: e.seats || 4,
-            hasAc: def?.has_ac ?? null,
-            icon: VEHICLE_ICONS[e.vehicle_type],
-          };
-        });
-      setVehicleOptions(options);
-      // Rebook preselect: honor the original ride's vehicle type when available
-      // (rebookVehicleType is an untyped URL param — narrow it first).
-      const rebookType = VEHICLE_TYPES.find((v) => v.key === rebookVehicleType)?.key;
-      const preferred = options.find((o) => o.key === rebookType) ?? options[0];
-      if (preferred) setSelectedVehicle(preferred.key);
-      if (preferred) setFareBreakdown(preferred);
-    } catch (e) {
-      logger.error("[home] estimate failed", e);
+      if (data.estimates) {
+        setEstimates(data.estimates);
+        setCachedEstimates(
+          pickupCoords.lat,
+          pickupCoords.lng,
+          dropoffCoords.lat,
+          dropoffCoords.lng,
+          data.estimates,
+        );
+      } else if (data.error) {
+        setEstimateError(data.message || data.error);
+      }
+    } catch {
+      setEstimateError("Failed to fetch estimates");
     } finally {
-      setLoadingFare(false);
+      setEstimateLoading(false);
     }
-  }, [pickup, destination, service, rebookVehicleType]);
+  }, [pickupCoords, dropoffCoords, stops]);
 
-  const handleDestinationSelect = (loc: { latitude: number; longitude: number; address: string }) => {
-    const place: SavedPlace = {
-      id: `dest-${Date.now()}`,
-      label: "Destination",
-      address: loc.address,
-      lat: loc.latitude,
-      lng: loc.longitude,
+  useEffect(() => {
+    if (hasRoute) fetchEstimates();
+  }, [hasRoute, fetchEstimates]);
+
+  // ── Fetch vehicle markers for map ──────────────────────────────
+  useEffect(() => {
+    if (!pickupCoords || bookingStep !== "FARES" || !selectedCategory) return;
+    let active = true;
+    const fetchMarkers = async () => {
+      try {
+        // Pick the first vehicle type in the category for marker query
+        const typeKey = getTypesForCategory(selectedCategory)[0];
+        if (!typeKey) return;
+        const res = await fetch(`${API_URL}/api/ride/nearby-markers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lat: pickupCoords.lat,
+            lng: pickupCoords.lng,
+            vehicle_type: typeKey,
+          }),
+        });
+        if (!res.ok || !active) return;
+        const data = await res.json();
+        if (active) setVehicleMarkers(data.markers ?? []);
+      } catch {
+        // non-blocking
+      }
     };
-    setDestination(place);
-    setDestinationLocation({ latitude: loc.latitude, longitude: loc.longitude, address: loc.address });
-    setHomeState("pickup");
-  };
+    fetchMarkers();
+    const id = setInterval(fetchMarkers, 30_000);
+    return () => { active = false; clearInterval(id); };
+  }, [pickupCoords, bookingStep, selectedCategory]);
 
-  const handleVehicleSelect = (key: VehicleTypeEnum) => {
-    setSelectedVehicle(key);
-  };
+  // ── Fetch nearby driver count + pickup ETA ─────────────────────
+  useEffect(() => {
+    if (!pickupCoords || bookingStep !== "FARES" || !selectedCategory) {
+      setPickupEta(null);
+      setNearbyCount(0);
+      return;
+    }
+    let active = true;
+    const fetchNearby = async () => {
+      try {
+        const typeKey = getTypesForCategory(selectedCategory)[0];
+        if (!typeKey) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token ?? "";
+        const res = await fetch(`${API_URL}/api/ride/nearby-drivers`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            pickup_lat: pickupCoords.lat,
+            pickup_lng: pickupCoords.lng,
+            vehicle_type: typeKey,
+          }),
+        });
+        if (!res.ok || !active) return;
+        const data = await res.json();
+        if (active) {
+          setPickupEta(data.estimated_wait_minutes ?? null);
+          setNearbyCount(data.count ?? 0);
+        }
+      } catch {
+        // non-blocking
+      }
+    };
+    fetchNearby();
+    const id = setInterval(fetchNearby, 30_000);
+    return () => { active = false; clearInterval(id); };
+  }, [pickupCoords?.lat, pickupCoords?.lng, bookingStep, selectedCategory]);
 
-  const handleBook = async () => {
-    if (!pickup || !destination || !selectedVehicle) return;
+  // Clear markers when leaving FARES
+  useEffect(() => {
+    if (bookingStep === "LOCATIONS") setVehicleMarkers([]);
+  }, [bookingStep]);
+
+  // ── Fetch route geometry for map line ──────────────────────────
+  useEffect(() => {
+    if (!pickupCoords || !dropoffCoords || !hasRoute) {
+      setRouteGeo(null);
+      return;
+    }
+    let active = true;
+    (async () => {
+      const geo = await fetchRouteGeometry(
+        pickupCoords.lat,
+        pickupCoords.lng,
+        dropoffCoords.lat,
+        dropoffCoords.lng,
+      );
+      if (active) setRouteGeo(geo);
+    })();
+    return () => { active = false; };
+  }, [pickupCoords?.lat, pickupCoords?.lng, dropoffCoords?.lat, dropoffCoords?.lng, hasRoute]);
+
+  // Clear route when leaving LOCATIONS
+  useEffect(() => {
+    if (bookingStep === "LOCATIONS" && !hasRoute) setRouteGeo(null);
+  }, [bookingStep, hasRoute]);
+
+  // Auto-select first vehicle when estimates load (no selection yet)
+  useEffect(() => {
+    if (bookingStep === "FARES" && categoryEstimates.length > 0 && !selectedVehicleType) {
+      setSelectedVehicleType(categoryEstimates[0].vehicle_type as VehicleTypeEnum);
+    }
+  }, [bookingStep, categoryEstimates, selectedVehicleType]);
+
+  // ── Map press handler (select on map) ────────────────────────
+  const handleMapPress = useCallback(async (coords: { lat: number; lng: number }) => {
+    setMapPinCoords(coords);
+    setMapPinLoading(true);
+    setMapPinAddress("");
+    try {
+      const BARIKOI_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
+      const res = await fetch(
+        `https://barikoi.xyz/v1/api/geocode/reverse/${BARIKOI_KEY}?lon=${coords.lng}&lat=${coords.lat}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setMapPinAddress(data.address || data.name || "");
+      }
+    } catch {
+      // non-blocking
+    } finally {
+      setMapPinLoading(false);
+    }
+  }, []);
+
+  // ── Save place handler ─────────────────────────────────────────
+  const handleSavePlace = useCallback(async () => {
+    if (!savePlaceLabel.trim() || !destination) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      await fetch(`${API_URL}/api/rider/addresses`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          label: savePlaceLabel.trim(),
+          address: destination.address,
+          lat: destination.lat,
+          lng: destination.lng,
+          is_favorite: true,
+        }),
+      });
+      setShowSavePlace(false);
+      setSavePlaceLabel("");
+      Alert.alert("Saved", `${savePlaceLabel.trim()} saved to your places`);
+    } catch {
+      Alert.alert("Error", "Could not save place");
+    }
+  }, [savePlaceLabel, destination]);
+
+  // ── Navigation handlers ────────────────────────────────────────
+  const handleLocationSelect = useCallback(
+    (
+      location: { latitude: number; longitude: number; address: string },
+      type: "from" | "to",
+    ) => {
+      if (type === "from") {
+        setPickup({
+          id: "pickup",
+          label: "Pickup",
+          address: location.address,
+          lat: location.latitude,
+          lng: location.longitude,
+        });
+        setPickupCoords({ lat: location.latitude, lng: location.longitude });
+        setUserLocation({
+          latitude: location.latitude,
+          longitude: location.longitude,
+          address: location.address,
+        });
+      } else {
+        setDestination({
+          id: "dest",
+          label: "Destination",
+          address: location.address,
+          lat: location.latitude,
+          lng: location.longitude,
+        });
+        setDropoffCoords({ lat: location.latitude, lng: location.longitude });
+        setDestinationLocation({
+          latitude: location.latitude,
+          longitude: location.longitude,
+          address: location.address,
+        });
+      }
+    },
+    [],
+  );
+
+  const handleMapPinConfirm = useCallback(
+    (type: "from" | "to") => {
+      if (!mapPinCoords) return;
+      handleLocationSelect(
+        {
+          latitude: mapPinCoords.lat,
+          longitude: mapPinCoords.lng,
+          address: mapPinAddress || `${mapPinCoords.lat.toFixed(4)}, ${mapPinCoords.lng.toFixed(4)}`,
+        },
+        type,
+      );
+      setMapPinCoords(null);
+      setMapPinAddress("");
+    },
+    [mapPinCoords, mapPinAddress, handleLocationSelect],
+  );
+
+  const handleNext = useCallback(() => {
+    setBookingStep("FARES");
+    sheetRef.current?.snapToIndex(1);
+    fetchEstimates();
+  }, [fetchEstimates]);
+
+  const handleCallForRide = useCallback(async () => {
+    if (!pickupCoords || !dropoffCoords || !selectedVehicleType) return;
     setRequesting(true);
     try {
-      setRiderPickup(pickup.address, pickup.lat, pickup.lng);
-      setRiderDropoff(destination.address, destination.lat, destination.lng);
-      setPickupCoords({ lat: pickup.lat, lng: pickup.lng });
-      setDropoffCoords({ lat: destination.lat, lng: destination.lng });
-      setSelectedVehicleType(selectedVehicle);
-      // Seed the coords confirm-ride reads (useCustomer) and hand off to the
-      // real booking pipeline: confirm-ride POSTs /api/ride/request and
-      // navigates to finding-driver itself on success. Previously this jumped
-      // straight to finding-driver with no ride ever created — the fake-search
-      // CTA that told riders "Drivers are busy" forever.
-      setUserLocation({ latitude: pickup.lat, longitude: pickup.lng, address: pickup.address });
-      setDestinationLocation({
-        latitude: destination.lat,
-        longitude: destination.lng,
-        address: destination.address,
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        Alert.alert("Error", "Not authenticated");
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/ride/request`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          pickup_lat: pickupCoords.lat,
+          pickup_lng: pickupCoords.lng,
+          pickup_address: pickup?.address || "",
+          dropoff_lat: dropoffCoords.lat,
+          dropoff_lng: dropoffCoords.lng,
+          dropoff_address: destination?.address || "",
+          vehicle_type: selectedVehicleType,
+          stops: stops.length > 0 ? stops : undefined,
+          selected_discount_type: selectedPromo?.type || "none",
+          selected_discount_amount_bdt: selectedPromo?.amount_bdt || 0,
+        }),
       });
-      router.replace("/(main)/(customer)/confirm-ride");
-    } catch (e) {
-      logger.error("[home] book failed", e);
-      Alert.alert("Error", "Could not request ride. Please try again.");
-      setHomeState("confirm");
+      const data = await res.json();
+      if (data.ride_id) {
+        setRiderPickup(
+          pickup?.address || "",
+          pickupCoords.lat,
+          pickupCoords.lng,
+        );
+        setRiderDropoff(
+          destination?.address || "",
+          dropoffCoords.lat,
+          dropoffCoords.lng,
+        );
+        setRiderVehicleType(selectedVehicleType);
+        setSearchingRideId(data.ride_id);
+        setRideStatus("finding");
+        router.push("/(main)/(customer)/finding-driver");
+      } else {
+        Alert.alert(
+          "Request Failed",
+          data.message || data.error || "Could not find a driver",
+        );
+      }
+    } catch (err) {
+      Alert.alert(
+        "Error",
+        err instanceof Error ? err.message : "Network error",
+      );
     } finally {
       setRequesting(false);
     }
-  };
+  }, [
+    pickupCoords,
+    dropoffCoords,
+    selectedVehicleType,
+    pickup,
+    destination,
+    stops,
+    selectedPromo,
+  ]);
 
-  const finalFare = useMemo(() => fareBreakdown?.total_bdt || 0, [fareBreakdown]);
+  // ── Backdrop ───────────────────────────────────────────────────
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={0}
+        appearsOnIndex={1}
+        opacity={0.4}
+        pressBehavior="none"
+      />
+    ),
+    [],
+  );
 
-  // ── RENDER: IDLE STATE ──
-  const renderIdle = () => (
-    <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
-      <View style={[styles.handle, { backgroundColor: borderColor }]} />
+  // ── RENDER: LOCATIONS ──────────────────────────────────────────
+  const renderLocations = () => (
+    <BottomSheetScrollView
+      style={styles.sheetContent}
+      contentContainerStyle={{ paddingBottom: 100 }}
+    >
+      {/* FROM */}
       <TouchableOpacity
-        style={[styles.whereToButton, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
-        onPress={() => setHomeState("destination")}
+        style={[
+          styles.inputRow,
+          { borderColor, backgroundColor: surfaceBg },
+        ]}
+        onPress={() =>
+          router.push({
+            pathname: "/(main)/(customer)/autocomplete",
+            params: { type: "from" },
+          })
+        }
       >
-        <Ionicons name="search" size={18} color={textSecondary} />
-        <Text style={[styles.whereToText, { color: textSecondary }]}>Where to?</Text>
+        <Ionicons name="locate-outline" size={20} color={colors.primary} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.inputLabel, { color: textSecondary }]}>
+            Pickup
+          </Text>
+          <Text
+            style={[styles.inputValue, { color: textPrimary }]}
+            numberOfLines={1}
+          >
+            {pickup?.address || "Current location"}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={textDisabled} />
       </TouchableOpacity>
 
-      {/* Category chips with pre-highlight from service param */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
-        <View style={styles.chipsRow}>
-          {VEHICLE_CATEGORIES.map((cat) => {
-            const label = language === "bn" ? cat.display_bn : cat.display_en;
-            const isActive = service === cat.key;
-            return (
-              <View
-                key={cat.key}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor: isActive ? colors.primaryLight : (isDark ? colors.darkSecondary : colors.gray100),
-                    borderColor: isActive ? colors.primary : borderColor,
-                    borderWidth: isActive ? 1.5 : 0,
-                  },
-                ]}
+      {/* Connector */}
+      <View style={[styles.connector, { borderColor }]} />
+
+      {/* Stops (between pickup and where-to) */}
+      {stops.map((stop, i) => (
+        <View key={`stop-${i}`}>
+          <TouchableOpacity
+            style={[
+              styles.inputRow,
+              { borderColor, backgroundColor: surfaceBg },
+            ]}
+            onPress={() =>
+              router.push({
+                pathname: "/(main)/(customer)/autocomplete",
+                params: { type: "stop", stopIndex: String(i) },
+              })
+            }
+          >
+            <Ionicons name="flag" size={20} color={colors.amber} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.inputLabel, { color: textSecondary }]}>Stop {i + 1}</Text>
+              <Text
+                style={[styles.inputValue, { color: stop.address ? textPrimary : textDisabled }]}
+                numberOfLines={1}
               >
-                <Ionicons name={cat.icon} size={16} color={isActive ? colors.primary : textSecondary} />
-                <Text style={[styles.chipText, { color: isActive ? colors.primary : textPrimary }]}>{label}</Text>
-              </View>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      {/* Quick chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
-        <View style={styles.chipsRow}>
-          {savedPlaces.slice(0, 3).map((place) => (
+                {stop.address || "Add stop"}
+              </Text>
+            </View>
             <TouchableOpacity
-              key={place.id}
-              style={[styles.chip, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
-              onPress={() => handleDestinationSelect({ latitude: place.lat, longitude: place.lng, address: place.address })}
+              onPress={() => {
+                const next = [...stops];
+                next.splice(i, 1);
+                setStops(next);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons
-                name={place.label === "Home" ? "home" : place.label === "Work" ? "briefcase" : "location"}
-                size={16}
-                color={colors.primary}
-              />
-              <Text style={[styles.chipText, { color: textPrimary }]}>{place.label}</Text>
+              <Ionicons name="close-circle" size={18} color={textDisabled} />
             </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            style={[styles.chip, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
-            onPress={() => setHomeState("destination")}
-          >
-            <Ionicons name="time" size={16} color={textSecondary} />
-            <Text style={[styles.chipText, { color: textSecondary }]}>Recent</Text>
           </TouchableOpacity>
+          <View style={[styles.connector, { borderColor }]} />
         </View>
-      </ScrollView>
-    </View>
-  );
+      ))}
 
-  // ── RENDER: DESTINATION SELECTOR ──
-  // Audit H-3: this state was cosmetically complete but functionally dead —
-  // the TextInput had no handlers, the lists were permanently empty, and
-  // "Select from map" did nothing. It now runs the same BarikoiAutocomplete
-  // find-ride uses, over real saved/recent data. Stops are confirm-ride's
-  // concern (L14); the map-select row was removed until a picker exists.
-  const renderDestination = () => {
-    const listPlaces = destListTab === "recent" ? recentPlaces : savedPlaces;
-    return (
-      <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
-        <View style={styles.destHeader}>
-          <TouchableOpacity onPress={() => setHomeState("idle")}>
-            <Ionicons name="arrow-back" size={24} color={textPrimary} />
-          </TouchableOpacity>
-          <Text style={[styles.destTitle, { color: textPrimary }]}>Where do you want to go?</Text>
-          <View style={{ width: 24 }} />
-        </View>
-
-        {/* Pickup field */}
-        <View style={[styles.inputRow, { borderColor: borderColor }]}>
-          <View style={[styles.dot, { backgroundColor: colors.primary }]} />
-          <Text style={[styles.inputText, { color: textSecondary }]} numberOfLines={1}>
-            {pickup?.address || "Your location"}
-          </Text>
-        </View>
-
-        {/* Destination search — real Barikoi autocomplete (audit H-3) */}
-        <BarikoiAutocomplete
-          icon={icons.target}
-          initialLocation=""
-          handlePress={handleDestinationSelect}
-        />
-
-        {/* Recent / Saved tabs */}
-        <View style={styles.tabRow}>
-          <TouchableOpacity
-            style={[styles.tab, { borderBottomColor: destListTab === "recent" ? colors.primary : "transparent" }]}
-            onPress={() => setDestListTab("recent")}
-          >
-            <Text style={[destListTab === "recent" ? styles.tabTextActive : styles.tabText, { color: destListTab === "recent" ? colors.primary : textSecondary }]}>Recent</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, { borderBottomColor: destListTab === "saved" ? colors.primary : "transparent" }]}
-            onPress={() => setDestListTab("saved")}
-          >
-            <Text style={[destListTab === "saved" ? styles.tabTextActive : styles.tabText, { color: destListTab === "saved" ? colors.primary : textSecondary }]}>Saved</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Place list */}
-        <ScrollView style={styles.placeList}>
-          {listPlaces.map((place) => (
-            <TouchableOpacity
-              key={place.id}
-              style={[styles.placeItem, { borderBottomColor: borderColor }]}
-              onPress={() => handleDestinationSelect({ latitude: place.lat, longitude: place.lng, address: place.address })}
-            >
-              <View style={[styles.placeIcon, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}>
-                <Ionicons
-                  name={destListTab === "saved" && place.label === "Home" ? "home" : destListTab === "saved" && place.label === "Work" ? "briefcase" : "time"}
-                  size={18}
-                  color={textSecondary}
-                />
-              </View>
-              <View style={styles.placeInfo}>
-                <Text style={[styles.placeName, { color: textPrimary }]}>{place.label}</Text>
-                <Text style={[styles.placeAddress, { color: textSecondary }]} numberOfLines={1}>{place.address}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-          {listPlaces.length === 0 && (
-            <Text style={[styles.emptyText, { color: textSecondary }]}>
-              {destListTab === "recent" ? "No recent destinations yet" : "No saved places yet"}
-            </Text>
-          )}
-        </ScrollView>
-      </View>
-    );
-  };
-
-  // ── RENDER: PICKUP CONFIRM ──
-  const renderPickup = () => (
-    <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
-      <View style={styles.destHeader}>
-        <TouchableOpacity onPress={() => setHomeState("destination")}>
-          <Ionicons name="arrow-back" size={24} color={textPrimary} />
+      {stops.length < 2 && (
+        <TouchableOpacity
+          style={styles.addStopBtn}
+          onPress={() => setStops([...stops, { lat: 0, lng: 0, address: "" }])}
+        >
+          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+          <Text style={[styles.addStopText, { color: colors.primary }]}>Add Stop</Text>
         </TouchableOpacity>
-        <Text style={[styles.destTitle, { color: textPrimary }]}>Set pickup location</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      <Text style={[styles.pickupAddress, { color: textPrimary }]} numberOfLines={2}>
-        {pickup?.address}
-      </Text>
-      <CustomButton
-        title="Confirm Pickup"
-        onPress={() => {
-          fetchEstimate();
-          setHomeState("vehicle");
-        }}
-      />
-    </View>
-  );
-
-  // ── RENDER: VEHICLE SELECT ──
-  const renderVehicle = () => (
-    <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
-      <View style={styles.destHeader}>
-        <TouchableOpacity onPress={() => setHomeState("pickup")}>
-          <Ionicons name="arrow-back" size={24} color={textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.destTitle, { color: textPrimary }]}>Choose {service || "ride"}</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      {loadingFare ? (
-        <ActivityIndicator color={colors.primary} style={{ marginVertical: 40 }} />
-      ) : (
-        <ScrollView style={styles.vehicleList}>
-          {vehicleOptions.map((v) => (
-            <TouchableOpacity
-              key={v.key}
-              style={[
-                styles.vehicleCard,
-                {
-                  backgroundColor: selectedVehicle === v.key ? colors.primaryLight : isDark ? colors.darkSecondary : colors.gray100,
-                  borderColor: selectedVehicle === v.key ? colors.primary : borderColor,
-                  borderWidth: selectedVehicle === v.key ? 2 : 1,
-                },
-              ]}
-              onPress={() => handleVehicleSelect(v.key)}
-            >
-              <View style={[styles.vehicleIconBg, { backgroundColor: colors.primary + "15" }]}>
-                <Ionicons name={v.icon} size={28} color={colors.primary} />
-              </View>
-              <View style={styles.vehicleInfo}>
-                <Text style={[styles.vehicleName, { color: textPrimary }]}>{v.label}</Text>
-                <Text style={[styles.vehicleMeta, { color: textSecondary }]}>
-                  {v.seats} seats{v.hasAc === true ? " · AC" : v.hasAc === false ? " · No AC" : ""}
-                </Text>
-              </View>
-              <View style={styles.vehicleFare}>
-                <Text style={[styles.vehiclePrice, { color: textPrimary }]}>৳{(v.fare / 100).toFixed(0)}</Text>
-                <Text style={[styles.vehicleEta, { color: textSecondary }]}>{v.eta} min</Text>
-              </View>
-              {selectedVehicle === v.key && (
-                <Ionicons name="checkmark-circle" size={22} color={colors.primary} style={styles.vehicleCheck} />
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
       )}
 
-      <CustomButton
-        title="Continue"
-        onPress={() => setHomeState("confirm")}
-        disabled={!selectedVehicle}
-      />
-    </View>
+      {stops.length > 0 && <View style={[styles.connector, { borderColor }]} />}
+
+      {/* TO (Where to?) */}
+      <TouchableOpacity
+        style={[styles.inputRow, { borderColor, backgroundColor: surfaceBg }]}
+        onPress={() =>
+          router.push({ pathname: "/(main)/(customer)/autocomplete", params: { type: "to" } })
+        }
+      >
+        <Ionicons name="location" size={20} color={colors.danger} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.inputLabel, { color: textSecondary }]}>Where to?</Text>
+          <Text
+            style={[styles.inputValue, { color: destination ? textPrimary : textDisabled }]}
+            numberOfLines={1}
+          >
+            {destination?.address || "Enter destination"}
+          </Text>
+        </View>
+        {destination && (
+          <TouchableOpacity
+            onPress={() => setShowSavePlace(true)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        )}
+        <Ionicons name="chevron-forward" size={16} color={textDisabled} />
+      </TouchableOpacity>
+
+      {/* Saved places pills */}
+      {savedPlaces.length > 0 && (
+        <>
+          <Text
+            style={[styles.sectionLabel, { color: textSecondary, marginTop: 20 }]}
+          >
+            Saved places
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {savedPlaces.map((place) => (
+              <TouchableOpacity
+                key={place.id}
+                style={[
+                  styles.savedPill,
+                  { backgroundColor: surfaceBg, borderColor },
+                ]}
+                onPress={() =>
+                  handleLocationSelect(
+                    {
+                      latitude: place.lat,
+                      longitude: place.lng,
+                      address: place.address,
+                    },
+                    "to",
+                  )
+                }
+              >
+                <Ionicons
+                  name={
+                    place.label === "Home"
+                      ? "home"
+                      : place.label === "Work"
+                        ? "briefcase"
+                        : "location"
+                  }
+                  size={16}
+                  color={colors.primary}
+                />
+                <Text style={[styles.savedPillText, { color: textPrimary }]}>
+                  {place.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </>
+      )}
+
+      {/* Recent destinations */}
+      {recentPlaces.length > 0 && (
+        <>
+          <Text
+            style={[styles.sectionLabel, { color: textSecondary, marginTop: 20 }]}
+          >
+            Recent
+          </Text>
+          {recentPlaces.map((place) => (
+            <TouchableOpacity
+              key={place.id}
+              style={[styles.recentRow, { borderBottomColor: borderColor }]}
+              onPress={() =>
+                handleLocationSelect(
+                  {
+                    latitude: place.lat,
+                    longitude: place.lng,
+                    address: place.address,
+                  },
+                  "to",
+                )
+              }
+            >
+              <Ionicons name="time-outline" size={18} color={textSecondary} />
+              <Text
+                style={[styles.recentText, { color: textPrimary }]}
+                numberOfLines={1}
+              >
+                {place.address}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
+
+      {/* Select on map button */}
+      <TouchableOpacity
+        style={[styles.selectOnMapBtn, { borderColor, backgroundColor: surfaceBg }]}
+        onPress={() => {
+          // Place pin at pickup location (or Dhaka default) so user can pan to adjust
+          const center = pickupCoords ?? { lat: 23.8103, lng: 90.4125 };
+          setMapPinCoords(center);
+          setMapPinAddress("");
+          setMapPinLoading(true);
+          // Reverse geocode the center
+          (async () => {
+            try {
+              const BARIKOI_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
+              const res = await fetch(
+                `https://barikoi.xyz/v1/api/geocode/reverse/${BARIKOI_KEY}?lon=${center.lng}&lat=${center.lat}`,
+              );
+              if (res.ok) {
+                const data = await res.json();
+                setMapPinAddress(data.address || data.name || "");
+              }
+            } catch {
+              // non-blocking
+            } finally {
+              setMapPinLoading(false);
+            }
+          })();
+        }}
+      >
+        <Ionicons name="map-outline" size={20} color={colors.primary} />
+        <Text style={[styles.selectOnMapText, { color: colors.primary }]}>Select on map</Text>
+      </TouchableOpacity>
+
+      {/* Next button */}
+      <TouchableOpacity
+        style={[
+          styles.nextBtn,
+          {
+            backgroundColor: hasRoute ? colors.primary : textDisabled,
+            opacity: hasRoute ? 1 : 0.5,
+          },
+        ]}
+        onPress={handleNext}
+        disabled={!hasRoute}
+      >
+        <Text style={styles.nextBtnText}>Next</Text>
+      </TouchableOpacity>
+    </BottomSheetScrollView>
   );
 
-  // ── RENDER: CONFIRM ──
-  const renderConfirm = () => (
-    <View style={[styles.sheetContent, { backgroundColor: surfaceBg }]}>
-      <View style={styles.destHeader}>
-        <TouchableOpacity onPress={() => setHomeState("vehicle")}>
-          <Ionicons name="arrow-back" size={24} color={textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.destTitle, { color: textPrimary }]}>Confirm Booking</Text>
-        <View style={{ width: 24 }} />
-      </View>
+  // ── RENDER: FARES ──────────────────────────────────────────────
+  const renderFares = () => (
+    <BottomSheetScrollView
+      style={styles.sheetContent}
+      contentContainerStyle={{ paddingBottom: 100 }}
+    >
+      {/* Back button */}
+      <TouchableOpacity
+        style={styles.backBtn}
+        onPress={() => {
+          setBookingStep("LOCATIONS");
+          sheetRef.current?.snapToIndex(0);
+        }}
+      >
+        <Ionicons name="arrow-back" size={22} color={textPrimary} />
+        <Text style={[styles.backBtnText, { color: textPrimary }]}>
+          Edit route
+        </Text>
+      </TouchableOpacity>
 
-      <ScrollView style={{ flex: 1 }}>
-        {/* Selected vehicle summary */}
-        <View style={[styles.confirmVehicleRow, { borderBottomColor: borderColor }]}>
-          <Ionicons
-            name={selectedVehicle ? VEHICLE_ICONS[selectedVehicle] : "car"}
-            size={24}
-            color={colors.primary}
-          />
-          <Text style={[styles.confirmVehicleText, { color: textPrimary }]}>
-            {selectedVehicle ? (language === "bn" ? getVehicleType(selectedVehicle).display_bn : getVehicleType(selectedVehicle).display_en) : ""}
-          </Text>
-          <Text style={[styles.confirmFare, { color: textPrimary }]}>
-            ৳{(finalFare / 100).toFixed(0)}
-          </Text>
-        </View>
-
-        {/* Fare breakdown (expandable) */}
-        {fareBreakdown && <FareBreakdownSheet fareBreakdown={fareBreakdown} />}
-
-        {/* Promo + tip live on confirm-ride (audit H-3): home's copies were
-            never carried into the booking handoff — dead UI, deleted. */}
-
-        {/* Payment */}
-        <View style={[styles.paymentRow, { borderColor: borderColor }]}>
-          <Ionicons name="cash" size={20} color={colors.greenVariant} />
-          <Text style={[styles.paymentText, { color: textPrimary }]}>Cash</Text>
-          <Text style={[styles.paymentSub, { color: textSecondary }]}>Pay driver directly</Text>
-        </View>
-
-        {/* Book button */}
-        <CustomButton
-          title={requesting ? "Requesting..." : "Book Now"}
-          onPress={handleBook}
-          disabled={requesting}
-          className="mt-4"
-        />
+      {/* Category switcher pills */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8, marginBottom: 16 }}
+      >
+        {VEHICLE_CATEGORIES.map((cat) => {
+          const label = language === "bn" ? cat.display_bn : cat.display_en;
+          const isActive = selectedCategory === cat.key;
+          return (
+            <TouchableOpacity
+              key={cat.key}
+              style={[
+                styles.catPill,
+                {
+                  backgroundColor: isActive
+                    ? colors.primary
+                    : surfaceBg,
+                  borderColor: isActive ? colors.primary : borderColor,
+                },
+              ]}
+              onPress={() => {
+                setSelectedCategory(cat.key as VehicleCategory);
+                setSelectedVehicleType(null);
+              }}
+            >
+              <Ionicons
+                name={cat.icon}
+                size={16}
+                color={isActive ? colors.white : textSecondary}
+              />
+              <Text
+                style={[
+                  styles.catPillText,
+                  { color: isActive ? colors.white : textPrimary },
+                ]}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
-    </View>
+
+      {/* Estimate loading / error / results */}
+      {estimateLoading ? (
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.mutedText, { color: textSecondary }]}>
+            Calculating fares...
+          </Text>
+        </View>
+      ) : estimateError ? (
+        <View style={styles.centerBox}>
+          <Ionicons name="warning-outline" size={40} color={colors.amber} />
+          <Text style={[styles.mutedText, { color: textSecondary }]}>
+            {estimateError}
+          </Text>
+          <TouchableOpacity onPress={fetchEstimates}>
+            <Text
+              style={{
+                color: colors.primary,
+                fontFamily: "Jakarta-SemiBold",
+                marginTop: 12,
+              }}
+            >
+              Retry
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : categoryEstimates.length > 0 ? (
+        <>
+          {/* Estimated fare header */}
+          <Text style={[styles.fareHeader, { color: textPrimary }]}>
+            Estimated fare
+          </Text>
+          {nearbyCount > 0 && (
+            <Text style={[styles.vehicleRowSub, { color: textSecondary, marginTop: -8, marginBottom: 12 }]}>          
+              {nearbyCount} driver{nearbyCount !== 1 ? 's' : ''} nearby{pickupEta != null ? ` · ~${pickupEta} min pickup` : ''}
+            </Text>
+          )}
+
+          {/* Vehicle cards */}
+          <View style={{ gap: 10 }}>
+            {categoryEstimates.map((est) => {
+              const def = VEHICLE_TYPES.find(
+                (v) => v.key === est.vehicle_type,
+              );
+              const isSelected = selectedVehicleType === est.vehicle_type;
+              const icon = VEHICLE_ICONS[est.vehicle_type] || "car";
+              return (
+                <TouchableOpacity
+                  key={est.vehicle_type}
+                  style={[
+                    styles.vehicleRow,
+                    {
+                      backgroundColor: isSelected
+                        ? isDark
+                          ? colors.primaryLightDark
+                          : colors.primaryLight
+                        : surfaceBg,
+                      borderColor: isSelected ? colors.primary : borderColor,
+                      borderWidth: isSelected ? 2 : 1,
+                    },
+                  ]}
+                  onPress={() =>
+                    setSelectedVehicleType(est.vehicle_type as VehicleTypeEnum)
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={icon}
+                    size={28}
+                    color={isSelected ? colors.primary : textPrimary}
+                  />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text
+                      style={[
+                        styles.vehicleRowName,
+                        { color: textPrimary },
+                      ]}
+                    >
+                      {def?.display_en || est.vehicle_type}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.vehicleRowSub,
+                        { color: textSecondary },
+                      ]}
+                    >
+                      {est.distance_km != null ? `${est.distance_km.toFixed(1)} km` : ''}{' · '}{est.eta_minutes} min trip{' · '}{est.seats} seats
+                    </Text>
+                    {pickupEta != null && (
+                      <Text
+                        style={[styles.vehicleRowSub, { color: colors.primary, marginTop: 2 }]}
+                      >
+                        ~{pickupEta} min pickup
+                      </Text>
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.vehicleRowPrice,
+                      { color: isSelected ? colors.primary : textPrimary },
+                    ]}
+                  >
+                    ৳{(est.total_bdt / 100).toFixed(0)}
+                  </Text>
+                  {isSelected && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={22}
+                      color={colors.primary}
+                    />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </>
+      ) : (
+        <View style={styles.centerBox}>
+          <Text style={[styles.mutedText, { color: textSecondary }]}>
+            No vehicles available for this route
+          </Text>
+        </View>
+      )}
+
+      {/* Promo/Voucher */}
+      {selectedEstimate?.available_discounts &&
+        selectedEstimate.available_discounts.length > 0 && (
+          <>
+            <Text
+              style={[styles.fareHeader, { color: textPrimary, marginTop: 20 }]}
+            >
+              Promos & Vouchers
+            </Text>
+            <View style={{ gap: 8 }}>
+              {selectedEstimate.available_discounts.map((d) => {
+                const isSelected =
+                  selectedPromo?.type === d.type &&
+                  selectedPromo?.amount_bdt === d.amount_bdt;
+                return (
+                  <TouchableOpacity
+                    key={d.type}
+                    style={[
+                      styles.vehicleRow,
+                      {
+                        backgroundColor: isSelected
+                          ? isDark
+                            ? colors.primaryLightDark
+                            : colors.primaryLight
+                          : surfaceBg,
+                        borderColor: isSelected ? colors.primary : borderColor,
+                      },
+                    ]}
+                    onPress={() =>
+                      setSelectedPromo(isSelected ? null : d)
+                    }
+                  >
+                    <Ionicons
+                      name="ticket-outline"
+                      size={22}
+                      color={isSelected ? colors.primary : textSecondary}
+                    />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={{ color: textPrimary, fontFamily: "Jakarta-SemiBold", fontSize: 14 }}>
+                        {d.description}
+                      </Text>
+                      <Text style={{ color: textSecondary, fontSize: 12 }}>
+                        {d.percent
+                          ? `${d.percent}% off`
+                          : `৳${(d.amount_bdt / 100).toFixed(0)} off`}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                      size={22}
+                      color={isSelected ? colors.primary : textDisabled}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+      {/* Call for Ride button */}
+      <TouchableOpacity
+        style={[
+          styles.callBtn,
+          {
+            backgroundColor: selectedVehicleType
+              ? colors.primary
+              : textDisabled,
+            opacity: selectedVehicleType ? 1 : 0.5,
+          },
+        ]}
+        onPress={handleCallForRide}
+        disabled={!selectedVehicleType || requesting}
+      >
+        {requesting ? (
+          <ActivityIndicator size="small" color={colors.white} />
+        ) : (
+          <Text style={styles.callBtnText}>
+            Call for {vehicleDef?.display_en || "Ride"} · ৳
+            {selectedEstimate
+              ? (selectedEstimate.total_bdt / 100).toFixed(0)
+              : "—"}
+          </Text>
+        )}
+      </TouchableOpacity>
+    </BottomSheetScrollView>
   );
+
+  // ── Main render ────────────────────────────────────────────────
+  const snapIndex = bookingStep === "LOCATIONS" ? 0 : 1;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar translucent backgroundColor="transparent" barStyle={isDark ? "light-content" : "dark-content"} />
-      {/* Map Layer */}
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle={isDark ? "light-content" : "dark-content"}
+      />
+
+      {/* Map (full screen background) */}
       <View style={StyleSheet.absoluteFill}>
-        <Map />
+        <Map route={routeGeo ?? undefined} vehicleMarkers={vehicleMarkers} onMapPress={handleMapPress} />
       </View>
 
-      {/* SOS Button (always visible) */}
-      <TouchableOpacity
-        style={[styles.sosBtn, { backgroundColor: colors.danger }]}
-        onPress={() => router.push("/(main)/(customer)/emergency-sos")}
-      >
-        <Ionicons name="alert-circle" size={20} color={colors.white} />
-      </TouchableOpacity>
+      {/* Map pin overlay — shown when user taps the map */}
+      {mapPinCoords && (
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          {/* Center pin */}
+          <View style={styles.mapPinContainer}>
+            <View style={[styles.mapPinDot, { backgroundColor: colors.primary }]} />
+            <View style={[styles.mapPinShadow, { backgroundColor: colors.primary + '30' }]} />
+          </View>
+
+          {/* Choice buttons at bottom */}
+          <View style={styles.mapPinActions}>
+            <Text style={[styles.mutedText, { color: textSecondary, marginBottom: 8 }]}>
+              {mapPinLoading ? "Getting address..." : mapPinAddress || "Tap a location"}
+            </Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity
+                style={[styles.mapPinBtn, { backgroundColor: colors.primary }]}
+                onPress={() => handleMapPinConfirm("from")}
+              >
+                <Ionicons name="locate-outline" size={18} color={colors.white} />
+                <Text style={styles.mapPinBtnText}>Set as Pickup</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.mapPinBtn, { backgroundColor: colors.danger }]}
+                onPress={() => handleMapPinConfirm("to")}
+              >
+                <Ionicons name="location" size={18} color={colors.white} />
+                <Text style={styles.mapPinBtnText}>Set as Destination</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              onPress={() => { setMapPinCoords(null); setMapPinAddress(""); }}
+              style={{ marginTop: 8 }}
+            >
+              <Text style={{ color: textSecondary, fontFamily: "Jakarta-SemiBold", fontSize: 14 }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Theme toggle */}
       <TouchableOpacity
-        style={[styles.themeToggleBtn, { backgroundColor: surfaceBg, borderColor: borderColor }]}
+        style={[
+          styles.themeToggle,
+          { backgroundColor: surfaceBg, borderColor },
+        ]}
         onPress={() => setTheme(isDark ? "light" : "dark")}
       >
-        <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
+        <Ionicons
+          name={isDark ? "sunny-outline" : "moon-outline"}
+          size={20}
+          color={textPrimary}
+        />
       </TouchableOpacity>
 
-      {/* Bottom Sheet (custom absolute-positioned sheet, no third-party sheet lib) */}
-      <Animated.View
-        style={[
-          styles.sheetContainer,
-          sheetAnimatedStyle,
-          { backgroundColor: surfaceBg, borderTopColor: borderColor },
-          shadows.bottomSheet,
-        ]}
+      {/* Bottom Sheet */}
+      <BottomSheet
+        ref={sheetRef}
+        index={snapIndex}
+        snapPoints={SNAP_POINTS}
+        onChange={() => {}}
+        enablePanDownToClose={false}
+        enableDynamicSizing={false}
+        backdropComponent={renderBackdrop}
+        backgroundStyle={{ backgroundColor: surfaceBg }}
+        handleIndicatorStyle={{
+          backgroundColor: borderColor,
+          width: 36,
+          height: 5,
+        }}
+        handleStyle={{
+          backgroundColor: surfaceBg,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+        }}
       >
-        <GestureDetector gesture={sheetPanGesture}>
-          <View style={styles.dragHandleHit}>
-            <View style={[styles.dragHandleBar, { backgroundColor: textDisabled }]} />
+        {bookingStep === "LOCATIONS" && renderLocations()}
+        {bookingStep === "FARES" && renderFares()}
+      </BottomSheet>
+
+      {/* Save Place Modal */}
+      {showSavePlace && (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: "rgba(0,0,0,0.5)",
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 200,
+            },
+          ]}
+        >
+          <View
+            style={[
+              {
+                width: "85%",
+                backgroundColor: surfaceBg,
+                borderRadius: 16,
+                padding: 24,
+                borderWidth: 1,
+                borderColor,
+              },
+            ]}
+          >
+            <Text style={[styles.fareHeader, { marginBottom: 16 }]}>
+              Save this place
+            </Text>
+            {/* Quick labels */}
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+              {["Home", "Work"].map((label) => (
+                <TouchableOpacity
+                  key={label}
+                  style={[
+                    styles.savedPill,
+                    {
+                      backgroundColor:
+                        savePlaceLabel === label ? colors.primary : surfaceBg,
+                      borderColor: savePlaceLabel === label ? colors.primary : borderColor,
+                    },
+                  ]}
+                  onPress={() => setSavePlaceLabel(label)}
+                >
+                  <Ionicons
+                    name={label === "Home" ? "home" : "briefcase"}
+                    size={16}
+                    color={savePlaceLabel === label ? colors.white : textPrimary}
+                  />
+                  <Text
+                    style={{
+                      color: savePlaceLabel === label ? colors.white : textPrimary,
+                      fontFamily: "Jakarta-SemiBold",
+                      fontSize: 13,
+                    }}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {/* Custom label input */}
+            <View
+              style={[
+                styles.inputRow,
+                { borderColor, backgroundColor: surfaceBg, marginBottom: 16 },
+              ]}
+            >
+              <Ionicons name="pencil" size={18} color={textSecondary} />
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  style={{
+                    color: textPrimary,
+                    fontFamily: "Jakarta-Regular",
+                    fontSize: 15,
+                    padding: 0,
+                  }}
+                  placeholder="Custom label (e.g., Gym, School)"
+                  placeholderTextColor={textDisabled}
+                  value={savePlaceLabel}
+                  onChangeText={setSavePlaceLabel}
+                />
+              </View>
+            </View>
+            {/* Destination preview */}
+            <Text
+              style={[styles.mutedText, { color: textSecondary, textAlign: "left", marginTop: 0, marginBottom: 16 }]}
+              numberOfLines={2}
+            >
+              {destination?.address}
+            </Text>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <TouchableOpacity
+                style={[styles.nextBtn, { flex: 1, backgroundColor: surfaceBg, borderWidth: 1, borderColor }]}
+                onPress={() => {
+                  setShowSavePlace(false);
+                  setSavePlaceLabel("");
+                }}
+              >
+                <Text style={[styles.nextBtnText, { color: textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.nextBtn, { flex: 1, backgroundColor: savePlaceLabel.trim() ? colors.primary : textDisabled }]}
+                onPress={handleSavePlace}
+                disabled={!savePlaceLabel.trim()}
+              >
+                <Text style={styles.nextBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </GestureDetector>
-        {homeState === "idle" && renderIdle()}
-        {homeState === "destination" && renderDestination()}
-        {homeState === "pickup" && renderPickup()}
-        {homeState === "vehicle" && renderVehicle()}
-        {homeState === "confirm" && renderConfirm()}
-      </Animated.View>
+        </View>
+      )}
     </GestureHandlerRootView>
   );
 }
 
+// ── Styles ───────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  sheetContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderTopWidth: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: "hidden",
-  },
-  dragHandleHit: {
-    height: 48,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  dragHandleBar: {
-    width: 36,
-    height: 5,
-    borderRadius: 2.5,
-  },
   sheetContent: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 24,
   },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-  whereToButton: {
+  inputRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 12,
+    borderWidth: 1,
     gap: 12,
   },
-  whereToText: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 16,
+  inputLabel: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 11,
   },
-  chipsScroll: {
-    marginTop: 16,
+  inputValue: {
+    fontFamily: "Jakarta-Medium",
+    fontSize: 15,
   },
-  chipsRow: {
+  connector: {
+    width: 2,
+    height: 16,
+    borderLeftWidth: 2,
+    borderStyle: "dashed",
+    marginLeft: 25,
+    marginVertical: 2,
+  },
+  addStopBtn: {
     flexDirection: "row",
-    gap: 10,
-    paddingRight: 20,
+    alignItems: "center",
+    paddingVertical: 12,
+    gap: 6,
   },
-  chip: {
+  addStopText: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 14,
+  },
+  sectionLabel: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 13,
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  savedPill: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 100,
+    borderRadius: 20,
     gap: 6,
+    borderWidth: 1,
   },
-  chipText: {
+  savedPillText: {
     fontFamily: "Jakarta-SemiBold",
     fontSize: 13,
   },
-  destHeader: {
+  recentRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
+    paddingVertical: 12,
+    gap: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  destTitle: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 18,
+  recentText: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 14,
+    flex: 1,
   },
-  inputRow: {
+  selectOnMapBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    justifyContent: "center",
+    height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 10,
-    gap: 12,
+    gap: 8,
+    marginTop: 16,
   },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  selectOnMapText: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 14,
   },
-  inputText: {
+  nextBtn: {
+    height: 52,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+  nextBtnText: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 16,
+    color: "#FFFFFF",
+  },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 12,
+  },
+  backBtnText: {
     fontFamily: "Jakarta-SemiBold",
     fontSize: 15,
   },
-  addStopBtn: {
-    padding: 4,
-  },
-  mapSelectRow: {
+  catPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginVertical: 12,
-  },
-  mapSelectText: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 14,
-  },
-  tabRow: {
-    flexDirection: "row",
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  tab: {
-    flex: 1,
-    alignItems: "center",
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    borderBottomWidth: 2,
+    borderRadius: 20,
+    gap: 6,
+    borderWidth: 1,
   },
-  tabText: {
+  catPillText: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 13,
+  },
+  fareHeader: {
+    fontFamily: "Jakarta-Bold",
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  vehicleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 4,
+  },
+  vehicleRowName: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 15,
+  },
+  vehicleRowSub: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  vehicleRowPrice: {
+    fontFamily: "Jakarta-Bold",
+    fontSize: 18,
+  },
+  callBtn: {
+    height: 56,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+  },
+  callBtnText: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 16,
+    color: "#FFFFFF",
+  },
+  centerBox: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 32,
+  },
+  mutedText: {
     fontFamily: "Jakarta-Regular",
     fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
   },
-  tabTextActive: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 14,
-  },
-  placeList: {
-    flex: 1,
-  },
-  placeItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    gap: 12,
-  },
-  placeIcon: {
+  themeToggle: {
+    position: "absolute",
+    top: 60,
+    right: 20,
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 100,
+    borderWidth: 1,
   },
-  placeInfo: {
-    flex: 1,
-  },
-  placeName: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 15,
-  },
-  placeAddress: {
-    fontFamily: "Jakarta-Regular",
-    fontSize: 13,
-    marginTop: 2,
-  },
-  emptyText: {
-    textAlign: "center",
-    marginTop: 40,
-    fontFamily: "Jakarta-Regular",
-    fontSize: 14,
-  },
-  pickupAddress: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 16,
-    textAlign: "center",
-    marginVertical: 20,
-    lineHeight: 24,
-  },
-  vehicleList: {
-    flex: 1,
-    marginBottom: 16,
-  },
-  vehicleCard: {
-    flexDirection: "row",
+  mapPinContainer: {
+    position: "absolute",
+    top: "45%",
+    left: "50%",
+    marginLeft: -8,
+    marginTop: -8,
     alignItems: "center",
-    padding: 16,
+    justifyContent: "center",
+  },
+  mapPinDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
+    zIndex: 2,
+  },
+  mapPinShadow: {
+    position: "absolute",
+    width: 32,
+    height: 32,
     borderRadius: 16,
-    marginBottom: 10,
-    borderWidth: 1,
+    top: -8,
+    left: -8,
+    zIndex: 1,
   },
-  vehicleIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+  mapPinActions: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     alignItems: "center",
-    justifyContent: "center",
+    paddingBottom: 20,
+    paddingHorizontal: 24,
   },
-  vehicleInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  vehicleName: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 16,
-  },
-  vehicleMeta: {
-    fontFamily: "Jakarta-Regular",
-    fontSize: 13,
-    marginTop: 2,
-  },
-  vehicleFare: {
-    alignItems: "flex-end",
-  },
-  vehiclePrice: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 18,
-  },
-  vehicleEta: {
-    fontFamily: "Jakarta-Regular",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  vehicleCheck: {
-    marginLeft: 10,
-  },
-  confirmVehicleRow: {
+  mapPinBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    gap: 12,
-  },
-  confirmVehicleText: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 16,
-    flex: 1,
-  },
-  confirmFare: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 20,
-  },
-  promoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 16,
-    gap: 10,
+    gap: 8,
   },
-  promoInput: {
-    flex: 1,
+  mapPinBtnText: {
+    color: "#FFFFFF",
     fontFamily: "Jakarta-SemiBold",
-    fontSize: 14,
-  },
-  promoApply: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 14,
-  },
-  promoApplied: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 13,
-    marginTop: 6,
-    marginLeft: 4,
-  },
-  sectionLabel: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 14,
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  tipRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  tipBtn: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  paymentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 20,
-    gap: 12,
-  },
-  paymentText: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 15,
-  },
-  paymentSub: {
-    fontFamily: "Jakarta-Regular",
-    fontSize: 13,
-    marginLeft: "auto",
-  },
-  themeToggleBtn: {
-    position: "absolute",
-    top: 60,
-    right: 72,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 100,
-    borderWidth: 1,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  sosBtn: {
-    position: "absolute",
-    top: 60,
-    right: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 100,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  pulseRing: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 2,
-  },
-  pulseRingInner: {
-    position: "absolute",
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
-  },
-  findingTitle: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 20,
-    marginTop: 16,
-  },
-  findingSub: {
-    fontFamily: "Jakarta-Regular",
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 8,
-    paddingHorizontal: 30,
-    lineHeight: 20,
-  },
-  cancelBtn: {
-    marginTop: 32,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 100,
-    borderWidth: 1.5,
-  },
-  cancelText: {
-    fontFamily: "Jakarta-Bold",
     fontSize: 15,
   },
 });
