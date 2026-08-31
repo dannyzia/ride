@@ -308,6 +308,12 @@ export const drivers = pgTable(
       .references(() => users.id)
       .unique(),
     vehicle_id: uuid("vehicle_id"),
+    // Owning fleet — universal model (every driver belongs to exactly one
+    // fleet; solo drivers own their implicit solo fleet). Backfill has applied
+    // NOT NULL in the DB (verified via scripts/verify-fleet-schema.ts).
+    fleet_id: uuid("fleet_id")
+      .notNull()
+      .references((): any => fleets.id),
     vehicle_type: vehicleTypeEnum("vehicle_type").notNull(),
     status: driverStatusEnum("status").notNull().default("pending"),
     rating: numeric("rating", { precision: 3, scale: 2 })
@@ -365,6 +371,7 @@ export const drivers = pgTable(
     index("drivers_vehicle_type_idx").on(t.vehicle_type),
     index("drivers_last_location_at_idx").on(t.last_location_at),
     index("drivers_vehicle_id_idx").on(t.vehicle_id),
+    index("drivers_fleet_id_idx").on(t.fleet_id),
     index("drivers_min_per_km_idx")
       .on(t.min_per_km_bdt)
       .where(sql`min_per_km_bdt IS NOT NULL`),
@@ -379,10 +386,21 @@ export const vehicles = pgTable(
   "vehicles",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    driver_id: uuid("driver_id")
+    // C5 OPTION A (universal fleet model, Zia ruling 2026-08-16): the strict
+    // 1:1 is lifted. driver_id is now a NULLABLE DENORMALIZED CACHE of the
+    // driver currently assigned to this vehicle (source of truth:
+    // fleet_vehicle_assignments, partial unique WHERE unassigned_at IS NULL).
+    // Written ONLY through lib/fleetAssignment.ts in the same transaction as
+    // the assignment row. NULL = unassigned pool vehicle. Read sites
+    // (app/api/driver/vehicles+api.ts, app/api/admin/*) keep working unchanged
+    // under the active-pointer pattern — dispatch is untouched.
+    driver_id: uuid("driver_id").references(() => drivers.id),
+    // Owning fleet (universal backfill: every existing driver/vehicle gets a
+    // solo NATIVE fleet — see scripts/fleet-backfill.ts). Backfill has applied
+    // NOT NULL in the DB (verified via scripts/verify-fleet-schema.ts).
+    fleet_id: uuid("fleet_id")
       .notNull()
-      .references(() => drivers.id)
-      .unique(),
+      .references((): any => fleets.id),
     vehicle_type: vehicleTypeEnum("vehicle_type").notNull(),
     manufacturer: varchar("manufacturer", { length: 100 }).notNull(),
     model: varchar("model", { length: 100 }).notNull(),
@@ -408,13 +426,11 @@ export const vehicles = pgTable(
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    // C5 RESOLVED (temporary): one vehicle per driver is the applied safe
-    // default — see docs/vehicle-model-decision.md. The multi-vehicle UI and
-    // the vehicle-activate endpoint were removed to match this index. If
-    // Product approves multi-vehicle, follow the Option B migration steps in
-    // that doc (drop this index, plain INSERT in POST /api/driver/vehicles,
-    // reinstate activation).
-    uniqueIndex("vehicles_driver_id_idx").on(t.driver_id),
+    // C5 RESOLVED (2026-08-16, universal fleet model): 1:1 unique index on
+    // driver_id DROPPED per docs/vehicle-model-decision.md Option B steps —
+    // a vehicle may now be unassigned (driver_id NULL) or reassigned within
+    // its fleet. Current pairing remains authoritative via
+    // fleet_vehicle_assignments (single active row per vehicle/driver).
     uniqueIndex("vehicles_reg_number_idx").on(t.registration_number),
     index("vehicles_fitness_expires_idx").on(t.fitness_expires_at),
     index("vehicles_tax_token_expires_idx").on(t.tax_token_expires_at),
@@ -732,6 +748,9 @@ export const rides = pgTable(
     // Never displayed to rider or driver.
     fare_v6_shadow: jsonb("fare_v6_shadow"),
     fare_v6_shadow_computed_at: timestamptz("fare_v6_shadow_computed_at"),
+    // Phase 7: data provenance — distinguishes native rides from external imports
+    source_type: varchar("source_type", { length: 30 }).notNull().default("native"), // native | external_api
+    external_source_id: varchar("external_source_id", { length: 255 }), // provider + external trip ID for dedup
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -2384,4 +2403,375 @@ export const driverSessions = pgTable("driver_sessions", {
   created_at: timestamptz("created_at").notNull().defaultNow(),
 }, (t) => [
   index("ds_driver_time_idx").on(t.driver_id, t.session_start),
+]);
+
+// ══════════════════════════════════════════════════════════════════════
+// Fleet Management (universal fleet model — Zia ruling 2026-08-16)
+// Spec: docs/FeatureList/New Feature Plan/Fleet Management/
+//       06-FLEET-MANAGEMENT-V5-by-Claude.xml § database.MVP1 + migration_plan
+// Constraints honored: extend existing entities (vehicles/drivers carry
+// fleet_id); no separate trip engine; no users.role changes (fleet roles
+// live in fleet_members); money = integer paisa; audit trail.
+// ══════════════════════════════════════════════════════════════════════
+
+export const fleetTypeEnum = pgEnum("fleet_type", [
+  "NATIVE",
+  "EXTERNAL",
+  "HYBRID",
+]);
+export const fleetStatusEnum = pgEnum("fleet_status", [
+  "PENDING",
+  "ACTIVE",
+  "SUSPENDED",
+  "BLOCKED",
+  "CLOSED",
+]);
+export const fleetMemberRoleEnum = pgEnum("fleet_member_role", [
+  "OWNER",
+  "MANAGER",
+  "DISPATCHER",
+  "ACCOUNTANT",
+  "VIEWER",
+]);
+export const fleetSubscriptionStatusEnum = pgEnum("fleet_subscription_status", [
+  "PENDING",
+  "ACTIVE",
+  "PAST_DUE",
+  "CANCELLED",
+  "EXPIRED",
+]);
+export const fleetBillingPeriodEnum = pgEnum("fleet_billing_period", [
+  "WEEKLY",
+  "MONTHLY",
+  "YEARLY",
+]);
+export const fleetBillingTxnTypeEnum = pgEnum("fleet_billing_txn_type", [
+  "SUBSCRIPTION",
+  "API_FEE",
+  "ADJUSTMENT",
+  "REFUND",
+  "OTHER",
+]);
+export const fleetAlertSeverityEnum = pgEnum("fleet_alert_severity", [
+  "INFO",
+  "WARNING",
+  "CRITICAL",
+]);
+
+/** Fleet subscription plan catalog (F13). Price in integer paisa (BDT). */
+export const fleetSubscriptionPlans = pgTable(
+  "fleet_subscription_plans",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description"),
+    billing_period: fleetBillingPeriodEnum("billing_period").notNull(),
+    price_bdt: integer("price_bdt").notNull(),
+    vehicle_limit: integer("vehicle_limit"),
+    driver_limit: integer("driver_limit"),
+    api_limit: integer("api_limit"),
+    features: jsonb("features"),
+    active: boolean("active").notNull().default(true),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("fsp_name_idx").on(t.name)],
+);
+
+/**
+ * A fleet (NATIVE solo/owner fleet, EXTERNAL SaaS fleet, or HYBRID).
+ * Every driver belongs to exactly one fleet — solo drivers get an implicit
+ * solo NATIVE fleet via scripts/fleet-backfill.ts and registration.
+ */
+export const fleets = pgTable("fleets", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  owner_user_id: uuid("owner_user_id").notNull().references(() => users.id),
+  name: varchar("name", { length: 150 }).notNull(),
+  fleet_type: fleetTypeEnum("fleet_type").notNull().default("NATIVE"),
+  status: fleetStatusEnum("status").notNull().default("PENDING"),
+  phone: varchar("phone", { length: 30 }),
+  email: varchar("email", { length: 150 }),
+  address: text("address"),
+  business_name: varchar("business_name", { length: 150 }),
+  trade_license_number: varchar("trade_license_number", { length: 100 }),
+  tax_identifier: varchar("tax_identifier", { length: 100 }),
+  subscription_plan_id: uuid("subscription_plan_id").references(
+    (): any => fleetSubscriptionPlans.id,
+  ),
+  subscription_status: fleetSubscriptionStatusEnum("subscription_status"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("fleets_owner_idx").on(t.owner_user_id),
+  index("fleets_status_idx").on(t.status),
+]);
+
+/**
+ * Fleet-scoped staff roles. Fully additive to users.role (which stays
+ * immutable and singular) — capability = row existence, mirroring the
+ * requireRole() pattern in lib/auth.ts (requireFleetMember middleware,
+ * Phase 2).
+ */
+export const fleetMembers = pgTable("fleet_members", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  fleet_id: uuid("fleet_id").notNull().references(() => fleets.id),
+  user_id: uuid("user_id").notNull().references(() => users.id),
+  role: fleetMemberRoleEnum("role").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  joined_at: timestamptz("joined_at").notNull().defaultNow(),
+  removed_at: timestamptz("removed_at"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("fm_fleet_user_idx").on(t.fleet_id, t.user_id),
+  index("fm_user_idx").on(t.user_id),
+  index("fm_fleet_status_idx").on(t.fleet_id, t.status),
+]);
+
+/**
+ * The AUTHORITATIVE source of current vehicle↔driver assignment within a
+ * fleet (MVP1, live — Zia ruling supersedes the V1 history-only design).
+ * Append-only: never overwrite; reassignment closes the active row
+ * (unassigned_at = now) and inserts a new one. vehicles.driver_id and
+ * drivers.vehicle_id are DENORMALIZED CACHES kept in sync by
+ * lib/fleetAssignment.ts in the same transaction.
+ */
+export const fleetVehicleAssignments = pgTable("fleet_vehicle_assignments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  fleet_id: uuid("fleet_id").notNull().references(() => fleets.id),
+  vehicle_id: uuid("vehicle_id").notNull().references(() => vehicles.id),
+  driver_id: uuid("driver_id").notNull().references(() => drivers.id),
+  assigned_at: timestamptz("assigned_at").notNull().defaultNow(),
+  unassigned_at: timestamptz("unassigned_at"),
+  assigned_by: uuid("assigned_by").references(() => users.id),
+  reason: text("reason"),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  // Append-only: no updated_at (exempt table per AGENTS.md convention).
+}, (t) => [
+  // Single active assignment per vehicle and per driver (spec constraint).
+  // Partial unique indexes so history rows (unassigned_at set) never collide.
+  uniqueIndex("fva_vehicle_active_idx")
+    .on(t.vehicle_id)
+    .where(sql`unassigned_at IS NULL`),
+  uniqueIndex("fva_driver_active_idx")
+    .on(t.driver_id)
+    .where(sql`unassigned_at IS NULL`),
+  index("fva_fleet_idx").on(t.fleet_id),
+  index("fva_created_idx").on(t.created_at),
+]);
+
+/** Fleet service subscription (separate from the driver ride subscription). */
+export const fleetSubscriptions = pgTable("fleet_subscriptions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  fleet_id: uuid("fleet_id").notNull().references(() => fleets.id),
+  plan_id: uuid("plan_id").notNull().references(() => fleetSubscriptionPlans.id),
+  status: fleetSubscriptionStatusEnum("status").notNull().default("PENDING"),
+  started_at: timestamptz("started_at"),
+  current_period_start: timestamptz("current_period_start"),
+  current_period_end: timestamptz("current_period_end"),
+  cancelled_at: timestamptz("cancelled_at"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("fs_fleet_idx").on(t.fleet_id),
+  index("fs_fleet_status_idx").on(t.fleet_id, t.status),
+]);
+
+/**
+ * Fleet billing events (subscription fees, API fees, adjustments).
+ * amount_bdt is integer paisa — never floats.
+ */
+export const fleetBillingTransactions = pgTable("fleet_billing_transactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  fleet_id: uuid("fleet_id").notNull().references(() => fleets.id),
+  subscription_id: uuid("subscription_id").references(
+    () => fleetSubscriptions.id,
+  ),
+  transaction_type: fleetBillingTxnTypeEnum("transaction_type").notNull(),
+  amount_bdt: integer("amount_bdt").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("BDT"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  reference: varchar("reference", { length: 200 }),
+  metadata: jsonb("metadata"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  // Append-only: no updated_at.
+}, (t) => [
+  index("fbt_fleet_created_idx").on(t.fleet_id, t.created_at),
+  index("fbt_subscription_idx").on(t.subscription_id),
+]);
+
+/** Fleet operational alerts (F16) — document expiry, maintenance, etc. */
+export const fleetAlerts = pgTable("fleet_alerts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  fleet_id: uuid("fleet_id").notNull().references(() => fleets.id),
+  type: varchar("type", { length: 50 }).notNull(),
+  severity: fleetAlertSeverityEnum("severity").notNull().default("INFO"),
+  title: varchar("title", { length: 200 }).notNull(),
+  message: text("message"),
+  entity_type: varchar("entity_type", { length: 30 }),
+  entity_id: uuid("entity_id"),
+  is_read: boolean("is_read").notNull().default(false),
+  resolved_at: timestamptz("resolved_at"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+}, (t) => [
+  index("fa_fleet_read_idx").on(t.fleet_id, t.is_read),
+  index("fa_fleet_created_idx").on(t.fleet_id, t.created_at),
+]);
+
+/**
+ * Fleet audit trail (who did what, when, from where). Cross-domain audit
+ * logging only — platform_config audits stay in config_audit_log.
+ */
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  actor_user_id: uuid("actor_user_id").references(() => users.id),
+  fleet_id: uuid("fleet_id").references(() => fleets.id),
+  action: varchar("action", { length: 100 }).notNull(),
+  entity_type: varchar("entity_type", { length: 30 }),
+  entity_id: uuid("entity_id"),
+  old_value: jsonb("old_value"),
+  new_value: jsonb("new_value"),
+  ip_address: varchar("ip_address", { length: 45 }),
+  user_agent: text("user_agent"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  // Append-only: no updated_at.
+}, (t) => [
+  index("al_fleet_created_idx").on(t.fleet_id, t.created_at),
+  index("al_actor_idx").on(t.actor_user_id),  index("al_entity_idx").on(t.entity_type, t.entity_id),
+]);
+
+// ── Phase 7: External Integration Framework ──────────────────────────────
+
+export const integrationProviderEnum = pgEnum("integration_provider", [
+  "uber",
+  "indrive",
+  "pathao",
+  "obaih",
+  "inDrive",
+  "custom",
+  "mock_platform",
+]);
+
+export const integrationStatusEnum = pgEnum("integration_status", [
+  "pending",
+  "connected",
+  "error",
+  "disabled",
+]);
+
+export const syncEntityTypeEnum = pgEnum("sync_entity_type", [
+  "vehicles",
+  "drivers",
+  "trips",
+  "earnings",
+]);
+
+export const syncStatusEnum = pgEnum("sync_status", [
+  "pending",
+  "running",
+  "completed",
+  "failed",
+  "rate_limited",
+]);
+
+/**
+ * Fleet integration configuration — one row per external provider connection.
+ * Stores encrypted credentials, sync state, and last-error for the fleet dashboard.
+ * Money fields: integer paisa (BDT).
+ */
+export const fleetIntegrations = pgTable("fleet_integrations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  fleet_id: uuid("fleet_id").notNull().references(() => fleets.id),
+  provider: integrationProviderEnum("provider").notNull(),
+  status: integrationStatusEnum("status").notNull().default("pending"),
+  // Encrypted credentials (AES-256-GCM via lib/encrypt.ts at rest).
+  // NEVER store plaintext OAuth tokens or API keys.
+  credentials_encrypted: text("credentials_encrypted"),
+  // Provider-specific config (rate limits, sync intervals, etc.)
+  config: jsonb("config"),
+  // Capabilities this provider supports (vehicles, drivers, trips, earnings)
+  capabilities: jsonb("capabilities").notNull(),
+  // Last successful sync timestamp per entity type
+  last_sync_at: timestamptz("last_sync_at"),
+  last_sync_entity: syncEntityTypeEnum("last_sync_entity"),
+  // Error state surfaced on the fleet dashboard
+  last_error: text("last_error"),
+  last_error_at: timestamptz("last_error_at"),
+  // Webhook secret for signature validation (hashed, not plaintext)
+  webhook_secret_hash: varchar("webhook_secret_hash", { length: 128 }),
+  webhook_url: varchar("webhook_url", { length: 500 }),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  // One integration per provider per fleet
+  uniqueIndex("fi_fleet_provider_idx").on(t.fleet_id, t.provider),
+  index("fi_fleet_status_idx").on(t.fleet_id, t.status),
+]);
+
+/**
+ * Sync job tracking — one row per sync operation (initial import, incremental, etc.)
+ * Append-only: no updated_at (status transitions are terminal: running → completed/failed).
+ */
+export const integrationSyncJobs = pgTable("integration_sync_jobs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  integration_id: uuid("integration_id").notNull().references(() => fleetIntegrations.id),
+  fleet_id: uuid("fleet_id").notNull().references(() => fleets.id),
+  entity_type: syncEntityTypeEnum("entity_type").notNull(),
+  status: syncStatusEnum("status").notNull().default("pending"),
+  sync_type: varchar("sync_type", { length: 30 }).notNull(), // initial_import | incremental | webhook
+  // Counters
+  records_fetched: integer("records_fetched").notNull().default(0),
+  records_created: integer("records_created").notNull().default(0),
+  records_updated: integer("records_updated").notNull().default(0),
+  records_unchanged: integer("records_unchanged").notNull().default(0),
+  records_failed: integer("records_failed").notNull().default(0),
+  // Error details on failure
+  error_message: text("error_message"),
+  error_code: varchar("error_code", { length: 50 }),
+  error_retryable: boolean("error_retryable").notNull().default(false),
+  // Timing
+  started_at: timestamptz("started_at"),
+  completed_at: timestamptz("completed_at"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  // Append-only: no updated_at.
+}, (t) => [
+  index("isj_integration_idx").on(t.integration_id),
+  index("isj_fleet_entity_idx").on(t.fleet_id, t.entity_type),
+  index("isj_status_idx").on(t.status),
+  index("isj_created_idx").on(t.created_at),
+]);
+
+/**
+ * External entity identity mappings — links provider-specific IDs to internal entities.
+ * NEVER allow external IDs to become the primary identity. Internal entity owns the mapping.
+ * UNIQUE(provider, external_id) prevents duplicate imports.
+ * UNIQUE(provider, internal_entity_type, internal_entity_id) prevents double-mapping.
+ */
+export const externalEntityMappings = pgTable("external_entity_mappings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  fleet_id: uuid("fleet_id").notNull().references(() => fleets.id),
+  integration_id: uuid("integration_id").notNull().references(() => fleetIntegrations.id),
+  provider: integrationProviderEnum("provider").notNull(),
+  // External identity (provider's ID for this entity)
+  external_id: varchar("external_id", { length: 255 }).notNull(),
+  external_entity_type: syncEntityTypeEnum("external_entity_type").notNull(),
+  // Internal identity (our entity this maps to)
+  internal_entity_type: varchar("internal_entity_type", { length: 30 }).notNull(), // vehicle | driver | ride
+  internal_entity_id: uuid("internal_entity_id").notNull(),
+  // Snapshot of external data at last sync (for diffing / staleness detection)
+  external_data: jsonb("external_data"),
+  last_synced_at: timestamptz("last_synced_at"),
+  // Mapping lifecycle
+  status: varchar("status", { length: 20 }).notNull().default("active"), // active | stale | deleted
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  // Prevent duplicate external IDs from the same provider
+  uniqueIndex("eem_provider_extid_idx").on(t.provider, t.external_id),
+  // Prevent double-mapping the same internal entity
+  uniqueIndex("eem_provider_internal_idx").on(t.provider, t.internal_entity_type, t.internal_entity_id),
+  index("eem_fleet_idx").on(t.fleet_id),
+  index("eem_integration_idx").on(t.integration_id),
+  index("eem_provider_entity_idx").on(t.provider, t.external_entity_type),
 ]);
