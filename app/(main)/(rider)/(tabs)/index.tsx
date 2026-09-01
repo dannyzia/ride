@@ -125,6 +125,8 @@ export default function DriverHome() {
   const [isCheckingSession, setIsCheckingSession] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
+  // §F.0(b) — fleet marketplace bidder entry card
+  const [marketplaceAccess, setMarketplaceAccess] = useState<Array<{ fleet_id: string; fleet_name: string; role: string }> | null>(null);
 
   const markerPulseAnim = useRef(new Animated.Value(1)).current;
   const goOnlinePulse = useRef(new Animated.Value(0)).current;
@@ -135,6 +137,28 @@ export default function DriverHome() {
   // ── Reduce-motion preference ──────────────────────────────────────
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+  }, []);
+
+  // §F.0(b) — check fleet marketplace access on mount
+  useEffect(() => {
+    const checkAccess = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const res = await fetch(
+          `${API_URL}/api/rental/access-check`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setMarketplaceAccess(data.fleets ?? []);
+        }
+      } catch {
+        // Not a fleet member — card stays hidden
+      }
+    };
+    checkAccess();
   }, []);
 
   // Pulsing driver-marker animation on the map
@@ -1383,6 +1407,47 @@ export default function DriverHome() {
 
           {/* v6 pricing reference — only visible when fare_framework_stage >= stage1 */}
           <DriverPricingReference />
+
+          {/* §F.0(b) — Fleet marketplace bidder entry card */}
+          {marketplaceAccess && marketplaceAccess.length > 0 && (
+            <TouchableOpacity
+              onPress={() => router.push(`/(main)/(customer)/(rental-bidder)`)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: isDark ? colors.surfaceElevatedDark : colors.surfaceLight,
+                borderWidth: 1,
+                borderColor: isDark ? colors.borderDark : colors.borderLight,
+                borderRadius: 14,
+                padding: 16,
+                marginTop: 12,
+              }}
+              accessibilityLabel="Marketplace bidding — view and bid on rental requests"
+              accessibilityRole="button"
+            >
+              <View
+                style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  backgroundColor: colors.primary + '18',
+                  justifyContent: 'center', alignItems: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <Ionicons name="swap-horizontal" size={22} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 15, color: textPrimary }}>
+                  Marketplace / Bidding
+                </Text>
+                <Text style={{ fontFamily: 'Jakarta', fontSize: 12, color: textSecondary, marginTop: 2 }}>
+                  {marketplaceAccess.length === 1
+                    ? `${marketplaceAccess[0].fleet_name} · ${marketplaceAccess[0].role}`
+                    : `${marketplaceAccess.length} fleets available`}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 

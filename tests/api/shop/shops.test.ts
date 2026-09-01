@@ -1,3 +1,7 @@
+// Mock ambulanceCerts to prevent h3-js TextDecoder issue in Jest
+jest.mock("@/lib/ambulanceCerts", () => ({
+  serviceLevelSatisfies: jest.fn(() => true),
+}));
 /**
  * Phase 1 Marketplace — Shop tests.
  *

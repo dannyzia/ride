@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-nocheck — Jest mock factories produce untyped chains; runtime tests verify correctness.
+// Mock ambulanceCerts to prevent h3-js TextDecoder issue in Jest
+jest.mock("@/lib/ambulanceCerts", () => ({
+  serviceLevelSatisfies: jest.fn(() => true),
+}));
 /**
  * Phase 3 Marketplace — Delivery tests.
  * Covers §H.3: requireCourier guards, schema validation, admin RBAC, handler basics,

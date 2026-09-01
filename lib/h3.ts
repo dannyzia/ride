@@ -1,9 +1,15 @@
 import { latLngToCell, gridDisk, cellToBoundary } from 'h3-js';
 
 const RESOLUTION = 9;
+const SERVICE_ZONE_RESOLUTION = 8;
 
 export function getH3Cell(lat: number, lng: number): string {
   return latLngToCell(lat, lng, RESOLUTION);
+}
+
+/** H3 cell at the coarser service-zone resolution (res 8, ~740m). */
+export function getH3CellRes8(lat: number, lng: number): string {
+  return latLngToCell(lat, lng, SERVICE_ZONE_RESOLUTION);
 }
 
 export function getH3Ring(lat: number, lng: number, k: number): string[] {

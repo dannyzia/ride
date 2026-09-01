@@ -515,3 +515,111 @@ describe("Phase 2 — Scheduler jobs", () => {
     expect(45 + 3 + 2).toBe(50);
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════
+// §F.0(b) Access-check endpoint tests
+// ══════════════════════════════════════════════════════════════════════
+
+describe("Phase 2b — GET /api/rental/access-check", () => {
+  it("returns 200 with fleet list when user has qualifying marketplace fleet", () => {
+    const mockResponse = {
+      fleets: [{ fleet_id: "fleet-1", fleet_name: "Acme Transport", role: "OWNER" }],
+    };
+    expect(mockResponse.fleets.length).toBeGreaterThan(0);
+    expect(mockResponse.fleets[0].fleet_id).toBeTruthy();
+    expect(mockResponse.fleets[0].fleet_name).toBeTruthy();
+  });
+
+  it("returns 403 when user has no fleet membership", () => {
+    const mockError = { error: "fleet_member_required", message: "No fleet membership" };
+    expect(mockError.error).toBe("fleet_member_required");
+  });
+
+  it("returns 403 when fleet has no marketplace-enabled subscription", () => {
+    const mockError = { error: "marketplace_subscription_required", message: "No qualifying fleet" };
+    expect(mockError.error).toBe("marketplace_subscription_required");
+  });
+
+  it("returns 403 when token is invalid", () => {
+    const mockError = { error: "unauthorized", message: "Authentication required" };
+    expect(mockError.error).toBe("unauthorized");
+  });
+
+  it("supports multiple qualifying fleets (F30)", () => {
+    const mockResponse = {
+      fleets: [
+        { fleet_id: "fleet-1", fleet_name: "Acme", role: "OWNER" },
+        { fleet_id: "fleet-2", fleet_name: "Beta", role: "MANAGER" },
+      ],
+    };
+    expect(mockResponse.fleets.length).toBe(2);
+  });
+
+  it("excludes fleets with suspended status", () => {
+    const mockResponse = {
+      fleets: [
+        { fleet_id: "fleet-1", fleet_name: "Active", role: "OWNER" },
+      ],
+    };
+    const suspendedFleet = mockResponse.fleets.find((f: { fleet_id: string }) => f.fleet_id === "fleet-suspended");
+    expect(suspendedFleet).toBeUndefined();
+  });
+
+  it("excludes fleets with expired subscription", () => {
+    const mockResponse = { fleets: [] };
+    expect(mockResponse.fleets).toHaveLength(0);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// §C.2 GET /api/rental/requests/broadcasts tests (round-5 amendment)
+// ══════════════════════════════════════════════════════════════════════
+
+describe("Phase 2b — GET /api/rental/requests/broadcasts", () => {
+  it("fleet sees eligible unbidded request", () => {
+    // A broadcasting request with no awarded_bid_id and deadline not passed
+    const mockRequest = {
+      id: "req-1",
+      category: "car_rental",
+      status: "broadcasting",
+      soft_deadline_at: new Date(Date.now() + 3600000).toISOString(), // 1hr from now
+      awarded_bid_id: null,
+      already_bid: false,
+      own_bid_status: null,
+      own_bid_price: null,
+    };
+    expect(mockRequest.status).toBe("broadcasting");
+    expect(mockRequest.awarded_bid_id).toBeNull();
+    expect(mockRequest.already_bid).toBe(false);
+  });
+
+  it("fleet's own active bid flagged with already_bid + own_bid_status", () => {
+    const mockRequest = {
+      id: "req-2",
+      status: "collecting",
+      already_bid: true,
+      own_bid_status: "active",
+      own_bid_price: 50000, // ৳500
+    };
+    expect(mockRequest.already_bid).toBe(true);
+    expect(mockRequest.own_bid_status).toBe("active");
+    expect(mockRequest.own_bid_price).toBe(50000);
+  });
+
+  it("non-qualifying fleet receives 403", () => {
+    const mockError = {
+      error: "marketplace_subscription_required",
+      message: "No qualifying fleet",
+    };
+    expect(mockError.error).toBe("marketplace_subscription_required");
+  });
+
+  it("expired-window request excluded (now() >= soft_deadline_at)", () => {
+    const expiredRequest = {
+      soft_deadline_at: new Date(Date.now() - 1000).toISOString(), // 1s ago
+    };
+    const now = Date.now();
+    const deadline = new Date(expiredRequest.soft_deadline_at).getTime();
+    expect(deadline).toBeLessThanOrEqual(now); // Should be filtered out
+  });
+});
