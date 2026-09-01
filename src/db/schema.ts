@@ -3010,6 +3010,12 @@ export const rentalVehicleTypeEnum = pgEnum("rental_vehicle_type", [
   "heavy_truck",
   "trailer",
   "van",
+  // Ruling 16: car values mirror vehicleTypeEnum (car UI = Phase 2b)
+  "car_compact",
+  "car_economy",
+  "car_comfort",
+  "car_premium",
+  "car_xl",
   "ambulance_basic",
   "ambulance_advanced",
 ]);
@@ -3035,7 +3041,11 @@ export const rentalRequests = pgTable("rental_requests", {
   cargo_weight_kg: integer("cargo_weight_kg"),
   cargo_volume_m3: numeric("cargo_volume_m3", { precision: 10, scale: 3 }),
   cargo_description: text("cargo_description"),
+  rental_options: text("rental_options"), // Ruling 13: comma-separated option/condition chips
   requested_vehicle_type: rentalVehicleTypeEnum("requested_vehicle_type"),
+  // Scheduling (Ruling 14): scheduled_start_at NULL = start now
+  scheduled_start_at: timestamptz("scheduled_start_at"),
+  duration_hours: integer("duration_hours"),
   // Ambulance-scheduled only
   patient_condition: text("patient_condition"),
   requires_paramedic: boolean("requires_paramedic"),
@@ -3086,6 +3096,7 @@ export const rentalBids = pgTable("rental_bids", {
   vehicle_id: uuid("vehicle_id").references((): any => vehicles.id),
   vehicle_type: rentalVehicleTypeEnum("vehicle_type").notNull(),
   quoted_price_bdt: integer("quoted_price_bdt").notNull(),
+  overtime_rate_bdt: integer("overtime_rate_bdt"), // Ruling 15: paisa, display-only (Phase 2b bid UI)
   quoted_notes: text("quoted_notes"),
   status: rentalBidStatusEnum("status").notNull().default("active"),
   submitted_at: timestamptz("submitted_at").notNull().defaultNow(),
@@ -3099,6 +3110,94 @@ export const rentalBids = pgTable("rental_bids", {
     .on(t.request_id, t.fleet_id)
     .where(sql`status = 'active'`),
   index("rental_bids_fleet_status_idx").on(t.fleet_id, t.status),
+]);
+
+// ══════════════════════════════════════════════════════════════════════
+// PHASE 6 — AMBULANCE (spec v2 §A.5; DDL normative-by-reference v1 §A.5)
+// ══════════════════════════════════════════════════════════════════════
+
+export const certificationStatusEnum = pgEnum("certification_status", [
+  "unverified",
+  "pending",
+  "verified",
+  "revoked",
+]);
+
+/**
+ * Ambulance certification — self-describing BLS/ALS credential per
+ * (driver, vehicle) pair. UNIQUE(user_id, vehicle_id): renewal = PATCH the
+ * row back to 'pending' with new documents (F12), admin re-reviews.
+ */
+export const ambulanceCertifications = pgTable("ambulance_certifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  user_id: uuid("user_id").notNull().references((): any => users.id),
+  vehicle_id: uuid("vehicle_id").notNull().references((): any => vehicles.id),
+  certification_status: certificationStatusEnum("certification_status").notNull().default("pending"),
+  cert_number: text("cert_number"),
+  issuing_body: text("issuing_body"),
+  issued_at: timestamptz("issued_at"),
+  expires_at: timestamptz("expires_at"),
+  service_level: varchar("service_level", { length: 3 }), // CHECK IN ('BLS','ALS') enforced in handler
+  document_urls: jsonb("document_urls").notNull().default(sql`'[]'::jsonb`),
+  reviewed_by: uuid("reviewed_by").references((): any => users.id),
+  reviewed_at: timestamptz("reviewed_at"),
+  review_notes: text("review_notes"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("ambulance_certifications_user_vehicle_idx").on(t.user_id, t.vehicle_id),
+  index("ambulance_certifications_user_idx").on(t.user_id),
+  index("ambulance_certifications_status_idx").on(t.certification_status, t.expires_at),
+]);
+
+export const emergencyStatusEnum = pgEnum("emergency_status", [
+  "broadcasting",
+  "assigned",
+  "en_route_pickup",
+  "arrived",
+  "en_route_dropoff",
+  "completed",
+  "cancelled",
+  "failed",
+]);
+
+/**
+ * Emergency ambulance request — own chain, NO bidding (v1 §A.5.2 + v2 §B.5).
+ * First-accept-wins: conditional UPDATE WHERE status='broadcasting' inside a
+ * §B.0 tx. expires_at = created_at + platform_config('emergency_ttl_seconds').
+ * F41: patient_condition is NEVER included in broadcast payloads (service
+ * level + pickup only) and is winner/caller-only on reads.
+ */
+export const emergencyRequests = pgTable("emergency_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  caller_user_id: uuid("caller_user_id").notNull().references((): any => users.id),
+  pickup_address: text("pickup_address").notNull(),
+  pickup_lat: numeric("pickup_lat", { precision: 9, scale: 6 }).notNull(),
+  pickup_lng: numeric("pickup_lng", { precision: 9, scale: 6 }).notNull(),
+  dropoff_address: text("dropoff_address"),
+  dropoff_lat: numeric("dropoff_lat", { precision: 9, scale: 6 }),
+  dropoff_lng: numeric("dropoff_lng", { precision: 9, scale: 6 }),
+  patient_condition: text("patient_condition").notNull(),
+  requires_paramedic: boolean("requires_paramedic").notNull().default(false),
+  service_level: varchar("service_level", { length: 3 }), // CHECK IN ('BLS','ALS') enforced in handler
+  status: emergencyStatusEnum("status").notNull().default("broadcasting"),
+  accepted_cert_id: uuid("accepted_cert_id").references((): any => ambulanceCertifications.id),
+  accepted_at: timestamptz("accepted_at"),
+  en_route_pickup_at: timestamptz("en_route_pickup_at"),
+  arrived_at: timestamptz("arrived_at"),
+  en_route_dropoff_at: timestamptz("en_route_dropoff_at"),
+  completed_at: timestamptz("completed_at"),
+  cancelled_at: timestamptz("cancelled_at"),
+  cancel_reason: text("cancel_reason"),
+  failure_reason: text("failure_reason"),
+  expires_at: timestamptz("expires_at").notNull(),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("emergency_requests_status_idx").on(t.status, t.created_at),
+  index("emergency_requests_caller_idx").on(t.caller_user_id),
+  // F41 assignee-status index: driver's active-emergency exclusivity lookups
+  index("emergency_requests_assignee_status_idx").on(t.accepted_cert_id, t.status),
 ]);
 
 /**

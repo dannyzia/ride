@@ -243,6 +243,40 @@ export default function ServicesHub() {
               Send a package
             </Text>
           </TouchableOpacity>
+
+          {/* Ambulance (Phase 6 — §F.0 sanctioned navigation-only exception) */}
+          <TouchableOpacity
+            className="rounded-2xl p-5 items-center"
+            style={{
+              width: "48%",
+              backgroundColor: surfaceBg,
+              borderWidth: 1,
+              borderColor: borderColor,
+            }}
+            onPress={() => router.push("/(main)/(customer)/(ambulance)/emergency")}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Emergency ambulance"
+          >
+            <View
+              className="w-14 h-14 rounded-full items-center justify-center mb-3"
+              style={{ backgroundColor: colors.danger + "18" }}
+            >
+              <Ionicons name="medkit" size={28} color={colors.danger} />
+            </View>
+            <Text
+              className="text-base font-JakartaBold"
+              style={{ color: textPrimary }}
+            >
+              Ambulance
+            </Text>
+            <Text
+              className="text-xs font-Jakarta mt-1 text-center"
+              style={{ color: textSecondary }}
+            >
+              Emergency & scheduled
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Spacer for future services */}

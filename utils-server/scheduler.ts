@@ -2443,5 +2443,46 @@ export function startScheduler(): void {
     }
   }, 4_000); // 4-second interval for fast activation
 
-  logger.info("[scheduler] started (55 jobs)");
+  // ════════════════════════════════════════════════════════════════
+  // MARKETPLACE — PHASE 6: AMBULANCE (jobs 53, 56)
+  // ════════════════════════════════════════════════════════════════
+
+  // Job 53 — Emergency TTL sweep: broadcasting + expires_at < now() → failed
+  let emergencyTtlRunning = false;
+  setInterval(async () => {
+    if (emergencyTtlRunning) return;
+    try {
+      emergencyTtlRunning = true;
+      const { sweepExpiredEmergencies } = await import('../utils-server/emergencyChain');
+      const count = await sweepExpiredEmergencies();
+      if (count > 0) {
+        logger.info('[scheduler] job 53 emergency TTL sweep', { failed: count });
+      }
+    } catch (e) {
+      logger.error('[scheduler] job 53 emergency TTL sweep error', e);
+    } finally {
+      emergencyTtlRunning = false;
+    }
+  }, 2_000); // 2s — TTL is 120s; expired offers must die fast
+
+  // Job 56 — Emergency activation: broadcast new broadcasting emergencies
+  // to eligible certified drivers (REST→WS bridge, watermark pattern)
+  let emergencyActivationRunning = false;
+  setInterval(async () => {
+    if (emergencyActivationRunning) return;
+    try {
+      emergencyActivationRunning = true;
+      const { activateEmergencyRequests } = await import('../utils-server/emergencyActivation');
+      const count = await activateEmergencyRequests();
+      if (count > 0) {
+        logger.info('[scheduler] job 56 emergency activation', { reached: count });
+      }
+    } catch (e) {
+      logger.error('[scheduler] job 56 emergency activation error', e);
+    } finally {
+      emergencyActivationRunning = false;
+    }
+  }, 2_000); // 2s — TTL is 120s
+
+  logger.info("[scheduler] started (57 jobs)");
 }

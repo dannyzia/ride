@@ -17,8 +17,10 @@ import {
   drivers,
   couriers,
   users,
+  emergencyRequests,
+  ambulanceCertifications,
 } from '@/src/db/schema';
-import { eq, and, sql, isNull, inArray } from 'drizzle-orm';
+import { eq, and, sql, isNull, inArray, notInArray } from 'drizzle-orm';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
@@ -126,6 +128,25 @@ export async function POST(request: Request, { id }: { id: string }) {
 
         if (activeRental) {
           throw Object.assign(new Error('Driver already committed to a rental'), { status: 409, message: 'driver_already_committed' });
+        }
+
+        // §B.7 carry-in (Phase 6): no ACTIVE emergency commitment for the
+        // parcel-courier driver (accepted an emergency that is not terminal).
+        const [activeEmergency] = await tx
+          .select({ id: emergencyRequests.id })
+          .from(emergencyRequests)
+          .innerJoin(
+            ambulanceCertifications,
+            eq(emergencyRequests.accepted_cert_id, ambulanceCertifications.id),
+          )
+          .where(and(
+            eq(ambulanceCertifications.user_id, bid.courier_user_id),
+            notInArray(emergencyRequests.status, ['completed', 'cancelled', 'failed']),
+          ))
+          .limit(1);
+
+        if (activeEmergency) {
+          throw Object.assign(new Error('Driver already committed to an emergency'), { status: 409, message: 'driver_already_committed' });
         }
       } else {
         // Food hero: FOR UPDATE on users row as common serialization point

@@ -322,6 +322,11 @@ export function sendToUser(userId: string, msg: Record<string, unknown>) {
   }
 }
 
+// Emergency chain emits through the bus so utils-server-free consumers
+// (Expo REST routes) never pull this WS server module into their bundle.
+import { setEmergencyEmitter } from "./emergencyBus";
+setEmergencyEmitter(sendToUser);
+
 // ── HTTP Server ────────────────────────────────────────────────────────────
 const WEBSOCKET_INTERNAL_SECRET = process.env.WEBSOCKET_INTERNAL_SECRET ?? "";
 
@@ -1521,6 +1526,24 @@ wss.on("connection", (ws: WebSocket) => {
         } catch (err) {
           logger.error("[ws] delivery handler error", err);
           send(ws, { type: "error", message: "delivery_handler_error" });
+        }
+        break;
+      }
+
+      /* ── Emergency ambulance (Phase 6) ────────────────────────── */
+      case "emergency": {
+        try {
+          const { handleEmergencyMessage } = await import("./emergencyHandler");
+          handleEmergencyMessage(
+            ws,
+            `${domain}:${action}`,
+            msg.payload as Record<string, unknown> ?? {},
+            (target, event, payload) => send(target, { type: event, ...(payload as Record<string, unknown>) }),
+            { userId: client.userId },
+          );
+        } catch (err) {
+          logger.error("[ws] emergency handler error", err);
+          send(ws, { type: "error", message: "emergency_handler_error" });
         }
         break;
       }

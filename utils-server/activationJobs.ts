@@ -88,6 +88,9 @@ export async function activateRentalRequests(): Promise<number> {
       soft_deadline_at: req.soft_deadline_at,
       cargo_tags: req.cargo_tags,
       requested_vehicle_type: req.requested_vehicle_type,
+      rental_options: req.rental_options,           // Ruling 13: comma-separated option chips
+      scheduled_start_at: req.scheduled_start_at,   // Ruling 14: NULL = immediate
+      duration_hours: req.duration_hours,           // Ruling 14: rental duration
     };
 
     for (const member of members) {

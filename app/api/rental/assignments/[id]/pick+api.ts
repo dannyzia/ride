@@ -4,13 +4,14 @@
  * Sets confirmation_deadline_at = now()+60min (clock unfreeze).
  */
 import { db } from "@/src/db";
-import { awardedBidAssignments, rentalRequests, rentalRequestEvents, drivers, vehicles, deliveryLegs } from "@/src/db/schema";
+import { awardedBidAssignments, rentalRequests, rentalRequestEvents, drivers, vehicles, deliveryLegs, emergencyRequests, ambulanceCertifications } from "@/src/db/schema";
 import { requireFleetMember } from "@/lib/auth";
+import { isVerifiedCertPair } from "@/lib/ambulanceCerts";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { z } from "zod";
-import { eq, and, isNull, inArray } from "drizzle-orm";
+import { eq, and, isNull, inArray, notInArray } from "drizzle-orm";
 
 const pickSchema = z.object({
   driver_user_id: z.string().uuid(),
@@ -93,6 +94,30 @@ export async function POST(request: Request, { id }: { id: string }) {
       );
     }
 
+    // §C.2b: ambulance-scheduled — the picked (driver, vehicle) must BE a
+    // VERIFIED, unexpired cert pair matching the request's service_level.
+    if (assignment.request_id) {
+      const [parent] = await db
+        .select({ category: rentalRequests.category, service_level: rentalRequests.service_level })
+        .from(rentalRequests)
+        .where(eq(rentalRequests.id, assignment.request_id))
+        .limit(1);
+
+      if (parent?.category === "ambulance_scheduled" && parent.service_level) {
+        const pairOk = await isVerifiedCertPair(
+          result.data.driver_user_id,
+          result.data.vehicle_id,
+          parent.service_level,
+        );
+        if (!pairOk) {
+          return Response.json(
+            { error: "ambulance_certification_required", message: `Picked (driver, vehicle) must hold a verified ${parent.service_level} certification` },
+            { status: 403 },
+          );
+        }
+      }
+    }
+
     // §B.7 cross-vertical exclusivity + F37: lock drivers row
     const [lockedDriver] = await db
       .select()
@@ -138,6 +163,30 @@ export async function POST(request: Request, { id }: { id: string }) {
     if (activeDeliveryLeg) {
       return Response.json(
         { error: "driver_already_committed", message: "Driver has an active delivery commitment" },
+        { status: 409 },
+      );
+    }
+
+    // §B.7 carry-in (Phase 6): no ACTIVE emergency commitment for this
+    // driver (accepted an emergency whose status is not terminal).
+    const [activeEmergency] = await db
+      .select({ id: emergencyRequests.id })
+      .from(emergencyRequests)
+      .innerJoin(
+        ambulanceCertifications,
+        eq(emergencyRequests.accepted_cert_id, ambulanceCertifications.id),
+      )
+      .where(
+        and(
+          eq(ambulanceCertifications.user_id, result.data.driver_user_id),
+          notInArray(emergencyRequests.status, ["completed", "cancelled", "failed"]),
+        ),
+      )
+      .limit(1);
+
+    if (activeEmergency) {
+      return Response.json(
+        { error: "driver_already_committed", message: "Driver has an active emergency commitment" },
         { status: 409 },
       );
     }

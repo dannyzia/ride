@@ -11,6 +11,7 @@
 import { db } from "@/src/db";
 import { rentalBids, rentalRequests } from "@/src/db/schema";
 import { requireFleetMarketplaceAccess } from "@/lib/marketplaceRbac";
+import { fleetHasVerifiedCertPair } from "@/lib/ambulanceCerts";
 import { parseJsonBody } from "@/lib/parseBody";
 import { getConfigInt } from "@/lib/platformConfig";
 import { logger } from "@/lib/logger";
@@ -24,11 +25,13 @@ const submitSchema = z.object({
   vehicle_type: z.enum([
     "pickup", "mini_truck", "medium_truck", "heavy_truck",
     "trailer", "van", "ambulance_basic", "ambulance_advanced",
+    "car_compact", "car_economy", "car_comfort", "car_premium", "car_xl",
   ]),
   driver_user_id: z.string().uuid().optional(), // REQUIRED when parent.tracking_required=true
   vehicle_id: z.string().uuid().optional(),
   quoted_price_bdt: z.number().int().positive(),
   quoted_notes: z.string().max(500).optional(),
+  overtime_rate_bdt: z.number().int().nonnegative().optional(), // Ruling 15: paisa, display-only
 });
 
 export async function POST(request: Request) {
@@ -85,6 +88,19 @@ export async function POST(request: Request) {
       );
     }
 
+    // Ambulance-scheduled (§C.2, ruling 6): the bidding fleet must hold ≥1
+    // VERIFIED cert pair matching the request's service_level — cert holder
+    // is an active fleet driver, cert vehicle ∈ fleet, unexpired.
+    if (req.category === "ambulance_scheduled" && req.service_level) {
+      const hasPair = await fleetHasVerifiedCertPair(fleetId!, req.service_level);
+      if (!hasPair) {
+        return Response.json(
+          { error: "ambulance_certification_required", message: `Fleet needs a verified ${req.service_level} ambulance certification` },
+          { status: 403 },
+        );
+      }
+    }
+
     // Price bounds (F18)
     const minPrice = await getConfigInt("rental_min_price_bdt", 10000);
     const maxPrice = await getConfigInt("rental_max_price_bdt", 5000000);
@@ -134,6 +150,7 @@ export async function POST(request: Request) {
         vehicle_type: body.vehicle_type,
         quoted_price_bdt: body.quoted_price_bdt,
         quoted_notes: body.quoted_notes,
+        overtime_rate_bdt: body.overtime_rate_bdt ?? null,
       })
       .returning({ id: rentalBids.id });
 

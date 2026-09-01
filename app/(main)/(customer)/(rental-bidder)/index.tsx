@@ -293,6 +293,53 @@ export default function BidderRequestsScreen() {
                     </View>
                   )}
                 </View>
+
+                {/* Bid button — only for requests not yet bidded on */}
+                {!req.already_bid && (
+                  <TouchableOpacity
+                    onPress={() => router.push({
+                      pathname: "/(main)/(customer)/(rental-bidder)/bid-submit",
+                      params: { requestId: req.id, category: req.category },
+                    })}
+                    style={{
+                      backgroundColor: colors.primary,
+                      borderRadius: 10,
+                      height: 44,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginTop: 8,
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Submit a bid"
+                  >
+                    <Text style={{ color: "#FFFFFF", fontSize: 14, fontFamily: "JakartaSemiBold" }}>
+                      Bid Now
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {req.already_bid && (
+                  <TouchableOpacity
+                    onPress={() => router.push({
+                      pathname: "/(main)/(customer)/(rental-bidder)/bid-submit",
+                      params: { requestId: req.id, category: req.category },
+                    })}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: colors.primary,
+                      borderRadius: 10,
+                      height: 44,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginTop: 8,
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Update your bid"
+                  >
+                    <Text style={{ color: colors.primary, fontSize: 14, fontFamily: "JakartaSemiBold" }}>
+                      Update Bid
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </TouchableOpacity>
             );
           })

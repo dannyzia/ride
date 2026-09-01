@@ -7,9 +7,10 @@ import type { User } from '@supabase/supabase-js';
 import { verifySupabaseToken } from './auth';
 import { supabaseAdmin } from './supabaseServer';
 import { db } from '@/src/db';
-import { shops, shopMembers } from '@/src/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { shops, shopMembers, ambulanceCertifications, drivers } from '@/src/db/schema';
+import { eq, and, isNull, or, gt } from 'drizzle-orm';
 import { logger } from './logger';
+import { serviceLevelSatisfies } from './ambulanceCerts';
 
 export type ShopMemberRole = 'OWNER' | 'MANAGER' | 'STAFF';
 
@@ -247,5 +248,82 @@ export function requireCourier(type: 'parcel' | 'food') {
     }
 
     return { supabaseUser, dbUser, courier, driver };
+  };
+}
+
+// ══════════════════════════════════════════════════════════════
+// requireAmbulanceCertified (Phase 6 — §E.3)
+// ══════════════════════════════════════════════════════════════
+
+export interface AmbulanceAuthResult {
+  supabaseUser: User;
+  dbUser: { id: string; role: string };
+  driver: { id: string; fleet_id: string | null };
+  cert: { id: string; service_level: string | null };
+}
+
+/**
+ * Curried guard: requireAmbulanceCertified(minServiceLevel) ensures:
+ * 1. Valid Supabase token
+ * 2. Active drivers row (cert holders are drivers)
+ * 3. ≥1 VERIFIED, unexpired ambulance_certifications row whose service_level
+ *    satisfies the minimum (BLS ⊂ ALS — §E.3)
+ */
+export function requireAmbulanceCertified(minServiceLevel: 'BLS' | 'ALS') {
+  return async (request: Request): Promise<AmbulanceAuthResult> => {
+    const supabaseUser = await verifySupabaseToken(request);
+
+    const { data: dbUser } = await supabaseAdmin
+      .from('users')
+      .select('id, role')
+      .eq('auth_uid', supabaseUser.id)
+      .maybeSingle();
+    if (!dbUser) throw Object.assign(new Error('Forbidden'), { status: 403 });
+
+    const { data: driver } = await supabaseAdmin
+      .from('drivers')
+      .select('id, fleet_id, status')
+      .eq('user_id', dbUser.id)
+      .eq('status', 'active')
+      .maybeSingle();
+    if (!driver) {
+      throw Object.assign(new Error('ambulance_certification_required'), {
+        status: 403,
+        message: 'Active driver account required for ambulance duty',
+      });
+    }
+
+    const certs = await db
+      .select({
+        id: ambulanceCertifications.id,
+        service_level: ambulanceCertifications.service_level,
+        expires_at: ambulanceCertifications.expires_at,
+      })
+      .from(ambulanceCertifications)
+      .where(
+        and(
+          eq(ambulanceCertifications.user_id, dbUser.id),
+          eq(ambulanceCertifications.certification_status, 'verified'),
+          or(
+            isNull(ambulanceCertifications.expires_at),
+            gt(ambulanceCertifications.expires_at, new Date()),
+          ),
+        ),
+      );
+
+    const cert = certs.find((c) => serviceLevelSatisfies(c.service_level, minServiceLevel));
+    if (!cert) {
+      throw Object.assign(new Error('ambulance_certification_required'), {
+        status: 403,
+        message: `A verified ${minServiceLevel} ambulance certification is required`,
+      });
+    }
+
+    return {
+      supabaseUser,
+      dbUser,
+      driver: { id: driver.id, fleet_id: driver.fleet_id },
+      cert: { id: cert.id, service_level: cert.service_level },
+    };
   };
 }
