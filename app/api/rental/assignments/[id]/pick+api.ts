@@ -20,6 +20,11 @@ const pickSchema = z.object({
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
+    // B7: UUID guard before the assignment SELECT
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return Response.json({ error: "invalid_uuid", message: "Invalid assignment id" }, { status: 400 });
+    }
+
     const assignRows = await db
       .select()
       .from(awardedBidAssignments)
@@ -48,7 +53,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       );
     }
 
-    await requireFleetMember(assignment.fleet_id, ["OWNER", "MANAGER", "DISPATCHER"])(
+    const { supabaseUser: actor } = await requireFleetMember(assignment.fleet_id, ["OWNER", "MANAGER", "DISPATCHER"])(
       request,
     );
 
@@ -70,8 +75,8 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     if (!driverRows[0]) {
       return Response.json(
-        { error: "driver_not_found", message: "Driver not found or not active in this fleet" },
-        { status: 404 },
+        { error: "driver_not_in_fleet", message: "Driver not found or not active in this fleet" },
+        { status: 403 },
       );
     }
 
@@ -89,8 +94,8 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     if (!vehicleRows[0]) {
       return Response.json(
-        { error: "vehicle_not_found", message: "Vehicle not found in this fleet" },
-        { status: 404 },
+        { error: "vehicle_not_in_fleet", message: "Vehicle not found in this fleet" },
+        { status: 403 },
       );
     }
 
@@ -118,90 +123,94 @@ export async function POST(request: Request, { id }: { id: string }) {
       }
     }
 
-    // §B.7 cross-vertical exclusivity + F37: lock drivers row
-    const [lockedDriver] = await db
-      .select()
-      .from(drivers)
-      .where(eq(drivers.id, driverRows[0].id))
-      .for("update");
-
-    // §B.7 Check 1: no active rental assignment (join parent + filter status)
-    const activeRentalStatuses = ["awarded", "confirmed"] as const;
-    const activeAssignments = await db
-      .select({ id: awardedBidAssignments.id })
-      .from(awardedBidAssignments)
-      .innerJoin(rentalRequests, eq(awardedBidAssignments.request_id, rentalRequests.id))
-      .where(
-        and(
-          eq(awardedBidAssignments.assigned_driver_user_id, result.data.driver_user_id),
-          isNull(awardedBidAssignments.released_at),
-          inArray(rentalRequests.status, activeRentalStatuses),
-        ),
-      )
-      .limit(1);
-
-    if (activeAssignments.length > 0 && activeAssignments[0].id !== id) {
-      return Response.json(
-        { error: "driver_already_committed", message: "Driver has an active rental commitment" },
-        { status: 409 },
-      );
-    }
-
-    // §B.7 Check 2: no active delivery leg for this driver
-    const activeDeliveryStates = ["pending", "assigned", "picked_up", "in_transit"] as const;
-    const [activeDeliveryLeg] = await db
-      .select({ id: deliveryLegs.id })
-      .from(deliveryLegs)
-      .where(
-        and(
-          eq(deliveryLegs.courier_user_id, result.data.driver_user_id),
-          inArray(deliveryLegs.leg_state, activeDeliveryStates),
-        ),
-      )
-      .limit(1);
-
-    if (activeDeliveryLeg) {
-      return Response.json(
-        { error: "driver_already_committed", message: "Driver has an active delivery commitment" },
-        { status: 409 },
-      );
-    }
-
-    // §B.7 carry-in (Phase 6): no ACTIVE emergency commitment for this
-    // driver (accepted an emergency whose status is not terminal).
-    const [activeEmergency] = await db
-      .select({ id: emergencyRequests.id })
-      .from(emergencyRequests)
-      .innerJoin(
-        ambulanceCertifications,
-        eq(emergencyRequests.accepted_cert_id, ambulanceCertifications.id),
-      )
-      .where(
-        and(
-          eq(ambulanceCertifications.user_id, result.data.driver_user_id),
-          notInArray(emergencyRequests.status, ["completed", "cancelled", "failed"]),
-        ),
-      )
-      .limit(1);
-
-    if (activeEmergency) {
-      return Response.json(
-        { error: "driver_already_committed", message: "Driver has an active emergency commitment" },
-        { status: 409 },
-      );
-    }
-
-    // Fulfill assignment
+    // §B.0 + §B.7 + F37: all exclusivity checks + FOR UPDATE + conditional
+    // fulfillment run INSIDE the transaction so the drivers-row lock is held
+    // until commit (the common serialization point that makes cross-vertical
+    // exclusivity atomic). Conditional WHERE guards against a racing SLA sweep.
     await db.transaction(async (tx) => {
-      await tx
+      // F37: lock the driver's drivers row inside the tx
+      const [lockedDriver] = await tx
+        .select()
+        .from(drivers)
+        .where(eq(drivers.id, driverRows[0].id))
+        .for("update");
+
+      if (!lockedDriver) {
+        throw Object.assign(new Error("Driver not found"), { status: 409 });
+      }
+
+      // §B.7 Check 1: no active rental assignment (join parent + filter status)
+      const activeRentalStatuses = ["awarded", "confirmed"] as const;
+      const activeAssignments = await tx
+        .select({ id: awardedBidAssignments.id })
+        .from(awardedBidAssignments)
+        .innerJoin(rentalRequests, eq(awardedBidAssignments.request_id, rentalRequests.id))
+        .where(
+          and(
+            eq(awardedBidAssignments.assigned_driver_user_id, result.data.driver_user_id),
+            isNull(awardedBidAssignments.released_at),
+            inArray(rentalRequests.status, activeRentalStatuses),
+          ),
+        )
+        .limit(1);
+
+      if (activeAssignments.length > 0 && activeAssignments[0].id !== id) {
+        throw Object.assign(new Error("driver_already_committed"), { status: 409 });
+      }
+
+      // §B.7 Check 2: no active delivery leg for this driver
+      const activeDeliveryStates = ["pending", "assigned", "picked_up", "in_transit"] as const;
+      const [activeDeliveryLeg] = await tx
+        .select({ id: deliveryLegs.id })
+        .from(deliveryLegs)
+        .where(
+          and(
+            eq(deliveryLegs.courier_user_id, result.data.driver_user_id),
+            inArray(deliveryLegs.leg_state, activeDeliveryStates),
+          ),
+        )
+        .limit(1);
+
+      if (activeDeliveryLeg) {
+        throw Object.assign(new Error("driver_already_committed"), { status: 409 });
+      }
+
+      // §B.7 carry-in (Phase 6): no ACTIVE emergency commitment for this
+      // driver (accepted an emergency whose status is not terminal).
+      const [activeEmergency] = await tx
+        .select({ id: emergencyRequests.id })
+        .from(emergencyRequests)
+        .innerJoin(
+          ambulanceCertifications,
+          eq(emergencyRequests.accepted_cert_id, ambulanceCertifications.id),
+        )
+        .where(
+          and(
+            eq(ambulanceCertifications.user_id, result.data.driver_user_id),
+            notInArray(emergencyRequests.status, ["completed", "cancelled", "failed"]),
+          ),
+        )
+        .limit(1);
+
+      if (activeEmergency) {
+        throw Object.assign(new Error("driver_already_committed"), { status: 409 });
+      }
+
+      // Conditional fulfillment: guard against racing SLA sweep (§B.0)
+      const fulfilled = await tx
         .update(awardedBidAssignments)
         .set({
           assigned_driver_user_id: result.data.driver_user_id,
           assigned_vehicle_id: result.data.vehicle_id,
-          assigned_by_user_id: result.data.driver_user_id,
+          assigned_by_user_id: actor.id,
           assigned_at: new Date(),
         })
-        .where(eq(awardedBidAssignments.id, id));
+        .where(and(eq(awardedBidAssignments.id, id), isNull(awardedBidAssignments.released_at)))
+        .returning({ id: awardedBidAssignments.id });
+
+      if (fulfilled.length === 0) {
+        throw Object.assign(new Error("assignment_released"), { status: 409 });
+      }
 
       // Unfreeze confirmation clock (F4): now + 60 min
       await tx
@@ -235,11 +244,23 @@ export async function POST(request: Request, { id }: { id: string }) {
         { error: "forbidden", message: "Not authorized" },
         { status: 403 },
       );
-    if (status === 409)
+    if (status === 409) {
+      const msg = (err as Error).message;
+      if (msg === "assignment_released")
+        return Response.json(
+          { error: "assignment_released", message: "Assignment has been released" },
+          { status: 409 },
+        );
+      if (msg === "driver_already_committed")
+        return Response.json(
+          { error: "driver_already_committed", message: "Driver has an active commitment" },
+          { status: 409 },
+        );
       return Response.json(
-        { error: "invalid_transition", message: (err as Error).message },
+        { error: "invalid_transition", message: msg },
         { status: 409 },
       );
+    }
     logger.error("[rental/pick POST] error", err);
     return Response.json(
       { error: "internal_error", message: "An internal server error occurred" },

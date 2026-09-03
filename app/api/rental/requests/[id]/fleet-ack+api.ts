@@ -12,6 +12,11 @@ import { eq, and, isNull } from "drizzle-orm";
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
+    // B7: UUID guard before any DB access
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return Response.json({ error: "invalid_uuid", message: "Invalid request id" }, { status: 400 });
+    }
+
     const reqRows = await db
       .select()
       .from(rentalRequests)
@@ -58,10 +63,22 @@ export async function POST(request: Request, { id }: { id: string }) {
     );
 
     await db.transaction(async (tx) => {
-      await tx
+      const updated = await tx
         .update(rentalRequests)
         .set({ fleet_ack_at: new Date(), updated_at: new Date() })
-        .where(eq(rentalRequests.id, id));
+        .where(
+          and(
+            eq(rentalRequests.id, id),
+            eq(rentalRequests.status, "awarded"),
+            eq(rentalRequests.tracking_required, true),
+            isNull(rentalRequests.fleet_ack_at),
+          ),
+        )
+        .returning({ id: rentalRequests.id });
+
+      if (updated.length === 0) {
+        throw Object.assign(new Error("invalid_transition"), { status: 409 });
+      }
 
       await tx.insert(rentalRequestEvents).values({
         request_id: id,

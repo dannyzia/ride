@@ -193,17 +193,19 @@ describe("Phase 6 — ambulance-scheduled bid gate (§C.2a)", () => {
 
   it("inserts the bid when the fleet holds a matching verified pair", async () => {
     mockFleetHasPair.mockResolvedValue(true);
-    mockQueueSelect([
-      {
-        id: bidBody.request_id,
-        category: "ambulance_scheduled",
-        service_level: "ALS",
-        status: "broadcasting",
-        soft_deadline_at: future,
-        tracking_required: false,
-      },
-      [{ cnt: 0 }], // open-bid cap
-    ]);
+    const requestRow = {
+      id: bidBody.request_id,
+      category: "ambulance_scheduled",
+      service_level: "ALS",
+      status: "broadcasting",
+      soft_deadline_at: future,
+      tracking_required: false,
+    };
+    // Select order (N12 submit tx): pre-check request → open-bid cap →
+    // in-tx FOR UPDATE re-lock of the request
+    mockQueueSelect([requestRow]);
+    mockQueueSelect([{ cnt: 0 }]);
+    mockQueueSelect([requestRow]);
 
     const res = await bidsPOST(
       new Request("http://localhost/api/rental/bids", {
@@ -227,6 +229,8 @@ describe("Phase 6 — pick-time cert pair + §B.7 emergency block", () => {
     mockIsVerifiedPair.mockReset();
   });
 
+  const ASGN_ID = "44444444-4444-4444-8444-444444444441"; // B7: route ids must be UUIDs
+
   const pickBody = {
     driver_user_id: "22222222-2222-4222-8222-222222222222",
     vehicle_id: "33333333-3333-4333-8333-333333333333",
@@ -236,7 +240,7 @@ describe("Phase 6 — pick-time cert pair + §B.7 emergency block", () => {
     // ONE queue entry PER select statement (in handler execution order)
     mockQueueSelect([
       {
-        id: "asgn-1",
+        id: ASGN_ID,
         request_id: "44444444-4444-4444-8444-444444444444",
         fleet_id: "fleet-1",
         released_at: null,
@@ -260,7 +264,7 @@ describe("Phase 6 — pick-time cert pair + §B.7 emergency block", () => {
         headers: { authorization: "Bearer t", "content-type": "application/json" },
         body: JSON.stringify(pickBody),
       }),
-      { id: "asgn-1" },
+      { id: ASGN_ID },
     );
 
     expect(res.status).toBe(403);
@@ -276,10 +280,11 @@ describe("Phase 6 — pick-time cert pair + §B.7 emergency block", () => {
   it("409 driver_already_committed when the driver holds an ACTIVE emergency", async () => {
     queueHappyPathAssignment();
     mockIsVerifiedPair.mockResolvedValue(true);
-    // §B.7 selects: active rental — none; active delivery — none; ACTIVE EMERGENCY
-    mockQueueSelect([]);
-    mockQueueSelect([]);
-    mockQueueSelect([{ id: "e9" }]);
+    // §B.7 selects (now inside tx): locked-driver, active rental, active delivery, ACTIVE EMERGENCY
+    mockQueueSelect([{ id: "d1", user_id: pickBody.driver_user_id, fleet_id: "fleet-1", status: "active" }]); // lockedDriver
+    mockQueueSelect([]); // active rental — none
+    mockQueueSelect([]); // active delivery — none
+    mockQueueSelect([{ id: "e9" }]); // ACTIVE EMERGENCY
 
     const res = await pickPOST(
       new Request("http://localhost/pick", {
@@ -287,7 +292,7 @@ describe("Phase 6 — pick-time cert pair + §B.7 emergency block", () => {
         headers: { authorization: "Bearer t", "content-type": "application/json" },
         body: JSON.stringify(pickBody),
       }),
-      { id: "asgn-1" },
+      { id: ASGN_ID },
     );
 
     expect(res.status).toBe(409);
@@ -298,10 +303,12 @@ describe("Phase 6 — pick-time cert pair + §B.7 emergency block", () => {
   it("terminal emergency (completed/cancelled/failed) does NOT block the pick", async () => {
     queueHappyPathAssignment();
     mockIsVerifiedPair.mockResolvedValue(true);
+    // §B.7 selects (now inside tx): locked-driver, active rental, active delivery, emergency
+    mockQueueSelect([{ id: "d1", user_id: pickBody.driver_user_id, fleet_id: "fleet-1", status: "active" }]); // lockedDriver
     mockQueueSelect([]); // rental — none
     mockQueueSelect([]); // delivery — none
     mockQueueSelect([]); // emergency — none active
-    mockQueueUpdate([{ id: "asgn-1" }]); // assignment update
+    mockQueueUpdate([{ id: ASGN_ID }]); // assignment update
     mockQueueUpdate([{ id: "req-1" }]); // rental_requests confirmation update
 
     const res = await pickPOST(
@@ -310,7 +317,7 @@ describe("Phase 6 — pick-time cert pair + §B.7 emergency block", () => {
         headers: { authorization: "Bearer t", "content-type": "application/json" },
         body: JSON.stringify(pickBody),
       }),
-      { id: "asgn-1" },
+      { id: ASGN_ID },
     );
 
     expect(res.status).toBe(200);
