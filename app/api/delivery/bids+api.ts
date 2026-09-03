@@ -25,16 +25,19 @@ export async function POST(request: Request) {
       return Response.json({ error: 'feature_disabled', message: 'Delivery marketplace is not enabled' }, { status: 404 });
     }
 
-    // Require courier — food or parcel (request category determines which)
-    const auth = await requireCourier('food')(request).catch(() => requireCourier('parcel')(request));
-
     const parsed = await parseJsonBody(request, submitBidSchema);
     if (!parsed.ok) return parsed.response;
     const data = parsed.data;
 
-    // Verify request exists and is in bidding state
+    // Resolve request type BEFORE auth — source_shop_order_id present = food, absent = parcel
     const [req] = await db
-      .select()
+      .select({
+        id: deliveryRequests.id,
+        status: deliveryRequests.status,
+        deadline_at: deliveryRequests.deadline_at,
+        source_shop_order_id: deliveryRequests.source_shop_order_id,
+        required_vehicle_type: deliveryRequests.required_vehicle_type,
+      })
       .from(deliveryRequests)
       .where(eq(deliveryRequests.id, data.request_id))
       .limit(1);
@@ -42,11 +45,39 @@ export async function POST(request: Request) {
     if (!req) {
       return Response.json({ error: 'not_found', message: 'Delivery request not found' }, { status: 404 });
     }
+
+    // Require courier matching the request type (food vs parcel)
+    const requiredType: 'food' | 'parcel' = req.source_shop_order_id ? 'food' : 'parcel';
+    const auth = await requireCourier(requiredType)(request);
+
+    // B3 (audit #14): defense-in-depth — the caller's qualifying courier row
+    // must be of the derived category type.
+    if (auth.courier.courier_type !== requiredType) {
+      return Response.json(
+        { error: 'courier_type_mismatch', message: 'Courier type does not match this request' },
+        { status: 403 },
+      );
+    }
+
     if (req.status !== 'pending') {
       return Response.json({ error: 'not_biddable', message: 'Request is not accepting bids' }, { status: 409 });
     }
     if (new Date(req.deadline_at) < new Date()) {
       return Response.json({ error: 'deadline_passed', message: 'Bidding deadline has passed' }, { status: 409 });
+    }
+
+    // §C.3: required_vehicle_type applies to PARCEL requests only — the bid's
+    // vehicle_type must match it exactly.
+    if (requiredType === 'parcel' && req.required_vehicle_type) {
+      if (data.vehicle_type !== req.required_vehicle_type) {
+        return Response.json(
+          {
+            error: 'vehicle_type_mismatch',
+            message: `This request requires a ${req.required_vehicle_type}`,
+          },
+          { status: 400 },
+        );
+      }
     }
 
     // Check for existing active bid (partial unique enforces this, but check first for better error)
