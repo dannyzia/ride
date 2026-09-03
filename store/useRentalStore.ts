@@ -18,7 +18,14 @@ export interface RentalRequest {
   dropoff_address: string;
   dropoff_lat: number;
   dropoff_lng: number;
+  cargo_tags?: string[] | null;
+  cargo_weight_kg?: number | null;
+  cargo_volume_m3?: string | number | null;
+  cargo_description?: string | null;
+  rental_options?: string | null;
   requested_vehicle_type: string | null;
+  scheduled_start_at?: string | null;
+  duration_hours?: number | null;
   bidding_window_seconds: number;
   soft_deadline_at: string;
   awarded_bid_id: string | null;

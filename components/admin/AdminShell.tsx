@@ -25,7 +25,7 @@ interface NavItem {
   route: string;
   label: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  group: "Operations" | "Catalogs" | "Programs" | "Config" | "Finance";
+  group: "Operations" | "Catalogs" | "Programs" | "Config" | "Finance" | "Marketplace";
   /** Roles that can see this item. Omit = all admin roles. */
   roles?: AdminRole[];
 }
@@ -244,6 +244,64 @@ const NAV: NavItem[] = [
     roles: OWNER_ADMIN, // admin.read
   },
 
+  // Marketplace
+  {
+    route: "/admin/marketplace/overview",
+    label: "MKT Overview",
+    icon: "chart-bar",
+    group: "Marketplace",
+    roles: OWNER_ADMIN, // marketplace.write
+  },
+  {
+    route: "/admin/marketplace/shops",
+    label: "Shops",
+    icon: "store",
+    group: "Marketplace",
+    roles: OWNER_ADMIN,
+  },
+  {
+    route: "/admin/marketplace/rental",
+    label: "Rental Requests",
+    icon: "car-hatchback",
+    group: "Marketplace",
+    roles: OWNER_ADMIN,
+  },
+  {
+    route: "/admin/marketplace/delivery",
+    label: "Deliveries",
+    icon: "truck-delivery",
+    group: "Marketplace",
+    roles: OWNER_ADMIN,
+  },
+  {
+    route: "/admin/marketplace/emergency",
+    label: "Emergencies",
+    icon: "ambulance",
+    group: "Marketplace",
+    roles: OWNER_ADMIN,
+  },
+  {
+    route: "/admin/marketplace/certifications",
+    label: "Certifications",
+    icon: "certificate",
+    group: "Marketplace",
+    roles: OWNER_ADMIN,
+  },
+  {
+    route: "/admin/marketplace/service-zones",
+    label: "Service Zones",
+    icon: "map-marker-radius",
+    group: "Marketplace",
+    roles: OWNER_ADMIN,
+  },
+  {
+    route: "/admin/marketplace/couriers",
+    label: "Couriers",
+    icon: "account-group",
+    group: "Marketplace",
+    roles: OWNER_ADMIN,
+  },
+
   // Config
   {
     route: "/admin/platform-config",
@@ -266,6 +324,7 @@ const GROUP_ORDER: NavItem["group"][] = [
   "Catalogs",
   "Programs",
   "Finance",
+  "Marketplace",
   "Config",
 ];
 

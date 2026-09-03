@@ -18,8 +18,6 @@ import { jest } from "@jest/globals";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { isVerticalEnabled } from "@/lib/platformConfig";
 import { roleHasPermission } from "@/lib/adminRbac";
-import { PATCH as rfqPatch } from "@/app/api/shop/rfq/[id]+api";
-import { POST as rfqPost } from "@/app/api/shop/rfq/[id]+api";
 
 // ─── Mock DB infrastructure ───────────────────────────────────────────────
 let mockSelectQueue: (() => unknown[])[] = [];

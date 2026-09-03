@@ -229,15 +229,22 @@ export async function transitionEmergencyRequest(
       .where(eq(emergencyRequests.id, requestId))
       .returning();
 
-    // Relay to the caller (§D.2.4)
-    emergencySendToUser((updatedRow as { caller_user_id: string }).caller_user_id, {
-      type: "emergency:status",
-      request_id: requestId,
-      status: newStatus,
-      updated_at: new Date().toISOString(),
-    });
-
     return updatedRow as Record<string, unknown>;
+  }).then((updatedRow) => {
+    // N14: WS relay AFTER commit — an emit inside the tx callback fires even
+    // when the transaction later rolls back (phantom notification to caller).
+    // A relay failure must not fail the already-committed transition.
+    try {
+      emergencySendToUser((updatedRow as { caller_user_id: string }).caller_user_id, {
+        type: "emergency:status",
+        request_id: requestId,
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      logger.warn("[emergencyChain] status relay failed", { request_id: requestId, err });
+    }
+    return updatedRow;
   });
 }
 

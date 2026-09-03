@@ -18,6 +18,7 @@ import {
 } from "../src/db/schema";
 import { eq, and, isNull, lt, sql, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { getConfigInt } from "../lib/platformConfig";
 
 /**
  * Append an event to rental_request_events (append-only, F21).
@@ -27,8 +28,11 @@ export async function appendEvent(
   eventType: string,
   payload: Record<string, unknown>,
   createdBy?: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tx?: any,
 ) {
-  await db.insert(rentalRequestEvents).values({
+  const executor = tx ?? db;
+  await executor.insert(rentalRequestEvents).values({
     request_id: requestId,
     event_type: eventType,
     payload,
@@ -114,13 +118,14 @@ export async function demoteWinner(
         })
         .where(eq(rentalRequests.id, requestId));
 
-      await appendEvent(requestId, "no_bidders", { reason });
+      await appendEvent(requestId, "no_bidders", { reason }, undefined, tx);
 
       return { ok: true, nextStatus: "no_bidders" as const };
     }
 
-    // Standing bids exist → collecting with 10-min reselect window
-    const reselectDeadline = new Date(Date.now() + 10 * 60 * 1000);
+    // Standing bids exist → collecting with reselect window (ruling 8: admin-tunable)
+    const reselectMinutes = await getConfigInt("rental_reselect_window_minutes", 10);
+    const reselectDeadline = new Date(Date.now() + reselectMinutes * 60 * 1000);
 
     await tx
       .update(rentalRequests)
@@ -137,7 +142,7 @@ export async function demoteWinner(
       reason,
       standing_bids: cnt,
       reselect_deadline_at: reselectDeadline.toISOString(),
-    });
+    }, undefined, tx);
 
     return { ok: true, nextStatus: "collecting" as const, standingBids: cnt };
   });
@@ -180,10 +185,20 @@ export async function sweepDeadlines() {
 
     if (cnt > 0) {
       // Has bids → expired (not auto-awarded — customer-selects)
-      await db
+      // Conditional WHERE guards against racing accept-bid (§B.0)
+      const updated = await db
         .update(rentalRequests)
         .set({ status: "expired", updated_at: now })
-        .where(eq(rentalRequests.id, row.id));
+        .where(
+          and(
+            eq(rentalRequests.id, row.id),
+            sql`${rentalRequests.status} IN ('broadcasting', 'collecting')`,
+            isNull(rentalRequests.awarded_at),
+          ),
+        )
+        .returning({ id: rentalRequests.id });
+
+      if (updated.length === 0) continue; // raced — skip
 
       await db
         .update(rentalBids)
@@ -198,10 +213,20 @@ export async function sweepDeadlines() {
       await appendEvent(row.id, "expired", { active_bids: cnt });
     } else {
       // No bids → no_bidders
-      await db
+      // Conditional WHERE guards against racing accept-bid (§B.0)
+      const updated = await db
         .update(rentalRequests)
         .set({ status: "no_bidders", updated_at: now })
-        .where(eq(rentalRequests.id, row.id));
+        .where(
+          and(
+            eq(rentalRequests.id, row.id),
+            sql`${rentalRequests.status} IN ('broadcasting', 'collecting')`,
+            isNull(rentalRequests.awarded_at),
+          ),
+        )
+        .returning({ id: rentalRequests.id });
+
+      if (updated.length === 0) continue; // raced — skip
 
       await appendEvent(row.id, "no_bidders", {});
     }
@@ -220,6 +245,22 @@ export async function sweepDeadlines() {
     );
 
   for (const row of reselectExpired) {
+    // Conditional WHERE guards against racing accept-bid (§B.0)
+    const updated = await db
+      .update(rentalRequests)
+      .set({ status: "expired", reselect_deadline_at: null, updated_at: now })
+      .where(
+        and(
+          eq(rentalRequests.id, row.id),
+          eq(rentalRequests.status, "collecting"),
+          lt(rentalRequests.reselect_deadline_at, now),
+          sql`${rentalRequests.reselect_deadline_at} IS NOT NULL`,
+        ),
+      )
+      .returning({ id: rentalRequests.id });
+
+    if (updated.length === 0) continue; // raced — skip
+
     // Set standing active bids → expired
     await db
       .update(rentalBids)
@@ -230,11 +271,6 @@ export async function sweepDeadlines() {
           eq(rentalBids.status, "active"),
         ),
       );
-
-    await db
-      .update(rentalRequests)
-      .set({ status: "expired", reselect_deadline_at: null, updated_at: now })
-      .where(eq(rentalRequests.id, row.id));
 
     await appendEvent(row.id, "expired", { reason: "reselect_window_lapsed" });
   }
@@ -272,6 +308,7 @@ export async function sweepAssignmentSla() {
   }
 
   // Branch (b) F45: tracking, fleet_ack_at IS NULL, past ack deadline
+  const ackSlaMinutes = await getConfigInt("rental_driver_pick_sla_minutes", 5);
   const ackTimeout = await db
     .select({ id: rentalRequests.id })
     .from(rentalRequests)
@@ -280,7 +317,7 @@ export async function sweepAssignmentSla() {
         eq(rentalRequests.status, "awarded"),
         eq(rentalRequests.tracking_required, true),
         isNull(rentalRequests.fleet_ack_at),
-        sql`${rentalRequests.awarded_at} + interval '1 minute' * ${5} < ${now}`, // 5-min ack SLA
+        sql`${rentalRequests.awarded_at} + interval '1 minute' * ${ackSlaMinutes} < ${now}`,
       ),
     );
 
@@ -340,7 +377,7 @@ export async function sweepConfirmationDeadlines() {
       // Release assignment
       await tx
         .update(awardedBidAssignments)
-        .set({ released_at: now, release_reason: "customer_cancelled" })
+        .set({ released_at: now, release_reason: "customer_overslept" })
         .where(
           and(
             eq(awardedBidAssignments.request_id, row.id),
@@ -360,9 +397,14 @@ export async function sweepConfirmationDeadlines() {
           confirmation_deadline_at: null,
           updated_at: now,
         })
-        .where(eq(rentalRequests.id, row.id));
+        .where(
+          and(
+            eq(rentalRequests.id, row.id),
+            eq(rentalRequests.status, "awarded"),
+          ),
+        );
 
-      await appendEvent(row.id, "customer_overslept", {});
+      await appendEvent(row.id, "customer_overslept", {}, undefined, tx);
     });
   }
 }

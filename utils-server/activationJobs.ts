@@ -18,7 +18,7 @@ import {
   shopOrders,
   fleets,
 } from '../src/db/schema';
-import { eq, and, gt, sql } from 'drizzle-orm';
+import { eq, and, gt, sql, inArray } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { getConnectedBidderIds, sendToBidder } from './rentalHandler';
 import { getEligibleFleets } from './rentalDispatchChain';
@@ -70,7 +70,7 @@ export async function activateRentalRequests(): Promise<number> {
       .from(fleetMembers)
       .where(
         and(
-          sql`${fleetMembers.fleet_id} IN ${eligibleFleetIds}`,
+          inArray(fleetMembers.fleet_id, eligibleFleetIds),
           eq(fleetMembers.status, 'active'),
         ),
       );
@@ -100,7 +100,10 @@ export async function activateRentalRequests(): Promise<number> {
       }
     }
 
-    // Push notification via lib/notify (alarm channel when urgency='alarm')
+    // Push notification via lib/notify (alarm channel when urgency='alarm').
+    // N11: deterministic idempotency key — job 54's watermark re-broadcasts on
+    // restart (TD-15 recovery); without the key every restart re-pushes the
+    // same activation to every member.
     try {
       const memberUserIds = members.map((m) => m.user_id);
       for (const userId of memberUserIds) {
@@ -110,6 +113,7 @@ export async function activateRentalRequests(): Promise<number> {
           req.urgency === 'alarm' ? '🚨 Urgent Rental Request' : 'New Rental Request',
           `${req.category} — ${req.pickup_address}`,
           { request_id: req.id, type: 'rental_bid_request' },
+          { idempotencyKey: `rental_activation:${req.id}:${userId}` },
         );
       }
     } catch (err) {
@@ -192,13 +196,15 @@ export async function activateDeliveryRequests(): Promise<number> {
           // Try WS first via rider/driver registry
           sendToUser(shopOrder.rider_user_id, payload);
 
-          // Always send push notification as well (user may not be on WS)
+          // Always send push notification as well (user may not be on WS).
+          // N11: idempotency key — restart re-broadcast must not re-push.
           await sendNotification(
             shopOrder.rider_user_id,
             'default',
             'Your order is being delivered',
             'A courier has been assigned to your food order',
             { order_id: req.source_shop_order_id, type: 'delivery_created' },
+            { idempotencyKey: `delivery_created:${req.id}` },
           );
         }
       } catch (err) {

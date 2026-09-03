@@ -220,35 +220,47 @@ export default function OrderCreateScreen() {
           borderTopWidth: 1,
           borderTopColor: borderColor,
           padding: 16,
-          flexDirection: "row",
-          alignItems: "center",
+          gap: 8,
         }}
       >
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 14, fontFamily: "JakartaMedium", color: textSecondary }}>Total</Text>
-          <Text style={{ fontSize: 20, fontFamily: "JakartaBold", color: colors.primary }}>
-            ৳{(subtotal / 100).toFixed(0)}
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={submitting || cart.length === 0}
+        {/* §F.3 cash disclosure — mandatory copy above the confirm CTA */}
+        <Text
           style={{
-            backgroundColor: colors.primary,
-            borderRadius: 12,
-            paddingHorizontal: 32,
-            paddingVertical: 14,
-            opacity: submitting || cart.length === 0 ? 0.5 : 1,
+            fontSize: 12,
+            fontFamily: "JakartaMedium",
+            color: textSecondary,
+            textAlign: "center",
           }}
         >
-          {submitting ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
-              Place Order
+          Payment is made directly to the driver/shop — not through the app.
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontFamily: "JakartaMedium", color: textSecondary }}>Total</Text>
+            <Text style={{ fontSize: 20, fontFamily: "JakartaBold", color: colors.primary }}>
+              ৳{(subtotal / 100).toFixed(0)}
             </Text>
-          )}
-        </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={submitting || cart.length === 0}
+            style={{
+              backgroundColor: colors.primary,
+              borderRadius: 12,
+              paddingHorizontal: 32,
+              paddingVertical: 14,
+              opacity: submitting || cart.length === 0 ? 0.5 : 1,
+            }}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
+                Place Order
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );

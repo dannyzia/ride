@@ -184,30 +184,23 @@ describe("Phase 2 — Round-4 regressions (F34-F45)", () => {
     expect(request.reselect_deadline_at!.getTime()).toBeLessThan(now.getTime());
   });
 
-  // F35: last-bid withdrawal pre-first-award reverts to broadcasting
+  // F35: last-bid withdrawal — pure branch resolver (extracted from handler)
   it("F35: last bid withdrawal (never awarded) → broadcasting", () => {
-    const request = {
-      status: "collecting",
-      awarded_at: null, // never awarded
-      reselect_deadline_at: null,
-    };
-
-    // Pre-first-award: reverts to broadcasting with fresh window
-    expect(request.awarded_at).toBeNull();
-    expect(request.reselect_deadline_at).toBeNull();
+    const { resolveF35Branch } = require("@/lib/resolveF35Branch");
+    const req = { reselect_deadline_at: null, awarded_at: null };
+    expect(resolveF35Branch(req, 0)).toBe("broadcasting");
   });
 
-  // F35: post-demotion last-standing withdrawal → no_bidders (terminal)
   it("F35: post-demotion last bid withdrawal → no_bidders", () => {
-    const request = {
-      status: "collecting",
-      awarded_at: new Date("2026-08-30T10:00:00Z"), // demotion marker present
-      reselect_deadline_at: new Date("2026-08-30T10:10:00Z"),
-    };
+    const { resolveF35Branch } = require("@/lib/resolveF35Branch");
+    const req = { reselect_deadline_at: new Date("2026-08-30T10:10:00Z"), awarded_at: new Date("2026-08-30T10:00:00Z") };
+    expect(resolveF35Branch(req, 0)).toBe("no_bidders");
+  });
 
-    // Post-demotion: last standing bid withdrawn → no_bidders
-    // Bidding NEVER reopens after first award
-    expect(request.awarded_at).not.toBeNull();
+  it("F35: more bids remain → null (no transition)", () => {
+    const { resolveF35Branch } = require("@/lib/resolveF35Branch");
+    const req = { reselect_deadline_at: null, awarded_at: null };
+    expect(resolveF35Branch(req, 2)).toBeNull();
   });
 
   // F36: re-award after demotion inserts a NEW assignment row

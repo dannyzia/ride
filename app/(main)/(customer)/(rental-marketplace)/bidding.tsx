@@ -19,6 +19,8 @@ import { colors } from "@/theme/goRide";
 import { useRentalStore } from "@/store/useRentalStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { describeVehicleType } from "./_truckCatalog";
+import CargoSummary from "./_components/CargoSummary";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
@@ -27,6 +29,16 @@ const RANK_COLORS: Record<string, string> = {
   "2nd": "#3B82F6",
   "3rd": "#F59E0B",
 };
+
+interface RentalRequestDetail {
+  category?: string;
+  cargo_tags?: string[] | null;
+  cargo_weight_kg?: number | null;
+  cargo_volume_m3?: string | null;
+  cargo_description?: string | null;
+  rental_options?: string | null;
+  requested_vehicle_type?: string | null;
+}
 
 export default function BiddingScreen() {
   const isDark = useIsDark();
@@ -40,6 +52,7 @@ export default function BiddingScreen() {
     useRentalStore();
   const [refreshing, setRefreshing] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [requestDetail, setRequestDetail] = useState<RentalRequestDetail | null>(null);
 
   const fetchBids = useCallback(async () => {
     if (!activeRequest) return;
@@ -53,7 +66,8 @@ export default function BiddingScreen() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!res.ok) return;
-      const data = await res.json();
+      const data: { request?: RentalRequestDetail; bids?: typeof bids } = await res.json();
+      if (data.request) setRequestDetail(data.request);
       setBids(data.bids ?? []);
     } catch (err) {
       logger.error("[bidding] fetch error", err);
@@ -122,6 +136,16 @@ export default function BiddingScreen() {
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
           Bids ({bids.length})
         </Text>
+        {requestDetail?.requested_vehicle_type ? (
+          <View
+            style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginRight: 8 }}
+            accessibilityLabel={`Requested vehicle: ${describeVehicleType(requestDetail.requested_vehicle_type)}`}
+          >
+            <Text style={{ fontSize: 12, fontFamily: "JakartaSemiBold", color: colors.primary }}>
+              {describeVehicleType(requestDetail.requested_vehicle_type)}
+            </Text>
+          </View>
+        ) : null}
         {deadline > 0 && (
           <View style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
             <Text style={{ fontSize: 13, fontFamily: "JakartaSemiBold", color: textPrimary }}>
@@ -139,6 +163,20 @@ export default function BiddingScreen() {
           </Text>
         </View>
       </View>
+
+      {/* Cargo summary — renders whenever cargo data is present (Phase 5) */}
+      {activeRequest ? (
+        <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+          <CargoSummary
+            cargoTags={requestDetail?.cargo_tags ?? activeRequest.cargo_tags}
+            cargoWeightKg={requestDetail?.cargo_weight_kg ?? activeRequest.cargo_weight_kg}
+            cargoVolumeM3={requestDetail?.cargo_volume_m3 ?? activeRequest.cargo_volume_m3}
+            cargoDescription={requestDetail?.cargo_description ?? activeRequest.cargo_description}
+            rentalOptionsCsv={requestDetail?.rental_options ?? activeRequest.rental_options}
+            requestedVehicleType={requestDetail?.requested_vehicle_type ?? activeRequest.requested_vehicle_type}
+          />
+        </View>
+      ) : null}
 
       <ScrollView
         style={{ flex: 1, paddingHorizontal: 20 }}
