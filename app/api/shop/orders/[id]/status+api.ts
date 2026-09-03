@@ -2,6 +2,9 @@
  * PATCH /api/shop/orders/[id]/status
  * Update order status. Shop staff / the ordering rider may update.
  * State machine per §B.3.
+ * B2 (audit #10): the row is read under FOR UPDATE, the transition is
+ * re-verified against the locked state, and the UPDATE is conditional on the
+ * locked status (0 rows ⇒ 409) — no more unlocked read-check-write window.
  */
 import { db } from "@/src/db";
 import { shopOrders } from "@/src/db/schema";
@@ -37,75 +40,102 @@ export async function PATCH(request: Request, { id }: { id: string }) {
   try {
     const result = await parseJsonBody(request, statusSchema);
     if (!result.ok) return result.response;
+    const targetStatus = result.data.status;
 
-    const orderRows = await db
-      .select()
-      .from(shopOrders)
-      .where(eq(shopOrders.id, id))
-      .limit(1);
+    let guard: Response | null = null;
+    let newStatus: string | undefined;
 
-    const order = orderRows[0];
-    if (!order) {
-      return Response.json(
-        { error: "not_found", message: "Order not found" },
-        { status: 404 },
-      );
-    }
+    await db.transaction(async (tx) => {
+      const orderRows = await tx
+        .select()
+        .from(shopOrders)
+        .where(eq(shopOrders.id, id))
+        .limit(1)
+        .for("update");
 
-    // Validate transition
-    const allowed = VALID_TRANSITIONS[order.status];
-    if (!allowed || !allowed.includes(result.data.status)) {
-      return Response.json(
-        {
-          error: "invalid_transition",
-          message: `Cannot transition from ${order.status} to ${result.data.status}`,
-        },
-        { status: 409 },
-      );
-    }
-
-    // Auth: shop member (owner/manager/staff) or the ordering rider
-    let authorized = false;
-    try {
-      await requireShopMember(order.shop_id, ["OWNER", "MANAGER", "STAFF"])(
-        request,
-      );
-      authorized = true;
-    } catch {
-      // Not a shop member — check if the ordering rider
-    }
-
-    if (!authorized) {
-      const { supabaseUser, dbUser } = await requireAnyRole(["rider", "driver"])(
-        request,
-      );
-      if (dbUser.id !== order.rider_user_id) {
-        return Response.json(
-          { error: "forbidden", message: "Not authorized" },
-          { status: 403 },
+      const order = orderRows[0];
+      if (!order) {
+        guard = Response.json(
+          { error: "not_found", message: "Order not found" },
+          { status: 404 },
         );
+        return;
       }
-    }
 
-    // Set timestamp fields
-    const updates: Record<string, unknown> = {
-      status: result.data.status,
-      updated_at: new Date(),
-    };
+      // Validate transition against the LOCKED row
+      const allowed = VALID_TRANSITIONS[order.status];
+      if (!allowed || !allowed.includes(targetStatus)) {
+        guard = Response.json(
+          {
+            error: "invalid_transition",
+            message: `Cannot transition from ${order.status} to ${targetStatus}`,
+          },
+          { status: 409 },
+        );
+        return;
+      }
 
-    if (result.data.status === "accepted") updates.accepted_at = new Date();
-    if (result.data.status === "preparing") updates.prepared_at = new Date();
-    if (result.data.status === "ready_for_pickup") updates.ready_at = new Date();
-    if (result.data.status === "out_for_delivery") updates.picked_up_at = new Date();
-    if (result.data.status === "delivered") updates.delivered_at = new Date();
-    if (result.data.status === "cancelled") {
-      updates.cancelled_at = new Date();
-      updates.cancel_reason = result.data.cancel_reason ?? null;
-    }
+      // Auth: shop member (owner/manager/staff) or the ordering rider
+      let authorized = false;
+      try {
+        await requireShopMember(order.shop_id, ["OWNER", "MANAGER", "STAFF"])(
+          request,
+        );
+        authorized = true;
+      } catch {
+        // Not a shop member — check if the ordering rider
+      }
 
-    await db.update(shopOrders).set(updates).where(eq(shopOrders.id, id));
+      if (!authorized) {
+        const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
+        if (dbUser.id !== order.rider_user_id) {
+          guard = Response.json(
+            { error: "forbidden", message: "Not authorized" },
+            { status: 403 },
+          );
+          return;
+        }
+      }
 
-    return Response.json({ message: "Order updated", status: result.data.status });
+      // Set timestamp fields
+      const updates: Record<string, unknown> = {
+        status: targetStatus,
+        updated_at: new Date(),
+      };
+
+      if (targetStatus === "accepted") updates.accepted_at = new Date();
+      if (targetStatus === "preparing") updates.prepared_at = new Date();
+      if (targetStatus === "ready_for_pickup") updates.ready_at = new Date();
+      if (targetStatus === "out_for_delivery") updates.picked_up_at = new Date();
+      if (targetStatus === "delivered") updates.delivered_at = new Date();
+      if (targetStatus === "cancelled") {
+        updates.cancelled_at = new Date();
+        updates.cancel_reason = result.data.cancel_reason ?? null;
+      }
+
+      // Conditional write: 0 rows means a racing transition won the row
+      const updated = await tx
+        .update(shopOrders)
+        .set(updates)
+        .where(and(eq(shopOrders.id, id), eq(shopOrders.status, order.status)))
+        .returning({ id: shopOrders.id });
+
+      if (updated.length === 0) {
+        guard = Response.json(
+          {
+            error: "invalid_transition",
+            message: `Cannot transition from ${order.status} to ${targetStatus}`,
+          },
+          { status: 409 },
+        );
+        return;
+      }
+
+      newStatus = targetStatus;
+    });
+
+    if (guard) return guard;
+    return Response.json({ message: "Order updated", status: newStatus });
   } catch (err: unknown) {
     const status = errors.getErrorStatus(err);
     if (status === 401)
