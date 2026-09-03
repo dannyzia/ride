@@ -293,160 +293,6 @@ async function finalizeAndPersistPickupTrace(rideId: string): Promise<void> {
   });
 }
 
-// ── R3.3: Auto-redispatch on driver cancel ────────────────────────────────
-/**
- * Trigger a fresh dispatch chain for a ride after a driver cancel.
- * Builds a new candidate pool (excluding already-billed drivers from the
- * previous chain) and starts a new sequential chain.
- */
-async function triggerRedispatch(rideId: string): Promise<void> {
-  const [ride] = await db
-    .select({
-      id: rides.id,
-      user_id: rides.user_id,
-      vehicle_type: rides.vehicle_type,
-      origin_latitude: rides.origin_latitude,
-      origin_longitude: rides.origin_longitude,
-      destination_latitude: rides.destination_latitude,
-      destination_longitude: rides.destination_longitude,
-      zone_id: rides.zone_id,
-      female_driver_preference: rides.female_driver_preference,
-      status: rides.status,
-    })
-    .from(rides)
-    .where(eq(rides.id, rideId))
-    .limit(1);
-
-  if (!ride || ride.status !== 'dispatching') {
-    logger.info('[redispatch] ride not found or not dispatching', { ride_id: rideId, status: ride?.status });
-    return;
-  }
-
-  const originLat = parseFloat(ride.origin_latitude?.toString() ?? '');
-  const originLng = parseFloat(ride.origin_longitude?.toString() ?? '');
-  const destLat = parseFloat(ride.destination_latitude?.toString() ?? '');
-  const destLng = parseFloat(ride.destination_longitude?.toString() ?? '');
-
-  if (!Number.isFinite(originLat) || !Number.isFinite(originLng)) {
-    logger.warn('[redispatch] invalid origin coordinates', { ride_id: rideId });
-    return;
-  }
-
-  // Build fresh candidate pool
-  let candidates = await buildCandidateList(
-    rideId,
-    originLat,
-    originLng,
-    destLat || originLat,
-    destLng || originLng,
-    ride.vehicle_type,
-    ride.zone_id,
-  );
-
-  // Exclude already-billed drivers from the previous chain (billing invariant:
-  // each driver is billed at most once per ride). Query dispatch_offers for
-  // this ride to find previously billed driver IDs.
-  const billedRows = await db
-    .select({ driver_id: dispatchOffers.driver_id })
-    .from(dispatchOffers)
-    .where(eq(dispatchOffers.ride_id, rideId));
-  const billedDriverIds = new Set(billedRows.map((r) => r.driver_id));
-
-  candidates = candidates.filter((c) => !billedDriverIds.has(c.driverId));
-
-  if (candidates.length === 0) {
-    logger.info('[redispatch] no eligible candidates after exclusion', { ride_id: rideId, billedCount: billedDriverIds.size });
-    // No candidates → set no_drivers status
-    await db.update(rides).set({ status: 'no_drivers', updated_at: new Date() }).where(eq(rides.id, rideId));
-    sendToRider(ride.user_id, { type: 'ride:no_drivers', ride_id: rideId });
-    return;
-  }
-
-  // Delay before first re-dispatch attempt (configurable, default 15s)
-  const delayMs = 15_000;
-  await new Promise((r) => setTimeout(r, delayMs));
-
-  // Re-check ride status after delay — rider may have cancelled during wait
-  const [recheck] = await db.select({ status: rides.status }).from(rides).where(eq(rides.id, rideId)).limit(1);
-  if (!recheck || recheck.status !== 'dispatching') {
-    logger.info('[redispatch] ride no longer dispatching after delay', { ride_id: rideId, status: recheck?.status });
-    return;
-  }
-
-  logger.info('[redispatch] starting fresh chain', { ride_id: rideId, candidates: candidates.length, billedExcluded: billedDriverIds.size });
-
-  // Build the dependency-injected chain runner (same pattern as the initial dispatch)
-  const deps = buildRedispatchChainDeps(rideId, ride.user_id);
-  const reason = await runSequentialChain(rideId, candidates, deps);
-
-  logger.info('[redispatch] chain ended', { ride_id: rideId, reason });
-}
-
-/** Build the RunChainDeps for a re-dispatch chain. Mirrors the initial
- * dispatch deps but is self-contained for clarity. */
-function buildRedispatchChainDeps(rideId: string, riderUserId: string) {
-  return {
-    isDriverConnected(driverId: string): boolean {
-      return connectedDrivers.has(driverId);
-    },
-    async isRideDispatching(): Promise<boolean> {
-      const [ride] = await db.select({ status: rides.status }).from(rides).where(eq(rides.id, rideId)).limit(1);
-      return ride?.status === 'dispatching';
-    },
-    async debitLead(driverId: string, chainIndex: number) {
-      // Lane-repair (audit batch 1): restore HEAD call shape — leadBilling's
-      // debitLeadForOfferTx takes a single DebitLeadParams object and opens
-      // its own transaction; the 4-arg positional form does not compile.
-      return debitLeadForOfferTx({ rideId, driverId, chainIndex });
-    },
-    emitLeadBilled(driverId: string, balanceAfter: number) {
-      sendToDriver(driverId, { type: 'lead:billed', ride_id: rideId, balance_after_bdt: balanceAfter });
-    },
-    async runAutoAccept(driverId: string): Promise<boolean> {
-      // Auto-accept: match the ride to this driver
-      const [updated] = await db.update(rides)
-        .set({
-          driver_id: driverId,
-          status: 'matched',
-          matched_at: new Date(),
-          updated_at: new Date(),
-        })
-        .where(and(eq(rides.id, rideId), eq(rides.status, 'dispatching')))
-        .returning({ id: rides.id });
-      if (!updated) return false;
-      // Notify rider and driver
-      sendToRider(riderUserId, { type: 'ride:matched', ride_id: rideId, driver_id: driverId });
-      sendToDriver(driverId, { type: 'ride:matched', ride_id: rideId });
-      return true;
-    },
-    async sendOffer(driverId: string, chainIndex: number, balanceAfter: number) {
-      const ttlMs = 15_000; // 15s offer TTL
-      return awaitOfferSettlement(
-        rideId,
-        driverId,
-        ttlMs,
-        () => {
-          sendToDriver(driverId, { type: 'offer:lost', ride_id: rideId, reason: 'expired' });
-        },
-      );
-    },
-    onSettled(driverId: string, outcome: string) {
-      // Stamp terminal outcomes in DB (non-blocking)
-      db.update(dispatchOffers)
-        .set({ outcome: outcome as any })
-        .where(and(eq(dispatchOffers.ride_id, rideId), eq(dispatchOffers.driver_id, driverId)))
-        .catch(() => {});
-    },
-    async onChainEnd(reason: string) {
-      if (reason === 'exhausted') {
-        // No more candidates → set no_drivers status
-        await db.update(rides).set({ status: 'no_drivers', updated_at: new Date() }).where(eq(rides.id, rideId));
-        sendToRider(riderUserId, { type: 'ride:no_drivers', ride_id: rideId });
-      }
-    },
-  };
-}
-
 // ── Helper ─────────────────────────────────────────────────────────────────
 function send(ws: WebSocket, msg: Record<string, unknown>) {
   if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
@@ -835,7 +681,7 @@ const server = http.createServer(async (req, res) => {
     });
     req.on("end", async () => {
       try {
-        const { ride_id, driver_id, cancelled_by, within_200m, redispatch } = JSON.parse(body);
+        const { ride_id, driver_id, cancelled_by, within_200m } = JSON.parse(body);
         // CG-2: driver_id is OPTIONAL — pre-match cancels (sequential chain
         // in flight, ride.driver_id still null) must also reach utils-server
         // so the chain stops billing further candidates.
@@ -843,21 +689,11 @@ const server = http.createServer(async (req, res) => {
           writeJson(400, { error: "missing_fields" });
           return;
         }
-        if (driver_id && !redispatch) {
+        if (driver_id) {
           sendToDriver(driver_id, {
             type: "ride:cancelled",
             ride_id,
             cancelled_by: cancelled_by === "driver" ? "driver" : cancelled_by === "system" ? "system" : "rider",
-          });
-        }
-        // R3.3: On auto-redispatch, notify the departing driver that the ride
-        // is being re-dispatched (not cancelled). The rider was already
-        // notified by the cancel API.
-        if (driver_id && redispatch) {
-          sendToDriver(driver_id, {
-            type: "ride:cancelled",
-            ride_id,
-            cancelled_by: "driver",
           });
         }
         // ALWAYS: abort any in-memory chain for this ride — resolve the
@@ -875,14 +711,6 @@ const server = http.createServer(async (req, res) => {
         // Phase F quote state 3: cancel drops the accept→start trace
         // without persisting a realized distance.
         unregisterRideTrace(ride_id);
-
-        // R3.3: Trigger auto-redispatch — build a fresh candidate pool and
-        // start a new chain. The departing driver is excluded (already billed).
-        if (redispatch) {
-          triggerRedispatch(ride_id).catch((e) =>
-            logger.error("[ride/cancel] auto-redispatch failed", { ride_id, error: e instanceof Error ? e.message : String(e) })
-          );
-        }
 
         // Phase G: proximity driver-cancel → off-platform completion
         // detection at cancel + 30 min. `within_200m` is an optional body
@@ -1495,46 +1323,6 @@ wss.on("connection", (ws: WebSocket) => {
           client.subscribedRideId = msg.ride_id as string;
         } else if (action === "unsubscribe" && client.role === "rider") {
           client.subscribedRideId = undefined;
-        } else if (action === "redispatch_response" && client.role === "rider") {
-          // R3.3: Rider responds to check-in prompt ("Keep looking?" / "No, cancel")
-          const rideId = msg.ride_id as string;
-          const keepLooking = msg.keep_looking as boolean;
-          if (!rideId) {
-            send(ws, { type: "error", message: "missing_ride_id" });
-            break;
-          }
-          if (keepLooking) {
-            // Yes — rider wants to keep searching. Reset the check-in timer.
-            await db.update(rides)
-              .set({ redispatch_started_at: new Date(), updated_at: new Date() })
-              .where(and(eq(rides.id, rideId), eq(rides.user_id, client.userId ?? '')));
-            sendToRider(client.userId ?? '', {
-              type: "ride:status",
-              ride_id: rideId,
-              status: "dispatching",
-            });
-          } else {
-            // No — rider wants to cancel. Use the cancel API.
-            const token = WEBSOCKET_INTERNAL_SECRET;
-            const wsPort = process.env.UTILS_SERVER_PORT ?? '3001';
-            try {
-              await fetch(`http://127.0.0.1:${wsPort}/internal/ride/cancelled`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
-                },
-                signal: AbortSignal.timeout(3_000),
-                body: JSON.stringify({
-                  ride_id: rideId,
-                  cancelled_by: 'rider',
-                }),
-              });
-            } catch {
-              // Best-effort cancel
-            }
-          }
-          break;
         } else if (
           action === "arrived" &&
           client.role === "driver" &&

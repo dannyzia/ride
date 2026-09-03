@@ -1263,55 +1263,6 @@ export function startScheduler(): void {
     }
   }, 60_000);
 
-  // ── (17b) R3.3: Auto-redispatch check-in — every 60s ────────────────
-  // Sends a polite "Keep looking?" notification to riders whose re-dispatch
-  // search window has exceeded the configured check-in threshold.
-  // ADR Phase 0 retrofit: house running-flag pattern (§0.3.6) — a tick slower
-  // than 60s must not overlap itself.
-  let r3CheckinRunning = false;
-  registerJob(async () => {
-    if (r3CheckinRunning) return;
-    try {
-      r3CheckinRunning = true;
-      const checkinMinutes = parseInt(await getConfigValue('auto_redispatch_checkin_minutes', '3'));
-      const threshold = new Date(Date.now() - checkinMinutes * 60_000);
-      // Find rides in dispatching status with redispatch_started_at older than threshold
-      const stale = await db
-        .select({ id: rides.id, user_id: rides.user_id, redispatch_started_at: rides.redispatch_started_at })
-        .from(rides)
-        .where(
-          and(
-            eq(rides.status, 'dispatching'),
-            sql`${rides.redispatch_started_at} IS NOT NULL`,
-            sql`${rides.redispatch_started_at} < ${threshold}`,
-          ),
-        )
-        .limit(20);
-      for (const ride of stale) {
-        // Reset the check-in timer so we don't spam — set to now()
-        await db.update(rides)
-          .set({ redispatch_started_at: new Date(), updated_at: new Date() })
-          .where(eq(rides.id, ride.id));
-        // Send check-in notification to the rider
-        const elapsed = ride.redispatch_started_at
-          ? Math.round((Date.now() - new Date(ride.redispatch_started_at).getTime()) / 60_000)
-          : checkinMinutes;
-        sendNotification(
-          ride.user_id,
-          'ride:redispatch_checkin',
-          `Still searching for ${elapsed} minutes`,
-          'Keep looking for a driver, or cancel this ride?',
-          { ride_id: ride.id },
-          { priority: 'high' },
-        ).catch(() => {});
-      }
-    } catch (e) {
-      logger.error('[scheduler] redispatch check-in error', e);
-    } finally {
-      r3CheckinRunning = false;
-    }
-  }, 60_000);
-
   // ── (18) Incentive progress tracking — every 5 min ──────────────────
   registerJob(async () => {
     try {

@@ -4,7 +4,7 @@
  * A8 — Scheduler ADR Phase 0 tests.
  * Covers: honest job counter (logged N === actual registered timers),
  * withJobBudget (ok / 57014-timeout swallow / non-timeout propagation /
- * SET LOCAL as first tx statement), R3.3 running-flag overlap guard.
+ * SET LOCAL as first tx statement).
  */
 import { jest } from '@jest/globals';
 
@@ -100,22 +100,6 @@ import { startScheduler, withJobBudget } from '@/utils-server/scheduler';
 
 const mockLoggerInfo = logger.info as jest.Mock;
 
-const flushMicrotasks = async () => {
-  for (let i = 0; i < 10; i += 1) {
-    // eslint-disable-next-line no-await-in-loop
-    await Promise.resolve();
-  }
-};
-
-const runSafely = (fn: () => unknown) => {
-  try {
-    const p = (fn as () => unknown)();
-    if (p instanceof Promise) p.catch(() => {});
-  } catch {
-    // inert
-  }
-};
-
 let siSpy: jest.SpyInstance;
 
 beforeEach(() => {
@@ -144,8 +128,8 @@ describe('A8 — honest job counter', () => {
     // The counter must equal the ACTUAL number of registered timers — never
     // a hardcoded string again.
     expect(logged).toBe(jest.getTimerCount());
-    // And the current registration count is 58 (57 jobs + the R3.3 check-in).
-    expect(logged).toBe(58);
+    // And the current registration count is 57 (R3.3 check-in reverted).
+    expect(logged).toBe(57);
   });
 });
 
@@ -207,42 +191,3 @@ describe('A8 — withJobBudget', () => {
   });
 });
 
-describe('A8 — R3.3 running-flag overlap guard', () => {
-  it('second concurrent tick no-ops while the first is running', async () => {
-    startScheduler();
-
-    // Hold the R3.3 tick open at its first config read
-    mockPendingConfigKeys = new Set(['auto_redispatch_checkin_minutes']);
-
-    const registrations = siSpy.mock.calls.filter((c) => c[1] === 60_000);
-    expect(registrations.length).toBeGreaterThan(0);
-
-    let r33: (() => void) | undefined;
-    for (const [fn] of registrations) {
-      mockGetConfigValue.mockClear();
-      runSafely(fn as () => void);
-      // eslint-disable-next-line no-await-in-loop
-      await flushMicrotasks();
-      const hit = mockGetConfigValue.mock.calls.some(
-        (c) => c[0] === 'auto_redispatch_checkin_minutes',
-      );
-      if (hit) {
-        r33 = fn as () => void;
-        break;
-      }
-    }
-
-    expect(r33).toBeDefined();
-
-    // The first tick is still pending on the config read. A second fire must
-    // no-op behind the running flag — no second config read, no DB work.
-    mockGetConfigValue.mockClear();
-    runSafely(r33!);
-    await flushMicrotasks();
-
-    const reentered = mockGetConfigValue.mock.calls.filter(
-      (c) => c[0] === 'auto_redispatch_checkin_minutes',
-    );
-    expect(reentered).toHaveLength(0);
-  });
-});
