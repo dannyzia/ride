@@ -7,7 +7,7 @@
  * Delivery accept-bid handles the fee write (F40).
  */
 import { db } from '@/src/db';
-import { deliveryRequests, shopOrders } from '@/src/db/schema';
+import { deliveryRequests, shopOrders, shops } from '@/src/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { logger } from './logger';
 
@@ -55,8 +55,31 @@ export async function createFromShopOrder(
     return null;
   }
 
+  // A5 (audit #6): resolve the shop row for REAL pickup coordinates. The
+  // previous code dispatched couriers to the customer's dropoff coords with a
+  // UUID string as the pickup address.
+  const [shop] = await (tx ?? db)
+    .select({
+      address_line: shops.address_line,
+      lat: shops.lat,
+      lng: shops.lng,
+    })
+    .from(shops)
+    .where(eq(shops.id, order.shop_id))
+    .limit(1);
+
+  if (!shop || !shop.address_line || !shop.lat || !shop.lng) {
+    logger.error('[shopDeliveryBridge] shop missing address/coords', {
+      orderId: order.id,
+      shopId: order.shop_id,
+    });
+    return null;
+  }
+
   // Create delivery request from shop order
-  const deadline = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes bidding window
+  // FLAGGED follow-up: the 10-minute bidding window is hardcoded — moving it
+  // behind a platform_config key is pending the spec owner's key decision.
+  const deadline = new Date(Date.now() + 10 * 60 * 1000);
 
   const [delivery] = await (tx ?? db)
     .insert(deliveryRequests)
@@ -64,9 +87,9 @@ export async function createFromShopOrder(
       created_by_user_id: order.rider_user_id,
       source_shop_order_id: order.id,
       status: 'pending',
-      pickup_address: `Shop ${order.shop_id}`, // TODO: resolve shop address from shops table
-      pickup_lat: order.delivery_lat, // For food delivery, pickup is the shop location
-      pickup_lng: order.delivery_lng,
+      pickup_address: shop.address_line,
+      pickup_lat: shop.lat,
+      pickup_lng: shop.lng,
       dropoff_address: order.delivery_address,
       dropoff_lat: order.delivery_lat,
       dropoff_lng: order.delivery_lng,

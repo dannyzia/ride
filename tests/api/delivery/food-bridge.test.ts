@@ -110,6 +110,10 @@ describe('Phase 4 — Food bridge', () => {
     it('creates a delivery request from a food delivery order', async () => {
       // No existing delivery request
       mockSelectResults.push([]);
+      // Shop row (A5 — resolved for real pickup coordinates)
+      mockSelectResults.push([
+        { address_line: '12 Gulshan Ave', lat: '23.7925', lng: '90.4078' },
+      ]);
 
       const result = await createFromShopOrder({
         id: 'order-1',
@@ -128,6 +132,77 @@ describe('Phase 4 — Food bridge', () => {
       expect(mockInsertCalls[0].source_shop_order_id).toBe('order-1');
       expect(mockInsertCalls[0].created_by_user_id).toBe('user-1');
       expect(mockInsertCalls[0].status).toBe('pending');
+    });
+
+    it('A5: pickup fields are the SHOP address/coords, distinct from delivery coords', async () => {
+      mockSelectResults.push([]); // no existing delivery request
+      mockSelectResults.push([
+        { address_line: '12 Gulshan Ave', lat: '23.7925', lng: '90.4078' },
+      ]);
+
+      const result = await createFromShopOrder({
+        id: 'order-1',
+        rider_user_id: 'user-1',
+        shop_id: 'shop-1',
+        delivery_address: '123 Main St',
+        delivery_lat: '23.8103',
+        delivery_lng: '90.4125',
+        rider_notes: null,
+        subtotal_bdt: 50000,
+        total_bdt: 50000,
+      });
+
+      expect(result).not.toBeNull();
+      expect(mockInsertCalls.length).toBe(1);
+      // Regression for audit #6: pickup used to carry the CUSTOMER's coords
+      expect(mockInsertCalls[0].pickup_address).toBe('12 Gulshan Ave');
+      expect(mockInsertCalls[0].pickup_lat).toBe('23.7925');
+      expect(mockInsertCalls[0].pickup_lng).toBe('90.4078');
+      // And they must differ from the dropoff
+      expect(mockInsertCalls[0].pickup_lat).not.toBe(mockInsertCalls[0].dropoff_lat);
+      expect(mockInsertCalls[0].pickup_lng).not.toBe(mockInsertCalls[0].dropoff_lng);
+      expect(mockInsertCalls[0].pickup_address).not.toBe(mockInsertCalls[0].dropoff_address);
+      expect(mockInsertCalls[0].dropoff_lat).toBe('23.8103');
+    });
+
+    it('A5: shop with missing address or coords → null, no insert', async () => {
+      mockSelectResults.push([]); // no existing delivery request
+      mockSelectResults.push([{ address_line: null, lat: '23.7925', lng: '90.4078' }]);
+
+      const result = await createFromShopOrder({
+        id: 'order-1',
+        rider_user_id: 'user-1',
+        shop_id: 'shop-1',
+        delivery_address: '123 Main St',
+        delivery_lat: '23.8103',
+        delivery_lng: '90.4125',
+        rider_notes: null,
+        subtotal_bdt: 50000,
+        total_bdt: 50000,
+      });
+
+      expect(result).toBeNull();
+      expect(mockInsertCalls.length).toBe(0);
+    });
+
+    it('A5: shop row missing entirely → null, no insert', async () => {
+      mockSelectResults.push([]); // no existing delivery request
+      mockSelectResults.push([]); // no shop row
+
+      const result = await createFromShopOrder({
+        id: 'order-1',
+        rider_user_id: 'user-1',
+        shop_id: 'shop-1',
+        delivery_address: '123 Main St',
+        delivery_lat: '23.8103',
+        delivery_lng: '90.4125',
+        rider_notes: null,
+        subtotal_bdt: 50000,
+        total_bdt: 50000,
+      });
+
+      expect(result).toBeNull();
+      expect(mockInsertCalls.length).toBe(0);
     });
 
     it('returns existing delivery request on duplicate (idempotent)', async () => {
