@@ -4,7 +4,7 @@
  * Re-checks winning fleet's gate IN-TX (ruling 10).
  */
 import { db } from "@/src/db";
-import { rentalRequests, rentalBids, awardedBidAssignments, rentalRequestEvents, fleetSubscriptions, fleetSubscriptionPlans, fleets } from "@/src/db/schema";
+import { rentalRequests, rentalBids, awardedBidAssignments, rentalRequestEvents, fleetSubscriptions, fleetSubscriptionPlans, fleets, drivers, vehicles } from "@/src/db/schema";
 import { requireAnyRole } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { getConfigInt } from "@/lib/platformConfig";
@@ -19,14 +19,12 @@ const acceptSchema = z.object({
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
-    const { supabaseUser, dbUser } = await requireAnyRole(["rider", "driver"])(
-      request,
-    );
+    const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
 
     const result = await parseJsonBody(request, acceptSchema);
     if (!result.ok) return result.response;
 
-    const { acceptedBid, req } = await db.transaction(async (tx) => {
+    const { acceptedBid, assignment } = await db.transaction(async (tx) => {
       // Lock request row (§B.0)
       const reqRows = await tx
         .select()
@@ -83,10 +81,44 @@ export async function POST(request: Request, { id }: { id: string }) {
       const features = sub?.plan_features as Record<string, unknown> | null;
       const periodOk = !sub?.period_end || new Date(sub.period_end) >= new Date();
       if (!sub || sub.fleet_status !== "ACTIVE" || !features?.marketplace_bidding || !periodOk) {
-        throw Object.assign(new Error("Fleet subscription is no longer active"), {
+        throw Object.assign(new Error("marketplace_subscription_required"), {
           status: 403,
-          message: "marketplace_subscription_required",
         });
+      }
+
+      // Validate driver belongs to the winning fleet and is active
+      if (bidRows[0].driver_user_id) {
+        const [driverRow] = await tx
+          .select({ id: drivers.id })
+          .from(drivers)
+          .where(
+            and(
+              eq(drivers.user_id, bidRows[0].driver_user_id),
+              eq(drivers.fleet_id, bidRows[0].fleet_id),
+              eq(drivers.status, "active"),
+            ),
+          )
+          .limit(1);
+        if (!driverRow) {
+          throw Object.assign(new Error("invalid_driver"), { status: 403 });
+        }
+      }
+
+      // Validate vehicle belongs to the winning fleet
+      if (bidRows[0].vehicle_id) {
+        const [vehicleRow] = await tx
+          .select({ id: vehicles.id })
+          .from(vehicles)
+          .where(
+            and(
+              eq(vehicles.id, bidRows[0].vehicle_id),
+              eq(vehicles.fleet_id, bidRows[0].fleet_id),
+            ),
+          )
+          .limit(1);
+        if (!vehicleRow) {
+          throw Object.assign(new Error("invalid_vehicle"), { status: 403 });
+        }
       }
 
       // Award: accepted bid → won, all others → superseded
@@ -152,7 +184,8 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     return Response.json({
       message: "Bid accepted",
-      assignment_id: acceptedBid.id,
+      assignment_id: assignment.id,
+      bid_id: acceptedBid.id,
       status: "awarded",
     });
   } catch (err: unknown) {

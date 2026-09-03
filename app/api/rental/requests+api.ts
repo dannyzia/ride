@@ -9,48 +9,84 @@
  * Feature flag: marketplace_rental_enabled.
  */
 import { db } from "@/src/db";
-import { rentalRequests, rentalRequestEvents } from "@/src/db/schema";
+import { rentalRequests, rentalRequestEvents, rentalVehicleTypeEnum, rateLimits } from "@/src/db/schema";
 import { requireAnyRole } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { isVerticalEnabled, getConfigInt } from "@/lib/platformConfig";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { z } from "zod";
-import { eq, and, desc, count, lt } from "drizzle-orm";
+import { eq, and, desc, count, lt, inArray, sql } from "drizzle-orm";
 
-const createSchema = z.object({
-  category: z.enum(["car_rental", "truck_rental", "ambulance_scheduled"]),
-  urgency: z.enum(["standard", "alarm"]).default("standard"),
-  pickup_address: z.string().min(1).max(500),
-  pickup_lat: z.number().min(-90).max(90),
-  pickup_lng: z.number().min(-180).max(180),
-  dropoff_address: z.string().min(1).max(500),
-  dropoff_lat: z.number().min(-90).max(90),
-  dropoff_lng: z.number().min(-180).max(180),
-  cargo_tags: z.array(z.string()).optional(),
-  cargo_weight_kg: z.number().int().positive().optional(),
-  cargo_volume_m3: z.number().positive().optional(),
-  cargo_description: z.string().max(1000).optional(),
-  requested_vehicle_type: z.string().optional(),
-  patient_condition: z.string().max(500).optional(),
-  requires_paramedic: z.boolean().optional(),
-  service_level: z.enum(["BLS", "ALS"]).optional(),
-  bidding_window_seconds: z.number().int().min(300).max(3600).default(1200),
-  tracking_required: z.boolean().default(false),
-});
+// Per-category vehicle accept-lists — DERIVED from the DB enum, never inline
+// (ruling 16: car_* values exist in the enum; car UI is Phase 2b, another lane).
+type RentalVehicleType = (typeof rentalVehicleTypeEnum.enumValues)[number];
+
+const CAR_VEHICLE_TYPES: readonly string[] = rentalVehicleTypeEnum.enumValues.filter(
+  (v) => v.startsWith("car_"),
+);
+const AMBULANCE_VEHICLE_TYPES: readonly string[] = rentalVehicleTypeEnum.enumValues.filter(
+  (v) => v.startsWith("ambulance_"),
+);
+const TRUCK_VEHICLE_TYPES: readonly string[] = rentalVehicleTypeEnum.enumValues.filter(
+  (v) => !v.startsWith("car_") && !v.startsWith("ambulance_"),
+);
+
+const createSchema = z
+  .object({
+    category: z.enum(["car_rental", "truck_rental", "ambulance_scheduled"]),
+    urgency: z.enum(["standard", "alarm"]).default("standard"),
+    pickup_address: z.string().min(1).max(500),
+    pickup_lat: z.number().min(-90).max(90),
+    pickup_lng: z.number().min(-180).max(180),
+    dropoff_address: z.string().min(1).max(500),
+    dropoff_lat: z.number().min(-90).max(90),
+    dropoff_lng: z.number().min(-180).max(180),
+    cargo_tags: z.array(z.string()).optional(),
+    cargo_weight_kg: z.number().int().positive().optional(),
+    cargo_volume_m3: z.number().positive().optional(),
+    cargo_description: z.string().max(1000).optional(),
+    rental_options: z.string().max(200).optional(), // ruling 13: comma-separated option/condition chips
+    requested_vehicle_type: z.string().optional(),
+    scheduled_start_at: z.string().datetime().nullable().optional(), // ruling 14: ISO; NULL = start now
+    duration_hours: z.number().int().min(1).max(720).optional(), // ruling 14
+    patient_condition: z.string().max(500).optional(),
+    requires_paramedic: z.boolean().optional(),
+    service_level: z.enum(["BLS", "ALS"]).optional(),
+    bidding_window_seconds: z.number().int().min(300).max(3600).default(1200),
+    tracking_required: z.boolean().default(false),
+  })
+  .superRefine((val, ctx) => {
+    if (!val.requested_vehicle_type) return;
+    const allowed =
+      val.category === "truck_rental"
+        ? TRUCK_VEHICLE_TYPES
+        : val.category === "car_rental"
+          ? CAR_VEHICLE_TYPES
+          : AMBULANCE_VEHICLE_TYPES;
+    if (!allowed.includes(val.requested_vehicle_type)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["requested_vehicle_type"],
+        message: `requested_vehicle_type must be one of: ${allowed.join(", ")}`,
+      });
+    }
+  });
 
 export async function POST(request: Request) {
   try {
+    // N19: auth precedes the feature flag — an unauthenticated caller gets 401,
+    // never a flag-state probe (403 feature_disabled).
+    const { supabaseUser, dbUser } = await requireAnyRole(["rider", "driver"])(
+      request,
+    );
+
     if (!(await isVerticalEnabled("marketplace_rental_enabled"))) {
       return Response.json(
         { error: "feature_disabled", message: "Rental marketplace is not enabled" },
         { status: 403 },
       );
     }
-
-    const { supabaseUser, dbUser } = await requireAnyRole(["rider", "driver"])(
-      request,
-    );
 
     const result = await parseJsonBody(request, createSchema);
     if (!result.ok) return result.response;
@@ -72,6 +108,25 @@ export async function POST(request: Request) {
       }
     }
 
+    // Rate limit: 1 per 5 minutes (F18) — rate_limits table
+    const rateLimitKey = `rental_create:${dbUser.id}`;
+    const rateLimitWindow = new Date(Math.floor(Date.now() / (5 * 60 * 1000)) * (5 * 60 * 1000));
+    const [rateLimitRow] = await db
+      .insert(rateLimits)
+      .values({ key: rateLimitKey, window_start: rateLimitWindow, count: 1 })
+      .onConflictDoUpdate({
+        target: [rateLimits.key, rateLimits.window_start],
+        set: { count: sql`${rateLimits.count} + 1` },
+      })
+      .returning({ count: rateLimits.count });
+
+    if ((rateLimitRow?.count ?? 0) > 1) {
+      return Response.json(
+        { error: "rate_limited", message: "Maximum 1 request per 5 minutes" },
+        { status: 429 },
+      );
+    }
+
     // Rate limit: ≤3 open requests (F18)
     const [openCount] = await db
       .select({ cnt: count() })
@@ -79,7 +134,7 @@ export async function POST(request: Request) {
       .where(
         and(
           eq(rentalRequests.rider_user_id, dbUser.id),
-          lt(rentalRequests.created_at, new Date(Date.now() - 24 * 60 * 60 * 1000)),
+          inArray(rentalRequests.status, ["broadcasting", "collecting", "awarded", "confirmed"]),
         ),
       );
 
@@ -111,7 +166,10 @@ export async function POST(request: Request) {
           cargo_weight_kg: body.cargo_weight_kg,
           cargo_volume_m3: body.cargo_volume_m3 ? String(body.cargo_volume_m3) : null,
           cargo_description: body.cargo_description,
-          requested_vehicle_type: body.requested_vehicle_type as "pickup" | "mini_truck" | "medium_truck" | "heavy_truck" | "trailer" | "van" | "ambulance_basic" | "ambulance_advanced" | null,
+          rental_options: body.rental_options ?? null,
+          requested_vehicle_type: (body.requested_vehicle_type ?? null) as RentalVehicleType | null,
+          scheduled_start_at: body.scheduled_start_at ? new Date(body.scheduled_start_at) : null,
+          duration_hours: body.duration_hours ?? null,
           patient_condition: body.patient_condition,
           requires_paramedic: body.requires_paramedic ?? null,
           service_level: body.service_level,

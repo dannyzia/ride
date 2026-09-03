@@ -103,7 +103,8 @@ export function getConnectedCourierCount(): number {
 export function sendToCourier(userId: string, event: string, payload: unknown): void {
   const ws = courierSockets.get(userId);
   if (ws && ws.readyState === 1) {
-    ws.send(JSON.stringify({ event, ...(payload as Record<string, unknown>) }));
+    // N18: unified WS envelope — `{ type, ... }` like every other channel
+    ws.send(JSON.stringify({ type: event, ...(payload as Record<string, unknown>) }));
   }
 }
 
@@ -115,7 +116,8 @@ export function broadcastToCouriers(
   payload: unknown,
   filter?: (userId: string) => boolean,
 ): void {
-  const message = JSON.stringify({ event, ...(payload as Record<string, unknown>) });
+  // N18: unified WS envelope — `{ type, ... }` like every other channel
+  const message = JSON.stringify({ type: event, ...(payload as Record<string, unknown>) });
   for (const [userId, ws] of courierSockets) {
     if (ws.readyState === 1 && (!filter || filter(userId))) {
       ws.send(message);
@@ -133,19 +135,19 @@ export function handleDeliveryMessage(
   event: string,
   payload: Record<string, unknown>,
   send: (target: WebSocket, event: string, payload: unknown) => void,
+  metadata: { userId?: string },
 ): void {
   switch (event) {
     case "delivery:heartbeat": {
-      const { userId, lat, lng } = payload as { userId: string; lat: number; lng: number };
-      if (userId && typeof lat === 'number' && typeof lng === 'number') {
-        handleHeartbeat(userId, lat, lng);
+      const { lat, lng } = payload as { lat: number; lng: number };
+      if (metadata.userId && typeof lat === 'number' && typeof lng === 'number') {
+        handleHeartbeat(metadata.userId, lat, lng);
       }
       break;
     }
     case "delivery:connect": {
-      const { userId } = payload as { userId: string };
-      if (userId) {
-        registerCourier(userId, ws);
+      if (metadata.userId) {
+        registerCourier(metadata.userId, ws);
       }
       break;
     }

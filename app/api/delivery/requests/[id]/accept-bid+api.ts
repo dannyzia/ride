@@ -149,11 +149,23 @@ export async function POST(request: Request, { id }: { id: string }) {
           throw Object.assign(new Error('Driver already committed to an emergency'), { status: 409, message: 'driver_already_committed' });
         }
       } else {
-        // Food hero: FOR UPDATE on users row as common serialization point
+        // Food hero — N13 (F37 serialization fix): a food courier that is ALSO
+        // a driver must serialize on the SAME row every other vertical locks.
+        // drivers-row FOR UPDATE = the F37 common serialization point when the
+        // user is dual-role; the users-row lock stays for food-vs-food races
+        // (pure food couriers have no drivers row and cannot race rental or
+        // emergency, both of which require one). Lock order users→drivers is
+        // consistent here and no other tx locks users→anything, so no cycle.
         await tx
           .select()
           .from(users)
           .where(eq(users.id, bid.courier_user_id))
+          .for('update');
+
+        await tx
+          .select({ id: drivers.id })
+          .from(drivers)
+          .where(eq(drivers.user_id, bid.courier_user_id))
           .for('update');
       }
 

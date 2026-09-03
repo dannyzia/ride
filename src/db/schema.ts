@@ -13,6 +13,7 @@ import {
   primaryKey,
   uniqueIndex,
   index,
+  check,
   timestamp as ts,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -751,6 +752,12 @@ export const rides = pgTable(
     // Phase 7: data provenance — distinguishes native rides from external imports
     source_type: varchar("source_type", { length: 30 }).notNull().default("native"), // native | external_api
     external_source_id: varchar("external_source_id", { length: 255 }), // provider + external trip ID for dedup
+    // R3.3: auto-redispatch tracking columns (survive crash for startup sweep)
+    // When the current re-dispatch search window began (NULL = no active re-dispatch).
+    redispatch_started_at: timestamptz("redispatch_started_at"),
+    // Monitoring/billing counter — how many leads consumed in current window.
+    // Check-in trigger reads redispatch_started_at (time-based), NOT this counter.
+    redispatch_attempts: integer("redispatch_attempts").notNull().default(0),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -3049,39 +3056,41 @@ export const rentalRequests = pgTable("rental_requests", {
   // Ambulance-scheduled only
   patient_condition: text("patient_condition"),
   requires_paramedic: boolean("requires_paramedic"),
-  service_level: varchar("service_level", { length: 5 }), // CHECK IN ('BLS','ALS') enforced in handler
-  // Bidding
-  bidding_window_seconds: integer("bidding_window_seconds").notNull().default(1200),
-  soft_deadline_at: timestamptz("soft_deadline_at").notNull(),
-  // Award
-  awarded_bid_id: uuid("awarded_bid_id").references((): any => rentalBids.id),
-  awarded_at: timestamptz("awarded_at"), // F34: NEVER cleared on demotion
-  reselect_deadline_at: timestamptz("reselect_deadline_at"), // F39: set at demotion
-  confirmation_deadline_at: timestamptz("confirmation_deadline_at"), // F4: NULL while pending
-  fleet_ack_at: timestamptz("fleet_ack_at"), // F45: tracking-fork ack
-  confirmed_at: timestamptz("confirmed_at"),
-  tracking_required: boolean("tracking_required").notNull().default(false),
-  negotiated_terms: text("negotiated_terms"),
-  cancelled_at: timestamptz("cancelled_at"),
-  cancel_reason: text("cancel_reason"),
-  cancelled_by: varchar("cancelled_by", { length: 10 }), // rider|fleet|system|admin
-  created_at: timestamptz("created_at").notNull().defaultNow(),
-  updated_at: timestamptz("updated_at").notNull().defaultNow(),
-}, (t) => [
-  index("rental_requests_rider_idx").on(t.rider_user_id),
-  index("rental_requests_status_idx").on(t.status),
-  index("rental_requests_cat_status_idx").on(t.category, t.status),
-  // Partial indexes for scheduler job deadline sweeps (jobs 46-48)
-  index("rental_requests_soft_deadline_idx")
-    .on(t.soft_deadline_at)
-    .where(sql`status IN ('broadcasting','collecting') AND awarded_at IS NULL`),
-  index("rental_requests_reselect_idx")
-    .on(t.reselect_deadline_at)
-    .where(sql`status = 'collecting' AND reselect_deadline_at IS NOT NULL`),
-  index("rental_requests_confirm_idx")
-    .on(t.confirmation_deadline_at)
-    .where(sql`status = 'awarded' AND confirmation_deadline_at IS NOT NULL`),
-]);
+   service_level: varchar("service_level", { length: 5 }), // F2: CHECK IN ('BLS','ALS') + NULL for non-ambulance
+   // Bidding
+   bidding_window_seconds: integer("bidding_window_seconds").notNull().default(1200),
+   soft_deadline_at: timestamptz("soft_deadline_at").notNull(),
+   // Award
+   awarded_bid_id: uuid("awarded_bid_id").references((): any => rentalBids.id),
+   awarded_at: timestamptz("awarded_at"), // F34: NEVER cleared on demotion
+   reselect_deadline_at: timestamptz("reselect_deadline_at"), // F39: set at demotion
+   confirmation_deadline_at: timestamptz("confirmation_deadline_at"), // F4: NULL while pending
+   fleet_ack_at: timestamptz("fleet_ack_at"), // F45: tracking-fork ack
+   confirmed_at: timestamptz("confirmed_at"),
+   tracking_required: boolean("tracking_required").notNull().default(false),
+   negotiated_terms: text("negotiated_terms"),
+   cancelled_at: timestamptz("cancelled_at"),
+   cancel_reason: text("cancel_reason"),
+   cancelled_by: varchar("cancelled_by", { length: 10 }), // rider|fleet|system|admin
+   created_at: timestamptz("created_at").notNull().defaultNow(),
+   updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  }, (t) => [
+    // F2: service_level must be BLS/ALS when present (ambulance-scheduled only)
+    check("rental_requests_service_level_check", sql`service_level IS NULL OR service_level IN ('BLS','ALS')`),
+    index("rental_requests_rider_idx").on(t.rider_user_id),
+   index("rental_requests_status_idx").on(t.status),
+   index("rental_requests_cat_status_idx").on(t.category, t.status),
+   // Partial indexes for scheduler job deadline sweeps (jobs 46-48)
+   index("rental_requests_soft_deadline_idx")
+     .on(t.soft_deadline_at)
+     .where(sql`status IN ('broadcasting','collecting') AND awarded_at IS NULL`),
+   index("rental_requests_reselect_idx")
+     .on(t.reselect_deadline_at)
+     .where(sql`status = 'collecting' AND reselect_deadline_at IS NOT NULL`),
+   index("rental_requests_confirm_idx")
+     .on(t.confirmation_deadline_at)
+     .where(sql`status = 'awarded' AND confirmation_deadline_at IS NOT NULL`),
+ ]);
 
 /**
  * Rental bid — fleet-submitted quote for a rental request.
@@ -3137,18 +3146,20 @@ export const ambulanceCertifications = pgTable("ambulance_certifications", {
   issuing_body: text("issuing_body"),
   issued_at: timestamptz("issued_at"),
   expires_at: timestamptz("expires_at"),
-  service_level: varchar("service_level", { length: 3 }), // CHECK IN ('BLS','ALS') enforced in handler
-  document_urls: jsonb("document_urls").notNull().default(sql`'[]'::jsonb`),
-  reviewed_by: uuid("reviewed_by").references((): any => users.id),
-  reviewed_at: timestamptz("reviewed_at"),
-  review_notes: text("review_notes"),
-  created_at: timestamptz("created_at").notNull().defaultNow(),
-  updated_at: timestamptz("updated_at").notNull().defaultNow(),
-}, (t) => [
-  uniqueIndex("ambulance_certifications_user_vehicle_idx").on(t.user_id, t.vehicle_id),
-  index("ambulance_certifications_user_idx").on(t.user_id),
-  index("ambulance_certifications_status_idx").on(t.certification_status, t.expires_at),
-]);
+   service_level: varchar("service_level", { length: 3 }).notNull(), // F2: CHECK IN ('BLS','ALS')
+   document_urls: jsonb("document_urls").notNull().default(sql`'[]'::jsonb`),
+   reviewed_by: uuid("reviewed_by").references((): any => users.id),
+   reviewed_at: timestamptz("reviewed_at"),
+   review_notes: text("review_notes"),
+   created_at: timestamptz("created_at").notNull().defaultNow(),
+   updated_at: timestamptz("updated_at").notNull().defaultNow(),
+ }, (t) => [
+   uniqueIndex("ambulance_certifications_user_vehicle_idx").on(t.user_id, t.vehicle_id),
+   index("ambulance_certifications_user_idx").on(t.user_id),
+   index("ambulance_certifications_status_idx").on(t.certification_status, t.expires_at),
+    // F2: service_level must be BLS/ALS
+    check("ambulance_certifications_service_level_check", sql`service_level IN ('BLS','ALS')`),
+  ]);
 
 export const emergencyStatusEnum = pgEnum("emergency_status", [
   "broadcasting",
@@ -3179,24 +3190,26 @@ export const emergencyRequests = pgTable("emergency_requests", {
   dropoff_lng: numeric("dropoff_lng", { precision: 9, scale: 6 }),
   patient_condition: text("patient_condition").notNull(),
   requires_paramedic: boolean("requires_paramedic").notNull().default(false),
-  service_level: varchar("service_level", { length: 3 }), // CHECK IN ('BLS','ALS') enforced in handler
-  status: emergencyStatusEnum("status").notNull().default("broadcasting"),
-  accepted_cert_id: uuid("accepted_cert_id").references((): any => ambulanceCertifications.id),
-  accepted_at: timestamptz("accepted_at"),
-  en_route_pickup_at: timestamptz("en_route_pickup_at"),
-  arrived_at: timestamptz("arrived_at"),
-  en_route_dropoff_at: timestamptz("en_route_dropoff_at"),
-  completed_at: timestamptz("completed_at"),
-  cancelled_at: timestamptz("cancelled_at"),
-  cancel_reason: text("cancel_reason"),
-  failure_reason: text("failure_reason"),
-  expires_at: timestamptz("expires_at").notNull(),
-  created_at: timestamptz("created_at").notNull().defaultNow(),
-  updated_at: timestamptz("updated_at").notNull().defaultNow(),
-}, (t) => [
-  index("emergency_requests_status_idx").on(t.status, t.created_at),
-  index("emergency_requests_caller_idx").on(t.caller_user_id),
-  // F41 assignee-status index: driver's active-emergency exclusivity lookups
+   service_level: varchar("service_level", { length: 3 }), // F2: CHECK IN ('BLS','ALS')
+   status: emergencyStatusEnum("status").notNull().default("broadcasting"),
+   accepted_cert_id: uuid("accepted_cert_id").references((): any => ambulanceCertifications.id),
+   accepted_at: timestamptz("accepted_at"),
+   en_route_pickup_at: timestamptz("en_route_pickup_at"),
+   arrived_at: timestamptz("arrived_at"),
+   en_route_dropoff_at: timestamptz("en_route_dropoff_at"),
+   completed_at: timestamptz("completed_at"),
+   cancelled_at: timestamptz("cancelled_at"),
+   cancel_reason: text("cancel_reason"),
+   failure_reason: text("failure_reason"),
+   expires_at: timestamptz("expires_at").notNull(),
+   created_at: timestamptz("created_at").notNull().defaultNow(),
+   updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  }, (t) => [
+    // F2: service_level must be BLS/ALS when present
+    check("emergency_requests_service_level_check", sql`service_level IS NULL OR service_level IN ('BLS','ALS')`),
+    index("emergency_requests_status_idx").on(t.status, t.created_at),
+   index("emergency_requests_caller_idx").on(t.caller_user_id),
+   // F41 assignee-status index: driver's active-emergency exclusivity lookups
   index("emergency_requests_assignee_status_idx").on(t.accepted_cert_id, t.status),
 ]);
 
@@ -3323,6 +3336,7 @@ export const deliveryRequests = pgTable("delivery_requests", {
   index("delivery_requests_status_idx").on(t.status),
   index("delivery_requests_deadline_idx").on(t.deadline_at)
     .where(sql`status = 'pending'`),
+  uniqueIndex("delivery_requests_source_shop_order_idx").on(t.source_shop_order_id),
 ]);
 
 /**
@@ -3351,6 +3365,26 @@ export const deliveryBids = pgTable("delivery_bids", {
  * Delivery leg — tracks the courier's trip lifecycle.
  * F42: index (courier_user_id, leg_state) for §B.7 scans.
  */
+/**
+ * R2.1: Driver earnings goals — per-driver target for a daily/weekly/monthly period.
+ * Progress is computed at read time from existing earnings tables, never denormalized.
+ */
+export const driverEarningsGoals = pgTable("driver_earnings_goals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  driver_user_id: uuid("driver_user_id").notNull().references(() => users.id),
+  period: varchar("period", { length: 20 }).notNull(), // 'daily' | 'weekly' | 'monthly'
+  target_bdt: integer("target_bdt").notNull(), // paisa
+  is_active: boolean("is_active").notNull().default(true),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  // One active goal per driver at a time
+  uniqueIndex("driver_earnings_goals_active_idx")
+    .on(t.driver_user_id)
+    .where(sql`is_active = true`),
+  index("driver_earnings_goals_driver_idx").on(t.driver_user_id),
+]);
+
 export const deliveryLegs = pgTable("delivery_legs", {
   id: uuid("id").defaultRandom().primaryKey(),
   request_id: uuid("request_id").notNull().references(() => deliveryRequests.id, { onDelete: "cascade" }),

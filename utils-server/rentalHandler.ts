@@ -7,6 +7,9 @@
  */
 import type { WebSocket } from "ws";
 import { logger } from "../lib/logger";
+import { db } from "../src/db";
+import { fleetMembers } from "../src/db/schema";
+import { eq, and } from "drizzle-orm";
 
 type SendFn = (ws: WebSocket, event: string, payload: unknown) => void;
 
@@ -66,7 +69,7 @@ export function sendToFleet(
 /**
  * Handle a rental-domain WS message.
  */
-export function handleRentalMessage(
+export async function handleRentalMessage(
   ws: WebSocket,
   event: string,
   payload: Record<string, unknown>,
@@ -78,6 +81,23 @@ export function handleRentalMessage(
   }, 5000);
 
   try {
+    // §D membership resolution: register bidder on first rental:* message
+    if (metadata.userId && !bidderSockets.has(metadata.userId)) {
+      const [membership] = await db
+        .select({ id: fleetMembers.id })
+        .from(fleetMembers)
+        .where(
+          and(
+            eq(fleetMembers.user_id, metadata.userId),
+            eq(fleetMembers.status, "active"),
+          ),
+        )
+        .limit(1);
+      if (membership) {
+        registerBidder(metadata.userId, ws);
+      }
+    }
+
     switch (event) {
       case "rental:bid_request":
         // S→C: broadcast a new rental request to eligible fleets

@@ -9,11 +9,11 @@
  * open-bid cap, price bounds, tracking_required conditional NOT NULL.
  */
 import { db } from "@/src/db";
-import { rentalBids, rentalRequests } from "@/src/db/schema";
+import { rentalBids, rentalRequests, drivers, vehicles, rentalRequestEvents, rentalVehicleTypeEnum } from "@/src/db/schema";
 import { requireFleetMarketplaceAccess } from "@/lib/marketplaceRbac";
 import { fleetHasVerifiedCertPair } from "@/lib/ambulanceCerts";
 import { parseJsonBody } from "@/lib/parseBody";
-import { getConfigInt } from "@/lib/platformConfig";
+import { isVerticalEnabled, getConfigInt } from "@/lib/platformConfig";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { z } from "zod";
@@ -22,11 +22,7 @@ import { eq, and, desc, sql, count as cnt } from "drizzle-orm";
 const submitSchema = z.object({
   request_id: z.string().uuid(),
   fleet_id: z.string().uuid().optional(), // REQUIRED when memberships.length > 1 (F30)
-  vehicle_type: z.enum([
-    "pickup", "mini_truck", "medium_truck", "heavy_truck",
-    "trailer", "van", "ambulance_basic", "ambulance_advanced",
-    "car_compact", "car_economy", "car_comfort", "car_premium", "car_xl",
-  ]),
+  vehicle_type: z.enum(rentalVehicleTypeEnum.enumValues as any),
   driver_user_id: z.string().uuid().optional(), // REQUIRED when parent.tracking_required=true
   vehicle_id: z.string().uuid().optional(),
   quoted_price_bdt: z.number().int().positive(),
@@ -36,6 +32,15 @@ const submitSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // N5 (§C.0): every vertical's bid endpoint checks the feature flag —
+    // 403 feature_disabled when the marketplace vertical is off.
+    if (!(await isVerticalEnabled("marketplace_rental_enabled"))) {
+      return Response.json(
+        { error: "feature_disabled", message: "Rental marketplace is not enabled" },
+        { status: 403 },
+      );
+    }
+
     const { supabaseUser, dbUser, memberships } =
       await requireFleetMarketplaceAccess()(request);
 
@@ -138,21 +143,106 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insert bid (partial unique prevents duplicate active bid per request+fleet)
-    const [bid] = await db
-      .insert(rentalBids)
-      .values({
+    // Validate driver belongs to the bidding fleet and is active
+    if (body.driver_user_id) {
+      const [driverRow] = await db
+        .select({ id: drivers.id })
+        .from(drivers)
+        .where(
+          and(
+            eq(drivers.user_id, body.driver_user_id),
+            eq(drivers.fleet_id, fleetId!),
+            eq(drivers.status, "active"),
+          ),
+        )
+        .limit(1);
+      if (!driverRow) {
+        return Response.json(
+          { error: "invalid_driver", message: "Driver not found or not in this fleet" },
+          { status: 403 },
+        );
+      }
+    }
+
+    // Validate vehicle belongs to the bidding fleet
+    if (body.vehicle_id) {
+      const [vehicleRow] = await db
+        .select({ id: vehicles.id })
+        .from(vehicles)
+        .where(
+          and(
+            eq(vehicles.id, body.vehicle_id),
+            eq(vehicles.fleet_id, fleetId!),
+          ),
+        )
+        .limit(1);
+      if (!vehicleRow) {
+        return Response.json(
+          { error: "invalid_vehicle", message: "Vehicle not found or not in this fleet" },
+          { status: 403 },
+        );
+      }
+    }
+
+    // N12 (§B.0): submit runs in ONE tx — re-lock the request row, re-verify
+    // status + deadline in-tx (guards the transition), conditional
+    // broadcasting→collecting flip on the first bid (§B.1), insert the bid,
+    // append the bid_submitted audit event — same tx.
+    const { bid } = await db.transaction(async (tx) => {
+      const [reqLocked] = await tx
+        .select()
+        .from(rentalRequests)
+        .where(eq(rentalRequests.id, body.request_id))
+        .for("update");
+
+      if (!reqLocked) {
+        throw Object.assign(new Error("Request not found"), { status: 404 });
+      }
+      if (!["broadcasting", "collecting"].includes(reqLocked.status)) {
+        throw Object.assign(new Error("Request is not accepting bids"), { status: 409 });
+      }
+      if (new Date(reqLocked.soft_deadline_at) <= new Date()) {
+        throw Object.assign(new Error("Bidding deadline has passed"), { status: 409 });
+      }
+
+      // §B.1: broadcasting → collecting on the first bid (conditional update)
+      if (reqLocked.status === "broadcasting") {
+        await tx
+          .update(rentalRequests)
+          .set({ status: "collecting", updated_at: new Date() })
+          .where(
+            and(
+              eq(rentalRequests.id, body.request_id),
+              eq(rentalRequests.status, "broadcasting"),
+            ),
+          );
+      }
+
+      // Insert bid (partial unique prevents duplicate active bid per request+fleet)
+      const [inserted] = await tx
+        .insert(rentalBids)
+        .values({
+          request_id: body.request_id,
+          submitted_by_user_id: dbUser.id,
+          fleet_id: fleetId!,
+          driver_user_id: body.driver_user_id ?? null,
+          vehicle_id: body.vehicle_id ?? null,
+          vehicle_type: body.vehicle_type as any,
+          quoted_price_bdt: body.quoted_price_bdt,
+          quoted_notes: body.quoted_notes,
+          overtime_rate_bdt: body.overtime_rate_bdt ?? null,
+        })
+        .returning({ id: rentalBids.id });
+
+      await tx.insert(rentalRequestEvents).values({
         request_id: body.request_id,
-        submitted_by_user_id: dbUser.id,
-        fleet_id: fleetId!,
-        driver_user_id: body.driver_user_id ?? null,
-        vehicle_id: body.vehicle_id ?? null,
-        vehicle_type: body.vehicle_type,
-        quoted_price_bdt: body.quoted_price_bdt,
-        quoted_notes: body.quoted_notes,
-        overtime_rate_bdt: body.overtime_rate_bdt ?? null,
-      })
-      .returning({ id: rentalBids.id });
+        event_type: "bid_submitted",
+        payload: { bid_id: inserted.id, fleet_id: fleetId, vehicle_type: body.vehicle_type },
+        created_by: dbUser.id,
+      });
+
+      return { bid: inserted };
+    });
 
     return Response.json(
       { bid_id: bid.id, message: "Bid submitted" },
