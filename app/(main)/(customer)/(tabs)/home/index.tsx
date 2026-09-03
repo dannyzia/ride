@@ -39,6 +39,7 @@ import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import SosBanner from "@/components/SosBanner";
 
 // ── Vehicle icons per type ───────────────────────────────────────
 const VEHICLE_ICONS: Record<VehicleTypeEnum, VehicleIconName> = {
@@ -1264,6 +1265,7 @@ export default function HomeScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <SosBanner />
       <StatusBar
         translucent
         backgroundColor="transparent"

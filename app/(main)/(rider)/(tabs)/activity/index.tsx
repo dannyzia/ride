@@ -17,6 +17,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT } from "@/lib/format";
+import Badge from "@/components/Badge";
 
 interface Trip {
   id: string;
@@ -47,12 +48,12 @@ const STATUS_FILTERS: { key: FilterStatus; label: string }[] = [
   { key: "cancelled", label: "Cancelled" },
 ];
 
-const STATUS_BADGE_COLORS: Record<string, string> = {
-  completed: colors.success,
-  cancelled: colors.danger,
-  in_progress: colors.accent,
-  matched: colors.amber,
-  expired: colors.grayMedium,
+const STATUS_BADGE_VARIANTS: Record<string, "success" | "danger" | "info" | "amber" | "primary" | "neutral"> = {
+  completed: "success",
+  cancelled: "danger",
+  in_progress: "info",
+  matched: "amber",
+  expired: "neutral",
 };
 
 export default function ActivityScreen() {
@@ -288,21 +289,10 @@ export default function ActivityScreen() {
               >
                 {/* Status + date */}
                 <View className="flex-row justify-between items-center mb-2">
-                  <View
-                    className="px-[8px] py-[3px] rounded-full"
-                    style={{
-                      backgroundColor: `${STATUS_BADGE_COLORS[trip.status] ?? colors.grayMedium}20`,
-                    }}
-                  >
-                    <Text
-                      className="text-[11px] font-JakartaBold"
-                      style={{
-                        color: STATUS_BADGE_COLORS[trip.status] ?? colors.grayMedium,
-                      }}
-                    >
-                      {trip.status.replace(/_/g, " ").toUpperCase()}
-                    </Text>
-                  </View>
+                  <Badge
+                    text={trip.status.replace(/_/g, " ").toUpperCase()}
+                    variant={STATUS_BADGE_VARIANTS[trip.status] ?? "neutral"}
+                  />
                   <Text
                     className="text-[11px] font-Jakarta"
                     style={{ color: textSecondary }}

@@ -60,14 +60,20 @@ function mockSelectQueue(queue: ChainResult[][]) {
   (db.select as jest.Mock).mockImplementation(() => {
     const rows = queue[callIndex] ?? [];
     callIndex++;
+    // Build chain that supports both .where().limit() and .where() terminal
+    const whereResult: any = {
+      limit: jest.fn(async () => rows),
+      orderBy: jest.fn(() => ({
+        limit: jest.fn(async () => rows),
+      })),
+      // Terminal .where() (no .limit) — thenable so `await ...where()` resolves to rows
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      then: (resolve: any, reject: any) =>
+        Promise.resolve(rows).then(resolve, reject),
+    };
     return {
       from: jest.fn(() => ({
-        where: jest.fn(() => ({
-          limit: jest.fn(async () => rows),
-          orderBy: jest.fn(() => ({
-            limit: jest.fn(async () => rows),
-          })),
-        })),
+        where: jest.fn(() => whereResult),
       })),
     };
   });
@@ -191,7 +197,7 @@ describe("resolve endpoint — acknowledged alerts", () => {
 describe("active endpoint — acknowledged alerts", () => {
   test("returns an alert with status 'acknowledged'", async () => {
     const now = new Date("2026-08-21T10:05:00Z");
-    // Queue: 1st = user lookup, 2nd = alert lookup (acknowledged)
+    // Queue: 1st = user lookup, 2nd = alert lookup (acknowledged), 3rd = recent count
     mockSelectQueue([
       [{ id: USER_ID, role: "rider" }],
       [{
@@ -206,6 +212,7 @@ describe("active endpoint — acknowledged alerts", () => {
         acknowledged_by: ADMIN_ID,
         acknowledged_at: now,
       }],
+      [{ count: 1 }],
     ]);
 
     const res = await activeGET(new Request("http://localhost/api/sos/active"));
@@ -235,6 +242,7 @@ describe("active endpoint — acknowledged alerts", () => {
         acknowledged_by: null,
         acknowledged_at: null,
       }],
+      [{ count: 1 }],
     ]);
 
     const res = await activeGET(new Request("http://localhost/api/sos/active"));

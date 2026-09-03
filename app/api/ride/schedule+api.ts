@@ -15,6 +15,7 @@ import { sendSms } from '@/lib/dprelay';
 import { getPlan05Int } from '@/lib/platformConfig';
 import { computeEstimatedDurationMinutes, checkRideOverlap } from '@/lib/scheduleUtils';
 import * as errors from '@/lib/errors';
+import { normalizeBdPhone, isSamePhone, isConsentFresh } from '@/lib/bookForOther';
 
 const scheduleSchema = z.object({
   pickup_lat: z.number().min(-90).max(90),
@@ -28,8 +29,9 @@ const scheduleSchema = z.object({
   promo_code: z.string().min(1).max(50).optional(),
   preference_ids: z.array(z.string().uuid()).max(10).optional(),
   secondary_rider_name: z.string().min(1).max(255).optional(),
-  secondary_rider_phone: z.string().min(1).max(20).optional(),
+  secondary_rider_phone: z.string().regex(/^01\d{9}$/, 'Invalid Bangladesh phone number').optional(),
   secondary_rider_consent: z.boolean().optional().default(false),
+  secondary_rider_consent_at: z.string().datetime().optional(),
   upfront_tip_bdt: z.number().int().min(0).max(20000).optional(),
   stops: z.array(z.object({ lat: z.number(), lng: z.number(), address: z.string().min(1).max(500) })).max(2).optional(),
 });
@@ -46,7 +48,7 @@ export async function POST(request: Request) {
     const parsed = await parseJsonBody(request, scheduleSchema);
     if (!parsed.ok) return parsed.response;
 
-    const { pickup_lat, pickup_lng, pickup_address, dropoff_lat, dropoff_lng, dropoff_address, vehicle_type, scheduled_at, preference_ids, secondary_rider_name, secondary_rider_phone, secondary_rider_consent, upfront_tip_bdt, stops } = parsed.data;
+    const { pickup_lat, pickup_lng, pickup_address, dropoff_lat, dropoff_lng, dropoff_address, vehicle_type, scheduled_at, preference_ids, secondary_rider_name, secondary_rider_phone, secondary_rider_consent, secondary_rider_consent_at, upfront_tip_bdt, stops } = parsed.data;
 
     const scheduledDate = new Date(scheduled_at);
     const now = new Date();
@@ -77,12 +79,29 @@ export async function POST(request: Request) {
     }
     const zoneId = zoneCheck.zone.id;
 
-    // Consent check: required when booking for someone else
-    if (secondary_rider_phone && !secondary_rider_consent) {
-      return Response.json(
-        { error: 'consent_required', message: 'Passenger consent is required when booking for someone else' },
-        { status: 400 },
-      );
+    // R1.3: Book-for-other hardening
+    if (secondary_rider_phone) {
+      // Self-phone rejection
+      if (isSamePhone(user.phone, secondary_rider_phone)) {
+        return Response.json(
+          { error: 'self_booking', message: 'Cannot book a ride for yourself using the passenger phone field' },
+          { status: 400 },
+        );
+      }
+      // Consent required
+      if (!secondary_rider_consent) {
+        return Response.json(
+          { error: 'consent_required', message: 'Passenger consent is required when booking for someone else' },
+          { status: 400 },
+        );
+      }
+      // Consent freshness: reject stale consent (> 10 min)
+      if (!isConsentFresh(secondary_rider_consent_at, Date.now())) {
+        return Response.json(
+          { error: 'consent_stale', message: 'Passenger consent has expired. Please re-confirm.' },
+          { status: 400 },
+        );
+      }
     }
 
     const dispatchWindowStart = new Date(scheduledDate.getTime() - 15 * 60 * 1000);

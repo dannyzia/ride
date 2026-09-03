@@ -1,9 +1,12 @@
 import { db } from "@/src/db";
 import { sosAlerts, users } from "@/src/db/schema";
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, desc, sql } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
+
+/** R3.1: Window (in seconds) for clustering alerts as high-intensity. */
+const INTENSITY_WINDOW_SECONDS = 60;
 
 /**
  * GET /api/sos/active
@@ -59,6 +62,21 @@ export async function GET(request: Request) {
       return Response.json({ active: false });
     }
 
+    // R3.1: Frequency-as-intensity — count alerts from this user in the
+    // last 60 seconds. Three or more = high-intensity distress signal.
+    const windowStart = new Date(Date.now() - INTENSITY_WINDOW_SECONDS * 1000);
+    const [recentCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(sosAlerts)
+      .where(
+        and(
+          eq(sosAlerts.user_id, dbUser.id),
+          sql`${sosAlerts.created_at} >= ${windowStart}`,
+        ),
+      );
+
+    const recentAlertCount = Number(recentCount?.count ?? 0);
+
     return Response.json({
       active: true,
       alert: {
@@ -73,6 +91,9 @@ export async function GET(request: Request) {
         acknowledged_by: alert.acknowledged_by,
         acknowledged_at: alert.acknowledged_at?.toISOString() ?? null,
       },
+      // R3.1: frequency clustering data for admin + client
+      recent_alert_count: recentAlertCount,
+      is_high_intensity: recentAlertCount >= 3,
     });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401)

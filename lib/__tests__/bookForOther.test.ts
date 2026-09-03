@@ -6,6 +6,7 @@
  * is tested by Maestro E2E flows.
  */
 import { z } from "zod";
+import { normalizeBdPhone } from "../../lib/bookForOther";
 
 // ── Schemas (mirrors from request+api.ts and schedule+api.ts) ─────────────
 
@@ -53,8 +54,9 @@ const scheduleSchema = z.object({
   ]),
   scheduled_at: z.string().datetime(),
   secondary_rider_name: z.string().min(1).max(255).optional(),
-  secondary_rider_phone: z.string().min(1).max(20).optional(),
+  secondary_rider_phone: z.string().regex(/^01\d{9}$/, 'Invalid Bangladesh phone number').optional(),
   secondary_rider_consent: z.boolean().optional().default(false),
+  secondary_rider_consent_at: z.string().datetime().optional(),
 });
 
 // ── Base valid payload ────────────────────────────────────────────────────
@@ -248,5 +250,45 @@ describe("SMS rate limit logic", () => {
     // so rides older than 1 hour are excluded from the count.
     // After an hour, the count naturally resets.
     expect(shouldSendSms(0)).toEqual({ send: true });
+  });
+});
+
+// ── R1.3: BD phone normalization + self-phone rejection ───────────────────
+
+describe("BD phone normalization (imported from production)", () => {
+  it("normalizes 01712345678 to 01712345678", () => {
+    expect(normalizeBdPhone("01712345678")).toBe("01712345678");
+  });
+
+  it("strips +88 prefix", () => {
+    expect(normalizeBdPhone("+8801712345678")).toBe("01712345678");
+  });
+
+  it("strips 88 prefix when length > 11", () => {
+    expect(normalizeBdPhone("8801712345678")).toBe("01712345678");
+  });
+
+  it("strips spaces and dashes", () => {
+    expect(normalizeBdPhone("017-123-45678")).toBe("01712345678");
+    expect(normalizeBdPhone("017 123 45678")).toBe("01712345678");
+  });
+
+  it("rejects non-BD phone (too short)", () => {
+    expect(normalizeBdPhone("0171234567")).toBeNull();
+  });
+
+  it("rejects non-BD phone (wrong prefix)", () => {
+    expect(normalizeBdPhone("02712345678")).toBeNull();
+  });
+
+  it("schedule schema now rejects non-BD phone", () => {
+    const result = scheduleSchema.safeParse({
+      ...baseRequest,
+      scheduled_at: new Date(Date.now() + 3600000).toISOString(),
+      secondary_rider_name: "Jane",
+      secondary_rider_phone: "12345",
+      secondary_rider_consent: true,
+    });
+    expect(result.success).toBe(false);
   });
 });

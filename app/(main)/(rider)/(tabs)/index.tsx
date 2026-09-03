@@ -21,6 +21,7 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import MapLibreGL from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { logger } from "@/lib/logger";
+import SosBanner from "@/components/SosBanner";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { relativeTime } from "@/lib/time";
 import {
@@ -855,6 +856,7 @@ export default function DriverHome() {
   // ── Render ───────────────────────────────────────────────────────
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <SosBanner />
       <StatusBar
         style={isDark ? "light" : "dark"}
         translucent

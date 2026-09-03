@@ -11,6 +11,7 @@ import { createCancellationCreditInTx } from '@/lib/cancellationCompensation';
 import { createCancellationFeeEventInTx } from '@/lib/paymentEvents';
 import { haversineKm } from '@/lib/hotspots';
 import { sendNotification } from '@/lib/notify';
+import { getConfigValue } from '@/lib/platformConfig';
 import * as errors from '@/lib/errors';
 
 // Phase G: proximity-cancel threshold — driver cancelling within this
@@ -106,6 +107,14 @@ export async function POST(request: Request, { id }: { id: string }) {
       }
     }
 
+    // R3.3: Auto-redispatch — when a driver cancels and auto-redispatch is
+    // enabled, transition to 'dispatching' instead of 'cancelled'. The ride
+    // goes back into the dispatch pool for a new driver match.
+    const autoRedispatchEnabled = (await getConfigValue('auto_redispatch_enabled', 'false')) === 'true';
+    const isDriverCancel = cancelled_by === 'driver';
+    const canRedispatch = isDriverCancel && autoRedispatchEnabled && !ride.scheduled_at;
+    const newStatus = canRedispatch ? 'dispatching' : 'cancelled';
+
     // M-28: every state write is ONE transaction. The atomic claim is the
     // exactly-once guard (two concurrent cancels both pass the pre-check;
     // only one wins the conditional UPDATE — the loser 409s and writes
@@ -117,10 +126,15 @@ export async function POST(request: Request, { id }: { id: string }) {
     await db.transaction(async (tx) => {
       const [claimedRide] = await tx.update(rides)
         .set({
-          status: 'cancelled',
-          cancelled_by,
-          cancel_reason: reason ?? null,
+          status: newStatus,
+          cancelled_by: canRedispatch ? null : cancelled_by,
+          cancel_reason: canRedispatch ? null : (reason ?? null),
           updated_at: new Date(),
+          // R3.3: mark the start of the re-dispatch search window
+          ...(canRedispatch ? {
+            redispatch_started_at: new Date(),
+            driver_id: null, // clear the departing driver
+          } : {}),
           // Phase G: stamped in the same claim UPDATE (never true for
           // rider cancels — driverCancelWithin200m only computes there).
           ...(driverCancelWithin200m ? { driver_cancel_within_200m: true } : {}),
@@ -192,13 +206,20 @@ export async function POST(request: Request, { id }: { id: string }) {
       catch (e) { logger.warn('[accounting] cancellation fee entry failed', e); }
     }
 
-    logger.info('[ride/cancel] ride cancelled', { rideId, cancelled_by, reason, feeBdt, driverCancelWithin200m });
+    logger.info(canRedispatch ? '[ride/cancel] driver cancel → auto-redispatch' : '[ride/cancel] ride cancelled', { rideId, cancelled_by, reason, feeBdt, driverCancelWithin200m, canRedispatch });
 
-    // ── Phase G: rider survey invite on driver-cancelled rides ────────
-    // Fire-and-forget (same convention as ride:completed in complete+api);
-    // a notification failure must never fail the cancellation. The rider
-    // app routes the tap via lib/notificationRouter.ts → ride screen.
-    if (cancelled_by === 'driver') {
+    // ── R3.3: rider notification on auto-redispatch ─────────────────
+    if (canRedispatch) {
+      sendNotification(
+        ride.user_id,
+        'ride:driver_cancelled',
+        'Finding a new driver…',
+        'Your driver cancelled. We are finding a new driver for you.',
+        { ride_id: rideId },
+        { priority: 'high' },
+      ).catch(() => {});
+    } else if (cancelled_by === 'driver') {
+      // ── Phase G: rider survey invite on driver-cancelled rides ────────
       sendNotification(
         ride.user_id,
         'ride:cancel_survey',
@@ -228,7 +249,8 @@ export async function POST(request: Request, { id }: { id: string }) {
           body: JSON.stringify({
             ride_id: rideId,
             driver_id: ride.driver_id ?? null,
-            cancelled_by,
+            cancelled_by: canRedispatch ? 'driver_redispatch' : cancelled_by,
+            redispatch: canRedispatch,
           }),
         }).catch((e) =>
           logger.error("[ride/cancel] WS ride:cancelled broadcast failed", { rideId, driverId: ride.driver_id ?? null, error: errors.getErrorMessage(e) }),
@@ -236,7 +258,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       }
     }
 
-    return Response.json({ ok: true, status: 'cancelled' });
+    return Response.json({ ok: true, status: canRedispatch ? 'dispatching' : 'cancelled' });
   } catch (e: unknown) {
     if (errors.getErrorStatus(e) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[ride/cancel] error', e);

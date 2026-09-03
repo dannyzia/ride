@@ -19,6 +19,10 @@ export interface SosActiveAlert {
 interface UseSosActiveResult {
   active: boolean;
   alert: SosActiveAlert | null;
+  /** R3.1: number of alerts from this user in the last 60 seconds */
+  recentAlertCount: number;
+  /** R3.1: true when 3+ alerts in 60s — high-intensity distress */
+  isHighIntensity: boolean;
   loading: boolean;
   resolving: boolean;
   resolveAlert: () => Promise<boolean>;
@@ -35,6 +39,8 @@ const POLL_INTERVAL_MS = 10_000;
 export function useSosActive(): UseSosActiveResult {
   const [active, setActive] = useState(false);
   const [alert, setAlert] = useState<SosActiveAlert | null>(null);
+  const [recentAlertCount, setRecentAlertCount] = useState(0);
+  const [isHighIntensity, setIsHighIntensity] = useState(false);
   const [loading, setLoading] = useState(true);
   const [resolving, setResolving] = useState(false);
   const mountedRef = useRef(true);
@@ -56,6 +62,8 @@ export function useSosActive(): UseSosActiveResult {
 
       setActive(data.active === true);
       setAlert(data.alert ?? null);
+      setRecentAlertCount(data.recent_alert_count ?? 0);
+      setIsHighIntensity(data.is_high_intensity === true);
     } catch (err) {
       logger.warn("[useSosActive] fetch failed", err);
     } finally {
@@ -105,5 +113,5 @@ export function useSosActive(): UseSosActiveResult {
     }
   }, [alert?.id, resolving, fetchActive]);
 
-  return { active, alert, loading, resolving, resolveAlert, refetch: fetchActive };
+  return { active, alert, recentAlertCount, isHighIntensity, loading, resolving, resolveAlert, refetch: fetchActive };
 }

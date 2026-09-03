@@ -7,6 +7,7 @@ import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import ProgressBar from "@/components/ProgressBar";
 
 function daysBetween(fromIso: string, toIso: string): number {
   const diff = new Date(toIso).getTime() - new Date(fromIso).getTime();
@@ -91,7 +92,14 @@ export default function ActiveSubscription() {
           </View>
           <View className="p-[16px] border rounded-[12px] mb-4" style={{ backgroundColor: surfaceBg, borderColor }}>
             <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>Calls remaining</Text>
-            <Text className="text-[28px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>{activeSubscription.calls_remaining}</Text>
+            <Text className="text-[28px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>{activeSubscription.calls_remaining === -1 ? "Unlimited" : activeSubscription.calls_remaining}</Text>
+            {activeSubscription.calls_remaining !== -1 && (
+              <ProgressBar
+                current={activeSubscription.daily_calls_used ?? 0}
+                total={Math.max(1, (activeSubscription.daily_calls_used ?? 0) + activeSubscription.calls_remaining)}
+                label={`${activeSubscription.daily_calls_used ?? 0} used today`}
+              />
+            )}
           </View>
           <TouchableOpacity
             className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3"

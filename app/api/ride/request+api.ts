@@ -24,6 +24,7 @@ import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { getStagedPromo, clearStagedPromo } from "@/lib/promoCache";
+import { normalizeBdPhone, isSamePhone, isConsentFresh } from "@/lib/bookForOther";
 import * as errors from "@/lib/errors";
 
 const requestSchema = z.object({
@@ -46,6 +47,7 @@ const requestSchema = z.object({
   secondary_rider_name: z.string().min(1).max(255).optional(),
   secondary_rider_phone: z.string().regex(/^01\d{9}$/, "Invalid Bangladesh phone number").optional(),
   secondary_rider_consent: z.boolean().optional().default(false),
+  secondary_rider_consent_at: z.string().datetime().optional(),
   upfront_tip_bdt: z.number().int().min(0).max(20000).optional(),
   stops: z.array(z.object({ lat: z.number(), lng: z.number(), address: z.string().min(1).max(500) })).max(2).optional(),
   female_driver_preference: z.boolean().optional(),
@@ -87,7 +89,7 @@ export async function POST(request: Request) {
     const uid = supabaseUser.id;
 
     const [user] = await db
-      .select({ id: users.id, role: users.role, total_rides: users.total_rides })
+      .select({ id: users.id, role: users.role, total_rides: users.total_rides, phone: users.phone })
       .from(users)
       .where(eq(users.auth_uid, uid))
       .limit(1);
@@ -115,6 +117,7 @@ export async function POST(request: Request) {
       secondary_rider_name,
       secondary_rider_phone,
       secondary_rider_consent,
+      secondary_rider_consent_at,
       upfront_tip_bdt,
       stops,
       female_driver_preference,
@@ -140,12 +143,29 @@ export async function POST(request: Request) {
     }
     const zoneId = zoneCheck.zone.id;
 
-    // Consent check: required when booking for someone else
-    if (secondary_rider_phone && !secondary_rider_consent) {
-      return Response.json(
-        { error: 'consent_required', message: 'Passenger consent is required when booking for someone else' },
-        { status: 400 },
-      );
+    // R1.3: Book-for-other hardening
+    if (secondary_rider_phone) {
+      // Self-phone rejection
+      if (isSamePhone(user.phone, secondary_rider_phone)) {
+        return Response.json(
+          { error: 'self_booking', message: 'Cannot book a ride for yourself using the passenger phone field' },
+          { status: 400 },
+        );
+      }
+      // Consent required
+      if (!secondary_rider_consent) {
+        return Response.json(
+          { error: 'consent_required', message: 'Passenger consent is required when booking for someone else' },
+          { status: 400 },
+        );
+      }
+      // Consent freshness: reject stale consent (> 10 min)
+      if (!isConsentFresh(secondary_rider_consent_at, Date.now())) {
+        return Response.json(
+          { error: 'consent_stale', message: 'Passenger consent has expired. Please re-confirm.' },
+          { status: 400 },
+        );
+      }
     }
 
     // Rate limit: 5 requests per hour

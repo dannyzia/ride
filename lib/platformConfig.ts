@@ -18,6 +18,10 @@ export const PLAN05_CONFIG_KEYS = [
   'cancel_grace_period_seconds',
   // Zone Foundation
   'zone_multi_active_enabled',
+  // R3.3: Auto-redispatch on driver cancel
+  'auto_redispatch_enabled',
+  'auto_redispatch_checkin_minutes',
+  'auto_redispatch_delay_ms',
 ] as const;
 
 export type Plan05ConfigKey = (typeof PLAN05_CONFIG_KEYS)[number];
@@ -30,6 +34,9 @@ const DEFAULTS: Record<Plan05ConfigKey, string> = {
   schedule_max_lead_days: '7',          // 7 days
   cancel_grace_period_seconds: '120',   // 2 minutes
   zone_multi_active_enabled: 'false',   // disabled until Zone Gate
+  auto_redispatch_enabled: 'false',        // disabled until R3.3 is verified
+  auto_redispatch_checkin_minutes: '3',    // 3 minutes before rider check-in
+  auto_redispatch_delay_ms: '15000',       // 15s delay before first re-dispatch
 };
 
 /**

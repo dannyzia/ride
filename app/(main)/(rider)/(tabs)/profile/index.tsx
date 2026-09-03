@@ -20,6 +20,7 @@ import { useChatStore } from "@/store/useChatStore";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
+import Avatar from "@/components/Avatar";
 
 const vehicleTypeDisplay: Record<string, string> = Object.fromEntries(
   VEHICLE_TYPES.map((v) => [v.key, v.display_en]),
@@ -159,21 +160,12 @@ export default function ProfileScreen() {
           className="items-center px-[24px] py-[32px] border-b"
           style={{ borderColor }}
         >
-          <View
-            className="w-20 h-20 rounded-full items-center justify-center mb-3"
-            style={{
-              backgroundColor: isDark
-                ? "rgba(12, 194, 95, 0.2)"
-                : colors.primaryLight,
-            }}
-          >
-            <Text
-              className="text-[32px] font-JakartaBold tracking-tight"
-              style={{ color: colors.primary }}
-            >
-              {(displayName || "D")[0].toUpperCase()}
-            </Text>
-          </View>
+          <Avatar
+            uri={null}
+            name={displayName}
+            size={80}
+            borderWidth={2}
+          />
           {loading ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : error ? (

@@ -7,7 +7,6 @@ import { sendNotification } from "../../../lib/notify";
 import { sendSmsSos } from "../../../lib/dprelay";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
-import { getPlan05Int } from "@/lib/platformConfig";
 import * as errors from "@/lib/errors";
 
 // T-1: this endpoint serves BOTH riders and drivers (the plan's canonical
@@ -63,29 +62,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Configurable cooldown: if the user sent an SOS within the configured
-    // window (default 15 min), reuse the existing open alert.
-    const cooldownSeconds = await getPlan05Int('sos_cooldown_seconds');
-    const _cooldownThreshold = new Date(Date.now() - cooldownSeconds * 1000);
-    const [recentAlert] = await db
-      .select({ id: sosAlerts.id })
-      .from(sosAlerts)
-      .where(
-        and(
-          eq(sosAlerts.user_id, dbUser.id),
-          eq(sosAlerts.status, "open"),
-        ),
-      )
-      .orderBy(desc(sosAlerts.created_at))
-      .limit(1);
-    if (recentAlert && (!ride_id || !recentAlert.id)) {
-      // Cooldown: user already has a recent open alert
-      if (recentAlert.id) {
-        logger.info("[sos/alert] cooldown — reusing recent open alert", { alertId: recentAlert.id });
-        return Response.json({ ok: true, deduped: true, alert_id: recentAlert.id });
-      }
-    }
-
+    // R3.1: No server cooldown — every trigger creates a new alert.
+    // Frequency IS the distress signal. The admin dashboard clusters alerts
+    // from the same user in a 60-second window as high-intensity.
+    //
     // One open alert per ride: if the ride already has an open SOS (e.g. the
     // auto-SOS fired, or the user double-tapped), keep the existing row — the
     // alert is already on the admin dashboard.

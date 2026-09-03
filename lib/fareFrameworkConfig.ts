@@ -179,6 +179,111 @@ export const FARE_FRAMEWORK_CONFIG_KEYS = [
   // Fuel recompute trigger — read by scheduler job 45 (not settable via admin API).
   // A-6b is Stage-1 work; flag is preserved until recompute pipeline is built.
   'fuel_recompute_pending',
+
+  // ════════════════════════════════════════════════════════════════
+  // Decision v1 — per-tier calibration values (Stage 0 shadow)
+  // These are more granular than the per-category keys above.
+  // Stored as paisa integers unless noted. Source: Decision v1.md.
+  // ════════════════════════════════════════════════════════════════
+
+  // Per-tier fuel prices (paisa — existing per-category keys store BDT;
+  // these duplicate for the v2 engine that reads per-tier directly)
+  'fuel_price_bike_petrol_bdt_per_l',  // 14000 paisa = 140 BDT/L
+  'fuel_price_cng_bdt_per_m3',         // 4300 paisa = 43 BDT/m³
+  'fuel_price_cars_octane_bdt_per_l',  // 14500 paisa = 145 BDT/L
+
+  // Per-tier fuel efficiency (decimal string — km/L or km/m³)
+  'fare_efficiency_bike_125_km_per_l',   // 40
+  'fare_efficiency_bike_150_km_per_l',   // 35
+  'fare_efficiency_cng_km_per_m3',       // 20
+  'fare_efficiency_car_eco_km_per_l',    // 9.5 (decimal string)
+  'fare_efficiency_car_std_km_per_l',    // 8
+  'fare_efficiency_car_prem_km_per_l',   // 7
+  'fare_efficiency_car_xl_km_per_l',     // 12 (hybrid)
+
+  // Per-tier maintenance — BDT/month stored as paisa (×100)
+  'fare_maintenance_bike_125_bdt_per_month',  // 185000 paisa = 1850 BDT
+  'fare_maintenance_bike_150_bdt_per_month',  // 210000 paisa = 2100 BDT
+  'fare_maintenance_cng_bdt_per_month',       // 450000 paisa = 4500 BDT
+  'fare_maintenance_car_eco_bdt_per_month',   // 525000 paisa = 5250 BDT
+  'fare_maintenance_car_std_bdt_per_month',   // 725000 paisa = 7250 BDT
+  'fare_maintenance_car_prem_bdt_per_month',  // 1050000 paisa = 10500 BDT
+  'fare_maintenance_car_xl_bdt_per_month',    // 1150000 paisa = 11500 BDT
+
+  // Joma — driver-paid rent (paisa)
+  'fare_joma_bike_125_bdt_per_month',     // 800000 paisa = 8000 BDT
+  'fare_joma_bike_150_bdt_per_month',     // 1000000 paisa = 10000 BDT
+  'fare_joma_bike_premium_bdt_per_month', // 1200000 paisa = 12000 BDT
+  'fare_joma_cng_bdt_per_day',            // 80000 paisa = 800 BDT
+  'fare_joma_cars_pct_of_net',            // 5000 = 50.00%
+
+  // Per-tier daily targets (paisa)
+  'fare_daily_target_bike_125_bdt',   // 85000 paisa = 850 BDT
+  'fare_daily_target_bike_150_bdt',   // 92500 paisa = 925 BDT
+  'fare_daily_target_cng_bdt',        // 95000 paisa = 950 BDT
+  'fare_daily_target_car_eco_bdt',    // 120000 paisa = 1200 BDT
+  'fare_daily_target_car_std_bdt',    // 150000 paisa = 1500 BDT
+  'fare_daily_target_car_prem_bdt',   // 200000 paisa = 2000 BDT
+  'fare_daily_target_car_xl_bdt',     // 220000 paisa = 2200 BDT
+
+  // Per-tier churn alarms (paisa — monitor only, Stage 0 telemetry)
+  'fare_churn_alarm_bike_125_bdt',  // 65000 paisa = 650 BDT
+  'fare_churn_alarm_bike_150_bdt',  // 70000 paisa = 700 BDT
+  'fare_churn_alarm_cng_bdt',       // 73000 paisa = 730 BDT
+  'fare_churn_alarm_car_eco_bdt',   // 89000 paisa = 890 BDT
+  'fare_churn_alarm_car_std_bdt',   // 125000 paisa = 1250 BDT
+  'fare_churn_alarm_car_prem_bdt',  // 170000 paisa = 1700 BDT
+  'fare_churn_alarm_car_xl_bdt',    // 170000 paisa = 1700 BDT
+
+  // Per-tier working hours (plain integer)
+  'fare_working_hours_bike_125_per_day', // 11
+  'fare_working_hours_bike_150_per_day', // 11
+  'fare_working_hours_cng_per_day',      // 12
+  'fare_working_hours_car_eco_per_day',  // 11
+  'fare_working_hours_car_std_per_day',  // 11
+  'fare_working_hours_car_prem_per_day', // 10
+  'fare_working_hours_car_xl_per_day',   // 11
+
+  // Per-tier trips per day (plain integer)
+  'fare_trips_per_day_bike_125',  // 14
+  'fare_trips_per_day_bike_150',  // 14
+  'fare_trips_per_day_cng',       // 16
+  'fare_trips_per_day_car_eco',   // 10
+  'fare_trips_per_day_car_std',   // 9
+  'fare_trips_per_day_car_prem',  // 8
+  'fare_trips_per_day_car_xl',    // 7
+
+  // Per-tier average trip km and minutes (km stored as ×100 integer, min as seconds)
+  'fare_avg_trip_km_bike_125',  // 450 (4.50 km)
+  'fare_avg_trip_min_bike_125', // 1200 (20 min = 1200s)
+  'fare_avg_trip_km_bike_150',  // 450
+  'fare_avg_trip_min_bike_150', // 1200
+  'fare_avg_trip_km_cng',       // 450
+  'fare_avg_trip_min_cng',      // 1440 (24 min)
+  'fare_avg_trip_km_car_eco',   // 600 (6 km)
+  'fare_avg_trip_min_car_eco',  // 1740 (29 min)
+  'fare_avg_trip_km_car_std',   // 650 (6.5 km)
+  'fare_avg_trip_min_car_std',  // 1860 (31 min)
+  'fare_avg_trip_km_car_prem',  // 800 (8 km)
+  'fare_avg_trip_min_car_prem', // 2100 (35 min)
+  'fare_avg_trip_km_car_xl',    // 900 (9 km)
+  'fare_avg_trip_min_car_xl',   // 2100 (35 min)
+
+  // Fare parameters — locked, Stage 0 calibrates
+  'fare_free_radius_km_bike',       // 1000 (1.00 km)
+  'fare_free_radius_km_cng',        // 1500 (1.50 km)
+  'fare_free_radius_km_car',        // 2000 (2.00 km)
+  'fare_free_pickup_min_bike',      // 5
+  'fare_free_pickup_min_cng',       // 5
+  'fare_free_pickup_min_car',       // 10
+  'fare_free_wait_min_bike',        // 1
+  'fare_free_wait_min_cng',         // 1
+  'fare_free_wait_min_car',         // 2
+  'fare_night_multiplier_disabled', // 100 (1.00×)
+  'fare_backstop_pct',              // 0 (calibration-required)
+
+  // Dispatch / leads (Decision v1)
+  'fare_engine_current', // 'v2' shadow
 ] as const;
 
 export type FareFrameworkConfigKey = (typeof FARE_FRAMEWORK_CONFIG_KEYS)[number];
@@ -285,6 +390,94 @@ export const FARE_FRAMEWORK_DEFAULTS: Record<FareFrameworkConfigKey, string> = {
   fare_gate_retention_drop_max_pp: '5',
   fare_gate_heat_correlation_min: '0.3',
   fuel_recompute_pending: 'false',
+
+  // Decision v1 — per-tier calibration values
+  fuel_price_bike_petrol_bdt_per_l: '14000',  // 140 BDT/L in paisa
+  fuel_price_cng_bdt_per_m3: '4300',          // 43 BDT/m³ in paisa
+  fuel_price_cars_octane_bdt_per_l: '14500',  // 145 BDT/L in paisa
+
+  fare_efficiency_bike_125_km_per_l: '40',
+  fare_efficiency_bike_150_km_per_l: '35',
+  fare_efficiency_cng_km_per_m3: '20',
+  fare_efficiency_car_eco_km_per_l: '9.5',
+  fare_efficiency_car_std_km_per_l: '8',
+  fare_efficiency_car_prem_km_per_l: '7',
+  fare_efficiency_car_xl_km_per_l: '12',
+
+  fare_maintenance_bike_125_bdt_per_month: '185000',
+  fare_maintenance_bike_150_bdt_per_month: '210000',
+  fare_maintenance_cng_bdt_per_month: '450000',
+  fare_maintenance_car_eco_bdt_per_month: '525000',
+  fare_maintenance_car_std_bdt_per_month: '725000',
+  fare_maintenance_car_prem_bdt_per_month: '1050000',
+  fare_maintenance_car_xl_bdt_per_month: '1150000',
+
+  fare_joma_bike_125_bdt_per_month: '800000',
+  fare_joma_bike_150_bdt_per_month: '1000000',
+  fare_joma_bike_premium_bdt_per_month: '1200000',
+  fare_joma_cng_bdt_per_day: '80000',
+  fare_joma_cars_pct_of_net: '5000',  // 50.00%
+
+  fare_daily_target_bike_125_bdt: '85000',
+  fare_daily_target_bike_150_bdt: '92500',
+  fare_daily_target_cng_bdt: '95000',
+  fare_daily_target_car_eco_bdt: '120000',
+  fare_daily_target_car_std_bdt: '150000',
+  fare_daily_target_car_prem_bdt: '200000',
+  fare_daily_target_car_xl_bdt: '220000',
+
+  fare_churn_alarm_bike_125_bdt: '65000',
+  fare_churn_alarm_bike_150_bdt: '70000',
+  fare_churn_alarm_cng_bdt: '73000',
+  fare_churn_alarm_car_eco_bdt: '89000',
+  fare_churn_alarm_car_std_bdt: '125000',
+  fare_churn_alarm_car_prem_bdt: '170000',
+  fare_churn_alarm_car_xl_bdt: '170000',
+
+  fare_working_hours_bike_125_per_day: '11',
+  fare_working_hours_bike_150_per_day: '11',
+  fare_working_hours_cng_per_day: '12',
+  fare_working_hours_car_eco_per_day: '11',
+  fare_working_hours_car_std_per_day: '11',
+  fare_working_hours_car_prem_per_day: '10',
+  fare_working_hours_car_xl_per_day: '11',
+
+  fare_trips_per_day_bike_125: '14',
+  fare_trips_per_day_bike_150: '14',
+  fare_trips_per_day_cng: '16',
+  fare_trips_per_day_car_eco: '10',
+  fare_trips_per_day_car_std: '9',
+  fare_trips_per_day_car_prem: '8',
+  fare_trips_per_day_car_xl: '7',
+
+  fare_avg_trip_km_bike_125: '450',
+  fare_avg_trip_min_bike_125: '1200',
+  fare_avg_trip_km_bike_150: '450',
+  fare_avg_trip_min_bike_150: '1200',
+  fare_avg_trip_km_cng: '450',
+  fare_avg_trip_min_cng: '1440',
+  fare_avg_trip_km_car_eco: '600',
+  fare_avg_trip_min_car_eco: '1740',
+  fare_avg_trip_km_car_std: '650',
+  fare_avg_trip_min_car_std: '1860',
+  fare_avg_trip_km_car_prem: '800',
+  fare_avg_trip_min_car_prem: '2100',
+  fare_avg_trip_km_car_xl: '900',
+  fare_avg_trip_min_car_xl: '2100',
+
+  fare_free_radius_km_bike: '1000',
+  fare_free_radius_km_cng: '1500',
+  fare_free_radius_km_car: '2000',
+  fare_free_pickup_min_bike: '5',
+  fare_free_pickup_min_cng: '5',
+  fare_free_pickup_min_car: '10',
+  fare_free_wait_min_bike: '1',
+  fare_free_wait_min_cng: '1',
+  fare_free_wait_min_car: '2',
+  fare_night_multiplier_disabled: '100',
+  fare_backstop_pct: '0',
+
+  fare_engine_current: 'v2',
 };
 
 /**

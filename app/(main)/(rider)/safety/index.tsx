@@ -1,11 +1,64 @@
-import { View, Text, TouchableOpacity, ScrollView, Linking, StatusBar } from "react-native";
+import { useState, useEffect, useCallback } from "react";
+import { View, Text, TouchableOpacity, ScrollView, Linking, StatusBar, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { supabase } from "@/lib/supabase";
+import { API_URL } from "@/lib/config";
+import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
+
+interface EmergencyContact {
+  id: string;
+  name: string;
+  phone: string;
+  relationship: string | null;
+}
+
+interface SosAlert {
+  id: string;
+  status: string;
+  latitude: string;
+  longitude: string;
+  message: string | null;
+  created_at: string;
+  ride_id: string | null;
+}
+
+interface SafetyTip {
+  title: string;
+  description: string;
+}
+
+interface Hotline {
+  name: string;
+  phone: string;
+  icon: string;
+}
+
+const HOTLINE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  shield: "shield-checkmark",
+  call: "call",
+  flame: "flame",
+  medkit: "medkit",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  open: colors.danger,
+  acknowledged: colors.amber,
+  resolved: colors.success,
+};
 
 export default function DriverSafety() {
+  const { t } = useTranslation();
+  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [recentAlerts, setRecentAlerts] = useState<SosAlert[]>([]);
+  const [tips, setTips] = useState<SafetyTip[]>([]);
+  const [hotlines, setHotlines] = useState<Hotline[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -14,6 +67,40 @@ export default function DriverSafety() {
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
+  const fetchSafetyData = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      const res = await fetch(`${API_URL}/api/driver/safety`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setContacts(data.emergency_contacts ?? []);
+      setRecentAlerts(data.recent_alerts ?? []);
+      setTips(data.safety_tips ?? []);
+      setHotlines(data.hotlines ?? []);
+    } catch (err) {
+      logger.error("[driver/safety] fetch failed", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchSafetyData(); }, [fetchSafetyData]);
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: bg }}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
+        <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
@@ -21,65 +108,97 @@ export default function DriverSafety() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Safety</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('safety.title')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
-        <Text className="text-[14px] font-Jakarta mb-3" style={{ color: textSecondary }}>Emergency contacts</Text>
+        {/* BD Emergency Hotlines */}
+        <Text className="text-[14px] font-Jakarta mb-3" style={{ color: textSecondary }}>{t('safety.emergency_hotlines')}</Text>
+        {hotlines.map((h) => (
+          <TouchableOpacity
+            key={h.phone}
+            className="flex-row items-center p-[14px] border rounded-[12px] mb-2"
+            style={{ backgroundColor: `${colors.danger}1A`, borderColor: `${colors.danger}4D` }}
+            onPress={() => Linking.openURL(`tel:${h.phone}`)}
+          >
+            <View className="mr-[12px]">
+              <Ionicons name={HOTLINE_ICONS[h.icon] ?? "call"} size={24} color={colors.danger} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-[15px] font-JakartaBold" style={{ color: colors.danger }}>{h.name}</Text>
+              <Text className="text-[13px] font-Jakarta" style={{ color: colors.danger }}>{h.phone}</Text>
+            </View>
+            <Ionicons name="call" size={18} color={colors.danger} />
+          </TouchableOpacity>
+        ))}
+
+        {/* Emergency Contacts */}
         <TouchableOpacity
-          className="flex-row items-center p-[14px] border rounded-[12px] mb-2"
-          style={{ backgroundColor: `${colors.danger}1A`, borderColor: `${colors.danger}4D` }}
-          onPress={() => Linking.openURL("tel:999")}
-        >
-          <View className="mr-[12px]">
-            <Ionicons name="warning" size={24} color={colors.danger} />
-          </View>
-          <View className="flex-1">
-            <Text className="text-[15px] font-JakartaBold" style={{ color: colors.danger }}>National Emergency</Text>
-            <Text className="text-[13px] font-Jakarta" style={{ color: colors.danger }}>999</Text>
-          </View>
-          <Ionicons name="call" size={18} color={colors.danger} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          className="flex-row items-center p-[14px] border rounded-[12px] mb-3"
-          style={{ backgroundColor: `${colors.danger}1A`, borderColor: `${colors.danger}4D` }}
-          onPress={() => Linking.openURL("tel:16263")}
-        >
-          <View className="mr-[12px]">
-            <Ionicons name="call" size={24} color={colors.danger} />
-          </View>
-          <View className="flex-1">
-            <Text className="text-[15px] font-JakartaBold" style={{ color: colors.danger }}>National Helpline</Text>
-            <Text className="text-[13px] font-Jakarta" style={{ color: colors.danger }}>16263</Text>
-          </View>
-          <Ionicons name="call" size={18} color={colors.danger} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          className="p-[14px] border rounded-[12px] mb-3"
+          className="p-[14px] border rounded-[12px] mt-2 mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/emergency-contacts")}
         >
           <View className="flex-row justify-between items-center">
             <View>
-              <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Emergency contacts</Text>
-              <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Manage your trusted contacts</Text>
+              <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{t('safety.emergency_contacts')}</Text>
+              <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>
+                {contacts.length > 0 ? t('safety.contacts_configured', { count: contacts.length }) : t('safety.no_contacts')}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={textSecondary} />
           </View>
         </TouchableOpacity>
-        <Text className="text-[14px] font-Jakarta mt-4 mb-3" style={{ color: textSecondary }}>Safety tips</Text>
-        <View className="p-[14px] border rounded-[12px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }}>
-          <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>1. Share your trip</Text>
-          <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Share your live location with trusted contacts during each trip.</Text>
-        </View>
-        <View className="p-[14px] border rounded-[12px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }}>
-          <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>2. Verify the rider</Text>
-          <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Confirm the rider&apos;s name and destination before starting the trip.</Text>
-        </View>
-        <View className="p-[14px] border rounded-[12px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }}>
-          <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>3. Trust your instincts</Text>
-          <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>If something feels wrong, cancel the ride and report it immediately.</Text>
-        </View>
+
+        {/* Recent SOS Alerts */}
+        {recentAlerts.length > 0 && (
+          <>
+            <Text className="text-[14px] font-Jakarta mt-4 mb-3" style={{ color: textSecondary }}>{t('safety.recent_sos_alerts')}</Text>
+            {recentAlerts.map((alert) => (
+              <View
+                key={alert.id}
+                className="p-[14px] border rounded-[12px] mb-2"
+                style={{ backgroundColor: surfaceBg, borderColor }}
+              >
+                <View className="flex-row justify-between items-center mb-1">
+                  <View className="flex-row items-center gap-2">
+                    <View
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: STATUS_COLORS[alert.status] ?? textSecondary }}
+                    />
+                    <Text className="text-[13px] font-JakartaBold" style={{ color: textPrimary }}>
+                      {alert.status.charAt(0).toUpperCase() + alert.status.slice(1)}
+                    </Text>
+                  </View>
+                  <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>
+                    {new Date(alert.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+                {alert.message && (
+                  <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }} numberOfLines={2}>
+                    {alert.message}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* Safety Tips (from platform_config) */}
+        <Text className="text-[14px] font-Jakarta mt-4 mb-3" style={{ color: textSecondary }}>{t('safety.safety_tips')}</Text>
+        {tips.map((tip, i) => (
+          <View
+            key={i}
+            className="p-[14px] border rounded-[12px] mb-2"
+            style={{ backgroundColor: surfaceBg, borderColor }}
+          >
+            <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>
+              {i + 1}. {tip.title}
+            </Text>
+            <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>
+              {tip.description}
+            </Text>
+          </View>
+        ))}
       </ScrollView>
       <TouchableOpacity
         onPress={() => setTheme(isDark ? "light" : "dark")}

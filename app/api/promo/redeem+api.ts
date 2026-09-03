@@ -1,5 +1,5 @@
 import { db } from "@/src/db";
-import { promoCodes, promoRedemptions, users } from "@/src/db/schema";
+import { promoCodes, promoRedemptions, users, riderSubscriptions, riderPasses } from "@/src/db/schema";
 import { eq, and, sql, count } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
@@ -33,6 +33,46 @@ export async function POST(request: Request) {
 
     const { code, pickup_lat, pickup_lng } = parsed.data;
 
+    // R1.2: Pass-first precedence — if the rider has an active pass, reject
+    const now = new Date();
+    const [activePass] = await db
+      .select({
+        sub_id: riderSubscriptions.id,
+        pass_name: riderPasses.name,
+        rides_used: riderSubscriptions.rides_used,
+        max_rides: riderPasses.max_rides,
+        discount_percent: riderPasses.discount_percent,
+        valid_until: riderSubscriptions.valid_until,
+      })
+      .from(riderSubscriptions)
+      .innerJoin(riderPasses, eq(riderSubscriptions.pass_id, riderPasses.id))
+      .where(
+        and(
+          eq(riderSubscriptions.rider_id, user.id),
+          eq(riderSubscriptions.status, 'active'),
+          sql`${riderSubscriptions.valid_until} > ${now}`,
+          sql`${riderSubscriptions.rides_used} < COALESCE(${riderPasses.max_rides}, ${riderSubscriptions.rides_used} + 1)`
+        )
+      )
+      .limit(1);
+
+    if (activePass) {
+      return Response.json(
+        {
+          error: 'pass_precedence',
+          message: 'You have an active ride pass. Passes take priority over promo codes.',
+          pass: {
+            name: activePass.pass_name,
+            discount_percent: activePass.discount_percent,
+            rides_used: activePass.rides_used,
+            max_rides: activePass.max_rides,
+            valid_until: activePass.valid_until,
+          },
+        },
+        { status: 409 },
+      );
+    }
+
     // Look up promo by code (case-insensitive)
     const [promo] = await db
       .select()
@@ -49,7 +89,6 @@ export async function POST(request: Request) {
     if (!promo)
       return Response.json({ error: 'promo_not_found', message: 'Promo code not found' }, { status: 404 });
 
-    const now = new Date();
     if (promo.valid_from > now)
       return Response.json({ error: 'promo_not_found', message: 'Promo code not found' }, { status: 404 });
     if (promo.expires_at < now)
