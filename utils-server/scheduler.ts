@@ -41,7 +41,7 @@ import { expireCredits, expireRiderFeeDeductions } from "../lib/walletCashback";
 import { runFraudDetection } from "../lib/fraudDetection";
 import { expireCancellationCredits } from "../lib/cancellationCompensation";
 import { sendNotification } from "../lib/notify";
-import { getPlan05Int } from "@/lib/platformConfig";
+import { getPlan05Int, getConfigValue } from "@/lib/platformConfig";
 import { upsertDemandForecasts } from "@/lib/forecast";
 import {
   getFareFrameworkConfig,
@@ -56,6 +56,122 @@ import {
   median,
   quantile,
 } from "./heat";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ADR Phase 0 (Z4) — marketplace tick instrumentation + pooler-safe budgets.
+// PROVISIONAL: every budget in this block is provisional and WILL be
+// re-derived at the Phase 2 gate. Session-level `SET statement_timeout` is
+// FORBIDDEN until the Phase 1 coupled change — only transaction-scoped
+// `SET LOCAL` is used here (it survives Supavisor transaction mode).
+// ═══════════════════════════════════════════════════════════════════════════
+
+type JobTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** PG 57014 query_canceled — statement_timeout fired (server-side cancel). */
+export function isQueryCanceled(e: unknown): boolean {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    (e as { code?: unknown }).code === "57014"
+  );
+}
+
+// PROVISIONAL budget derivation (recorded for the Phase 2 gate):
+// - Formula per execution order: budget = max(2000, 10 × observed median),
+//   capped at 30000.
+// - Local idle-tick measurement was NOT possible in this environment (no live
+//   DB/pooler), so no median was observed. The only measured data available:
+//   healthy remote round-trips ~1.5s, cold connects ~5.8s, and the global
+//   per-connection statement_timeout of 30s (all in src/db/index.ts).
+// - 10_000 = 10 × a 1_000ms PROVISIONAL median estimate for a LIMIT-bounded
+//   watermark scan — 3.3× headroom below the 30s global ceiling so a wedged
+//   tick cannot hold a pooler slot for the full global budget.
+// Unmeasured — flagged; re-derive from live tick telemetry at the Phase 2 gate.
+const MARKETPLACE_TICK_BUDGET_MS = 10_000;
+
+// Pool occupancy (spec part 3): node-postgres Pool exposes totalCount/
+// idleCount/waitingCount. This project's pool is postgres-js
+// (postgres package — src/db/index.ts) which does NOT expose live occupancy
+// counters. Finding logged once per process; occupancy fields are appended to
+// tick lines ONLY if a compatible pool is ever reachable. No plumbing is
+// invented through drizzle internals.
+const poolOccupancy = (): Record<string, number> => {
+  const client = (
+    db as unknown as {
+      $client?: { totalCount?: unknown; idleCount?: unknown; waitingCount?: unknown };
+    }
+  ).$client;
+  if (
+    typeof client?.totalCount === "number" &&
+    typeof client?.idleCount === "number" &&
+    typeof client?.waitingCount === "number"
+  ) {
+    return {
+      pool_total: client.totalCount,
+      pool_idle: client.idleCount,
+      pool_waiting: client.waitingCount,
+    };
+  }
+  return {};
+};
+
+let poolOccupancyFindingLogged = false;
+
+/**
+ * Run one scheduler tick inside a transaction whose FIRST statement is
+ * `SET LOCAL statement_timeout = <budget>` (transaction-scoped; pooler-safe).
+ * fn receives the transaction handle. PG 57014 (query_canceled) is swallowed
+ * and logged as outcome 'timeout'; any other error is logged as outcome
+ * 'error' and rethrown to the job's own catch. EVERY run logs exactly one
+ * structured '[scheduler] job N tick' line (outcome ok|error|timeout).
+ */
+export async function withJobBudget<T>(
+  jobN: number,
+  budgetMs: number,
+  fn: (tx: JobTx) => Promise<T>,
+): Promise<T | undefined> {
+  const started = Date.now();
+  const budget = Math.max(1, Math.floor(budgetMs));
+  if (!poolOccupancyFindingLogged) {
+    poolOccupancyFindingLogged = true;
+    if (Object.keys(poolOccupancy()).length === 0) {
+      logger.warn(
+        "[scheduler] pool occupancy unavailable (postgres-js client exposes no totalCount/idleCount/waitingCount) — tick lines omit pool fields",
+      );
+    }
+  }
+  try {
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql.raw(`SET LOCAL statement_timeout = ${budget}`));
+      return fn(tx);
+    });
+    logger.info(`[scheduler] job ${jobN} tick`, {
+      job: jobN,
+      duration_ms: Date.now() - started,
+      outcome: "ok",
+      ...poolOccupancy(),
+    });
+    return result;
+  } catch (e) {
+    if (isQueryCanceled(e)) {
+      logger.info(`[scheduler] job ${jobN} tick`, {
+        job: jobN,
+        duration_ms: Date.now() - started,
+        outcome: "timeout",
+        ...poolOccupancy(),
+      });
+      // Swallowed — the job's running flag releases in its finally block.
+      return undefined;
+    }
+    logger.info(`[scheduler] job ${jobN} tick`, {
+      job: jobN,
+      duration_ms: Date.now() - started,
+      outcome: "error",
+      ...poolOccupancy(),
+    });
+    throw e;
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Fare Framework monitors (Phase E/F/G) — pure helpers + job runners.
@@ -701,12 +817,23 @@ export async function runDeclineMonitoring(): Promise<void> {
 }
 
 export function startScheduler(): void {
+  // ADR Phase 0 — honest job count: the '[scheduler] started (N jobs)' line is
+  // derived from a counter incremented at each registration. It can never lie
+  // again.
+  let registeredJobs = 0;
+  const registerJob = (
+    fn: (...args: unknown[]) => void,
+    ms?: number,
+  ): ReturnType<typeof setInterval> => {
+    registeredJobs += 1;
+    return setInterval(fn, ms);
+  };
 
   // ── (1) Scheduled ride dispatch — every 30s ─────────────────────────
   // Overlap guard: a tick slower than 30s must not start a second dispatch
   // sweep on the same `scheduled_dispatched_at IS NULL` rows.
   let scheduledDispatchRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (scheduledDispatchRunning) return;
     scheduledDispatchRunning = true;
     try {
@@ -765,7 +892,7 @@ export function startScheduler(): void {
   }, 30_000);
 
   // ── (2) Daily call reset — every 60s (fires when the stored reset time has passed) ──
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       // Z-7: fire whenever daily_reset_at has passed, NOT only within 60s of
       // midnight. A missed tick (deploy restart, event-loop stall, server
@@ -787,7 +914,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (3) Temporary driver expiry — every 60s ─────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       await db
@@ -805,7 +932,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (4) Subscription expiry — every 60s ─────────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       await db
@@ -823,7 +950,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (5) Stale matched rides — every 60s ─────────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const staleThreshold = new Date(Date.now() - 30 * 60_000);
       // W-5: returning() the affected rows so the riders get notified — the
@@ -864,7 +991,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (6) Vehicle type cooling-off promotion — every 60s ──────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       const due = await db
@@ -894,7 +1021,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (7) Consent copy deadline check — every 60s ────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000); // 90 days
       await db
@@ -912,7 +1039,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (8) Used challenges cleanup — every 5 min ───────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       await db.delete(usedChallenges).where(lt(usedChallenges.expires_at, now));
@@ -922,7 +1049,7 @@ export function startScheduler(): void {
   }, 300_000);
 
   // ── (9) RTDB cleanup — every 5 min ─────────────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       // Cleanup stale RTDB verification entries is handled by Cloud Functions TTL
       logger.debug("[scheduler] RTDB cleanup tick");
@@ -932,7 +1059,7 @@ export function startScheduler(): void {
   }, 300_000);
 
   // ── (10) Document purge — every 1h ─────────────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       await db
@@ -954,7 +1081,7 @@ export function startScheduler(): void {
   }, 3600_000);
 
   // ── (11) Chat retention cleanup — every 1h ─────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000); // 90 days
       await db.delete(chatMessages).where(lt(chatMessages.created_at, cutoff));
@@ -966,7 +1093,7 @@ export function startScheduler(): void {
   // ── (12) Callback_pending recovery — every 30s ──────────────────────
   // Overlap guard: an enqueue must not run twice for the same orphaned event.
   let callbackRecoveryRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (callbackRecoveryRunning) return;
     callbackRecoveryRunning = true;
     try {
@@ -1003,7 +1130,7 @@ export function startScheduler(): void {
   }, 30_000);
 
   // ── (13) Rate limits cleanup — every 1h ────────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24h
       await db.delete(rateLimits).where(lt(rateLimits.window_start, cutoff));
@@ -1013,7 +1140,7 @@ export function startScheduler(): void {
   }, 3600_000);
 
   // ── (14) Credit voucher expiry — every 5 min ────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       await db
@@ -1033,7 +1160,7 @@ export function startScheduler(): void {
   // ── (15) Stale pending ride recovery — every 30s ────────────────────
   // Overlap guard: re-dispatches must not double-fire for the same stalled ride.
   let stalePendingRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (stalePendingRunning) return;
     stalePendingRunning = true;
     try {
@@ -1083,7 +1210,7 @@ export function startScheduler(): void {
   }, 30_000);
 
   // ── (16) Stale dispatching rides — every 30s ──────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const stale = await db
         .update(rides)
@@ -1108,7 +1235,7 @@ export function startScheduler(): void {
   }, 30_000);
 
   // ── (17) Stale driver_arrived auto-cancel — every 60s ─────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const staleThreshold = new Date(Date.now() - 10 * 60_000);
       const stale = await db
@@ -1136,8 +1263,57 @@ export function startScheduler(): void {
     }
   }, 60_000);
 
+  // ── (17b) R3.3: Auto-redispatch check-in — every 60s ────────────────
+  // Sends a polite "Keep looking?" notification to riders whose re-dispatch
+  // search window has exceeded the configured check-in threshold.
+  // ADR Phase 0 retrofit: house running-flag pattern (§0.3.6) — a tick slower
+  // than 60s must not overlap itself.
+  let r3CheckinRunning = false;
+  registerJob(async () => {
+    if (r3CheckinRunning) return;
+    try {
+      r3CheckinRunning = true;
+      const checkinMinutes = parseInt(await getConfigValue('auto_redispatch_checkin_minutes', '3'));
+      const threshold = new Date(Date.now() - checkinMinutes * 60_000);
+      // Find rides in dispatching status with redispatch_started_at older than threshold
+      const stale = await db
+        .select({ id: rides.id, user_id: rides.user_id, redispatch_started_at: rides.redispatch_started_at })
+        .from(rides)
+        .where(
+          and(
+            eq(rides.status, 'dispatching'),
+            sql`${rides.redispatch_started_at} IS NOT NULL`,
+            sql`${rides.redispatch_started_at} < ${threshold}`,
+          ),
+        )
+        .limit(20);
+      for (const ride of stale) {
+        // Reset the check-in timer so we don't spam — set to now()
+        await db.update(rides)
+          .set({ redispatch_started_at: new Date(), updated_at: new Date() })
+          .where(eq(rides.id, ride.id));
+        // Send check-in notification to the rider
+        const elapsed = ride.redispatch_started_at
+          ? Math.round((Date.now() - new Date(ride.redispatch_started_at).getTime()) / 60_000)
+          : checkinMinutes;
+        sendNotification(
+          ride.user_id,
+          'ride:redispatch_checkin',
+          `Still searching for ${elapsed} minutes`,
+          'Keep looking for a driver, or cancel this ride?',
+          { ride_id: ride.id },
+          { priority: 'high' },
+        ).catch(() => {});
+      }
+    } catch (e) {
+      logger.error('[scheduler] redispatch check-in error', e);
+    } finally {
+      r3CheckinRunning = false;
+    }
+  }, 60_000);
+
   // ── (18) Incentive progress tracking — every 5 min ──────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
 
@@ -1324,7 +1500,7 @@ export function startScheduler(): void {
   }, 300_000);
 
   // ── (18) Auto-start timer for driver_arrived rides — every 10s ──────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       // Read max_free_wait_seconds from system_config at runtime
       const [configRow] = await db
@@ -1367,7 +1543,7 @@ export function startScheduler(): void {
   // (dispatch_offer_ttl_seconds + 5s grace) so the sweep can never race a
   // LIVE sequential chain's pending offer.
   let offerExpiryRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (offerExpiryRunning) return;
     offerExpiryRunning = true;
     try {
@@ -1390,7 +1566,7 @@ export function startScheduler(): void {
   }, 10_000);
 
   // ── (20) Document Expiry Alerts — every 6 hours ────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       for (const { label, daysBefore, col } of [
@@ -1432,7 +1608,7 @@ export function startScheduler(): void {
   }, 6 * 3600_000);
 
   // ── (21a) Scheduled Ride Reminder — 60 min — every 60s ───────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       const sixtyMin = new Date(now.getTime() + 60 * 60 * 1000);
@@ -1468,7 +1644,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (21b) Scheduled Ride Reminder — 15 min — every 60s ───────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       const fifteenMin = new Date(now.getTime() + 15 * 60 * 1000);
@@ -1504,7 +1680,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (22) Rider Pass Expiry — every 60s ──────────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       await db.update(riderSubscriptions)
@@ -1516,7 +1692,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (23) Driver Promo Rewards — every 10 min ──────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       const activePromos = await db.select().from(promoCodes)
@@ -1555,7 +1731,7 @@ export function startScheduler(): void {
   }, 600_000);
 
   // ── (24) Safety: Stationary Anomaly Check — every 5 min ────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       await detectStationaryAnomaly();
     } catch (e: any) {
@@ -1564,7 +1740,7 @@ export function startScheduler(): void {
   }, 300_000);
 
   // ── (26) Zone budget daily reset — every 60s, fires at BDT midnight ──────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const midnight = nextBdtMidnightUtc();
       const now = new Date();
@@ -1578,7 +1754,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (27) Zone graduation evaluation — daily at 06:00 BDT ──────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       // Check if it's 06:00 BDT (UTC+6): hour 0 UTC
       const now = new Date();
@@ -1595,7 +1771,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (28) Cashback expiry — daily at 01:00 BDT ─────────────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       // 01:00 BDT = 19:00 UTC (previous day)
       const now = new Date();
@@ -1611,7 +1787,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (29) Fraud detection — daily at 03:00 BDT (21:00 UTC) ─────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       const utcHour = now.getUTCHours();
@@ -1626,7 +1802,7 @@ export function startScheduler(): void {
   }, 60_000);
 
   // ── (30) Cancellation credit expiry — every 5 min ──────────────────────
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const expired = await expireCancellationCredits();
       if (expired > 0) {
@@ -1638,7 +1814,7 @@ export function startScheduler(): void {
   }, 300_000);
 
   // ── (31) Rider fee deduction expiry — daily at 02:00 BDT ──────────────
-  setInterval(async () => {
+  registerJob(async () => {
     const now = new Date();
     if (now.getUTCHours() !== 20 || now.getUTCMinutes() !== 0) return;
     try {
@@ -1657,7 +1833,7 @@ export function startScheduler(): void {
   // acknowledged alerts that the user never resolved are not stuck forever.
   // The creator-only resolve endpoint (sos/resolve) is the primary path;
   // this is a safety net for when the user can't reach their phone.
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       // Configurable auto-resolve duration (default 30 min, platform_config)
       const resolveSeconds = await getPlan05Int('sos_auto_resolve_seconds');
@@ -1709,7 +1885,7 @@ export function startScheduler(): void {
   // Scheduled rides whose dispatch_window_end has passed without being
   // dispatched are cancelled automatically. This prevents stale scheduled
   // rides from sitting in 'scheduled' status forever.
-  setInterval(async () => {
+  registerJob(async () => {
     try {
       const now = new Date();
       const cancelled = await db
@@ -1757,7 +1933,7 @@ export function startScheduler(): void {
   // supply (current online drivers), upsert into demand_forecasts. Prunes
   // rows older than 14 days. This lights up the heatmap API.
   let forecastRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (forecastRunning) return;
     const now = new Date();
     // Fire at the top of each hour (minute 0)
@@ -1777,7 +1953,7 @@ export function startScheduler(): void {
   // per-zone EWMA, rank zones → live_pctile. Idle density from connected
   // drivers. Upsert zone_heat. Math lives in ./heat (ewma/blend/tag helpers).
   const liveHeatRunning = { value: false };
-  setInterval(async () => {
+  registerJob(async () => {
     if (liveHeatRunning.value) return;
     liveHeatRunning.value = true;
     try {
@@ -1877,7 +2053,7 @@ export function startScheduler(): void {
   // driver_net_bdt → per-zone mean earnings-per-drop → percentile rank.
   // Math helpers (percentileRank) live in ./heat.
   const baselineHeatRunning = { value: false };
-  setInterval(async () => {
+  registerJob(async () => {
     if (baselineHeatRunning.value) return;
     baselineHeatRunning.value = true;
     try {
@@ -1985,7 +2161,7 @@ export function startScheduler(): void {
   // 60-min earnings over held-out weeks. Writes heat_backtest_correlation
   // into platform_config — Stage 0 exit gate metric.
   const backtestRunning = { value: false };
-  setInterval(async () => {
+  registerJob(async () => {
     if (backtestRunning.value) return;
     const now = new Date();
     // Fire once per week (Sunday at 3 AM)
@@ -2041,7 +2217,7 @@ export function startScheduler(): void {
   // Phase F monitor: zone-relative realized/firm pickup-distance breach →
   // fraud_flags('dawdle'). Status advancement is owned by job 40.
   let dawdleGuardRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     const now = new Date();
     if (now.getUTCHours() !== 22 || now.getUTCMinutes() >= 1) return;
     if (dawdleGuardRunning) return;
@@ -2061,7 +2237,7 @@ export function startScheduler(): void {
   // zone_recalibration_queue + pickup_low_confidence_zone_ids CSV append.
   // Off while zone_recal_min_sample_rides = 0 (Stage 0 default).
   let zoneRecalRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     const now = new Date();
     if (now.getUTCHours() !== 23 || now.getUTCMinutes() >= 1) return;
     if (zoneRecalRunning) return;
@@ -2081,7 +2257,7 @@ export function startScheduler(): void {
   // dawdle_escalation_windows cooldowns. Runs AFTER job 38 so dawdle
   // still_breaching evidence from the same morning is fresh.
   let responseLadderRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     const now = new Date();
     if (now.getUTCHours() !== 0 || now.getUTCMinutes() >= 1) return;
     if (responseLadderRunning) return;
@@ -2100,7 +2276,7 @@ export function startScheduler(): void {
   // Phase E: cold-tag decline rate > 2× hot-tag median →
   // fraud_flags('heat_manipulation'). MONITOR ONLY (status stays 'open').
   let declineMonitorRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     const now = new Date();
     if (now.getDay() !== 6 || now.getHours() !== 4) return;
     if (declineMonitorRunning) return;
@@ -2123,7 +2299,7 @@ export function startScheduler(): void {
   // Compute median driver recovery time per zone from zone_recovery_samples
   // (7-day window). Upsert zone_heat.recovery_time_min + sample_count.
   let zoneRecoveryRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (zoneRecoveryRunning) return;
     zoneRecoveryRunning = true;
     try {
@@ -2159,7 +2335,7 @@ export function startScheduler(): void {
   // ── (43) Zone fee schedule — monthly (1st of month, 02:00 UTC = 08:00 BDT)
   // Generate fee schedule from recovery data. Currently ships inert.
   let zoneFeeScheduleRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     const now = new Date();
     const utcHour = now.getUTCHours();
     const utcMinutes = now.getUTCMinutes();
@@ -2185,7 +2361,7 @@ export function startScheduler(): void {
   // Aggregate billed_minutes/day per tier from trip_time_samples.
   // Stage-1 work: write calibration data to platform_config.
   let billingMinRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     const now = new Date();
     if (now.getUTCHours() !== 3 || now.getUTCMinutes() >= 1) return;
     if (billingMinRunning) return;
@@ -2215,7 +2391,7 @@ export function startScheduler(): void {
   // No admin UI sets this flag (not in ALLOWED_KEYS), so this is effectively
   // a no-op until the fuel recompute pipeline is built.
   let fuelRecomputeRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (fuelRecomputeRunning) return;
     try {
       const cfg = await getFareFrameworkConfig(['fuel_recompute_pending']);
@@ -2240,7 +2416,7 @@ export function startScheduler(): void {
 
   // Job 49 — Shop order auto-cancel (pending too long)
   let shopOrderAutoCancelRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (shopOrderAutoCancelRunning) return;
     try {
       shopOrderAutoCancelRunning = true;
@@ -2280,7 +2456,7 @@ export function startScheduler(): void {
 
   // Job 50 — Shop RFQ expiry
   let shopRfqExpiryRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (shopRfqExpiryRunning) return;
     try {
       shopRfqExpiryRunning = true;
@@ -2310,7 +2486,7 @@ export function startScheduler(): void {
 
   // Job 46 — Rental soft-deadline sweep (expired / no_bidders / reselect lapsed)
   let rentalDeadlineSweepRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (rentalDeadlineSweepRunning) return;
     try {
       rentalDeadlineSweepRunning = true;
@@ -2325,7 +2501,7 @@ export function startScheduler(): void {
 
   // Job 47 — Rental assignment SLA + fleet-ack timeout
   let rentalSlaSweepRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (rentalSlaSweepRunning) return;
     try {
       rentalSlaSweepRunning = true;
@@ -2340,7 +2516,7 @@ export function startScheduler(): void {
 
   // Job 48 — Rental confirmation deadline sweep (customer_overslept)
   let rentalConfirmSweepRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (rentalConfirmSweepRunning) return;
     try {
       rentalConfirmSweepRunning = true;
@@ -2359,7 +2535,7 @@ export function startScheduler(): void {
 
   // Job 51 — Delivery TTL sweep (expire pending requests past deadline)
   let deliveryTtlRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (deliveryTtlRunning) return;
     try {
       deliveryTtlRunning = true;
@@ -2387,7 +2563,7 @@ export function startScheduler(): void {
 
   // Job 52 — Courier stale presence sweep (>90s since last_seen_at → offline)
   let courierStaleRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (courierStaleRunning) return;
     try {
       courierStaleRunning = true;
@@ -2409,12 +2585,13 @@ export function startScheduler(): void {
 
   // Job 54 — Rental activation: broadcast new broadcasting requests to eligible fleets
   let rentalActivationRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (rentalActivationRunning) return;
     try {
       rentalActivationRunning = true;
       const { activateRentalRequests } = await import('../utils-server/activationJobs');
-      const count = await activateRentalRequests();
+      const count =
+        (await withJobBudget(54, MARKETPLACE_TICK_BUDGET_MS, (_tx) => activateRentalRequests())) ?? 0;
       if (count > 0) {
         logger.info('[scheduler] job 54 rental activation', { broadcasts: count });
       }
@@ -2427,12 +2604,13 @@ export function startScheduler(): void {
 
   // Job 55 — Delivery activation: broadcast new pending requests to eligible couriers
   let deliveryActivationRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (deliveryActivationRunning) return;
     try {
       deliveryActivationRunning = true;
       const { activateDeliveryRequests } = await import('../utils-server/activationJobs');
-      const count = await activateDeliveryRequests();
+      const count =
+        (await withJobBudget(55, MARKETPLACE_TICK_BUDGET_MS, (_tx) => activateDeliveryRequests())) ?? 0;
       if (count > 0) {
         logger.info('[scheduler] job 55 delivery activation', { broadcasts: count });
       }
@@ -2449,12 +2627,13 @@ export function startScheduler(): void {
 
   // Job 53 — Emergency TTL sweep: broadcasting + expires_at < now() → failed
   let emergencyTtlRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (emergencyTtlRunning) return;
     try {
       emergencyTtlRunning = true;
       const { sweepExpiredEmergencies } = await import('../utils-server/emergencyChain');
-      const count = await sweepExpiredEmergencies();
+      const count =
+        (await withJobBudget(53, MARKETPLACE_TICK_BUDGET_MS, (_tx) => sweepExpiredEmergencies())) ?? 0;
       if (count > 0) {
         logger.info('[scheduler] job 53 emergency TTL sweep', { failed: count });
       }
@@ -2468,12 +2647,13 @@ export function startScheduler(): void {
   // Job 56 — Emergency activation: broadcast new broadcasting emergencies
   // to eligible certified drivers (REST→WS bridge, watermark pattern)
   let emergencyActivationRunning = false;
-  setInterval(async () => {
+  registerJob(async () => {
     if (emergencyActivationRunning) return;
     try {
       emergencyActivationRunning = true;
       const { activateEmergencyRequests } = await import('../utils-server/emergencyActivation');
-      const count = await activateEmergencyRequests();
+      const count =
+        (await withJobBudget(56, MARKETPLACE_TICK_BUDGET_MS, (_tx) => activateEmergencyRequests())) ?? 0;
       if (count > 0) {
         logger.info('[scheduler] job 56 emergency activation', { reached: count });
       }
@@ -2484,5 +2664,5 @@ export function startScheduler(): void {
     }
   }, 2_000); // 2s — TTL is 120s
 
-  logger.info("[scheduler] started (57 jobs)");
+  logger.info(`[scheduler] started (${registeredJobs} jobs)`);
 }
