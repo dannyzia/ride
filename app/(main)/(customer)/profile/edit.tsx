@@ -20,6 +20,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface UserProfile {
   id: string;
@@ -36,6 +37,7 @@ interface MeResponse {
 }
 
 export default function EditProfile() {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
@@ -103,7 +105,7 @@ export default function EditProfile() {
   const handleSave = useCallback(async () => {
     const trimmed = name.trim();
     if (trimmed.length < 2) {
-      setError("Name must be at least 2 characters");
+      setError(t('profile_edit.name_too_short'));
       return;
     }
     setSaving(true);
@@ -114,7 +116,7 @@ export default function EditProfile() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not signed in");
+        setError(t('profile_edit.not_signed_in'));
         return;
       }
       const body: { name: string; profile_image_url?: string } = { name: trimmed };
@@ -126,14 +128,14 @@ export default function EditProfile() {
       });
       const data = (await res.json()) as MeResponse;
       if (!res.ok) {
-        setError(data.message ?? data.error ?? "Failed to save");
+        setError(data.message ?? data.error ?? t('profile_edit.failed_to_save'));
         return;
       }
-      Alert.alert("Profile Updated", "Your changes have been saved.", [
-        { text: "OK", onPress: () => router.back() },
+      Alert.alert(t('profile_edit.profile_updated'), t('profile_edit.changes_saved'), [
+        { text: t('common.confirm'), onPress: () => router.back() },
       ]);
     } catch (err) {
-      setError("Network error. Please try again.");
+      setError(t('profile_edit.network_error'));
       logger.error("[edit-profile] save failed", err);
     } finally {
       setSaving(false);
@@ -164,18 +166,18 @@ export default function EditProfile() {
       <View style={styles.screenHeader}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back')}
           onPress={() => router.back()}
           style={styles.backButton}
         >
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.screenTitle, { color: textPrimary }]} numberOfLines={1}>
-          Edit Profile
+          {t('profile.edit_profile')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('profile_edit.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           style={styles.themeToggle}
         >
@@ -191,7 +193,7 @@ export default function EditProfile() {
         <View style={styles.avatarBlock}>
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel="Change profile photo"
+            accessibilityLabel={t('profile_edit.change_photo_a11y')}
             onPress={() => void pickImage()}
             activeOpacity={0.8}
           >
@@ -208,17 +210,17 @@ export default function EditProfile() {
               <Ionicons name="pencil" size={14} color={textSecondary} />
             </View>
           </TouchableOpacity>
-          <Text style={[styles.photoHint, { color: textSecondary }]}>Change photo</Text>
+          <Text style={[styles.photoHint, { color: textSecondary }]}>{t('profile_edit.change_photo')}</Text>
         </View>
 
-        <Text style={[styles.fieldLabel, { color: textSecondary }]}>Name</Text>
+        <Text style={[styles.fieldLabel, { color: textSecondary }]}>{t('profile_edit.name')}</Text>
         <TextInput
-          accessibilityLabel="Name"
+          accessibilityLabel={t('profile_edit.name')}
           style={[
             styles.input,
             { backgroundColor: surfaceBg, borderColor, color: textPrimary },
           ]}
-          placeholder="Enter your name"
+          placeholder={t('profile_edit.name_placeholder')}
           placeholderTextColor={textDisabled}
           value={name}
           onChangeText={setName}
@@ -226,7 +228,7 @@ export default function EditProfile() {
           returnKeyType="done"
         />
 
-        <Text style={[styles.fieldLabel, { color: textSecondary }]}>Email</Text>
+        <Text style={[styles.fieldLabel, { color: textSecondary }]}>{t('profile_edit.email')}</Text>
         <View
           style={[
             styles.disabledInputWrap,
@@ -234,9 +236,9 @@ export default function EditProfile() {
           ]}
         >
           <TextInput
-            accessibilityLabel="Email (read only)"
+            accessibilityLabel={t('profile_edit.email_readonly_a11y')}
             style={[styles.inputBase, styles.disabledInput, { color: textSecondary }]}
-            placeholder="No email added"
+            placeholder={t('profile_edit.email_placeholder')}
             placeholderTextColor={textDisabled}
             value={email}
             onChangeText={setEmail}
@@ -245,7 +247,7 @@ export default function EditProfile() {
           <Ionicons name="lock-closed-outline" size={16} color={textDisabled} />
         </View>
         <Text style={[styles.fieldHint, { color: textDisabled }]}>
-          Email can&apos;t be changed in the app yet
+          {t('profile_edit.email_cant_change')}
         </Text>
 
         {error ? (
@@ -256,7 +258,7 @@ export default function EditProfile() {
 
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Save profile"
+          accessibilityLabel={t('profile_edit.save_profile_a11y')}
           onPress={() => void handleSave()}
           disabled={saveDisabled}
           activeOpacity={0.8}
@@ -265,7 +267,7 @@ export default function EditProfile() {
           {saving ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
-            <Text style={styles.saveText}>Save</Text>
+            <Text style={styles.saveText}>{t('profile_edit.save')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

@@ -18,6 +18,7 @@ import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 import EmptyState from "@/components/EmptyState";
 
 interface Contact {
@@ -29,7 +30,16 @@ interface Contact {
 
 const ADD_ROUTE = "/(main)/(customer)/(tabs)/settings/emergency-contacts/add";
 
+const RELATIONSHIP_LABEL_KEYS: Record<string, string> = {
+  Family: "emergency_contacts.relationship_family",
+  Friend: "emergency_contacts.relationship_friend",
+  Partner: "emergency_contacts.relationship_partner",
+  Colleague: "emergency_contacts.relationship_colleague",
+  Other: "emergency_contacts.relationship_other",
+};
+
 export default function SettingsEmergencyContacts() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -45,6 +55,11 @@ export default function SettingsEmergencyContacts() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
+  const relLabel = (rel: string) => {
+    const key = RELATIONSHIP_LABEL_KEYS[rel];
+    return key ? t(key) : rel;
+  };
+
   const fetchContacts = useCallback(async () => {
     setError("");
     try {
@@ -53,7 +68,7 @@ export default function SettingsEmergencyContacts() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated. Please sign in again.");
+        setError(t('emergency_contacts.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/user/emergency-contacts`, {
@@ -61,13 +76,13 @@ export default function SettingsEmergencyContacts() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.message || data.error || "Failed to load contacts");
+        setError(data.message || data.error || t('emergency_contacts.load_failed'));
         return;
       }
       const data = await res.json();
       setContacts(data.contacts ?? []);
     } catch (err) {
-      setError("Network error. Please try again.");
+      setError(t('emergency_contacts.network_error'));
       logger.error("[emergency-contacts] fetch failed", err);
     } finally {
       setLoading(false);
@@ -90,22 +105,22 @@ export default function SettingsEmergencyContacts() {
       if (canCall) {
         await Linking.openURL(`tel:${contact.phone}`);
       } else {
-        Alert.alert("Cannot Call", "This device cannot place phone calls.");
+        Alert.alert(t('emergency_contacts.cannot_call_title'), t('emergency_contacts.cannot_call_message'));
       }
     } catch (err) {
       logger.error("[emergency-contacts] call failed", err);
-      Alert.alert("Cannot Call", "This device cannot place phone calls.");
+      Alert.alert(t('emergency_contacts.cannot_call_title'), t('emergency_contacts.cannot_call_message'));
     }
   };
 
   const deleteContact = (contact: Contact) => {
     Alert.alert(
-      "Delete Contact",
-      `Remove ${contact.name} from your emergency contacts?`,
+      t('emergency_contacts.delete_title'),
+      t('emergency_contacts.delete_message', { name: contact.name }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Delete",
+          text: t('common.delete'),
           style: "destructive",
           onPress: async () => {
             try {
@@ -114,7 +129,7 @@ export default function SettingsEmergencyContacts() {
               } = await supabase.auth.getSession();
               const token = session?.access_token;
               if (!token) {
-                Alert.alert("Error", "Not authenticated. Please sign in again.");
+                Alert.alert(t('common.error'), t('emergency_contacts.not_authenticated'));
                 return;
               }
               const res = await fetch(`${API_URL}/api/user/emergency-contacts?id=${contact.id}`, {
@@ -123,12 +138,12 @@ export default function SettingsEmergencyContacts() {
               });
               if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
-                Alert.alert("Error", data.message || data.error || "Failed to delete contact");
+                Alert.alert(t('common.error'), data.message || data.error || t('emergency_contacts.delete_failed'));
                 return;
               }
               setContacts((prev) => prev.filter((c) => c.id !== contact.id));
             } catch (err) {
-              Alert.alert("Error", "Network error. Please try again.");
+              Alert.alert(t('common.error'), t('emergency_contacts.network_error'));
               logger.error("[emergency-contacts] delete failed", err);
             }
           },
@@ -161,13 +176,13 @@ export default function SettingsEmergencyContacts() {
           {item.name}
         </Text>
         <Text style={[styles.phoneText, { color: textSecondary }]} numberOfLines={1}>
-          {item.relationship ? `${item.relationship} · ` : ""}
+          {item.relationship ? `${relLabel(item.relationship)} · ` : ""}
           {item.phone}
         </Text>
       </View>
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityLabel={`Call ${item.name}`}
+        accessibilityLabel={t('emergency_contacts.a11y_call', { name: item.name })}
         onPress={() => callContact(item)}
         style={styles.callButton}
         hitSlop={4}
@@ -176,7 +191,7 @@ export default function SettingsEmergencyContacts() {
       </TouchableOpacity>
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityLabel={`Delete contact ${item.name}`}
+        accessibilityLabel={t('emergency_contacts.a11y_delete', { name: item.name })}
         onPress={() => deleteContact(item)}
         style={styles.deleteButton}
         hitSlop={4}
@@ -192,7 +207,7 @@ export default function SettingsEmergencyContacts() {
       <View style={styles.header}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('emergency_contacts.a11y_go_back')}
           onPress={() => router.back()}
           hitSlop={8}
         >
@@ -203,11 +218,11 @@ export default function SettingsEmergencyContacts() {
           numberOfLines={1}
           adjustsFontSizeToFit
         >
-          Emergency Contacts
+          {t('profile.emergency_contacts')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Add emergency contact"
+          accessibilityLabel={t('emergency_contacts.a11y_add')}
           onPress={() => router.push(ADD_ROUTE)}
           style={styles.addButton}
         >
@@ -215,7 +230,7 @@ export default function SettingsEmergencyContacts() {
         </TouchableOpacity>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('emergency_contacts.a11y_toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
         >
@@ -231,14 +246,14 @@ export default function SettingsEmergencyContacts() {
             <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel="Retry loading contacts"
+              accessibilityLabel={t('emergency_contacts.a11y_retry')}
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={() => {
                 setLoading(true);
                 fetchContacts();
               }}
             >
-              <Text style={[styles.retryText, { color: colors.danger }]}>Retry</Text>
+              <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -259,9 +274,9 @@ export default function SettingsEmergencyContacts() {
           ListEmptyComponent={
             <EmptyState
               icon="people-outline"
-              title="No emergency contacts"
-              subtitle="Add someone we can contact in case of an emergency"
-              actionLabel="Add Contact"
+              title={t('emergency_contacts.empty_title')}
+              subtitle={t('emergency_contacts.empty_subtitle')}
+              actionLabel={t('emergency_contacts.add')}
               onAction={() => router.push(ADD_ROUTE)}
             />
           }

@@ -20,6 +20,7 @@ import { formatBDT, formatDate } from "@/lib/format";
 import TransactionRow from "@/components/TransactionRow";
 import EmptyState from "@/components/EmptyState";
 import WalletSkeleton from "@/components/WalletSkeleton";
+import { useTranslation } from "react-i18next";
 
 // ── API contracts (app/api/rider/wallet+api.ts) ────────────────────────────
 // GET /api/rider/wallet → { balance_bdt, recent_transactions: [...] }
@@ -67,27 +68,28 @@ interface PassesResponse {
 // semantic row (credits → refund, ride-related/ debits → ride_payment).
 type RowType = "top_up" | "ride_payment" | "pass_purchase" | "refund";
 
-function mapTxn(txn: WalletTxn): { type: RowType; title: string } {
+function mapTxn(txn: WalletTxn): { type: RowType; titleKey: string | null; title: string } {
   switch (txn.transaction_type) {
     case "referral_reward":
-      return { type: "refund", title: "Referral Reward" };
+      return { type: "refund", titleKey: "rider_wallet.txn_referral_reward", title: "Referral Reward" };
     case "ride_discount":
-      return { type: "ride_payment", title: "Ride Discount" };
+      return { type: "ride_payment", titleKey: "rider_wallet.txn_ride_discount", title: "Ride Discount" };
     case "upfront_tip":
-      return { type: "ride_payment", title: "Upfront Tip" };
+      return { type: "ride_payment", titleKey: "rider_wallet.txn_upfront_tip", title: "Upfront Tip" };
     case "cashback_earn":
-      return { type: "refund", title: "Cashback Earned" };
+      return { type: "refund", titleKey: "rider_wallet.txn_cashback_earned", title: "Cashback Earned" };
     case "cashback_redeem":
-      return { type: "ride_payment", title: "Cashback Redeemed" };
+      return { type: "ride_payment", titleKey: "rider_wallet.txn_cashback_redeemed", title: "Cashback Redeemed" };
     case "cashback_expire":
-      return { type: "ride_payment", title: "Cashback Expired" };
+      return { type: "ride_payment", titleKey: "rider_wallet.txn_cashback_expired", title: "Cashback Expired" };
     case "adjustment":
       return txn.amount_bdt >= 0
-        ? { type: "refund", title: "Wallet Credit" }
-        : { type: "ride_payment", title: "Wallet Adjustment" };
+        ? { type: "refund", titleKey: "rider_wallet.txn_wallet_credit", title: "Wallet Credit" }
+        : { type: "ride_payment", titleKey: "rider_wallet.txn_wallet_adjustment", title: "Wallet Adjustment" };
     default:
       return {
         type: "ride_payment",
+        titleKey: null,
         title: txn.transaction_type
           .split("_")
           .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -99,6 +101,7 @@ function mapTxn(txn: WalletTxn): { type: RowType; title: string } {
 const RECENT_COUNT = 5;
 
 export default function WalletScreen() {
+  const { t } = useTranslation();
   const [balanceBdt, setBalanceBdt] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<WalletTxn[]>([]);
   const [activePass, setActivePass] = useState<RiderSubscription | null>(null);
@@ -146,7 +149,7 @@ export default function WalletScreen() {
           if (sub) {
             const pass = data.passes?.find((p) => p.id === sub.pass_id) ?? null;
             setActivePass(sub);
-            setPassName(pass?.name ?? "Ride Pass");
+            setPassName(pass?.name ?? t('rider_wallet.ride_pass'));
             setPassMaxRides(pass?.max_rides ?? null);
           } else {
             setActivePass(null);
@@ -163,7 +166,7 @@ export default function WalletScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchWallet();
@@ -203,11 +206,11 @@ export default function WalletScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: textPrimary }]}>Wallet</Text>
+          <Text style={[styles.headerTitle, { color: textPrimary }]}>{t('wallet.title')}</Text>
           <TouchableOpacity
             onPress={() => setTheme(isDark ? "light" : "dark")}
             accessibilityRole="button"
-            accessibilityLabel="Toggle theme"
+            accessibilityLabel={t('rider_wallet.toggle_theme')}
             hitSlop={8}
           >
             <Ionicons
@@ -223,14 +226,14 @@ export default function WalletScreen() {
         ) : error || balanceBdt === null ? (
           <View style={styles.errorState}>
             <Ionicons name="warning-outline" size={48} color={colors.danger} />
-            <Text style={[styles.errorTitle, { color: textPrimary }]}>Could not load wallet</Text>
-            <Text style={[styles.errorSub, { color: textSecondary }]}>Pull down to retry</Text>
+            <Text style={[styles.errorTitle, { color: textPrimary }]}>{t('rider_wallet.load_failed')}</Text>
+            <Text style={[styles.errorSub, { color: textSecondary }]}>{t('rider_wallet.pull_to_retry')}</Text>
           </View>
         ) : (
           <>
             {/* Balance card */}
             <View style={[styles.balanceCard, { backgroundColor: surfaceBg, borderTopColor: colors.primary }]}>
-              <Text style={[styles.balanceLabel, { color: textSecondary }]}>AVAILABLE BALANCE</Text>
+              <Text style={[styles.balanceLabel, { color: textSecondary }]}>{t('rider_wallet.available_balance')}</Text>
               <Text style={styles.balanceValue}>{formatBDT(balanceBdt, { decimals: true })}</Text>
 
               <View style={styles.buttonRow}>
@@ -238,19 +241,19 @@ export default function WalletScreen() {
                   style={[styles.topUpButton, { backgroundColor: colors.primary }]}
                   onPress={() => router.push("/(main)/(customer)/(tabs)/settings/top-up")}
                   accessibilityRole="button"
-                  accessibilityLabel="Top up wallet"
+                  accessibilityLabel={t('rider_wallet.top_up_wallet')}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.topUpButtonText}>Top Up</Text>
+                  <Text style={styles.topUpButtonText}>{t('wallet.top_up')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.txnsButton, { backgroundColor: surfaceBg, borderColor }]}
                   onPress={openTransactions}
                   accessibilityRole="button"
-                  accessibilityLabel="Show all transactions"
+                  accessibilityLabel={t('rider_wallet.show_all_transactions')}
                   activeOpacity={0.85}
                 >
-                  <Text style={[styles.txnsButtonText, { color: textPrimary }]}>Transactions</Text>
+                  <Text style={[styles.txnsButtonText, { color: textPrimary }]}>{t('rider_wallet.transactions')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -258,7 +261,7 @@ export default function WalletScreen() {
             {/* Active passes — hidden entirely when the rider has none */}
             {activePass ? (
               <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: textPrimary }]}>Active Passes</Text>
+                <Text style={[styles.sectionTitle, { color: textPrimary }]}>{t('rider_wallet.active_passes')}</Text>
                 <View
                   style={[
                     styles.passCard,
@@ -268,8 +271,8 @@ export default function WalletScreen() {
                   <Text style={[styles.passName, { color: textPrimary }]}>{passName}</Text>
                   <Text style={[styles.passMeta, { color: textSecondary }]}>
                     {passMaxRides !== null
-                      ? `${activePass.rides_used} of ${passMaxRides} rides used`
-                      : `${activePass.rides_used} rides used`}
+                      ? t('rider_wallet.rides_used_of', { used: activePass.rides_used, max: passMaxRides })
+                      : t('rider_wallet.rides_used', { count: activePass.rides_used })}
                   </Text>
                   {passProgress !== null ? (
                     <View style={[styles.passTrack, { backgroundColor: borderColor }]}>
@@ -279,7 +282,7 @@ export default function WalletScreen() {
                     </View>
                   ) : null}
                   <Text style={[styles.passExpiry, { color: textDisabled }]}>
-                    Valid until {formatDate(activePass.valid_until)}
+                    {t('rider_wallet.valid_until', { date: formatDate(activePass.valid_until) })}
                   </Text>
                 </View>
               </View>
@@ -292,13 +295,13 @@ export default function WalletScreen() {
                 txnsSectionY.current = e.nativeEvent.layout.y;
               }}
             >
-              <Text style={[styles.sectionTitle, { color: textPrimary }]}>Recent Transactions</Text>
+              <Text style={[styles.sectionTitle, { color: textPrimary }]}>{t('wallet.recent_transactions')}</Text>
               {visibleTxns.length === 0 ? (
                 <EmptyState
                   icon="receipt-outline"
                   iconSize={48}
-                  title="No transactions yet"
-                  subtitle="Your wallet activity will appear here"
+                  title={t('rider_wallet.no_transactions')}
+                  subtitle={t('rider_wallet.no_transactions_sub')}
                 />
               ) : (
                 visibleTxns.map((txn) => {
@@ -307,7 +310,7 @@ export default function WalletScreen() {
                     <TransactionRow
                       key={txn.id}
                       type={mapped.type}
-                      title={mapped.title}
+                      title={mapped.titleKey ? t(mapped.titleKey) : mapped.title}
                       amountBdt={txn.amount_bdt}
                       status="success"
                       date={txn.created_at}
@@ -319,12 +322,12 @@ export default function WalletScreen() {
                 <TouchableOpacity
                   onPress={() => setShowAllTxns(true)}
                   accessibilityRole="button"
-                  accessibilityLabel="Show all transactions"
+                  accessibilityLabel={t('rider_wallet.show_all_transactions')}
                   style={styles.showMore}
                   hitSlop={8}
                 >
                   <Text style={[styles.showMoreText, { color: colors.primary }]}>
-                    Show all {transactions.length} transactions
+                    {t('rider_wallet.show_all_count', { count: transactions.length })}
                   </Text>
                 </TouchableOpacity>
               ) : null}

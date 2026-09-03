@@ -4,8 +4,10 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function NoDriversAvailable() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -32,9 +34,9 @@ export default function NoDriversAvailable() {
         >
           <Ionicons name="ban" size={40} color={colors.danger} />
         </View>
-        <Text className="text-[24px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>No Drivers Available</Text>
+        <Text className="text-[24px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>{t('no_drivers_available.title')}</Text>
         <Text className="text-[16px] font-Jakarta text-center mb-6" style={{ color: textSecondary }}>
-          There are no drivers available in your area right now. Please try again in a few minutes or schedule a ride for later.
+          {t('no_drivers_available.message')}
         </Text>
       </View>
       <View className="w-full gap-3">
@@ -43,14 +45,14 @@ export default function NoDriversAvailable() {
           style={{ backgroundColor: colors.primary }}
           onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
         >
-          <Text className="text-[18px] font-JakartaBold text-goWhite">Try Again</Text>
+          <Text className="text-[18px] font-JakartaBold text-goWhite">{t('no_drivers_available.try_again')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           className="border rounded-full w-full py-[16px] items-center"
           style={{ borderColor }}
           onPress={() => router.push("/(main)/(customer)/schedule-ride")}
         >
-          <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Schedule for Later</Text>
+          <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('no_drivers_available.schedule_for_later')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

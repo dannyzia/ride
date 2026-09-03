@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface Prefs {
   ride_updates: boolean;
@@ -26,7 +27,7 @@ const DEFAULT_PREFS: Prefs = {
 };
 
 export default function DriverSettingsNotifications() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;

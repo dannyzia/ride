@@ -8,8 +8,10 @@ import { logger } from "@/lib/logger";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsRequestData() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -26,21 +28,21 @@ export default function SettingsRequestData() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) { setError("Not authenticated"); setIsRequesting(false); return; }
+      if (!token) { setError(t('request_data.not_authenticated')); setIsRequesting(false); return; }
       const res = await fetch(API_URL + "/api/user/request-data", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       });
       if (res.ok) {
-        Alert.alert("Requested", "Your data export has been requested. You will receive an email when it is ready.");
+        Alert.alert(t('request_data.requested_title'), t('request_data.requested_message'));
         router.back();
       } else {
         const data = await res.json();
-        setError(data.error || "Failed to request data");
+        setError(data.error || t('request_data.failed'));
       }
     } catch (err) {
       logger.error("Request data failed", err);
-      setError("An error occurred");
+      setError(t('request_data.error_occurred'));
     } finally {
       setIsRequesting(false);
     }
@@ -51,9 +53,9 @@ export default function SettingsRequestData() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Request My Data</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.request_data')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 40 }}>
@@ -64,23 +66,23 @@ export default function SettingsRequestData() {
           >
             <Ionicons name="download" size={40} color={colors.primary} />
           </View>
-          <Text className="text-[24px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>Request Your Data</Text>
+          <Text className="text-[24px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>{t('request_data.title')}</Text>
           <Text className="text-[16px] font-Jakarta text-center mb-4" style={{ color: textSecondary }}>
-            Get a copy of all the data we have about you, including ride history, payments, and profile information.
+            {t('request_data.description')}
           </Text>
         </View>
         <View className="mb-6 p-[16px] border rounded-[12px]" style={{ backgroundColor: surfaceBg, borderColor }}>
-          <Text className="text-[14px] font-JakartaBold mb-2" style={{ color: textPrimary }}>What you will receive:</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>• Profile information</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>• Ride history (pickup, destination, fare, date)</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>• Payment history</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>• Saved addresses</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>• Device and login history</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>• Promo usage</Text>
+          <Text className="text-[14px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('request_data.what_you_receive')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('request_data.item_profile')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('request_data.item_rides')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('request_data.item_payments')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('request_data.item_addresses')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('request_data.item_devices')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('request_data.item_promos')}</Text>
         </View>
         <View className="mb-4 p-[16px] border rounded-[12px]" style={{ backgroundColor: colors.primary + "1A", borderColor: colors.blue + "4D" }}>
-          <Text className="text-[14px] font-JakartaBold mb-2" style={{ color: colors.blue }}>Processing Time</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>We will prepare your data within 30 days and send a download link to your registered email.</Text>
+          <Text className="text-[14px] font-JakartaBold mb-2" style={{ color: colors.blue }}>{t('request_data.processing_time')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('request_data.processing_desc')}</Text>
         </View>
         {error ? <Text className="text-[14px] font-Jakarta mb-3 text-center" style={{ color: colors.danger }}>{error}</Text> : null}
         <TouchableOpacity
@@ -89,7 +91,7 @@ export default function SettingsRequestData() {
           onPress={handleRequest}
           disabled={isRequesting}
         >
-          <Text className="text-[18px] font-JakartaBold text-goWhite">{isRequesting ? "Requesting..." : "Request Data Export"}</Text>
+          <Text className="text-[18px] font-JakartaBold text-goWhite">{isRequesting ? t('request_data.requesting') : t('request_data.cta')}</Text>
         </TouchableOpacity>
       </ScrollView>
       <TouchableOpacity

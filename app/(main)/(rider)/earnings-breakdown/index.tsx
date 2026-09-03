@@ -17,6 +17,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT } from "@/lib/format";
+import { useTranslation } from "react-i18next";
 
 interface TripRow {
   ride_id: string;
@@ -34,7 +35,7 @@ const DATE_RANGES = [
 ] as const;
 
 export default function EarningsBreakdown() {
-  const [trips, setTrips] = useState<TripRow[]>([]);
+  const { t } = useTranslation();  const [trips, setTrips] = useState<TripRow[]>([]);
   const [totalEarningsBdt, setTotalEarningsBdt] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

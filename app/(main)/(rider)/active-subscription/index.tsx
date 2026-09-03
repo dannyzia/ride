@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import ProgressBar from "@/components/ProgressBar";
+import { useTranslation } from "react-i18next";
 
 function daysBetween(fromIso: string, toIso: string): number {
   const diff = new Date(toIso).getTime() - new Date(fromIso).getTime();
@@ -15,7 +16,7 @@ function daysBetween(fromIso: string, toIso: string): number {
 }
 
 export default function ActiveSubscription() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;

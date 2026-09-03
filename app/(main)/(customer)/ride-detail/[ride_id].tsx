@@ -21,6 +21,7 @@ import { fetchRouteGeometry } from "@/lib/routeGeometry";
 import StatusBadge from "@/components/StatusBadge";
 import RideCardSkeleton from "@/components/RideCardSkeleton";
 import Map, { MapRoutePoint } from "@/components/Map";
+import { useTranslation } from "react-i18next";
 
 type BadgeStatus = "completed" | "cancelled" | "in_progress" | "scheduled";
 
@@ -104,6 +105,7 @@ const getRideCoords = (
 };
 
 const RideDetailScreen = () => {
+  const { t } = useTranslation();
   const { ride_id } = useLocalSearchParams<{ ride_id: string }>();
   const [ride, setRide] = useState<RideDetail | null>(null);
   const [driver, setDriver] = useState<DriverDetail | null>(null);
@@ -200,14 +202,14 @@ const RideDetailScreen = () => {
         />
         <View style={styles.centered}>
           <Ionicons name="warning-outline" size={48} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: textPrimary }]}>Could not load ride</Text>
+          <Text style={[styles.errorTitle, { color: textPrimary }]}>{t('ride_detail.could_not_load')}</Text>
           <TouchableOpacity
             style={[styles.retryBtn, { backgroundColor: colors.primary }]}
             onPress={fetchRide}
             accessibilityRole="button"
-            accessibilityLabel="Retry loading ride"
+            accessibilityLabel={t('ride_detail.retry_loading')}
           >
-            <Text style={styles.retryBtnText}>Retry</Text>
+            <Text style={styles.retryBtnText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -228,36 +230,36 @@ const RideDetailScreen = () => {
   const total = toPaisa(ride.rider_payable_bdt) ?? toPaisa(fb.total_bdt) ?? 0;
 
   const fareRows: { label: string; value: number; note?: string }[] = [
-    ...(base !== null ? [{ label: "Base Fare", value: base }] : []),
-    ...(distance !== null ? [{ label: "Distance", value: distance }] : []),
-    ...(time !== null ? [{ label: "Time", value: time }] : []),
-    ...(wait !== null && wait > 0 ? [{ label: "Waiting Fee", value: wait }] : []),
+    ...(base !== null ? [{ label: t('ride_detail.base_fare'), value: base }] : []),
+    ...(distance !== null ? [{ label: t('finish_ride.distance'), value: distance }] : []),
+    ...(time !== null ? [{ label: t('ride_detail.time'), value: time }] : []),
+    ...(wait !== null && wait > 0 ? [{ label: t('ride_detail.waiting_fee'), value: wait }] : []),
     // v6 Phase F: waiting charge from fare_breakdown (may differ from ride.wait_fee_bdt)
     ...(fb.waiting_charge_bdt != null && fb.waiting_charge_bdt > 0 &&
-        (wait == null || wait === 0) ? [{ label: "Waiting charge", value: fb.waiting_charge_bdt }] : []),
+        (wait == null || wait === 0) ? [{ label: t('finish_ride.waiting_charge'), value: fb.waiting_charge_bdt }] : []),
     // v6 Phase F: zone fee (100% to driver)
     ...(fb.zone_fee_bdt != null && fb.zone_fee_bdt > 0
-      ? [{ label: "Zone fee", value: fb.zone_fee_bdt }]
+      ? [{ label: t('finish_ride.zone_fee'), value: fb.zone_fee_bdt }]
       : []),
     // v6 Phase F: night multiplier indicator
     ...(fb.night_mult_applied != null && fb.night_mult_applied > 1.0
       ? [{
-          label: `Night surcharge (${((fb.night_mult_applied - 1) * 100).toFixed(0)}%)`,
+          label: t('ride_detail.night_surcharge_pct', { percent: ((fb.night_mult_applied - 1) * 100).toFixed(0) }),
           value: 0,
-          note: "Included in time charges above",
+          note: t('ride_detail.night_note'),
         }]
       : []),
     ...(fb.pickup_fee_final_bdt != null && fb.pickup_fee_final_bdt > 0
       ? [{
-          label: "Pickup Fee",
+          label: t('ride_detail.pickup_fee'),
           value: fb.pickup_fee_final_bdt,
           note: fb.pickup_trueup_delta_bdt != null && fb.pickup_trueup_delta_bdt !== 0
-            ? "(adjusted for actual distance)"
+            ? t('ride_detail.pickup_adjusted')
             : undefined,
         }]
       : []),
-    ...(tip !== null && tip > 0 ? [{ label: "Tip", value: tip }] : []),
-    ...(discount !== null && discount > 0 ? [{ label: "Discount", value: -discount }] : []),
+    ...(tip !== null && tip > 0 ? [{ label: t('ride_detail.tip'), value: tip }] : []),
+    ...(discount !== null && discount > 0 ? [{ label: t('ride_detail.discount'), value: -discount }] : []),
   ];
 
   const vehicleLine = [driver?.vehicle_type, driver?.vehicle_plate].filter(Boolean).join(" · ");
@@ -274,16 +276,16 @@ const RideDetailScreen = () => {
             onPress={() => router.back()}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Go back"
+            accessibilityLabel={t('ride_detail.go_back')}
           >
             <Ionicons name="arrow-back" size={24} color={textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: textPrimary }]}>Ride Detail</Text>
+          <Text style={[styles.title, { color: textPrimary }]}>{t('ride_detail.title')}</Text>
           <TouchableOpacity
             onPress={() => setTheme(isDark ? "light" : "dark")}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Toggle theme"
+            accessibilityLabel={t('ride_detail.toggle_theme')}
           >
             <Ionicons
               name={isDark ? "sunny-outline" : "moon-outline"}
@@ -319,12 +321,12 @@ const RideDetailScreen = () => {
                 <View style={[styles.routeDot, { backgroundColor: colors.danger }]} />
               </View>
               <View style={styles.routeTextCol}>
-                <Text style={[styles.addrLabel, { color: textSecondary }]}>Pickup</Text>
+                <Text style={[styles.addrLabel, { color: textSecondary }]}>{t('ride_detail.pickup')}</Text>
                 <Text style={[styles.addrText, { color: textPrimary }]} numberOfLines={2}>
                   {ride.origin_address ?? "—"}
                 </Text>
                 <Text style={[styles.addrLabel, styles.addrLabelGap, { color: textSecondary }]}>
-                  Destination
+                  {t('ride_detail.destination')}
                 </Text>
                 <Text style={[styles.addrText, { color: textPrimary }]} numberOfLines={2}>
                   {ride.destination_address ?? "—"}
@@ -339,13 +341,13 @@ const RideDetailScreen = () => {
             <View style={styles.reasonRow}>
               <Ionicons name="close-circle" size={20} color={colors.danger} />
               <Text style={[styles.reasonLabel, { color: textSecondary }]}>
-                Cancellation Reason
+                {t('ride_detail.cancellation_reason')}
               </Text>
             </View>
             <Text style={[styles.reasonText, { color: textPrimary }]}>{ride.cancel_reason}</Text>
             {ride.cancelled_by && (
               <Text style={[styles.cancelledBy, { color: textSecondary }]}>
-                Cancelled by {ride.cancelled_by}
+                {t('ride_detail.cancelled_by_name', { name: ride.cancelled_by })}
               </Text>
             )}
           </View>
@@ -369,7 +371,7 @@ const RideDetailScreen = () => {
             </View>
             <View style={styles.driverInfo}>
               <Text style={[styles.driverName, { color: textPrimary }]} numberOfLines={1}>
-                {driver.full_name ?? "Driver"}
+                {driver.full_name ?? t('ride_detail.driver')}
               </Text>
               <View style={styles.ratingRow}>
                 <Ionicons name="star" size={14} color={colors.amber} />
@@ -387,14 +389,14 @@ const RideDetailScreen = () => {
         {!isCancelled && !driver ? (
           <View style={[styles.card, { backgroundColor: surfaceBg, borderColor }]}>
             <Text style={[styles.noDriverText, { color: textDisabled }]}>
-              Driver info unavailable
+              {t('ride_detail.driver_unavailable')}
             </Text>
           </View>
         ) : null}
 
         {!isCancelled ? (
           <View style={[styles.card, { backgroundColor: surfaceBg, borderColor }]}>
-            <Text style={[styles.sectionTitle, { color: textPrimary }]}>Fare Breakdown</Text>
+            <Text style={[styles.sectionTitle, { color: textPrimary }]}>{t('ride_detail.fare_breakdown')}</Text>
             {fareRows.map((row) => (
               <View key={row.label} style={styles.fareRow}>
                 <View style={{ flex: 1 }}>
@@ -409,7 +411,7 @@ const RideDetailScreen = () => {
               </View>
             ))}
             <View style={[styles.fareRow, styles.fareTotalRow, { borderTopColor: borderColor }]}>
-              <Text style={[styles.fareTotalLabel, { color: textPrimary }]}>Total</Text>
+              <Text style={[styles.fareTotalLabel, { color: textPrimary }]}>{t('ride_detail.total')}</Text>
               <Text style={[styles.fareTotalValue, { color: colors.primary }]}>
                 {formatBDT(total)}
               </Text>
@@ -434,9 +436,9 @@ const RideDetailScreen = () => {
             })
           }
           accessibilityRole="button"
-          accessibilityLabel="Rebook ride"
+          accessibilityLabel={t('ride_detail.rebook_a11y')}
         >
-          <Text style={styles.rebookBtnText}>Rebook Ride</Text>
+          <Text style={styles.rebookBtnText}>{t('ride_detail.rebook')}</Text>
         </TouchableOpacity>
 
         {ride.status === "completed" && canDisputeRide(ride.completed_at) && (
@@ -446,10 +448,10 @@ const RideDetailScreen = () => {
               router.push(`/(main)/(customer)/fare-dispute?rideId=${ride.id}`)
             }
             accessibilityRole="button"
-            accessibilityLabel="Dispute fare"
+            accessibilityLabel={t('ride_detail.dispute_a11y')}
           >
             <Text style={[styles.disputeBtnText, { color: colors.amber }]}>
-              Dispute Fare
+              {t('ride_detail.dispute_fare')}
             </Text>
           </TouchableOpacity>
         )}
@@ -460,9 +462,9 @@ const RideDetailScreen = () => {
             router.push(`/(main)/(customer)/report-issue?rideId=${ride.id}`)
           }
           accessibilityRole="button"
-          accessibilityLabel="Report issue"
+          accessibilityLabel={t('ride_detail.report_a11y')}
         >
-          <Text style={[styles.reportBtnText, { color: textPrimary }]}>Report Issue</Text>
+          <Text style={[styles.reportBtnText, { color: textPrimary }]}>{t('ride_detail.report_issue')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

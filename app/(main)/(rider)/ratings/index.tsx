@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface Review {
   id: string;
@@ -24,7 +25,7 @@ interface RatingsData {
 }
 
 export default function Ratings() {
-  const [data, setData] = useState<RatingsData | null>(null);
+  const { t } = useTranslation();  const [data, setData] = useState<RatingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 

@@ -17,6 +17,7 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { formatBDT } from "@/lib/format";
+import { useTranslation } from "react-i18next";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -50,6 +51,7 @@ interface TripRow {
 }
 
 export default function EarningsDetail() {
+  const { t } = useTranslation();
   const { date } = useLocalSearchParams<{ date: string }>();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
@@ -134,7 +136,7 @@ export default function EarningsDetail() {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]} numberOfLines={1}>
-          Earnings
+          {t('earnings_detail.title')}
         </Text>
         <TouchableOpacity
           onPress={() => setTheme(isDark ? "light" : "dark")}
@@ -154,7 +156,7 @@ export default function EarningsDetail() {
         <View style={styles.centered}>
           <Ionicons name="calendar-outline" size={48} color={textDisabled} />
           <Text style={[styles.centeredText, { color: textSecondary }]}>
-            Invalid date.
+            {t('earnings_detail.invalid_date')}
           </Text>
         </View>
       ) : loading ? (
@@ -165,7 +167,7 @@ export default function EarningsDetail() {
         <View style={styles.centered}>
           <Ionicons name="warning-outline" size={48} color={colors.danger} />
           <Text style={[styles.centeredText, { color: textSecondary }]}>
-            Could not load earnings.
+            {t('earnings_detail.could_not_load')}
           </Text>
           <TouchableOpacity
             style={[styles.retryBtn, { backgroundColor: colors.primary }]}
@@ -173,7 +175,7 @@ export default function EarningsDetail() {
             accessibilityRole="button"
             accessibilityLabel="Retry"
           >
-            <Text style={styles.retryBtnText}>Retry</Text>
+            <Text style={styles.retryBtnText}>{t('earnings_detail.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -185,14 +187,14 @@ export default function EarningsDetail() {
             <Text style={[styles.title, { color: textPrimary }]}>{titleLabel}</Text>
             {isToday && (
               <View style={[styles.todayBadge, { backgroundColor: colors.primaryLight }]}>
-                <Text style={[styles.todayBadgeText, { color: colors.primary }]}>Today</Text>
+                <Text style={[styles.todayBadgeText, { color: colors.primary }]}>{t('earnings_detail.today')}</Text>
               </View>
             )}
           </View>
 
           {/* Day summary */}
           <View style={[styles.summaryCard, { backgroundColor: surfaceBg, borderColor }]}>
-            <Text style={[styles.summaryLabel, { color: textSecondary }]}>Total Earnings</Text>
+            <Text style={[styles.summaryLabel, { color: textSecondary }]}>{t('earnings_detail.total_earnings')}</Text>
             <Text style={[styles.summaryValue, { color: colors.primary }]}>
               {formatBDT(summary?.earnings_bdt ?? 0)}
             </Text>
@@ -201,7 +203,7 @@ export default function EarningsDetail() {
                 <Text style={[styles.summaryStatValue, { color: textPrimary }]}>
                   {summary?.trips ?? 0}
                 </Text>
-                <Text style={[styles.summaryStatLabel, { color: textSecondary }]}>Trips</Text>
+                <Text style={[styles.summaryStatLabel, { color: textSecondary }]}>{t('earnings_detail.trips')}</Text>
               </View>
               <View style={styles.summaryStat}>
                 <Text style={[styles.summaryStatValue, { color: textPrimary }]}>
@@ -209,13 +211,13 @@ export default function EarningsDetail() {
                     ? `${Math.round(summary.online_hours * 10) / 10}h`
                     : "—"}
                 </Text>
-                <Text style={[styles.summaryStatLabel, { color: textSecondary }]}>Online</Text>
+                <Text style={[styles.summaryStatLabel, { color: textSecondary }]}>{t('earnings_detail.online')}</Text>
               </View>
             </View>
           </View>
 
           {/* Trip list */}
-          <Text style={[styles.sectionTitle, { color: textPrimary }]}>Trips</Text>
+          <Text style={[styles.sectionTitle, { color: textPrimary }]}>{t('earnings_detail.trips')}</Text>
           {trips && trips.length > 0 ? (
             trips.map((trip) => (
               <View
@@ -231,7 +233,7 @@ export default function EarningsDetail() {
                     }).format(new Date(trip.completed_at))}
                   </Text>
                   <Text style={[styles.tripRoute, { color: textPrimary }]} numberOfLines={1}>
-                    {trip.origin_address ?? "Pickup"} → {trip.destination_address ?? "Dropoff"}
+                    {trip.origin_address ?? t('earnings_detail.pickup')} → {trip.destination_address ?? t('earnings_detail.dropoff')}
                   </Text>
                 </View>
                 <Text style={[styles.tripEarnings, { color: textPrimary }]}>
@@ -243,7 +245,7 @@ export default function EarningsDetail() {
             <View style={[styles.emptyCard, { backgroundColor: surfaceBg, borderColor }]}>
               <Ionicons name="car-outline" size={32} color={textDisabled} />
               <Text style={[styles.emptyText, { color: textSecondary }]}>
-                No completed trips on this day.
+                {t('earnings_detail.no_trips_today')}
               </Text>
             </View>
           )}

@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors, radii, spacing } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 const DAYS = [
   { key: 1, label: "Monday", short: "Mon" },
@@ -49,7 +50,7 @@ interface DaySchedule {
 }
 
 export default function Schedule() {
-  const [schedule, setSchedule] = useState<Record<number, DaySchedule>>({});
+  const { t } = useTranslation();  const [schedule, setSchedule] = useState<Record<number, DaySchedule>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");

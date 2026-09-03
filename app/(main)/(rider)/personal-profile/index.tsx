@@ -10,6 +10,7 @@ import { uploadImage } from "@/lib/imageToURL";
 import { logger } from "@/lib/logger";
 import { colors, fonts, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface DriverProfilePatch {
   name: string;
@@ -18,7 +19,7 @@ interface DriverProfilePatch {
 }
 
 export default function DriverPersonalProfile() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
   const [name, setName] = useState("");

@@ -5,8 +5,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRiderStore } from "@/store/useRiderStore";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function DriverInfo() {
+  const { t } = useTranslation();
   const { activeRide } = useRiderStore();
   const driver = activeRide?.driver;
   const isDark = useIsDark();
@@ -33,8 +35,8 @@ export default function DriverInfo() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }} onPress={() => router.back()}>Back</Text>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Driver Information</Text>
+        <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }} onPress={() => router.back()}>{t('common.back')}</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('driver_info.title')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 24 }}>
@@ -45,24 +47,24 @@ export default function DriverInfo() {
           >
             <Text className="text-[28px] font-JakartaBold tracking-tight" style={{ color: colors.primary }}>{driver?.name?.charAt(0) ?? "D"}</Text>
           </View>
-          <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>{driver?.name ?? "Driver"}</Text>
+          <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>{driver?.name ?? t('driver_info.driver')}</Text>
           <View className="flex-row items-center mt-1">
             <Ionicons name="star" size={16} color={colors.amber} />
             <Text className="text-[14px] font-Jakarta ml-1" style={{ color: textSecondary }}>
-              {driver?.rating ?? "N/A"} · {driver?.vehicle_type ?? ""}
+              {driver?.rating ?? t('driver_info.na')} · {driver?.vehicle_type ?? ""}
             </Text>
           </View>
         </View>
         <View className="flex-row gap-4">
           <TouchableOpacity className="flex-1 rounded-full py-[14px] items-center" style={{ backgroundColor: colors.primary }} onPress={handleCall}>
-            <Text className="text-[16px] font-JakartaBold text-goWhite">Call</Text>
+            <Text className="text-[16px] font-JakartaBold text-goWhite">{t('driver_info.call')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="flex-1 border rounded-full py-[14px] items-center"
             style={{ borderColor }}
             onPress={handleChat}
           >
-            <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>Chat</Text>
+            <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>{t('driver_info.chat')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

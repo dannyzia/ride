@@ -8,8 +8,10 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function ActivityOngoing() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -53,9 +55,9 @@ export default function ActivityOngoing() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Ongoing</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('rider_activity.ongoing')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 24 }}>
@@ -67,22 +69,22 @@ export default function ActivityOngoing() {
               </View>
               <View className="flex-1">
                 <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>
-                  {activeRide.vehicle_type?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? "Ride"}
+                  {activeRide.vehicle_type?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? t('rider_activity.ride')}
                 </Text>
                 <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
-                  {activeRide.driver?.name ?? "Driver"} · {activeRide.eta_minutes ?? "—"} min away
+                  {activeRide.driver?.name ?? t('rider_activity.driver')} · {t('rider_activity.min_away', { minutes: activeRide.eta_minutes ?? "—" })}
                 </Text>
               </View>
             </View>
             <View className="gap-1 mb-4">
               <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
-                Pickup: {activeRide.origin_address ?? "—"}
+                {t('rider_activity.pickup_label', { address: activeRide.origin_address ?? "—" })}
               </Text>
               <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
-                Destination: {activeRide.destination_address ?? "—"}
+                {t('rider_activity.destination_label', { address: activeRide.destination_address ?? "—" })}
               </Text>
               <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
-                Fare: ৳{((Number(activeRide.fare_breakdown?.total_bdt ?? 0)) / 100).toFixed(0)}
+                {t('rider_activity.fare_label', { amount: ((Number(activeRide.fare_breakdown?.total_bdt ?? 0)) / 100).toFixed(0) })}
               </Text>
             </View>
             <View className="gap-3">
@@ -91,24 +93,24 @@ export default function ActivityOngoing() {
                 style={{ backgroundColor: colors.primary }}
                 onPress={() => router.push("/(main)/(customer)/driver-info")}
               >
-                <Text className="text-[16px] font-JakartaBold" style={{ color: colors.white }}>Driver Info</Text>
+                <Text className="text-[16px] font-JakartaBold" style={{ color: colors.white }}>{t('rider_activity.driver_info')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className="rounded-full shadow-go-sm w-full py-[14px] items-center"
                 style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
                 onPress={() => router.push(`/(main)/(customer)/chat/${activeRide.id}`)}
               >
-                <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>Chat</Text>
+                <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>{t('rider_activity.chat')}</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
           <View className="items-center py-8">
             <Text className="text-[20px] font-JakartaBold tracking-tight mb-4" style={{ color: textSecondary }}>
-              No active rides
+              {t('rider_activity.no_active_rides')}
             </Text>
             <Text className="text-[16px] font-Jakarta text-center" style={{ color: textSecondary }}>
-              Your active rides will appear here
+              {t('rider_activity.no_active_rides_sub')}
             </Text>
           </View>
         )}

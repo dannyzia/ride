@@ -8,8 +8,10 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors, fonts } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function ActivityCompleted() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -54,9 +56,9 @@ export default function ActivityCompleted() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
         <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}>
-          <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>Back</Text>
+          <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>Completed</Text>
+        <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>{t('activity.completed')}</Text>
         <View style={{ width: 50 }} />
       </View>
       <ScrollView style={{ flex: 1, paddingHorizontal: 24 }} contentContainerStyle={{ paddingVertical: 24 }}>
@@ -69,7 +71,7 @@ export default function ActivityCompleted() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: textPrimary }}>
-                    {ride.vehicle_type?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? "Ride"}
+                    {ride.vehicle_type?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? t('activity_completed.ride')}
                   </Text>
                   <Text style={{ fontSize: 12, fontFamily: fonts.body, color: textSecondary }}>
                     {ride.date ?? ""} · {ride.time ?? ""}
@@ -78,13 +80,13 @@ export default function ActivityCompleted() {
               </View>
               <View style={{ gap: 4, marginBottom: 12 }}>
                 <Text style={{ fontSize: 12, fontFamily: fonts.body, color: textSecondary }}>
-                  Pickup: {ride.pickup_address ?? "—"}
+                  {t('activity_completed.pickup', { address: ride.pickup_address ?? "—" })}
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: fonts.body, color: textSecondary }}>
-                  Destination: {ride.destination_address ?? "—"}
+                  {t('activity_completed.destination', { address: ride.destination_address ?? "—" })}
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: fonts.body, color: textSecondary }}>
-                  Fare: ৳{((ride.fare_bdt ?? 0) / 100).toFixed(0)}
+                  {t('activity_completed.fare', { amount: ((ride.fare_bdt ?? 0) / 100).toFixed(0) })}
                 </Text>
               </View>
               <View style={{ flexDirection: "row", gap: 8 }}>
@@ -92,13 +94,13 @@ export default function ActivityCompleted() {
                   style={{ flex: 1, backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: "center" }}
                   onPress={() => router.push(`/(main)/(customer)/ride-detail/${ride.id}`)}
                 >
-                  <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: textPrimary }}>View Receipt</Text>
+                  <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: textPrimary }}>{t('activity_completed.view_receipt')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: "center" }}
                   onPress={() => router.push("/(main)/(customer)/rate-driver")}
                 >
-                  <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: colors.white }}>Rate Driver</Text>
+                  <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: colors.white }}>{t('ride.rate_driver')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -106,10 +108,10 @@ export default function ActivityCompleted() {
         ) : (
           <View style={{ alignItems: "center", paddingVertical: 32 }}>
             <Text style={{ fontSize: 20, fontFamily: fonts.heading, letterSpacing: -0.5, color: textSecondary, marginBottom: 16 }}>
-              No completed rides
+              {t('activity_completed.no_rides')}
             </Text>
             <Text style={{ fontSize: 16, fontFamily: fonts.body, color: textSecondary, textAlign: "center" }}>
-              Your completed rides will appear here
+              {t('activity_completed.empty_desc')}
             </Text>
           </View>
         )}

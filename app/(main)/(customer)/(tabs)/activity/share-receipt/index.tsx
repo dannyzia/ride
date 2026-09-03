@@ -5,8 +5,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRiderStore } from "@/store/useRiderStore";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function ActivityShareReceipt() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -22,9 +24,9 @@ export default function ActivityShareReceipt() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/activity")}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Share Receipt</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('share_receipt.title')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
@@ -37,28 +39,28 @@ export default function ActivityShareReceipt() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>
-                    {receipt.vehicle_type ? receipt.vehicle_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "Ride"}
+                    {receipt.vehicle_type ? receipt.vehicle_type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : t('share_receipt.ride')}
                   </Text>
                   <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{receipt.date} · {receipt.time}</Text>
                 </View>
               </View>
-              <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>From: {receipt.pickup_address}</Text>
-              <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>To: {receipt.destination_address}</Text>
-              <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>Fare: ৳{(receipt.fare_bdt ?? 0) / 100}</Text>
+              <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{t('share_receipt.from', { address: receipt.pickup_address })}</Text>
+              <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{t('share_receipt.to', { address: receipt.destination_address })}</Text>
+              <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{t('share_receipt.fare', { amount: (receipt.fare_bdt ?? 0) / 100 })}</Text>
               <View className="flex-row gap-3 mt-3">
                 <TouchableOpacity className="flex-1 border rounded-[8px] px-[12px] py-[6px] items-center" style={{ backgroundColor: surfaceBg, borderColor }}>
-                  <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>Share</Text>
+                  <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{t('share_receipt.share')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity className="flex-1 border rounded-[8px] px-[12px] py-[6px] items-center" style={{ backgroundColor: surfaceBg, borderColor }}>
-                  <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>Download</Text>
+                  <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{t('share_receipt.download')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
           ))
         ) : (
           <View className="items-center py-[24px]">
-            <Text className="text-[20px] font-JakartaBold tracking-tight mb-4" style={{ color: textSecondary }}>No recent receipts</Text>
-            <Text className="text-[16px] font-Jakarta text-center" style={{ color: textSecondary }}>Your recent receipts will appear here</Text>
+            <Text className="text-[20px] font-JakartaBold tracking-tight mb-4" style={{ color: textSecondary }}>{t('share_receipt.no_receipts')}</Text>
+            <Text className="text-[16px] font-Jakarta text-center" style={{ color: textSecondary }}>{t('share_receipt.empty_desc')}</Text>
           </View>
         )}
       </ScrollView>

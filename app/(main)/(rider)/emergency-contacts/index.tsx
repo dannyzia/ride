@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 const MAX_CONTACTS = 5;
 
@@ -35,7 +36,7 @@ function isValidBdPhone(phone: string): boolean {
 }
 
 export default function EmergencyContacts() {
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const { t } = useTranslation();  const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);

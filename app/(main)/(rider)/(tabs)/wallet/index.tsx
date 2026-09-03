@@ -20,6 +20,7 @@ import { formatBDT } from "@/lib/format";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useState as useStateModal } from "react";
 import PaymentWebView from "@/components/PaymentWebView";
+import { useTranslation } from "react-i18next";
 
 interface DuesData {
   subscription: {
@@ -59,6 +60,7 @@ const TXN_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function WalletScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const [balancePaisa, setBalancePaisa] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -85,21 +87,21 @@ export default function WalletScreen() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated");
+        setError(t('wallet.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/driver/wallet`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        setError("Failed to load wallet");
+        setError(t('wallet.failed_to_load'));
         return;
       }
       const data = await res.json();
       setBalancePaisa(data.balance_bdt ?? 0);
       setTransactions(data.recent_transactions ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
+      setError(err instanceof Error ? err.message : t('wallet.network_error'));
       logger.error("Wallet fetch failed", err);
     }
   }, []);
@@ -206,7 +208,7 @@ export default function WalletScreen() {
           className="text-[20px] font-JakartaBold tracking-tight"
           style={{ color: textPrimary }}
         >
-          Wallet
+          {t('wallet.title')}
         </Text>
         {loading ? (
           <ActivityIndicator
@@ -233,7 +235,7 @@ export default function WalletScreen() {
               className="text-[13px] font-Jakarta"
               style={{ color: textSecondary }}
             >
-              Driver wallet balance
+              {t('wallet.balance')}
             </Text>
           </>
         )}
@@ -262,7 +264,7 @@ export default function WalletScreen() {
                 className="text-[14px] font-JakartaSemiBold"
                 style={{ color: textPrimary }}
               >
-                Active Package
+                {t('wallet.active_package')}
               </Text>
             </View>
             <View className="flex-row justify-between items-center">
@@ -271,14 +273,14 @@ export default function WalletScreen() {
                   className="text-[13px] font-Jakarta"
                   style={{ color: textSecondary }}
                 >
-                  Calls remaining
+                  {t('wallet.calls_remaining')}
                 </Text>
                 <Text
                   className="text-[20px] font-JakartaBold"
                   style={{ color: textPrimary }}
                 >
                   {activeSubscription.calls_remaining === -1
-                    ? "Unlimited"
+                    ? t('wallet.unlimited')
                     : activeSubscription.calls_remaining}
                 </Text>
               </View>
@@ -287,7 +289,7 @@ export default function WalletScreen() {
                   className="text-[13px] font-Jakarta"
                   style={{ color: textSecondary }}
                 >
-                  Expires
+                  {t('wallet.expires')}
                 </Text>
                 <Text
                   className="text-[14px] font-JakartaSemiBold"
@@ -323,7 +325,7 @@ export default function WalletScreen() {
                 className="text-[14px] font-JakartaSemiBold"
                 style={{ color: colors.danger }}
               >
-                Outstanding Dues
+                {t('wallet.outstanding_dues')}
               </Text>
             </View>
             <Text
@@ -336,7 +338,7 @@ export default function WalletScreen() {
               className="text-[12px] font-Jakarta mt-1"
               style={{ color: textSecondary }}
             >
-              Commission owed on completed rides
+              {t('wallet.commission_owed')}
             </Text>
           </View>
         )}
@@ -347,11 +349,11 @@ export default function WalletScreen() {
           style={{ backgroundColor: colors.primary }}
           onPress={handleTopUp}
           accessibilityRole="button"
-          accessibilityLabel="Top up wallet"
+          accessibilityLabel={t('wallet.top_up')}
         >
           <Ionicons name="add-circle-outline" size={20} color={colors.white} />
           <Text className="text-[16px] font-JakartaBold text-white">
-            Top Up
+            {t('wallet.top_up')}
           </Text>
         </TouchableOpacity>
 
@@ -371,7 +373,7 @@ export default function WalletScreen() {
               className="text-[14px] font-JakartaSemiBold"
               style={{ color: textPrimary }}
             >
-              Payout Method
+              {t('wallet.payout_method')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={textSecondary} />
@@ -388,7 +390,7 @@ export default function WalletScreen() {
                 className="text-[14px] font-JakartaSemiBold"
                 style={{ color: textPrimary }}
               >
-                Cancellation Credits
+                {t('wallet.cancellation_credits')}
               </Text>
               <Text
                 className="text-[13px] font-Jakarta"
@@ -415,7 +417,7 @@ export default function WalletScreen() {
                       className="text-[13px] font-JakartaSemiBold"
                       style={{ color: textPrimary }}
                     >
-                      {formatBDT(credit.amount_bdt)} bonus
+                      {formatBDT(credit.amount_bdt)} {t('wallet.bonus')}
                     </Text>
                     <Text
                       className="text-[11px] font-Jakarta"
@@ -446,7 +448,7 @@ export default function WalletScreen() {
                   className="text-[13px] font-JakartaSemiBold"
                   style={{ color: textPrimary }}
                 >
-                  Total pending
+                  {t('wallet.total_pending')}
                 </Text>
                 <Text
                   className="text-[14px] font-JakartaBold"
@@ -466,7 +468,7 @@ export default function WalletScreen() {
               className="text-[16px] font-JakartaBold mb-2"
               style={{ color: textPrimary }}
             >
-              Recent Transactions
+              {t('wallet.recent_transactions')}
             </Text>
             {transactions.map((txn) => (
               <View
@@ -525,8 +527,7 @@ export default function WalletScreen() {
             className="text-[13px] font-Jakarta"
             style={{ color: textSecondary }}
           >
-            Wallet balance is credited at ride completion and from gamification
-            rewards. Withdrawals are not yet available.
+            {t('wallet.wallet_note')}
           </Text>
         </View>
       </ScrollView>

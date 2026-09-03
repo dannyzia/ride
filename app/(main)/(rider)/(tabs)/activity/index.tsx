@@ -18,6 +18,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT } from "@/lib/format";
 import Badge from "@/components/Badge";
+import { useTranslation } from "react-i18next";
 
 interface Trip {
   id: string;
@@ -42,10 +43,9 @@ interface Pagination {
 
 type FilterStatus = "all" | "completed" | "cancelled" | "in_progress";
 
-const STATUS_FILTERS: { key: FilterStatus; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "completed", label: "Completed" },
-  { key: "cancelled", label: "Cancelled" },
+const STATUS_FILTERS: { key: FilterStatus; label: string }[] = [    { key: "all", label: "activity.all" },
+  { key: "completed", label: "activity.completed" },
+  { key: "cancelled", label: "activity.cancelled" },
 ];
 
 const STATUS_BADGE_VARIANTS: Record<string, "success" | "danger" | "info" | "amber" | "primary" | "neutral"> = {
@@ -57,6 +57,7 @@ const STATUS_BADGE_VARIANTS: Record<string, "success" | "danger" | "info" | "amb
 };
 
 export default function ActivityScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +86,7 @@ export default function ActivityScreen() {
         } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) {
-          setError("Not authenticated");
+          setError(t('activity.not_authenticated'));
           return;
         }
         const params = new URLSearchParams({
@@ -96,7 +97,7 @@ export default function ActivityScreen() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
-          setError("Failed to load trips");
+          setError(t('activity.failed_to_load'));
           return;
         }
         const data = await res.json();
@@ -108,7 +109,7 @@ export default function ActivityScreen() {
         setPagination(data.pagination ?? null);
       } catch (e) {
         logger.error("[activity] fetch trips failed", e);
-        setError("Could not load trip history");
+        setError(t('activity.could_not_load'));
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -234,7 +235,7 @@ export default function ActivityScreen() {
                   className="text-[13px] font-JakartaSemiBold"
                   style={{ color: active ? colors.white : textPrimary }}
                 >
-                  {f.label}
+                  {t(f.label)}
                 </Text>
               </TouchableOpacity>
             );
@@ -255,7 +256,7 @@ export default function ActivityScreen() {
             </Text>
             <TouchableOpacity onPress={handleRefresh} className="mt-2">
               <Text className="text-[14px] font-JakartaBold" style={{ color: colors.primary }}>
-                Retry
+                {t('activity.retry')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -266,13 +267,13 @@ export default function ActivityScreen() {
               className="text-[15px] font-Jakarta mt-3 text-center"
               style={{ color: textSecondary }}
             >
-              No trips found.
+              {t('activity.no_trips')}
             </Text>
             <Text
               className="text-[13px] font-Jakarta mt-1 text-center"
               style={{ color: textSecondary }}
             >
-              Your ride history will appear here.
+              {t('activity.ride_history_placeholder')}
             </Text>
           </View>
         ) : (
@@ -317,7 +318,7 @@ export default function ActivityScreen() {
                       style={{ color: textPrimary }}
                       numberOfLines={1}
                     >
-                      {trip.origin.address || "Pickup"}
+                      {trip.origin.address || t('activity.pickup')}
                     </Text>
                   </View>
                   <View className="flex-row items-center gap-2">
@@ -334,7 +335,7 @@ export default function ActivityScreen() {
                       style={{ color: textPrimary }}
                       numberOfLines={1}
                     >
-                      {trip.destination.address || "Drop-off"}
+                      {trip.destination.address || t('activity.drop_off')}
                     </Text>
                   </View>
                 </View>
@@ -370,7 +371,7 @@ export default function ActivityScreen() {
                           className="text-[11px] font-Jakarta"
                           style={{ color: textSecondary }}
                         >
-                          incl. {formatBDT(trip.tip_bdt)} tip
+                          {t('activity.incl_tip', { amount: formatBDT(trip.tip_bdt) })}
                         </Text>
                       )}
                     </View>
@@ -398,7 +399,7 @@ export default function ActivityScreen() {
                     className="text-[14px] font-JakartaSemiBold"
                     style={{ color: colors.primary }}
                   >
-                    Load More
+                    {t('activity.load_more')}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -410,7 +411,7 @@ export default function ActivityScreen() {
                 className="text-center text-[12px] font-Jakarta pb-2"
                 style={{ color: textSecondary }}
               >
-                Showing {trips.length} of {pagination.total} trips
+                {t('activity.showing_of', { count: trips.length, total: pagination.total })}
               </Text>
             )}
           </View>

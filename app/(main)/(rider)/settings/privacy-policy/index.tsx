@@ -1,5 +1,6 @@
 import LegalDocumentScreen from "@/components/LegalDocumentScreen";
+import { useTranslation } from "react-i18next";
 
 export default function DriverPrivacyPolicy() {
-  return <LegalDocumentScreen type="privacy" role="driver" />;
+  const { t } = useTranslation();  return <LegalDocumentScreen type="privacy" role="driver" />;
 }

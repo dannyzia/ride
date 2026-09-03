@@ -17,6 +17,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT } from "@/lib/format";
+import { useTranslation } from "react-i18next";
 
 interface DailyStats {
   earnings_bdt: number;
@@ -27,6 +28,7 @@ interface DailyStats {
 }
 
 export default function EarningsDashboard() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<DailyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -51,19 +53,19 @@ export default function EarningsDashboard() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated");
+        setError(t('earnings.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/driver/daily-stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        setError("Failed to load earnings");
+        setError(t('earnings.failed_to_load'));
         return;
       }
       setStats(await res.json());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
+      setError(err instanceof Error ? err.message : t('earnings.network_error'));
       logger.error("Fetch earnings failed", err);
     } finally {
       setLoading(false);
@@ -96,7 +98,7 @@ export default function EarningsDashboard() {
           className="flex-1 text-center text-[18px] font-JakartaBold"
           style={{ color: textPrimary }}
         >
-          Earnings
+          {t('earnings.title')}
         </Text>
         <View style={{ width: 32 }} />
       </View>
@@ -136,7 +138,7 @@ export default function EarningsDashboard() {
                 className="text-[14px] font-JakartaBold"
                 style={{ color: colors.primary }}
               >
-                Retry
+                {t('common.retry')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -155,7 +157,7 @@ export default function EarningsDashboard() {
                 className="text-[13px] font-Jakarta"
                 style={{ color: textSecondary }}
               >
-                Today&apos;s earnings
+                {t('earnings.todays_earnings')}
               </Text>
               <Text
                 className="text-[28px] font-JakartaBold tracking-tight mt-1"
@@ -169,7 +171,7 @@ export default function EarningsDashboard() {
                     className="text-[12px] font-Jakarta"
                     style={{ color: textSecondary }}
                   >
-                    Trips
+                    {t('earnings.trips')}
                   </Text>
                   <Text
                     className="text-[16px] font-JakartaBold"
@@ -183,7 +185,7 @@ export default function EarningsDashboard() {
                     className="text-[12px] font-Jakarta"
                     style={{ color: textSecondary }}
                   >
-                    Online
+                    {t('earnings.online')}
                   </Text>
                   <Text
                     className="text-[16px] font-JakartaBold"
@@ -198,7 +200,7 @@ export default function EarningsDashboard() {
                       className="text-[12px] font-Jakarta"
                       style={{ color: textSecondary }}
                     >
-                      Rating
+                      {t('earnings.rating')}
                     </Text>
                     <Text
                       className="text-[16px] font-JakartaBold"
@@ -225,13 +227,13 @@ export default function EarningsDashboard() {
                     className="text-[15px] font-JakartaBold"
                     style={{ color: textPrimary }}
                   >
-                    Earnings Breakdown
+                    {t('earnings.earnings_breakdown')}
                   </Text>
                   <Text
                     className="text-[13px] font-Jakarta mt-1"
                     style={{ color: textSecondary }}
                   >
-                    Trip-by-trip earnings details
+                    {t('earnings.earnings_breakdown_desc')}
                   </Text>
                 </View>
                 <Ionicons
@@ -255,13 +257,13 @@ export default function EarningsDashboard() {
                     className="text-[15px] font-JakartaBold"
                     style={{ color: textPrimary }}
                   >
-                    Commission Statement
+                    {t('earnings.commission_statement')}
                   </Text>
                   <Text
                     className="text-[13px] font-Jakarta mt-1"
                     style={{ color: textSecondary }}
                   >
-                    Weekly commission breakdown
+                    {t('earnings.commission_statement_desc')}
                   </Text>
                 </View>
                 <Ionicons
@@ -283,13 +285,13 @@ export default function EarningsDashboard() {
                     className="text-[15px] font-JakartaBold"
                     style={{ color: textPrimary }}
                   >
-                    Due Amounts
+                    {t('earnings.due_amounts')}
                   </Text>
                   <Text
                     className="text-[13px] font-Jakarta mt-1"
                     style={{ color: textSecondary }}
                   >
-                    Subscription and commission dues
+                    {t('earnings.due_amounts_desc')}
                   </Text>
                 </View>
                 <Ionicons

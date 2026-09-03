@@ -31,6 +31,7 @@ import {
   type DemandLevel,
   type HotspotPoint,
 } from "@/lib/hotspots";
+import { useTranslation } from "react-i18next";
 
 // LOW-13: drivers.vehicle_type is a machine key (e.g. bike_standard); show the
 // human label ("Bike Standard") in the header.
@@ -72,6 +73,7 @@ const DEMAND_COLOR: Record<DemandLevel, string> = {
 let driverHomeMessageHandler: ((event: MessageEvent) => void) | null = null;
 
 export default function DriverHome() {
+  const { t } = useTranslation();
   const {
     driver,
     activeSubscription,
@@ -555,10 +557,10 @@ export default function DriverHome() {
           setActiveOffer(null);
           const lostToast =
             msg.reason === "cancelled"
-              ? "Ride cancelled"
+              ? t('driver_home.ride_cancelled')
               : msg.reason === "accepted_elsewhere"
-                ? "Accepted by another driver"
-                : "Offer expired";
+                ? t('driver_home.accepted_elsewhere')
+                : t('driver_home.offer_expired');
           showToast(lostToast, "info");
         } else if (type === "offer:accepted") {
           // Stage 2 reveal: the exact dropoff arrives only now — populate the
@@ -577,7 +579,7 @@ export default function DriverHome() {
           const cancelledByDriver = msg.cancelled_by === "driver";
           const cancelledBySystem = msg.cancelled_by === "system";
           if (!cancelledByDriver && !cancelledBySystem) {
-            Alert.alert("Ride Cancelled", "Rider cancelled the ride");
+            Alert.alert(t('driver_home.ride_cancelled_title'), t('driver_home.rider_cancelled'));
           }
           if (msg.ride_id) removeRideOffer(msg.ride_id);
           setActiveRideId(null);
@@ -805,12 +807,12 @@ export default function DriverHome() {
           return;
         }
         Alert.alert(
-          "Cannot go online",
-          err.message ?? "Check your subscription status.",
+          t('driver_home.cannot_go_online'),
+          err.message ?? t('driver_home.check_subscription'),
         );
       }
     } catch {
-      Alert.alert("Error", "Network error. Please try again.");
+      Alert.alert(t('common.error'), t('driver_home.network_error'));
     }
   };
 
@@ -884,7 +886,7 @@ export default function DriverHome() {
                 marginTop: spacing.sm,
               }}
             >
-              {locationLoading ? "Getting your location..." : "Location unavailable — enable GPS"}
+              {locationLoading ? t('driver_home.getting_location') : t('driver_home.location_unavailable')}
             </Text>
           </View>
         ) : MapLibreGL && MapLibreGL.MapView ? (
@@ -927,7 +929,7 @@ export default function DriverHome() {
             }}
           >
             <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 16, color: textSecondary }}>
-              Map View
+              {t('driver_home.map_view')}
             </Text>
           </View>
         )}
@@ -1008,8 +1010,8 @@ export default function DriverHome() {
               onPress={toggleOnline}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="Go online"
-              accessibilityHint="Start receiving ride requests"
+              accessibilityLabel={t('driver_home.go_online_label')}
+              accessibilityHint={t('driver_home.start_receiving')}
               style={{ alignItems: "center", justifyContent: "center" }}
             >
               {!reduceMotion && (
@@ -1055,7 +1057,7 @@ export default function DriverHome() {
                     marginTop: 2,
                   }}
                 >
-                  GO ONLINE
+                  {t('driver_home.go_online')}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -1069,7 +1071,7 @@ export default function DriverHome() {
                   textAlign: "center",
                 }}
               >
-                Last connected: {relativeTime(lastOnlineAt)}
+                {t('driver_home.last_connected')} {relativeTime(lastOnlineAt)}
               </Text>
             ) : null}
           </View>
@@ -1131,7 +1133,7 @@ export default function DriverHome() {
             <TouchableOpacity
               onPress={() => setTheme(isDark ? "light" : "dark")}
               accessibilityRole="button"
-              accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
+              accessibilityLabel={isDark ? t('driver_home.switch_light_theme') : t('driver_home.switch_dark_theme')}
               style={{
                 width: 36,
                 height: 36,
@@ -1155,7 +1157,7 @@ export default function DriverHome() {
                 <TouchableOpacity
                   onPress={() => router.push("/(main)/(rider)/break-mode")}
                   accessibilityRole="button"
-                  accessibilityLabel="Take a break"
+                  accessibilityLabel={t('driver_home.take_break')}
                   style={{
                     width: 36, height: 36, borderRadius: 18,
                     backgroundColor: colors.amber,
@@ -1167,7 +1169,7 @@ export default function DriverHome() {
                 <TouchableOpacity
                   onPress={toggleOnline}
                   accessibilityRole="button"
-                  accessibilityLabel="Go offline"
+                  accessibilityLabel={t('driver_home.go_offline')}
                   style={{
                     width: 36, height: 36, borderRadius: 18,
                     backgroundColor: colors.danger,
@@ -1181,7 +1183,7 @@ export default function DriverHome() {
               <TouchableOpacity
                 onPress={() => router.push("/(main)/(rider)/break-mode")}
                 accessibilityRole="button"
-                accessibilityLabel="Take a break"
+                accessibilityLabel={t('driver_home.take_break')}
                 style={{
                   width: 36, height: 36, borderRadius: 18,
                   backgroundColor: colors.amber,
@@ -1221,7 +1223,7 @@ export default function DriverHome() {
                 color: colors.black,
               }}
             >
-              Reconnecting…
+              {t('driver_home.reconnecting')}
             </Text>
           </View>
         )}
@@ -1240,7 +1242,7 @@ export default function DriverHome() {
               }
             }}
             accessibilityRole="button"
-            accessibilityLabel="Recenter map on my location"
+            accessibilityLabel={t('driver_home.recenter_map')}
             style={{
               position: "absolute",
               bottom: 16,
@@ -1291,7 +1293,7 @@ export default function DriverHome() {
               }}
             >
               <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary }}>
-                Calls Remaining
+                {t('driver_home.calls_remaining')}
               </Text>
               <Text
                 style={{
@@ -1302,7 +1304,7 @@ export default function DriverHome() {
                 }}
               >
                 {activeSubscription.calls_remaining === -1
-                  ? "Unlimited"
+                  ? t('driver_home.unlimited')
                   : activeSubscription.calls_remaining}
               </Text>
             </View>
@@ -1322,7 +1324,7 @@ export default function DriverHome() {
               }}
             >
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: colors.primary }}>
-                Buy a Package to Start
+                {t('driver_home.buy_package')}
               </Text>
             </TouchableOpacity>
           )}
@@ -1439,12 +1441,12 @@ export default function DriverHome() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 15, color: textPrimary }}>
-                  Marketplace / Bidding
+                  {t('driver_home.marketplace_bidding')}
                 </Text>
                 <Text style={{ fontFamily: 'Jakarta', fontSize: 12, color: textSecondary, marginTop: 2 }}>
                   {marketplaceAccess.length === 1
                     ? `${marketplaceAccess[0].fleet_name} · ${marketplaceAccess[0].role}`
-                    : `${marketplaceAccess.length} fleets available`}
+                    : t('driver_home.fleets_available', { count: marketplaceAccess.length })}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={textSecondary} />
@@ -1482,11 +1484,11 @@ export default function DriverHome() {
                 <Ionicons name="alert-circle" size={28} color={colors.amber} />
               </View>
               <Text style={{ fontFamily: 'Jakarta-Bold', fontSize: 18, color: textPrimary, textAlign: 'center' }}>
-                Active Session Found
+                {t('driver_home.active_session_found')}
               </Text>
             </View>
             <Text style={{ fontFamily: 'Jakarta-Regular', fontSize: 14, color: textSecondary, textAlign: 'center', marginBottom: 24 }}>
-              You have an active session from earlier. Resume working or end it to start fresh.
+              {t('driver_home.active_session_desc')}
             </Text>
             <TouchableOpacity
               onPress={() => {
@@ -1496,13 +1498,13 @@ export default function DriverHome() {
               }}
               style={{ backgroundColor: colors.primary, borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}
             >
-              <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 16, color: colors.white }}>Resume Working</Text>
+              <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 16, color: colors.white }}>{t('driver_home.resume_working')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleForceEndSession}
               style={{ backgroundColor: surfaceBg, borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.danger }}
             >
-              <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 16, color: colors.danger }}>End Session</Text>
+              <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 16, color: colors.danger }}>{t('driver_home.end_session')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1518,7 +1520,7 @@ export default function DriverHome() {
         >
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={{ fontFamily: 'Jakarta-Medium', fontSize: 14, color: textSecondary, marginTop: 12 }}>
-            Checking your session...
+            {t('driver_home.checking_session')}
           </Text>
         </View>
       )}
@@ -1538,7 +1540,7 @@ export default function DriverHome() {
             {sessionError}
           </Text>
           <TouchableOpacity onPress={() => recoverSession(true)}>
-            <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 14, color: colors.primary }}>Retry</Text>
+            <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 14, color: colors.primary }}>{t('driver_home.retry')}</Text>
           </TouchableOpacity>
         </View>
       )}

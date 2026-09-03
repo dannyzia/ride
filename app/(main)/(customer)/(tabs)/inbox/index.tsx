@@ -20,6 +20,7 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import NotificationCard from "@/components/NotificationCard";
 import NotificationSkeleton from "@/components/NotificationSkeleton";
 import EmptyState from "@/components/EmptyState";
+import { useTranslation } from "react-i18next";
 
 const READ_IDS_KEY = "@rider_read_notification_ids";
 
@@ -28,6 +29,8 @@ interface NotificationRow {
   type: string;
   title: string;
   body: string | null;
+  titleKey?: string;
+  bodyKey?: string;
   data: Record<string, unknown> | null;
   sent_at: string;
   created_at: string;
@@ -70,6 +73,8 @@ const SAMPLE_NOTIFICATIONS: NotificationRow[] = [
     type: "promo",
     title: "Weekend discount inside",
     body: "Enjoy 20% off your next three rides, this weekend only.",
+    titleKey: "inbox.sample_promo_title",
+    bodyKey: "inbox.sample_promo_body",
     data: null,
     sent_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
@@ -79,6 +84,8 @@ const SAMPLE_NOTIFICATIONS: NotificationRow[] = [
     type: "trip",
     title: "Trip reminder",
     body: "You have a scheduled ride coming up tomorrow morning.",
+    titleKey: "inbox.sample_trip_title",
+    bodyKey: "inbox.sample_trip_body",
     data: null,
     sent_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
@@ -88,6 +95,8 @@ const SAMPLE_NOTIFICATIONS: NotificationRow[] = [
     type: "payment",
     title: "Payment received",
     body: "Your wallet top-up of BDT 200 was successful.",
+    titleKey: "inbox.sample_payment_title",
+    bodyKey: "inbox.sample_payment_body",
     data: null,
     sent_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
@@ -97,6 +106,8 @@ const SAMPLE_NOTIFICATIONS: NotificationRow[] = [
     type: "system",
     title: "Keep your app updated",
     body: "Update to the latest version for the best experience.",
+    titleKey: "inbox.sample_system_title",
+    bodyKey: "inbox.sample_system_body",
     data: null,
     sent_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
@@ -104,6 +115,7 @@ const SAMPLE_NOTIFICATIONS: NotificationRow[] = [
 ];
 
 export default function Inbox() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
@@ -211,27 +223,27 @@ export default function Inbox() {
       <View style={styles.stateWrap}>
         <Ionicons name="warning-outline" size={48} color={colors.danger} />
         <Text style={[styles.errorTitle, { color: colors.danger }]}>
-          Could not load notifications
+          {t('inbox.load_failed')}
         </Text>
         <Text style={[styles.stateSubtitle, { color: textSecondary }]}>
-          Pull down to retry
+          {t('inbox.pull_to_retry')}
         </Text>
         <Text style={[styles.sampleCaption, { color: textSecondary }]}>
-          Using sample data
+          {t('inbox.using_sample_data')}
         </Text>
       </View>
     );
-  }, [error, textSecondary]);
+  }, [error, textSecondary, t]);
 
   const listEmpty = useMemo(
     () => (
       <EmptyState
         icon="notifications-off-outline"
-        title="No notifications yet"
-        subtitle="We'll notify you about rides, promos, and updates"
+        title={t('inbox.no_notifications')}
+        subtitle={t('inbox.no_notifications_sub')}
       />
     ),
-    [],
+    [t],
   );
 
   return (
@@ -242,10 +254,10 @@ export default function Inbox() {
         translucent
       />
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
-        <Text style={[styles.headerTitle, { color: textPrimary }]}>Notifications</Text>
+        <Text style={[styles.headerTitle, { color: textPrimary }]}>{t('inbox.title')}</Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('inbox.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           style={[styles.themeToggle, { backgroundColor: surfaceBg, borderColor }]}
         >
@@ -281,8 +293,8 @@ export default function Inbox() {
           renderItem={({ item }) => (
             <NotificationCard
               type={toCardType(item.type)}
-              title={item.title}
-              body={item.body ?? ""}
+              title={item.titleKey ? t(item.titleKey) : item.title}
+              body={item.bodyKey ? t(item.bodyKey) : item.body ?? ""}
               isRead={error ? true : readIds.has(item.id)}
               createdAt={item.sent_at}
               onPress={error ? undefined : () => handlePress(item)}

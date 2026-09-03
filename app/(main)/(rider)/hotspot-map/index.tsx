@@ -18,6 +18,7 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import Map, { type MapHotspot } from "@/components/Map";
+import { useTranslation } from "react-i18next";
 interface HotspotRow {
   zone_id: string;
   zone_name: string;
@@ -33,7 +34,7 @@ interface HotspotRow {
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
 export default function HotspotMapScreen() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const [hotspots, setHotspots] = useState<HotspotRow[] | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);

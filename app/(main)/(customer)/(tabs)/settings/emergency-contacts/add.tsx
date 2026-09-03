@@ -18,10 +18,20 @@ import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 
 const RELATIONSHIPS = ["Family", "Friend", "Partner", "Colleague", "Other"];
 
+const RELATIONSHIP_LABEL_KEYS: Record<string, string> = {
+  Family: "emergency_contacts.relationship_family",
+  Friend: "emergency_contacts.relationship_friend",
+  Partner: "emergency_contacts.relationship_partner",
+  Colleague: "emergency_contacts.relationship_colleague",
+  Other: "emergency_contacts.relationship_other",
+};
+
 export default function AddEmergencyContact() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -38,6 +48,11 @@ export default function AddEmergencyContact() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const relLabel = (rel: string) => {
+    const key = RELATIONSHIP_LABEL_KEYS[rel];
+    return key ? t(key) : rel;
+  };
+
   const phoneDigits = phone.replace(/\D/g, "");
   const nameValid = name.trim().length >= 2;
   const phoneValid = phoneDigits.length >= 10 && phoneDigits.length <= 13;
@@ -53,7 +68,7 @@ export default function AddEmergencyContact() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated. Please sign in again.");
+        setError(t('emergency_contacts.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/user/emergency-contacts`, {
@@ -70,14 +85,14 @@ export default function AddEmergencyContact() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.message || data.error || "Failed to save contact");
+        setError(data.message || data.error || t('emergency_contacts.save_failed'));
         return;
       }
-      Alert.alert("Contact Saved", `${name.trim()} was added to your emergency contacts.`, [
-        { text: "OK", onPress: () => router.back() },
+      Alert.alert(t('emergency_contacts.saved_title'), t('emergency_contacts.saved_message', { name: name.trim() }), [
+        { text: t('find_customer.ok'), onPress: () => router.back() },
       ]);
     } catch (err) {
-      setError("Network error. Please try again.");
+      setError(t('emergency_contacts.network_error'));
       logger.error("[emergency-contacts/add] save failed", err);
     } finally {
       setSaving(false);
@@ -90,7 +105,7 @@ export default function AddEmergencyContact() {
       <View style={styles.header}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('emergency_contacts.a11y_go_back')}
           onPress={() => router.back()}
           hitSlop={8}
         >
@@ -101,11 +116,11 @@ export default function AddEmergencyContact() {
           numberOfLines={1}
           adjustsFontSizeToFit
         >
-          Add Contact
+          {t('emergency_contacts.add')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('emergency_contacts.a11y_toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
         >
@@ -118,13 +133,13 @@ export default function AddEmergencyContact() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.inputLabel, { color: textSecondary }]}>Name</Text>
+        <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('emergency_contacts.name')}</Text>
         <TextInput
           style={[
             styles.input,
             { backgroundColor: surfaceBg, borderColor, color: textPrimary },
           ]}
-          placeholder="Contact name"
+          placeholder={t('emergency_contacts.placeholder_name')}
           placeholderTextColor={textDisabled}
           value={name}
           onChangeText={setName}
@@ -132,7 +147,7 @@ export default function AddEmergencyContact() {
           autoCorrect={false}
         />
 
-        <Text style={[styles.inputLabel, { color: textSecondary }]}>Phone Number</Text>
+        <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('emergency_contacts.phone')}</Text>
         <View style={styles.phoneRow}>
           <View
             style={[
@@ -157,11 +172,11 @@ export default function AddEmergencyContact() {
         </View>
         {phone.length > 0 && !phoneValid ? (
           <Text style={[styles.helperText, { color: textSecondary }]}>
-            Enter a valid number (10–13 digits)
+            {t('emergency_contacts.phone_helper')}
           </Text>
         ) : null}
 
-        <Text style={[styles.inputLabel, { color: textSecondary }]}>Relationship</Text>
+        <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('emergency_contacts.relationship')}</Text>
         <View style={styles.chipWrap}>
           {RELATIONSHIPS.map((rel) => {
             const selected = relationship === rel;
@@ -169,7 +184,7 @@ export default function AddEmergencyContact() {
               <TouchableOpacity
                 key={rel}
                 accessibilityRole="button"
-                accessibilityLabel={`Relationship ${rel}`}
+                accessibilityLabel={t('emergency_contacts.a11y_relationship', { relationship: relLabel(rel) })}
                 accessibilityState={{ selected }}
                 style={[
                   styles.chip,
@@ -187,7 +202,7 @@ export default function AddEmergencyContact() {
                     { color: selected ? colors.white : textSecondary },
                   ]}
                 >
-                  {rel}
+                  {relLabel(rel)}
                 </Text>
               </TouchableOpacity>
             );
@@ -199,19 +214,19 @@ export default function AddEmergencyContact() {
             <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel="Retry saving contact"
+              accessibilityLabel={t('emergency_contacts.a11y_retry_save')}
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={handleSave}
               disabled={saving || !formValid}
             >
-              <Text style={[styles.retryText, { color: colors.danger }]}>Retry</Text>
+              <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
 
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Save Contact"
+          accessibilityLabel={t('emergency_contacts.a11y_save')}
           accessibilityState={{ disabled: !formValid || saving }}
           style={[
             styles.saveButton,
@@ -224,7 +239,7 @@ export default function AddEmergencyContact() {
           {saving ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
-            <Text style={styles.saveButtonText}>Save Contact</Text>
+            <Text style={styles.saveButtonText}>{t('emergency_contacts.save')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

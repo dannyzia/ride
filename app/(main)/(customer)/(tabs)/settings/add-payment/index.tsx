@@ -4,8 +4,10 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function AddPaymentMethod() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -19,9 +21,9 @@ export default function AddPaymentMethod() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Add Payment Method</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('add_payment.title')}</Text>
         <View className="w-[50px]" />
       </View>
       <View className="flex-1 items-center justify-center px-[24px]">
@@ -31,9 +33,9 @@ export default function AddPaymentMethod() {
         >
           <Ionicons name="card" size={48} color={colors.primary} />
         </View>
-        <Text className="text-[22px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>Coming Soon</Text>
+        <Text className="text-[22px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>{t('add_payment.coming_soon')}</Text>
         <Text className="text-[15px] font-Jakarta text-center" style={{ color: textSecondary }}>
-          Secure card payment via PortPos hosted checkout will be available soon. Your card details are never stored in the app.
+          {t('add_payment.coming_soon_desc')}
         </Text>
       </View>
       <TouchableOpacity

@@ -20,6 +20,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { formatBDT, formatDateTime } from "@/lib/format";
 import EmptyState from "@/components/EmptyState";
+import { useTranslation } from "react-i18next";
 
 interface RideSummary {
   id: string;
@@ -42,6 +43,7 @@ const MIN_DETAILS = 20;
 const MAX_DETAILS = 1000;
 
 export default function FareDispute() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const { rideId } = useLocalSearchParams<{ rideId?: string }>();
@@ -79,7 +81,7 @@ export default function FareDispute() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setRideError("Not authenticated. Please sign in again.");
+        setRideError(t('fare_dispute.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/ride/${rideId}`, {
@@ -87,12 +89,12 @@ export default function FareDispute() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setRideError(data.message || data.error || "Failed to load ride");
+        setRideError(data.message || data.error || t('fare_dispute.failed_to_load_ride'));
         return;
       }
       setRide(data.ride ?? null);
     } catch (err) {
-      setRideError("Network error. Please try again.");
+      setRideError(t('fare_dispute.network_error'));
       logger.error("[fare-dispute] ride fetch failed", err);
     } finally {
       setRideLoading(false);
@@ -117,7 +119,7 @@ export default function FareDispute() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated. Please sign in again.");
+        setError(t('fare_dispute.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/rider/fare-disputes`, {
@@ -135,19 +137,19 @@ export default function FareDispute() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.message || data.error || "Failed to submit dispute");
+        setError(data.message || data.error || t('fare_dispute.failed_to_submit'));
         return;
       }
       const refund = typeof data.refund_bdt === "number" ? data.refund_bdt : 0;
       Alert.alert(
-        "Dispute Submitted",
+        t('fare_dispute.dispute_submitted_title'),
         refund > 0
-          ? `Your dispute was reviewed and a refund of ${formatBDT(refund)} was approved.`
-          : "Your dispute was submitted. Our team will review it and get back to you.",
-        [{ text: "OK", onPress: () => router.back() }],
+          ? t('fare_dispute.refund_approved', { amount: formatBDT(refund) })
+          : t('fare_dispute.will_review'),
+        [{ text: t('common.confirm'), onPress: () => router.back() }],
       );
     } catch (err) {
-      setError("Network error. Please try again.");
+      setError(t('fare_dispute.network_error'));
       logger.error("[fare-dispute] submit failed", err);
     } finally {
       setSubmitting(false);
@@ -161,7 +163,7 @@ export default function FareDispute() {
         <View style={styles.header}>
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel="Go back"
+            accessibilityLabel={t('common.back')}
             onPress={() => router.back()}
             hitSlop={8}
           >
@@ -172,11 +174,11 @@ export default function FareDispute() {
             numberOfLines={1}
             adjustsFontSizeToFit
           >
-            Fare Dispute
+            {t('fare_dispute.title')}
           </Text>
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel="Toggle theme"
+            accessibilityLabel={t('fare_dispute.toggle_theme')}
             onPress={() => setTheme(isDark ? "light" : "dark")}
             hitSlop={8}
           >
@@ -186,9 +188,9 @@ export default function FareDispute() {
         <View style={styles.emptyWrap}>
           <EmptyState
             icon="alert-circle-outline"
-            title="No ride specified"
-            subtitle="Open this screen from a ride in your ride history"
-            actionLabel="Go Back"
+            title={t('fare_dispute.no_ride_title')}
+            subtitle={t('fare_dispute.no_ride_subtitle')}
+            actionLabel={t('common.back')}
             onAction={() => router.back()}
           />
         </View>
@@ -202,7 +204,7 @@ export default function FareDispute() {
       <View style={styles.header}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back')}
           onPress={() => router.back()}
           hitSlop={8}
         >
@@ -213,11 +215,11 @@ export default function FareDispute() {
           numberOfLines={1}
           adjustsFontSizeToFit
         >
-          Fare Dispute
+          {t('fare_dispute.title')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('fare_dispute.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
         >
@@ -230,7 +232,7 @@ export default function FareDispute() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.sectionLabel, { color: textSecondary }]}>Ride</Text>
+        <Text style={[styles.sectionLabel, { color: textSecondary }]}>{t('fare_dispute.section_ride')}</Text>
         {rideLoading ? (
           <View style={[styles.rideCard, { backgroundColor: surfaceBg, borderColor }]}>
             <View style={[styles.skeletonLine, { backgroundColor: skeletonBg, width: "50%" }]} />
@@ -242,12 +244,12 @@ export default function FareDispute() {
             <Text style={[styles.errorText, { color: colors.danger }]}>{rideError}</Text>
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel="Retry loading ride"
+              accessibilityLabel={t('fare_dispute.retry_load_a11y')}
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={fetchRide}
               disabled={rideLoading}
             >
-              <Text style={[styles.retryText, { color: colors.danger }]}>Retry</Text>
+              <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : ride ? (
@@ -268,7 +270,7 @@ export default function FareDispute() {
               </Text>
             </View>
             <View style={[styles.fareRow, { borderTopColor: borderColor }]}>
-              <Text style={[styles.fareLabel, { color: textSecondary }]}>Fare charged</Text>
+              <Text style={[styles.fareLabel, { color: textSecondary }]}>{t('fare_dispute.fare_charged')}</Text>
               <Text style={[styles.fareValue, { color: textPrimary }]}>
                 {formatBDT(chargedFarePaisa)}
               </Text>
@@ -276,24 +278,24 @@ export default function FareDispute() {
           </View>
         ) : null}
 
-        <Text style={[styles.sectionLabel, { color: textSecondary }]}>Expected fare</Text>
+        <Text style={[styles.sectionLabel, { color: textSecondary }]}>{t('fare_dispute.expected_fare')}</Text>
         <View style={[styles.fareInputRow, { backgroundColor: surfaceBg, borderColor }]}>
           <Text style={[styles.farePrefix, { color: textSecondary }]}>৳</Text>
           <TextInput
             style={[styles.fareInput, { color: textPrimary }]}
-            placeholder="0"
+            placeholder={t('fare_dispute.zero_placeholder')}
             placeholderTextColor={textDisabled}
             value={expectedFare}
             onChangeText={(text) => setExpectedFare(text.replace(/[^0-9]/g, ""))}
             keyboardType="number-pad"
-            accessibilityLabel="Expected fare in taka"
+            accessibilityLabel={t('fare_dispute.expected_fare_a11y')}
           />
         </View>
         <Text style={[styles.helperText, { color: textSecondary }]}>
-          What should you have paid for this ride?
+          {t('fare_dispute.what_should_you_pay')}
         </Text>
 
-        <Text style={[styles.sectionLabel, { color: textSecondary }]}>Reason</Text>
+        <Text style={[styles.sectionLabel, { color: textSecondary }]}>{t('fare_dispute.reason')}</Text>
         <View style={styles.chipWrap}>
           {DISPUTE_REASONS.map((r) => {
             const selected = reason === r.value;
@@ -301,7 +303,7 @@ export default function FareDispute() {
               <TouchableOpacity
                 key={r.value}
                 accessibilityRole="button"
-                accessibilityLabel={`Reason ${r.label}`}
+                accessibilityLabel={t('fare_dispute.reason_a11y', { label: r.label })}
                 accessibilityState={{ selected }}
                 style={[
                   styles.chip,
@@ -326,13 +328,13 @@ export default function FareDispute() {
           })}
         </View>
 
-        <Text style={[styles.sectionLabel, { color: textSecondary }]}>Details</Text>
+        <Text style={[styles.sectionLabel, { color: textSecondary }]}>{t('fare_dispute.details')}</Text>
         <TextInput
           style={[
             styles.detailsInput,
             { backgroundColor: surfaceBg, borderColor, color: textPrimary },
           ]}
-          placeholder="Explain what went wrong (at least 20 characters)"
+          placeholder={t('fare_dispute.explain_placeholder')}
           placeholderTextColor={textDisabled}
           value={details}
           onChangeText={setDetails}
@@ -342,7 +344,7 @@ export default function FareDispute() {
         <View style={styles.counterRow}>
           {details.length > 0 && !detailsValid ? (
             <Text style={[styles.helperText, { color: textSecondary }]}>
-              At least {MIN_DETAILS - details.length} more characters
+              {t('fare_dispute.more_chars_needed', { count: MIN_DETAILS - details.length })}
             </Text>
           ) : (
             <View />
@@ -357,19 +359,19 @@ export default function FareDispute() {
             <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel="Retry submitting dispute"
+              accessibilityLabel={t('fare_dispute.retry_submit_a11y')}
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={handleSubmit}
               disabled={submitting || !formValid}
             >
-              <Text style={[styles.retryText, { color: colors.danger }]}>Retry</Text>
+              <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
 
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Submit dispute"
+          accessibilityLabel={t('fare_dispute.submit_a11y')}
           accessibilityState={{ disabled: !formValid || submitting }}
           style={[
             styles.submitButton,
@@ -382,7 +384,7 @@ export default function FareDispute() {
           {submitting ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
-            <Text style={styles.submitButtonText}>Submit Dispute</Text>
+            <Text style={styles.submitButtonText}>{t('fare_dispute.submit_dispute')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

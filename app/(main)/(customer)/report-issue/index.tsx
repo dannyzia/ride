@@ -18,6 +18,7 @@ import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 
 const CATEGORIES = [
   "Driver behaviour",
@@ -33,6 +34,7 @@ const MIN_DESCRIPTION = 20;
 const MAX_DESCRIPTION = 500;
 
 export default function ReportIssue() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const { rideId } = useLocalSearchParams<{ rideId?: string }>();
@@ -64,7 +66,7 @@ export default function ReportIssue() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated. Please sign in again.");
+        setError(t('report_issue.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/support/ticket`, {
@@ -82,12 +84,12 @@ export default function ReportIssue() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.message || data.error || "Failed to submit report");
+        setError(data.message || data.error || t('report_issue.failed_to_submit'));
         return;
       }
       setShowSuccess(true);
     } catch (err) {
-      setError("Network error. Please try again.");
+      setError(t('report_issue.network_error'));
       logger.error("[report-issue] submit failed", err);
     } finally {
       setLoading(false);
@@ -105,7 +107,7 @@ export default function ReportIssue() {
       <View style={styles.header}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back')}
           onPress={() => router.back()}
           hitSlop={8}
         >
@@ -116,11 +118,11 @@ export default function ReportIssue() {
           numberOfLines={1}
           adjustsFontSizeToFit
         >
-          Report an Issue
+          {t('ride.report_an_issue')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('report_issue.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
         >
@@ -137,12 +139,12 @@ export default function ReportIssue() {
           <View style={[styles.rideChip, { backgroundColor: colors.infoLight }]}>
             <Ionicons name="car-outline" size={16} color={colors.info} />
             <Text style={[styles.rideChipText, { color: colors.info }]} numberOfLines={1}>
-              Regarding a recent ride
+              {t('report_issue.regarding_recent_ride')}
             </Text>
           </View>
         ) : null}
 
-        <Text style={[styles.inputLabel, { color: textSecondary }]}>Issue type</Text>
+        <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('ride.category')}</Text>
         <View style={styles.chipWrap}>
           {CATEGORIES.map((c) => {
             const selected = category === c;
@@ -150,7 +152,7 @@ export default function ReportIssue() {
               <TouchableOpacity
                 key={c}
                 accessibilityRole="button"
-                accessibilityLabel={`Issue type ${c}`}
+                accessibilityLabel={t('report_issue.issue_type_a11y', { type: c })}
                 accessibilityState={{ selected }}
                 style={[
                   styles.chip,
@@ -175,13 +177,13 @@ export default function ReportIssue() {
           })}
         </View>
 
-        <Text style={[styles.inputLabel, { color: textSecondary }]}>What happened?</Text>
+        <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('ride.describe_issue')}</Text>
         <TextInput
           style={[
             styles.descriptionInput,
             { backgroundColor: surfaceBg, borderColor, color: textPrimary },
           ]}
-          placeholder="Tell us what happened (at least 20 characters)"
+          placeholder={t('ride.tell_us_what_happened')}
           placeholderTextColor={textDisabled}
           value={description}
           onChangeText={setDescription}
@@ -191,7 +193,7 @@ export default function ReportIssue() {
         <View style={styles.counterRow}>
           {description.length > 0 && !descriptionValid ? (
             <Text style={[styles.helperText, { color: textSecondary }]}>
-              At least {MIN_DESCRIPTION - description.length} more characters
+              {t('report_issue.more_chars_needed', { count: MIN_DESCRIPTION - description.length })}
             </Text>
           ) : (
             <View />
@@ -206,19 +208,19 @@ export default function ReportIssue() {
             <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel="Retry submitting report"
+              accessibilityLabel={t('report_issue.retry_a11y')}
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={handleSubmit}
               disabled={loading || !formValid}
             >
-              <Text style={[styles.retryText, { color: colors.danger }]}>Retry</Text>
+              <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
 
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Submit report"
+          accessibilityLabel={t('report_issue.submit_a11y')}
           accessibilityState={{ disabled: !formValid || loading }}
           style={[
             styles.submitButton,
@@ -231,7 +233,7 @@ export default function ReportIssue() {
           {loading ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
-            <Text style={styles.submitButtonText}>Submit</Text>
+            <Text style={styles.submitButtonText}>{t('ride.submit')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -245,17 +247,17 @@ export default function ReportIssue() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: surfaceBg }]}>
             <Ionicons name="checkmark-circle" size={64} color={colors.primary} />
-            <Text style={[styles.modalTitle, { color: textPrimary }]}>Report submitted</Text>
+            <Text style={[styles.modalTitle, { color: textPrimary }]}>{t('report_issue.report_submitted')}</Text>
             <Text style={[styles.modalSubtitle, { color: textSecondary }]}>
-              Our support team will review your report and get back to you.
+              {t('report_issue.support_will_review')}
             </Text>
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel="Done"
+              accessibilityLabel={t('report_issue.done_a11y')}
               style={[styles.modalButton, { backgroundColor: colors.primary }]}
               onPress={closeSuccess}
             >
-              <Text style={styles.modalButtonText}>Done</Text>
+              <Text style={styles.modalButtonText}>{t('report_issue.done')}</Text>
             </TouchableOpacity>
           </View>
         </View>

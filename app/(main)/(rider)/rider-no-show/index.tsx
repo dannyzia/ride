@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 function formatElapsed(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -16,7 +17,7 @@ function formatElapsed(seconds: number): string {
 }
 
 export default function RiderNoShow() {
-  const { rideId } = useLocalSearchParams<{ rideId: string }>();
+  const { t } = useTranslation();  const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const [loading, setLoading] = useState(false);
   // §7.20: wait timer anchored to the server-stamped wait_start_at
   // (POST /api/ride/{id}/wait-start stamps it; GET /api/ride/{id} returns it).

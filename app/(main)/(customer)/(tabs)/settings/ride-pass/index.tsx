@@ -10,6 +10,7 @@ import AnimatedCard from "@/components/AnimatedCard";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface RidePass {
   id: string; name: string; description: string | null; price_bdt: number;
@@ -21,6 +22,7 @@ interface ActiveSubscription {
 }
 
 export default function RidePassPurchase() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const [passes, setPasses] = useState<RidePass[]>([]);
@@ -69,22 +71,22 @@ export default function RidePassPurchase() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) { Alert.alert("Error", "Not authenticated"); return; }
+      if (!token) { Alert.alert(t('common.error'), t('wallet.not_authenticated')); return; }
       const res = await fetch(`${API_URL}/api/rider/passes`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ pass_id: passId }),
       });
       const data = await res.json();
-      if (!res.ok) { Alert.alert("Error", data.error ?? "Purchase failed"); return; }
+      if (!res.ok) { Alert.alert(t('common.error'), data.error ?? t('ride_pass.purchase_failed')); return; }
       if (data.payment_url) {
         setPaymentUrl(data.payment_url);
         setPaymentEventId(data.payment_event_id);
       } else {
-        Alert.alert("Success", "Pass activated!");
+        Alert.alert(t('common.success'), t('ride_pass.activated'));
         fetchPasses();
       }
-    } catch (err) { Alert.alert("Error", err instanceof Error ? err.message : String(err)); }
+    } catch (err) { Alert.alert(t('common.error'), err instanceof Error ? err.message : String(err)); }
     finally { setPurchasing(null); }
   };
 
@@ -94,8 +96,8 @@ export default function RidePassPurchase() {
         bkashURL={paymentUrl}
         paymentID={paymentEventId}
         purpose="rider_pass"
-        onSuccess={() => { setPaymentUrl(""); Alert.alert("Success", "Pass activated!"); fetchPasses(); }}
-        onError={(err) => { setPaymentUrl(""); Alert.alert("Payment Failed", err ?? "Failed"); }}
+        onSuccess={() => { setPaymentUrl(""); Alert.alert(t('common.success'), t('ride_pass.activated')); fetchPasses(); }}
+        onError={(err) => { setPaymentUrl(""); Alert.alert(t('ride_pass.payment_failed'), err ?? t('ride_pass.failed')); }}
       />
     );
   }
@@ -104,8 +106,8 @@ export default function RidePassPurchase() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-6 py-4 border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>Back</Text></TouchableOpacity>
-        <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>Ride Pass</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>{t('common.back')}</Text></TouchableOpacity>
+        <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>{t('ride_pass.title')}</Text>
         <View className="w-12" />
       </View>
       {loading ? (
@@ -117,7 +119,7 @@ export default function RidePassPurchase() {
               className="rounded-xl p-4 mb-6 border"
               style={{ backgroundColor: isDark ? "rgba(12, 194, 95, 0.1)" : colors.accentLight, borderColor: colors.accent + "4D" }}
             >
-              <Text className="text-sm font-JakartaBold mb-1" style={{ color: colors.accent }}>Active Pass</Text>
+              <Text className="text-sm font-JakartaBold mb-1" style={{ color: colors.accent }}>{t('ride_pass.active_pass')}</Text>
               <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>{activeSub.pass_name}</Text>
               {activeSub.max_rides ? (
                 <View className="mt-2 mb-1">
@@ -134,16 +136,16 @@ export default function RidePassPurchase() {
                     />
                   </View>
                   <Text className="font-Jakarta mt-1" style={{ color: textSecondary, fontSize: 13 }}>
-                    {activeSub.rides_used} of {activeSub.max_rides} rides
+                    {t('ride_pass.rides_of', { used: activeSub.rides_used, total: activeSub.max_rides })}
                   </Text>
                 </View>
               ) : (
                 <Text className="text-sm font-Jakarta mt-1" style={{ color: textSecondary }}>
-                  Rides: {activeSub.rides_used} (unlimited)
+                  {t('ride_pass.rides_unlimited', { used: activeSub.rides_used })}
                 </Text>
               )}
               <Text className="text-sm font-Jakarta" style={{ color: textSecondary }}>
-                Expires: {new Date(activeSub.valid_until).toLocaleDateString()}
+                {t('ride_pass.expires', { date: new Date(activeSub.valid_until).toLocaleDateString() })}
               </Text>
             </View>
           )}
@@ -155,12 +157,12 @@ export default function RidePassPurchase() {
               <View className="flex-row items-center justify-between mt-3">
                 <View>
                   <Text className="text-lg font-JakartaBold" style={{ color: colors.primary }}>৳{(p.price_bdt / 100).toFixed(0)}</Text>
-                  <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>{p.discount_percent}% off · {p.validity_days} days{p.max_rides ? ` · ${p.max_rides} rides` : ""}</Text>
+                  <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>{t('ride_pass.discount_days', { percent: p.discount_percent, days: p.validity_days })}{p.max_rides ? t('ride_pass.rides_suffix', { count: p.max_rides }) : ""}</Text>
                 </View>
                 <TouchableOpacity onPress={() => buyPass(p.id)} disabled={purchasing === p.id}
                   className="py-2 px-4 rounded-full"
                   style={{ backgroundColor: purchasing === p.id ? disabledBg : colors.primary }}>
-                  <Text className="text-goWhite font-JakartaBold text-sm">{purchasing === p.id ? "..." : "Buy"}</Text>
+                  <Text className="text-goWhite font-JakartaBold text-sm">{purchasing === p.id ? "..." : t('ride_pass.buy')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

@@ -22,11 +22,25 @@ import { VEHICLE_TYPES, VehicleTypeEnum } from "@/lib/vehicleTypes";
 import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
 import ScheduleRideSheet from "@/components/ScheduleRideSheet";
 import { icons } from "@/constants/data";
+import { useTranslation } from "react-i18next";
 
 const MIN_LEAD_MS = 30 * 60 * 1000;
 const MAX_LEAD_MS = 7 * 24 * 60 * 60 * 1000;
 
+const VEHICLE_TYPE_LABEL_KEYS: Record<string, string> = {
+  bike_basic: "schedule_ride.vehicle_bike_basic",
+  bike_standard: "schedule_ride.vehicle_bike_standard",
+  bike_plus: "schedule_ride.vehicle_bike_plus",
+  cng: "schedule_ride.vehicle_cng",
+  car_compact: "schedule_ride.vehicle_car_compact",
+  car_economy: "schedule_ride.vehicle_car_economy",
+  car_comfort: "schedule_ride.vehicle_car_comfort",
+  car_premium: "schedule_ride.vehicle_car_premium",
+  car_xl: "schedule_ride.vehicle_car_xl",
+};
+
 export default function ScheduleRide() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -74,12 +88,12 @@ export default function ScheduleRide() {
   const canSubmit = hasPickup && hasDropoff && scheduleValid && !requesting;
 
   let validationHint: string | null = null;
-  if (!hasPickup) validationHint = "Set your pickup location to schedule a ride.";
-  else if (!hasDropoff) validationHint = "Enter a destination to schedule a ride.";
+  if (!hasPickup) validationHint = t('schedule_ride.set_pickup');
+  else if (!hasDropoff) validationHint = t('schedule_ride.enter_destination');
   else if (!scheduledAt || scheduledAt.getTime() < Date.now() + MIN_LEAD_MS)
-    validationHint = "Pickup time must be at least 30 minutes from now.";
+    validationHint = t('schedule_ride.min_lead');
   else if (scheduledAt.getTime() > Date.now() + MAX_LEAD_MS)
-    validationHint = "Rides can be scheduled up to 7 days ahead.";
+    validationHint = t('schedule_ride.max_lead');
 
   const handleSelectTime = (iso: string) => {
     setError(null);
@@ -96,7 +110,7 @@ export default function ScheduleRide() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated. Please sign in again.");
+        setError(t('schedule_ride.not_authenticated'));
         setRequesting(false);
         return;
       }
@@ -129,11 +143,11 @@ export default function ScheduleRide() {
         return;
       }
       setError(
-        data?.message ?? "Could not schedule the ride. Please try again.",
+        data?.message ?? t('schedule_ride.could_not_schedule'),
       );
     } catch (e) {
       logger.error("[schedule-ride] schedule failed", e);
-      setError("Network error. Please try again.");
+      setError(t('schedule_ride.network_error'));
     } finally {
       setRequesting(false);
     }
@@ -150,18 +164,18 @@ export default function ScheduleRide() {
           onPress={() => router.back()}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('schedule_ride.go_back')}
         >
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>
-          Schedule a Ride
+          {t('schedule_ride.title')}
         </Text>
         <TouchableOpacity
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('schedule_ride.toggle_theme')}
         >
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
@@ -178,29 +192,30 @@ export default function ScheduleRide() {
         showsVerticalScrollIndicator={false}
       >
         {/* Pickup + destination */}
-        <Text style={[styles.sectionTitle, { color: textPrimary }]}>Pickup</Text>
+        <Text style={[styles.sectionTitle, { color: textPrimary }]}>{t('schedule_ride.pickup')}</Text>
         <BarikoiAutocomplete
           icon={icons.target}
-          initialLocation={userAddress ?? "Current Location"}
+          initialLocation={userAddress ?? t('schedule_ride.current_location')}
           handlePress={(location) => setUserLocation(location)}
         />
 
         <Text style={[styles.sectionTitle, styles.sectionGap, { color: textPrimary }]}>
-          Destination
+          {t('schedule_ride.destination')}
         </Text>
         <BarikoiAutocomplete
           icon={icons.pin}
-          initialLocation={destinationAddress ?? "Enter Destination"}
+          initialLocation={destinationAddress ?? t('schedule_ride.enter_destination_placeholder')}
           handlePress={(location) => setDestinationLocation(location)}
         />
 
         {/* Vehicle */}
         <Text style={[styles.sectionTitle, styles.sectionGap, { color: textPrimary }]}>
-          Vehicle
+          {t('schedule_ride.vehicle')}
         </Text>
         <View style={styles.vehicleGrid}>
           {VEHICLE_TYPES.map((vt) => {
             const isActive = vt.key === vehicleType;
+            const label = VEHICLE_TYPE_LABEL_KEYS[vt.key] ? t(VEHICLE_TYPE_LABEL_KEYS[vt.key]) : vt.display_en;
             return (
               <TouchableOpacity
                 key={vt.key}
@@ -209,7 +224,7 @@ export default function ScheduleRide() {
                   setError(null);
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={`Select ${vt.display_en}`}
+                accessibilityLabel={t('schedule_ride.select_vehicle', { name: label })}
                 style={[
                   styles.vehicleChip,
                   {
@@ -225,7 +240,7 @@ export default function ScheduleRide() {
                   ]}
                   numberOfLines={1}
                 >
-                  {vt.display_en}
+                  {label}
                 </Text>
               </TouchableOpacity>
             );
@@ -234,7 +249,7 @@ export default function ScheduleRide() {
 
         {/* Date + time via ScheduleRideSheet */}
         <Text style={[styles.sectionTitle, styles.sectionGap, { color: textPrimary }]}>
-          Date & Time
+          {t('schedule_ride.date_time')}
         </Text>
         <ScheduleRideSheet
           onConfirm={handleSelectTime}
@@ -261,12 +276,12 @@ export default function ScheduleRide() {
           onPress={handleSchedule}
           disabled={!canSubmit}
           accessibilityRole="button"
-          accessibilityLabel="Schedule ride"
+          accessibilityLabel={t('schedule_ride.a11y_schedule')}
         >
           {requesting ? (
             <ActivityIndicator color={colors.white} />
           ) : (
-            <Text style={styles.submitBtnText}>Schedule Ride</Text>
+            <Text style={styles.submitBtnText}>{t('schedule_ride.schedule_ride')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

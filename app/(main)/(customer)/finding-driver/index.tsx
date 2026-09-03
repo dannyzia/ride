@@ -20,6 +20,7 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useRiderStore, type VehicleType } from "@/store/useRiderStore";
 import { useWSStore } from "@/store";
 import { supabase } from "@/lib/supabase";
+import { useTranslation } from "react-i18next";
 
 const POLL_INTERVAL_MS = 10000;
 const MAX_EMPTY_POLLS = 12;
@@ -38,6 +39,7 @@ interface Alternative {
 const COMMITTED_STATUSES = ["matched", "driver_arriving", "driver_arrived"];
 
 export default function FindingDriver() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -53,6 +55,7 @@ export default function FindingDriver() {
   const [prolongedEmpty, setProlongedEmpty] = useState(false);
   const [alternatives, setAlternatives] = useState<Alternative[] | null>(null);
   const [findingState, setFindingState] = useState<FindingState>('searching');
+  const [redispatchCheckin, setRedispatchCheckin] = useState<{ rideId: string; elapsed: number } | null>(null);
   const driverFound = useRef(false);
   const emptyPollCount = useRef(0);
 
@@ -130,6 +133,10 @@ export default function FindingDriver() {
         router.replace("/(main)/(customer)/no-drivers-available");
       } else if (msg.type === "ride:alternatives" && Array.isArray(msg.alternatives)) {
         setAlternatives(msg.alternatives as Alternative[]);
+      } else if (msg.type === "ride:redispatch_checkin") {
+        // R3.3: Rider check-in — "Still searching for X minutes. Keep looking?"
+        const elapsed = (msg as any).elapsed_minutes ?? 3;
+        setRedispatchCheckin({ rideId: msg.ride_id ?? '', elapsed });
       }
     };
     ws.addEventListener("message", handler);
@@ -242,6 +249,23 @@ export default function FindingDriver() {
     }
   };
 
+  // R3.3: Handle redispatch check-in response
+  const handleRedispatchKeepLooking = useCallback(() => {
+    if (!redispatchCheckin || !ws) return;
+    ws.send(JSON.stringify({
+      type: 'ride:redispatch_response',
+      ride_id: redispatchCheckin.rideId,
+      keep_looking: true,
+    }));
+    setRedispatchCheckin(null);
+  }, [redispatchCheckin, ws]);
+
+  const handleRedispatchCancel = useCallback(() => {
+    if (!redispatchCheckin) return;
+    setRedispatchCheckin(null);
+    handleCancel();
+  }, [redispatchCheckin, handleCancel]);
+
   useEffect(() => {
     const controller = new AbortController();
     const tick = () => {
@@ -311,15 +335,15 @@ export default function FindingDriver() {
                 className="text-[20px] font-JakartaBold mt-4"
                 style={{ color: textPrimary }}
               >
-                Finding your driver...
+                {t('finding_driver.finding')}
               </Text>
               <Text
                 className="text-sm font-Jakarta text-center mt-2"
                 style={{ color: textSecondary }}
               >
                 {prolongedEmpty
-                  ? "Drivers are busy — keep waiting or try another vehicle type"
-                  : "Searching for nearby drivers…"}
+                  ? t('finding_driver.drivers_busy')
+                  : t('finding_driver.searching')}
               </Text>
             </View>
 
@@ -332,13 +356,13 @@ export default function FindingDriver() {
                 <View className="flex-row items-center mb-2">
                   <Ionicons name="car" size={20} color={colors.primary} />
                   <Text className="ml-2 text-base font-JakartaSemiBold" style={{ color: textPrimary }}>
-                    {count} nearby driver{count !== 1 ? "s" : ""}
+                    {t('finding_driver.nearby_driver', { count })}
                   </Text>
                 </View>
                 <View className="flex-row items-center">
                   <Ionicons name="time" size={20} color={colors.primary} />
                   <Text className="ml-2 text-base font-Jakarta" style={{ color: textSecondary }}>
-                    Estimated wait: {eta} min
+                    {t('finding_driver.estimated_wait', { minutes: eta })}
                   </Text>
                 </View>
               </View>
@@ -351,13 +375,13 @@ export default function FindingDriver() {
               className="text-[20px] font-JakartaBold mt-4"
               style={{ color: textPrimary }}
             >
-              Connection issue
+              {t('finding_driver.connection_issue')}
             </Text>
             <Text
               className="text-sm font-Jakarta text-center mt-2"
               style={{ color: textSecondary }}
             >
-              Could not connect to the server. Check your network and try again.
+              {t('finding_driver.connection_message')}
             </Text>
             <TouchableOpacity
               className="rounded-full py-3 px-8 mt-4"
@@ -368,7 +392,7 @@ export default function FindingDriver() {
               }}
             >
               <Text className="text-base font-JakartaBold" style={{ color: colors.white }}>
-                Retry
+                {t('common.retry')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -379,13 +403,13 @@ export default function FindingDriver() {
               className="text-[20px] font-JakartaBold mt-4"
               style={{ color: textPrimary }}
             >
-              No drivers nearby
+              {t('finding_driver.no_drivers')}
             </Text>
             <Text
               className="text-sm font-Jakarta text-center mt-2"
               style={{ color: textSecondary }}
             >
-              No drivers available right now. Try again in a few minutes or choose a different vehicle type.
+              {t('finding_driver.no_drivers_message')}
             </Text>
             <TouchableOpacity
               className="rounded-full py-3 px-8 mt-4"
@@ -396,7 +420,7 @@ export default function FindingDriver() {
               }}
             >
               <Text className="text-base font-JakartaBold" style={{ color: colors.white }}>
-                Try Again
+                {t('finding_driver.try_again')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -409,7 +433,7 @@ export default function FindingDriver() {
           onPress={handleCancel}
         >
           <Text className="text-base font-JakartaBold" style={{ color: colors.danger }}>
-            Cancel Booking
+            {t('finding_driver.cancel_booking')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -422,6 +446,64 @@ export default function FindingDriver() {
           onSelect={handleSelectAlternative}
           onCancel={handleAlternativesCancel}
         />
+      )}
+
+      {/* R3.3: Redispatch check-in modal */}
+      {redispatchCheckin && (
+        <View
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 200,
+          }}
+        >
+          <View
+            style={{
+              width: '85%',
+              backgroundColor: surfaceBg,
+              borderRadius: 16,
+              padding: 24,
+              borderWidth: 1,
+              borderColor,
+            }}
+          >
+            <Text
+              className="text-[18px] font-JakartaBold mb-2"
+              style={{ color: textPrimary }}
+            >
+              {t('finding_driver.still_searching')}
+            </Text>
+            <Text
+              className="text-[14px] font-Jakarta mb-6"
+              style={{ color: textSecondary }}
+            >
+              {t('finding_driver.searching_for_minutes', { count: redispatchCheckin.elapsed })}
+            </Text>
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                className="flex-1 py-[12px] rounded-[10px] items-center"
+                style={{ backgroundColor: colors.danger }}
+                onPress={handleRedispatchCancel}
+              >
+                <Text className="text-[15px] font-JakartaSemiBold" style={{ color: colors.white }}>
+                  {t('finding_driver.cancel_ride')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 py-[12px] rounded-[10px] items-center"
+                style={{ backgroundColor: colors.primary }}
+                onPress={handleRedispatchKeepLooking}
+              >
+                <Text className="text-[15px] font-JakartaSemiBold" style={{ color: colors.white }}>
+                  {t('finding_driver.keep_looking')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       )}
     </SafeAreaView>
   );

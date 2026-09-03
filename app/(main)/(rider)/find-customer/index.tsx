@@ -18,6 +18,7 @@ import { fetchRouteGeometry } from "@/lib/routeGeometry";
 import TollParkingModal from "@/components/TollParkingModal";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 // Route-line refetch policy for the pickup map (master plan §7.2): the
 // location watch ticks every 10s, so the Barikoi route fetch is throttled to
@@ -49,6 +50,7 @@ const calculateDistance = (
 };
 
 const ReachCustomer = () => {
+  const { t } = useTranslation();
   const router = useRouter();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
@@ -96,7 +98,7 @@ const ReachCustomer = () => {
     try {
       if (!waiting) {
         const res = await fetch(`${API_URL}/api/ride/${activeRideId}/wait-start`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) { Alert.alert("Error", "Could not start waiting timer"); setWaitLoading(false); return; }
+        if (!res.ok) { Alert.alert(t('find_customer.error'), t('find_customer.could_not_start_wait')); setWaitLoading(false); return; }
         setWaiting(true);
         setWaitSeconds(0);
         waitIntervalRef.current = setInterval(() => setWaitSeconds((s) => s + 1), 1000);
@@ -105,9 +107,9 @@ const ReachCustomer = () => {
         const res = await fetch(`${API_URL}/api/ride/${activeRideId}/wait-end`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         setWaiting(false);
-        Alert.alert("Waiting Time", `${data.total_wait_minutes ?? 0} min total\nFree: ${data.free_minutes ?? 3} min\nFee: ৳${((data.wait_fee_bdt ?? 0) / 100).toFixed(2)}`);
+        Alert.alert(t('find_customer.waiting_time'), `${data.total_wait_minutes ?? 0} ${t('find_customer.min_total')}\n${t('find_customer.free')}: ${data.free_minutes ?? 3} min\n${t('find_customer.fee')}: ৳${((data.wait_fee_bdt ?? 0) / 100).toFixed(2)}`);
       }
-    } catch { Alert.alert("Error", "Failed to update waiting timer"); }
+    } catch { Alert.alert(t('find_customer.error'), t('find_customer.failed_to_update_wait')); }
     setWaitLoading(false);
   };
 
@@ -118,8 +120,8 @@ const ReachCustomer = () => {
   // driver home (Home owns reconnect).
   useEffect(() => {
     if (!ws) {
-      Alert.alert("Connection Lost", "You are no longer connected to the server. Returning home.", [
-        { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+      Alert.alert(t('find_customer.connection_lost'), t('find_customer.not_connected_message'), [
+        { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)") },
       ]);
     }
   }, [ws, router]);
@@ -144,8 +146,8 @@ const ReachCustomer = () => {
           const cancelledByDriver = msg.cancelled_by === "driver";
           const cancelledBySystem = msg.cancelled_by === "system";
           if (!cancelledByDriver && !cancelledBySystem) {
-            Alert.alert("Ride Cancelled", "Rider cancelled the ride", [
-              { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+            Alert.alert(t('find_customer.ride_cancelled'), t('find_customer.rider_cancelled_ride'), [
+              { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)") },
             ]);
           } else {
             router.replace("/(main)/(rider)");
@@ -259,8 +261,8 @@ const ReachCustomer = () => {
     // app polling. Don't advance silently; surface it and let the driver retry.
     // M-6: wait for server ack before navigating to enter-otp.
     if (!ws || ws.readyState !== WebSocket.OPEN || !activeRideId) {
-      Alert.alert("Connection Lost", "Not connected to the server. Returning home.", [
-        { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+      Alert.alert(t('find_customer.connection_lost'), t('find_customer.not_connected_server'), [
+        { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)") },
       ]);
       return;
     }
@@ -298,8 +300,8 @@ const ReachCustomer = () => {
         router.replace("/(main)/(rider)/enter-otp");
       })
       .catch(() => {
-        Alert.alert("Connection Lost", "Server did not acknowledge. Please try again.", [
-          { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+        Alert.alert(t('find_customer.connection_lost'), t('find_customer.server_not_acknowledge'), [
+          { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)") },
         ]);
       });
   };
@@ -360,7 +362,7 @@ const ReachCustomer = () => {
     if (customerPhone) {
       Linking.openURL(`tel:${customerPhone}`);
     } else {
-      Alert.alert("Unavailable", "Phone number not available");
+      Alert.alert(t('find_customer.unavailable'), t('find_customer.phone_not_available'));
     }
   };
 
@@ -386,7 +388,7 @@ const ReachCustomer = () => {
               marginBottom: spacing["2xl"],
             }}
           >
-            Ride Details
+            {t('find_customer.ride_details')}
           </Text>
 
           {/* Pickup / Destination */}
@@ -408,7 +410,7 @@ const ReachCustomer = () => {
                 marginBottom: spacing.sm,
               }}
             >
-              Stops ({currentStopIdx + 1}/{stops.length + 1})
+              {t('find_customer.stops')} ({currentStopIdx + 1}/{stops.length + 1})
             </Text>
             {stops.map((stop: { id: string; address: string }, i: number) => {
               const completed = i < currentStopIdx;
@@ -438,7 +440,7 @@ const ReachCustomer = () => {
                 marginTop: 4,
               }}
             >
-              Final: {destinationAddress}
+              {t('find_customer.final')}: {destinationAddress}
             </Text>
             {currentStopIdx < stops.length && (
               <TouchableOpacity
@@ -454,7 +456,7 @@ const ReachCustomer = () => {
                   });
                   if (res.ok) {
                     setCurrentStopIdx(i => i + 1);
-                    Alert.alert('Stop completed', 'Continue to next destination.');
+                    Alert.alert(t('find_customer.stop_completed'), t('find_customer.continue_next'));
                   }
                 }}
                 accessibilityRole="button"
@@ -478,7 +480,7 @@ const ReachCustomer = () => {
                       fontSize: 15,
                     }}
                   >
-                    Complete Stop {currentStopIdx + 1}
+                    {t('find_customer.complete_stop')} {currentStopIdx + 1}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -496,7 +498,7 @@ const ReachCustomer = () => {
               marginBottom: spacing.sm,
             }}
           >
-            Need Help?
+            {t('find_customer.need_help')}
           </Text>
           <Text
             style={{
@@ -506,7 +508,7 @@ const ReachCustomer = () => {
               marginBottom: spacing.md,
             }}
           >
-            Contact or navigate to your rider
+            {t('find_customer.contact_navigate_rider')}
           </Text>
           <DriverActionBar
             onCall={callCustomer}
@@ -526,10 +528,10 @@ const ReachCustomer = () => {
               marginBottom: spacing.md,
             }}
           >
-            Slide to confirm once you&apos;ve reached the pickup location
+            {t('find_customer.slide_confirm_arrival')}
           </Text>
           <SlideButton
-            title="Slide to Confirm Arrival"
+            title={t('find_customer.slide_to_confirm')}
             onComplete={handleSlideComplete}
             bgColor={colors.slideGreen}
             textColor={colors.white}
@@ -538,7 +540,7 @@ const ReachCustomer = () => {
             onPress={toggleWait}
             disabled={waitLoading}
             accessibilityRole="button"
-            accessibilityLabel={waiting ? "Stop waiting timer" : "Start waiting timer"}
+            accessibilityLabel={waiting ? t('find_customer.stop_waiting') : t('find_customer.start_waiting')}
             style={{
               marginTop: spacing.md,
               paddingVertical: spacing.md,
@@ -562,8 +564,8 @@ const ReachCustomer = () => {
                   }}
                 >
                   {waiting
-                    ? `${Math.floor(waitSeconds / 60)}:${String(waitSeconds % 60).padStart(2, "0")} — Stop`
-                    : "Start Waiting Timer"}
+                    ? `${Math.floor(waitSeconds / 60)}:${String(waitSeconds % 60).padStart(2, "0")} — ${t('find_customer.stop_waiting')}`
+                    : t('find_customer.start_waiting_timer')}
                 </Text>
               </View>
             )}
@@ -571,17 +573,17 @@ const ReachCustomer = () => {
           <TouchableOpacity
             onPress={() => activeRideId && router.push(`/(main)/(rider)/cancellation-reasons?rideId=${activeRideId}`)}
             accessibilityRole="button"
-            accessibilityLabel="Cancel ride"
+            accessibilityLabel={t('find_customer.cancel_ride')}
             style={{ marginTop: spacing.md, alignItems: "center" }}
           >
             <Text style={{ color: colors.danger, fontSize: 14, fontFamily: "Jakarta-Bold" }}>
-              Cancel Ride
+              {t('find_customer.cancel_ride')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setShowTollModal(true)}
             accessibilityRole="button"
-            accessibilityLabel="Add toll or parking charge"
+            accessibilityLabel={t('find_customer.add_toll_parking')}
             style={{
               marginTop: spacing.md,
               paddingVertical: spacing.sm,
@@ -595,7 +597,7 @@ const ReachCustomer = () => {
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
               <Ionicons name="receipt-outline" size={16} color={colors.white} />
               <Text style={{ color: colors.white, fontFamily: "Jakarta-Bold", fontSize: 14 }}>
-                Add Charge
+                {t('find_customer.add_charge')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -636,7 +638,7 @@ const ReachCustomer = () => {
       <TouchableOpacity
         onPress={() => setTheme(isDark ? "light" : "dark")}
         accessibilityRole="button"
-        accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
+        accessibilityLabel={isDark ? t('find_customer.switch_light_theme') : t('find_customer.switch_dark_theme')}
         style={{
           position: "absolute",
           top: 64,

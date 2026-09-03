@@ -5,12 +5,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { formatDateTime } from "@/lib/format";
+import { useTranslation } from "react-i18next";
 
 export default function RideScheduled() {
   const { ride_id, scheduled_at } = useLocalSearchParams<{
     ride_id?: string;
     scheduled_at?: string;
   }>();
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -41,7 +43,7 @@ export default function RideScheduled() {
           style={styles.toggle}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('ride_scheduled.toggle_theme')}
         >
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
@@ -53,9 +55,9 @@ export default function RideScheduled() {
         <View style={[styles.iconWrap, { backgroundColor: colors.accentLight }]}>
           <Ionicons name="checkmark-circle" size={56} color={colors.primary} />
         </View>
-        <Text style={[styles.title, { color: textPrimary }]}>Ride Scheduled</Text>
+        <Text style={[styles.title, { color: textPrimary }]}>{t('ride_scheduled.title')}</Text>
         <Text style={[styles.subtitle, { color: textSecondary }]}>
-          Your ride has been scheduled successfully.
+          {t('ride_scheduled.subtitle')}
         </Text>
 
         {scheduledLabel && (
@@ -63,7 +65,7 @@ export default function RideScheduled() {
             <Ionicons name="time-outline" size={18} color={colors.primary} />
             <View style={styles.detailTextCol}>
               <Text style={[styles.detailLabel, { color: textSecondary }]}>
-                Pickup at
+                {t('ride_scheduled.pickup_at')}
               </Text>
               <Text style={[styles.detailValue, { color: textPrimary }]}>
                 {scheduledLabel}
@@ -74,7 +76,7 @@ export default function RideScheduled() {
 
         {reference && (
           <Text style={[styles.reference, { color: textSecondary }]}>
-            Reference {reference}
+            {t('ride_scheduled.reference', { reference })}
           </Text>
         )}
 
@@ -85,18 +87,18 @@ export default function RideScheduled() {
               router.replace("/(main)/(customer)/(tabs)/activity")
             }
             accessibilityRole="button"
-            accessibilityLabel="View schedule"
+            accessibilityLabel={t('ride_scheduled.a11y_view_schedule')}
           >
-            <Text style={styles.primaryBtnText}>View Schedule</Text>
+            <Text style={styles.primaryBtnText}>{t('ride_scheduled.view_schedule')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.secondaryBtn, { borderColor, backgroundColor: surfaceBg }]}
             onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
             accessibilityRole="button"
-            accessibilityLabel="Back to home"
+            accessibilityLabel={t('ride_scheduled.a11y_back_to_home')}
           >
             <Text style={[styles.secondaryBtnText, { color: textPrimary }]}>
-              Back to Home
+              {t('ride.back_to_home')}
             </Text>
           </TouchableOpacity>
         </View>

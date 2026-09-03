@@ -17,6 +17,7 @@ import { logger } from "@/lib/logger";
 import { colors, radii, spacing } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useTranslation } from "react-i18next";
 
 interface DocRow {
   id: string;
@@ -76,7 +77,7 @@ const DOC_LABELS: Record<string, string> = {
 type BadgeTone = "approved" | "pending" | "rejected" | "missing";
 
 export default function DocumentsScreen() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const [docs, setDocs] = useState<DocRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

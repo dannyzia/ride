@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import PaymentWebView from "@/components/PaymentWebView";
+import { useTranslation } from "react-i18next";
 
 interface Package {
   id: string;
@@ -21,7 +22,7 @@ interface Package {
 }
 
 export default function SubscriptionCheckout() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;

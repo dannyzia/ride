@@ -4,8 +4,10 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsHelpSupport() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -21,48 +23,48 @@ export default function SettingsHelpSupport() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Help & Support</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.help_support')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
         <View className="mt-4 mb-4">
-          <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>Quick Help</Text>
+          <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('help_support.quick_help')}</Text>
           <TouchableOpacity className="flex-row items-center p-[12px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }} onPress={() => router.push("/(main)/(customer)/(tabs)/settings/faq")}>
             <View className="w-8 h-8 rounded-full mr-3 items-center justify-center" style={{ backgroundColor: colors.primary }}><Ionicons name="help-circle" size={16} color={colors.white} /></View>
-            <View className="flex-1"><Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>FAQ</Text><Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>Frequently asked questions</Text></View>
+            <View className="flex-1"><Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.faq')}</Text><Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{t('help_support.faq_desc')}</Text></View>
             <Ionicons name="chevron-forward" size={16} color={textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity className="flex-row items-center p-[12px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }} onPress={() => router.push("/(main)/(customer)/(tabs)/settings/contact-support")}>
             <View className="w-8 h-8 rounded-full mr-3 items-center justify-center" style={{ backgroundColor: colors.primary }}><Ionicons name="chatbubble-ellipses" size={16} color={colors.white} /></View>
-            <View className="flex-1"><Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>Contact Support</Text><Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>Chat with our support team</Text></View>
+            <View className="flex-1"><Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.contact_support')}</Text><Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{t('help_support.contact_desc')}</Text></View>
             <Ionicons name="chevron-forward" size={16} color={textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity className="flex-row items-center p-[12px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }} onPress={() => Linking.openURL('tel:' + supportPhone)}>
             <View className="w-8 h-8 rounded-full mr-3 items-center justify-center" style={{ backgroundColor: isDark ? colors.primaryLightDark : colors.primaryLight }}><Ionicons name="call" size={16} color={colors.primary} /></View>
-            <View className="flex-1"><Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>Call Support</Text><Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>+880 1XXX-XXXXXX</Text></View>
+            <View className="flex-1"><Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{t('help_support.call_support')}</Text><Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>+880 1XXX-XXXXXX</Text></View>
             <Ionicons name="chevron-forward" size={16} color={textSecondary} />
           </TouchableOpacity>
         </View>
         <View className="mt-6">
-          <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>Safety</Text>
+          <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('settings.safety')}</Text>
           <TouchableOpacity className="flex-row items-center p-[12px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }} onPress={() => router.push("/(main)/(customer)/(tabs)/settings/emergency-contacts")}>
             <View className="w-8 h-8 rounded-full mr-3 items-center justify-center" style={{ backgroundColor: colors.danger }}><Ionicons name="warning" size={16} color={colors.white} /></View>
-            <View className="flex-1"><Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>Emergency Contacts</Text><Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>Manage your emergency contacts</Text></View>
+            <View className="flex-1"><Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.emergency_contacts')}</Text><Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{t('help_support.emergency_desc')}</Text></View>
             <Ionicons name="chevron-forward" size={16} color={textSecondary} />
           </TouchableOpacity>
         </View>
         <View className="mt-6">
-          <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>Legal</Text>
+          <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('help_support.legal')}</Text>
           <TouchableOpacity className="flex-row items-center p-[12px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }} onPress={() => router.push("/(main)/(customer)/(tabs)/settings/privacy-policy")}>
             <View className="w-8 h-8 rounded-full mr-3 items-center justify-center" style={{ backgroundColor: colors.primary }}><Ionicons name="document-text" size={16} color={colors.white} /></View>
-            <Text className="flex-1 text-[14px] font-Jakarta" style={{ color: textPrimary }}>Privacy Policy</Text>
+            <Text className="flex-1 text-[14px] font-Jakarta" style={{ color: textPrimary }}>{t('legal.privacy_policy')}</Text>
             <Ionicons name="chevron-forward" size={16} color={textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity className="flex-row items-center p-[12px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }} onPress={() => router.push("/(main)/(customer)/(tabs)/settings/terms-of-service")}>
             <View className="w-8 h-8 rounded-full mr-3 items-center justify-center" style={{ backgroundColor: colors.primary }}><Ionicons name="clipboard" size={16} color={colors.white} /></View>
-            <Text className="flex-1 text-[14px] font-Jakarta" style={{ color: textPrimary }}>Terms of Service</Text>
+            <Text className="flex-1 text-[14px] font-Jakarta" style={{ color: textPrimary }}>{t('legal.terms_of_service')}</Text>
             <Ionicons name="chevron-forward" size={16} color={textSecondary} />
           </TouchableOpacity>
         </View>

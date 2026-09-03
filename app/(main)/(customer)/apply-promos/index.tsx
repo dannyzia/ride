@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { useRiderStore } from "@/store/useRiderStore";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface Promo {
   promo_id: string;
@@ -24,6 +25,7 @@ interface Promo {
 }
 
 export default function ApplyPromos() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const [promoCode, setPromoCode] = useState("");
@@ -70,7 +72,7 @@ export default function ApplyPromos() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) { setMessage("Not authenticated"); setMessageType("error"); setLoading(false); return; }
+      if (!token) { setMessage(t('apply_promos.not_authenticated')); setMessageType("error"); setLoading(false); return; }
       const res = await fetch(`${API_URL}/api/promo/redeem`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -83,11 +85,21 @@ export default function ApplyPromos() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setMessage(data.error || "Invalid promo code");
+        if (res.status === 409 && data.error === "pass_precedence") {
+          setMessage(
+            t('apply_promos.pass_precedence', {
+              name: data.pass?.name,
+              percent: data.pass?.discount_percent,
+            })
+          );
+          setMessageType("error");
+          return;
+        }
+        setMessage(data.message || data.error || t('apply_promos.invalid_code'));
         setMessageType("error");
         return;
       }
-      setMessage("Promo applied successfully!");
+      setMessage(t('apply_promos.applied'));
       setMessageType("success");
       // M-29: stage the promo in the rider store for the home screen to
       // display the discount. Server-side staging via promoCache.ts is the
@@ -104,7 +116,7 @@ export default function ApplyPromos() {
         });
       }
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed to apply promo");
+      setMessage(err instanceof Error ? err.message : t('apply_promos.failed'));
       setMessageType("error");
       logger.error("Apply promo failed", err);
     } finally {
@@ -117,20 +129,20 @@ export default function ApplyPromos() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Apply Promo</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('apply_promos.title')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
         <View className="mb-6">
           <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>
-            Enter Promo Code
+            {t('apply_promos.enter_code_label')}
           </Text>
           <TextInput
             className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta"
             style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
-            placeholder="Enter promo code"
+            placeholder={t('apply_promos.enter_code_placeholder')}
             placeholderTextColor={textSecondary}
             value={promoCode}
             onChangeText={setPromoCode}
@@ -158,18 +170,18 @@ export default function ApplyPromos() {
           {loading ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
-            <Text className="text-[16px] font-JakartaBold text-goWhite">Apply</Text>
+            <Text className="text-[16px] font-JakartaBold text-goWhite">{t('apply_promos.apply')}</Text>
           )}
         </TouchableOpacity>
         <View>
           <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>
-            Available Promos
+            {t('apply_promos.available')}
           </Text>
           {promosLoading ? (
             <ActivityIndicator size="small" color={colors.primary} className="py-4" />
           ) : promos.length === 0 ? (
             <Text className="text-[14px] font-Jakarta py-4" style={{ color: textSecondary }}>
-              No promos available right now.
+              {t('apply_promos.none')}
             </Text>
           ) : (
             promos.map((promo) => (

@@ -8,10 +8,20 @@ import { logger } from "@/lib/logger";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 const LABELS = ["Home", "Work", "Gym", "Friend", "Other"];
 
+const LABEL_KEYS: Record<string, string> = {
+  Home: "saved_addresses.label_home",
+  Work: "saved_addresses.label_work",
+  Gym: "saved_addresses.label_gym",
+  Friend: "saved_addresses.label_friend",
+  Other: "saved_addresses.label_other",
+};
+
 export default function AddAddress() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -31,23 +41,23 @@ export default function AddAddress() {
   const effectiveLabel = label === "Other" ? customLabel : label;
 
   const handleSave = async () => {
-    if (!effectiveLabel.trim()) { setError("Please select or enter a label"); return; }
-    if (!addressLine.trim()) { setError("Please enter an address"); return; }
+    if (!effectiveLabel.trim()) { setError(t('saved_addresses.error_label')); return; }
+    if (!addressLine.trim()) { setError(t('saved_addresses.error_address')); return; }
     setLoading(true); setError("");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) { setError("Not authenticated"); return; }
+      if (!token) { setError(t('wallet.not_authenticated')); return; }
       const res = await fetch(`${API_URL}/api/rider/addresses`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ label: effectiveLabel.trim(), address: addressLine.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Failed to save"); return; }
+      if (!res.ok) { setError(data.error || t('saved_addresses.save_failed')); return; }
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : "Network error");
+      setError(err instanceof Error && err.message ? err.message : t('wallet.network_error'));
       logger.error("Add address failed", err);
     } finally {
       setLoading(false);
@@ -65,17 +75,17 @@ export default function AddAddress() {
           <Ionicons name="checkmark-circle" size={36} color={colors.primary} />
         </View>
         <Text className="text-[22px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>
-          Address Added
+          {t('saved_addresses.added_title')}
         </Text>
         <Text className="text-[15px] font-Jakarta text-center mb-2" style={{ color: textSecondary }}>
-          {effectiveLabel} — {addressLine}
+          {LABEL_KEYS[effectiveLabel] ? t(LABEL_KEYS[effectiveLabel]) : effectiveLabel} — {addressLine}
         </Text>
         <TouchableOpacity
           className="rounded-full w-full py-[16px] items-center mb-3"
           style={{ backgroundColor: colors.primary }}
           onPress={() => router.replace("/(main)/(customer)/(tabs)/settings/saved-addresses")}
         >
-          <Text className="text-[18px] font-JakartaBold text-goWhite">Done</Text>
+          <Text className="text-[18px] font-JakartaBold text-goWhite">{t('saved_addresses.done')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setTheme(isDark ? "light" : "dark")}
@@ -94,14 +104,14 @@ export default function AddAddress() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Add Address</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('saved_addresses.add')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 24 }}>
         <Text className="text-[15px] font-JakartaBold mb-3" style={{ color: textPrimary }}>
-          Select Label
+          {t('saved_addresses.select_label')}
         </Text>
         <ScrollView horizontal className="mb-6">
           {LABELS.map((l) => (
@@ -117,7 +127,7 @@ export default function AddAddress() {
                 className="text-[14px] font-JakartaBold"
                 style={{ color: label === l ? colors.white : textPrimary }}
               >
-                {l}
+                {LABEL_KEYS[l] ? t(LABEL_KEYS[l]) : l}
               </Text>
             </TouchableOpacity>
           ))}
@@ -125,12 +135,12 @@ export default function AddAddress() {
         {label === "Other" && (
           <View className="mb-6">
             <Text className="text-[15px] font-JakartaBold mb-2" style={{ color: textPrimary }}>
-              Custom Label
+              {t('saved_addresses.custom_label')}
             </Text>
             <TextInput
               className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta"
               style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
-              placeholder="Enter label"
+              placeholder={t('saved_addresses.placeholder_label')}
               placeholderTextColor={textSecondary}
               value={customLabel}
               onChangeText={setCustomLabel}
@@ -139,12 +149,12 @@ export default function AddAddress() {
         )}
         <View className="mb-6">
           <Text className="text-[15px] font-JakartaBold mb-2" style={{ color: textPrimary }}>
-            Address
+            {t('saved_addresses.address')}
           </Text>
           <TextInput
             className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta"
             style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
-            placeholder="Enter full address"
+            placeholder={t('saved_addresses.placeholder_address')}
             placeholderTextColor={textSecondary}
             value={addressLine}
             onChangeText={setAddressLine}
@@ -157,7 +167,7 @@ export default function AddAddress() {
           onPress={handleSave}
           disabled={loading}
         >
-          {loading ? <ActivityIndicator size={20} color="#FFFFFF" /> : <Text className="text-[18px] font-JakartaBold text-goWhite">Save Address</Text>}
+          {loading ? <ActivityIndicator size={20} color="#FFFFFF" /> : <Text className="text-[18px] font-JakartaBold text-goWhite">{t('saved_addresses.save')}</Text>}
         </TouchableOpacity>
       </ScrollView>
       <TouchableOpacity

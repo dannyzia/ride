@@ -10,8 +10,10 @@ import { useRiderStore } from "@/store/useRiderStore";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsPersonalInfo() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -45,23 +47,23 @@ export default function SettingsPersonalInfo() {
   };
 
   const saveChanges = async () => {
-    if (!localName.trim()) { setError("Name is required"); return; }
+    if (!localName.trim()) { setError(t('personal_info.name_required')); return; }
     setLoading(true); setError(""); setSuccessMessage("");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) { setError("Not authenticated"); return; }
+      if (!token) { setError(t('personal_info.not_authenticated')); return; }
       const res = await fetch(`${API_URL}/api/user/me`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: localName.trim(), profile_image_url: localPhoto }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Failed to save"); return; }
+      if (!res.ok) { setError(data.error || t('personal_info.save_failed')); return; }
       if (setRider) setRider({ name: localName.trim(), photo: localPhoto ?? undefined });
-      setSuccessMessage("Profile updated successfully!");
+      setSuccessMessage(t('personal_info.updated'));
     } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : "Network error");
+      setError(err instanceof Error && err.message ? err.message : t('personal_info.network_error'));
       logger.error("Profile save failed", err);
     } finally {
       setLoading(false);
@@ -73,9 +75,9 @@ export default function SettingsPersonalInfo() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Personal Info</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.personal_info')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 24 }}>
@@ -92,41 +94,41 @@ export default function SettingsPersonalInfo() {
                 className="w-24 h-24 rounded-full items-center justify-center"
                 style={{ backgroundColor: isDark ? colors.primaryLightDark : colors.primaryLight }}
               >
-                <Text className="text-[14px] font-Jakarta" style={{ color: colors.primary }}>+ Photo</Text>
+                <Text className="text-[14px] font-Jakarta" style={{ color: colors.primary }}>{t('personal_info.add_photo')}</Text>
               </View>
             )}
           </TouchableOpacity>
           <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>
-            {localName || "Add Name"}
+            {localName || t('personal_info.add_name')}
           </Text>
         </View>
         <View className="mb-4">
-          <Text className="text-[14px] font-Jakarta mb-2" style={{ color: textSecondary }}>Name</Text>
+          <Text className="text-[14px] font-Jakarta mb-2" style={{ color: textSecondary }}>{t('personal_info.name')}</Text>
           <TextInput
             className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta"
             style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
-            placeholder="Enter your name"
+            placeholder={t('personal_info.name_placeholder')}
             placeholderTextColor={textSecondary}
             value={localName}
             onChangeText={setLocalName}
           />
         </View>
         <View className="mb-4">
-          <Text className="text-[14px] font-Jakarta mb-2" style={{ color: textSecondary }}>Email</Text>
+          <Text className="text-[14px] font-Jakarta mb-2" style={{ color: textSecondary }}>{t('personal_info.email')}</Text>
           <TextInput
             className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta"
             style={{ backgroundColor: surfaceBg, borderColor, color: textSecondary }}
-            placeholder="Not set"
+            placeholder={t('personal_info.not_set')}
             placeholderTextColor={textSecondary}
             editable={false}
           />
         </View>
         <View className="mb-6">
-          <Text className="text-[14px] font-Jakarta mb-2" style={{ color: textSecondary }}>Phone Number</Text>
+          <Text className="text-[14px] font-Jakarta mb-2" style={{ color: textSecondary }}>{t('personal_info.phone')}</Text>
           <TextInput
             className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta"
             style={{ backgroundColor: surfaceBg, borderColor, color: textSecondary }}
-            placeholder="Not set"
+            placeholder={t('personal_info.not_set')}
             placeholderTextColor={textSecondary}
             editable={false}
           />
@@ -146,7 +148,7 @@ export default function SettingsPersonalInfo() {
           {loading ? (
             <ActivityIndicator size={20} color="#FFFFFF" />
           ) : (
-            <Text className="text-[18px] font-JakartaBold text-goWhite">Save Changes</Text>
+            <Text className="text-[18px] font-JakartaBold text-goWhite">{t('personal_info.save_changes')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

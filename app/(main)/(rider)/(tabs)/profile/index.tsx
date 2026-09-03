@@ -21,6 +21,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import Avatar from "@/components/Avatar";
+import { useTranslation } from "react-i18next";
 
 const vehicleTypeDisplay: Record<string, string> = Object.fromEntries(
   VEHICLE_TYPES.map((v) => [v.key, v.display_en]),
@@ -48,9 +49,8 @@ const MENU: MenuItem[] = [
   { label: "Safety", route: "/(main)/(rider)/safety", icon: "shield-outline", section: "Safety" },
 ];
 
-const SECTION_ORDER = ["Account", "Vehicles", "Activity", "Programs", "Safety"];
-
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const { driver } = useDriverStore();
 
   const isDark = useIsDark();
@@ -81,20 +81,20 @@ export default function ProfileScreen() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated");
+        setError(t('profile.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/driver/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        setError("Failed to load profile");
+        setError(t('profile.failed_to_load'));
         return;
       }
       const data = await res.json();
       setProfileData(data.driver ?? data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
+      setError(err instanceof Error ? err.message : t('profile.network_error'));
       logger.error("Profile fetch failed", err);
     } finally {
       setLoading(false);
@@ -106,10 +106,10 @@ export default function ProfileScreen() {
   }, [fetchProfile]);
 
   const handleSignOut = useCallback(() => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t('profile.sign_out'), t('driver.sign_out_confirm'), [
+      { text: t('common.cancel'), style: "cancel" },
       {
-        text: "Sign Out",
+        text: t('profile.sign_out'),
         style: "destructive",
         onPress: async () => {
           try {
@@ -127,7 +127,7 @@ export default function ProfileScreen() {
   }, []);
 
   const displayName =
-    profileData?.full_name || driver?.name || "Driver";
+    profileData?.full_name || driver?.name || t('driver.profile');
   const displayVehicle =
     profileData?.vehicle_type || driver?.vehicle_type || "";
   // Number(): rating is numeric in pg — it can arrive as a string ("4.70"),
@@ -137,6 +137,7 @@ export default function ProfileScreen() {
     profileData?.completed_rides ?? driver?.completed_rides_count ?? 0;
 
   // Group menu by section
+  const SECTION_ORDER = ['Account', 'Vehicles', 'Activity', 'Programs', 'Safety'] as const;
   const grouped = SECTION_ORDER.reduce<Record<string, MenuItem[]>>(
     (acc, section) => {
       acc[section] = MENU.filter((m) => m.section === section);
@@ -190,7 +191,7 @@ export default function ProfileScreen() {
                 {vehicleTypeDisplay[displayVehicle] ?? displayVehicle?.replace(/_/g, " ")?.replace(/\b\w/g, (c: string) => c.toUpperCase())}
                 {" · "}
                 <Ionicons name="star" size={12} color={colors.amber} />{" "}
-                {displayRating.toFixed(1)} · {displayRides} rides
+                {displayRating.toFixed(1)} · {displayRides} {t('profile.rides')}
               </Text>
             </>
           )}

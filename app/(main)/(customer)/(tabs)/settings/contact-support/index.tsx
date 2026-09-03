@@ -15,6 +15,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import SettingsRow from "@/components/SettingsRow";
+import { useTranslation } from "react-i18next";
 
 const CHAT_ROUTE = "/(main)/(customer)/(tabs)/chat";
 const SUPPORT_EMAIL = "support@ride.app.bd";
@@ -23,6 +24,7 @@ const SUPPORT_PHONE = process.env.EXPO_PUBLIC_SUPPORT_PHONE ?? "+880 1XXX-XXXXXX
 export default function SettingsContactSupport() {
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
+  const { t } = useTranslation();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surface = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -32,13 +34,13 @@ export default function SettingsContactSupport() {
     ? colors.textSecondaryDark
     : colors.textSecondaryLight;
 
-  const openExternal = async (label: string, url: string) => {
+  const openExternal = async (label: string, labelKey: string, url: string) => {
     try {
       const canOpen = await Linking.canOpenURL(url);
       if (!canOpen) {
         Alert.alert(
-          "Unavailable",
-          "No app is available to handle this request on your device."
+          t('contact_support.unavailable_title'),
+          t('contact_support.unavailable_message')
         );
         return;
       }
@@ -46,23 +48,23 @@ export default function SettingsContactSupport() {
     } catch (err) {
       logger.error(`[settings/contact-support] failed to open ${label}`, err);
       Alert.alert(
-        "Something went wrong",
-        `Could not open ${label}. Please try again.`
+        t('contact_support.something_went_wrong'),
+        t('contact_support.could_not_open', { name: t(labelKey) })
       );
     }
   };
 
   const callEmergency = () => {
     Alert.alert(
-      "Call Emergency: 999",
-      "This will place a call to the national emergency number. Continue?",
+      t('contact_support.call_emergency'),
+      t('contact_support.emergency_confirm'),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Call 999",
+          text: t('contact_support.call_999'),
           style: "destructive",
           onPress: () => {
-            void openExternal("emergency call", "tel:999");
+            void openExternal("emergency call", "contact_support.label_emergency_call", "tel:999");
           },
         },
       ]
@@ -79,18 +81,18 @@ export default function SettingsContactSupport() {
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => router.back()}
         >
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>
-          Contact Support
+          {t('settings.contact_support')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('contact_support.toggle_theme')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => setTheme(isDark ? "light" : "dark")}
         >
@@ -103,29 +105,30 @@ export default function SettingsContactSupport() {
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.sectionTitle, { color: textPrimary }]}>
-          Support Channels
+          {t('contact_support.channels')}
         </Text>
         <View style={[styles.card, { backgroundColor: surface }]}>
           <SettingsRow
             icon="chatbubble-ellipses-outline"
-            label="Live Chat"
+            label={t('contact_support.live_chat')}
             onPress={() => router.push(CHAT_ROUTE)}
           />
           <SettingsRow
             icon="mail-outline"
             iconColor={colors.info}
-            label="Email Support"
+            label={t('contact_support.email_support')}
             onPress={() => {
-              void openExternal("email", `mailto:${SUPPORT_EMAIL}`);
+              void openExternal("email", "contact_support.label_email", `mailto:${SUPPORT_EMAIL}`);
             }}
           />
           <SettingsRow
             icon="call-outline"
             iconColor={colors.checkGreen}
-            label="Call Us"
+            label={t('contact_support.call_us')}
             onPress={() => {
               void openExternal(
                 "phone call",
+                "contact_support.label_phone_call",
                 `tel:${SUPPORT_PHONE.replace(/\s+/g, "")}`
               );
             }}
@@ -133,25 +136,25 @@ export default function SettingsContactSupport() {
           />
         </View>
         <Text style={[styles.channelHint, { color: textSecondary }]}>
-          Email: {SUPPORT_EMAIL}
+          {t('contact_support.email_prefix')} {SUPPORT_EMAIL}
         </Text>
         <Text style={[styles.channelHint, { color: textSecondary }]}>
-          Phone: {SUPPORT_PHONE}
+          {t('contact_support.phone_prefix')} {SUPPORT_PHONE}
         </Text>
         <Text
           style={[styles.sectionTitle, { color: textPrimary, marginTop: 32 }]}
         >
-          Emergency
+          {t('contact_support.emergency')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Call Emergency 999"
+          accessibilityLabel={t('contact_support.call_emergency_a11y')}
           activeOpacity={0.8}
           onPress={callEmergency}
           style={[styles.emergencyButton, { backgroundColor: colors.danger }]}
         >
           <Ionicons name="warning" size={20} color={colors.white} />
-          <Text style={styles.emergencyButtonText}>Call Emergency: 999</Text>
+          <Text style={styles.emergencyButtonText}>{t('contact_support.call_emergency')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

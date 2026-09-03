@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface RideDetail {
   id: string;
@@ -23,6 +24,7 @@ interface RideDetail {
 }
 
 export default function RideHistoryDetail() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -43,15 +45,15 @@ export default function RideHistoryDetail() {
         setLoading(true); setError("");
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        if (!token) { setError("Not authenticated"); setLoading(false); return; }
+        if (!token) { setError(t('wallet.not_authenticated')); setLoading(false); return; }
         const res = await fetch(`${API_URL}/api/ride/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        if (!res.ok) { setError(data.error || "Failed to load ride"); return; }
+        if (!res.ok) { setError(data.error || t('history_detail.failed_to_load')); return; }
         if (!cancelled) setRide(data.ride);
       } catch (err) {
-        if (!cancelled) setError((err instanceof Error ? err.message : String(err)) || "Network error");
+        if (!cancelled) setError((err instanceof Error ? err.message : String(err)) || t('wallet.network_error'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -77,9 +79,9 @@ export default function RideHistoryDetail() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Ride Details</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('find_customer.ride_details')}</Text>
         <View className="w-[50px]" />
       </View>
       {loading ? (
@@ -97,19 +99,19 @@ export default function RideHistoryDetail() {
               {ride.vehicle_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
             </Text>
             <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>
-              {formatDate(ride.created_at)} · {ride.distance_km} km · {ride.duration_minutes} min
+              {formatDate(ride.created_at)} · {t('history_detail.distance_duration', { km: ride.distance_km, minutes: ride.duration_minutes })}
             </Text>
             <View className="mt-3 space-y-1">
               <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
-                From: {ride.pickup_address ?? "—"}
+                {t('history_detail.from', { address: ride.pickup_address ?? "—" })}
               </Text>
               <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
-                To: {ride.dropoff_address ?? "—"}
+                {t('history_detail.to', { address: ride.dropoff_address ?? "—" })}
               </Text>
             </View>
             <View className="flex-row justify-between items-center mt-3 pt-3" style={{ borderTopWidth: 1, borderTopColor: borderColor }}>
               <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
-                Driver: {ride.driver_name ?? "—"} <Ionicons name="star" size={12} color={textSecondary} /> {ride.driver_rating ?? "—"}
+                {t('history_detail.driver', { name: ride.driver_name ?? "—" })} <Ionicons name="star" size={12} color={textSecondary} /> {ride.driver_rating ?? "—"}
               </Text>
               <Text className="text-[16px] font-JakartaBold" style={{ color: colors.primary }}>
                 ৳{(ride.total_bdt / 100).toFixed(0)}
@@ -121,19 +123,19 @@ export default function RideHistoryDetail() {
             style={{ backgroundColor: surfaceBg, borderColor }}
             onPress={() => router.push(`/(main)/(customer)/(tabs)/activity/share-receipt?rideId=${ride.id}`)}
           >
-            <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>View Receipt</Text>
+            <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{t('history_detail.view_receipt')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="rounded-[12px] py-[14px] items-center"
             style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor: colors.danger }}
             onPress={() => router.push(`/(main)/(customer)/report-issue?rideId=${ride.id}`)}
           >
-            <Text className="text-[15px] font-JakartaBold" style={{ color: colors.danger }}>Report an Issue</Text>
+            <Text className="text-[15px] font-JakartaBold" style={{ color: colors.danger }}>{t('ride.report_an_issue')}</Text>
           </TouchableOpacity>
         </ScrollView>
       ) : (
         <View className="flex-1 items-center justify-center px-[24px]">
-          <Text className="text-[16px] font-Jakarta" style={{ color: textSecondary }}>Ride not found</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: textSecondary }}>{t('history_detail.not_found')}</Text>
         </View>
       )}
       <TouchableOpacity

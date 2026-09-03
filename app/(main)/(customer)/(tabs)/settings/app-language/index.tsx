@@ -11,6 +11,8 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
+import { setLanguage } from "@/i18n/i18n";
 
 type LanguageCode = "en" | "bn";
 
@@ -21,7 +23,9 @@ const LANGUAGES: { code: LanguageCode; flag: string; label: string }[] = [
 
 export default function SettingsAppLanguage() {
   const isDark = useIsDark();
-  const { language, setLanguage, setTheme } = useAppearance();
+  const { setTheme } = useAppearance();
+  const { i18n, t } = useTranslation();
+  const activeLanguage: LanguageCode = i18n.language === "bn" ? "bn" : "en";
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surface = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -52,18 +56,18 @@ export default function SettingsAppLanguage() {
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => router.back()}
         >
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>
-          App Language
+          {t('app_language.title')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('app_language.toggle_theme')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => setTheme(isDark ? "light" : "dark")}
         >
@@ -76,7 +80,7 @@ export default function SettingsAppLanguage() {
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.sectionTitle, { color: textPrimary }]}>
-          Language
+          {t('settings.language')}
         </Text>
         <View style={[styles.card, { backgroundColor: surface }]}>
           {LANGUAGES.map((lang, index) => (
@@ -84,7 +88,7 @@ export default function SettingsAppLanguage() {
               <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel={lang.label}
-                accessibilityState={{ selected: language === lang.code }}
+                accessibilityState={{ selected: activeLanguage === lang.code }}
                 activeOpacity={0.7}
                 onPress={() => setLanguage(lang.code)}
                 style={styles.row}
@@ -93,7 +97,7 @@ export default function SettingsAppLanguage() {
                 <Text style={[styles.label, { color: textPrimary }]}>
                   {lang.label}
                 </Text>
-                {renderRadio(language === lang.code)}
+                {renderRadio(activeLanguage === lang.code)}
               </TouchableOpacity>
               {index < LANGUAGES.length - 1 ? (
                 <View
@@ -104,7 +108,7 @@ export default function SettingsAppLanguage() {
           ))}
         </View>
         <Text style={[styles.hint, { color: textSecondary }]}>
-          Your choice is saved instantly. Bengali translations are coming soon.
+          {t('app_language.hint')}
         </Text>
       </ScrollView>
     </SafeAreaView>

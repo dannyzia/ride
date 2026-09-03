@@ -18,6 +18,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { formatBDT, formatRelativeTime } from "@/lib/format";
 import EmptyState from "@/components/EmptyState";
+import { useTranslation } from "react-i18next";
 
 interface ReferralRecent {
   referee_phone: string | null;
@@ -51,6 +52,7 @@ function maskPhone(phone: string): string {
 }
 
 export default function Referral() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const [data, setData] = useState<ReferralResponse | null>(null);
@@ -107,15 +109,15 @@ export default function Referral() {
     if (!data?.code) return;
     const rewardPart =
       data.campaign && data.campaign.referee_reward_bdt > 0
-        ? ` Get ${formatBDT(data.campaign.referee_reward_bdt)} off your first ride.`
+        ? t('referral.share_reward', { amount: formatBDT(data.campaign.referee_reward_bdt) })
         : "";
-    const message = `Join me on Ride! Use my referral code ${data.code} when you sign up.${rewardPart}`;
+    const message = t('referral.share_message', { code: data.code }) + rewardPart;
     try {
       await Share.share({ message });
     } catch (err) {
       logger.warn("[referral] share failed", err);
     }
-  }, [data]);
+  }, [data, t]);
 
   const handleCopy = useCallback(async () => {
     if (!data?.code) return;
@@ -138,7 +140,7 @@ export default function Referral() {
       >
         <View style={styles.recentInfo}>
           <Text style={[styles.recentPhone, { color: textPrimary }]} numberOfLines={1}>
-            {item.referee_phone ? maskPhone(item.referee_phone) : "Unknown"}
+            {item.referee_phone ? maskPhone(item.referee_phone) : t('referral.unknown')}
           </Text>
           <Text style={[styles.recentTime, { color: textDisabled }]}>
             {formatRelativeTime(item.created_at)}
@@ -151,7 +153,7 @@ export default function Referral() {
           ]}
         >
           <Text style={[styles.statusText, { color: rewarded ? colors.primary : colors.amber }]}>
-            {rewarded ? "Rewarded" : "Pending"}
+            {rewarded ? t('referral.rewarded') : t('referral.pending')}
           </Text>
         </View>
       </View>
@@ -168,10 +170,10 @@ export default function Referral() {
         translucent
       />
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
-        <Text style={[styles.headerTitle, { color: textPrimary }]}>Referrals</Text>
+        <Text style={[styles.headerTitle, { color: textPrimary }]}>{t('referral.title')}</Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('referral.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           style={[styles.themeToggle, { backgroundColor: surfaceBg, borderColor }]}
         >
@@ -207,29 +209,29 @@ export default function Referral() {
           <View style={styles.errorWrap}>
             <Ionicons name="warning-outline" size={48} color={colors.danger} />
             <Text style={[styles.errorTitle, { color: colors.danger }]}>
-              Could not load referrals
+              {t('referral.load_failed')}
             </Text>
             <Text style={[styles.stateSubtitle, { color: textSecondary }]}>
-              Pull down to retry
+              {t('referral.pull_to_retry')}
             </Text>
           </View>
         ) : isEmpty ? (
           <EmptyState
             icon="gift-outline"
-            title="No referrals yet"
-            subtitle="Your referral code will appear here once it's available"
+            title={t('referral.no_referrals')}
+            subtitle={t('referral.no_referrals_sub')}
           />
         ) : data ? (
           <>
             <View style={[styles.codeCard, { backgroundColor: surfaceBg, borderColor }]}>
               <Text style={[styles.codeLabel, { color: textSecondary }]}>
-                Your referral code
+                {t('referral.your_code')}
               </Text>
               {data.code ? (
                 <Text style={styles.codeValue}>{data.code}</Text>
               ) : (
                 <Text style={[styles.codeMissing, { color: textSecondary }]}>
-                  No referral code available yet
+                  {t('referral.no_code')}
                 </Text>
               )}
             </View>
@@ -238,16 +240,16 @@ export default function Referral() {
               <View style={styles.buttonRow}>
                 <TouchableOpacity
                   accessibilityRole="button"
-                  accessibilityLabel="Share referral code"
+                  accessibilityLabel={t('referral.a11y_share_code')}
                   style={[styles.shareButton, { backgroundColor: colors.primary }]}
                   onPress={handleShare}
                 >
                   <Ionicons name="share-social-outline" size={18} color={colors.white} />
-                  <Text style={styles.shareButtonText}>Share</Text>
+                  <Text style={styles.shareButtonText}>{t('referral.share')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   accessibilityRole="button"
-                  accessibilityLabel="Copy referral code"
+                  accessibilityLabel={t('referral.a11y_copy_code')}
                   style={[
                     styles.copyButton,
                     {
@@ -268,7 +270,7 @@ export default function Referral() {
                       { color: copied ? colors.primary : textPrimary },
                     ]}
                   >
-                    {copied ? "Copied!" : "Copy"}
+                    {copied ? t('referral.copied') : t('referral.copy')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -279,30 +281,30 @@ export default function Referral() {
                 <Text style={[styles.statValue, { color: textPrimary }]}>
                   {data.stats.total_referrals}
                 </Text>
-                <Text style={[styles.statLabel, { color: textSecondary }]}>Invited</Text>
+                <Text style={[styles.statLabel, { color: textSecondary }]}>{t('referral.invited')}</Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
               <View style={styles.statCol}>
                 <Text style={[styles.statValue, { color: textPrimary }]}>
                   {data.stats.successful}
                 </Text>
-                <Text style={[styles.statLabel, { color: textSecondary }]}>Successful</Text>
+                <Text style={[styles.statLabel, { color: textSecondary }]}>{t('referral.successful')}</Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
               <View style={styles.statCol}>
                 <Text style={[styles.statValue, { color: textPrimary }]}>
                   {formatBDT(data.stats.total_reward_bdt)}
                 </Text>
-                <Text style={[styles.statLabel, { color: textSecondary }]}>Earned</Text>
+                <Text style={[styles.statLabel, { color: textSecondary }]}>{t('referral.earned')}</Text>
               </View>
             </View>
 
-            <Text style={[styles.sectionTitle, { color: textPrimary }]}>Recent referrals</Text>
+            <Text style={[styles.sectionTitle, { color: textPrimary }]}>{t('referral.recent')}</Text>
             {data.recent.length > 0 ? (
               data.recent.map(renderRecentItem)
             ) : (
               <Text style={[styles.noRecent, { color: textSecondary }]}>
-                Friends you invite will show up here
+                {t('referral.recent_empty')}
               </Text>
             )}
           </>

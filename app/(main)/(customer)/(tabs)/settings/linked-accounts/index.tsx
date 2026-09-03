@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface LinkedAccount {
   provider: string;
@@ -17,6 +18,7 @@ interface LinkedAccount {
 }
 
 export default function SettingsLinkedAccounts() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -56,9 +58,9 @@ export default function SettingsLinkedAccounts() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Linked Accounts</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.linked_accounts')}</Text>
         <View className="w-[50px]" />
       </View>
       {loading ? (
@@ -68,17 +70,17 @@ export default function SettingsLinkedAccounts() {
       ) : (
         <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
           <View className="mt-4 mb-4">
-            <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>Connected Services</Text>
+            <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('linked_accounts.connected_services')}</Text>
             {accounts.length === 0 ? (
               <Text className="text-[14px] font-Jakarta py-4" style={{ color: textSecondary }}>
-                No linked accounts. Connect a service below.
+                {t('linked_accounts.empty')}
               </Text>
             ) : (
               accounts.map((acc) => (
                 <View key={acc.provider} className="flex-row items-center px-[12px] py-[8px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }}>
                   <View className="w-8 h-8 rounded-full mr-3 items-center justify-center"><Ionicons name={acc.provider === "google" ? "phone-portrait" : "business"} size={16} color={textSecondary} /></View>
                   <View className="flex-1"><Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{acc.label}</Text></View>
-                  <View className="rounded-full px-[8px] py-[2px]" style={{ backgroundColor: colors.primary + "1A" }}><Text className="text-[11px] font-JakartaBold" style={{ color: colors.primary }}>Connected</Text></View>
+                  <View className="rounded-full px-[8px] py-[2px]" style={{ backgroundColor: colors.primary + "1A" }}><Text className="text-[11px] font-JakartaBold" style={{ color: colors.primary }}>{t('linked_accounts.connected')}</Text></View>
                 </View>
               ))
             )}
@@ -88,7 +90,7 @@ export default function SettingsLinkedAccounts() {
                 style={{ backgroundColor: surfaceBg, borderColor }}
                 disabled
               >
-                <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>Add Account — Coming soon</Text>
+                <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>{t('linked_accounts.add_account')}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -40,6 +40,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import SosBanner from "@/components/SosBanner";
+import { useTranslation } from "react-i18next";
 
 // ── Vehicle icons per type ───────────────────────────────────────
 const VEHICLE_ICONS: Record<VehicleTypeEnum, VehicleIconName> = {
@@ -95,6 +96,7 @@ export default function HomeScreen() {
     vehicle_type?: string;
   }>();
 
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { language, setTheme } = useAppearance();
 
@@ -203,13 +205,13 @@ export default function HomeScreen() {
       setPickup({
         id: "current",
         label: "Current Location",
-        address: userAddress || "Current Location",
+        address: userAddress || t('rider_home.current_location'),
         lat: userLatitude,
         lng: userLongitude,
       });
       setPickupCoords({ lat: userLatitude, lng: userLongitude });
     }
-  }, [userLatitude, userLongitude, userAddress]);
+  }, [userLatitude, userLongitude, userAddress, t]);
 
   // ── Init: set category from service param ──────────────────────
   useEffect(() => {
@@ -418,11 +420,11 @@ export default function HomeScreen() {
         setEstimateError(data.message || data.error);
       }
     } catch {
-      setEstimateError("Failed to fetch estimates");
+      setEstimateError(t('rider_home.estimates_failed'));
     } finally {
       setEstimateLoading(false);
     }
-  }, [pickupCoords, dropoffCoords, stops]);
+  }, [pickupCoords, dropoffCoords, stops, t]);
 
   useEffect(() => {
     if (hasRoute) fetchEstimates();
@@ -579,11 +581,11 @@ export default function HomeScreen() {
       });
       setShowSavePlace(false);
       setSavePlaceLabel("");
-      Alert.alert("Saved", `${savePlaceLabel.trim()} saved to your places`);
+      Alert.alert(t('rider_home.place_saved_title'), t('rider_home.place_saved', { label: savePlaceLabel.trim() }));
     } catch {
-      Alert.alert("Error", "Could not save place");
+      Alert.alert(t('common.error'), t('rider_home.save_place_failed'));
     }
-  }, [savePlaceLabel, destination]);
+  }, [savePlaceLabel, destination, t]);
 
   // ── Navigation handlers ────────────────────────────────────────
   const handleLocationSelect = useCallback(
@@ -656,7 +658,7 @@ export default function HomeScreen() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        Alert.alert("Error", "Not authenticated");
+        Alert.alert(t('common.error'), t('rider_home.not_authenticated'));
         return;
       }
 
@@ -697,14 +699,14 @@ export default function HomeScreen() {
         router.push("/(main)/(customer)/finding-driver");
       } else {
         Alert.alert(
-          "Request Failed",
-          data.message || data.error || "Could not find a driver",
+          t('rider_home.request_failed'),
+          data.message || data.error || t('rider_home.no_driver_found'),
         );
       }
     } catch (err) {
       Alert.alert(
-        "Error",
-        err instanceof Error ? err.message : "Network error",
+        t('common.error'),
+        err instanceof Error ? err.message : t('rider_home.network_error'),
       );
     } finally {
       setRequesting(false);
@@ -717,6 +719,7 @@ export default function HomeScreen() {
     destination,
     stops,
     selectedPromo,
+    t,
   ]);
 
   // ── Backdrop ───────────────────────────────────────────────────
@@ -755,13 +758,13 @@ export default function HomeScreen() {
         <Ionicons name="locate-outline" size={20} color={colors.primary} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.inputLabel, { color: textSecondary }]}>
-            Pickup
+            {t('rider_home.pickup')}
           </Text>
           <Text
             style={[styles.inputValue, { color: textPrimary }]}
             numberOfLines={1}
           >
-            {pickup?.address || "Current location"}
+            {pickup?.address || t('rider_home.current_location_placeholder')}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={textDisabled} />
@@ -787,12 +790,12 @@ export default function HomeScreen() {
           >
             <Ionicons name="flag" size={20} color={colors.amber} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.inputLabel, { color: textSecondary }]}>Stop {i + 1}</Text>
+              <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('rider_home.stop_number', { number: i + 1 })}</Text>
               <Text
                 style={[styles.inputValue, { color: stop.address ? textPrimary : textDisabled }]}
                 numberOfLines={1}
               >
-                {stop.address || "Add stop"}
+                {stop.address || t('rider_home.add_stop')}
               </Text>
             </View>
             <TouchableOpacity
@@ -816,7 +819,7 @@ export default function HomeScreen() {
           onPress={() => setStops([...stops, { lat: 0, lng: 0, address: "" }])}
         >
           <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-          <Text style={[styles.addStopText, { color: colors.primary }]}>Add Stop</Text>
+          <Text style={[styles.addStopText, { color: colors.primary }]}>{t('rider_home.add_stop_button')}</Text>
         </TouchableOpacity>
       )}
 
@@ -831,12 +834,12 @@ export default function HomeScreen() {
       >
         <Ionicons name="location" size={20} color={colors.danger} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.inputLabel, { color: textSecondary }]}>Where to?</Text>
+          <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('home.search_destination')}</Text>
           <Text
             style={[styles.inputValue, { color: destination ? textPrimary : textDisabled }]}
             numberOfLines={1}
           >
-            {destination?.address || "Enter destination"}
+            {destination?.address || t('rider_home.enter_destination')}
           </Text>
         </View>
         {destination && (
@@ -856,7 +859,7 @@ export default function HomeScreen() {
           <Text
             style={[styles.sectionLabel, { color: textSecondary, marginTop: 20 }]}
           >
-            Saved places
+            {t('rider_home.saved_places')}
           </Text>
           <ScrollView
             horizontal
@@ -907,7 +910,7 @@ export default function HomeScreen() {
           <Text
             style={[styles.sectionLabel, { color: textSecondary, marginTop: 20 }]}
           >
-            Recent
+            {t('rider_home.recent')}
           </Text>
           {recentPlaces.map((place) => (
             <TouchableOpacity
@@ -965,7 +968,7 @@ export default function HomeScreen() {
         }}
       >
         <Ionicons name="map-outline" size={20} color={colors.primary} />
-        <Text style={[styles.selectOnMapText, { color: colors.primary }]}>Select on map</Text>
+        <Text style={[styles.selectOnMapText, { color: colors.primary }]}>{t('rider_home.select_on_map')}</Text>
       </TouchableOpacity>
 
       {/* Next button */}
@@ -980,7 +983,7 @@ export default function HomeScreen() {
         onPress={handleNext}
         disabled={!hasRoute}
       >
-        <Text style={styles.nextBtnText}>Next</Text>
+        <Text style={styles.nextBtnText}>{t('rider_home.next')}</Text>
       </TouchableOpacity>
     </BottomSheetScrollView>
   );
@@ -1001,7 +1004,7 @@ export default function HomeScreen() {
       >
         <Ionicons name="arrow-back" size={22} color={textPrimary} />
         <Text style={[styles.backBtnText, { color: textPrimary }]}>
-          Edit route
+          {t('rider_home.edit_route')}
         </Text>
       </TouchableOpacity>
 
@@ -1054,7 +1057,7 @@ export default function HomeScreen() {
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.mutedText, { color: textSecondary }]}>
-            Calculating fares...
+            {t('rider_home.calculating_fares')}
           </Text>
         </View>
       ) : estimateError ? (
@@ -1071,7 +1074,7 @@ export default function HomeScreen() {
                 marginTop: 12,
               }}
             >
-              Retry
+              {t('common.retry')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1079,11 +1082,11 @@ export default function HomeScreen() {
         <>
           {/* Estimated fare header */}
           <Text style={[styles.fareHeader, { color: textPrimary }]}>
-            Estimated fare
+            {t('rider_home.estimated_fare')}
           </Text>
           {nearbyCount > 0 && (
             <Text style={[styles.vehicleRowSub, { color: textSecondary, marginTop: -8, marginBottom: 12 }]}>          
-              {nearbyCount} driver{nearbyCount !== 1 ? 's' : ''} nearby{pickupEta != null ? ` · ~${pickupEta} min pickup` : ''}
+              {t('rider_home.drivers_nearby', { count: nearbyCount })}{pickupEta != null ? t('rider_home.drivers_nearby_eta', { minutes: pickupEta }) : ''}
             </Text>
           )}
 
@@ -1135,13 +1138,13 @@ export default function HomeScreen() {
                         { color: textSecondary },
                       ]}
                     >
-                      {est.distance_km != null ? `${est.distance_km.toFixed(1)} km` : ''}{' · '}{est.eta_minutes} min trip{' · '}{est.seats} seats
+                      {est.distance_km != null ? t('rider_home.km', { distance: est.distance_km.toFixed(1) }) : ''}{' · '}{t('rider_home.min_trip', { minutes: est.eta_minutes })}{' · '}{t('rider_home.seats', { seats: est.seats })}
                     </Text>
                     {pickupEta != null && (
                       <Text
                         style={[styles.vehicleRowSub, { color: colors.primary, marginTop: 2 }]}
                       >
-                        ~{pickupEta} min pickup
+                        {t('rider_home.min_pickup', { minutes: pickupEta })}
                       </Text>
                     )}
                   </View>
@@ -1168,7 +1171,7 @@ export default function HomeScreen() {
       ) : (
         <View style={styles.centerBox}>
           <Text style={[styles.mutedText, { color: textSecondary }]}>
-            No vehicles available for this route
+            {t('rider_home.no_vehicles')}
           </Text>
         </View>
       )}
@@ -1180,7 +1183,7 @@ export default function HomeScreen() {
             <Text
               style={[styles.fareHeader, { color: textPrimary, marginTop: 20 }]}
             >
-              Promos & Vouchers
+              {t('rider_home.promos_vouchers')}
             </Text>
             <View style={{ gap: 8 }}>
               {selectedEstimate.available_discounts.map((d) => {
@@ -1216,8 +1219,8 @@ export default function HomeScreen() {
                       </Text>
                       <Text style={{ color: textSecondary, fontSize: 12 }}>
                         {d.percent
-                          ? `${d.percent}% off`
-                          : `৳${(d.amount_bdt / 100).toFixed(0)} off`}
+                          ? t('rider_home.percent_off', { percent: d.percent })
+                          : t('rider_home.amount_off', { amount: (d.amount_bdt / 100).toFixed(0) })}
                       </Text>
                     </View>
                     <Ionicons
@@ -1250,10 +1253,12 @@ export default function HomeScreen() {
           <ActivityIndicator size="small" color={colors.white} />
         ) : (
           <Text style={styles.callBtnText}>
-            Call for {vehicleDef?.display_en || "Ride"} · ৳
-            {selectedEstimate
-              ? (selectedEstimate.total_bdt / 100).toFixed(0)
-              : "—"}
+            {t('rider_home.call_for_ride', {
+              type: vehicleDef?.display_en || "Ride",
+              amount: selectedEstimate
+                ? (selectedEstimate.total_bdt / 100).toFixed(0)
+                : "—",
+            })}
           </Text>
         )}
       </TouchableOpacity>
@@ -1289,7 +1294,7 @@ export default function HomeScreen() {
           {/* Choice buttons at bottom */}
           <View style={styles.mapPinActions}>
             <Text style={[styles.mutedText, { color: textSecondary, marginBottom: 8 }]}>
-              {mapPinLoading ? "Getting address..." : mapPinAddress || "Tap a location"}
+              {mapPinLoading ? t('rider_home.getting_address') : mapPinAddress || t('rider_home.tap_location')}
             </Text>
             <View style={{ flexDirection: "row", gap: 10 }}>
               <TouchableOpacity
@@ -1297,21 +1302,21 @@ export default function HomeScreen() {
                 onPress={() => handleMapPinConfirm("from")}
               >
                 <Ionicons name="locate-outline" size={18} color={colors.white} />
-                <Text style={styles.mapPinBtnText}>Set as Pickup</Text>
+                <Text style={styles.mapPinBtnText}>{t('rider_home.set_as_pickup')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.mapPinBtn, { backgroundColor: colors.danger }]}
                 onPress={() => handleMapPinConfirm("to")}
               >
                 <Ionicons name="location" size={18} color={colors.white} />
-                <Text style={styles.mapPinBtnText}>Set as Destination</Text>
+                <Text style={styles.mapPinBtnText}>{t('rider_home.set_as_destination')}</Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity
               onPress={() => { setMapPinCoords(null); setMapPinAddress(""); }}
               style={{ marginTop: 8 }}
             >
-              <Text style={{ color: textSecondary, fontFamily: "Jakarta-SemiBold", fontSize: 14 }}>Cancel</Text>
+              <Text style={{ color: textSecondary, fontFamily: "Jakarta-SemiBold", fontSize: 14 }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1383,36 +1388,39 @@ export default function HomeScreen() {
             ]}
           >
             <Text style={[styles.fareHeader, { marginBottom: 16 }]}>
-              Save this place
+              {t('rider_home.save_this_place')}
             </Text>
             {/* Quick labels */}
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
-              {["Home", "Work"].map((label) => (
+              {[
+                { key: "Home", labelKey: "rider_home.label_home" },
+                { key: "Work", labelKey: "rider_home.label_work" },
+              ].map((label) => (
                 <TouchableOpacity
-                  key={label}
+                  key={label.key}
                   style={[
                     styles.savedPill,
                     {
                       backgroundColor:
-                        savePlaceLabel === label ? colors.primary : surfaceBg,
-                      borderColor: savePlaceLabel === label ? colors.primary : borderColor,
+                        savePlaceLabel === label.key ? colors.primary : surfaceBg,
+                      borderColor: savePlaceLabel === label.key ? colors.primary : borderColor,
                     },
                   ]}
-                  onPress={() => setSavePlaceLabel(label)}
+                  onPress={() => setSavePlaceLabel(label.key)}
                 >
                   <Ionicons
-                    name={label === "Home" ? "home" : "briefcase"}
+                    name={label.key === "Home" ? "home" : "briefcase"}
                     size={16}
-                    color={savePlaceLabel === label ? colors.white : textPrimary}
+                    color={savePlaceLabel === label.key ? colors.white : textPrimary}
                   />
                   <Text
                     style={{
-                      color: savePlaceLabel === label ? colors.white : textPrimary,
+                      color: savePlaceLabel === label.key ? colors.white : textPrimary,
                       fontFamily: "Jakarta-SemiBold",
                       fontSize: 13,
                     }}
                   >
-                    {label}
+                    {t(label.labelKey)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -1433,7 +1441,7 @@ export default function HomeScreen() {
                     fontSize: 15,
                     padding: 0,
                   }}
-                  placeholder="Custom label (e.g., Gym, School)"
+                  placeholder={t('rider_home.custom_label_placeholder')}
                   placeholderTextColor={textDisabled}
                   value={savePlaceLabel}
                   onChangeText={setSavePlaceLabel}
@@ -1455,14 +1463,14 @@ export default function HomeScreen() {
                   setSavePlaceLabel("");
                 }}
               >
-                <Text style={[styles.nextBtnText, { color: textSecondary }]}>Cancel</Text>
+                <Text style={[styles.nextBtnText, { color: textSecondary }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.nextBtn, { flex: 1, backgroundColor: savePlaceLabel.trim() ? colors.primary : textDisabled }]}
                 onPress={handleSavePlace}
                 disabled={!savePlaceLabel.trim()}
               >
-                <Text style={styles.nextBtnText}>Save</Text>
+                <Text style={styles.nextBtnText}>{t('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </View>

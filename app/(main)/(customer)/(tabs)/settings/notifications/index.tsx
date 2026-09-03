@@ -18,6 +18,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import SettingsRow from "@/components/SettingsRow";
+import { useTranslation } from "react-i18next";
 
 interface Prefs {
   ride_updates: boolean;
@@ -44,17 +45,17 @@ const DEFAULT_PREFS: Prefs = {
 
 interface PrefRowConfig {
   key: PrefKey;
-  label: string;
+  labelKey: string;
   icon: keyof typeof Ionicons.glyphMap;
   iconColor?: string;
 }
 
 const ALERT_ROWS: PrefRowConfig[] = [
-  { key: "ride_updates", label: "Ride Updates", icon: "car-sport-outline" },
-  { key: "promo_offers", label: "Promotions & Offers", icon: "pricetag-outline" },
+  { key: "ride_updates", labelKey: "notifications_screen.ride_updates", icon: "car-sport-outline" },
+  { key: "promo_offers", labelKey: "notifications_screen.promo_offers", icon: "pricetag-outline" },
   {
     key: "service_alerts",
-    label: "Service Alerts",
+    labelKey: "notifications_screen.service_alerts",
     icon: "warning-outline",
     iconColor: colors.amber,
   },
@@ -63,13 +64,13 @@ const ALERT_ROWS: PrefRowConfig[] = [
 const CHANNEL_ROWS: PrefRowConfig[] = [
   {
     key: "email_notifications",
-    label: "Email Notifications",
+    labelKey: "notifications_screen.email_notifications",
     icon: "mail-outline",
     iconColor: colors.info,
   },
   {
     key: "sms_notifications",
-    label: "SMS Notifications",
+    labelKey: "notifications_screen.sms_notifications",
     icon: "phone-portrait-outline",
     iconColor: colors.info,
   },
@@ -81,20 +82,23 @@ const ErrorBanner = ({
 }: {
   message: string;
   onRetry: () => void;
-}) => (
-  <View style={[styles.banner, { backgroundColor: `${colors.danger}1A` }]}>
-    <Ionicons name="alert-circle" size={20} color={colors.danger} />
-    <Text style={[styles.bannerText, { color: colors.danger }]}>{message}</Text>
-    <TouchableOpacity
-      accessibilityRole="button"
-      accessibilityLabel="Retry"
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      onPress={onRetry}
-    >
-      <Text style={styles.bannerAction}>Retry</Text>
-    </TouchableOpacity>
-  </View>
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <View style={[styles.banner, { backgroundColor: `${colors.danger}1A` }]}>
+      <Ionicons name="alert-circle" size={20} color={colors.danger} />
+      <Text style={[styles.bannerText, { color: colors.danger }]}>{message}</Text>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={t('common.retry')}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        onPress={onRetry}
+      >
+        <Text style={styles.bannerAction}>{t('common.retry')}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
 
 const SkeletonRow = ({ block }: { block: string }) => (
   <View style={styles.skeletonRow}>
@@ -106,6 +110,7 @@ const SkeletonRow = ({ block }: { block: string }) => (
 export default function SettingsNotifications() {
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
+  const { t } = useTranslation();
 
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
@@ -205,7 +210,7 @@ export default function SettingsNotifications() {
       key={row.key}
       icon={row.icon}
       iconColor={row.iconColor}
-      label={row.label}
+      label={t(row.labelKey)}
       onPress={() => toggle(row.key)}
       showChevron={false}
       isLast={isLast}
@@ -215,7 +220,7 @@ export default function SettingsNotifications() {
           onValueChange={() => toggle(row.key)}
           trackColor={{ false: borderColor, true: colors.primary }}
           thumbColor={colors.white}
-          accessibilityLabel={row.label}
+          accessibilityLabel={t(row.labelKey)}
         />
       }
     />
@@ -231,18 +236,18 @@ export default function SettingsNotifications() {
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => router.back()}
         >
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>
-          Notifications
+          {t('settings.notifications')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('notifications_screen.toggle_theme')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => setTheme(isDark ? "light" : "dark")}
         >
@@ -256,7 +261,7 @@ export default function SettingsNotifications() {
       <ScrollView contentContainerStyle={styles.content}>
         {loadError ? (
           <ErrorBanner
-            message="Couldn't load your preferences."
+            message={t('notifications_screen.load_failed')}
             onRetry={load}
           />
         ) : null}
@@ -272,7 +277,7 @@ export default function SettingsNotifications() {
         ) : (
           <>
             <Text style={[styles.sectionTitle, { color: textPrimary }]}>
-              Alert Types
+              {t('notifications_screen.alert_types')}
             </Text>
             <View style={[styles.card, { backgroundColor: surface }]}>
               {ALERT_ROWS.map((row, index) =>
@@ -282,7 +287,7 @@ export default function SettingsNotifications() {
             <Text
               style={[styles.sectionTitle, { color: textPrimary, marginTop: 24 }]}
             >
-              Notification Channels
+              {t('notifications_screen.channels')}
             </Text>
             <View style={[styles.card, { backgroundColor: surface }]}>
               {CHANNEL_ROWS.map((row, index) =>
@@ -302,19 +307,19 @@ export default function SettingsNotifications() {
                   color={colors.checkGreen}
                 />
                 <Text style={[styles.bannerText, { color: colors.checkGreen }]}>
-                  Preferences saved
+                  {t('notifications_screen.saved')}
                 </Text>
               </View>
             ) : null}
             {saveError ? (
               <ErrorBanner
-                message="Couldn't save your preferences. Your toggles are kept."
+                message={t('notifications_screen.save_failed')}
                 onRetry={save}
               />
             ) : null}
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel="Save Preferences"
+              accessibilityLabel={t('notifications_screen.save')}
               activeOpacity={0.8}
               disabled={saving}
               onPress={save}
@@ -323,7 +328,7 @@ export default function SettingsNotifications() {
               {saving ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <Text style={styles.saveButtonText}>Save Preferences</Text>
+                <Text style={styles.saveButtonText}>{t('notifications_screen.save')}</Text>
               )}
             </TouchableOpacity>
           </>

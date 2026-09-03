@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface RideDetail {
   id: string;
@@ -22,6 +23,7 @@ interface RideDetail {
 }
 
 export default function RideDetailsScheduled() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [ride, setRide] = useState<RideDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,15 +43,15 @@ export default function RideDetailsScheduled() {
         setLoading(true); setError("");
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        if (!token) { setError("Not authenticated"); return; }
+        if (!token) { setError(t('finish_ride.not_authenticated')); return; }
         const res = await fetch(`${API_URL}/api/ride/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        if (!res.ok) { setError(data.error || "Failed to load"); return; }
+        if (!res.ok) { setError(data.error || t('ride_details_scheduled.failed_to_load')); return; }
         if (!cancelled) setRide(data.ride);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Network error");
+        if (!cancelled) setError(err instanceof Error ? err.message : t('wallet.network_error'));
         logger.error("RideDetailsScheduled fetch failed", err);
       } finally {
         if (!cancelled) setLoading(false);
@@ -67,9 +69,9 @@ export default function RideDetailsScheduled() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Ride Details</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('ride_details_scheduled.title')}</Text>
         <View className="w-[50px]" />
       </View>
       {loading ? (
@@ -84,12 +86,12 @@ export default function RideDetailsScheduled() {
             style={{ backgroundColor: colors.primary }}
             onPress={() => { setLoading(true); setError(""); }}
           >
-            <Text className="text-[16px] font-JakartaBold text-goWhite">Retry</Text>
+            <Text className="text-[16px] font-JakartaBold text-goWhite">{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : !ride ? (
         <View className="flex-1 items-center justify-center">
-          <Text className="text-[18px] font-JakartaBold" style={{ color: textSecondary }}>Ride not found</Text>
+          <Text className="text-[18px] font-JakartaBold" style={{ color: textSecondary }}>{t('ride_details_scheduled.ride_not_found')}</Text>
         </View>
       ) : (
         <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 24 }}>
@@ -103,7 +105,7 @@ export default function RideDetailsScheduled() {
               </View>
               <View className="flex-1">
                 <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>
-                  {ride.vehicle_type?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? "Ride"}
+                  {ride.vehicle_type?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? t('ride_details_scheduled.ride')}
                 </Text>
                 <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>
                   {formattedDate} · {formattedTime}
@@ -112,13 +114,13 @@ export default function RideDetailsScheduled() {
             </View>
             <View className="gap-1">
               <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
-                Pickup: {ride.origin_address ?? "—"}
+                {t('ride_details_scheduled.pickup_label', { address: ride.origin_address ?? "—" })}
               </Text>
               <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
-                Destination: {ride.destination_address ?? "—"}
+                {t('ride_details_scheduled.destination_label', { address: ride.destination_address ?? "—" })}
               </Text>
               <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
-                Fare: ৳{((ride.fare_breakdown?.total_bdt ?? 0) / 100).toFixed(0)}
+                {t('ride_details_scheduled.fare_label', { amount: ((ride.fare_breakdown?.total_bdt ?? 0) / 100).toFixed(0) })}
               </Text>
             </View>
           </View>
@@ -128,14 +130,14 @@ export default function RideDetailsScheduled() {
               style={{ backgroundColor: colors.primary }}
               onPress={() => router.push("/(main)/(customer)/rate-driver")}
             >
-              <Text className="text-[16px] font-JakartaBold text-goWhite">Rate Driver</Text>
+              <Text className="text-[16px] font-JakartaBold text-goWhite">{t('ride.rate_driver')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               className="flex-1 border rounded-full py-[14px] items-center"
               style={{ borderColor }}
               onPress={() => router.replace("/(main)/(customer)/cancel-reason")}
             >
-              <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>Cancel</Text>
+              <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

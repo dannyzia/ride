@@ -7,8 +7,10 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { authCleanup } from "@/lib/authCleanup";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsLogoutConfirmation() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -40,10 +42,10 @@ export default function SettingsLogoutConfirmation() {
           <Ionicons name="log-out-outline" size={40} color={colors.danger} />
         </View>
         <Text className="text-[24px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>
-          Log Out
+          {t('logout_confirmation.title')}
         </Text>
         <Text className="text-[16px] font-Jakarta text-center" style={{ color: textSecondary }}>
-          Are you sure you want to log out? You will need to enter your phone number and OTP to sign in again.
+          {t('logout_confirmation.message')}
         </Text>
       </View>
       <View className="w-full gap-4">
@@ -52,19 +54,19 @@ export default function SettingsLogoutConfirmation() {
           style={{ backgroundColor: colors.danger }}
           onPress={handleLogout}
           accessibilityRole="button"
-          accessibilityLabel="Log out"
+          accessibilityLabel={t('logout_confirmation.log_out_a11y')}
         >
-          <Text className="text-[18px] font-JakartaBold text-goWhite">Log Out</Text>
+          <Text className="text-[18px] font-JakartaBold text-goWhite">{t('logout_confirmation.title')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           className="rounded-full w-full py-[16px] items-center"
           style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Cancel"
+          accessibilityLabel={t('common.cancel')}
         >
           <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>
-            Cancel
+            {t('common.cancel')}
           </Text>
         </TouchableOpacity>
       </View>

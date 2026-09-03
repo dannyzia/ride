@@ -31,6 +31,7 @@ import {
   getVehicleType,
 } from "@/lib/vehicleTypes";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
+import { useTranslation } from "react-i18next";
 
 
 
@@ -574,7 +575,7 @@ function ClassificationErrorModal({
 }
 
 export default function OnboardingWizard() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const fetchDriver = useDriverFlowStore((s) => s.fetchDriver);
 

@@ -9,8 +9,10 @@ import PaymentWebView from "@/components/PaymentWebView";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function TopUpMethod() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -31,14 +33,14 @@ export default function TopUpMethod() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) { setError("Not authenticated"); return; }
+      if (!token) { setError(t('wallet.not_authenticated')); return; }
       const res = await fetch(`${API_URL}/api/rider/wallet/topup`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ amount_bdt: parseInt(amount || "500", 10) * 100 }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Payment failed"); return; }
+      if (!res.ok) { setError(data.error || t('top_up_method.payment_failed')); return; }
       if (data.payment_url) {
         setPaymentUrl(data.payment_url);
         setPaymentEventId(data.payment_event_id);
@@ -46,7 +48,7 @@ export default function TopUpMethod() {
         router.replace(`/(main)/(customer)/(tabs)/settings/top-up-success?amount=${amount}`);
       }
     } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : "Network error");
+      setError(err instanceof Error && err.message ? err.message : t('wallet.network_error'));
       logger.error("Top-up payment failed", err);
     } finally {
       setLoading(false);
@@ -59,7 +61,7 @@ export default function TopUpMethod() {
         bkashURL={paymentUrl}
         paymentID={paymentEventId}
         onSuccess={() => router.replace(`/(main)/(customer)/(tabs)/settings/top-up-success?amount=${amount}`)}
-        onError={(err) => { setPaymentUrl(""); setError(err || "Payment failed"); }}
+        onError={(err) => { setPaymentUrl(""); setError(err || t('top_up_method.payment_failed')); }}
       />
     );
   }
@@ -69,20 +71,20 @@ export default function TopUpMethod() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Payment</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('top_up_method.payment')}</Text>
         <View className="w-[50px]" />
       </View>
       <View className="flex-1 px-[24px] pt-[24px]">
         <Text className="text-[15px] font-Jakarta mb-1" style={{ color: textSecondary }}>
-          Amount
+          {t('top_up_method.amount')}
         </Text>
         <Text className="text-[28px] font-JakartaBold tracking-tight mb-6" style={{ color: textPrimary }}>
           ৳{amount ?? "500"}
         </Text>
         <Text className="text-[15px] font-Jakarta mb-6" style={{ color: textSecondary }}>
-          You will be redirected to our secure payment partner (PortPos) to complete your top-up.
+          {t('top_up_method.redirect_notice')}
         </Text>
         {error ? (
           <Text className="text-[14px] font-Jakarta mb-3" style={{ color: colors.danger }}>{error}</Text>
@@ -96,7 +98,7 @@ export default function TopUpMethod() {
           {loading ? (
             <ActivityIndicator size={20} color="#FFFFFF" />
           ) : (
-            <Text className="text-[18px] font-JakartaBold text-goWhite">Pay ৳{amount ?? "500"}</Text>
+            <Text className="text-[18px] font-JakartaBold text-goWhite">{t('top_up_method.pay', { amount: amount ?? "500" })}</Text>
           )}
         </TouchableOpacity>
       </View>

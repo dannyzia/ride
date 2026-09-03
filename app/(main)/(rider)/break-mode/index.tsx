@@ -17,8 +17,10 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 function HeaderThemeToggle() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -29,7 +31,7 @@ function HeaderThemeToggle() {
     <TouchableOpacity
       onPress={() => setTheme(isDark ? "light" : "dark")}
       accessibilityRole="button"
-      accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      accessibilityLabel={isDark ? t('break_mode.switch_light_theme') : t('break_mode.switch_dark_theme')}
       style={{
         width: 40,
         height: 40,
@@ -51,6 +53,7 @@ function HeaderThemeToggle() {
 }
 
 export default function BreakMode() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const [breakStartedAt, setBreakStartedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,7 +79,7 @@ export default function BreakMode() {
         } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) {
-          setError("Not authenticated");
+          setError(t('break_mode.not_authenticated'));
           return;
         }
         const meRes = await fetch(`${API_URL}/api/driver/me`, {
@@ -108,11 +111,11 @@ export default function BreakMode() {
           setBreakStartedAt(data.break_started_at);
           setElapsed(0);
         } else {
-          setError(data?.error || "Failed to start break");
+          setError(data?.error || t('break_mode.failed_to_start'));
         }
       } catch (err) {
         logger.error("BreakMode start failed", err);
-        if (!cancelled) setError("Network error");
+        if (!cancelled) setError(t('break_mode.network_error'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -182,7 +185,7 @@ export default function BreakMode() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated");
+        setError(t('break_mode.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/driver/break/end`, {
@@ -193,7 +196,7 @@ export default function BreakMode() {
       // server on_break while dispatch kept the driver off the pool silently.
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.message || "Failed to end break — please try again");
+        setError(data?.message || t('break_mode.failed_to_end'));
         return;
       }
       // Sync store state after successful break end
@@ -201,7 +204,7 @@ export default function BreakMode() {
       router.back();
     } catch (err) {
       logger.error("BreakMode end failed", err);
-      setError("Network error — please try again");
+      setError(t('break_mode.network_error_retry'));
     } finally {
       setEnding(false);
     }
@@ -247,7 +250,7 @@ export default function BreakMode() {
         <TouchableOpacity
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('break_mode.go_back')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
@@ -260,7 +263,7 @@ export default function BreakMode() {
             color: textPrimary,
           }}
         >
-          Break Mode
+          {t('break_mode.title')}
         </Text>
         <HeaderThemeToggle />
       </View>
@@ -299,7 +302,7 @@ export default function BreakMode() {
             marginBottom: spacing.sm,
           }}
         >
-          On a break
+          {t('break_mode.on_break')}
         </Text>
         <Text
           style={{
@@ -310,7 +313,7 @@ export default function BreakMode() {
             marginBottom: spacing.xl,
           }}
         >
-          You won&apos;t receive ride requests while on break.
+          {t('break_mode.no_requests_break')}
         </Text>
         <Text
           accessibilityLabel={`Total break time ${hours} hours ${minutes} minutes ${secs} seconds`}
@@ -333,7 +336,7 @@ export default function BreakMode() {
             marginBottom: spacing["3xl"],
           }}
         >
-          Total break time
+          {t('break_mode.total_break_time')}
         </Text>
         {error ? (
           <Text
@@ -351,7 +354,7 @@ export default function BreakMode() {
         <TouchableOpacity
           onPress={handleEndBreak}
           accessibilityRole="button"
-          accessibilityLabel="End break"
+          accessibilityLabel={t('break_mode.end_break')}
           disabled={ending}
           style={{
             width: "100%",
@@ -372,7 +375,7 @@ export default function BreakMode() {
                 color: colors.white,
               }}
             >
-              End Break
+              {t('break_mode.end_break')}
             </Text>
           )}
         </TouchableOpacity>

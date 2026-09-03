@@ -4,12 +4,13 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 const THEMES = ["light", "dark", "system"] as const;
 const THEME_LABELS: Record<string, string> = { light: "Light", dark: "Dark", system: "System" };
 
 export default function DriverSettingsAppearance() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const { theme, setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;

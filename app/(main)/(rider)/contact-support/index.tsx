@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors, radii, spacing } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 const CATEGORIES = [
   { key: "ride_issue", label: "Ride Issue", icon: "car-outline" as const },
@@ -32,7 +33,7 @@ const CATEGORIES = [
 type CategoryKey = (typeof CATEGORIES)[number]["key"];
 
 export default function ContactSupport() {
-  const [category, setCategory] = useState<CategoryKey | null>(null);
+  const { t } = useTranslation();  const [category, setCategory] = useState<CategoryKey | null>(null);
   const [subject, setSubject] = useState("");
   const [msg, setMsg] = useState("");
   const [attachment, setAttachment] = useState<string | null>(null);

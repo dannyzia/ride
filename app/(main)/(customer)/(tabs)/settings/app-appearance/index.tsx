@@ -12,22 +12,24 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import SettingsRow from "@/components/SettingsRow";
+import { useTranslation } from "react-i18next";
 
 type ThemeMode = "light" | "dark" | "system";
 
 const THEME_OPTIONS: {
   mode: ThemeMode;
   icon: keyof typeof Ionicons.glyphMap;
-  label: string;
+  labelKey: string;
 }[] = [
-  { mode: "light", icon: "sunny-outline", label: "Light" },
-  { mode: "dark", icon: "moon-outline", label: "Dark" },
-  { mode: "system", icon: "phone-portrait-outline", label: "System" },
+  { mode: "light", icon: "sunny-outline", labelKey: "app_appearance.light" },
+  { mode: "dark", icon: "moon-outline", labelKey: "app_appearance.dark" },
+  { mode: "system", icon: "phone-portrait-outline", labelKey: "app_appearance.system" },
 ];
 
 export default function SettingsAppAppearance() {
   const isDark = useIsDark();
   const { theme, setTheme } = useAppearance();
+  const { t } = useTranslation();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surface = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -58,18 +60,18 @@ export default function SettingsAppAppearance() {
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => router.back()}
         >
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>
-          App Appearance
+          {t('app_appearance.title')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('app_appearance.toggle_theme')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => setTheme(isDark ? "light" : "dark")}
         >
@@ -82,14 +84,14 @@ export default function SettingsAppAppearance() {
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.sectionTitle, { color: textPrimary }]}>
-          Theme
+          {t('app_appearance.theme')}
         </Text>
         <View style={[styles.card, { backgroundColor: surface }]}>
           {THEME_OPTIONS.map((option, index) => (
             <SettingsRow
               key={option.mode}
               icon={option.icon}
-              label={option.label}
+              label={t(option.labelKey)}
               onPress={() => setTheme(option.mode)}
               showChevron={false}
               rightElement={renderRadio(theme === option.mode)}
@@ -98,7 +100,7 @@ export default function SettingsAppAppearance() {
           ))}
         </View>
         <Text style={[styles.hint, { color: textSecondary }]}>
-          System follows your device's appearance setting.
+          {t('app_appearance.hint')}
         </Text>
       </ScrollView>
     </SafeAreaView>

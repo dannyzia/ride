@@ -15,8 +15,10 @@ import { logger } from "@/lib/logger";
 import { showToast } from "@/components/Toast";
 import { colors, spacing, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 function HeaderThemeToggle() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -27,7 +29,7 @@ function HeaderThemeToggle() {
     <TouchableOpacity
       onPress={() => setTheme(isDark ? "light" : "dark")}
       accessibilityRole="button"
-      accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      accessibilityLabel={isDark ? t('rate_rider.switch_light_theme') : t('rate_rider.switch_dark_theme')}
       style={{
         width: 40,
         height: 40,
@@ -49,6 +51,7 @@ function HeaderThemeToggle() {
 }
 
 export default function RateRider() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const [rating, setRating] = useState(0);
@@ -87,11 +90,11 @@ export default function RateRider() {
   const handleSubmit = async () => {
     if (submitted.current) return;
     if (rating === 0) {
-      setError("Please select a rating");
+      setError(t('rate_rider.please_select_rating'));
       return;
     }
     if (!rideId) {
-      setError("No ride to rate");
+      setError(t('rate_rider.no_ride_to_rate'));
       return;
     }
     setLoading(true);
@@ -102,7 +105,7 @@ export default function RateRider() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated");
+        setError(t('rate_rider.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/ride/${rideId}/rate`, {
@@ -116,18 +119,18 @@ export default function RateRider() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (res.status === 409 && data.error === "already_rated") {
-          showToast("You have already rated this ride.", "info");
+          showToast(t('rate_rider.already_rated'), "info");
           goHomeDelayed();
           return;
         }
-        setError(data.message || data.error || "Failed to submit rating");
+        setError(data.message || data.error || t('rate_rider.failed_to_submit'));
         return;
       }
       submitted.current = true;
-      showToast("Rating submitted — thank you!");
+      showToast(t('rate_rider.rating_submitted'));
       goHomeDelayed();
     } catch (err) {
-      setError((err instanceof Error ? err.message : String(err)) || "Network error");
+      setError((err instanceof Error ? err.message : String(err)) || t('rate_rider.network_error'));
       logger.error("Rate rider failed", err);
     } finally {
       setLoading(false);
@@ -154,7 +157,7 @@ export default function RateRider() {
         <TouchableOpacity
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('rate_rider.go_back')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
@@ -167,7 +170,7 @@ export default function RateRider() {
             color: textPrimary,
           }}
         >
-          Rate Rider
+          {t('rate_rider.title')}
         </Text>
         <HeaderThemeToggle />
       </View>
@@ -197,7 +200,7 @@ export default function RateRider() {
             marginBottom: spacing["2xl"],
           }}
         >
-          Rider
+          {t('rate_rider.rider')}
         </Text>
         <View
           style={{
@@ -211,7 +214,7 @@ export default function RateRider() {
               key={star}
               onPress={() => setRating(star)}
               accessibilityRole="button"
-              accessibilityLabel={`Rate ${star} ${star === 1 ? "star" : "stars"}`}
+              accessibilityLabel={`Rate ${star} ${star === 1 ? t('rate_rider.star') : t('rate_rider.stars')}`}
               hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             >
               <Ionicons
@@ -238,7 +241,7 @@ export default function RateRider() {
         <TouchableOpacity
           onPress={handleSubmit}
           accessibilityRole="button"
-          accessibilityLabel="Submit rating"
+          accessibilityLabel={t('rate_rider.submit_rating')}
           disabled={loading || rating === 0}
           style={{
             width: "100%",
@@ -259,7 +262,7 @@ export default function RateRider() {
                 color: colors.white,
               }}
             >
-              Submit Rating
+              {t('rate_rider.submit_rating')}
             </Text>
           )}
         </TouchableOpacity>

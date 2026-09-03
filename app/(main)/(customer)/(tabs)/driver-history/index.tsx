@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface Trip {
   ride_id: string;
@@ -19,6 +20,7 @@ interface Trip {
 }
 
 export default function DriverTripHistory() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -38,15 +40,15 @@ export default function DriverTripHistory() {
         setLoading(true); setError("");
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        if (!token) { setError("Not authenticated"); setLoading(false); return; }
+        if (!token) { setError(t('wallet.not_authenticated')); setLoading(false); return; }
         const res = await fetch(`${API_URL}/api/ride/get-all`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const json = await res.json();
-        if (!res.ok) { setError(json.error || "Failed to load trips"); return; }
+        if (!res.ok) { setError(json.error || t('driver_history.failed_to_load')); return; }
         if (!cancelled) setTrips(json.data || []);
       } catch (err) {
-        if (!cancelled) setError((err instanceof Error ? err.message : String(err)) || "Network error");
+        if (!cancelled) setError((err instanceof Error ? err.message : String(err)) || t('wallet.network_error'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -71,9 +73,9 @@ export default function DriverTripHistory() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>My Trips</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('driver_history.title')}</Text>
         <View className="w-[50px]" />
       </View>
       {loading ? (
@@ -86,27 +88,27 @@ export default function DriverTripHistory() {
         </View>
       ) : trips.length === 0 ? (
         <View className="flex-1 items-center justify-center px-[24px]">
-          <Text className="text-[16px] font-Jakarta" style={{ color: textSecondary }}>No trips yet</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: textSecondary }}>{t('driver_history.no_trips')}</Text>
         </View>
       ) : (
         <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 16 }}>
-          {trips.map((t) => (
+          {trips.map((trip) => (
             <TouchableOpacity
-              key={t.ride_id}
+              key={trip.ride_id}
               className="flex-row justify-between items-center p-[14px] border rounded-[12px] mb-3"
               style={{ backgroundColor: surfaceBg, borderColor }}
-              onPress={() => router.push(`/(main)/(customer)/(tabs)/driver-history/${t.ride_id}`)}
+              onPress={() => router.push(`/(main)/(customer)/(tabs)/driver-history/${trip.ride_id}`)}
             >
               <View>
                 <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>
-                  {t.destination_address ?? "Destination"}
+                  {trip.destination_address ?? t('driver_history.destination')}
                 </Text>
                 <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
-                  {formatDate(t.created_at)} · {t.vehicle_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                  {formatDate(trip.created_at)} · {trip.vehicle_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                 </Text>
               </View>
               <Text className="text-[15px] font-JakartaBold" style={{ color: colors.primary }}>
-                ৳{((t.fare_breakdown?.total_bdt ?? 0) / 100).toFixed(0)}
+                ৳{((trip.fare_breakdown?.total_bdt ?? 0) / 100).toFixed(0)}
               </Text>
             </TouchableOpacity>
           ))}

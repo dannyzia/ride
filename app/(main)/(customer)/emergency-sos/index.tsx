@@ -21,6 +21,7 @@ import { logger } from "@/lib/logger";
 import { enqueueSosAlert } from "@/lib/sosQueue";
 import NetInfo from "@react-native-community/netinfo";
 import { useSosActive } from "@/lib/useSosActive";
+import { useTranslation } from "react-i18next";
 
 /**
  * Returns a human-readable "time ago" string from an ISO date.
@@ -40,6 +41,7 @@ function timeAgo(iso: string): string {
 // and dials first, matching the SOSButton T-1 contract: the emergency call
 // must never depend on a network round-trip.
 export default function EmergencySOS() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const activeRideId = useRiderStore((s) => s.activeRide?.id);
@@ -166,7 +168,7 @@ export default function EmergencySOS() {
     router.push("/(main)/(customer)/(tabs)/settings/help-support");
   };
 
-  const statusLabel = alert?.status === "acknowledged" ? "Acknowledged" : "Active";
+  const statusLabel = alert?.status === "acknowledged" ? t('emergency_sos.acknowledged') : t('emergency_sos.active');
 
   // ── Active alert view ──────────────────────────────────────────
   if (active && alert) {
@@ -182,10 +184,10 @@ export default function EmergencySOS() {
             <Ionicons name="shield" size={32} color={colors.white} />
           </View>
           <Text className="text-2xl font-JakartaBold tracking-tight mb-2" style={{ color: colors.danger }}>
-            Active SOS Alert
+            {t('emergency_sos.active_alert_title')}
           </Text>
           <Text className="text-base font-Jakarta text-center mb-2" style={{ color: textSecondary }}>
-            Your emergency alert is being handled
+            {t('emergency_sos.active_alert_subtitle')}
           </Text>
 
           {/* Status badge */}
@@ -193,7 +195,7 @@ export default function EmergencySOS() {
             className="flex-row items-center rounded-full px-4 py-2 mt-2"
             style={{ backgroundColor: alert.status === "acknowledged" ? colors.primaryLight : colors.dangerLight }}
             accessibilityRole="text"
-            accessibilityLabel={`Alert status: ${statusLabel}`}
+            accessibilityLabel={t('emergency_sos.alert_status_a11y', { status: statusLabel })}
           >
             <View
               className="w-2 h-2 rounded-full mr-2"
@@ -227,12 +229,12 @@ export default function EmergencySOS() {
             onPress={handleResolve}
             disabled={resolving}
             accessibilityRole="button"
-            accessibilityLabel="Resolve this SOS alert"
+            accessibilityLabel={t('emergency_sos.resolve_a11y')}
           >
             {resolving ? (
               <ActivityIndicator size={20} color={colors.white} />
             ) : (
-              <Text className="text-lg font-JakartaBold text-goWhite">Resolve Alert</Text>
+              <Text className="text-lg font-JakartaBold text-goWhite">{t('emergency_sos.resolve_alert')}</Text>
             )}
           </TouchableOpacity>
 
@@ -241,10 +243,10 @@ export default function EmergencySOS() {
             style={{ borderColor }}
             onPress={handleShareLocation}
             accessibilityRole="button"
-            accessibilityLabel="Share live location"
+            accessibilityLabel={t('emergency_sos.share_location_a11y')}
           >
             <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
-              Share Live Location
+              {t('emergency_sos.share_live_location')}
             </Text>
           </TouchableOpacity>
 
@@ -253,10 +255,10 @@ export default function EmergencySOS() {
             style={{ borderColor }}
             onPress={handleReportIssue}
             accessibilityRole="button"
-            accessibilityLabel="Report safety issue"
+            accessibilityLabel={t('emergency_sos.report_safety_a11y')}
           >
             <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
-              Report Safety Issue
+              {t('emergency_sos.report_safety_issue')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -281,7 +283,7 @@ export default function EmergencySOS() {
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
         <ActivityIndicator size="large" color={colors.danger} />
         <Text className="text-sm font-Jakarta mt-4" style={{ color: textSecondary }}>
-          Checking for active alerts…
+          {t('emergency_sos.checking_active_alerts')}
         </Text>
       </SafeAreaView>
     );
@@ -301,10 +303,10 @@ export default function EmergencySOS() {
           <Ionicons name="shield" size={32} color={colors.white} />
         </View>
         <Text className="text-2xl font-JakartaBold tracking-tight mb-2" style={{ color: colors.danger }}>
-          Emergency SOS
+          {t('emergency_sos.title')}
         </Text>
         <Text className="text-base font-Jakarta text-center mb-6" style={{ color: textSecondary }}>
-          Tap for immediate help
+          {t('emergency_sos.tap_for_immediate_help')}
         </Text>
       </View>
 
@@ -315,12 +317,12 @@ export default function EmergencySOS() {
           onPress={() => setConfirmVisible(true)}
           disabled={sending}
           accessibilityRole="button"
-          accessibilityLabel="Send SOS and call emergency services"
+          accessibilityLabel={t('emergency_sos.send_sos_a11y')}
         >
           {sending ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
-            <Text className="text-lg font-JakartaBold text-goWhite">Send SOS &amp; Call 999</Text>
+            <Text className="text-lg font-JakartaBold text-goWhite">{t('emergency_sos.send_sos_call_999')}</Text>
           )}
         </TouchableOpacity>
 
@@ -333,7 +335,7 @@ export default function EmergencySOS() {
           >
             <Ionicons name="cloud-offline-outline" size={18} color={colors.amber} style={{ marginRight: 8 }} />
             <Text className="text-sm font-JakartaMedium" style={{ color: colors.amber }}>
-              Alert queued — will send when online
+              {t('emergency_sos.alert_queued')}
             </Text>
           </View>
         )}
@@ -343,10 +345,10 @@ export default function EmergencySOS() {
           style={{ borderColor }}
           onPress={handleShareLocation}
           accessibilityRole="button"
-          accessibilityLabel="Share live location"
+          accessibilityLabel={t('emergency_sos.share_location_a11y')}
         >
           <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
-            Share Live Location
+            {t('emergency_sos.share_live_location')}
           </Text>
         </TouchableOpacity>
 
@@ -355,10 +357,10 @@ export default function EmergencySOS() {
           style={{ borderColor }}
           onPress={handleReportIssue}
           accessibilityRole="button"
-          accessibilityLabel="Report safety issue"
+          accessibilityLabel={t('emergency_sos.report_safety_a11y')}
         >
           <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
-            Report Safety Issue
+            {t('emergency_sos.report_safety_issue')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -381,10 +383,10 @@ export default function EmergencySOS() {
               <Ionicons name="warning" size={28} color={colors.white} />
             </View>
             <Text className="text-lg font-JakartaBold text-center" style={{ color: textPrimary }}>
-              Send Emergency SOS?
+              {t('emergency_sos.confirm_send_title')}
             </Text>
             <Text className="text-sm font-Jakarta text-center mt-2" style={{ color: textSecondary }}>
-              This will call emergency services (999) and send your live location to our safety team.
+              {t('emergency_sos.confirm_send_body')}
             </Text>
           </View>
 
@@ -394,12 +396,12 @@ export default function EmergencySOS() {
             onPress={handleConfirm}
             disabled={sending}
             accessibilityRole="button"
-            accessibilityLabel="Call 999 and send alert"
+            accessibilityLabel={t('emergency_sos.call_999_send_a11y')}
           >
             {sending ? (
               <ActivityIndicator size={20} color={colors.white} />
             ) : (
-              <Text className="text-base font-JakartaBold text-goWhite">Call 999 &amp; Send Alert</Text>
+              <Text className="text-base font-JakartaBold text-goWhite">{t('emergency_sos.call_999_send')}</Text>
             )}
           </TouchableOpacity>
 
@@ -409,10 +411,10 @@ export default function EmergencySOS() {
             onPress={() => setConfirmVisible(false)}
             disabled={sending}
             accessibilityRole="button"
-            accessibilityLabel="Cancel"
+            accessibilityLabel={t('common.cancel')}
           >
             <Text className="text-base font-JakartaSemiBold" style={{ color: textSecondary }}>
-              Cancel
+              {t('common.cancel')}
             </Text>
           </TouchableOpacity>
         </View>

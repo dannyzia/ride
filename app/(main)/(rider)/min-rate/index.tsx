@@ -18,6 +18,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import MinRateSlider from "@/components/MinRateSlider";
 import { validateMinPerKm } from "@/lib/validateMinPerKm";
+import { useTranslation } from "react-i18next";
 
 interface SliderConfig {
   vehicle_type: string;
@@ -29,7 +30,7 @@ interface SliderConfig {
 }
 
 export default function MinRateScreen() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;

@@ -31,6 +31,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 type Stop = { lat: number; lng: number; address: string };
 const MAX_STOPS = 2;
@@ -39,10 +40,10 @@ type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
 // ── Vehicle category grouping ────────────────────────────────────
 type Category = "bike" | "cng" | "car";
-const CATEGORY_META: Record<Category, { label: string; icon: IoniconName; prefix: string }> = {
-  bike: { label: "Bike", icon: "bicycle", prefix: "bike_" },
-  cng: { label: "CNG", icon: "car", prefix: "cng" },
-  car: { label: "Car", icon: "car-sport", prefix: "car_" },
+const CATEGORY_META: Record<Category, { labelKey: string; icon: IoniconName; prefix: string }> = {
+  bike: { labelKey: "find_ride.category_bike", icon: "bicycle", prefix: "bike_" },
+  cng: { labelKey: "find_ride.category_cng", icon: "car", prefix: "cng" },
+  car: { labelKey: "find_ride.category_car", icon: "car-sport", prefix: "car_" },
 };
 const CATEGORY_ORDER: Category[] = ["bike", "cng", "car"];
 
@@ -58,8 +59,21 @@ const VEHICLE_ICONS: Record<string, ImageSourcePropType> = {
   car_xl: icons.cab,
 };
 
+const VEHICLE_TYPE_LABEL_KEYS: Record<string, string> = {
+  bike_basic: "find_ride.vehicle_bike_basic",
+  bike_standard: "find_ride.vehicle_bike_standard",
+  bike_plus: "find_ride.vehicle_bike_plus",
+  cng: "find_ride.vehicle_cng",
+  car_compact: "find_ride.vehicle_car_compact",
+  car_economy: "find_ride.vehicle_car_economy",
+  car_comfort: "find_ride.vehicle_car_comfort",
+  car_premium: "find_ride.vehicle_car_premium",
+  car_xl: "find_ride.vehicle_car_xl",
+};
+
 const PlanRidePage = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -105,7 +119,7 @@ const PlanRidePage = () => {
       : userAddress
     : userLatitude
       ? `${userLatitude.toFixed(4)}, ${(userLongitude ?? 0).toFixed(4)}`
-      : "Enter or choose location";
+      : t('find_ride.enter_or_choose_location');
 
   const fetchEstimates = useCallback(async () => {
     if (!userLatitude || !userLongitude || !destinationLatitude || !destinationLongitude) {
@@ -157,7 +171,7 @@ const PlanRidePage = () => {
         setError(data.message || data.error);
       }
     } catch (_err) {
-      setError("Failed to fetch estimates");
+      setError(t('find_ride.failed_to_fetch_estimates'));
     } finally {
       setEstimating(false);
     }
@@ -168,6 +182,7 @@ const PlanRidePage = () => {
     destinationLongitude,
     setEstimates,
     setEstimating,
+    t,
   ]);
 
   useEffect(() => {
@@ -211,8 +226,8 @@ const PlanRidePage = () => {
       logger.info("[find-ride] permission status:", status);
       if (status !== "granted") {
         Alert.alert(
-          "Permission Denied",
-          "Location permission is required to request a ride.",
+          t('find_ride.permission_denied'),
+          t('find_ride.location_permission_required'),
         );
         return;
       }
@@ -241,8 +256,8 @@ const PlanRidePage = () => {
 
       if (!loc) {
         Alert.alert(
-          "Location Unavailable",
-          "Could not get your location. Make sure GPS/Location is enabled in your device settings and try again outside.",
+          t('find_ride.location_unavailable'),
+          t('find_ride.location_unavailable_message'),
         );
         return;
       }
@@ -256,8 +271,8 @@ const PlanRidePage = () => {
     } catch (_e) {
       logger.warn("[find-ride] GPS error:", _e instanceof Error ? _e.message : _e);
       Alert.alert(
-        "GPS Unavailable",
-        "Could not get your location. Make sure GPS is enabled and try again.",
+        t('find_ride.gps_unavailable'),
+        t('find_ride.gps_unavailable_message'),
       );
     } finally {
       setLocating(false);
@@ -273,6 +288,9 @@ const PlanRidePage = () => {
 
   const renderEstimate = (item: FareEstimate) => {
     const def = VEHICLE_TYPES.find((v) => v.key === item.vehicle_type);
+    const label = VEHICLE_TYPE_LABEL_KEYS[item.vehicle_type]
+      ? t(VEHICLE_TYPE_LABEL_KEYS[item.vehicle_type])
+      : def?.display_en || item.vehicle_type;
     const selected = selectedVehicleType === item.vehicle_type;
     return (
       <TouchableOpacity
@@ -301,10 +319,10 @@ const PlanRidePage = () => {
         />
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={[styles.estimateName, { color: textPrimary }]}>
-            {def?.display_en || item.vehicle_type}
+            {label}
           </Text>
           <Text style={[styles.estimateSub, { color: textSecondary }]}>
-            {item.seats} seats • {item.eta_minutes} min away
+            {t('find_ride.seats_eta', { seats: item.seats, minutes: item.eta_minutes })}
           </Text>
         </View>
         <Text style={[styles.estimatePrice, { color: textPrimary }]}>
@@ -317,7 +335,7 @@ const PlanRidePage = () => {
   return (
     <View style={{ flex: 1 }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
-      <RideLayout title="Plan Ride" disabled={false} snapPoints={["50%", "90%"]}>
+      <RideLayout title={t('find_ride.title')} disabled={false} snapPoints={["50%", "90%"]}>
         <View style={{ flex: 1 }}>
           <BottomSheetScrollView
             style={{ flex: 1 }}
@@ -326,7 +344,7 @@ const PlanRidePage = () => {
             contentContainerStyle={{ paddingBottom: 150 }}
           >
             {/* Pickup */}
-            <Text style={[styles.sectionLabel, { color: textPrimary }]}>Pickup</Text>
+            <Text style={[styles.sectionLabel, { color: textPrimary }]}>{t('find_ride.pickup')}</Text>
             <TouchableOpacity
               onPress={useCurrentLocation}
               style={[
@@ -342,10 +360,10 @@ const PlanRidePage = () => {
               )}
               <Text style={styles.currentLocationText}>
                 {locating
-                  ? "Getting your location..."
+                  ? t('find_ride.getting_location')
                   : userLatitude
-                    ? "Use Current Location"
-                    : "Get My Location"}
+                    ? t('find_ride.use_current_location')
+                    : t('find_ride.get_my_location')}
               </Text>
             </TouchableOpacity>
             <BarikoiAutocomplete
@@ -359,7 +377,7 @@ const PlanRidePage = () => {
             {stops.map((stop, i) => (
               <View key={`stop-${i}`} style={styles.stopBlock}>
                 <View style={styles.stopHeader}>
-                  <Text style={[styles.sectionLabel, { color: textPrimary }]}>Stop {i + 1}</Text>
+                  <Text style={[styles.sectionLabel, { color: textPrimary }]}>{t('find_ride.stop_number', { number: i + 1 })}</Text>
                   <TouchableOpacity
                     onPress={() => removeStop(i)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -379,30 +397,30 @@ const PlanRidePage = () => {
             {stops.length < MAX_STOPS && (
               <TouchableOpacity onPress={addStop} style={styles.addStopBtn}>
                 <Ionicons name="add" size={18} color={colors.primary} />
-                <Text style={styles.addStopText}>Add Stop</Text>
+                <Text style={styles.addStopText}>{t('find_ride.add_stop')}</Text>
               </TouchableOpacity>
             )}
 
             {/* Destination */}
-            <Text style={[styles.sectionLabel, { color: textPrimary, marginTop: 8 }]}>Destination</Text>
+            <Text style={[styles.sectionLabel, { color: textPrimary, marginTop: 8 }]}>{t('find_ride.destination')}</Text>
             <BarikoiAutocomplete
               icon={icons.pin}
               initialLocation={
                 destinationAddress && destinationAddress.length > 49
                   ? destinationAddress.slice(0, 49) + "..."
-                  : destinationAddress || "Enter Destination"
+                  : destinationAddress || t('find_ride.enter_destination')
               }
               textInputBackgroundColor="transparent"
               handlePress={(location) => setDestinationLocation(location)}
             />
 
             {/* Vehicle estimates */}
-            <Text style={[styles.sectionLabel, { color: textPrimary, marginTop: 8 }]}>Choose a ride</Text>
+            <Text style={[styles.sectionLabel, { color: textPrimary, marginTop: 8 }]}>{t('find_ride.choose_a_ride')}</Text>
             {estimating ? (
               <View style={styles.centerBox}>
                 <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={[styles.mutedText, { color: textSecondary }]}>
-                  Finding available vehicles...
+                  {t('find_ride.finding_vehicles')}
                 </Text>
               </View>
             ) : error ? (
@@ -411,7 +429,7 @@ const PlanRidePage = () => {
                   {error}
                 </Text>
                 <CustomButton
-                  title="Retry"
+                  title={t('common.retry')}
                   onPress={fetchEstimates}
                   className="w-40"
                 />
@@ -468,12 +486,12 @@ const PlanRidePage = () => {
                             },
                           ]}
                         >
-                          {meta.label}
+                          {t(meta.labelKey)}
                         </Text>
                         <Text style={[styles.categoryPrice, { color: textPrimary }]}>
                           ৳{(cheapest / 100).toFixed(0)}
                         </Text>
-                        <Text style={[styles.categoryEta, { color: textSecondary }]}>{fastest} min</Text>
+                        <Text style={[styles.categoryEta, { color: textSecondary }]}>{t('find_ride.eta_min', { minutes: fastest })}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -492,13 +510,13 @@ const PlanRidePage = () => {
             ) : hasRoute ? (
               <View style={styles.centerBox}>
                 <Text style={[styles.mutedText, { color: textSecondary }]}>
-                  No vehicles available for this route
+                  {t('find_ride.no_vehicles_route')}
                 </Text>
               </View>
             ) : (
               <View style={styles.centerBox}>
                 <Text style={[styles.mutedText, { color: textSecondary }]}>
-                  Set pickup and destination to see fares
+                  {t('find_ride.set_route_to_see_fares')}
                 </Text>
               </View>
             )}
@@ -506,7 +524,7 @@ const PlanRidePage = () => {
 
           <View style={{ paddingTop: 8 }}>
             <CustomButton
-              title="Confirm Ride"
+              title={t('find_ride.confirm_ride')}
               onPress={handleConfirm}
               disabled={!canConfirm}
               className="w-full"

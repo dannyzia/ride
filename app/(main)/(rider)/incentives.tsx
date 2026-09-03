@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface ActiveIncentive {
   incentive_id: string;
@@ -46,34 +47,17 @@ type IncentiveRow =
   | ({ key: "active" } & ActiveIncentive)
   | ({ key: "completed" } & CompletedIncentive);
 
-function formatMetric(metric: string): string {
-  switch (metric) {
-    case "completed_rides":
-      return "rides";
-    case "online_hours":
-      return "hours";
-    case "acceptance_rate":
-      return "%";
-    case "consecutive_accepts":
-      return "accepts";
-    default:
-      return metric;
-  }
+const METRIC_SUFFIX_I18N: Record<string, string> = {
+  completed_rides: 'incentives.metric_rides', online_hours: 'incentives.metric_hours',
+  acceptance_rate: 'incentives.metric_rate', consecutive_accepts: 'incentives.metric_consecutive',
+};
+function formatMetric(metric: string, t: (key: string) => string): string {
+  const key = METRIC_SUFFIX_I18N[metric];
+  return key ? t(key) : metric;
 }
-
-function formatMetricLabel(metric: string): string {
-  switch (metric) {
-    case "completed_rides":
-      return "Completed Rides";
-    case "online_hours":
-      return "Online Hours";
-    case "acceptance_rate":
-      return "Acceptance Rate";
-    case "consecutive_accepts":
-      return "Consecutive Accepts";
-    default:
-      return metric;
-  }
+function formatMetricLabel(metric: string, t: (key: string) => string): string {
+  const key = METRIC_SUFFIX_I18N[metric];
+  return key ? t(key) : metric;
 }
 
 function getProgressPercent(current: number, target: number): number {
@@ -82,6 +66,7 @@ function getProgressPercent(current: number, target: number): number {
 }
 
 export default function IncentivesScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -136,7 +121,7 @@ export default function IncentivesScreen() {
       0,
       Math.ceil((endsAt.getTime() - Date.now()) / 86400_000),
     );
-    const metricLabel = formatMetric(item.target_metric);
+    const metricLabel = formatMetric(item.target_metric, t);
 
     return (
       <View
@@ -201,7 +186,7 @@ export default function IncentivesScreen() {
                 color: colors.primary,
               }}
             >
-              +{item.reward_calls} calls
+              +{item.reward_calls} {t('incentives.calls')}
             </Text>
           </View>
         </View>
@@ -222,7 +207,7 @@ export default function IncentivesScreen() {
                 color: textSecondary,
               }}
             >
-              {formatMetricLabel(item.target_metric)}
+              {formatMetricLabel(item.target_metric, t)}
             </Text>
             <Text
               style={{
@@ -274,7 +259,7 @@ export default function IncentivesScreen() {
               color: textDisabled,
             }}
           >
-            {daysLeft > 0 ? `${daysLeft} days left` : "Ending soon"}
+            {daysLeft > 0 ? t('incentives.days_left', { count: daysLeft }) : t('incentives.ending_soon')}
           </Text>
           {pct >= 100 && (
             <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -292,7 +277,7 @@ export default function IncentivesScreen() {
                   marginLeft: 2,
                 }}
               >
-                Completed!
+                {t('incentives.completed_exclaim')}
               </Text>
             </View>
           )}
@@ -344,9 +329,9 @@ export default function IncentivesScreen() {
             color: textSecondary,
           }}
         >
-          {item.completed_at
-            ? `Completed ${new Date(item.completed_at).toLocaleDateString("en-GB")}`
-            : "Completed"}
+          {            item.completed_at
+            ? `${t('incentives.completed')} ${new Date(item.completed_at).toLocaleDateString("en-GB")}`
+            : t('incentives.completed')}
         </Text>
       </View>
       <Text
@@ -357,7 +342,7 @@ export default function IncentivesScreen() {
           color: colors.primary,
         }}
       >
-        +{item.reward_calls} calls
+        +{item.reward_calls} {t('incentives.calls')}
       </Text>
     </View>
   );
@@ -388,7 +373,7 @@ export default function IncentivesScreen() {
             color: textPrimary,
           }}
         >
-          Incentives
+          {t('incentives.title')}
         </Text>
         <View style={{ width: 32 }} />
       </View>
@@ -416,7 +401,7 @@ export default function IncentivesScreen() {
               textAlign: "center",
             }}
           >
-            Could not load incentives. Pull to refresh.
+            {t('incentives.could_not_load')}
           </Text>
         </View>
       ) : (
@@ -467,7 +452,7 @@ export default function IncentivesScreen() {
                       marginBottom: spacing.xs,
                     }}
                   >
-                    Total Bonus Earned
+                    {t('incentives.total_bonus_earned')}
                   </Text>
                   <Text
                     style={{
@@ -477,7 +462,7 @@ export default function IncentivesScreen() {
                       color: colors.white,
                     }}
                   >
-                    {data.total_bonus_calls_earned} calls
+                    {data.total_bonus_calls_earned} {t('incentives.calls')}
                   </Text>
                 </View>
               );
@@ -494,7 +479,7 @@ export default function IncentivesScreen() {
                 marginBottom: spacing.sm,
                 }}
                 >
-                Completed
+                {t('incentives.completed')}
                 </Text>
               );
             }
@@ -524,7 +509,7 @@ export default function IncentivesScreen() {
                   marginTop: spacing.md,
                 }}
               >
-                No active incentives
+                {t('incentives.no_active')}
               </Text>
               <Text
                 style={{
@@ -535,8 +520,7 @@ export default function IncentivesScreen() {
                   textAlign: "center",
                 }}
               >
-                Active campaigns will appear here. Complete rides to earn bonus
-                calls!
+                {t('incentives.no_active_desc')}
               </Text>
             </View>
           }

@@ -17,11 +17,25 @@ import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance"
+import { useTranslation } from "react-i18next";
 
 const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
 
+const VEHICLE_TYPE_LABEL_KEYS: Record<string, string> = {
+  bike_basic: "confirm_ride.vehicle_bike_basic",
+  bike_standard: "confirm_ride.vehicle_bike_standard",
+  bike_plus: "confirm_ride.vehicle_bike_plus",
+  cng: "confirm_ride.vehicle_cng",
+  car_compact: "confirm_ride.vehicle_car_compact",
+  car_economy: "confirm_ride.vehicle_car_economy",
+  car_comfort: "confirm_ride.vehicle_car_comfort",
+  car_premium: "confirm_ride.vehicle_car_premium",
+  car_xl: "confirm_ride.vehicle_car_xl",
+};
+
 const ConfirmRidePage = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -155,8 +169,8 @@ const ConfirmRidePage = () => {
         const timeInMinutes = Math.round((seconds + 300) / 60);
         const duration =
           timeInMinutes < 60
-            ? `${timeInMinutes} mins`
-            : `${(timeInMinutes / 60).toFixed(1)} hours`;
+            ? t('confirm_ride.mins', { count: timeInMinutes })
+            : t('confirm_ride.hours', { count: (timeInMinutes / 60).toFixed(1) });
 
         const km = meters / 1000;
         const distance =
@@ -166,7 +180,9 @@ const ConfirmRidePage = () => {
         setRideDistance(distance);
       } catch {
         setRideDuration(
-          displayEstimate ? `${displayEstimate.eta_minutes} min` : "N/A",
+          displayEstimate
+            ? t('confirm_ride.minutes', { minutes: displayEstimate.eta_minutes })
+            : t('confirm_ride.not_available'),
         );
         setRideDistance(
           displayEstimate
@@ -232,7 +248,7 @@ const ConfirmRidePage = () => {
       !destinationLongitude ||
       !selectedVehicleType
     ) {
-      Alert.alert("Error", "Missing location or vehicle type");
+      Alert.alert(t('common.error'), t('confirm_ride.missing_location_or_vehicle'));
       return;
     }
 
@@ -241,17 +257,17 @@ const ConfirmRidePage = () => {
     } = await supabase.auth.getSession();
     const token = session?.access_token;
     if (!token) {
-      Alert.alert("Error", "Not authenticated");
+      Alert.alert(t('common.error'), t('confirm_ride.not_authenticated'));
       return;
     }
 
     if (bookForOther && (!otherName.trim() || !otherPhone.trim())) {
-      Alert.alert("Validation", "Please enter the passenger's name and phone number");
+      Alert.alert(t('confirm_ride.validation'), t('confirm_ride.enter_passenger_name_phone'));
       setRequesting(false);
       return;
     }
     if (bookForOther && !otherConsent) {
-      Alert.alert("Consent Required", "Please confirm the passenger has consented to receive an SMS with ride tracking details.");
+      Alert.alert(t('confirm_ride.consent_required'), t('confirm_ride.consent_message'));
       setRequesting(false);
       return;
     }
@@ -312,12 +328,12 @@ const ConfirmRidePage = () => {
         router.replace(scheduledAt ? "/(main)/(customer)/ride-scheduled" : "/(main)/(customer)/finding-driver");
       } else {
         Alert.alert(
-          "Request Failed",
-          data.message || data.error || "Could not find a driver",
+          t('confirm_ride.request_failed'),
+          data.message || data.error || t('confirm_ride.could_not_find_driver'),
         );
       }
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Network error");
+      Alert.alert(t('common.error'), err instanceof Error ? err.message : t('confirm_ride.network_error'));
     } finally {
       setRequesting(false);
     }
@@ -326,7 +342,7 @@ const ConfirmRidePage = () => {
   return (
     <Fragment>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
-      <RideLayout title="Confirm Ride" disabled={false}>
+      <RideLayout title={t('confirm_ride.title')} disabled={false}>
       <View style={{ flex: 1 }}>
         {/* Selected vehicle info */}
         {displayEstimate && vehicleDef && (
@@ -340,10 +356,10 @@ const ConfirmRidePage = () => {
             </View>
             <View style={{ flex: 1, marginLeft: 16 }}>
               <Text style={{ color: textPrimary, fontSize: 18, fontFamily: fonts.heading }}>
-                {vehicleDef.display_en}
+                {VEHICLE_TYPE_LABEL_KEYS[vehicleDef.key] ? t(VEHICLE_TYPE_LABEL_KEYS[vehicleDef.key]) : vehicleDef.display_en}
               </Text>
               <Text style={{ color: textSecondary, fontSize: 14 }}>
-                {displayEstimate.seats} seats
+                {t('confirm_ride.seats', { seats: displayEstimate.seats })}
               </Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
@@ -353,11 +369,11 @@ const ConfirmRidePage = () => {
               {/* Non-binding fare range (Phase F §6) */}
               {displayEstimate.fare_range_low_bdt != null && displayEstimate.fare_range_high_bdt != null && (
                 <Text style={{ color: textSecondary, fontSize: 11 }}>
-                  ৳{(displayEstimate.fare_range_low_bdt / 100).toFixed(0)} – ৳{(displayEstimate.fare_range_high_bdt / 100).toFixed(0)} est.
+                  ৳{(displayEstimate.fare_range_low_bdt / 100).toFixed(0)} – ৳{(displayEstimate.fare_range_high_bdt / 100).toFixed(0)} {t('confirm_ride.est')}
                 </Text>
               )}
               <Text style={{ color: textSecondary, fontSize: 12 }}>
-                {displayEstimate.eta_minutes} min
+                {t('confirm_ride.minutes', { minutes: displayEstimate.eta_minutes })}
               </Text>
             </View>
           </View>
@@ -369,7 +385,7 @@ const ConfirmRidePage = () => {
           {scheduledAt && (
             <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
               <Ionicons name="time-outline" size={16} color={colors.primary} />
-              <Text style={{ color: textSecondary, marginLeft: 8 }}>Pickup at</Text>
+              <Text style={{ color: textSecondary, marginLeft: 8 }}>{t('confirm_ride.pickup_at')}</Text>
               <View
                 style={{ marginLeft: "auto", paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, backgroundColor: colors.primaryLight }}
               >
@@ -395,18 +411,18 @@ const ConfirmRidePage = () => {
             <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingHorizontal: 12, marginBottom: 8, borderRadius: 10, backgroundColor: "rgba(245, 158, 11, 0.10)" }}>
               <Ionicons name="alert-circle-outline" size={16} color="#f59e0b" />
               <Text style={{ color: "#f59e0b", fontSize: 13, marginLeft: 8, flex: 1 }}>
-                {displayEstimate.traffic_message ?? 'Traffic is heavy now — trip may take longer and cost more.'}
+                {displayEstimate.traffic_message ?? t('confirm_ride.traffic_warning')}
               </Text>
             </View>
           )}
           <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
-            <Text style={{ color: textSecondary }}>Distance</Text>
+            <Text style={{ color: textSecondary }}>{t('confirm_ride.distance')}</Text>
             <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
               {rideDistance}
             </Text>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
-            <Text style={{ color: textSecondary }}>Duration</Text>
+            <Text style={{ color: textSecondary }}>{t('confirm_ride.duration')}</Text>
             <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
               {rideDuration}
             </Text>
@@ -414,7 +430,7 @@ const ConfirmRidePage = () => {
         {/* Discount selector */}
         {displayEstimate?.available_discounts && displayEstimate.available_discounts.length > 0 && (
           <View style={{ backgroundColor: surface, borderRadius: 16, padding: 16, marginBottom: 20 }}>
-            <Text style={{ color: textPrimary, fontSize: 14, fontFamily: fonts.headingSemi, marginBottom: 12 }}>Available Discounts</Text>
+            <Text style={{ color: textPrimary, fontSize: 14, fontFamily: fonts.headingSemi, marginBottom: 12 }}>{t('confirm_ride.available_discounts')}</Text>
             {displayEstimate.available_discounts.map((discount: DiscountOption) => {
               const isSelected =
                 selectedDiscount?.type === discount.type &&
@@ -448,7 +464,7 @@ const ConfirmRidePage = () => {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>{discount.description}</Text>
-                    <Text style={{ color: textSecondary, fontSize: 12 }}>{discount.percent ? `${discount.percent}% off` : `৳${(discount.amount_bdt / 100).toFixed(0)} off`}</Text>
+                    <Text style={{ color: textSecondary, fontSize: 12 }}>{discount.percent ? t('confirm_ride.percent_off', { percent: discount.percent }) : t('confirm_ride.amount_off', { amount: (discount.amount_bdt / 100).toFixed(0) })}</Text>
                   </View>
                   <Text
                     style={{
@@ -465,29 +481,31 @@ const ConfirmRidePage = () => {
           </View>
         )}
           <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
-            <Text style={{ color: textSecondary }}>Base fare</Text>
+            <Text style={{ color: textSecondary }}>{t('confirm_ride.base_fare')}</Text>
             <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
               ৳{displayEstimate ? (displayEstimate.total_bdt / 100).toFixed(0) : "—"}
             </Text>
            </View>
            {pendingFeeDeduction && (
              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
-               <Text style={{ color: textSecondary }}>Pending cancellation fee</Text>
+               <Text style={{ color: textSecondary }}>{t('confirm_ride.pending_cancellation_fee')}</Text>
                <Text style={{ color: colors.danger, fontFamily: fonts.headingSemi }}>
-                 ৳{(pendingFeeDeduction.remaining / 100).toFixed(0)} (from cashback)
+                 ৳{(pendingFeeDeduction.remaining / 100).toFixed(0)} {t('confirm_ride.from_cashback')}
                </Text>
              </View>
            )}
             {selectedDiscount && (
              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
                <Text style={{ color: textSecondary }}>
-                 {selectedDiscount.type === "intro"
-                   ? "Intro bonus"
-                   : selectedDiscount.type === "promo"
-                   ? "Promo discount"
-                   : selectedDiscount.type === "pass"
-                   ? "Pass discount"
-                   : "Wallet credit"}
+                 {t(
+                   selectedDiscount.type === "intro"
+                     ? "confirm_ride.intro_bonus"
+                     : selectedDiscount.type === "promo"
+                     ? "confirm_ride.promo_discount"
+                     : selectedDiscount.type === "pass"
+                     ? "confirm_ride.pass_discount"
+                     : "confirm_ride.wallet_credit",
+                 )}
                </Text>
                <Text style={{ color: colors.primary, fontFamily: fonts.headingSemi }}>
                  −৳{(selectedDiscount.amount_bdt / 100).toFixed(0)}
@@ -496,7 +514,7 @@ const ConfirmRidePage = () => {
            )}
           {upfrontTip > 0 && (
             <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
-              <Text style={{ color: textSecondary }}>Tip</Text>
+              <Text style={{ color: textSecondary }}>{t('confirm_ride.tip')}</Text>
               <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
                 ৳{upfrontTip.toFixed(0)}
               </Text>
@@ -507,9 +525,9 @@ const ConfirmRidePage = () => {
            displayEstimate.pickup_fee_high_bdt != null && (
             <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: textSecondary }}>Pickup fee</Text>
+                <Text style={{ color: textSecondary }}>{t('confirm_ride.pickup_fee')}</Text>
                 {displayEstimate.pickup_fee_range_low_confidence === true && (
-                  <Text style={{ color: colors.amber, fontSize: 11, marginTop: 2 }}>(estimated)</Text>
+                  <Text style={{ color: colors.amber, fontSize: 11, marginTop: 2 }}>{t('confirm_ride.estimated')}</Text>
                 )}
               </View>
               <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
@@ -518,7 +536,7 @@ const ConfirmRidePage = () => {
             </View>
           )}
           <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8 }}>
-            <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>Total</Text>
+            <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>{t('confirm_ride.total')}</Text>
             <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>
                ৳{displayEstimate ? (Math.round(displayEstimate.total_bdt - (selectedDiscount?.amount_bdt ?? 0) + upfrontTip * 100) / 100).toFixed(0) : "—"}
             </Text>
@@ -537,7 +555,7 @@ const ConfirmRidePage = () => {
               style={{ color: textPrimary, marginLeft: 12, flex: 1 }}
               numberOfLines={2}
             >
-              {userAddress || "Pickup"}
+              {userAddress || t('confirm_ride.pickup')}
             </Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8 }}>
@@ -550,7 +568,7 @@ const ConfirmRidePage = () => {
               style={{ color: textPrimary, marginLeft: 12, flex: 1 }}
               numberOfLines={2}
             >
-              {destinationAddress || "Dropoff"}
+              {destinationAddress || t('confirm_ride.dropoff')}
             </Text>
           </View>
         </View>
@@ -563,12 +581,12 @@ const ConfirmRidePage = () => {
           <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: bookForOther ? colors.primary : "transparent", borderColor: bookForOther ? colors.primary : border }}>
             {bookForOther && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
           </View>
-          <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>Book for someone else</Text>
+          <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>{t('confirm_ride.book_for_other')}</Text>
         </TouchableOpacity>
         {bookForOther && (
           <View style={{ marginBottom: 16 }}>
             <TextInput style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, fontFamily: fonts.body, color: textPrimary, marginBottom: 12 }}
-              placeholder="Passenger name" placeholderTextColor={colors.textSecondaryDark} value={otherName} onChangeText={setOtherName} />
+              placeholder={t('confirm_ride.passenger_name')} placeholderTextColor={colors.textSecondaryDark} value={otherName} onChangeText={setOtherName} />
             <TextInput style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, fontFamily: fonts.body, color: textPrimary }}
               placeholder="01XXXXXXXXX" placeholderTextColor={colors.textSecondaryDark} keyboardType="numeric" value={otherPhone} onChangeText={setOtherPhone} />
             <TouchableOpacity
@@ -576,13 +594,13 @@ const ConfirmRidePage = () => {
               style={{ flexDirection: "row", alignItems: "flex-start", marginTop: 8 }}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: otherConsent }}
-              accessibilityLabel="Confirm passenger consent for SMS"
+              accessibilityLabel={t('confirm_ride.a11y_consent_sms')}
             >
               <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, marginTop: 1, backgroundColor: otherConsent ? colors.primary : "transparent", borderColor: otherConsent ? colors.primary : border }}>
                 {otherConsent && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
               </View>
               <Text style={{ fontSize: 13, fontFamily: fonts.body, color: textSecondary, flex: 1, lineHeight: 18 }}>
-                I confirm the passenger has consented to receive an SMS with ride tracking details.
+                {t('confirm_ride.consent_checkbox')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -595,7 +613,7 @@ const ConfirmRidePage = () => {
           <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: preferFemale ? colors.primary : "transparent", borderColor: preferFemale ? colors.primary : border }}>
             {preferFemale && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
           </View>
-          <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>Prefer female driver</Text>
+          <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>{t('confirm_ride.prefer_female_driver')}</Text>
         </TouchableOpacity>
 
         {/* Schedule for later toggle — §R1/S4 */}
@@ -611,13 +629,13 @@ const ConfirmRidePage = () => {
           }}
           style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}
           accessibilityRole="button"
-          accessibilityLabel={scheduleLater ? "Disable schedule for later" : "Enable schedule for later"}
+          accessibilityLabel={scheduleLater ? t('confirm_ride.a11y_disable_schedule_later') : t('confirm_ride.a11y_enable_schedule_later')}
         >
           <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: scheduleLater ? colors.primary : "transparent", borderColor: scheduleLater ? colors.primary : border }}>
             {scheduleLater && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
           </View>
           <Ionicons name="time-outline" size={16} color={scheduleLater ? colors.primary : textSecondary} style={{ marginRight: 6 }} />
-          <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>Schedule for later</Text>
+          <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary }}>{t('confirm_ride.schedule_for_later')}</Text>
         </TouchableOpacity>
 
         {/* ScheduleRideSheet — inline when toggle is ON */}
@@ -639,18 +657,18 @@ const ConfirmRidePage = () => {
         {stops.length < 2 && (
           <TouchableOpacity onPress={() => setShowStopModal(true)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, marginBottom: 8 }}>
             <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-            <Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 15, marginLeft: 6 }}>Add Stop</Text>
+            <Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 15, marginLeft: 6 }}>{t('confirm_ride.add_stop')}</Text>
           </TouchableOpacity>
         )}
         {stops.map((stop, i) => (
           <View key={i} style={{ flexDirection: "row", alignItems: "center", backgroundColor: surface, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 8 }}>
-            <Text style={{ flex: 1, fontSize: 14, fontFamily: fonts.body, color: textPrimary }}>Stop {i + 1}: {stop.address}</Text>
+            <Text style={{ flex: 1, fontSize: 14, fontFamily: fonts.body, color: textPrimary }}>{t('confirm_ride.stop_label', { number: i + 1, address: stop.address })}</Text>
             <TouchableOpacity onPress={() => setStops(stops.filter((_, j) => j !== i))}><Ionicons name="close" size={16} color={colors.danger} /></TouchableOpacity>
           </View>
         ))}
 
         <CustomButton
-          title={requesting ? "Requesting..." : scheduledAt ? "Schedule Ride" : "Request Ride"}
+          title={requesting ? t('confirm_ride.requesting') : scheduledAt ? t('confirm_ride.schedule_ride') : t('ride.request')}
           onPress={handleRequestRide}
           disabled={requesting || !selectedVehicleType}
           className="w-full mt-auto"
@@ -660,8 +678,8 @@ const ConfirmRidePage = () => {
       <Modal visible={showStopModal} transparent animationType="slide" onRequestClose={() => setShowStopModal(false)}>
       <View style={{ flex: 1, backgroundColor: bg, paddingTop: 80, paddingHorizontal: 24 }}>
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
-          <TouchableOpacity onPress={() => setShowStopModal(false)}><Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 16 }}>Cancel</Text></TouchableOpacity>
-          <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>Add Stop</Text>
+          <TouchableOpacity onPress={() => setShowStopModal(false)}><Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 16 }}>{t('common.cancel')}</Text></TouchableOpacity>
+          <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>{t('confirm_ride.add_stop')}</Text>
           <View style={{ width: 48 }} />
         </View>
         <BarikoiAutocomplete

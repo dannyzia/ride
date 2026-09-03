@@ -9,6 +9,7 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useRiderStore } from "@/store/useRiderStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 
 const TIP_OPTIONS = [20, 50, 100];
 
@@ -21,6 +22,7 @@ interface DriverInfo {
 }
 
 export default function RateDriver() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -98,11 +100,11 @@ export default function RateDriver() {
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      setError("Please select a rating");
+      setError(t('rate_rider.please_select_rating'));
       return;
     }
     if (!rideId) {
-      setError("Missing ride ID");
+      setError(t('rate_driver.missing_ride_id'));
       return;
     }
     setLoading(true);
@@ -111,7 +113,7 @@ export default function RateDriver() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated");
+        setError(t('finish_ride.not_authenticated'));
         return;
       }
 
@@ -128,7 +130,7 @@ export default function RateDriver() {
       });
       const rateData = await rateRes.json();
       if (!rateRes.ok) {
-        setError(rateData.error || "Failed to submit rating");
+        setError(rateData.error || t('rate_rider.failed_to_submit'));
         setLoading(false);
         return;
       }
@@ -155,7 +157,7 @@ export default function RateDriver() {
 
       router.replace("/(main)/(customer)/services-hub");
     } catch (err) {
-      setError((err instanceof Error ? err.message : String(err)) || "Network error");
+      setError((err instanceof Error ? err.message : String(err)) || t('wallet.network_error'));
       logger.error("Rate driver failed", err);
     } finally {
       setLoading(false);
@@ -166,10 +168,10 @@ export default function RateDriver() {
     const driverId = driver?.id || activeRide?.driver_id;
     if (!driverId) return;
     if (isBlocked) {
-      Alert.alert("Unblock Driver?", "You will be matched again.", [
-        { text: "Cancel", style: "cancel" },
+      Alert.alert(t('rate_driver.unblock_title'), t('rate_driver.unblock_message'), [
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Unblock",
+          text: t('rate_driver.unblock'),
           onPress: async () => {
             setBlocking(true);
             try {
@@ -182,7 +184,7 @@ export default function RateDriver() {
               });
               setIsBlocked(false);
             } catch {
-              Alert.alert("Error", "Failed to unblock");
+              Alert.alert(t('common.error'), t('rate_driver.failed_to_unblock'));
             } finally {
               setBlocking(false);
             }
@@ -190,10 +192,10 @@ export default function RateDriver() {
         },
       ]);
     } else {
-      Alert.alert("Block Driver?", "You won&apos;t be matched with this driver again.", [
-        { text: "Cancel", style: "cancel" },
+      Alert.alert(t('rate_driver.block_title'), t('rate_driver.block_message'), [
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Block",
+          text: t('rate_driver.block'),
           style: "destructive",
           onPress: async () => {
             setBlocking(true);
@@ -212,10 +214,10 @@ export default function RateDriver() {
               if (res.ok) setIsBlocked(true);
               else {
                 const d = await res.json();
-                Alert.alert("Error", d.error ?? "Failed");
+                Alert.alert(t('common.error'), d.error ?? t('rate_driver.failed'));
               }
             } catch {
-              Alert.alert("Error", "Network error");
+              Alert.alert(t('common.error'), t('wallet.network_error'));
             } finally {
               setBlocking(false);
             }
@@ -225,7 +227,7 @@ export default function RateDriver() {
     }
   };
 
-  const ratingLabel = rating === 1 ? "Poor" : rating === 2 ? "Fair" : rating === 3 ? "Good" : rating === 4 ? "Very Good" : rating === 5 ? "Excellent" : "Tap to rate";
+  const ratingLabel = rating === 1 ? t('rate_driver.poor') : rating === 2 ? t('rate_driver.fair') : rating === 3 ? t('rate_driver.good') : rating === 4 ? t('rate_driver.very_good') : rating === 5 ? t('rate_driver.excellent') : t('rate_driver.tap_to_rate');
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
@@ -239,7 +241,7 @@ export default function RateDriver() {
             <Ionicons name="arrow-back" size={24} color={textPrimary} />
           </TouchableOpacity>
           <Text className="text-[28px] font-JakartaBold text-center flex-1" style={{ color: textPrimary }}>
-            How was your ride?
+            {t('rate_driver.how_was_ride')}
           </Text>
           <TouchableOpacity
             onPress={() => setTheme(isDark ? "light" : "dark")}
@@ -260,13 +262,13 @@ export default function RateDriver() {
             <ActivityIndicator size="large" color={colors.primary} />
           ) : driverError ? (
             <View className="items-center gap-3">
-              <Text style={{ color: colors.danger }}>Could not load driver info</Text>
+              <Text style={{ color: colors.danger }}>{t('rate_driver.could_not_load_driver')}</Text>
               <TouchableOpacity onPress={fetchDriver} className="px-4 py-2 rounded-full border" style={{ borderColor: colors.primary }}>
-                <Text style={{ color: colors.primary, fontFamily: "Jakarta-SemiBold" }}>Retry</Text>
+                <Text style={{ color: colors.primary, fontFamily: "Jakarta-SemiBold" }}>{t('common.retry')}</Text>
               </TouchableOpacity>
             </View>
           ) : !driver ? (
-            <Text style={{ color: textSecondary }}>No driver info available</Text>
+            <Text style={{ color: textSecondary }}>{t('rate_driver.no_driver_info')}</Text>
           ) : (
             <>
               <View
@@ -282,7 +284,7 @@ export default function RateDriver() {
                 )}
               </View>
               <Text className="text-xl font-JakartaBold" style={{ color: textPrimary }}>
-                {driver.full_name ?? "Driver"}
+                {driver.full_name ?? t('rate_driver.driver')}
               </Text>
               <Text className="text-sm font-Jakarta" style={{ color: textSecondary }}>
                 {driver.vehicle_type?.toUpperCase?.() ?? ""} {driver.vehicle_plate ?? ""}
@@ -313,7 +315,7 @@ export default function RateDriver() {
 
         {/* Tip selector */}
         <Text className="text-base font-JakartaSemiBold mb-3" style={{ color: textPrimary }}>
-          Add a tip (optional)
+          {t('rate_driver.add_tip_optional')}
         </Text>
         <View className="flex-row gap-2 mb-2">
           {TIP_OPTIONS.map((t) => (
@@ -340,7 +342,7 @@ export default function RateDriver() {
             onPress={() => { setTip(0); }}
           >
             <Text style={{ color: customTip ? colors.white : textPrimary, fontFamily: "Jakarta-SemiBold" }}>
-              Custom
+              {t('rate_driver.custom')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -348,7 +350,7 @@ export default function RateDriver() {
           <TextInput
             className="rounded-xl border px-4 py-3 text-sm font-Jakarta mb-4"
             style={{ borderColor, backgroundColor: surfaceBg, color: textPrimary }}
-            placeholder="Enter custom tip (৳)"
+            placeholder={t('rate_driver.custom_tip_placeholder')}
             placeholderTextColor={textDisabled}
             keyboardType="number-pad"
             value={customTip}
@@ -374,10 +376,10 @@ export default function RateDriver() {
             {isBlocked && <Ionicons name="checkmark" size={14} color={colors.white} />}
           </View>
           <Text className="text-sm font-Jakarta" style={{ color: textPrimary }}>
-            Block this driver
+            {t('rate_driver.block_this_driver')}
           </Text>
           <Text className="text-xs font-Jakarta ml-2" style={{ color: textSecondary }}>
-            You won&apos;t be matched again
+            {t('rate_driver.wont_be_matched_again')}
           </Text>
         </TouchableOpacity>
 
@@ -393,7 +395,7 @@ export default function RateDriver() {
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <Text className="text-lg font-JakartaBold" style={{ color: colors.white }}>
-              Submit Rating
+              {t('rate_driver.submit_rating')}
             </Text>
           )}
         </TouchableOpacity>

@@ -20,6 +20,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { getBarikoiAutocompleteUrl } from "@/lib/useBarikoiMapStyle";
 import { logger } from "@/lib/logger";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface PlaceSuggestion {
   place_id?: string | number;
@@ -50,6 +51,7 @@ const AutocompletePage = () => {
   const { userLatitude, userLongitude, setUserLocation, setDestinationLocation } = useCustomer();
   const { type, stopIndex } = useLocalSearchParams<{ type?: string; stopIndex?: string }>();
   const locationType = type === "from" ? "from" : type === "stop" ? "stop" : "to";
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -184,7 +186,7 @@ const AutocompletePage = () => {
       >
         <View className="mt-10 mb-6 items-center">
           <Text className="text-3xl font-bold text-center" style={{ color: textPrimary }}>
-            Where do you want to go?
+            {t('autocomplete.title')}
           </Text>
         </View>
 
@@ -196,7 +198,7 @@ const AutocompletePage = () => {
           />
           <TextInput
             autoFocus
-            placeholder={locationType === "from" ? "Search pickup..." : locationType === "stop" ? "Search stop..." : "Search destination..."}
+            placeholder={locationType === "from" ? t('autocomplete.search_pickup') : locationType === "stop" ? t('autocomplete.search_stop') : t('home.search')}
             placeholderTextColor={textSecondary}
             value={query}
             onChangeText={setQuery}

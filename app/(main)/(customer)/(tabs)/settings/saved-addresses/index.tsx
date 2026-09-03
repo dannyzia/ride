@@ -17,6 +17,7 @@ import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 import EmptyState from "@/components/EmptyState";
 
 interface AddressItem {
@@ -35,6 +36,7 @@ function addressIcon(label: string): keyof typeof Ionicons.glyphMap {
 }
 
 export default function SavedAddresses() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -58,7 +60,7 @@ export default function SavedAddresses() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated. Please sign in again.");
+        setError(t('saved_addresses.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/rider/addresses`, {
@@ -66,13 +68,13 @@ export default function SavedAddresses() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.message || data.error || "Failed to load addresses");
+        setError(data.message || data.error || t('saved_addresses.load_failed'));
         return;
       }
       const data = await res.json();
       setAddresses(data.addresses ?? []);
     } catch (err) {
-      setError("Network error. Please try again.");
+      setError(t('saved_addresses.network_error'));
       logger.error("[saved-addresses] fetch failed", err);
     } finally {
       setLoading(false);
@@ -91,12 +93,12 @@ export default function SavedAddresses() {
 
   const deleteAddress = (address: AddressItem) => {
     Alert.alert(
-      "Delete Address",
-      `Remove "${address.label}" from your saved addresses?`,
+      t('saved_addresses.delete_title'),
+      t('saved_addresses.delete_message', { label: address.label }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Delete",
+          text: t('common.delete'),
           style: "destructive",
           onPress: async () => {
             try {
@@ -105,7 +107,7 @@ export default function SavedAddresses() {
               } = await supabase.auth.getSession();
               const token = session?.access_token;
               if (!token) {
-                Alert.alert("Error", "Not authenticated. Please sign in again.");
+                Alert.alert(t('common.error'), t('saved_addresses.not_authenticated'));
                 return;
               }
               const res = await fetch(`${API_URL}/api/rider/addresses?id=${address.id}`, {
@@ -114,12 +116,12 @@ export default function SavedAddresses() {
               });
               if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
-                Alert.alert("Error", data.message || data.error || "Failed to delete address");
+                Alert.alert(t('common.error'), data.message || data.error || t('saved_addresses.delete_failed'));
                 return;
               }
               setAddresses((prev) => prev.filter((a) => a.id !== address.id));
             } catch (err) {
-              Alert.alert("Error", "Network error. Please try again.");
+              Alert.alert(t('common.error'), t('saved_addresses.network_error'));
               logger.error("[saved-addresses] delete failed", err);
             }
           },
@@ -149,7 +151,7 @@ export default function SavedAddresses() {
     <View style={[styles.card, { backgroundColor: surfaceBg, borderColor }]}>
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityLabel={`Address ${item.label}`}
+        accessibilityLabel={t('saved_addresses.a11y_address', { label: item.label })}
         style={styles.cardBody}
         onPress={() =>
           router.push(`/(main)/(customer)/(tabs)/settings/saved-addresses/${item.id}`)
@@ -180,7 +182,7 @@ export default function SavedAddresses() {
       </TouchableOpacity>
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityLabel={`Delete address ${item.label}`}
+        accessibilityLabel={t('saved_addresses.a11y_delete', { label: item.label })}
         onPress={() => deleteAddress(item)}
         style={styles.deleteButton}
         hitSlop={4}
@@ -196,7 +198,7 @@ export default function SavedAddresses() {
       <View style={styles.header}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('saved_addresses.a11y_go_back')}
           onPress={() => router.back()}
           hitSlop={8}
         >
@@ -207,11 +209,11 @@ export default function SavedAddresses() {
           numberOfLines={1}
           adjustsFontSizeToFit
         >
-          Saved Addresses
+          {t('saved_addresses.title')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('saved_addresses.a11y_toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
         >
@@ -227,14 +229,14 @@ export default function SavedAddresses() {
             <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel="Retry loading addresses"
+              accessibilityLabel={t('saved_addresses.a11y_retry')}
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={() => {
                 setLoading(true);
                 fetchAddresses();
               }}
             >
-              <Text style={[styles.retryText, { color: colors.danger }]}>Retry</Text>
+              <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -255,9 +257,9 @@ export default function SavedAddresses() {
           ListEmptyComponent={
             <EmptyState
               icon="location-outline"
-              title="No saved addresses"
-              subtitle="Save places you go often for faster booking"
-              actionLabel="Add Address"
+              title={t('saved_addresses.empty_title')}
+              subtitle={t('saved_addresses.empty_subtitle')}
+              actionLabel={t('saved_addresses.add')}
               onAction={() =>
                 router.push("/(main)/(customer)/(tabs)/settings/saved-addresses/add-address")
               }

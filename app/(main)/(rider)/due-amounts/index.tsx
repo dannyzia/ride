@@ -17,6 +17,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT } from "@/lib/format";
+import { useTranslation } from "react-i18next";
 
 interface DuesData {
   subscription: {
@@ -30,7 +31,7 @@ interface DuesData {
 }
 
 export default function DueAmounts() {
-  const [data, setData] = useState<DuesData | null>(null);
+  const { t } = useTranslation();  const [data, setData] = useState<DuesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");

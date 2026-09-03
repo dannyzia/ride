@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -27,7 +28,7 @@ const reasons: Reason[] = [
 ];
 
 export default function ReportIssue() {
-  const [selected, setSelected] = useState<Reason | null>(null);
+  const { t } = useTranslation();  const [selected, setSelected] = useState<Reason | null>(null);
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");

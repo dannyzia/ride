@@ -19,6 +19,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors, radii, spacing } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 import {
   BODY_TYPE_GROUPS,
   BODY_TYPE_DISPLAY,
@@ -307,7 +308,7 @@ function ClassificationErrorModal({ visible, onRetry, onBack }: {
 }
 
 export default function AddVehicle() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;

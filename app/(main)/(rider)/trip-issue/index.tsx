@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 const ISSUE_CATEGORIES = [
   "Rider misconduct",
@@ -20,7 +21,7 @@ const ISSUE_CATEGORIES = [
 ];
 
 export default function TripIssue() {
-  const [selected, setSelected] = useState("");
+  const { t } = useTranslation();  const [selected, setSelected] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

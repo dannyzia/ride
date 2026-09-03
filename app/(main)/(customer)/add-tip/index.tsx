@@ -9,10 +9,12 @@ import { logger } from "@/lib/logger";
 import { useRiderStore } from "@/store/useRiderStore";
 import { colors, fonts, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 const PRESET_TIPS_BDT = [0, 20, 50, 100]; // in BDT (not paisa)
 
 export default function AddTip() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -39,7 +41,7 @@ export default function AddTip() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) { setError("Not authenticated"); setSubmitting(false); return; }
+      if (!token) { setError(t('finish_ride.not_authenticated')); setSubmitting(false); return; }
       const res = await fetch(`${API_URL}/api/ride/${activeRide.id}/tip`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -47,14 +49,14 @@ export default function AddTip() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Tip failed");
+        setError(data.error || t('add_tip.failed'));
         setSubmitting(false);
         return;
       }
       setSubmitting(false);
       router.replace("/(main)/(customer)/services-hub");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
+      setError(err instanceof Error ? err.message : t('wallet.network_error'));
       setSubmitting(false);
       logger.error("Tip submission error", err);
     }
@@ -65,9 +67,9 @@ export default function AddTip() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>Back</Text>
+          <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>Add Tip</Text>
+        <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>{t('ride.add_tip')}</Text>
         <View style={{ width: 50 }} />
       </View>
       <ScrollView style={{ flex: 1, paddingHorizontal: 24 }} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -78,12 +80,12 @@ export default function AddTip() {
             </Text>
           </View>
           <Text style={{ fontSize: 20, fontFamily: fonts.heading, letterSpacing: -0.5, color: textPrimary, marginBottom: 24 }}>
-            {activeRide?.driver?.name ?? "Driver"}
+            {activeRide?.driver?.name ?? t('add_tip.driver')}
           </Text>
         </View>
         <View style={{ marginBottom: 24 }}>
           <Text style={{ fontSize: 16, fontFamily: fonts.heading, color: textPrimary, marginBottom: 8 }}>
-            Tip Amount
+            {t('add_tip.tip_amount')}
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
             {PRESET_TIPS_BDT.map((amount) => {
@@ -105,7 +107,7 @@ export default function AddTip() {
                   }}
                 >
                   <Text style={{ fontSize: 14, fontFamily: fonts.body, color: selected ? colors.primary : textPrimary }}>
-                    {amount === 0 ? "No Tip" : `৳${amount}`}
+                    {amount === 0 ? t('add_tip.no_tip') : `৳${amount}`}
                   </Text>
                 </TouchableOpacity>
               );
@@ -113,7 +115,7 @@ export default function AddTip() {
           </View>
           <TextInput
             style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontFamily: fonts.body, color: textPrimary }}
-            placeholder="Or enter custom amount (BDT)"
+            placeholder={t('add_tip.custom_amount_placeholder')}
             placeholderTextColor={isDark ? colors.textSecondaryDark : colors.textSecondaryLight}
             value={customTip}
             onChangeText={(text) => {
@@ -134,7 +136,7 @@ export default function AddTip() {
           {submitting ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
-            <Text style={{ fontSize: 18, fontFamily: fonts.heading, color: colors.white }}>Add Tip</Text>
+            <Text style={{ fontSize: 18, fontFamily: fonts.heading, color: colors.white }}>{t('ride.add_tip')}</Text>
           )}
         </TouchableOpacity>
       </View>

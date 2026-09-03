@@ -19,17 +19,19 @@ import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { authCleanup } from "@/lib/authCleanup";
+import { useTranslation } from "react-i18next";
 
 const DELETED_ITEMS = [
-  "Your name, phone number and email",
-  "Your profile photo",
-  "Saved addresses",
-  "Ride pickup and destination details",
+  "delete_account.item_name",
+  "delete_account.item_photo",
+  "delete_account.item_addresses",
+  "delete_account.item_ride_details",
 ];
 
 export default function SettingsDeleteAccount() {
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
+  const { t } = useTranslation();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -53,7 +55,7 @@ export default function SettingsDeleteAccount() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated. Please sign in again.");
+        setError(t('delete_account.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/user/delete-data`, {
@@ -66,14 +68,14 @@ export default function SettingsDeleteAccount() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.message || data.error || "Failed to delete account");
+        setError(data.message || data.error || t('delete_account.failed'));
         return;
       }
       await authCleanup();
       await supabase.auth.signOut();
     } catch (err) {
       logger.error("[delete-account] failed", err);
-      setError("An error occurred. Please try again.");
+      setError(t('delete_account.error_occurred'));
     } finally {
       setIsDeleting(false);
     }
@@ -82,11 +84,11 @@ export default function SettingsDeleteAccount() {
   const handleDeletePress = () => {
     if (!confirmed || isDeleting) return;
     Alert.alert(
-      "Are you absolutely sure?",
-      "This will permanently erase your account data. This action cannot be undone.",
+      t('delete_account.confirm_title'),
+      t('delete_account.confirm_message'),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: performDelete },
+        { text: t('common.cancel'), style: "cancel" },
+        { text: t('common.delete'), style: "destructive", onPress: performDelete },
       ],
     );
   };
@@ -97,7 +99,7 @@ export default function SettingsDeleteAccount() {
       <View style={styles.header}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back')}
           onPress={() => router.back()}
           hitSlop={8}
         >
@@ -108,11 +110,11 @@ export default function SettingsDeleteAccount() {
           numberOfLines={1}
           adjustsFontSizeToFit
         >
-          Delete Account
+          {t('settings.delete_account')}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('delete_account.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
         >
@@ -128,21 +130,20 @@ export default function SettingsDeleteAccount() {
         <View style={[styles.warningBanner, { backgroundColor: `${colors.danger}1A` }]}>
           <Ionicons name="warning" size={24} color={colors.danger} />
           <Text style={[styles.warningText, { color: colors.danger }]}>
-            This action cannot be undone
+            {t('delete_account.cannot_undo')}
           </Text>
         </View>
 
         <Text style={[styles.explanation, { color: textSecondary }]}>
-          Deleting your account erases your personal information from Ride and signs you out
-          immediately. You will not be able to recover any of this data.
+          {t('delete_account.explanation')}
         </Text>
 
         <View style={[styles.deletedCard, { backgroundColor: surfaceBg, borderColor }]}>
-          <Text style={[styles.deletedTitle, { color: textPrimary }]}>What will be erased</Text>
+          <Text style={[styles.deletedTitle, { color: textPrimary }]}>{t('delete_account.what_erased')}</Text>
           {DELETED_ITEMS.map((item) => (
             <View key={item} style={styles.deletedItemRow}>
               <View style={styles.deletedDot} />
-              <Text style={[styles.deletedItemText, { color: textSecondary }]}>{item}</Text>
+              <Text style={[styles.deletedItemText, { color: textSecondary }]}>{t(item)}</Text>
             </View>
           ))}
         </View>
@@ -152,25 +153,25 @@ export default function SettingsDeleteAccount() {
             <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel="Retry account deletion"
+              accessibilityLabel={t('delete_account.retry_a11y')}
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={handleDeletePress}
               disabled={isDeleting || !confirmed}
             >
-              <Text style={[styles.retryText, { color: colors.danger }]}>Retry</Text>
+              <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
 
         <Text style={[styles.inputLabel, { color: textSecondary }]}>
-          Type DELETE to confirm
+          {t('delete_account.type_to_confirm')}
         </Text>
         <TextInput
           style={[
             styles.confirmInput,
             { backgroundColor: surfaceBg, borderColor, color: textPrimary },
           ]}
-          placeholder="DELETE"
+          placeholder={t('delete_account.confirm_phrase')}
           placeholderTextColor={textDisabled}
           value={confirmText}
           onChangeText={setConfirmText}
@@ -180,7 +181,7 @@ export default function SettingsDeleteAccount() {
 
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Delete My Account"
+          accessibilityLabel={t('delete_account.cta')}
           accessibilityState={{ disabled: !confirmed || isDeleting }}
           style={[
             styles.deleteButton,
@@ -193,7 +194,7 @@ export default function SettingsDeleteAccount() {
           {isDeleting ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
-            <Text style={styles.deleteButtonText}>Delete My Account</Text>
+            <Text style={styles.deleteButtonText}>{t('delete_account.cta')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

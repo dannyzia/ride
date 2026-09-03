@@ -8,8 +8,10 @@ import { logger } from "@/lib/logger";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsDeleteData() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -23,26 +25,26 @@ export default function SettingsDeleteData() {
   const [error, setError] = useState("");
 
   const handleDelete = async () => {
-    if (confirmText !== "DELETE MY DATA") { setError("Please type DELETE MY DATA to confirm"); return; }
+    if (confirmText !== "DELETE MY DATA") { setError(t('delete_data.type_to_confirm_error')); return; }
     setIsDeleting(true); setError("");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) { setError("Not authenticated"); setIsDeleting(false); return; }
+      if (!token) { setError(t('delete_data.not_authenticated')); setIsDeleting(false); return; }
       const res = await fetch(API_URL + "/api/user/delete-data", {
         method: "DELETE",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
       });
       if (res.ok) {
-        Alert.alert("Success", "Your data has been deleted");
+        Alert.alert(t('common.success'), t('delete_data.deleted_message'));
         router.back();
       } else {
         const data = await res.json();
-        setError(data.error || "Failed to delete data");
+        setError(data.error || t('delete_data.failed'));
       }
     } catch (err) {
       logger.error("Delete data failed", err);
-      setError("An error occurred");
+      setError(t('delete_data.error_occurred'));
     } finally {
       setIsDeleting(false);
     }
@@ -53,9 +55,9 @@ export default function SettingsDeleteData() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Delete My Data</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.delete_data')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 40 }}>
@@ -66,26 +68,26 @@ export default function SettingsDeleteData() {
           >
             <Ionicons name="trash" size={40} color={colors.danger} />
           </View>
-          <Text className="text-[24px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>Delete Your Data</Text>
+          <Text className="text-[24px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>{t('delete_data.title')}</Text>
           <Text className="text-[16px] font-Jakarta text-center mb-4" style={{ color: textSecondary }}>
-            Permanently delete all your personal data from our systems. This cannot be undone.
+            {t('delete_data.description')}
           </Text>
         </View>
         <View className="mb-6 p-[16px] border rounded-[12px]" style={{ backgroundColor: colors.danger + "1A", borderColor: colors.danger + "4D" }}>
-          <Text className="text-[14px] font-JakartaBold mb-2" style={{ color: colors.danger }}>This will delete:</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>• All ride history and receipts</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>• Payment methods and transaction history</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>• Saved addresses and preferences</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>• Wallet balance and promo codes</Text>
-          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>• Device and login history</Text>
+          <Text className="text-[14px] font-JakartaBold mb-2" style={{ color: colors.danger }}>{t('delete_data.will_delete')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('delete_data.item_rides')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('delete_data.item_payments')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('delete_data.item_addresses')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('delete_data.item_wallet')}</Text>
+          <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>{t('delete_data.item_devices')}</Text>
         </View>
         {error ? <Text className="text-[14px] font-Jakarta mb-3 text-center" style={{ color: colors.danger }}>{error}</Text> : null}
         <View className="mb-6">
-          <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>Type DELETE MY DATA to confirm</Text>
+          <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('delete_data.type_to_confirm')}</Text>
           <TextInput
             className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta"
             style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
-            placeholder="DELETE MY DATA"
+            placeholder={t('delete_data.confirm_phrase')}
             placeholderTextColor={textSecondary}
             value={confirmText}
             onChangeText={setConfirmText}
@@ -98,7 +100,7 @@ export default function SettingsDeleteData() {
           onPress={handleDelete}
           disabled={isDeleting || confirmText !== "DELETE MY DATA"}
         >
-          <Text className="text-[18px] font-JakartaBold text-goWhite">{isDeleting ? "Deleting..." : "Delete My Data"}</Text>
+          <Text className="text-[18px] font-JakartaBold text-goWhite">{isDeleting ? t('delete_data.deleting') : t('delete_data.cta')}</Text>
         </TouchableOpacity>
       </ScrollView>
       <TouchableOpacity

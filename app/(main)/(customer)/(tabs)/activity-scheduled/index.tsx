@@ -8,8 +8,10 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function ActivityScheduled() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -53,9 +55,9 @@ export default function ActivityScheduled() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Scheduled</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('activity_scheduled.title')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 24 }}>
@@ -68,7 +70,7 @@ export default function ActivityScheduled() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>
-                    {ride.vehicle_type?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? "Ride"}
+                    {ride.vehicle_type?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? t('activity_scheduled.ride')}
                   </Text>
                   <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>
                     {ride.date ?? ""} · {ride.time ?? ""}
@@ -77,13 +79,13 @@ export default function ActivityScheduled() {
               </View>
               <View className="gap-1 mb-3">
                 <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>
-                  Pickup: {ride.pickup_address ?? "—"}
+                  {t('activity_scheduled.pickup', { address: ride.pickup_address ?? "—" })}
                 </Text>
                 <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>
-                  Destination: {ride.destination_address ?? "—"}
+                  {t('activity_scheduled.destination', { address: ride.destination_address ?? "—" })}
                 </Text>
                 <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>
-                  Fare: ৳{((ride.fare_bdt ?? 0) / 100).toFixed(0)}
+                  {t('activity_scheduled.fare', { amount: ((ride.fare_bdt ?? 0) / 100).toFixed(0) })}
                 </Text>
               </View>
               <View className="flex-row gap-2">
@@ -92,14 +94,14 @@ export default function ActivityScheduled() {
                   style={{ backgroundColor: surfaceBg, borderColor }}
                   onPress={() => router.push(`/(main)/(customer)/ride-details-scheduled/${ride.id}`)}
                 >
-                  <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>View Details</Text>
+                  <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{t('activity_scheduled.view_details')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   className="flex-1 rounded-[8px] px-[12px] py-[8px] items-center"
                   style={{ backgroundColor: colors.danger }}
                   onPress={() => router.replace("/(main)/(customer)/cancel-reason")}
                 >
-                  <Text className="text-[14px] font-JakartaBold" style={{ color: colors.white }}>Cancel</Text>
+                  <Text className="text-[14px] font-JakartaBold" style={{ color: colors.white }}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -107,10 +109,10 @@ export default function ActivityScheduled() {
         ) : (
           <View className="items-center py-8">
             <Text className="text-[20px] font-JakartaBold tracking-tight mb-4" style={{ color: textSecondary }}>
-              No scheduled rides
+              {t('activity_scheduled.no_rides')}
             </Text>
             <Text className="text-[16px] font-Jakarta text-center" style={{ color: textSecondary }}>
-              Your scheduled rides will appear here
+              {t('activity_scheduled.empty_desc')}
             </Text>
           </View>
         )}

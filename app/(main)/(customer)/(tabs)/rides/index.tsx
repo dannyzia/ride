@@ -24,6 +24,7 @@ import { supabase } from "@/lib/supabase";
 import { formatBDT, formatDateTime } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import RideCardSkeleton from "@/components/RideCardSkeleton";
+import { useTranslation } from "react-i18next";
 
 type BadgeStatus = "completed" | "cancelled" | "in_progress" | "scheduled";
 
@@ -90,10 +91,18 @@ interface DateGroup {
 }
 
 const FILTER_LABELS: Record<FilterTab, string> = {
-  all: "All",
-  completed: "Completed",
-  cancelled: "Cancelled",
-  scheduled: "Scheduled",
+  all: "activity.all",
+  completed: "activity.completed",
+  cancelled: "activity.cancelled",
+  scheduled: "rides_list.filter_scheduled",
+};
+
+const GROUP_LABEL_KEYS: Record<string, string> = {
+  Today: "rides_list.group_today",
+  Yesterday: "rides_list.group_yesterday",
+  "This Week": "rides_list.group_this_week",
+  "This Month": "rides_list.group_this_month",
+  Earlier: "rides_list.group_earlier",
 };
 
 const toPaisa = (value: number | null | undefined): number | null =>
@@ -157,6 +166,7 @@ const mapRideRow = (row: RideApiRow): RideItem => ({
 });
 
 export default function RidesScreen() {
+  const { t } = useTranslation();
   const [rides, setRides] = useState<RideItem[]>([]);
   const [filteredRides, setFilteredRides] = useState<RideItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -263,10 +273,10 @@ export default function RidesScreen() {
   };
 
   const handleRebook = (ride: RideItem) => {
-    Alert.alert("Rebook Ride?", `Book the same route to ${ride.destination_address}?`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t('rides_list.rebook_title'), t('rides_list.rebook_message', { destination: ride.destination_address }), [
+      { text: t('common.cancel'), style: "cancel" },
       {
-        text: "Rebook",
+        text: t('rides_list.rebook'),
         onPress: () => {
           router.push({
             pathname: "/(main)/(customer)/(tabs)/home",
@@ -287,7 +297,7 @@ export default function RidesScreen() {
 
   const handleDispute = (ride: RideItem) => {
     if (ride.fare_bdt <= 0) {
-      Alert.alert("Error", "No fare on record to dispute.");
+      Alert.alert(t('common.error'), t('rides_list.no_fare_dispute'));
       return;
     }
     router.push(`/(main)/(customer)/fare-dispute?rideId=${ride.id}`);
@@ -305,7 +315,7 @@ export default function RidesScreen() {
         }}
         activeOpacity={0.8}
         accessibilityRole="button"
-        accessibilityLabel={`Ride to ${item.destination_address}`}
+        accessibilityLabel={t('rides_list.a11y_ride_to', { destination: item.destination_address })}
       >
         <View style={styles.cardHeader}>
           <Text style={[styles.cardDate, { color: textSecondary }]}>
@@ -343,7 +353,7 @@ export default function RidesScreen() {
             </View>
             <View>
               <Text style={[styles.driverName, { color: textPrimary }]} numberOfLines={1}>
-                {item.driver_name ?? "No driver assigned"}
+                {item.driver_name ?? t('rides_list.no_driver')}
               </Text>
               <Text style={[styles.vehicleInfo, { color: textSecondary }]} numberOfLines={1}>
                 {item.vehicle_type}
@@ -361,20 +371,20 @@ export default function RidesScreen() {
               style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
               onPress={() => handleRebook(item)}
               accessibilityRole="button"
-              accessibilityLabel="Rebook ride"
+              accessibilityLabel={t('rides_list.a11y_rebook')}
             >
               <Ionicons name="refresh" size={16} color={colors.primary} />
-              <Text style={[styles.actionBtnText, { color: textPrimary }]}>Rebook</Text>
+              <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('rides_list.rebook')}</Text>
             </TouchableOpacity>
             {canDisputeRide(item.completed_at) && (
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}
                 onPress={() => handleDispute(item)}
                 accessibilityRole="button"
-                accessibilityLabel="Dispute fare"
+                accessibilityLabel={t('rides_list.a11y_dispute_fare')}
               >
                 <Ionicons name="flag" size={16} color={colors.danger} />
-                <Text style={[styles.actionBtnText, { color: colors.danger }]}>Dispute</Text>
+                <Text style={[styles.actionBtnText, { color: colors.danger }]}>{t('rides_list.dispute')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -396,11 +406,11 @@ export default function RidesScreen() {
         <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
           <View style={[styles.modalContent, { backgroundColor: surfaceBg }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: textPrimary }]}>Ride Receipt</Text>
+              <Text style={[styles.modalTitle, { color: textPrimary }]}>{t('rides_list.receipt_title')}</Text>
               <TouchableOpacity
                 onPress={() => setDetailModalVisible(false)}
                 accessibilityRole="button"
-                accessibilityLabel="Close receipt"
+                accessibilityLabel={t('rides_list.a11y_close_receipt')}
               >
                 <Ionicons name="close" size={24} color={textSecondary} />
               </TouchableOpacity>
@@ -429,19 +439,19 @@ export default function RidesScreen() {
 
               {selectedRide.status === "cancelled" && selectedRide.cancelled_by && (
                 <Text style={[styles.cancelledByText, { color: textSecondary }]}>
-                  Cancelled by {selectedRide.cancelled_by}
+                  {t('rides_list.cancelled_by', { by: selectedRide.cancelled_by })}
                 </Text>
               )}
               {selectedRide.status === "cancelled" && selectedRide.cancel_reason && (
                 <Text style={[styles.cancelledByText, { color: textSecondary }]}>
-                  Reason: {selectedRide.cancel_reason}
+                  {t('rides_list.reason', { reason: selectedRide.cancel_reason })}
                 </Text>
               )}
 
               <View style={[styles.fareBreakdown, { borderColor: borderColor }]}>
                 {selectedRide.fare_base_bdt !== null && (
                   <View style={styles.fareRow}>
-                    <Text style={[styles.fareLabel, { color: textSecondary }]}>Base Fare</Text>
+                    <Text style={[styles.fareLabel, { color: textSecondary }]}>{t('rides_list.base_fare')}</Text>
                     <Text style={[styles.fareValue, { color: textPrimary }]}>
                       {formatBDT(selectedRide.fare_base_bdt)}
                     </Text>
@@ -449,7 +459,7 @@ export default function RidesScreen() {
                 )}
                 {selectedRide.fare_distance_bdt !== null && (
                   <View style={styles.fareRow}>
-                    <Text style={[styles.fareLabel, { color: textSecondary }]}>Distance</Text>
+                    <Text style={[styles.fareLabel, { color: textSecondary }]}>{t('rides_list.distance')}</Text>
                     <Text style={[styles.fareValue, { color: textPrimary }]}>
                       {formatBDT(selectedRide.fare_distance_bdt)}
                     </Text>
@@ -457,7 +467,7 @@ export default function RidesScreen() {
                 )}
                 {selectedRide.fare_time_bdt !== null && (
                   <View style={styles.fareRow}>
-                    <Text style={[styles.fareLabel, { color: textSecondary }]}>Time</Text>
+                    <Text style={[styles.fareLabel, { color: textSecondary }]}>{t('rides_list.time')}</Text>
                     <Text style={[styles.fareValue, { color: textPrimary }]}>
                       {formatBDT(selectedRide.fare_time_bdt)}
                     </Text>
@@ -465,7 +475,7 @@ export default function RidesScreen() {
                 )}
 
                 <View style={[styles.fareRow, styles.fareTotal, { borderTopColor: borderColor }]}>
-                  <Text style={[styles.fareTotalLabel, { color: textPrimary }]}>Total Fare</Text>
+                  <Text style={[styles.fareTotalLabel, { color: textPrimary }]}>{t('ride.total_fare')}</Text>
                   <Text style={[styles.fareTotalValue, { color: colors.primary }]}>
                     {formatBDT(selectedRide.fare_bdt)}
                   </Text>
@@ -514,10 +524,10 @@ export default function RidesScreen() {
                     router.push(`/(main)/(customer)/ride-detail/${selectedRide.id}`);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel="View full ride detail"
+                  accessibilityLabel={t('rides_list.a11y_view_details')}
                 >
                   <Text style={[styles.modalActionTextSecondary, { color: textPrimary }]}>
-                    View Full Details
+                    {t('rides_list.view_details')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -527,19 +537,19 @@ export default function RidesScreen() {
                     handleRebook(selectedRide);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel="Rebook this route"
+                  accessibilityLabel={t('rides_list.a11y_rebook_route')}
                 >
-                  <Text style={styles.modalActionText}>Rebook This Route</Text>
+                  <Text style={styles.modalActionText}>{t('rides_list.rebook_this_route')}</Text>
                 </TouchableOpacity>
                 {selectedRide.status === "completed" && canDisputeRide(selectedRide.completed_at) && (
                   <TouchableOpacity
                     style={[styles.modalActionBtnSecondary, { borderColor: borderColor }]}
                     onPress={() => handleDispute(selectedRide)}
                     accessibilityRole="button"
-                    accessibilityLabel="File fare dispute"
+                    accessibilityLabel={t('rides_list.a11y_file_dispute')}
                   >
                     <Text style={[styles.modalActionTextSecondary, { color: textPrimary }]}>
-                      File Dispute
+                      {t('rides_list.file_dispute')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -556,21 +566,21 @@ export default function RidesScreen() {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Ionicons name="car-outline" size={64} color={textDisabled} />
-      <Text style={[styles.emptyTitle, { color: textPrimary }]}>No rides yet</Text>
+      <Text style={[styles.emptyTitle, { color: textPrimary }]}>{t('rides_list.no_rides')}</Text>
       <Text style={[styles.emptySub, { color: textSecondary }]}>
         {searchQuery.trim()
-          ? "No rides match your search"
+          ? t('rides_list.no_search_results')
           : activeFilter === "all"
-            ? "Your ride history will appear here"
-            : `No ${FILTER_LABELS[activeFilter].toLowerCase()} rides found`}
+            ? t('rides_list.no_rides_sub')
+            : t('rides_list.no_filtered', { filter: t(FILTER_LABELS[activeFilter]).toLowerCase() })}
       </Text>
       <TouchableOpacity
         style={[styles.bookBtn, { backgroundColor: colors.primary }]}
         onPress={() => router.push("/(main)/(customer)/(tabs)/home")}
         accessibilityRole="button"
-        accessibilityLabel="Book a ride"
+        accessibilityLabel={t('rides_list.book_a_ride')}
       >
-        <Text style={styles.bookBtnText}>Book a Ride</Text>
+        <Text style={styles.bookBtnText}>{t('rides_list.book_a_ride')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -578,13 +588,13 @@ export default function RidesScreen() {
   const renderErrorState = () => (
     <View style={styles.emptyState}>
       <Ionicons name="warning-outline" size={48} color={colors.danger} />
-      <Text style={[styles.emptyTitle, { color: textPrimary }]}>Could not load rides</Text>
-      <Text style={[styles.emptySub, { color: textSecondary }]}>Pull down to retry</Text>
+      <Text style={[styles.emptyTitle, { color: textPrimary }]}>{t('rides_list.load_failed')}</Text>
+      <Text style={[styles.emptySub, { color: textSecondary }]}>{t('rides_list.pull_to_retry')}</Text>
     </View>
   );
 
   const renderSectionHeader = (title: string) => (
-    <Text style={[styles.sectionHeader, { color: textSecondary, backgroundColor: bg }]}>{title}</Text>
+    <Text style={[styles.sectionHeader, { color: textSecondary, backgroundColor: bg }]}>{t(GROUP_LABEL_KEYS[title] ?? title)}</Text>
   );
 
   return (
@@ -594,12 +604,12 @@ export default function RidesScreen() {
         backgroundColor={bg}
       />
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
-        <Text style={[styles.headerTitle, { color: textPrimary }]}>Your Rides</Text>
+        <Text style={[styles.headerTitle, { color: textPrimary }]}>{t('rides_list.header_title')}</Text>
         <TouchableOpacity
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('rides_list.toggle_theme')}
         >
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
@@ -613,7 +623,7 @@ export default function RidesScreen() {
         <Ionicons name="search" size={18} color={textDisabled} />
         <TextInput
           style={[styles.searchInput, { color: textPrimary }]}
-          placeholder="Search rides..."
+          placeholder={t('rides_list.search_placeholder')}
           placeholderTextColor={textDisabled}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -622,7 +632,7 @@ export default function RidesScreen() {
           <TouchableOpacity
             onPress={() => setSearchQuery("")}
             accessibilityRole="button"
-            accessibilityLabel="Clear search"
+            accessibilityLabel={t('rides_list.clear_search')}
           >
             <Ionicons name="close-circle" size={18} color={textDisabled} />
           </TouchableOpacity>
@@ -646,7 +656,7 @@ export default function RidesScreen() {
             ]}
             onPress={() => setActiveFilter(tab)}
             accessibilityRole="button"
-            accessibilityLabel={`Filter ${FILTER_LABELS[tab]}`}
+            accessibilityLabel={t('rides_list.a11y_filter', { label: FILTER_LABELS[tab] })}
           >
             <Text
               style={{
@@ -663,18 +673,18 @@ export default function RidesScreen() {
           style={[styles.navChip, { backgroundColor: surfaceBg, borderColor: borderColor }]}
           onPress={() => router.push("/(main)/(customer)/(tabs)/inbox")}
           accessibilityRole="button"
-          accessibilityLabel="Go to inbox"
+          accessibilityLabel={t('rides_list.a11y_inbox')}
         >
-          <Text style={[styles.navChipText, { color: textSecondary }]}>Inbox</Text>
+          <Text style={[styles.navChipText, { color: textSecondary }]}>{t('rides_list.inbox')}</Text>
           <Ionicons name="arrow-forward" size={14} color={textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.navChip, { backgroundColor: surfaceBg, borderColor: borderColor }]}
           onPress={() => router.push("/(main)/(customer)/(tabs)/referral")}
           accessibilityRole="button"
-          accessibilityLabel="Go to referral"
+          accessibilityLabel={t('rides_list.a11y_referral')}
         >
-          <Text style={[styles.navChipText, { color: textSecondary }]}>Referral</Text>
+          <Text style={[styles.navChipText, { color: textSecondary }]}>{t('rides_list.referral')}</Text>
           <Ionicons name="arrow-forward" size={14} color={textSecondary} />
         </TouchableOpacity>
       </ScrollView>

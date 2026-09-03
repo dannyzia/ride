@@ -10,6 +10,7 @@ import {
 import type { GestureResponderEvent } from "react-native";
 import { icons } from "@/constants/data";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import { useTranslation } from "react-i18next";
 
 const TabIcon = ({
   focused,
@@ -58,6 +59,7 @@ const TabBarButton = ({
 };
 
 export default function TabsLayout() {
+  const { t } = useTranslation();
   return (
     <View style={{ flex: 1 }}>
       <OfflineIndicator />
@@ -80,10 +82,10 @@ export default function TabsLayout() {
         }}
       >
         {[
-          { name: "home/index", icon: icons.home, label: "Home" },
-          { name: "rides/index", icon: icons.list, label: "Activity" },
-          { name: "chat/index", icon: icons.chat, label: "Chat" },
-          { name: "profile/index", icon: icons.profile, label: "Account" },
+          { name: "home/index", icon: icons.home, label: t('tabs.home') },
+          { name: "rides/index", icon: icons.list, label: t('tabs.activity') },
+          { name: "chat/index", icon: icons.chat, label: t('rider_tabs.chat') },
+          { name: "profile/index", icon: icons.profile, label: t('rider_tabs.account') },
         ].map(({ name, icon, label }) => (
           <Tabs.Screen
             key={name}

@@ -4,8 +4,10 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function TopUpSuccess() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -26,27 +28,27 @@ export default function TopUpSuccess() {
         <Ionicons name="checkmark-circle" size={48} color={colors.primary} />
       </View>
       <Text className="text-[24px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>
-        Top Up Successful
+        {t('top_up_success.title')}
       </Text>
       <Text className="text-[15px] font-Jakarta text-center mb-2" style={{ color: textSecondary }}>
-        ৳{amount ?? "500"} has been added to your wallet.
+        {t('top_up_success.added', { amount: amount ?? "500" })}
       </Text>
       <Text className="text-[13px] font-Jakarta text-center mb-8" style={{ color: textSecondary }}>
-        You can now use this balance for rides and packages.
+        {t('top_up_success.usable')}
       </Text>
       <TouchableOpacity
         className="rounded-full w-full py-[16px] items-center mb-3"
         style={{ backgroundColor: colors.primary }}
         onPress={() => router.replace("/(main)/(customer)/(tabs)/rides")}
       >
-        <Text className="text-[18px] font-JakartaBold text-goWhite">View Transactions</Text>
+        <Text className="text-[18px] font-JakartaBold text-goWhite">{t('top_up_success.view_transactions')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         className="border rounded-full w-full py-[16px] items-center"
         style={{ borderColor }}
         onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
       >
-        <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Back to Home</Text>
+        <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('ride.back_to_home')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => setTheme(isDark ? "light" : "dark")}

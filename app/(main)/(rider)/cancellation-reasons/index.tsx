@@ -20,6 +20,7 @@ import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useRideOfferStore } from "@/store";
+import { useTranslation } from "react-i18next";
 
 const REASONS = [
   "Rider no-show",
@@ -64,7 +65,7 @@ function HeaderThemeToggle() {
 }
 
 export default function CancellationReasons() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const { rideId: rideIdParam } = useLocalSearchParams<{
     rideId: string;
   }>();

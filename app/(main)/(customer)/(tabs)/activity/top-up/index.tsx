@@ -8,6 +8,15 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
+
+const TX_LABEL_KEYS: Record<string, string> = {
+  promo_receivable: "wallet.transaction_types.promo_receivable",
+  referral_receivable: "wallet.transaction_types.referral_receivable",
+  payout: "wallet.transaction_types.payout",
+  adjustment: "wallet.transaction_types.adjustment",
+  cancellation_compensation: "wallet.transaction_types.cancellation_compensation",
+};
 
 interface WalletTransaction {
   transaction_type: string;
@@ -16,6 +25,7 @@ interface WalletTransaction {
 }
 
 export default function ActivityTopUp() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -43,10 +53,10 @@ export default function ActivityTopUp() {
           setWalletBalance(data.balance_bdt ?? 0);
           setTransactions(data.recent_transactions ?? []);
         } else {
-          setError("Failed to load wallet");
+          setError(t('wallet.failed_to_load'));
         }
       } catch (e) {
-        setError("Failed to load wallet");
+        setError(t('wallet.failed_to_load'));
         logger.error("[top-up] fetch failed", e);
       } finally {
         setLoading(false);
@@ -59,9 +69,9 @@ export default function ActivityTopUp() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/activity")}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Top Up</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('wallet.top_up')}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingBottom: 24 }}>
@@ -72,16 +82,16 @@ export default function ActivityTopUp() {
         ) : (
           <>
             <View className="mt-4 mb-4">
-              <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>Wallet Balance</Text>
+              <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('top_up.wallet_balance')}</Text>
               <Text className="text-[24px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>৳{(walletBalance / 100).toFixed(0)}</Text>
             </View>
             <View className="mb-4">
-              <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>Recent Transactions</Text>
+              <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('wallet.recent_transactions')}</Text>
               {transactions.length > 0 ? (
                 transactions.map((tx, index) => (
                   <View key={index} className="mb-2 flex-row items-center px-[12px] py-[8px] border rounded-[8px]" style={{ backgroundColor: surfaceBg, borderColor }}>
                     <View className="flex-1">
-                      <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{tx.transaction_type}</Text>
+                      <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{TX_LABEL_KEYS[tx.transaction_type] ? t(TX_LABEL_KEYS[tx.transaction_type]) : tx.transaction_type}</Text>
                       <Text className="text-[11px] font-Jakarta" style={{ color: textSecondary }}>{new Date(tx.created_at).toLocaleDateString()}</Text>
                     </View>
                     <Text
@@ -93,7 +103,7 @@ export default function ActivityTopUp() {
                   </View>
                 ))
               ) : (
-                <Text className="text-[14px] font-Jakarta text-center py-[16px]" style={{ color: textSecondary }}>No recent transactions</Text>
+                <Text className="text-[14px] font-Jakarta text-center py-[16px]" style={{ color: textSecondary }}>{t('top_up.no_transactions')}</Text>
               )}
             </View>
           </>
@@ -103,7 +113,7 @@ export default function ActivityTopUp() {
           style={{ backgroundColor: colors.primary }}
           onPress={() => router.push("/(main)/(customer)/(tabs)/settings/top-up")}
         >
-          <Text className="text-[18px] font-JakartaBold" style={{ color: colors.white }}>Top Up Wallet</Text>
+          <Text className="text-[18px] font-JakartaBold" style={{ color: colors.white }}>{t('top_up.top_up_wallet')}</Text>
         </TouchableOpacity>
       </ScrollView>
       <TouchableOpacity

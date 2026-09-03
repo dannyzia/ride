@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import PaymentWebView from "@/components/PaymentWebView";
+import { useTranslation } from "react-i18next";
 
 interface CallPackage {
   id: string;
@@ -30,6 +31,7 @@ interface CallPackage {
 }
 
 export default function PackagesScreen() {
+  const { t } = useTranslation();
   const [packages, setPackages] = useState<CallPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -116,12 +118,12 @@ export default function PackagesScreen() {
         setPaymentID(data.payment_event_id);
       } else {
         const err = await res.json().catch(() => ({ message: "Purchase failed" }));
-        Alert.alert("Error", err.message || "Could not initiate purchase");
+        Alert.alert(t('packages.error'), err.message || t('packages.could_not_initiate'));
         setPurchasing(false);
         setPendingPkgId(null);
       }
     } catch {
-      Alert.alert("Error", "Network error — could not initiate purchase");
+      Alert.alert(t('packages.error'), t('packages.network_error'));
       setPurchasing(false);
       setPendingPkgId(null);
     }
@@ -142,8 +144,8 @@ export default function PackagesScreen() {
       if (elapsed >= MAX_DURATION_MS) {
         stopPolling();
         Alert.alert(
-          "Payment Not Confirmed",
-          "If you were charged, please contact support with your package details.",
+          t('packages.payment_not_confirmed'),
+          t('packages.payment_not_confirmed_desc'),
           [{ text: "OK" }],
         );
         return;
@@ -161,7 +163,7 @@ export default function PackagesScreen() {
           const activeSub = data.subscription;
           if (activeSub && activeSub.id && (!newSubscriptionIdRef.current || activeSub.id === newSubscriptionIdRef.current)) {
             stopPolling();
-            Alert.alert("Success", "Package purchased successfully!", [
+            Alert.alert(t('packages.success'), t('packages.purchase_success'), [
               {
                 text: "OK",
                 onPress: () => {
@@ -195,7 +197,7 @@ export default function PackagesScreen() {
   const handlePaymentError = (error: string) => {
     setPaymentURL(null);
     setPaymentID(null);
-    Alert.alert("Payment Failed", error);
+    Alert.alert(t('packages.payment_failed'), error);
     setPurchasing(false);
     setPendingPkgId(null);
   };
@@ -229,7 +231,7 @@ export default function PackagesScreen() {
               className="text-xs font-JakartaSemiBold"
               style={{ color: colors.primary }}
             >
-              Trial
+              {t('packages.trial')}
             </Text>
           </View>
         )}
@@ -241,7 +243,7 @@ export default function PackagesScreen() {
           style={{ backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }}
         >
           <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>
-            {item.call_count} calls
+            {t('packages.calls_count', { count: item.call_count })}
           </Text>
         </View>
         <View
@@ -249,7 +251,7 @@ export default function PackagesScreen() {
           style={{ backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }}
         >
           <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>
-            {item.duration_days} days
+            {t('packages.days_count', { count: item.duration_days })}
           </Text>
         </View>
         <View
@@ -257,7 +259,7 @@ export default function PackagesScreen() {
           style={{ backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }}
         >
           <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>
-            Cap: {item.daily_cap}/day
+            {t('packages.cap_per_day', { count: item.daily_cap })}
           </Text>
         </View>
       </View>
@@ -278,7 +280,7 @@ export default function PackagesScreen() {
           {purchasing && pendingPkgId === item.id ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
-            <Text className="text-white font-JakartaSemiBold text-sm">Buy Now</Text>
+            <Text className="text-white font-JakartaSemiBold text-sm">{t('packages.buy_now')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -296,7 +298,7 @@ export default function PackagesScreen() {
           className="text-lg font-JakartaBold"
           style={{ color: textPrimary }}
         >
-          Call Packages
+          {t('packages.title')}
         </Text>
         <View style={{ width: 24 }} />
       </View>
@@ -312,7 +314,7 @@ export default function PackagesScreen() {
             className="text-base mt-4 text-center font-Jakarta"
             style={{ color: textSecondary }}
           >
-            No packages available. Check back later.
+            {t('packages.no_packages')}
           </Text>
         </View>
       ) : (
@@ -355,7 +357,7 @@ export default function PackagesScreen() {
                 className="text-lg font-JakartaSemiBold mt-4"
                 style={{ color: textPrimary }}
               >
-                Confirming Payment...
+                {t('packages.confirming_payment')}
               </Text>
               <Text
                 className="text-sm mt-2 font-Jakarta"
@@ -375,7 +377,7 @@ export default function PackagesScreen() {
                 style={{ backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }}
               >
                 <Text className="text-sm font-JakartaSemiBold" style={{ color: textSecondary }}>
-                  Dismiss
+                  {t('packages.dismiss')}
                 </Text>
               </TouchableOpacity>
             </View>

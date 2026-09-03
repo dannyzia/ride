@@ -17,6 +17,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT } from "@/lib/format";
+import { useTranslation } from "react-i18next";
 
 interface CommissionTrip {
   ride_id: string;
@@ -37,7 +38,7 @@ interface CommissionData {
 }
 
 export default function CommissionStatement() {
-  const [data, setData] = useState<CommissionData | null>(null);
+  const { t } = useTranslation();  const [data, setData] = useState<CommissionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");

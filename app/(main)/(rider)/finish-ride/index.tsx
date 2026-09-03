@@ -25,6 +25,7 @@ import CustomButton from "@/components/CustomButton";
 import RideLayout from "@/components/RideLayout";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 interface CompletionSummary {
   total_bdt: number;
@@ -41,6 +42,7 @@ interface CompletionSummary {
 }
 
 const FinishRide = () => {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useSession();
   const isDark = useIsDark();
@@ -74,8 +76,8 @@ const FinishRide = () => {
   // nothing else works, so send the driver home (Home owns reconnect).
   useEffect(() => {
     if (!ws) {
-      Alert.alert("Connection Lost", "You are no longer connected to the server. Returning home.", [
-        { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+      Alert.alert(t('finish_ride.connection_lost'), t('finish_ride.not_connected_message'), [
+        { text: t('finish_ride.ok'), onPress: () => router.replace("/(main)/(rider)") },
       ]);
     }
   }, [ws, router]);
@@ -100,8 +102,8 @@ const FinishRide = () => {
           const cancelledByDriver = msg.cancelled_by === "driver";
           const cancelledBySystem = msg.cancelled_by === "system";
           if (!cancelledByDriver && !cancelledBySystem) {
-            Alert.alert("Ride Cancelled", "Rider cancelled the ride", [
-              { text: "OK", onPress: () => router.replace("/(main)/(rider)") },
+            Alert.alert(t('finish_ride.ride_cancelled'), t('finish_ride.rider_cancelled_ride'), [
+              { text: t('finish_ride.ok'), onPress: () => router.replace("/(main)/(rider)") },
             ]);
           } else {
             router.replace("/(main)/(rider)");
@@ -221,7 +223,7 @@ const FinishRide = () => {
     } = await supabase.auth.getSession();
     const token = session?.access_token;
     if (!token) {
-      Alert.alert("Error", "Not authenticated");
+      Alert.alert(t('finish_ride.error'), t('finish_ride.not_authenticated'));
       return;
     }
 
@@ -236,8 +238,8 @@ const FinishRide = () => {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         Alert.alert(
-          "Could not complete ride",
-          data.message || `Server returned ${res.status}`,
+          t('finish_ride.could_not_complete'),
+          data.message || `${t('finish_ride.server_returned')} ${res.status}`,
         );
         return;
       }
@@ -271,14 +273,14 @@ const FinishRide = () => {
       setActiveRideId(null);
       setShowModal(true);
     } catch (e) {
-      Alert.alert("Error", e instanceof Error ? e.message : "Network error completing ride");
+      Alert.alert(t('finish_ride.error'), e instanceof Error ? e.message : t('finish_ride.network_error_completing'));
     }
   };
 
   const handleCallCustomer = () => {
     if (customerPhone) {
       Linking.openURL(`tel:${customerPhone}`).catch(() =>
-        Alert.alert("Error", "Unable to place call."),
+        Alert.alert(t('finish_ride.error'), t('finish_ride.unable_to_call')),
       );
     }
   };
@@ -345,7 +347,7 @@ const FinishRide = () => {
             marginBottom: spacing["2xl"],
           }}
         >
-          Ride Details
+          {t('finish_ride.ride_details')}
         </Text>
 
         {/* Pickup / Destination */}
@@ -364,7 +366,7 @@ const FinishRide = () => {
               marginBottom: spacing.sm,
             }}
           >
-            Need Help?
+            {t('finish_ride.need_help')}
           </Text>
           <Text
             style={{
@@ -374,7 +376,7 @@ const FinishRide = () => {
               marginBottom: spacing.md,
             }}
           >
-            Contact or navigate while on trip
+            {t('finish_ride.contact_navigate_trip')}
           </Text>
           <DriverActionBar
             onCall={handleCallCustomer}
@@ -394,10 +396,10 @@ const FinishRide = () => {
               marginBottom: spacing.md,
             }}
           >
-            Slide to confirm once you&apos;ve reached the dropoff location
+            {t('finish_ride.slide_confirm_dropoff')}
           </Text>
           <SlideButton
-            title="Slide to Confirm Drop-off"
+            title={t('finish_ride.slide_to_confirm_dropoff')}
             onComplete={handleSlideComplete}
             bgColor={colors.slideGreen}
             textColor={colors.white}
@@ -405,7 +407,7 @@ const FinishRide = () => {
           <TouchableOpacity
             onPress={() => setShowTollModal(true)}
             accessibilityRole="button"
-            accessibilityLabel="Add toll or parking charge"
+            accessibilityLabel={t('finish_ride.add_toll_parking')}
             style={{
               marginTop: spacing.md,
               paddingVertical: spacing.sm,
@@ -419,7 +421,7 @@ const FinishRide = () => {
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
               <Ionicons name="receipt-outline" size={16} color={colors.white} />
               <Text style={{ color: colors.white, fontFamily: "Jakarta-Bold", fontSize: 14 }}>
-                Add Charge
+                {t('finish_ride.add_charge')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -450,7 +452,7 @@ const FinishRide = () => {
                 marginBottom: spacing.xs,
               }}
             >
-              Ride Completed
+              {t('finish_ride.ride_completed')}
             </Text>
             <Text
               style={{
@@ -460,7 +462,7 @@ const FinishRide = () => {
                 textAlign: "center",
               }}
             >
-              You&apos;ve successfully dropped off the customer.
+              {t('finish_ride.successfully_dropped')}
             </Text>
           </View>
 
@@ -475,7 +477,7 @@ const FinishRide = () => {
               fontVariant: ["tabular-nums"],
             }}
           >
-            Collect ৳{(cashPaisa / 100).toFixed(2)} cash from rider
+            {t('finish_ride.collect_cash', { amount: (cashPaisa / 100).toFixed(2) })}
           </Text>
 
           {/* N3: forfeited upfront tip — never let a promised tip vanish silently */}
@@ -500,8 +502,7 @@ const FinishRide = () => {
                   color: colors.amber,
                 }}
               >
-                Upfront tip ৳{((completion?.upfront_tip_forfeited_bdt ?? 0) / 100).toFixed(2)} could not
-                be collected from the rider's wallet.
+                {t('finish_ride.upfront_tip_not_collected', { amount: ((completion?.upfront_tip_forfeited_bdt ?? 0) / 100).toFixed(2) })}
               </Text>
             </View>
           )}
@@ -522,7 +523,7 @@ const FinishRide = () => {
                 marginBottom: spacing.sm,
               }}
             >
-              <Text style={labelStyle}>Total Fare</Text>
+              <Text style={labelStyle}>{t('finish_ride.total_fare')}</Text>
               <Text
                 style={[valueStyle, { color: colors.primary, fontSize: 16 }]}
               >
@@ -536,7 +537,7 @@ const FinishRide = () => {
                 marginBottom: spacing.sm,
               }}
             >
-              <Text style={labelStyle}>Distance</Text>
+              <Text style={labelStyle}>{t('finish_ride.distance')}</Text>
               <Text style={valueStyle}>{distanceText}</Text>
             </View>
             <View
@@ -546,7 +547,7 @@ const FinishRide = () => {
                 marginBottom: spacing.sm,
               }}
             >
-              <Text style={labelStyle}>Duration</Text>
+              <Text style={labelStyle}>{t('finish_ride.duration')}</Text>
               <Text style={valueStyle}>{durationText}</Text>
             </View>
             {/* v6 Phase F: zone fee */}
@@ -558,7 +559,7 @@ const FinishRide = () => {
                   marginBottom: spacing.sm,
                 }}
               >
-                <Text style={labelStyle}>Zone fee</Text>
+                <Text style={labelStyle}>{t('finish_ride.zone_fee')}</Text>
                 <Text style={valueStyle}>৳{((completion?.zone_fee_bdt ?? 0) / 100).toFixed(2)}</Text>
               </View>
             )}
@@ -571,7 +572,7 @@ const FinishRide = () => {
                   marginBottom: spacing.sm,
                 }}
               >
-                <Text style={labelStyle}>Waiting charge</Text>
+                <Text style={labelStyle}>{t('finish_ride.waiting_charge')}</Text>
                 <Text style={valueStyle}>৳{((completion?.waiting_charge_bdt ?? 0) / 100).toFixed(2)}</Text>
               </View>
             )}
@@ -584,14 +585,14 @@ const FinishRide = () => {
                   marginBottom: spacing.sm,
                 }}
               >
-                <Text style={labelStyle}>Night surcharge</Text>
+                <Text style={labelStyle}>{t('finish_ride.night_surcharge')}</Text>
                 <Text style={[valueStyle, { color: colors.amber }]}>+{(((completion?.night_mult_applied ?? 1.0) - 1) * 100).toFixed(0)}%</Text>
               </View>
             )}
           </View>
 
           <CustomButton
-            title="Rate Rider"
+            title={t('finish_ride.rate_rider')}
             className="w-full mb-3"
             onPress={() => {
               setShowModal(false);
@@ -601,7 +602,7 @@ const FinishRide = () => {
             }}
           />
           <CustomButton
-            title="Back to Home"
+            title={t('finish_ride.back_to_home')}
             className="w-full"
             onPress={handleGoHome}
           />
@@ -615,7 +616,7 @@ const FinishRide = () => {
       <TouchableOpacity
         onPress={() => setTheme(isDark ? "light" : "dark")}
         accessibilityRole="button"
-        accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
+        accessibilityLabel={isDark ? t('finish_ride.switch_light_theme') : t('finish_ride.switch_dark_theme')}
         style={{
           position: "absolute",
           top: 64,

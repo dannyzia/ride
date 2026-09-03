@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
+import { useTranslation } from "react-i18next";
 
 interface Vehicle {
   id: string;
@@ -56,7 +57,7 @@ const ONE_VEHICLE_NOTICE =
   "You can only register one vehicle. Contact support to change it.";
 
 export default function VehicleManagement() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const { t } = useTranslation();  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 

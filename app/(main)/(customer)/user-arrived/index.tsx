@@ -5,10 +5,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRiderStore } from "@/store/useRiderStore";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function UserArrived() {
+  const { t } = useTranslation();
   const { activeRide } = useRiderStore();
-  const driverName = activeRide?.driver?.name ?? "your driver";
+  const driverName = activeRide?.driver?.name ?? t('user_arrived.your_driver');
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -35,24 +37,24 @@ export default function UserArrived() {
         <Ionicons name="location" size={48} color={colors.primary} />
       </View>
       <Text className="text-[24px] font-JakartaBold tracking-tight mb-2" style={{ color: textPrimary }}>
-        You have arrived
+        {t('user_arrived.title')}
       </Text>
       <Text className="text-[15px] font-Jakarta text-center mb-8" style={{ color: textSecondary }}>
-        Hope you enjoyed the ride with {driverName}. Please take a moment to rate your experience.
+        {t('user_arrived.subtitle', { name: driverName })}
       </Text>
       <TouchableOpacity
         className="rounded-full w-full py-[16px] items-center mb-3"
         style={{ backgroundColor: colors.primary }}
         onPress={() => router.replace("/(main)/(customer)/rate-driver")}
       >
-        <Text className="text-[18px] font-JakartaBold text-goWhite">Rate your driver</Text>
+        <Text className="text-[18px] font-JakartaBold text-goWhite">{t('user_arrived.rate_your_driver')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         className="border rounded-full w-full py-[16px] items-center"
         style={{ borderColor }}
         onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
       >
-        <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Skip</Text>
+        <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('user_arrived.skip')}</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

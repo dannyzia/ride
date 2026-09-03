@@ -18,6 +18,7 @@ import { logger } from "@/lib/logger";
 import { colors, radii, spacing } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
+import { useTranslation } from "react-i18next";
 
 type DriverStatus = "pending" | "temporary" | "active" | "suspended" | "rejected";
 
@@ -33,7 +34,7 @@ const POLL_INTERVAL_MS = 10_000;
 const AUTO_NAVIGATE_DELAY_MS = 2_500;
 
 export default function VerificationScreen() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const fetchDriver = useDriverFlowStore((s) => s.fetchDriver);
 
   const bg = isDark ? colors.bgDark : colors.bgLight;

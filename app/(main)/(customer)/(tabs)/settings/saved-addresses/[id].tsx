@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface AddressItem {
   id: string;
@@ -19,6 +20,7 @@ interface AddressItem {
 }
 
 export default function AddressDetail() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -41,15 +43,15 @@ export default function AddressDetail() {
         setLoading(true); setError("");
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        if (!token) { setError("Not authenticated"); setLoading(false); return; }
+        if (!token) { setError(t('wallet.not_authenticated')); setLoading(false); return; }
         const res = await fetch(`${API_URL}/api/rider/addresses?id=${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        if (!res.ok) { setError(data.error || "Failed to load"); return; }
+        if (!res.ok) { setError(data.error || t('saved_addresses.load_failed_short')); return; }
         if (!cancelled) setAddress(data.addresses?.[0] ?? null);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error && err.message ? err.message : "Network error");
+        if (!cancelled) setError(err instanceof Error && err.message ? err.message : t('wallet.network_error'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -59,27 +61,27 @@ export default function AddressDetail() {
 
   const handleDelete = async () => {
     Alert.alert(
-      "Delete Address",
-      "Are you sure you want to delete this saved address?",
+      t('saved_addresses.delete_title'),
+      t('saved_addresses.delete_confirm'),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Delete",
+          text: t('common.delete'),
           style: "destructive",
           onPress: async () => {
             setDeleting(true); setError("");
             try {
               const { data: { session } } = await supabase.auth.getSession();
               const token = session?.access_token;
-              if (!token) { setError("Not authenticated"); setDeleting(false); return; }
+              if (!token) { setError(t('wallet.not_authenticated')); setDeleting(false); return; }
                const res = await fetch(`${API_URL}/api/rider/addresses?id=${id}`, {
                  method: "DELETE",
                  headers: { Authorization: `Bearer ${token}` },
                });
-              if (!res.ok) { setError("Failed to delete"); setDeleting(false); return; }
+              if (!res.ok) { setError(t('saved_addresses.delete_failed_short')); setDeleting(false); return; }
               router.replace("/(main)/(customer)/(tabs)/settings/saved-addresses");
             } catch (err) {
-              setError(err instanceof Error && err.message ? err.message : "Network error");
+              setError(err instanceof Error && err.message ? err.message : t('wallet.network_error'));
               logger.error("Delete address failed", err);
               setDeleting(false);
             }
@@ -94,9 +96,9 @@ export default function AddressDetail() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Address Details</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('saved_addresses.details_title')}</Text>
         <TouchableOpacity onPress={() => setShowMore(!showMore)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.primary} />
         </TouchableOpacity>
@@ -104,16 +106,16 @@ export default function AddressDetail() {
       {showMore && (
         <View className="border-b px-[24px] py-3" style={{ backgroundColor: surfaceBg, borderColor }}>
           <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }}>
-            <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>Set as pickup</Text>
+            <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>{t('saved_addresses.set_pickup')}</Text>
           </TouchableOpacity>
           <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }}>
-            <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>Set as destination</Text>
+            <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>{t('saved_addresses.set_destination')}</Text>
           </TouchableOpacity>
           <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }}>
-            <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>Edit address</Text>
+            <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>{t('saved_addresses.edit')}</Text>
           </TouchableOpacity>
           <TouchableOpacity className="py-2" onPress={handleDelete}>
-            <Text className="text-[15px] font-Jakarta" style={{ color: colors.danger }}>Delete address</Text>
+            <Text className="text-[15px] font-Jakarta" style={{ color: colors.danger }}>{t('saved_addresses.delete_address')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -138,14 +140,14 @@ export default function AddressDetail() {
                 style={{ borderColor: colors.danger }}
                 onPress={handleDelete}
               >
-                <Text className="text-[16px] font-JakartaBold" style={{ color: colors.danger }}>Delete Address</Text>
+                <Text className="text-[16px] font-JakartaBold" style={{ color: colors.danger }}>{t('saved_addresses.delete_title')}</Text>
               </TouchableOpacity>
             )}
           </View>
         </ScrollView>
       ) : (
         <View className="flex-1 items-center justify-center px-[24px]">
-          <Text className="text-[16px] font-Jakarta" style={{ color: textSecondary }}>Address not found</Text>
+          <Text className="text-[16px] font-Jakarta" style={{ color: textSecondary }}>{t('saved_addresses.not_found')}</Text>
         </View>
       )}
       <TouchableOpacity

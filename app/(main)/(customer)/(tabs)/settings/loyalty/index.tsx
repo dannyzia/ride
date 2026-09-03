@@ -9,10 +9,12 @@ import Skeleton from "@/components/Skeleton";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface Offer { id: string; title: string; points_required: number; reward_type: string; reward_value_bdt: number | null; }
 
 export default function RiderLoyalty() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -45,9 +47,9 @@ export default function RiderLoyalty() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const redeem = (offer: Offer) => {
-    Alert.alert("Redeem?", `${offer.title} for ${offer.points_required} points?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Redeem", onPress: async () => {
+    Alert.alert(t('loyalty.redeem_confirm_title'), t('loyalty.redeem_confirm_message', { title: offer.title, points: offer.points_required }), [
+      { text: t('common.cancel'), style: "cancel" },
+      { text: t('loyalty.redeem'), onPress: async () => {
         setRedeeming(offer.id);
         try {
           const { data: { session } } = await supabase.auth.getSession();
@@ -57,9 +59,9 @@ export default function RiderLoyalty() {
             body: JSON.stringify({ offer_id: offer.id }),
           });
           const data = await res.json();
-          if (res.ok) { Alert.alert("Redeemed!", `Reward: ৳${((data.reward_bdt ?? 0) / 100).toFixed(0)}`); fetchData(); }
-          else { Alert.alert("Error", data.error ?? "Failed"); }
-        } catch (_e) { Alert.alert("Error", "Network error"); }
+          if (res.ok) { Alert.alert(t('loyalty.redeemed'), t('loyalty.reward_amount', { amount: ((data.reward_bdt ?? 0) / 100).toFixed(0) })); fetchData(); }
+          else { Alert.alert(t('common.error'), data.error ?? t('loyalty.failed')); }
+        } catch (_e) { Alert.alert(t('common.error'), t('wallet.network_error')); }
         setRedeeming(null);
       }},
     ]);
@@ -76,29 +78,29 @@ export default function RiderLoyalty() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-6 py-4 border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>Back</Text></TouchableOpacity>
-        <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>Loyalty & Rewards</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>{t('common.back')}</Text></TouchableOpacity>
+        <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>{t('loyalty.title')}</Text>
         <View className="w-12" />
       </View>
       <View className="items-center py-8">
         <Text className="text-4xl font-JakartaBold tracking-tight" style={{ color: colors.primary }}>{balance}</Text>
-        <Text className="text-sm font-Jakarta mt-1" style={{ color: textSecondary }}>Reward Points</Text>
+        <Text className="text-sm font-Jakarta mt-1" style={{ color: textSecondary }}>{t('loyalty.reward_points')}</Text>
       </View>
       <FlatList
         data={offers}
         keyExtractor={(o) => o.id}
         contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
-        ListEmptyComponent={<Text className="text-center font-Jakarta py-8" style={{ color: textSecondary }}>No rewards available yet</Text>}
+        ListEmptyComponent={<Text className="text-center font-Jakarta py-8" style={{ color: textSecondary }}>{t('loyalty.empty')}</Text>}
         renderItem={({ item }) => (
           <View className="border rounded-xl shadow-go-sm p-4 mb-3 flex-row items-center justify-between" style={{ backgroundColor: surfaceBg, borderColor }}>
             <View className="flex-1">
               <Text className="text-base font-JakartaBold" style={{ color: textPrimary }}>{item.title}</Text>
-              <Text className="text-sm font-Jakarta mt-0.5" style={{ color: textSecondary }}>{item.points_required} points{item.reward_value_bdt ? ` • ৳${(item.reward_value_bdt / 100).toFixed(0)} credit` : ""}</Text>
+              <Text className="text-sm font-Jakarta mt-0.5" style={{ color: textSecondary }}>{t('loyalty.points', { points: item.points_required })}{item.reward_value_bdt ? t('loyalty.credit_suffix', { amount: (item.reward_value_bdt / 100).toFixed(0) }) : ""}</Text>
             </View>
             <TouchableOpacity onPress={() => redeem(item)} disabled={redeeming === item.id || balance < item.points_required}
               className="py-2 px-4 rounded-full"
               style={{ backgroundColor: balance >= item.points_required ? colors.primary : disabledBg }}>
-              <Text className="text-goWhite font-JakartaBold text-sm">{redeeming === item.id ? "..." : "Redeem"}</Text>
+              <Text className="text-goWhite font-JakartaBold text-sm">{redeeming === item.id ? "..." : t('loyalty.redeem')}</Text>
             </TouchableOpacity>
           </View>
         )}

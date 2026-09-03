@@ -6,6 +6,7 @@ import { View, ActivityIndicator, Text, Linking, StatusBar, TouchableOpacity } f
 import { useLocalSearchParams, Stack } from "expo-router";
 import ChatScreen from "@/components/ChatScreen";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface RideContext {
   current_user_id: string;
@@ -15,6 +16,7 @@ interface RideContext {
 }
 
 export default function CustomerChatRoute() {
+  const { t } = useTranslation();
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const [ctx, setCtx] = useState<RideContext | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,12 +33,12 @@ export default function CustomerChatRoute() {
     fetch(`${API_URL}/api/ride/${rideId}/details`)
       .then(async (res) => {
         if (!res.ok) {
-          setError("Failed to load chat");
+          setError(t('chat.failed_to_load'));
           return;
         }
         setCtx(await res.json());
       })
-      .catch(() => setError("Network error"));
+      .catch(() => setError(t('wallet.network_error')));
   }, [rideId]);
 
   if (error) {
@@ -77,7 +79,7 @@ export default function CustomerChatRoute() {
       <Stack.Screen
         options={{
           headerShown: false,
-          title: `Chat with ${ctx.other_user_name}`,
+          title: t('chat.chat_with', { name: ctx.other_user_name }),
         }}
       />
       <ChatScreen

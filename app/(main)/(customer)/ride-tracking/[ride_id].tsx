@@ -23,6 +23,7 @@ import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 import { colors, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 import PinInput from "@/components/PinInput";
 import LiveMeter from "@/components/LiveMeter";
 import { isPinMismatch, PIN_REVERT_DELAY_MS } from "@/lib/pin";
@@ -66,6 +67,7 @@ interface RideDetails {
 }
 
 export default function RideTrackingScreen() {
+  const { t } = useTranslation();
   const { ride_id } = useLocalSearchParams<{ ride_id: string }>();
   const [trackingState, setTrackingState] = useState<TrackingState>("en_route");
   const [ride, setRide] = useState<RideDetails | null>(null);
@@ -115,7 +117,7 @@ export default function RideTrackingScreen() {
       }
     } catch (e) {
       logger.error("[tracking] fetch ride failed", e);
-      Alert.alert("Error", "Could not load ride details.");
+      Alert.alert(t('common.error'), t('ride_tracking.could_not_load'));
     } finally {
       setLoading(false);
     }
@@ -230,7 +232,7 @@ export default function RideTrackingScreen() {
             else if (msg.status === "in_progress") setTrackingState("in_progress");
             else if (msg.status === "completed") setTrackingState("complete");
             else if (msg.status === "cancelled") {
-              Alert.alert("Ride Cancelled", "The ride was cancelled");
+              Alert.alert(t('notification.ride_cancelled'), t('ride_tracking.ride_was_cancelled'));
               router.replace("/(main)/(customer)/(tabs)/home");
             }
             break;
@@ -249,7 +251,7 @@ export default function RideTrackingScreen() {
             }
             break;
           case "ride:cancelled":
-            Alert.alert("Ride Cancelled", "The ride was cancelled");
+            Alert.alert(t('notification.ride_cancelled'), t('ride_tracking.ride_was_cancelled'));
             router.replace("/(main)/(customer)/(tabs)/home");
             break;
         }
@@ -322,14 +324,14 @@ export default function RideTrackingScreen() {
 
   const handleCancel = () => {
     Alert.alert(
-      "Cancel Ride?",
+      t('ride_tracking.cancel_ride_confirm'),
       trackingState === "en_route"
-        ? "A cancellation fee may apply."
-        : "You may be charged a no-show fee.",
+        ? t('ride_tracking.fee_may_apply')
+        : t('ride_tracking.no_show_fee'),
       [
-        { text: "Keep Ride", style: "cancel" },
+        { text: t('ride_tracking.keep_ride'), style: "cancel" },
         {
-          text: "Cancel Ride",
+          text: t('ride.cancel_ride'),
           style: "destructive",
             onPress: async () => {
               try {
@@ -347,10 +349,10 @@ export default function RideTrackingScreen() {
                 router.replace("/(main)/(customer)/(tabs)/home");
               } else {
                 const err = await res.json().catch(() => ({}));
-                Alert.alert("Error", err.error || "Could not cancel ride.");
+                Alert.alert(t('common.error'), err.error || t('ride_tracking.could_not_cancel'));
               }
             } catch {
-              Alert.alert("Error", "Network error. Please try again.");
+              Alert.alert(t('common.error'), t('ride_tracking.network_error'));
             }
           },
         },
@@ -360,7 +362,7 @@ export default function RideTrackingScreen() {
 
   const handleShare = async () => {
     try {
-      const message = `I'm on a ride with Ride. Track me live: ${API_URL}/track/${ride_id}`;
+      const message = t('ride_tracking.share_message', { url: `${API_URL}/track/${ride_id}` });
       await Share.share({ message });
     } catch {
       logger.warn("[tracking] share failed");
@@ -371,7 +373,7 @@ export default function RideTrackingScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: bg, justifyContent: "center", alignItems: "center" }]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: textSecondary }]}>Loading ride details...</Text>
+        <Text style={[styles.loadingText, { color: textSecondary }]}>{t('ride_tracking.loading_ride')}</Text>
       </SafeAreaView>
     );
   }
@@ -380,12 +382,12 @@ export default function RideTrackingScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: bg, justifyContent: "center", alignItems: "center" }]}>
         <Ionicons name="alert-circle" size={48} color={colors.danger} />
-        <Text style={[styles.loadingText, { color: textSecondary }]}>Ride not found</Text>
+        <Text style={[styles.loadingText, { color: textSecondary }]}>{t('ride_tracking.ride_not_found')}</Text>
         <TouchableOpacity
           style={[styles.backHomeBtn, { backgroundColor: colors.primary }]}
           onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
         >
-          <Text style={styles.backHomeText}>Back to Home</Text>
+          <Text style={styles.backHomeText}>{t('ride.back_to_home')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -405,7 +407,7 @@ export default function RideTrackingScreen() {
         <View pointerEvents="none" style={styles.reconnectBanner}>
           <Ionicons name="cloud-offline-outline" size={16} color={colors.black} />
           <Text style={styles.reconnectText}>
-            Reconnecting — last update {relativeTime(lastUpdateAt)}
+            {t('ride_tracking.reconnecting_last_update', { time: relativeTime(lastUpdateAt) })}
           </Text>
         </View>
       )}
@@ -455,7 +457,7 @@ export default function RideTrackingScreen() {
           </MapViewLib>
         ) : (
           <View style={[styles.mapFallback, { backgroundColor: isDark ? colors.surfaceElevatedDark : colors.gray100 }]}>
-            <Text style={{ color: textSecondary }}>Map unavailable</Text>
+            <Text style={{ color: textSecondary }}>{t('ride_tracking.map_unavailable')}</Text>
           </View>
         )}
       </View>
@@ -480,7 +482,7 @@ export default function RideTrackingScreen() {
               : trackingState === "in_progress" ? colors.info
               : colors.primary
           }]}>
-            {trackingState === "en_route" ? "Driver en route" : trackingState === "arrived" ? "Driver arrived" : trackingState === "in_progress" ? "On trip" : "Complete"}
+            {trackingState === "en_route" ? t('ride_tracking.status_en_route') : trackingState === "arrived" ? t('ride_tracking.status_arrived') : trackingState === "in_progress" ? t('ride_tracking.status_on_trip') : t('ride_tracking.status_complete')}
           </Text>
         </View>
         <TouchableOpacity
@@ -521,14 +523,14 @@ export default function RideTrackingScreen() {
                 <View style={styles.ratingRow}>
                   <Ionicons name="star" size={14} color={colors.amber} />
                   <Text style={[styles.ratingText, { color: textSecondary }]}>{driver.rating.toFixed(1)}</Text>
-                  <Text style={[styles.tripsText, { color: textDisabled }]}>· {driver.total_trips} trips</Text>
+                  <Text style={[styles.tripsText, { color: textDisabled }]}>{t('ride_tracking.trips_count', { count: driver.total_trips })}</Text>
                 </View>
               </View>
               <View style={{ alignItems: "flex-end" }}>
                 <Text style={[styles.etaText, { color: colors.primary }]}>
-                  {trackingState === "arrived" ? "Arrived" : `${etaMinutes} min`}
+                  {trackingState === "arrived" ? t('ride.arrived') : t('ride_tracking.eta_minutes', { minutes: etaMinutes })}
                 </Text>
-                <Text style={[styles.etaSub, { color: textSecondary }]}>away</Text>
+                <Text style={[styles.etaSub, { color: textSecondary }]}>{t('ride_tracking.away')}</Text>
               </View>
             </View>
 
@@ -553,15 +555,15 @@ export default function RideTrackingScreen() {
             <View style={styles.actionRow}>
               <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => { if (driver?.phone) Linking.openURL(`tel:${driver.phone}`); }}>
                 <Ionicons name="call" size={20} color={colors.primary} />
-                <Text style={[styles.actionBtnText, { color: textPrimary }]}>Call</Text>
+                <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.call')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => router.push(`/(main)/(customer)/chat/${ride_id}`)}>
                 <Ionicons name="chatbubble" size={20} color={colors.primary} />
-                <Text style={[styles.actionBtnText, { color: textPrimary }]}>Chat</Text>
+                <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.chat')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={handleCancel}>
                 <Ionicons name="close-circle" size={20} color={colors.danger} />
-                <Text style={[styles.actionBtnText, { color: colors.danger }]}>Cancel</Text>
+                <Text style={[styles.actionBtnText, { color: colors.danger }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -572,28 +574,28 @@ export default function RideTrackingScreen() {
           <View style={[styles.pinCard, { backgroundColor: surfaceBg, borderColor }]}>
             <View style={styles.pinHeaderRow}>
               <Ionicons name="lock-closed" size={18} color={colors.primary} />
-              <Text style={[styles.pinTitle, { color: textPrimary }]}>Your Ride PIN</Text>
+              <Text style={[styles.pinTitle, { color: textPrimary }]}>{t('ride_tracking.your_ride_pin')}</Text>
             </View>
             <PinInput
               value={pinValue}
               onChange={handlePinChange}
               error={pinError}
-              accessibilityLabel="Ride PIN"
+              accessibilityLabel={t('ride_tracking.ride_pin')}
             />
             {pinError ? (
               <Text style={[styles.pinError, { color: colors.danger }]}>
-                That doesn&apos;t match your ride PIN — restoring…
+                {t('ride_tracking.pin_mismatch')}
               </Text>
             ) : (
               <Text style={[styles.pinHint, { color: textSecondary }]}>
-                Share this PIN with your driver to start the ride.
+                {t('ride_tracking.pin_hint')}
               </Text>
             )}
             <TouchableOpacity
               style={[styles.copyBtn, { backgroundColor: colors.primaryLight }]}
               onPress={handleCopyPin}
               accessibilityRole="button"
-              accessibilityLabel="Copy PIN"
+              accessibilityLabel={t('ride_tracking.copy_pin')}
             >
               <Ionicons
                 name={pinCopied ? "checkmark" : "copy-outline"}
@@ -601,7 +603,7 @@ export default function RideTrackingScreen() {
                 color={colors.primary}
               />
               <Text style={[styles.copyBtnText, { color: colors.primary }]}>
-                {pinCopied ? "Copied" : "Copy PIN"}
+                {pinCopied ? t('ride_tracking.copied') : t('ride_tracking.copy_pin')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -626,15 +628,15 @@ export default function RideTrackingScreen() {
             <View style={styles.actionRow}>
               <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => { if (driver?.phone) Linking.openURL(`tel:${driver.phone}`); }}>
                 <Ionicons name="call" size={20} color={colors.primary} />
-                <Text style={[styles.actionBtnText, { color: textPrimary }]}>Call</Text>
+                <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.call')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => router.push(`/(main)/(customer)/chat/${ride_id}`)}>
                 <Ionicons name="chatbubble" size={20} color={colors.primary} />
-                <Text style={[styles.actionBtnText, { color: textPrimary }]}>Chat</Text>
+                <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.chat')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={handleShare}>
                 <Ionicons name="share" size={20} color={colors.primary} />
-                <Text style={[styles.actionBtnText, { color: textPrimary }]}>Share</Text>
+                <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.share')}</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -643,14 +645,14 @@ export default function RideTrackingScreen() {
         {/* ── COMPLETE: FARE + RATE DRIVER ── */}
         {trackingState === "complete" && (
           <View style={[styles.completeContainer, { backgroundColor: surfaceBg }]}>
-            <Text style={[styles.completeTitle, { color: textPrimary }]}>Ride Complete</Text>
+            <Text style={[styles.completeTitle, { color: textPrimary }]}>{t('ride_tracking.ride_complete')}</Text>
 
             <View style={[styles.fareCard, { borderColor: borderColor }]}>
               <Text style={[styles.fareAmount, { color: colors.primary }]}>
                 ৳{(ride.fare_bdt / 100).toFixed(0)}
               </Text>
               <Text style={[styles.fareLabel, { color: textSecondary }]}>
-                Pay driver in cash
+                {t('ride_tracking.pay_driver_cash')}
               </Text>
             </View>
 
@@ -658,7 +660,7 @@ export default function RideTrackingScreen() {
               style={[styles.rateDriverBtn, { backgroundColor: colors.primary }]}
               onPress={() => router.push(`/(main)/(customer)/rate-driver?rideId=${ride_id}`)}
             >
-              <Text style={styles.rateDriverBtnText}>Rate Your Driver</Text>
+              <Text style={styles.rateDriverBtnText}>{t('ride_tracking.rate_your_driver')}</Text>
             </TouchableOpacity>
           </View>
         )}

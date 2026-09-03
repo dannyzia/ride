@@ -20,6 +20,7 @@ import { uploadImage } from "@/lib/imageToURL";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface DriverProfile {
   full_name: string;
@@ -33,7 +34,7 @@ interface DriverProfile {
 }
 
 export default function EditProfile() {
-  const [profile, setProfile] = useState<DriverProfile | null>(null);
+  const { t } = useTranslation();  const [profile, setProfile] = useState<DriverProfile | null>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [city, setCity] = useState("");

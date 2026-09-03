@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
+import { useTranslation } from "react-i18next";
 
 interface Vehicle {
   id: string;
@@ -33,10 +34,10 @@ const vehicleTypeDisplay: Record<string, string> = Object.fromEntries(
 // docs/vehicle-model-decision.md. This screen is now a read-only
 // confirmation of the registered vehicle — multi-vehicle selection and the
 // vehicle-activate / vehicle-type-change calls were removed.
-const ONE_VEHICLE_NOTICE =
-  "You can only register one vehicle. Contact support to change it.";
+const ONE_VEHICLE_NOTICE_KEY = 'vehicle_select.one_vehicle_notice';
 
 export default function SelectActiveVehicle() {
+  const { t } = useTranslation();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -59,20 +60,20 @@ export default function SelectActiveVehicle() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated");
+        setError(t('vehicle_select.not_authenticated'));
         return;
       }
       const res = await fetch(`${API_URL}/api/driver/vehicles`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        setError("Failed to load vehicles");
+        setError(t('vehicle_select.failed_to_load'));
         return;
       }
       const data = await res.json();
       setVehicles(data.vehicles ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
+      setError(err instanceof Error ? err.message : t('vehicle_select.network_error'));
       logger.error("SelectActiveVehicle fetch failed", err);
     } finally {
       setLoading(false);
@@ -106,7 +107,7 @@ export default function SelectActiveVehicle() {
           className="flex-1 text-center text-[18px] font-JakartaBold"
           style={{ color: textPrimary }}
         >
-          Your Vehicle
+          {t('vehicle_select.title')}
         </Text>
         <View style={{ width: 32 }} />
       </View>
@@ -135,7 +136,7 @@ export default function SelectActiveVehicle() {
                 className="text-[14px] font-JakartaBold"
                 style={{ color: colors.primary }}
               >
-                Retry
+                {t('vehicle_select.retry')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -146,7 +147,7 @@ export default function SelectActiveVehicle() {
               className="text-[15px] font-Jakarta mt-3 text-center"
               style={{ color: textSecondary }}
             >
-              No vehicles registered.
+              {t('vehicle_select.no_vehicles')}
             </Text>
           </View>
         ) : (
@@ -200,7 +201,7 @@ export default function SelectActiveVehicle() {
                         className="text-[10px] font-JakartaBold"
                         style={{ color: colors.primary }}
                       >
-                        ACTIVE
+                        {t('vehicle_select.active')}
                       </Text>
                     </View>
                   )}
@@ -231,7 +232,7 @@ export default function SelectActiveVehicle() {
               className="text-[13px] font-Jakarta flex-1"
               style={{ color: textSecondary }}
             >
-              {ONE_VEHICLE_NOTICE}
+              {t(ONE_VEHICLE_NOTICE_KEY)}
             </Text>
           </View>
         )}
@@ -249,7 +250,7 @@ export default function SelectActiveVehicle() {
               className="text-[16px] font-JakartaBold"
               style={{ color: colors.white }}
             >
-              Continue
+              {t('vehicle_select.continue')}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -264,7 +265,7 @@ export default function SelectActiveVehicle() {
                 className="text-[16px] font-JakartaBold"
                 style={{ color: colors.white }}
               >
-                Add Vehicle
+                {t('vehicle_select.add_vehicle')}
               </Text>
             </TouchableOpacity>
           )

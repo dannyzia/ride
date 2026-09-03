@@ -21,6 +21,7 @@ import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import SettingsRow from "@/components/SettingsRow";
 import EmptyState from "@/components/EmptyState";
 import { authCleanup } from "@/lib/authCleanup";
+import { useTranslation } from "react-i18next";
 
 interface UserProfile {
   id: string;
@@ -51,6 +52,7 @@ const REPORT_ISSUE_ROUTE = "/(main)/(customer)/report-issue";
 const DELETE_ACCOUNT_ROUTE = "/(main)/(customer)/(tabs)/settings/delete-account";
 
 const Profile = () => {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -74,7 +76,7 @@ const Profile = () => {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not signed in");
+        setError(t('profile.not_signed_in'));
         return;
       }
       const res = await fetch(`${API_URL}/api/user/me`, {
@@ -87,13 +89,13 @@ const Profile = () => {
       setProfile(data.user);
       setError(null);
     } catch (err) {
-      setError("Couldn't load your profile. Check your connection and try again.");
+      setError(t('profile.load_failed'));
       logger.error("[profile] fetch failed", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchProfile();
@@ -110,16 +112,16 @@ const Profile = () => {
       authCleanup();
     } catch (err) {
       logger.error("[profile] sign out failed", err);
-      Alert.alert("Sign Out Failed", "Please try again.");
+      Alert.alert(t('profile.sign_out_failed'), t('profile.please_try_again'));
     }
-  }, []);
+  }, [t]);
 
   const confirmSignOut = useCallback(() => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Sign Out", style: "destructive", onPress: () => { void handleSignOut(); } },
+    Alert.alert(t('profile.sign_out'), t('profile.sign_out_confirm'), [
+      { text: t('common.cancel'), style: "cancel" },
+      { text: t('profile.sign_out'), style: "destructive", onPress: () => { void handleSignOut(); } },
     ]);
-  }, [handleSignOut]);
+  }, [handleSignOut, t]);
 
   const renderSection = (title: string, children: ReactNode) => (
     <View key={title}>
@@ -151,9 +153,9 @@ const Profile = () => {
         <View style={styles.centerContent}>
           <EmptyState
             icon="warning-outline"
-            title="Couldn't load profile"
-            subtitle={error ?? "Something went wrong"}
-            actionLabel="Try Again"
+            title={t('profile.load_failed_title')}
+            subtitle={error ?? t('profile.something_went_wrong')}
+            actionLabel={t('profile.try_again')}
             onAction={fetchProfile}
           />
         </View>
@@ -187,10 +189,10 @@ const Profile = () => {
         }
       >
         <View style={styles.screenHeader}>
-          <Text style={[styles.screenTitle, { color: textPrimary }]}>Profile</Text>
+          <Text style={[styles.screenTitle, { color: textPrimary }]}>{t('profile.title')}</Text>
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel="Toggle theme"
+            accessibilityLabel={t('profile.toggle_theme')}
             onPress={() => setTheme(isDark ? "light" : "dark")}
             style={styles.themeToggle}
           >
@@ -211,7 +213,7 @@ const Profile = () => {
             </View>
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel="Edit profile"
+              accessibilityLabel={t('profile.edit_profile')}
               onPress={() => router.push(EDIT_ROUTE)}
               style={[styles.editBadge, { backgroundColor: surfaceBg, borderColor }]}
             >
@@ -231,23 +233,23 @@ const Profile = () => {
             ) : null}
             {memberSinceYear ? (
               <Text style={[styles.metaText, { color: textSecondary }]}>
-                Rider since {memberSinceYear}
+                {t('profile.rider_since', { year: memberSinceYear })}
               </Text>
             ) : null}
           </View>
         </View>
 
         {renderSection(
-          "ACCOUNT",
+          t('profile.section_account'),
           <>
             <SettingsRow
               icon="person-outline"
-              label="Edit Profile"
+              label={t('profile.edit_profile')}
               onPress={() => router.push(EDIT_ROUTE)}
             />
             <SettingsRow
               icon="call-outline"
-              label="Phone Number"
+              label={t('profile.phone_number')}
               showChevron={false}
               onPress={() => {}}
               rightElement={
@@ -258,7 +260,7 @@ const Profile = () => {
             />
             <SettingsRow
               icon="key-outline"
-              label="Change Password"
+              label={t('profile.change_password')}
               onPress={() => router.push(CHANGE_PASSWORD_ROUTE)}
               isLast
             />
@@ -266,26 +268,26 @@ const Profile = () => {
         )}
 
         {renderSection(
-          "PREFERENCES",
+          t('profile.section_preferences'),
           <>
             <SettingsRow
               icon="sunny-outline"
-              label="Appearance"
+              label={t('settings.appearance')}
               onPress={() => router.push(APPEARANCE_ROUTE)}
             />
             <SettingsRow
               icon="notifications-outline"
-              label="Notifications"
+              label={t('settings.notifications')}
               onPress={() => router.push(NOTIFICATIONS_ROUTE)}
             />
             <SettingsRow
               icon="home-outline"
-              label="Saved Addresses"
+              label={t('profile.saved_addresses')}
               onPress={() => router.push(SAVED_ADDRESSES_ROUTE)}
             />
             <SettingsRow
               icon="warning-outline"
-              label="Emergency Contacts"
+              label={t('profile.emergency_contacts')}
               onPress={() => router.push(EMERGENCY_CONTACTS_ROUTE)}
               isLast
             />
@@ -293,18 +295,18 @@ const Profile = () => {
         )}
 
         {renderSection(
-          "SUPPORT",
+          t('profile.section_support'),
           <>
-            <SettingsRow icon="help-circle-outline" label="FAQ" onPress={() => router.push(FAQ_ROUTE)} />
+            <SettingsRow icon="help-circle-outline" label={t('profile.faq')} onPress={() => router.push(FAQ_ROUTE)} />
             <SettingsRow
               icon="headset-outline"
-              label="Contact Support"
+              label={t('profile.contact_support')}
               onPress={() => router.push(CONTACT_SUPPORT_ROUTE)}
             />
             <SettingsRow
               icon="flag-outline"
               iconColor={colors.amber}
-              label="Report Issue"
+              label={t('profile.report_issue')}
               onPress={() => router.push(REPORT_ISSUE_ROUTE)}
               isLast
             />
@@ -313,19 +315,19 @@ const Profile = () => {
 
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Sign out"
+          accessibilityLabel={t('profile.sign_out')}
           onPress={confirmSignOut}
           style={styles.signOutButton}
         >
-          <Text style={[styles.signOutText, { color: colors.danger }]}>Sign Out</Text>
+          <Text style={[styles.signOutText, { color: colors.danger }]}>{t('profile.sign_out')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Delete account"
+          accessibilityLabel={t('profile.delete_account')}
           onPress={() => router.push(DELETE_ACCOUNT_ROUTE)}
           style={styles.deleteAccountButton}
         >
-          <Text style={[styles.deleteAccountText, { color: textDisabled }]}>Delete Account</Text>
+          <Text style={[styles.deleteAccountText, { color: textDisabled }]}>{t('profile.delete_account')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

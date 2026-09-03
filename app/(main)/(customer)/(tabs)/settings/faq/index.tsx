@@ -14,6 +14,7 @@ import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface FaqItem {
   id: string;
@@ -32,48 +33,43 @@ interface FaqsResponse {
   error?: string;
 }
 
-const FAQ_FALLBACKS: FaqItem[] = [
+const FAQ_FALLBACKS: { id: string; questionKey: string; answerKey: string }[] = [
   {
     id: "fallback-1",
-    question: "How do I book a ride?",
-    answer:
-      "Set your pickup point and destination on the home screen, confirm the fare estimate, and request the ride. Nearby drivers are matched automatically.",
+    questionKey: "faq.fallback_1_question",
+    answerKey: "faq.fallback_1_answer",
   },
   {
     id: "fallback-2",
-    question: "How is my fare calculated?",
-    answer:
-      "Fares are based on trip distance and estimated duration. You always see the estimated fare before confirming, and the final fare after the trip ends.",
+    questionKey: "faq.fallback_2_question",
+    answerKey: "faq.fallback_2_answer",
   },
   {
     id: "fallback-3",
-    question: "Can I cancel a ride?",
-    answer:
-      "Yes. You can cancel while a driver is on the way. Frequently cancelling after a driver accepts may affect your account standing.",
+    questionKey: "faq.fallback_3_question",
+    answerKey: "faq.fallback_3_answer",
   },
   {
     id: "fallback-4",
-    question: "Which payment methods can I use?",
-    answer:
-      "You can pay with cash or through the in-app payment gateway. Available options are shown when you confirm your ride.",
+    questionKey: "faq.fallback_4_question",
+    answerKey: "faq.fallback_4_answer",
   },
   {
     id: "fallback-5",
-    question: "How do I report an issue with my ride?",
-    answer:
-      "Go to Settings, then Contact Support to reach us by live chat, email, or phone. Include your trip details so we can help you faster.",
+    questionKey: "faq.fallback_5_question",
+    answerKey: "faq.fallback_5_answer",
   },
   {
     id: "fallback-6",
-    question: "What are rider passes?",
-    answer:
-      "Ride passes give you discounted fares for a set period of time. You can view and purchase available passes under Settings, then Ride Pass.",
+    questionKey: "faq.fallback_6_question",
+    answerKey: "faq.fallback_6_answer",
   },
 ];
 
 export default function SettingsFAQ() {
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
+  const { t } = useTranslation();
 
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -92,6 +88,13 @@ export default function SettingsFAQ() {
     : colors.textDisabledLight;
   const skeletonBlock = isDark ? colors.darkSecondary : colors.gray100;
 
+  const toFaqItems = (fallbacks: typeof FAQ_FALLBACKS) =>
+    fallbacks.map((f) => ({
+      id: f.id,
+      question: t(f.questionKey),
+      answer: t(f.answerKey),
+    }));
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -102,7 +105,7 @@ export default function SettingsFAQ() {
         logger.error(`[settings/faq] API error status ${res.status}`);
       }
       if (!res.ok || rows.length === 0) {
-        setFaqs(FAQ_FALLBACKS);
+        setFaqs(toFaqItems(FAQ_FALLBACKS));
         setUsingFallback(true);
         return;
       }
@@ -116,12 +119,12 @@ export default function SettingsFAQ() {
       setUsingFallback(false);
     } catch (err) {
       logger.error("[settings/faq] fetch failed", err);
-      setFaqs(FAQ_FALLBACKS);
+      setFaqs(toFaqItems(FAQ_FALLBACKS));
       setUsingFallback(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -137,16 +140,16 @@ export default function SettingsFAQ() {
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.back')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => router.back()}
         >
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textPrimary }]}>FAQ</Text>
+        <Text style={[styles.headerTitle, { color: textPrimary }]}>{t('settings.faq')}</Text>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Toggle theme"
+          accessibilityLabel={t('faq.toggle_theme')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => setTheme(isDark ? "light" : "dark")}
         >
@@ -173,15 +176,15 @@ export default function SettingsFAQ() {
             {usingFallback ? (
               <View style={styles.fallbackRow}>
                 <Text style={[styles.fallbackText, { color: textSecondary }]}>
-                  Showing common questions
+                  {t('faq.showing_common')}
                 </Text>
                 <TouchableOpacity
                   accessibilityRole="button"
-                  accessibilityLabel="Retry loading FAQs"
+                  accessibilityLabel={t('faq.retry_loading_a11y')}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   onPress={load}
                 >
-                  <Text style={styles.fallbackRetry}>Retry</Text>
+                  <Text style={styles.fallbackRetry}>{t('common.retry')}</Text>
                 </TouchableOpacity>
               </View>
             ) : null}

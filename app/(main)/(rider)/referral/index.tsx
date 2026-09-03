@@ -8,9 +8,10 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function DriverReferral() {
-  const [code, setCode] = useState("");
+  const { t } = useTranslation();  const [code, setCode] = useState("");
   const [earnedBdt, setEarnedBdt] = useState(0);
   const [totalReferrals, setTotalReferrals] = useState(0);
   const [loading, setLoading] = useState(true);

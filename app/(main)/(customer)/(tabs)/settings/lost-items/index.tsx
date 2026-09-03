@@ -8,10 +8,20 @@ import { logger } from "@/lib/logger";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 const STATUS_COLORS: Record<string, string> = {
   reported: "#F59E0B", driver_confirmed: "#0CC25F", photo_provided: "#0CC25F",
   arranged_return: "#0CC25F", resolved: "#16A34A", unresolved: "#E31D1C",
+};
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  reported: "lost_items.reported",
+  driver_confirmed: "lost_items.status_driver_confirmed",
+  photo_provided: "lost_items.status_photo_provided",
+  arranged_return: "lost_items.status_arranged_return",
+  resolved: "lost_items.status_resolved",
+  unresolved: "lost_items.status_unresolved",
 };
 
 interface LostItem {
@@ -30,6 +40,7 @@ interface RecentRide {
 }
 
 export default function RiderLostItems() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -47,6 +58,11 @@ export default function RiderLostItems() {
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const statusLabel = (status: string) => {
+    const key = STATUS_LABEL_KEYS[status];
+    return key ? t(key) : status.replace(/_/g, " ");
+  };
+
   const fetchItems = useCallback(async () => {
     try {
       setError("");
@@ -55,7 +71,7 @@ export default function RiderLostItems() {
       if (!token) return;
       const res = await fetch(`${API_URL}/api/rider/lost-items`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setItems((await res.json()).items ?? []);
-    } catch (e) { setError("Failed to load. Pull down to refresh."); logger.error("Fetch lost items failed", e); }
+    } catch (e) { setError(t('lost_items.load_failed')); logger.error("Fetch lost items failed", e); }
     finally { setLoading(false); }
   }, []);
 
@@ -72,7 +88,7 @@ export default function RiderLostItems() {
   };
 
   const submitReport = async () => {
-    if (!selectedRideId || description.trim().length < 3) { Alert.alert("Error", "Select a ride and describe the item (min 3 chars)"); return; }
+    if (!selectedRideId || description.trim().length < 3) { Alert.alert(t('common.error'), t('lost_items.validation')); return; }
     setSubmitting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -81,9 +97,9 @@ export default function RiderLostItems() {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ride_id: selectedRideId, item_description: description.trim() }),
       });
-      if (res.ok) { Alert.alert("Reported", "Driver has been notified."); setModalVisible(false); setDescription(""); fetchItems(); }
-      else { const d = await res.json(); Alert.alert("Error", d.error ?? "Failed"); }
-    } catch (_err) { Alert.alert("Error", "Network error"); }
+      if (res.ok) { Alert.alert(t('lost_items.reported'), t('lost_items.driver_notified')); setModalVisible(false); setDescription(""); fetchItems(); }
+      else { const d = await res.json(); Alert.alert(t('common.error'), d.error ?? t('lost_items.failed')); }
+    } catch (_err) { Alert.alert(t('common.error'), t('wallet.network_error')); }
     finally { setSubmitting(false); }
   };
 
@@ -91,8 +107,8 @@ export default function RiderLostItems() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-6 py-4 border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>Back</Text></TouchableOpacity>
-        <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>Lost Items</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>{t('common.back')}</Text></TouchableOpacity>
+        <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>{t('settings.lost_items')}</Text>
         <View className="w-12" />
       </View>
       {loading ? <ActivityIndicator size="large" color={colors.primary} className="mt-10" /> : error && items.length === 0 ? (
@@ -100,36 +116,36 @@ export default function RiderLostItems() {
       ) : (
         <FlatList className="flex-1 px-6" data={items} keyExtractor={(r) => r.id}
           contentContainerStyle={{ paddingVertical: 16 }}
-          ListEmptyComponent={<Text className="text-center font-Jakarta py-8" style={{ color: textSecondary }}>No lost item reports</Text>}
+          ListEmptyComponent={<Text className="text-center font-Jakarta py-8" style={{ color: textSecondary }}>{t('lost_items.empty')}</Text>}
           renderItem={({ item }) => (
             <View className="border rounded-xl p-4 mb-3" style={{ backgroundColor: surfaceBg, borderColor }}>
               <View className="flex-row justify-between items-start mb-1">
                 <Text className="flex-1 text-sm font-JakartaBold" style={{ color: textPrimary }}>{item.item_description}</Text>
-                <Text className="text-xs font-JakartaBold" style={{ color: STATUS_COLORS[item.status] ?? textSecondary }}>{item.status.replace(/_/g, " ")}</Text>
+                <Text className="text-xs font-JakartaBold" style={{ color: STATUS_COLORS[item.status] ?? textSecondary }}>{statusLabel(item.status)}</Text>
               </View>
               {item.driver_photo_url && (
                 <View className="flex-row items-center mt-1">
                   <Ionicons name="camera" size={12} color={textSecondary} style={{ marginRight: 4 }} />
-                  <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>Photo provided</Text>
+                  <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>{t('lost_items.status_photo_provided')}</Text>
                 </View>
               )}
-              {item.return_method && <Text className="text-xs font-Jakarta mt-0.5" style={{ color: textSecondary }}>Return: {item.return_method.replace(/_/g, " ")}</Text>}
-              {(item.return_fee_bdt ?? 0) > 0 && <Text className="text-xs font-JakartaBold mt-0.5" style={{ color: colors.accent }}>Fee: ৳{(item.return_fee_bdt! / 100).toFixed(0)}</Text>}
+              {item.return_method && <Text className="text-xs font-Jakarta mt-0.5" style={{ color: textSecondary }}>{t('lost_items.return_method', { method: item.return_method.replace(/_/g, " ") })}</Text>}
+              {(item.return_fee_bdt ?? 0) > 0 && <Text className="text-xs font-JakartaBold mt-0.5" style={{ color: colors.accent }}>{t('lost_items.fee_amount', { amount: (item.return_fee_bdt! / 100).toFixed(0) })}</Text>}
             </View>
           )}
         />
       )}
       <TouchableOpacity onPress={openReport} className="mx-6 mb-6 py-4 rounded-full items-center" style={{ backgroundColor: colors.accent }}>
-        <Text className="text-goWhite font-JakartaBold text-base">Report Lost Item</Text>
+        <Text className="text-goWhite font-JakartaBold text-base">{t('lost_items.report')}</Text>
       </TouchableOpacity>
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View className="flex-1 justify-end bg-black/50">
           <View className="rounded-t-3xl p-6 max-h-[80%]" style={{ backgroundColor: surfaceBg }}>
             <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>Report Lost Item</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}><Text className="font-JakartaBold" style={{ color: colors.danger }}>Cancel</Text></TouchableOpacity>
+              <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>{t('lost_items.report')}</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}><Text className="font-JakartaBold" style={{ color: colors.danger }}>{t('common.cancel')}</Text></TouchableOpacity>
             </View>
-            <Text className="text-sm font-Jakarta mb-2" style={{ color: textSecondary }}>Select Ride</Text>
+            <Text className="text-sm font-Jakarta mb-2" style={{ color: textSecondary }}>{t('lost_items.select_ride')}</Text>
             <FlatList data={recentRides} keyExtractor={(r) => r.ride_id} style={{ maxHeight: 120 }} className="mb-3"
               renderItem={({ item }) => (
                 <TouchableOpacity onPress={() => setSelectedRideId(item.ride_id)}
@@ -137,18 +153,18 @@ export default function RiderLostItems() {
                   style={selectedRideId === item.ride_id
                     ? { backgroundColor: colors.accentLight, borderColor: colors.accent }
                     : { backgroundColor: bg, borderColor }}>
-                  <Text className="text-sm font-Jakarta" style={{ color: textPrimary }}>{item.origin_address ?? item.pickup_address ?? "Ride"}</Text>
+                  <Text className="text-sm font-Jakarta" style={{ color: textPrimary }}>{item.origin_address ?? item.pickup_address ?? t('lost_items.ride_fallback')}</Text>
                 </TouchableOpacity>
               )}
             />
-            <Text className="text-sm font-Jakarta mb-2" style={{ color: textSecondary }}>Describe the item</Text>
+            <Text className="text-sm font-Jakarta mb-2" style={{ color: textSecondary }}>{t('lost_items.describe_item')}</Text>
             <TextInput className="border rounded-lg px-4 py-3 font-Jakarta text-sm mb-4"
               style={{ backgroundColor: bg, borderColor, color: textPrimary }}
-              value={description} onChangeText={setDescription} multiline placeholder="e.g. Black wallet in back seat" placeholderTextColor={textSecondary} />
+              value={description} onChangeText={setDescription} multiline placeholder={t('lost_items.placeholder')} placeholderTextColor={textSecondary} />
             <TouchableOpacity onPress={submitReport} disabled={submitting}
               className="py-4 rounded-full items-center"
               style={{ backgroundColor: submitting ? (isDark ? colors.borderDark : colors.borderLight) : colors.accent }}>
-              <Text className="text-goWhite font-JakartaBold text-base">{submitting ? "Submitting..." : "Submit Report"}</Text>
+              <Text className="text-goWhite font-JakartaBold text-base">{submitting ? t('lost_items.submitting') : t('lost_items.submit')}</Text>
             </TouchableOpacity>
           </View>
         </View>

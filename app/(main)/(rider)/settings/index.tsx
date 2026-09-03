@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ThemeToggle from "@/components/ThemeToggle";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface SettingsItem {
   label: string;
@@ -33,7 +34,7 @@ const SETTINGS: SettingsItem[] = [
 const SECTION_ORDER = ["Subscription", "Preferences", "Account", "Support", "Legal"];
 
 export default function DriverSettings() {
-  const isDark = useIsDark();
+  const { t } = useTranslation();  const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;

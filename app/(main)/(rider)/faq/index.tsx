@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface FAQ {
   id: string;
@@ -24,7 +25,7 @@ interface FAQ {
 }
 
 export default function DriverFAQ() {
-  const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const { t } = useTranslation();  const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState<number | null>(null);

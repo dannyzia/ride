@@ -10,6 +10,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import ChartBar from "@/components/ChartBar";
 import ChartLine from "@/components/ChartLine";
+import { useTranslation } from "react-i18next";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 type Period = "week" | "month";
@@ -32,7 +33,7 @@ interface Performance {
 }
 
 export default function PerformanceStats() {
-  const [stats, setStats] = useState<Performance | null>(null);
+  const { t } = useTranslation();  const [stats, setStats] = useState<Performance | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState<Period>("week");

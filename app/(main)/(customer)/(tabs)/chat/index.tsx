@@ -4,8 +4,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 const Chat = () => {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -18,7 +20,7 @@ const Chat = () => {
     <SafeAreaView className="flex-1 p-5" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <Text className="text-2xl font-JakartaBold" style={{ color: textPrimary }}>Chat</Text>
+        <Text className="text-2xl font-JakartaBold" style={{ color: textPrimary }}>{t('chat_list.title')}</Text>
         <View className="flex-1 flex justify-center items-center">
           <Image
             source={images.message}
@@ -27,13 +29,13 @@ const Chat = () => {
             resizeMode="contain"
           />
           <Text className="text-3xl font-JakartaBold mt-3" style={{ color: textPrimary }}>
-            No Messages Yet
+            {t('chat_list.no_messages')}
           </Text>
           <Text
             className="text-base mt-2 text-center px-7"
             style={{ color: textSecondary, fontFamily: "Jakarta-Regular" }}
           >
-            Start a conversation with your friends and family
+            {t('chat_list.empty_sub')}
           </Text>
         </View>
       </ScrollView>

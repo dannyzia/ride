@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ReactNativeModal from "react-native-modal";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useCallLedgerStore } from "@/store/useCallLedgerStore";
+import { useTranslation } from "react-i18next";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -53,76 +54,50 @@ interface MissedSummary {
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const OUTCOME_OPTIONS = [
-  { key: "all", label: "All" },
-  { key: "accepted", label: "Accepted" },
-  { key: "expired", label: "Ignored" },
-  { key: "refunded", label: "Refunded" },
-  { key: "filtered", label: "Filtered" },
-] as const;
-
-const VEHICLE_TYPE_OPTIONS = [
-  { key: "all", label: "All Types" },
-  { key: "bike_basic", label: "Bike Basic" },
-  { key: "bike_standard", label: "Bike Standard" },
-  { key: "bike_plus", label: "Bike Plus" },
-  { key: "cng", label: "CNG" },
-  { key: "car_compact", label: "Car Compact" },
-  { key: "car_economy", label: "Car Economy" },
-  { key: "car_comfort", label: "Car Comfort" },
-  { key: "car_premium", label: "Car Premium" },
-  { key: "car_xl", label: "Car XL" },
-] as const;
-
-const DATE_RANGE_OPTIONS = [
-  { key: "7d", label: "This Week", days: 7 },
-  { key: "30d", label: "This Month", days: 30 },
-  { key: "all", label: "All Time", days: 0 },
-] as const;
-
-const EVENT_CONFIG: Record<
-  string,
-  { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }
-> = {
-  deduction: {
-    label: "Ride Deduction",
-    icon: "remove-circle-outline",
-    color: colors.danger,
-  },
-  // Phase D (§6): new deduction rows are lead debits written at offer time
-  // with reason='offer_sent' — labeled distinctly from legacy per-open
-  // deduction rows via the reason-aware override in renderLedgerItem.
-  credit: { label: "Credit Added", icon: "add-circle-outline", color: colors.primary },
-  initial_load: {
-    label: "Subscription Activated",
-    icon: "arrow-down",
-    color: colors.primary,
-  },
-  expiry_writeoff: {
-    label: "Expired Credits",
-    icon: "time-outline",
-    color: colors.grayMedium,
-  },
-  pro_rata_credit: {
-    label: "Pro-rata Compensation",
-    icon: "gift-outline",
-    color: colors.adminAccent,
-  },
+const OUTCOME_KEYS = ['all', 'accepted', 'expired', 'refunded', 'filtered'] as const;
+const OUTCOME_I18N: Record<string, string> = {
+  all: 'common.all', accepted: 'call_ledger.accepted', expired: 'call_ledger.ignored',
+  refunded: 'call_ledger.refunded', filtered: 'call_ledger.filtered',
 };
 
-const OUTCOME_CONFIG = (
+const VEHICLE_TYPE_KEYS = ['all', 'bike_basic', 'bike_standard', 'bike_plus', 'cng', 'car_compact', 'car_economy', 'car_comfort', 'car_premium', 'car_xl'] as const;
+const VEHICLE_TYPE_I18N: Record<string, string> = {
+  all: 'call_ledger.all_types',
+};
+
+const DATE_RANGE_KEYS = ['7d', '30d', 'all'] as const;
+const DATE_RANGE_DAYS: Record<string, number> = { '7d': 7, '30d': 30, all: 0 };
+const DATE_RANGE_I18N: Record<string, string> = {
+  '7d': 'call_ledger.this_week', '30d': 'call_ledger.this_month', all: 'call_ledger.all_time',
+};
+
+const EVENT_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
+  deduction: { icon: "remove-circle-outline", color: colors.danger },
+  credit: { icon: "add-circle-outline", color: colors.primary },
+  initial_load: { icon: "arrow-down", color: colors.primary },
+  expiry_writeoff: { icon: "time-outline", color: colors.grayMedium },
+  pro_rata_credit: { icon: "gift-outline", color: colors.adminAccent },
+};
+const EVENT_I18N: Record<string, string> = {
+  deduction: 'call_ledger.ride_deduction', credit: 'call_ledger.credit_added',
+  initial_load: 'call_ledger.subscription_activated', expiry_writeoff: 'call_ledger.expired_credits',
+  pro_rata_credit: 'call_ledger.pro_rata_compensation',
+};
+
+const getOutcomeConfig = (
   textSecondary: string,
+  t: (key: string) => string,
 ): Record<string, { label: string; color: string }> => ({
-  accepted: { label: "Accepted", color: colors.primary },
-  expired: { label: "No Response", color: colors.amber },
-  refunded: { label: "Refunded", color: colors.info },
-  filtered: { label: "Rate Filtered", color: colors.grayMedium },
-  delivered: { label: "Pending", color: textSecondary },
+  accepted: { label: t('call_ledger.accepted'), color: colors.primary },
+  expired: { label: t('call_ledger.no_response'), color: colors.amber },
+  refunded: { label: t('call_ledger.refunded'), color: colors.info },
+  filtered: { label: t('call_ledger.rate_filtered'), color: colors.grayMedium },
+  delivered: { label: t('call_ledger.pending'), color: textSecondary },
 });
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, t: (key: string) => string): string {
   const d = new Date(dateStr);
   const today = new Date();
   const yesterday = new Date(today);
@@ -132,9 +107,9 @@ function formatDate(dateStr: string): string {
     month: "long",
     year: "numeric",
   });
-  if (d.toDateString() === today.toDateString()) return `Today, ${datePart}`;
+  if (d.toDateString() === today.toDateString()) return `${t('call_ledger.today')}, ${datePart}`;
   if (d.toDateString() === yesterday.toDateString())
-    return `Yesterday, ${datePart}`;
+    return `${t('call_ledger.yesterday')}, ${datePart}`;
   return datePart;
 }
 
@@ -158,6 +133,7 @@ function formatShortDate(dateStr: string): string {
 type TabKey = "ledger" | "missed";
 
 export default function CallLedgerScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   // Live balance: prefer the store (updated by lead:billed pushes and every
@@ -207,12 +183,10 @@ export default function CallLedgerScreen() {
       else setLedgerLoading(true);
       try {
         const params = new URLSearchParams();
-        const rangeOpt = DATE_RANGE_OPTIONS.find(
-          (r) => r.key === dateRangeFilter,
-        );
-        if (rangeOpt && rangeOpt.days > 0) {
+        const rangeDays = DATE_RANGE_DAYS[dateRangeFilter] ?? 0;
+        if (rangeDays > 0) {
           const fromDate = new Date(
-            Date.now() - rangeOpt.days * 86400_000,
+            Date.now() - rangeDays * 86400_000,
           ).toISOString();
           params.set("from_date", fromDate);
         }
@@ -250,12 +224,10 @@ export default function CallLedgerScreen() {
         if (outcomeFilter !== "all") params.set("outcome", outcomeFilter);
         if (vehicleTypeFilter !== "all")
           params.set("vehicle_type", vehicleTypeFilter);
-        const rangeOpt = DATE_RANGE_OPTIONS.find(
-          (r) => r.key === dateRangeFilter,
-        );
-        if (rangeOpt && rangeOpt.days > 0) {
+        const rangeDays = DATE_RANGE_DAYS[dateRangeFilter] ?? 0;
+        if (rangeDays > 0) {
           const fromDate = new Date(
-            Date.now() - rangeOpt.days * 86400_000,
+            Date.now() - rangeDays * 86400_000,
           ).toISOString();
           params.set("from_date", fromDate);
         }
@@ -298,13 +270,13 @@ export default function CallLedgerScreen() {
       groups[dk].push(entry);
     }
     return Object.entries(groups).map(([_dk, ents]) => ({
-      date: formatDate(ents[0].created_at),
+      date: formatDate(ents[0].created_at, t),
       entries: ents.sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       ),
     }));
-  }, [entries]);
+  }, [entries, t]);
 
   const onLedgerRefresh = useCallback(() => fetchLedger(true), [fetchLedger]);
   const onMissedRefresh = useCallback(() => fetchMissed(true), [fetchMissed]);
@@ -342,7 +314,7 @@ export default function CallLedgerScreen() {
               marginBottom: spacing.sm,
             }}
           >
-            This Week
+            {t('call_ledger.this_week')}
           </Text>
           <View
             style={{ flexDirection: "row", justifyContent: "space-between" }}
@@ -365,7 +337,7 @@ export default function CallLedgerScreen() {
                   color: "rgba(255,255,255,0.7)",
                 }}
               >
-                Accepted
+                {t('call_ledger.accepted')}
               </Text>
             </View>
             <View style={{ alignItems: "center" }}>
@@ -386,7 +358,7 @@ export default function CallLedgerScreen() {
                   color: "rgba(255,255,255,0.7)",
                 }}
               >
-                Missed
+                {t('call_ledger.missed')}
               </Text>
             </View>
             <View style={{ alignItems: "center" }}>
@@ -407,7 +379,7 @@ export default function CallLedgerScreen() {
                   color: "rgba(255,255,255,0.7)",
                 }}
               >
-                Filtered
+                {t('call_ledger.filtered')}
               </Text>
             </View>
             <View style={{ alignItems: "center" }}>
@@ -428,7 +400,7 @@ export default function CallLedgerScreen() {
                   color: "rgba(255,255,255,0.7)",
                 }}
               >
-                Refunded
+                {t('call_ledger.refunded')}
               </Text>
             </View>
           </View>
@@ -482,7 +454,7 @@ export default function CallLedgerScreen() {
             marginLeft: 4,
           }}
         >
-          Filters
+          {t('call_ledger.filters')}
         </Text>
         {activeFilterCount > 0 && (
           <View
@@ -535,7 +507,7 @@ export default function CallLedgerScreen() {
               fontWeight: "600",
             }}
           >
-            {OUTCOME_OPTIONS.find((o) => o.key === outcomeFilter)?.label}
+            {t(OUTCOME_I18N[outcomeFilter] ?? 'common.all')}
           </Text>
           <Ionicons
             name="close"
@@ -570,8 +542,9 @@ export default function CallLedgerScreen() {
             }}
           >
             {
-              VEHICLE_TYPE_OPTIONS.find((v) => v.key === vehicleTypeFilter)
-                ?.label
+              vehicleTypeFilter === 'all'
+                ? t(VEHICLE_TYPE_I18N['all'])
+                : vehicleTypeFilter.replace(/_/g, ' ')
             }
           </Text>
           <Ionicons
@@ -626,7 +599,7 @@ export default function CallLedgerScreen() {
             marginBottom: spacing.lg,
           }}
         >
-          Filter Requests
+          {t('call_ledger.filter_requests')}
         </Text>
 
         {/* Outcome */}
@@ -639,7 +612,7 @@ export default function CallLedgerScreen() {
             marginBottom: spacing.sm,
           }}
         >
-          Outcome
+          {t('call_ledger.outcome')}
         </Text>
         <View
           style={{
@@ -649,21 +622,21 @@ export default function CallLedgerScreen() {
             marginBottom: spacing.lg,
           }}
         >
-          {OUTCOME_OPTIONS.map((opt) => (
+          {OUTCOME_KEYS.map((key) => (
             <TouchableOpacity
-              key={opt.key}
-              onPress={() => setOutcomeFilter(opt.key)}
+              key={key}
+              onPress={() => setOutcomeFilter(key)}
               style={{
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.pill,
                 borderWidth: 1,
                 borderColor:
-                  outcomeFilter === opt.key
+                  outcomeFilter === key
                     ? colors.primary
                     : borderColor,
                 backgroundColor:
-                  outcomeFilter === opt.key ? colors.primary : surfaceBg,
+                  outcomeFilter === key ? colors.primary : surfaceBg,
               }}
             >
               <Text
@@ -672,12 +645,12 @@ export default function CallLedgerScreen() {
                   fontSize: 13,
                   fontWeight: "500",
                   color:
-                    outcomeFilter === opt.key
+                    outcomeFilter === key
                       ? colors.white
                       : textSecondary,
                 }}
               >
-                {opt.label}
+                {t(OUTCOME_I18N[key] ?? 'common.all')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -693,7 +666,7 @@ export default function CallLedgerScreen() {
             marginBottom: spacing.sm,
           }}
         >
-          Vehicle Type
+          {t('call_ledger.vehicle_type')}
         </Text>
         <View
           style={{
@@ -703,21 +676,21 @@ export default function CallLedgerScreen() {
             marginBottom: spacing.lg,
           }}
         >
-          {VEHICLE_TYPE_OPTIONS.map((opt) => (
+          {VEHICLE_TYPE_KEYS.map((key) => (
             <TouchableOpacity
-              key={opt.key}
-              onPress={() => setVehicleTypeFilter(opt.key)}
+              key={key}
+              onPress={() => setVehicleTypeFilter(key)}
               style={{
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.pill,
                 borderWidth: 1,
                 borderColor:
-                  vehicleTypeFilter === opt.key
+                  vehicleTypeFilter === key
                     ? colors.primary
                     : borderColor,
                 backgroundColor:
-                  vehicleTypeFilter === opt.key ? colors.primary : surfaceBg,
+                  vehicleTypeFilter === key ? colors.primary : surfaceBg,
               }}
             >
               <Text
@@ -726,12 +699,12 @@ export default function CallLedgerScreen() {
                   fontSize: 13,
                   fontWeight: "500",
                   color:
-                    vehicleTypeFilter === opt.key
+                    vehicleTypeFilter === key
                       ? colors.white
                       : textSecondary,
                 }}
               >
-                {opt.label}
+                {key === 'all' ? t(VEHICLE_TYPE_I18N['all']) : key.replace(/_/g, ' ')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -747,7 +720,7 @@ export default function CallLedgerScreen() {
             marginBottom: spacing.sm,
           }}
         >
-          Time Period
+          {t('call_ledger.time_period')}
         </Text>
         <View
           style={{
@@ -756,21 +729,21 @@ export default function CallLedgerScreen() {
             marginBottom: spacing.lg,
           }}
         >
-          {DATE_RANGE_OPTIONS.map((opt) => (
+          {DATE_RANGE_KEYS.map((key) => (
             <TouchableOpacity
-              key={opt.key}
-              onPress={() => setDateRangeFilter(opt.key)}
+              key={key}
+              onPress={() => setDateRangeFilter(key)}
               style={{
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.pill,
                 borderWidth: 1,
                 borderColor:
-                  dateRangeFilter === opt.key
+                  dateRangeFilter === key
                     ? colors.primary
                     : borderColor,
                 backgroundColor:
-                  dateRangeFilter === opt.key ? colors.primary : surfaceBg,
+                  dateRangeFilter === key ? colors.primary : surfaceBg,
               }}
             >
               <Text
@@ -779,12 +752,12 @@ export default function CallLedgerScreen() {
                   fontSize: 13,
                   fontWeight: "500",
                   color:
-                    dateRangeFilter === opt.key
+                    dateRangeFilter === key
                       ? colors.white
                       : textSecondary,
                 }}
               >
-                {opt.label}
+                {t(DATE_RANGE_I18N[key] ?? 'call_ledger.all_time')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -808,7 +781,7 @@ export default function CallLedgerScreen() {
               color: colors.white,
             }}
           >
-            Apply Filters
+            {t('call_ledger.apply_filters')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -817,9 +790,8 @@ export default function CallLedgerScreen() {
 
   // ── Render: Missed Request Item ──────────────────────────────────────────
 
-  const renderMissedItem = ({ item }: { item: MissedOffer }) => {
-    const config =
-      OUTCOME_CONFIG(textSecondary)[item.outcome] ?? {
+  const renderMissedItem = ({ item }: { item: MissedOffer }) => {      const config =
+      getOutcomeConfig(textSecondary, t)[item.outcome] ?? {
         label: item.outcome,
         color: colors.grayMedium,
       };
@@ -975,7 +947,7 @@ export default function CallLedgerScreen() {
                 color: colors.amber,
               }}
             >
-              min rate too high
+              {t('call_ledger.min_rate_too_high')}
             </Text>
           )}
         </View>
@@ -1003,17 +975,13 @@ export default function CallLedgerScreen() {
         {group.date}
       </Text>
       {group.entries.map((entry) => {
-        const config = EVENT_CONFIG[entry.event_type] ?? {
-          label: entry.event_type,
-          icon: "infocirlceo",
-          color: colors.grayMedium,
-        };
+        const evtIcon = EVENT_ICONS[entry.event_type] ?? { icon: 'infocirlceo' as keyof typeof Ionicons.glyphMap, color: colors.grayMedium };
         // Phase D: offer-time lead debits carry reason='offer_sent' — give
         // them the lead label; legacy deduction reasons keep the old one.
         const entryLabel =
           entry.event_type === "deduction" && entry.reason === "offer_sent"
-            ? "Lead (offer sent)"
-            : config.label;
+            ? t('call_ledger.lead_offer_sent')
+            : t(EVENT_I18N[entry.event_type] ?? 'call_ledger.no_entries');
         return (
           <View
             key={entry.id}
@@ -1031,13 +999,13 @@ export default function CallLedgerScreen() {
                 width: 36,
                 height: 36,
                 borderRadius: 18,
-                backgroundColor: config.color + "15",
+                backgroundColor: evtIcon.color + "15",
                 alignItems: "center",
                 justifyContent: "center",
                 marginRight: spacing.sm,
               }}
             >
-              <Ionicons name={config.icon} size={16} color={config.color} />
+              <Ionicons name={evtIcon.icon} size={16} color={evtIcon.color} />
             </View>
             <View style={{ flex: 1 }}>
               <View
@@ -1077,7 +1045,7 @@ export default function CallLedgerScreen() {
                   marginTop: 2,
                 }}
               >
-                {formatTime(entry.created_at)} · Balance: {entry.balance_after}
+                {formatTime(entry.created_at)} · {t('call_ledger.balance', { count: entry.balance_after })}
               </Text>
             </View>
           </View>
@@ -1112,7 +1080,7 @@ export default function CallLedgerScreen() {
             color: textPrimary,
           }}
         >
-          Call Ledger
+          {t('call_ledger.header')}
         </Text>
         <View style={{ width: 24 }} />
       </View>
@@ -1150,7 +1118,7 @@ export default function CallLedgerScreen() {
                   : textSecondary,
             }}
           >
-            Missed Requests
+            {t('call_ledger.tab_missed')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -1175,7 +1143,7 @@ export default function CallLedgerScreen() {
                   : textSecondary,
             }}
           >
-            Call History
+            {t('call_ledger.tab_history')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1198,7 +1166,7 @@ export default function CallLedgerScreen() {
             marginBottom: spacing.xs,
           }}
         >
-          Available Balance
+          {t('call_ledger.available_balance')}
         </Text>
         <Text
           style={{
@@ -1209,8 +1177,8 @@ export default function CallLedgerScreen() {
           }}
         >
           {liveBalance === -1
-            ? "Unlimited"
-            : `${liveBalance ?? balance ?? 0} calls`}
+            ? t('call_ledger.unlimited')
+            : t('call_ledger.calls_count', { count: liveBalance ?? balance ?? 0 })}
         </Text>
       </View>
 
@@ -1250,7 +1218,7 @@ export default function CallLedgerScreen() {
                   textAlign: "center",
                 }}
               >
-                No requests to show
+                {t('call_ledger.no_requests')}
               </Text>
               <Text
                 style={{
@@ -1261,8 +1229,7 @@ export default function CallLedgerScreen() {
                   textAlign: "center",
                 }}
               >
-                Ride offers sent to you will appear here. Use filters to find
-                specific requests.
+                {t('call_ledger.no_requests_desc')}
               </Text>
             </View>
           ) : (
@@ -1313,8 +1280,7 @@ export default function CallLedgerScreen() {
                 textAlign: "center",
               }}
             >
-              No call history yet. Your call usage will appear here once you
-              start accepting rides.
+              {t('call_ledger.no_history')}
             </Text>
           </View>
         ) : (
