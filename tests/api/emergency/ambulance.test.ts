@@ -165,20 +165,21 @@ describe("Phase 6 — certification renewal (F12)", () => {
 
   it("renew resets the pair to pending and clears the review", async () => {
     mockSetCaptures.length = 0;
-    mockQueueSelect([
-      {
-        id: CERT_ID,
-        user_id: "db-user-1",
-        vehicle_id: "veh-1",
-        certification_status: "verified",
-        service_level: "ALS",
-        cert_number: "OLD-1",
-        issuing_body: "Gov",
-        issued_at: null,
-        expires_at: new Date(Date.now() + 86400000).toISOString(),
-        document_urls: [],
-      },
-    ]);
+    const certRow = {
+      id: CERT_ID,
+      user_id: "db-user-1",
+      vehicle_id: "veh-1",
+      certification_status: "verified",
+      service_level: "ALS",
+      cert_number: "OLD-1",
+      issuing_body: "Gov",
+      issued_at: null,
+      expires_at: new Date(Date.now() + 86400000).toISOString(),
+      document_urls: [],
+    };
+    // B4: pre-tx read + locked (FOR UPDATE) read inside the tx
+    mockQueueSelect([certRow]);
+    mockQueueSelect([certRow]);
     mockQueueUpdate([{ id: CERT_ID }]);
 
     const req = new Request(`http://localhost/api/ambulance/certifications/${CERT_ID}/renew`, {
@@ -212,6 +213,59 @@ describe("Phase 6 — certification renewal (F12)", () => {
     });
     const res = await renewPATCH(req, { id: CERT_ID });
     expect(res.status).toBe(403);
+  });
+
+  it("B4: ownership re-verified on the LOCKED row inside the tx — 403, zero updates", async () => {
+    mockSetCaptures.length = 0;
+    // Pre-tx read passes (owner)…
+    mockQueueSelect([{ id: CERT_ID, user_id: "db-user-1", service_level: "ALS" }]);
+    // …but the locked read inside the tx sees a non-owner (mutated state)
+    mockQueueSelect([{ id: CERT_ID, user_id: "someone-else", service_level: "ALS" }]);
+    // No update is queued — if the handler updates anyway, mockSetCaptures grows
+
+    const req = new Request(`http://localhost/api/ambulance/certifications/${CERT_ID}/renew`, {
+      method: "PATCH",
+      headers: { authorization: "Bearer t", "content-type": "application/json" },
+      body: JSON.stringify({ service_level: "ALS" }),
+    });
+    const res = await renewPATCH(req, { id: CERT_ID });
+    expect(res.status).toBe(403);
+    expect(mockSetCaptures).toHaveLength(0);
+  });
+
+  it("B4: concurrent double-renew serializes — both complete, single final state", async () => {
+    mockSetCaptures.length = 0;
+    const certRow = {
+      id: CERT_ID,
+      user_id: "db-user-1",
+      certification_status: "verified",
+      service_level: "BLS",
+    };
+    for (const urls of [
+      ["https://example.com/renew-1.pdf"],
+      ["https://example.com/renew-2.pdf"],
+    ]) {
+      mockQueueSelect([certRow]);
+      mockQueueSelect([certRow]);
+      mockQueueUpdate([{ id: CERT_ID }]);
+      const req = new Request(
+        `http://localhost/api/ambulance/certifications/${CERT_ID}/renew`,
+        {
+          method: "PATCH",
+          headers: { authorization: "Bearer t", "content-type": "application/json" },
+          body: JSON.stringify({ service_level: "BLS", document_urls: urls }),
+        },
+      );
+      const res = await renewPATCH(req, { id: CERT_ID });
+      expect(res.status).toBe(200);
+    }
+
+    // Serialized: two tx runs, exactly two updates, final state = second renew
+    expect(mockSetCaptures).toHaveLength(2);
+    expect(mockSetCaptures[1]).toMatchObject({ certification_status: "pending" });
+    expect(mockSetCaptures[1].document_urls).toEqual([
+      "https://example.com/renew-2.pdf",
+    ]);
   });
 });
 

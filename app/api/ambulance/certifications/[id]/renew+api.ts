@@ -61,24 +61,43 @@ export async function PATCH(request: Request, { id }: { id: string }) {
     if (!result.ok) return result.response;
     const body = result.data;
 
-    // F12: renewal invalidates the previous review — back to 'pending',
-    // review fields cleared, admin re-reviews.
-    await db
-      .update(ambulanceCertifications)
-      .set({
-        certification_status: "pending",
-        service_level: body.service_level,
-        cert_number: body.cert_number ?? cert.cert_number,
-        issuing_body: body.issuing_body ?? cert.issuing_body,
-        issued_at: body.issued_at ? new Date(body.issued_at) : cert.issued_at,
-        expires_at: body.expires_at ? new Date(body.expires_at) : null,
-        document_urls: body.document_urls ?? cert.document_urls,
-        reviewed_by: null,
-        reviewed_at: null,
-        review_notes: null,
-        updated_at: new Date(),
-      })
-      .where(eq(ambulanceCertifications.id, id));
+    // B4 (audit #15): the cert row is locked (FOR UPDATE) and ownership is
+    // re-verified inside the tx; the UPDATE shares the transaction.
+    await db.transaction(async (tx) => {
+      const lockedRows = await tx
+        .select()
+        .from(ambulanceCertifications)
+        .where(eq(ambulanceCertifications.id, id))
+        .limit(1)
+        .for("update");
+
+      const locked = lockedRows[0];
+      if (!locked) {
+        throw Object.assign(new Error("Certification not found"), { status: 404 });
+      }
+      if (locked.user_id !== dbUser.id) {
+        throw Object.assign(new Error("Only the cert holder can renew"), { status: 403 });
+      }
+
+      // F12: renewal invalidates the previous review — back to 'pending',
+      // review fields cleared, admin re-reviews.
+      await tx
+        .update(ambulanceCertifications)
+        .set({
+          certification_status: "pending",
+          service_level: body.service_level,
+          cert_number: body.cert_number ?? locked.cert_number,
+          issuing_body: body.issuing_body ?? locked.issuing_body,
+          issued_at: body.issued_at ? new Date(body.issued_at) : locked.issued_at,
+          expires_at: body.expires_at ? new Date(body.expires_at) : null,
+          document_urls: body.document_urls ?? locked.document_urls,
+          reviewed_by: null,
+          reviewed_at: null,
+          review_notes: null,
+          updated_at: new Date(),
+        })
+        .where(eq(ambulanceCertifications.id, id));
+    });
 
     return Response.json({ message: "Renewal submitted — pending admin review", status: "pending" });
   } catch (err: unknown) {
@@ -92,6 +111,11 @@ export async function PATCH(request: Request, { id }: { id: string }) {
       return Response.json(
         { error: "forbidden", message: (err as Error).message ?? "Not authorized" },
         { status: 403 },
+      );
+    if (status === 404)
+      return Response.json(
+        { error: "not_found", message: "Certification not found" },
+        { status: 404 },
       );
     logger.error("[ambulance/certifications/renew PATCH] error", err);
     return Response.json(
