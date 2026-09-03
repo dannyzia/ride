@@ -18,12 +18,16 @@ interface SOSAlert {
   created_at: string;
   acknowledged_by: string | null;
   acknowledged_at: string | null;
+  recent_alert_count: number;
+  is_high_intensity: boolean;
 }
 
 const PAGE_SIZE = 50;
 const STATUS_OPTIONS = ["all", "open", "acknowledged", "resolved"] as const;
+const SORT_OPTIONS = ["created_at", "intensity"] as const;
 
 type StatusFilter = (typeof STATUS_OPTIONS)[number];
+type SortOption = (typeof SORT_OPTIONS)[number];
 
 export default function SOSAlertsScreen() {
   const toast = useAdminToast();
@@ -32,12 +36,14 @@ export default function SOSAlertsScreen() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("created_at");
 
-  const fetchAlerts = useCallback(async (p: number, status: StatusFilter) => {
+  const fetchAlerts = useCallback(async (p: number, status: StatusFilter, sort: SortOption) => {
     setLoading(true);
     const params = new URLSearchParams({
       limit: String(PAGE_SIZE),
       offset: String((p - 1) * PAGE_SIZE),
+      sort,
     });
     if (status !== "all") params.set("status", status);
     const res = await adminFetch<{ alerts: SOSAlert[]; total: number }>(
@@ -50,11 +56,9 @@ export default function SOSAlertsScreen() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchAlerts(page, statusFilter); }, [page, statusFilter, fetchAlerts]);
+  useEffect(() => { fetchAlerts(page, statusFilter, sortBy); }, [page, statusFilter, sortBy, fetchAlerts]);
 
-  // F-15: live SOS stream. The initial HTTP fetch above still provides
-  // history; this subscription only prepends NEW alerts as they arrive
-  // when viewing page 1 with no filter (so stale pages aren't polluted).
+  // F-15: live SOS stream
   const toastRef = useRef(toast);
   toastRef.current = toast;
   const pageRef = useRef(page);
@@ -63,7 +67,6 @@ export default function SOSAlertsScreen() {
   filterRef.current = statusFilter;
   useEffect(() => {
     const unsubscribe = ensureAdminSocket((alert) => {
-      // Only prepend if on page 1 and showing all (most common live view)
       if (pageRef.current === 1 && filterRef.current === "all") {
         setAlerts((prev) => {
           if (prev.some((a) => a.id === alert.id)) return prev;
@@ -78,6 +81,8 @@ export default function SOSAlertsScreen() {
             created_at: alert.created_at,
             acknowledged_by: null,
             acknowledged_at: null,
+            recent_alert_count: 1,
+            is_high_intensity: false,
           };
           return [incoming, ...prev];
         });
@@ -91,7 +96,7 @@ export default function SOSAlertsScreen() {
     const res = await adminFetch<{ success: boolean }>(`/api/admin/sos-alerts/${alertId}/ack`, {
       method: "POST", body: JSON.stringify({}), headers: { "Content-Type": "application/json" },
     });
-    if (res.data?.success) { toast.show("Alert acknowledged", "success"); fetchAlerts(page, statusFilter); }
+    if (res.data?.success) { toast.show("Alert acknowledged", "success"); fetchAlerts(page, statusFilter, sortBy); }
     else { toast.show(res.error ?? "Failed", "error"); }
   };
 
@@ -100,7 +105,24 @@ export default function SOSAlertsScreen() {
     { key: "user_id", header: "User", render: (r) => r.user_id.slice(0, 8), width: 100 },
     { key: "role", header: "Role", width: 60 },
     { key: "status", header: "Status", render: (r) => r.status ?? "open", width: 80 },
-    { key: "message", header: "Message", render: (r) => r.message ?? "—", width: 180 },
+    {
+      key: "recent_alert_count",
+      header: "Alerts/60s",
+      render: (r) => (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Text style={{ color: colors.textSecondaryDark, fontFamily: "Jakarta-Medium", fontSize: 12 }}>
+            {r.recent_alert_count ?? 0}
+          </Text>
+          {r.is_high_intensity && (
+            <View style={{ paddingHorizontal: 5, paddingVertical: 2, backgroundColor: colors.danger, borderRadius: 4 }}>
+              <Text style={{ color: "#FFF", fontFamily: "Jakarta-Bold", fontSize: 9 }}>HIGH</Text>
+            </View>
+          )}
+        </View>
+      ),
+      width: 90,
+    },
+    { key: "message", header: "Message", render: (r) => r.message ?? "—", width: 150 },
     { key: "id", header: "", render: (r) => (
       r.status !== "acknowledged" ? (
         <Pressable onPress={() => ackAlert(r.id)} style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.danger, borderRadius: 6 }}>
@@ -112,15 +134,9 @@ export default function SOSAlertsScreen() {
 
   return (
     <AdminShell title="SOS Alerts" subtitle="Emergency alerts from users">
-      {/* Status filter */}
+      {/* Filters row */}
       <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          marginBottom: 12,
-          gap: 6,
-          flexWrap: "wrap",
-        }}
+        style={{ flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 6, flexWrap: "wrap" }}
         accessibilityRole="tablist"
         accessibilityLabel="Filter alerts by status"
       >
@@ -138,19 +154,36 @@ export default function SOSAlertsScreen() {
               accessibilityState={{ selected: active }}
               accessibilityLabel={`Filter by ${label}`}
               style={{
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 6,
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6,
                 backgroundColor: active ? colors.adminAccent : "#2A2D35",
               }}
             >
-              <Text
-                style={{
-                  color: active ? colors.white : colors.textSecondaryDark,
-                  fontFamily: "Jakarta-SemiBold",
-                  fontSize: 12,
-                }}
-              >
+              <Text style={{ color: active ? colors.white : colors.textSecondaryDark, fontFamily: "Jakarta-SemiBold", fontSize: 12 }}>
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+
+        <Text style={{ color: colors.textSecondaryDark, fontFamily: "Jakarta-SemiBold", fontSize: 13, marginLeft: 12, marginRight: 4 }}>
+          Sort:
+        </Text>
+        {SORT_OPTIONS.map((s) => {
+          const active = sortBy === s;
+          const label = s === "created_at" ? "Newest" : "Intensity";
+          return (
+            <Pressable
+              key={s}
+              onPress={() => { setSortBy(s); setPage(1); }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`Sort by ${label}`}
+              style={{
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6,
+                backgroundColor: active ? colors.adminAccent : "#2A2D35",
+              }}
+            >
+              <Text style={{ color: active ? colors.white : colors.textSecondaryDark, fontFamily: "Jakarta-SemiBold", fontSize: 12 }}>
                 {label}
               </Text>
             </Pressable>

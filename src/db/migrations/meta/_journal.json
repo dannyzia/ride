@@ -372,6 +372,13 @@
       "when": 1788310000000,
       "tag": "0054_delivery_request_unique_order",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1788400000000,
+      "tag": "0055_driver_earnings_goals",
+      "breakpoints": true
     }
   ]
 }

@@ -20,6 +20,11 @@ const createSchema = z.object({
   usage_interval: z.number().int().positive().optional().nullable(), // F15-API-09
   valid_from: z.string().datetime(),
   expires_at: z.string().datetime(),
+  // R3.5: driver promo auto-credit fields (schema columns exist at promoCodes:482-485)
+  target_role: z.enum(["rider", "driver"]).optional().default("rider"),
+  metric: z.string().max(30).optional().nullable(),
+  target_value: z.number().int().positive().optional().nullable(),
+  validity_days: z.number().int().positive().optional().default(7),
 });
 
 const patchSchema = createSchema.partial().extend({
@@ -50,6 +55,10 @@ export async function POST(req: Request) {
         usage_interval: data.usage_interval ?? null,
         valid_from: new Date(data.valid_from),
         expires_at: new Date(data.expires_at),
+        target_role: data.target_role ?? 'rider',
+        metric: data.metric ?? null,
+        target_value: data.target_value ?? null,
+        validity_days: data.validity_days ?? 7,
         created_by: dbUser.id,
       })
       .returning();
@@ -229,6 +238,10 @@ export async function GET(req: Request) {
       expires_at: p.expires_at,
       is_active: p.is_active,
       times_used: countByPromo.get(p.id) ?? 0,
+      target_role: p.target_role,
+      metric: p.metric,
+      target_value: p.target_value,
+      validity_days: p.validity_days,
     }));
 
     return Response.json({

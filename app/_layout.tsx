@@ -18,7 +18,8 @@ import { API_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
 import { processQueue } from "@/lib/sosQueue";
 import NetInfo from "@react-native-community/netinfo";
-import { routeNotification } from "@/lib/notificationRouter";
+import * as Linking from "expo-linking";
+import { routeNotification, routeDeepLink } from "@/lib/notificationRouter";
 import { useOtaBackgroundPolling } from "@/lib/otaBackgroundUpdate";
 
 const isWeb = Platform.OS === "web";
@@ -275,11 +276,31 @@ export default function RootLayout() {
     return () => sub.remove();
   }, [router]);
 
-  // ── Deep-link handling ──────────────────────────────────────────
-  // Expo Router's `linking` config handles the initial URL on cold start.
-  // For runtime deep links (while app is open), we use the
-  // `Linking.addEventListener` in the linking config's `getStateFromPath`.
-  // The linking config below defines all valid URL patterns.
+  // ── Deep-link handling (R5a) ───────────────────────────────────
+  // Scheme `ride` is registered in app.config.js. Cold-start URLs are
+  // picked up via getInitialURL(); warm links (app already open) via the
+  // url event listener. Both route through the centralized router
+  // (lib/notificationRouter.ts → routeDeepLink), which validates every
+  // pattern and fails safely on unknown/malformed links.
+  useEffect(() => {
+    const handleUrl = (event: { url: string }) => {
+      const { url } = event;
+      if (!url) return;
+      const routed = routeDeepLink(url);
+      if (!routed) {
+        logger.warn("[layout] unhandled deep link", { url });
+      }
+    };
+
+    // Cold start: URL that launched the app.
+    Linking.getInitialURL().then((url) => {
+      if (url) handleUrl({ url });
+    });
+
+    // Warm start: URL received while the app is open.
+    const sub = Linking.addEventListener("url", handleUrl);
+    return () => sub.remove();
+  }, []);
 
   // On web: skip the Reanimated splash animation
   if (isWeb && (initializing || !fontsLoaded)) {

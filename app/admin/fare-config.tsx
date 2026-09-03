@@ -31,6 +31,22 @@ interface ConfigResponse {
   config?: ConfigItem[];
 }
 
+// R4.0: Stage 0 gate-metrics card — mirrors GET /api/admin/fare-gate-metrics.
+type GateStatus = "green" | "red" | "calibration_needed";
+
+interface GateMetric {
+  key: string;
+  label: string;
+  measured: number | null;
+  threshold: number;
+  status: GateStatus;
+  hint: string;
+}
+
+interface GateMetricsResponse {
+  metrics?: GateMetric[];
+}
+
 type FieldType = "boolean" | "number" | "csv" | "rateDisplay";
 
 interface FieldDef {
@@ -401,6 +417,10 @@ export default function FareConfigScreen() {
   // ROUND-13: Admin role for RBAC-tier gating.
   const [adminRole, setAdminRole] = useState<AdminRole | null>(null);
 
+  // R4.0: Stage 0 gate metrics (read-only traffic-light card).
+  const [gateMetrics, setGateMetrics] = useState<GateMetric[] | null>(null);
+  const [gateLoading, setGateLoading] = useState(false);
+
   const isEditor = useMemo(
     () => adminRole === "owner" || adminRole === "admin",
     [adminRole],
@@ -413,7 +433,8 @@ export default function FareConfigScreen() {
 
   const fetchConfig = useCallback(async () => {
     setLoading(true);
-    const [configRes, roleRes] = await Promise.all([
+    setGateLoading(true);
+    const [configRes, roleRes, gateRes] = await Promise.all([
       adminFetch<ConfigResponse>("/api/admin/config", { method: "GET" }),
       // Fetch current user role from supabase (client-side, same pattern as layout).
       (async () => {
@@ -426,7 +447,14 @@ export default function FareConfigScreen() {
           .maybeSingle();
         return data?.role as AdminRole | null;
       })(),
+      // R4.0: Stage 0 gate metrics — 30-day traffic-light evaluation.
+      adminFetch<GateMetricsResponse>("/api/admin/fare-gate-metrics", {
+        method: "GET",
+      }),
     ]);
+    if (!gateRes.error && gateRes.data?.metrics) {
+      setGateMetrics(gateRes.data.metrics);
+    }
     const { data, error, status } = configRes;
     if (error || !data) {
       if (status !== 0) {
@@ -455,7 +483,20 @@ export default function FareConfigScreen() {
     setEdits(editsMap);
     setAdminRole(roleRes);
     setLoading(false);
+    setGateLoading(false);
   }, [toast, allFields]);
+
+  const refreshGateMetrics = useCallback(async () => {
+    setGateLoading(true);
+    const res = await adminFetch<GateMetricsResponse>(
+      "/api/admin/fare-gate-metrics",
+      { method: "GET" },
+    );
+    if (!res.error && res.data?.metrics) {
+      setGateMetrics(res.data.metrics);
+    }
+    setGateLoading(false);
+  }, []);
 
   useEffect(() => {
     fetchConfig();
@@ -1110,6 +1151,78 @@ export default function FareConfigScreen() {
             </View>
           </View>
 
+          {/* ── R4.0: Stage 0 Gate Metrics (read-only traffic lights) ── */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Stage 0 Gate Metrics</Text>
+                <Text style={styles.sectionSubtitle}>
+                  R4 gate: 30-day traffic-light review of fare_framework_stage
+                  readiness. Thresholds come from the six fare_gate_* config
+                  keys; 0 threshold = CALIBRATION NEEDED. Read-only until Stage
+                  1.
+                </Text>
+              </View>
+              <Pressable
+                style={styles.ghostBtn}
+                onPress={refreshGateMetrics}
+                disabled={gateLoading}
+              >
+                {gateLoading ? (
+                  <ActivityIndicator color={colors.adminAccent} size="small" />
+                ) : (
+                  <Text style={styles.ghostBtnText}>Refresh Gates</Text>
+                )}
+              </Pressable>
+            </View>
+            {gateMetrics === null ? (
+              <Text style={styles.helpText}>
+                Gate metrics unavailable — check /api/admin/fare-gate-metrics.
+              </Text>
+            ) : (
+              <View style={{ gap: 10 }}>
+                {gateMetrics.map((m) => {
+                  const statusColor =
+                    m.status === "green"
+                      ? colors.greenVariant
+                      : m.status === "red"
+                        ? colors.redVariant
+                        : colors.amber;
+                  return (
+                    <View
+                      key={m.key}
+                      style={[
+                        styles.gateRow,
+                        {
+                          borderLeftColor: statusColor,
+                        },
+                      ]}
+                    >
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                          <View
+                            style={[
+                              styles.gateDot,
+                              { backgroundColor: statusColor },
+                            ]}
+                          />
+                          <Text style={styles.fieldLabel}>{m.label}</Text>
+                        </View>
+                        <Text style={styles.gateValue}>
+                          Measured: {m.measured ?? "—"}
+                          <Text style={styles.helpText}>
+                            {"  ·  "}Threshold: {m.threshold}
+                          </Text>
+                        </Text>
+                        <Text style={styles.helpText}>{m.hint}</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+
           {renderSection(
             "Pickup Fee Configuration",
             "Measurement toggle, fee master toggle, free radii, caps, and trace settings.",
@@ -1256,6 +1369,27 @@ const styles = StyleSheet.create({
     fontFamily: "Jakarta-Regular",
     fontSize: 11,
     lineHeight: 16,
+  },
+  // R4.0: Stage 0 gate metrics card
+  gateRow: {
+    backgroundColor: "#181A20",
+    borderWidth: 1,
+    borderColor: "#2A2D35",
+    borderLeftWidth: 3,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+  },
+  gateDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  gateValue: {
+    color: colors.textPrimaryDark,
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 13,
   },
   // REV-6: Fare engine setup section
   infoBanner: {
