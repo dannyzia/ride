@@ -114,6 +114,11 @@ export async function PATCH(req: Request) {
     updates.valid_from = new Date(data.valid_from);
   if (data.expires_at !== undefined)
     updates.expires_at = new Date(data.expires_at);
+  // R3.5 auto-credit fields — PATCH must edit them, not just POST
+  if (data.target_role !== undefined) updates.target_role = data.target_role;
+  if (data.metric !== undefined) updates.metric = data.metric;
+  if (data.target_value !== undefined) updates.target_value = data.target_value;
+  if (data.validity_days !== undefined) updates.validity_days = data.validity_days;
   if (data.is_active !== undefined) updates.is_active = data.is_active;
 
   if (Object.keys(updates).length <= 1) {
