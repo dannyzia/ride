@@ -71,12 +71,6 @@ export interface RideSubscribeMessage {
   ride_id: string;
 }
 
-export interface RedispatchResponseMessage {
-  type: "ride:redispatch_response";
-  ride_id: string;
-  keep_looking: boolean; // true = continue searching, false = cancel
-}
-
 export type InboundMessage =
   | AuthHelloMessage
   | AuthRefreshMessage
@@ -88,8 +82,7 @@ export type InboundMessage =
   | OfferAcceptMessage
   | OfferRejectMessage
   | ChatTypingMessage
-  | RideSubscribeMessage
-  | RedispatchResponseMessage;
+  | RideSubscribeMessage;
 
 export interface RideOfferMessage {
   type: "ride:offer";
