@@ -14,6 +14,7 @@ import {
 } from "./h3Index";
 import { startCompensationWorker } from "./compensationWorker";
 import { startScheduler } from "./scheduler";
+import { runRedispatchTrigger } from "./redispatch";
 import {
   buildCandidateList,
   isDispatchPaused,
@@ -46,6 +47,7 @@ import {
 } from "../src/db/schema";
 import { eq, and, inArray, isNull, sql, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { getPlan05Int } from "../lib/platformConfig";
 import { getZoneForLocation } from "../lib/zone";
 import { getH3Cell, getH3Ring } from "../lib/h3";
 import { calculateFare, haversineKm } from "../lib/fareCalc";
@@ -681,7 +683,15 @@ const server = http.createServer(async (req, res) => {
     });
     req.on("end", async () => {
       try {
-        const { ride_id, driver_id, cancelled_by, within_200m } = JSON.parse(body);
+        const { ride_id, driver_id, cancelled_by, within_200m, redispatch, rider_user_id } =
+          JSON.parse(body) as {
+            ride_id?: string;
+            driver_id?: string;
+            cancelled_by?: string;
+            within_200m?: boolean;
+            redispatch?: boolean;
+            rider_user_id?: string;
+          };
         // CG-2: driver_id is OPTIONAL — pre-match cancels (sequential chain
         // in flight, ride.driver_id still null) must also reach utils-server
         // so the chain stops billing further candidates.
@@ -738,6 +748,31 @@ const server = http.createServer(async (req, res) => {
               error: e instanceof Error ? e.message : String(e),
             });
           }
+        }
+
+        // R3.3: auto-redispatch (design docs/Plan/redispatch-r3-3-design.md §2/§9).
+        // Fire-and-forget — must never fail the cancel response. The trigger
+        // notifies the rider (WS ride:status), waits auto_redispatch_delay_ms,
+        // re-checks the ride is still 'dispatching' (rider may have cancelled
+        // during the delay, §5), then starts a NEW dispatch pipeline for the
+        // same ride_id; buildCandidateList's cumulative dispatch_offers
+        // exclusion keeps previously-billed drivers out of the fresh pool (§3).
+        if (redispatch === true) {
+          const delayMs = await getPlan05Int("auto_redispatch_delay_ms", 15000);
+          runRedispatchTrigger(ride_id, rider_user_id ?? null, {
+            getRide: async (id) => {
+              const [row] = await db.select().from(rides).where(eq(rides.id, id)).limit(1);
+              return row ?? null;
+            },
+            dispatchPipeline: (ride) => dispatchRidePipeline(ride, false),
+            notifyRider: (userId, msg) => sendToRider(userId, msg),
+            delayMs,
+          }).catch((e: unknown) =>
+            logger.error("[redispatch] auto-redispatch failed", {
+              ride_id,
+              error: e instanceof Error ? e.message : String(e),
+            }),
+          );
         }
         writeJson(200, { ok: true });
       } catch {

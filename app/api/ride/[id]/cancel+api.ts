@@ -1,6 +1,6 @@
 import { db } from '@/src/db';
 import { rides, users, drivers, riderFeeDeductions } from '@/src/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -11,6 +11,7 @@ import { createCancellationCreditInTx } from '@/lib/cancellationCompensation';
 import { createCancellationFeeEventInTx } from '@/lib/paymentEvents';
 import { haversineKm } from '@/lib/hotspots';
 import { sendNotification } from '@/lib/notify';
+import { getConfigValue, getPlan05Int } from '@/lib/platformConfig';
 import * as errors from '@/lib/errors';
 
 // Phase G: proximity-cancel threshold — driver cancelling within this
@@ -62,20 +63,38 @@ export async function POST(request: Request, { id }: { id: string }) {
     // Derive cancelled_by server-side from role
     const cancelled_by = dbUser.role === 'driver' ? 'driver' : 'rider';
 
+    // ── R3.3: auto-redispatch gating (design §1/§7) ─────────────────
+    // Attempt cap is checked BEFORE canRedispatch is decided; on exhaustion
+    // the ride goes to the same 'expired' terminal state a normal
+    // no-drivers-found dispatch uses (never re-dispatched). Scheduled rides
+    // are excluded entirely (§8).
+    const isDriverCancel = cancelled_by === 'driver';
+    const autoRedispatchEnabled = (await getConfigValue('auto_redispatch_enabled', 'false')) === 'true';
+    const maxAttempts = await getPlan05Int('auto_redispatch_max_attempts', 3);
+    const attemptsExhausted = (ride.redispatch_attempts ?? 0) >= maxAttempts;
+    const canRedispatch = isDriverCancel && autoRedispatchEnabled && !ride.scheduled_at && !attemptsExhausted;
+    const newStatus = canRedispatch ? 'dispatching' : attemptsExhausted ? 'expired' : 'cancelled';
+
     // Evaluate cancellation fee against the PRE-cancel snapshot (no wallet
     // debit — collected from future cashback). Never re-read the ride here:
     // the claim below flips it to 'cancelled', and re-reading would match no
     // policy and silently drop the fee.
     // Phase F pin-edit: a forced pickup requote resets the free-cancel
     // window — the grace anchor is GREATEST(created_at, pickup_requoted_at).
-    const rideCreated = new Date(ride.created_at);
-    const requotedAt = ride.pickup_requoted_at != null ? new Date(ride.pickup_requoted_at) : null;
-    const graceAnchor =
-      requotedAt && requotedAt.getTime() > rideCreated.getTime() ? requotedAt : rideCreated;
-    const { feeBdt } = await evaluateCancellation(
-      { status: ride.status, created_at: graceAnchor },
-      cancelled_by as 'rider' | 'driver',
-    );
+    // Amendment 2: a redispatching ride writes ZERO fee events of any kind —
+    // the whole fee evaluation is gated on !canRedispatch.
+    let feeBdt = 0;
+    if (!canRedispatch) {
+      const rideCreated = new Date(ride.created_at);
+      const requotedAt = ride.pickup_requoted_at != null ? new Date(ride.pickup_requoted_at) : null;
+      const graceAnchor =
+        requotedAt && requotedAt.getTime() > rideCreated.getTime() ? requotedAt : rideCreated;
+      const evaluated = await evaluateCancellation(
+        { status: ride.status, created_at: graceAnchor },
+        cancelled_by as 'rider' | 'driver',
+      );
+      feeBdt = evaluated.feeBdt;
+    }
 
     // ── Phase G: proximity-cancel stamp ─────────────────────────────
     // Driver-cancel branch only: driver position = drivers.last_location_*
@@ -117,10 +136,17 @@ export async function POST(request: Request, { id }: { id: string }) {
     await db.transaction(async (tx) => {
       const [claimedRide] = await tx.update(rides)
         .set({
-          status: 'cancelled',
-          cancelled_by,
-          cancel_reason: reason ?? null,
+          status: newStatus,
+          cancelled_by: canRedispatch ? null : cancelled_by,
+          cancel_reason: canRedispatch ? null : (reason ?? null),
           updated_at: new Date(),
+          // R3.3: mark the start of the re-dispatch search window and bump
+          // the attempt counter (the cap bound — design §7).
+          ...(canRedispatch ? {
+            redispatch_started_at: new Date(),
+            redispatch_attempts: sql`${rides.redispatch_attempts} + 1`,
+            driver_id: null, // clear the departing driver
+          } : {}),
           // Phase G: stamped in the same claim UPDATE (never true for
           // rider cancels — driverCancelWithin200m only computes there).
           ...(driverCancelWithin200m ? { driver_cancel_within_200m: true } : {}),
@@ -134,8 +160,12 @@ export async function POST(request: Request, { id }: { id: string }) {
       }
       claimed = true;
 
+      // Amendment 2: a redispatching ride writes zero fee events — every
+      // fee write below is gated on !canRedispatch (in addition to the
+      // feeBdt > 0 pre-computation, which is 0 on the redispatch path).
+
       // Fee stamp (we own the status transition now)
-      if (feeBdt > 0) {
+      if (!canRedispatch && feeBdt > 0) {
         await tx.update(rides).set({
           cancellation_fee_bdt: feeBdt,
           cancellation_compensation_driver_id: ride.driver_id,
@@ -151,7 +181,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       }
 
       // Create compensation credit for the original driver (platform-funded)
-      if (feeBdt > 0 && ride.driver_id) {
+      if (!canRedispatch && feeBdt > 0 && ride.driver_id) {
         await createCancellationCreditInTx(tx, {
           originalDriverId: ride.driver_id,
           cancellationRideId: rideId,
@@ -160,7 +190,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       }
 
       // Create rider fee deduction (collected from future cashback)
-      if (feeBdt > 0) {
+      if (!canRedispatch && feeBdt > 0) {
         const expiresAt = new Date(Date.now() + 90 * 86400_000);
         await tx.insert(riderFeeDeductions).values({
           rider_id: ride.user_id,
@@ -187,18 +217,31 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     // ── Accounting entry (non-blocking side ledger — outside the tx by
     // design, matching every other money route in the codebase) ──────────
-    if (feeBdt > 0) {
+    if (!canRedispatch && feeBdt > 0) {
       try { await recordCancellationFee({ id: rideId, feePaisa: feeBdt, riderId: ride.user_id, zoneId: ride.zone_id }); }
       catch (e) { logger.warn('[accounting] cancellation fee entry failed', e); }
     }
 
-    logger.info('[ride/cancel] ride cancelled', { rideId, cancelled_by, reason, feeBdt, driverCancelWithin200m });
+    logger.info('[ride/cancel] ride cancelled', { rideId, cancelled_by, reason, feeBdt, driverCancelWithin200m, redispatch: canRedispatch });
 
-    // ── Phase G: rider survey invite on driver-cancelled rides ────────
+    // ── Rider notification (design §4) ───────────────────────────────
     // Fire-and-forget (same convention as ride:completed in complete+api);
-    // a notification failure must never fail the cancellation. The rider
-    // app routes the tap via lib/notificationRouter.ts → ride screen.
-    if (cancelled_by === 'driver') {
+    // a notification failure must never fail the cancellation.
+    if (canRedispatch) {
+      // R3.3: rider is told the driver cancelled and a new match is running;
+      // the app keeps the finding-driver UI via the WS ride:status push from
+      // runRedispatchTrigger.
+      sendNotification(
+        ride.user_id,
+        'ride:driver_cancelled',
+        'Finding a new driver…',
+        'Your driver cancelled. We are finding a new driver for you.',
+        { ride_id: rideId },
+        { priority: 'high' },
+      ).catch(() => {});
+    } else if (cancelled_by === 'driver') {
+      // ── Phase G: rider survey invite on driver-cancelled rides ────────
+      // The rider app routes the tap via lib/notificationRouter.ts → ride screen.
       sendNotification(
         ride.user_id,
         'ride:cancel_survey',
@@ -229,6 +272,10 @@ export async function POST(request: Request, { id }: { id: string }) {
             ride_id: rideId,
             driver_id: ride.driver_id ?? null,
             cancelled_by,
+            // R3.3: utils-server rebuilds a fresh dispatch chain for the ride
+            // (design §2/§9); rider_user_id feeds the WS ride:status push.
+            redispatch: canRedispatch,
+            rider_user_id: ride.user_id,
           }),
         }).catch((e) =>
           logger.error("[ride/cancel] WS ride:cancelled broadcast failed", { rideId, driverId: ride.driver_id ?? null, error: errors.getErrorMessage(e) }),
@@ -236,7 +283,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       }
     }
 
-    return Response.json({ ok: true, status: 'cancelled' });
+    return Response.json({ ok: true, status: newStatus });
   } catch (e: unknown) {
     if (errors.getErrorStatus(e) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[ride/cancel] error', e);

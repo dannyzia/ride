@@ -91,6 +91,10 @@ jest.mock("@/lib/notify", () => ({
 }));
 jest.mock("@/lib/platformConfig", () => ({
   getPlan05Int: jest.fn(),
+  // R3.3 re-land: the cancel route now consults auto_redispatch_enabled
+  // (gated on !canRedispatch for the fee block) — the shared mock must
+  // provide it. Default fallback 'false' keeps legacy behavior in these tests.
+  getConfigValue: jest.fn(),
 }));
 
 import { db } from "@/src/db";

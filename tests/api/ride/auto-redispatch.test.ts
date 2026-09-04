@@ -164,7 +164,8 @@ function mockDriverCancelSelects(ride: Row) {
 const fetchMock = jest.fn(() => Promise.resolve({ ok: true } as Response));
 
 function lastFetchBody(): Row {
-  const call = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
+  const calls = fetchMock.mock.calls as unknown as [string, { body: string }][];
+  const call = calls[calls.length - 1];
   return JSON.parse(String((call?.[1] as { body: string }).body));
 }
 

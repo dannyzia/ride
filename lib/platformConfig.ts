@@ -22,6 +22,7 @@ export const PLAN05_CONFIG_KEYS = [
   'auto_redispatch_enabled',
   'auto_redispatch_checkin_minutes',
   'auto_redispatch_delay_ms',
+  'auto_redispatch_max_attempts',
 ] as const;
 
 export type Plan05ConfigKey = (typeof PLAN05_CONFIG_KEYS)[number];
@@ -37,6 +38,7 @@ const DEFAULTS: Record<Plan05ConfigKey, string> = {
   auto_redispatch_enabled: 'false',        // disabled until R3.3 is verified
   auto_redispatch_checkin_minutes: '3',    // 3 minutes before rider check-in
   auto_redispatch_delay_ms: '15000',       // 15s delay before first re-dispatch
+  auto_redispatch_max_attempts: '3',       // give up (expired) after N redispatch attempts
 };
 
 /**
