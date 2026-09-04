@@ -316,11 +316,16 @@ const DEEP_LINK_ROUTES: DeepLinkRoute[] = [
  */
 export function routeDeepLink(url: string): boolean {
   try {
-    // Strip scheme and host if present
+    // Strip scheme and host if present. For custom schemes (ride://) the
+    // first path segment lands in `hostname` — e.g. ride://rider/wallet has
+    // host 'rider' and path '/wallet'. Reconstruct host + path so the
+    // role-prefixed patterns below match full scheme links.
     let path = url;
     if (url.includes("://")) {
       const parsed = new URL(url);
-      path = parsed.pathname + parsed.search;
+      path =
+        (parsed.hostname ? parsed.hostname + parsed.pathname : parsed.pathname) +
+        parsed.search;
     }
     // Strip leading slash for matching
     path = path.replace(/^\/+/, "");

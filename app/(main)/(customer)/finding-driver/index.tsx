@@ -55,7 +55,6 @@ export default function FindingDriver() {
   const [prolongedEmpty, setProlongedEmpty] = useState(false);
   const [alternatives, setAlternatives] = useState<Alternative[] | null>(null);
   const [findingState, setFindingState] = useState<FindingState>('searching');
-  const [redispatchCheckin, setRedispatchCheckin] = useState<{ rideId: string; elapsed: number } | null>(null);
   const driverFound = useRef(false);
   const emptyPollCount = useRef(0);
 
@@ -133,10 +132,6 @@ export default function FindingDriver() {
         router.replace("/(main)/(customer)/no-drivers-available");
       } else if (msg.type === "ride:alternatives" && Array.isArray(msg.alternatives)) {
         setAlternatives(msg.alternatives as Alternative[]);
-      } else if (msg.type === "ride:redispatch_checkin") {
-        // R3.3: Rider check-in — "Still searching for X minutes. Keep looking?"
-        const elapsed = (msg as any).elapsed_minutes ?? 3;
-        setRedispatchCheckin({ rideId: msg.ride_id ?? '', elapsed });
       }
     };
     ws.addEventListener("message", handler);
@@ -248,23 +243,6 @@ export default function FindingDriver() {
       router.back();
     }
   };
-
-  // R3.3: Handle redispatch check-in response
-  const handleRedispatchKeepLooking = useCallback(() => {
-    if (!redispatchCheckin || !ws) return;
-    ws.send(JSON.stringify({
-      type: 'ride:redispatch_response',
-      ride_id: redispatchCheckin.rideId,
-      keep_looking: true,
-    }));
-    setRedispatchCheckin(null);
-  }, [redispatchCheckin, ws]);
-
-  const handleRedispatchCancel = useCallback(() => {
-    if (!redispatchCheckin) return;
-    setRedispatchCheckin(null);
-    handleCancel();
-  }, [redispatchCheckin, handleCancel]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -448,63 +426,6 @@ export default function FindingDriver() {
         />
       )}
 
-      {/* R3.3: Redispatch check-in modal */}
-      {redispatchCheckin && (
-        <View
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 200,
-          }}
-        >
-          <View
-            style={{
-              width: '85%',
-              backgroundColor: surfaceBg,
-              borderRadius: 16,
-              padding: 24,
-              borderWidth: 1,
-              borderColor,
-            }}
-          >
-            <Text
-              className="text-[18px] font-JakartaBold mb-2"
-              style={{ color: textPrimary }}
-            >
-              {t('finding_driver.still_searching')}
-            </Text>
-            <Text
-              className="text-[14px] font-Jakarta mb-6"
-              style={{ color: textSecondary }}
-            >
-              {t('finding_driver.searching_for_minutes', { count: redispatchCheckin.elapsed })}
-            </Text>
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                className="flex-1 py-[12px] rounded-[10px] items-center"
-                style={{ backgroundColor: colors.danger }}
-                onPress={handleRedispatchCancel}
-              >
-                <Text className="text-[15px] font-JakartaSemiBold" style={{ color: colors.white }}>
-                  {t('finding_driver.cancel_ride')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 py-[12px] rounded-[10px] items-center"
-                style={{ backgroundColor: colors.primary }}
-                onPress={handleRedispatchKeepLooking}
-              >
-                <Text className="text-[15px] font-JakartaSemiBold" style={{ color: colors.white }}>
-                  {t('finding_driver.keep_looking')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
