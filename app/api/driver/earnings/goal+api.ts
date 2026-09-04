@@ -70,13 +70,17 @@ export async function GET(request: Request) {
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: "user_not_found", message: "User not found" }, { status: 404 });
 
-    const [driver] = await db.select({ id: drivers.id }).from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
+    const [driver] = await db
+      .select({ id: drivers.id, user_id: drivers.user_id })
+      .from(drivers)
+      .where(eq(drivers.user_id, user.id))
+      .limit(1);
     if (!driver) return Response.json({ error: "driver_not_found", message: "Driver not found" }, { status: 404 });
 
     const [goal] = await db
       .select()
       .from(driverEarningsGoals)
-      .where(and(eq(driverEarningsGoals.driver_user_id, driver.id), eq(driverEarningsGoals.is_active, true)))
+      .where(and(eq(driverEarningsGoals.driver_user_id, driver.user_id), eq(driverEarningsGoals.is_active, true)))
       .limit(1);
 
     if (!goal) {
@@ -108,7 +112,11 @@ export async function POST(request: Request) {
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!user) return Response.json({ error: "user_not_found", message: "User not found" }, { status: 404 });
 
-    const [driver] = await db.select({ id: drivers.id }).from(drivers).where(eq(drivers.user_id, user.id)).limit(1);
+    const [driver] = await db
+      .select({ id: drivers.id, user_id: drivers.user_id })
+      .from(drivers)
+      .where(eq(drivers.user_id, user.id))
+      .limit(1);
     if (!driver) return Response.json({ error: "driver_not_found", message: "Driver not found" }, { status: 404 });
 
     const parsed = await parseJsonBody(request, goalSchema);
@@ -123,7 +131,7 @@ export async function POST(request: Request) {
         .set({ is_active: false, updated_at: new Date() })
         .where(
           and(
-            eq(driverEarningsGoals.driver_user_id, driver.id),
+            eq(driverEarningsGoals.driver_user_id, driver.user_id),
             eq(driverEarningsGoals.is_active, true),
           ),
         );
@@ -131,7 +139,7 @@ export async function POST(request: Request) {
       const [inserted] = await tx
         .insert(driverEarningsGoals)
         .values({
-          driver_user_id: driver.id,
+          driver_user_id: driver.user_id,
           period,
           target_bdt,
           is_active: true,
