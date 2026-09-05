@@ -38,6 +38,9 @@ start: run the sync script every time, before Metro.
 # 0. Which network am I on? (sanity — printed IP must be reachable FROM the phone)
 node scripts/dev-env-sync.js          # patches .env.local to the CURRENT LAN IP
 node scripts/dev-env-sync.js --check  # optional: CI-style drift gate (exit 1 on drift)
+# NOTE: `03 Metro.bat` (repo root) runs the sync automatically before
+# `npx expo start` — humans starting Metro via the .bat get this for free.
+# Agents starting Metro directly MUST run the sync themselves first.
 
 # 1. utils-server (WebSocket dispatch, port 3001)
 cd utils-server; npm run dev          # expect: "[ws] dispatch server listening on 0.0.0.0:3001"
