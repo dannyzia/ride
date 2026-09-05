@@ -1,14 +1,13 @@
 /**
- * TDD RED for the implementation lane's Z2 fix (finding:
- * .kilo/plans/findings/2026-09-05-postrow-demoted-fleet-emit.md).
+ * Demoted-fleet WS emit for demoteWinner's collecting path — the GREEN
+ * counterpart to finding 2026-09-05-postrow-demoted-fleet-emit.
  *
- * demoteWinner's collecting path re-reads awarded_bid_id AFTER the tx nulls
- * it, so postRow.awarded_bid_id is always null and the demoted winning fleet
- * never receives the rental:status emit (only the rider does).
- *
- * Declared with test.failing: the suite stays green today (proving the bug),
- * and flips RED the moment the implementation agent's fix makes the test pass
- * — the fix commit then flips test.failing → test in the same commit.
+ * History: the original postRow block re-read awarded_bid_id AFTER the tx
+ * nulled it, so the demoted fleet never received rental:status. The test
+ * agent shipped that gap as a test.failing red; the implementation agent
+ * landed Shape 2 (closure `demotedBidId` captured pre-null, post-tx fleet
+ * lookup keyed on it) in e9bea6d, and this test was flipped test.failing →
+ * test in the same pass.
  */
 jest.mock("../../src/db", () => ({
   db: { select: jest.fn(), update: jest.fn(), insert: jest.fn(), transaction: jest.fn() },
@@ -25,7 +24,6 @@ jest.mock("../rentalHandler", () => ({
 }));
 
 import { db } from "../../src/db";
-import { rentalRequests } from "../../src/db/schema";
 import { sendToBidder, sendToFleetMembers } from "../rentalHandler";
 import { demoteWinner } from "../rentalDispatchChain";
 
@@ -38,9 +36,9 @@ const DEMOTED_FLEET_ID = "fleet-1";
 function scriptTxAndPostRead(): void {
   let selectCall = 0;
   (db.select as jest.Mock).mockImplementation(() => {
-    // call 0 (in-tx): request row · call 1 (in-tx): live assignment ·
-    // call 2 (in-tx): standing-bid count · call 3 (post-tx): postRow ·
-    // call 4 (post-tx): winning-bid fleet lookup
+    // call 1 (in-tx): request row · call 2 (in-tx): live assignment ·
+    // call 3 (in-tx): standing-bid count · call 4 (post-tx): winning-bid
+    // fleet lookup (keyed on the closure demotedBidId) · call 5: emitRentalStatus owner lookup
     selectCall++;
     const rows: Row[] =
       selectCall === 1
@@ -50,8 +48,8 @@ function scriptTxAndPostRead(): void {
           : selectCall === 3
             ? [{ cnt: 2 }]
             : selectCall === 4
-              ? [{ awarded_bid_id: DEMOTED_BID_ID }] // the value the tx saw pre-null
-              : [{ fleet_id: DEMOTED_FLEET_ID }];
+              ? [{ fleet_id: DEMOTED_FLEET_ID }]
+              : [{ rider_user_id: "rider-1" }];
     const chain: any = {
       from: () => chain,
       where: () => chain,
@@ -80,23 +78,46 @@ beforeEach(() => {
 });
 
 describe("demoteWinner — demoted-fleet WS emit (Z2 finding)", () => {
-  test.failing(
-    "collecting demotion emits rental:status to the DEMOTED fleet, not just the rider",
-    async () => {
-      const result = await demoteWinner(REQUEST_ID, "sla_timeout");
-      expect(result).toMatchObject({ ok: true, nextStatus: "collecting" });
+  test("collecting demotion emits rental:status to BOTH the rider and the demoted fleet", async () => {
+    const result = await demoteWinner(REQUEST_ID, "sla_timeout");
+    expect(result).toMatchObject({ ok: true, nextStatus: "collecting" });
 
-      // rider notified
-      expect(sendToBidder).toHaveBeenCalled();
-      // THE GAP: the demoted winning fleet must also be notified with its
-      // fleet id. Today the postRow re-read sees the already-nulled
-      // awarded_bid_id, so the fleet lookup never runs.
-      expect(sendToFleetMembers).toHaveBeenCalledWith(
-        DEMOTED_FLEET_ID,
-        "rental:status",
-        expect.objectContaining({ request_id: REQUEST_ID, status: "collecting" }),
-      );
-      void rentalRequests;
-    },
-  );
+    expect(sendToBidder).toHaveBeenCalled();
+    // the fix: the demoted winning fleet is resolved from the bid id captured
+    // pre-null and notified with its fleet id
+    expect(sendToFleetMembers).toHaveBeenCalledWith(
+      DEMOTED_FLEET_ID,
+      "rental:status",
+      expect.objectContaining({ request_id: REQUEST_ID, status: "collecting" }),
+    );
+  });
+
+  test("no_bidders demotion emits to the rider with no fleet", async () => {
+    let selectCall = 0;
+    (db.select as jest.Mock).mockImplementation(() => {
+      selectCall++;
+      const rows: Row[] =
+        selectCall === 1
+          ? [{ id: REQUEST_ID, status: "awarded", awarded_bid_id: DEMOTED_BID_ID }]
+          : selectCall === 2
+            ? [{ assigned_driver_user_id: null }]
+            : selectCall === 3
+              ? [{ cnt: 0 }] // no standing bids → no_bidders
+              : [{ rider_user_id: "rider-1" }];
+      const chain: any = {
+        from: () => chain,
+        where: () => chain,
+        for: () => chain,
+        limit: async () => rows,
+        then: (res: (v: unknown) => void, rej: (e: unknown) => void) =>
+          Promise.resolve(rows).then(res, rej),
+      };
+      return chain;
+    });
+
+    const result = await demoteWinner(REQUEST_ID, "fleet_ack_timeout");
+    expect(result).toMatchObject({ ok: true, nextStatus: "no_bidders" });
+    expect(sendToBidder).toHaveBeenCalled();
+    expect(sendToFleetMembers).not.toHaveBeenCalled(); // nothing was demoted-and-reselected
+  });
 });
