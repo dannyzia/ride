@@ -107,6 +107,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       // Demotion path (§B.1)
       const reselectMinutes = await getConfigInt("rental_reselect_window_minutes", 10);
       let guard: Response | null = null;
+      let withdrewTo: "collecting" | "no_bidders" = "collecting";
       await db.transaction(async (tx) => {
         // R3-completion: the pre-tx reads above are UNLOCKED — a pick handler
         // can commit between them and this tx. Lock the request row and
@@ -181,37 +182,81 @@ export async function POST(request: Request, { id }: { id: string }) {
             );
         }
 
-        await tx
-          .update(rentalRequests)
-          .set({
-            status: "collecting",
-            awarded_bid_id: null,
-            confirmation_deadline_at: null,
-            reselect_deadline_at: new Date(Date.now() + reselectMinutes * 60 * 1000),
-            updated_at: new Date(),
-          })
+        // R3 round-2 (Item 2 #2): mirror demoteWinner's §B.1 branch — no
+        // superseded bids ⇒ terminal no_bidders (bidding can NEVER reopen,
+        // F35), never a bid-less 'collecting' that only sweeps to expired.
+        const [{ cnt: supersededCnt }] = await tx
+          .select({ cnt: sql<number>`count(*)::int` })
+          .from(rentalBids)
           .where(
             and(
-              eq(rentalRequests.id, bid.request_id),
-              eq(rentalRequests.status, "awarded"),
+              eq(rentalBids.request_id, bid.request_id),
+              eq(rentalBids.status, "superseded"),
             ),
           );
 
-        await tx.insert(rentalRequestEvents).values({
-          request_id: bid.request_id,
-          event_type: "bid_demoted",
-          payload: { reason: "fleet_cancelled", bid_id: id },
-          created_by: dbUser.id,
-        });
+        if (supersededCnt === 0) {
+          await tx
+            .update(rentalRequests)
+            .set({ status: "no_bidders", updated_at: new Date() })
+            .where(eq(rentalRequests.id, bid.request_id));
+
+          await tx.insert(rentalRequestEvents).values({
+            request_id: bid.request_id,
+            event_type: "no_bidders",
+            payload: { reason: "fleet_cancelled" },
+            created_by: dbUser.id,
+          });
+          withdrewTo = "no_bidders";
+        } else {
+          await tx
+            .update(rentalRequests)
+            .set({
+              status: "collecting",
+              awarded_bid_id: null,
+              confirmation_deadline_at: null,
+              reselect_deadline_at: new Date(Date.now() + reselectMinutes * 60 * 1000),
+              updated_at: new Date(),
+            })
+            .where(
+              and(
+                eq(rentalRequests.id, bid.request_id),
+                eq(rentalRequests.status, "awarded"),
+              ),
+            );
+
+          await tx.insert(rentalRequestEvents).values({
+            request_id: bid.request_id,
+            event_type: "bid_demoted",
+            payload: { reason: "fleet_cancelled", bid_id: id },
+            created_by: dbUser.id,
+          });
+        }
       });
 
       if (guard) return guard;
 
-      return Response.json({ message: "Bid withdrawn, request returned to collecting" });
+      return Response.json({ message: `Bid withdrawn, request returned to ${withdrewTo}` });
     }
 
     // Plain withdraw (pre-settle) — §B.0 atomic transition
     await db.transaction(async (tx) => {
+      // R3 round-2 (1g): lock the request row FIRST — the COUNT and the F35
+      // branch UPDATEs below must serialize against a racing bid-submit's own
+      // request lock, else a submit landing between the COUNT and the F35
+      // UPDATE leaves a fresh 'active' bid on a 'broadcasting' request (the
+      // bid becomes un-accept-able and sweeps to expired).
+      const [lockedReq] = await tx
+        .select({ status: rentalRequests.status })
+        .from(rentalRequests)
+        .where(eq(rentalRequests.id, bid.request_id))
+        .for("update")
+        .limit(1);
+
+      if (!lockedReq || lockedReq.status !== "collecting") {
+        throw Object.assign(new Error("invalid_transition"), { status: 409 });
+      }
+
       const updated = await tx
         .update(rentalBids)
         .set({

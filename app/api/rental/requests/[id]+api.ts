@@ -10,7 +10,7 @@ import { requireAnyRole } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
-import { eq, and, desc, sql, count as cnt, avg, inArray, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, count as cnt, avg, inArray, isNull, notInArray } from "drizzle-orm";
 import { z } from "zod";
 
 export async function GET(request: Request, { id }: { id: string }) {
@@ -186,7 +186,29 @@ export async function POST(request: Request, { id }: { id: string }) {
       body = result.data;
     }
 
+    const TERMINAL_STATUSES = ["cancelled", "expired", "no_bidders", "completed"] as const;
+
+    let guard: Response | null = null;
     await db.transaction(async (tx) => {
+      // R3 round-2 (Extra): lock the request row and re-verify the non-terminal
+      // condition UNDER the lock — the pre-tx check at :163 is unlocked, and a
+      // complete committing `confirmed → completed` in the race window must not
+      // be overwritten to `cancelled` by the unconditional UPDATE below.
+      const [lockedReq] = await tx
+        .select({ status: rentalRequests.status })
+        .from(rentalRequests)
+        .where(eq(rentalRequests.id, id))
+        .for("update")
+        .limit(1);
+
+      if (!lockedReq || (TERMINAL_STATUSES as readonly string[]).includes(lockedReq.status)) {
+        guard = Response.json(
+          { error: "invalid_transition", message: `Cannot cancel from ${lockedReq?.status ?? "unknown"}` },
+          { status: 409 },
+        );
+        return;
+      }
+
       // Settle every unsettled bid: active + won + superseded → lost (§B.1 —
       // superseded rows from a prior award must not linger on a terminal request)
       await tx
@@ -215,7 +237,9 @@ export async function POST(request: Request, { id }: { id: string }) {
           ),
         );
 
-      await tx
+      // Conditional write mirroring the pre-tx check (belt-and-suspenders over
+      // the FOR UPDATE above)
+      const updatedReq = await tx
         .update(rentalRequests)
         .set({
           status: "cancelled",
@@ -225,7 +249,21 @@ export async function POST(request: Request, { id }: { id: string }) {
           awarded_bid_id: null,
           updated_at: new Date(),
         })
-        .where(eq(rentalRequests.id, id));
+        .where(
+          and(
+            eq(rentalRequests.id, id),
+            notInArray(rentalRequests.status, [...TERMINAL_STATUSES]),
+          ),
+        )
+        .returning({ id: rentalRequests.id });
+
+      if (updatedReq.length === 0) {
+        guard = Response.json(
+          { error: "invalid_transition", message: `Cannot cancel from ${lockedReq.status}` },
+          { status: 409 },
+        );
+        return;
+      }
 
       await tx.insert(rentalRequestEvents).values({
         request_id: id,
@@ -234,6 +272,8 @@ export async function POST(request: Request, { id }: { id: string }) {
         created_by: dbUser.id,
       });
     });
+
+    if (guard) return guard;
 
     return Response.json({ message: "Request cancelled" });
   } catch (err: unknown) {

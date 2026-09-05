@@ -4,14 +4,14 @@
  * Re-checks winning fleet's gate IN-TX (ruling 10).
  */
 import { db } from "@/src/db";
-import { rentalRequests, rentalBids, awardedBidAssignments, rentalRequestEvents, fleetSubscriptions, fleetSubscriptionPlans, fleets, drivers, vehicles } from "@/src/db/schema";
+import { rentalRequests, rentalBids, awardedBidAssignments, rentalRequestEvents, fleetSubscriptions, fleetSubscriptionPlans, fleets, drivers, vehicles, deliveryLegs, emergencyRequests, ambulanceCertifications } from "@/src/db/schema";
 import { requireAnyRole } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { getConfigInt } from "@/lib/platformConfig";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull, inArray, notInArray, sql } from "drizzle-orm";
 
 const acceptSchema = z.object({
   bid_id: z.string().uuid(),
@@ -98,9 +98,73 @@ export async function POST(request: Request, { id }: { id: string }) {
               eq(drivers.status, "active"),
             ),
           )
-          .limit(1);
+          .limit(1)
+          .for("update");
         if (!driverRow) {
           throw Object.assign(new Error("invalid_driver"), { status: 403 });
+        }
+
+        // R3 round-2 (1i): tracking accepts assign the driver DIRECTLY here —
+        // no pick step follows, so the §B.7 cross-vertical exclusivity checks
+        // must run at accept (mirrors pick+api.ts:144-197; the drivers lock
+        // above is the serialization point). Non-tracking accepts assign no
+        // driver — their §B.7 runs at pick.
+        if (req.tracking_required) {
+          // §B.7 Check 1: no active rental assignment (parent-status filter —
+          // terminal parents don't count; only awarded/confirmed commit a driver)
+          const activeRentalStatuses = ["awarded", "confirmed"] as const;
+          const [activeRental] = await tx
+            .select({ id: awardedBidAssignments.id })
+            .from(awardedBidAssignments)
+            .innerJoin(
+              rentalRequests,
+              eq(awardedBidAssignments.request_id, rentalRequests.id),
+            )
+            .where(
+              and(
+                eq(awardedBidAssignments.assigned_driver_user_id, bidRows[0].driver_user_id),
+                isNull(awardedBidAssignments.released_at),
+                inArray(rentalRequests.status, activeRentalStatuses),
+              ),
+            )
+            .limit(1);
+          if (activeRental) {
+            throw Object.assign(new Error("driver_already_committed"), { status: 409 });
+          }
+
+          // §B.7 Check 2: no active delivery leg
+          const [activeLeg] = await tx
+            .select({ id: deliveryLegs.id })
+            .from(deliveryLegs)
+            .where(
+              and(
+                eq(deliveryLegs.courier_user_id, bidRows[0].driver_user_id),
+                sql`${deliveryLegs.leg_state} IN ('pending', 'assigned', 'picked_up', 'in_transit')`,
+              ),
+            )
+            .limit(1);
+          if (activeLeg) {
+            throw Object.assign(new Error("driver_already_committed"), { status: 409 });
+          }
+
+          // §B.7 Check 3: no active emergency commitment
+          const [activeEmergency] = await tx
+            .select({ id: emergencyRequests.id })
+            .from(emergencyRequests)
+            .innerJoin(
+              ambulanceCertifications,
+              eq(emergencyRequests.accepted_cert_id, ambulanceCertifications.id),
+            )
+            .where(
+              and(
+                eq(ambulanceCertifications.user_id, bidRows[0].driver_user_id),
+                notInArray(emergencyRequests.status, ["completed", "cancelled", "failed"]),
+              ),
+            )
+            .limit(1);
+          if (activeEmergency) {
+            throw Object.assign(new Error("driver_already_committed"), { status: 409 });
+          }
         }
       }
 
@@ -122,10 +186,22 @@ export async function POST(request: Request, { id }: { id: string }) {
       }
 
       // Award: accepted bid → won, all others → superseded
-      await tx
+      // R3 round-2 (1b): conditional on status='active' — a fleet withdraw can
+      // land between the unlocked pre-read and this flip; blindly overwriting
+      // 'withdrawn' → 'won' would award a request on a withdrawn bid.
+      const awardedBid = await tx
         .update(rentalBids)
         .set({ status: "won", settled_at: new Date() })
-        .where(eq(rentalBids.id, result.data.bid_id));
+        .where(
+          and(
+            eq(rentalBids.id, result.data.bid_id),
+            eq(rentalBids.status, "active"),
+          ),
+        )
+        .returning({ id: rentalBids.id });
+      if (awardedBid.length === 0) {
+        throw Object.assign(new Error("bid_no_longer_active"), { status: 409 });
+      }
 
       await tx
         .update(rentalBids)
@@ -200,11 +276,17 @@ export async function POST(request: Request, { id }: { id: string }) {
         { error: "forbidden", message: (err as Error).message ?? "Not authorized" },
         { status: 403 },
       );
-    if (status === 409)
+    if (status === 409) {
+      const msg = (err as Error).message;
       return Response.json(
-        { error: "invalid_transition", message: (err as Error).message },
+        {
+          // R3 round-2 (1b): named code for the raced bid; legacy codes preserved
+          error: msg === "bid_no_longer_active" ? "bid_no_longer_active" : "invalid_transition",
+          message: msg,
+        },
         { status: 409 },
       );
+    }
     logger.error("[rental/accept-bid POST] error", err);
     return Response.json(
       { error: "internal_error", message: "An internal server error occurred" },

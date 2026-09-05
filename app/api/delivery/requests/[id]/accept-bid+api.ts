@@ -152,10 +152,11 @@ export async function POST(request: Request, { id }: { id: string }) {
         // Food hero — N13 (F37 serialization fix): a food courier that is ALSO
         // a driver must serialize on the SAME row every other vertical locks.
         // drivers-row FOR UPDATE = the F37 common serialization point when the
-        // user is dual-role; the users-row lock stays for food-vs-food races
-        // (pure food couriers have no drivers row and cannot race rental or
-        // emergency, both of which require one). Lock order users→drivers is
-        // consistent here and no other tx locks users→anything, so no cycle.
+        // user is dual-role; the users-row lock stays for food-vs-food races.
+        // R3 round-2 (finding 5): the comment previously claimed pure food
+        // couriers "cannot race rental or emergency" — WRONG for dual-role
+        // users (they DO have a drivers row), so the full §B.7 checks below
+        // mirror the parcel branch under the same drivers lock.
         await tx
           .select()
           .from(users)
@@ -167,6 +168,46 @@ export async function POST(request: Request, { id }: { id: string }) {
           .from(drivers)
           .where(eq(drivers.user_id, bid.courier_user_id))
           .for('update');
+
+        // §B.7: no active rental assignment — join rental_requests and filter
+        // by parent status IN ('awarded','confirmed'); terminal parents don't
+        // count (mirrors the parcel branch above).
+        const activeRentalStatuses = ['awarded', 'confirmed'] as const;
+        const [heroActiveRental] = await tx
+          .select({ id: awardedBidAssignments.id })
+          .from(awardedBidAssignments)
+          .innerJoin(
+            rentalRequests,
+            eq(awardedBidAssignments.request_id, rentalRequests.id),
+          )
+          .where(and(
+            eq(awardedBidAssignments.assigned_driver_user_id, bid.courier_user_id),
+            isNull(awardedBidAssignments.released_at),
+            inArray(rentalRequests.status, activeRentalStatuses),
+          ))
+          .limit(1);
+
+        if (heroActiveRental) {
+          throw Object.assign(new Error('Driver already committed to a rental'), { status: 409, message: 'driver_already_committed' });
+        }
+
+        // §B.7: no ACTIVE emergency commitment for the dual-role food hero.
+        const [heroActiveEmergency] = await tx
+          .select({ id: emergencyRequests.id })
+          .from(emergencyRequests)
+          .innerJoin(
+            ambulanceCertifications,
+            eq(emergencyRequests.accepted_cert_id, ambulanceCertifications.id),
+          )
+          .where(and(
+            eq(ambulanceCertifications.user_id, bid.courier_user_id),
+            notInArray(emergencyRequests.status, ['completed', 'cancelled', 'failed']),
+          ))
+          .limit(1);
+
+        if (heroActiveEmergency) {
+          throw Object.assign(new Error('Driver already committed to an emergency'), { status: 409, message: 'driver_already_committed' });
+        }
       }
 
       // Check B.7: no active delivery leg (any type — parcel or food)

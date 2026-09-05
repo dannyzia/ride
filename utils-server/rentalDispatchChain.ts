@@ -76,7 +76,14 @@ export async function demoteWinner(
         ),
       )
       .limit(1);
-    if (liveAssign?.assigned_driver_user_id) {
+    if (liveAssign?.assigned_driver_user_id && reason === "sla_timeout") {
+      // Reason-aware (R3 round-2, Item 2 #1): an empty assignment becoming
+      // non-empty before a sla_timeout demote means fleet staff PICKED while
+      // we were sweeping — the customer must not be demoted for it. For
+      // fleet_ack_timeout / fleet_cancelled the FLEET is the one failing to
+      // deliver (tracking assignments are born-fulfilled, so a blanket exit
+      // would abort every branch-(b) ack-timeout demote); the demote proceeds
+      // and the conditional release UPDATE releases the driver normally.
       return { ok: false, reason: "driver_picked" };
     }
 
