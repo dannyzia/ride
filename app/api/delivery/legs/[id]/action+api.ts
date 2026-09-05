@@ -13,6 +13,7 @@ import { eq, and, sql, inArray } from 'drizzle-orm';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { notifyWs } from '@/lib/wsNotify';
 
 type DeliveryStatus = (typeof deliveryStatusEnum.enumValues)[number];
 
@@ -179,6 +180,35 @@ export async function POST(request: Request, { id }: { id: string }) {
     });
 
     if (guard) return guard;
+
+    // Z2: emit after the tx (v1 §D.3.5 delivery:status) — customer + courier.
+    try {
+      const [legRow] = await db
+        .select({ request_id: deliveryLegs.request_id, courier_user_id: deliveryLegs.courier_user_id })
+        .from(deliveryLegs)
+        .where(eq(deliveryLegs.id, id))
+        .limit(1);
+      const [reqRow] = await db
+        .select({ created_by_user_id: deliveryRequests.created_by_user_id })
+        .from(deliveryRequests)
+        .where(eq(deliveryRequests.id, legRow?.request_id ?? ''))
+        .limit(1);
+      notifyWs([
+        {
+          event: 'delivery:status',
+          to: [
+            ...(reqRow ? [{ kind: 'user' as const, user_id: reqRow.created_by_user_id }] : []),
+            { kind: 'user', user_id: legRow?.courier_user_id ?? auth.dbUser.id },
+          ],
+          payload: { request_id: legRow?.request_id ?? id, leg_id: id, status: newState },
+        },
+      ]);
+    } catch (e: unknown) {
+      logger.warn('[delivery/leg-action] ws notify failed', {
+        legId: id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
 
     logger.info('Delivery leg action', { legId: id, action, courierId: auth.dbUser.id });
 

@@ -67,6 +67,25 @@ export function sendToFleet(
 }
 
 /**
+ * Send to every CONNECTED active member of a fleet (Z2).
+ * Resolves membership fresh from fleet_members (status='active') and fans out
+ * over the bidder registry. Best-effort: unconnected members are skipped.
+ */
+export async function sendToFleetMembers(
+  fleetId: string,
+  event: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  const members = await db
+    .select({ user_id: fleetMembers.user_id })
+    .from(fleetMembers)
+    .where(and(eq(fleetMembers.fleet_id, fleetId), eq(fleetMembers.status, "active")));
+  for (const { user_id } of members) {
+    sendToBidder(user_id, event, payload);
+  }
+}
+
+/**
  * Handle a rental-domain WS message.
  */
 export async function handleRentalMessage(

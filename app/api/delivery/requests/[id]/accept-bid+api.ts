@@ -24,6 +24,7 @@ import { eq, and, sql, isNull, inArray, notInArray } from 'drizzle-orm';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { notifyWs, type WsNotifyEvent } from '@/lib/wsNotify';
 
 const acceptSchema = z.object({
   bid_id: z.string().uuid(),
@@ -289,6 +290,55 @@ export async function POST(request: Request, { id }: { id: string }) {
     });
 
     logger.info('Delivery bid accepted', { requestId: id, bidId: bid_id, courierId: result.bid.courier_user_id });
+
+    // Z2: emit after the tx (v1 §D.3 — delivery:bid_won / bid_settled / status)
+    try {
+      const losingCouriers = await db
+        .selectDistinct({ courier_user_id: deliveryBids.courier_user_id })
+        .from(deliveryBids)
+        .where(and(eq(deliveryBids.request_id, id), eq(deliveryBids.status, 'lost')));
+      const customer = await db
+        .select({ created_by_user_id: deliveryRequests.created_by_user_id })
+        .from(deliveryRequests)
+        .where(eq(deliveryRequests.id, id))
+        .limit(1);
+      const events: WsNotifyEvent[] = [
+        {
+          event: 'delivery:bid_won',
+          to: [{ kind: 'user', user_id: result.bid.courier_user_id }],
+          payload: {
+            request_id: id,
+            bid_id,
+            courier_user_id: result.bid.courier_user_id,
+            quoted_fee_bdt: result.bid.quoted_fee_bdt,
+            status: 'assigned',
+          },
+        },
+        ...losingCouriers
+          .filter((c) => c.courier_user_id !== result.bid.courier_user_id)
+          .map((c): WsNotifyEvent => ({
+            event: 'delivery:bid_settled',
+            to: [{ kind: 'user', user_id: c.courier_user_id }],
+            payload: { request_id: id, bid_id, reason: 'accepted', status: 'assigned' },
+          })),
+        {
+          event: 'delivery:status',
+          to: [
+            ...(customer[0]
+              ? [{ kind: 'user' as const, user_id: customer[0].created_by_user_id }]
+              : []),
+            { kind: 'user', user_id: result.bid.courier_user_id },
+          ],
+          payload: { request_id: id, status: 'assigned' },
+        },
+      ];
+      notifyWs(events);
+    } catch (e: unknown) {
+      logger.warn('[delivery/accept-bid] ws notify failed', {
+        requestId: id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
 
     return Response.json({
       delivery: result.request,

@@ -86,6 +86,10 @@ export async function demoteWinner(
   requestId: string,
   reason: "sla_timeout" | "fleet_ack_timeout" | "fleet_cancelled",
 ) {
+  // Z2 finding fix (Shape 2): the collecting branch nulls awarded_bid_id, so
+  // the post-tx block cannot re-read it — pass the pre-null id out via this
+  // closure variable (set inside the tx, before the nulling write).
+  let demotedBidId: string | null = null;
   const result = await db.transaction(async (tx) => {
     const [req] = await tx
       .select()
@@ -168,6 +172,7 @@ export async function demoteWinner(
 
     if (cnt === 0) {
       // No standing bids → no_bidders (terminal)
+      demotedBidId = req.awarded_bid_id ?? null;
       await tx
         .update(rentalRequests)
         .set({
@@ -185,6 +190,7 @@ export async function demoteWinner(
     }
 
     // Standing bids exist → collecting with reselect window (ruling 8: admin-tunable)
+    demotedBidId = req.awarded_bid_id ?? null;
     const reselectMinutes = await getConfigInt("rental_reselect_window_minutes", 10);
     const reselectDeadline = new Date(Date.now() + reselectMinutes * 60 * 1000);
 
@@ -208,22 +214,17 @@ export async function demoteWinner(
     return { ok: true as const, nextStatus: "collecting" as const, standingBids: cnt };
   });
 
-  // Z2: sweep demotion emits (owner + the demoted winning fleet). The tx's
-  // `req` is closure-scoped, so re-read the post-demotion row here.
+  // Z2: sweep demotion emits (owner + the demoted winning fleet). The demoted
+  // bid id is captured INSIDE the tx (Shape 2) — the collecting branch nulls
+  // awarded_bid_id, so a post-tx re-read always sees null (test agent finding
+  // 2026-09-05-postrow-demoted-fleet-emit).
   if (result.ok && result.nextStatus) {
     let demotedFleetId: string | null = null;
-    const [postRow] = await db
-      .select({
-        awarded_bid_id: rentalRequests.awarded_bid_id,
-      })
-      .from(rentalRequests)
-      .where(eq(rentalRequests.id, requestId))
-      .limit(1);
-    if (result.nextStatus === "collecting" && postRow?.awarded_bid_id) {
+    if (demotedBidId) {
       const [winningBid] = await db
         .select({ fleet_id: rentalBids.fleet_id })
         .from(rentalBids)
-        .where(eq(rentalBids.id, postRow.awarded_bid_id))
+        .where(eq(rentalBids.id, demotedBidId))
         .limit(1);
       demotedFleetId = winningBid?.fleet_id ?? null;
     }

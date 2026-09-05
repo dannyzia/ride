@@ -5,6 +5,7 @@ import { db } from "@/src/db";
 import { rentalBids, rentalRequests, awardedBidAssignments, rentalRequestEvents } from "@/src/db/schema";
 import { requireAnyRole, requireFleetMember } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { notifyWs } from "@/lib/wsNotify";
 import * as errors from "@/lib/errors";
 import { eq, and } from "drizzle-orm";
 
@@ -104,6 +105,29 @@ export async function POST(request: Request, { id }: { id: string }) {
         created_by: dbUser.id,
       });
     });
+
+    // Z2: emit after the tx (v1 §D.1.8) — owner + winning fleet
+    try {
+      notifyWs([
+        {
+          event: "rental:status",
+          to: [
+            { kind: "user", user_id: req.rider_user_id },
+            { kind: "fleet", fleet_id: bid.fleet_id },
+          ],
+          payload: {
+            request_id: bid.request_id,
+            status: "completed",
+            awarded_bid_id: bid.id,
+          },
+        },
+      ]);
+    } catch (e: unknown) {
+      logger.warn("[rental/complete] ws notify failed", {
+        requestId: bid.request_id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
 
     return Response.json({ message: "Ride completed" });
   } catch (err: unknown) {

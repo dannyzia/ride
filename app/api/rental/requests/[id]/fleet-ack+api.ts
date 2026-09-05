@@ -7,6 +7,7 @@ import { db } from "@/src/db";
 import { rentalRequests, awardedBidAssignments, rentalRequestEvents } from "@/src/db/schema";
 import { requireFleetMember } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { notifyWs } from "@/lib/wsNotify";
 import * as errors from "@/lib/errors";
 import { eq, and, isNull } from "drizzle-orm";
 
@@ -86,6 +87,40 @@ export async function POST(request: Request, { id }: { id: string }) {
         payload: { fleet_id: assignment.fleet_id },
       });
     });
+
+    // Z2: emit after the tx (v1 §D — rental:fleet_ack to owner, rental:status to fleet)
+    try {
+      const [reqRow] = await db
+        .select({ rider_user_id: rentalRequests.rider_user_id })
+        .from(rentalRequests)
+        .where(eq(rentalRequests.id, id))
+        .limit(1);
+      notifyWs([
+        ...(reqRow
+          ? [
+              {
+                event: "rental:fleet_ack",
+                to: [{ kind: "user" as const, user_id: reqRow.rider_user_id }],
+                payload: {
+                  request_id: id,
+                  fleet_id: assignment.fleet_id,
+                  status: "awarded",
+                },
+              },
+            ]
+          : []),
+        {
+          event: "rental:status",
+          to: [{ kind: "fleet", fleet_id: assignment.fleet_id }],
+          payload: { request_id: id, status: "awarded" },
+        },
+      ]);
+    } catch (e: unknown) {
+      logger.warn("[rental/fleet-ack] ws notify failed", {
+        requestId: id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
 
     return Response.json({ message: "Fleet acknowledged" });
   } catch (err: unknown) {

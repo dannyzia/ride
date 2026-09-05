@@ -12,6 +12,7 @@ import { requireAnyRole } from "@/lib/auth";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
+import { notifyWs } from "@/lib/wsNotify";
 import * as errors from "@/lib/errors";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
@@ -135,6 +136,31 @@ export async function PATCH(request: Request, { id }: { id: string }) {
     });
 
     if (guard) return guard;
+
+    // Z2: emit after the tx (v1 §D.4.1 shop:order_status) — customer + shop staff
+    try {
+      const [orderRow] = await db
+        .select({ rider_user_id: shopOrders.rider_user_id, shop_id: shopOrders.shop_id })
+        .from(shopOrders)
+        .where(eq(shopOrders.id, id))
+        .limit(1);
+      notifyWs([
+        {
+          event: "shop:order_status",
+          to: [
+            ...(orderRow ? [{ kind: "user" as const, user_id: orderRow.rider_user_id }] : []),
+            ...(orderRow ? [{ kind: "shop_staff" as const, shop_id: orderRow.shop_id }] : []),
+          ],
+          payload: { order_id: id, shop_id: orderRow?.shop_id ?? null, status: newStatus },
+        },
+      ]);
+    } catch (e: unknown) {
+      logger.warn("[shop/orders/status] ws notify failed", {
+        orderId: id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+
     return Response.json({ message: "Order updated", status: newStatus });
   } catch (err: unknown) {
     const status = errors.getErrorStatus(err);

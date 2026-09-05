@@ -10,6 +10,7 @@ import { db } from "@/src/db";
 import { rentalRequests, awardedBidAssignments, rentalRequestEvents } from "@/src/db/schema";
 import { requireAnyRole } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { notifyWs } from "@/lib/wsNotify";
 import * as errors from "@/lib/errors";
 import { eq, and, isNull } from "drizzle-orm";
 
@@ -133,6 +134,32 @@ export async function POST(request: Request, { id }: { id: string }) {
     });
 
     if (guard) return guard;
+
+    // Z2: emit after the tx (v1 §D.1.8)
+    try {
+      const [reqRow] = await db
+        .select({ rider_user_id: rentalRequests.rider_user_id })
+        .from(rentalRequests)
+        .where(eq(rentalRequests.id, id))
+        .limit(1);
+      const [fleetRow] = await db
+        .select({ fleet_id: awardedBidAssignments.fleet_id })
+        .from(awardedBidAssignments)
+        .where(and(eq(awardedBidAssignments.request_id, id), isNull(awardedBidAssignments.released_at)))
+        .limit(1);
+      const to: Array<{ kind: "user"; user_id: string } | { kind: "fleet"; fleet_id: string }> = [];
+      if (reqRow) to.push({ kind: "user", user_id: reqRow.rider_user_id });
+      if (fleetRow) to.push({ kind: "fleet", fleet_id: fleetRow.fleet_id });
+      notifyWs([
+        { event: "rental:status", to, payload: { request_id: id, status: "confirmed" } },
+      ]);
+    } catch (e: unknown) {
+      logger.warn("[rental/confirm] ws notify failed", {
+        requestId: id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+
     return Response.json({ message: "Booking confirmed" });
   } catch (err: unknown) {
     const status = errors.getErrorStatus(err);

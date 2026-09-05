@@ -12,6 +12,7 @@ import * as errors from "@/lib/errors";
 import { z } from "zod";
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { resolveF35Branch } from "@/lib/resolveF35Branch";
+import { notifyWs } from "@/lib/wsNotify";
 
 const withdrawSchema = z.object({
   force: z.boolean().default(false),
@@ -236,6 +237,32 @@ export async function POST(request: Request, { id }: { id: string }) {
 
       if (guard) return guard;
 
+      // Z2: force-withdraw emissions — after the tx (v1 §D)
+      try {
+        notifyWs([
+          {
+            event: "rental:bid_settled",
+            to: [{ kind: "fleet", fleet_id: bid.fleet_id }],
+            payload: {
+              request_id: bid.request_id,
+              bid_id: id,
+              reason: "withdrawn",
+              status: withdrewTo,
+            },
+          },
+          {
+            event: "rental:status",
+            to: [
+              { kind: "user", user_id: req.rider_user_id },
+              { kind: "fleet", fleet_id: bid.fleet_id },
+            ],
+            payload: { request_id: bid.request_id, status: withdrewTo },
+          },
+        ]);
+      } catch (e: unknown) {
+        logger.warn("[rental/withdraw] ws notify failed", { bidId: id, error: e instanceof Error ? e.message : String(e) });
+      }
+
       return Response.json({ message: `Bid withdrawn, request returned to ${withdrewTo}` });
     }
 
@@ -338,6 +365,32 @@ export async function POST(request: Request, { id }: { id: string }) {
         });
       }
     });
+
+    // Z2: plain-withdraw emissions — after the tx (v1 §D)
+    try {
+      notifyWs([
+        {
+          event: "rental:bid_settled",
+          to: [{ kind: "fleet", fleet_id: bid.fleet_id }],
+          payload: {
+            request_id: bid.request_id,
+            bid_id: id,
+            reason: "withdrawn",
+            status: req.status,
+          },
+        },
+        {
+          event: "rental:status",
+          to: [
+            { kind: "user", user_id: req.rider_user_id },
+            { kind: "fleet", fleet_id: bid.fleet_id },
+          ],
+          payload: { request_id: bid.request_id, status: req.status },
+        },
+      ]);
+    } catch (e: unknown) {
+      logger.warn("[rental/withdraw] ws notify failed", { bidId: id, error: e instanceof Error ? e.message : String(e) });
+    }
 
     return Response.json({ message: "Bid withdrawn" });
   } catch (err: unknown) {

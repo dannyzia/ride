@@ -10,6 +10,7 @@ import { shopOrders } from "@/src/db/schema";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { createFromShopOrder } from "@/lib/shopDeliveryBridge";
 import { logger } from "@/lib/logger";
+import { notifyWs } from "@/lib/wsNotify";
 import * as errors from "@/lib/errors";
 import { eq, and } from "drizzle-orm";
 
@@ -107,6 +108,31 @@ export async function POST(request: Request, { id }: { id: string }) {
     });
 
     if (guard) return guard;
+
+    // Z2: emit after the tx (v1 §D.4.1 shop:order_status) — customer + shop staff
+    try {
+      const [orderRow] = await db
+        .select({ rider_user_id: shopOrders.rider_user_id, shop_id: shopOrders.shop_id })
+        .from(shopOrders)
+        .where(eq(shopOrders.id, id))
+        .limit(1);
+      notifyWs([
+        {
+          event: "shop:order_status",
+          to: [
+            ...(orderRow ? [{ kind: "user" as const, user_id: orderRow.rider_user_id }] : []),
+            ...(orderRow ? [{ kind: "shop_staff" as const, shop_id: orderRow.shop_id }] : []),
+          ],
+          payload: { order_id: id, shop_id: orderRow?.shop_id ?? null, status: "ready_for_pickup" },
+        },
+      ]);
+    } catch (e: unknown) {
+      logger.warn("[shop/mark-ready] ws notify failed", {
+        orderId: id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+
     return Response.json({ message: "Order marked ready" });
   } catch (err: unknown) {
     const status = errors.getErrorStatus(err);

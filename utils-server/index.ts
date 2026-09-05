@@ -44,6 +44,7 @@ import {
   zones,
   fraudFlags,
   driverSessions,
+  shopMembers,
 } from "../src/db/schema";
 import { eq, and, inArray, isNull, sql, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
@@ -393,6 +394,75 @@ const server = http.createServer(async (req, res) => {
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
   if (token !== WEBSOCKET_INTERNAL_SECRET) {
     writeJson(401, { error: "unauthorized" });
+    return;
+  }
+
+  if (req.url === "/internal/ws/notify" && req.method === "POST") {
+    // Z2: marketplace per-state-change notifications from the API process.
+    // Body: { events: [{ event, to: [{ kind, user_id?, fleet_id? }], payload }] }
+    // kind: 'user' (rental bidder + courier registries) | 'fleet' (active
+    // fleet_members) | 'couriers' (all connected couriers) | 'shop_staff'
+    // (active shop_members). Every send is best-effort.
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", async () => {
+      try {
+        const { events } = JSON.parse(body) as {
+          events?: Array<{
+            event: string;
+            to?: Array<{ kind: string; user_id?: string; fleet_id?: string; shop_id?: string }>;
+            payload?: Record<string, unknown>;
+          }>;
+        };
+        if (!Array.isArray(events)) {
+          writeJson(400, { error: "missing_events" });
+          return;
+        }
+        const { sendToBidder, sendToFleetMembers } = await import("./rentalHandler");
+        const { sendToCourier, broadcastToCouriers } = await import("./deliveryHandler");
+        let sent = 0;
+        for (const e of events) {
+          if (!e?.event) continue;
+          for (const to of e.to ?? []) {
+            try {
+              if (to.kind === "user" && to.user_id) {
+                sendToBidder(to.user_id, e.event, e.payload ?? {});
+                sendToCourier(to.user_id, e.event, e.payload ?? {});
+                sent += 1;
+              } else if (to.kind === "fleet" && to.fleet_id) {
+                await sendToFleetMembers(to.fleet_id, e.event, e.payload ?? {});
+                sent += 1;
+              } else if (to.kind === "couriers") {
+                broadcastToCouriers(e.event, e.payload ?? {});
+                sent += 1;
+              } else if (to.kind === "shop_staff" && to.shop_id) {
+                const members = await db
+                  .select({ user_id: shopMembers.user_id })
+                  .from(shopMembers)
+                  .where(
+                    and(eq(shopMembers.shop_id, to.shop_id), eq(shopMembers.status, "active")),
+                  );
+                for (const { user_id } of members) {
+                  sendToBidder(user_id, e.event, e.payload ?? {});
+                }
+                sent += 1;
+              }
+            } catch (toErr: unknown) {
+              logger.warn("[ws/notify] recipient send failed", {
+                event: e.event,
+                to,
+                error: toErr instanceof Error ? toErr.message : String(toErr),
+              });
+            }
+          }
+        }
+        writeJson(200, { ok: true, sent });
+      } catch {
+        writeJson(400, { error: "invalid_body" });
+      }
+    });
     return;
   }
 

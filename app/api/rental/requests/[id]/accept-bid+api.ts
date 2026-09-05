@@ -12,6 +12,7 @@ import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { z } from "zod";
 import { eq, and, isNull, inArray, notInArray, sql } from "drizzle-orm";
+import { notifyWs } from "@/lib/wsNotify";
 
 const acceptSchema = z.object({
   bid_id: z.string().uuid(),
@@ -24,7 +25,7 @@ export async function POST(request: Request, { id }: { id: string }) {
     const result = await parseJsonBody(request, acceptSchema);
     if (!result.ok) return result.response;
 
-    const { acceptedBid, assignment } = await db.transaction(async (tx) => {
+    const { acceptedBid, assignment, req } = await db.transaction(async (tx) => {
       // Lock request row (§B.0)
       const reqRows = await tx
         .select()
@@ -257,6 +258,60 @@ export async function POST(request: Request, { id }: { id: string }) {
 
       return { acceptedBid: bidRows[0], req, assignment };
     });
+
+    // Z2: per-state-change WS emissions — AFTER the tx resolves (v1 §D).
+    // Fire-and-forget; a WS outage must not fail the committed transition.
+    try {
+      const losingFleets = await db
+        .selectDistinct({ fleet_id: rentalBids.fleet_id })
+        .from(rentalBids)
+        .where(
+          and(
+            eq(rentalBids.request_id, id),
+            eq(rentalBids.status, "superseded"),
+          ),
+        );
+      notifyWs([
+        {
+          event: "rental:bid_won",
+          to: [{ kind: "fleet", fleet_id: acceptedBid.fleet_id }],
+          payload: {
+            request_id: id,
+            bid_id: acceptedBid.id,
+            fleet_id: acceptedBid.fleet_id,
+            status: "awarded",
+            quoted_price_bdt: acceptedBid.quoted_price_bdt ?? null,
+            assignment_id: assignment.id,
+            tracking_required: req.tracking_required,
+          },
+        },
+        ...losingFleets
+          .filter((f) => f.fleet_id !== acceptedBid.fleet_id)
+          .map((f) => ({
+            event: "rental:bid_settled",
+            to: [{ kind: "fleet" as const, fleet_id: f.fleet_id }],
+            payload: {
+              request_id: id,
+              bid_id: acceptedBid.id,
+              reason: "accepted",
+              status: "awarded",
+            },
+          })),
+        {
+          event: "rental:status",
+          to: [
+            { kind: "user", user_id: req.rider_user_id },
+            { kind: "fleet", fleet_id: acceptedBid.fleet_id },
+          ],
+          payload: { request_id: id, status: "awarded", awarded_bid_id: acceptedBid.id },
+        },
+      ]);
+    } catch (e: unknown) {
+      logger.warn("[rental/accept-bid] ws notify failed", {
+        requestId: id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
 
     return Response.json({
       message: "Bid accepted",

@@ -12,6 +12,7 @@ import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { z } from "zod";
 import { eq, and, isNull, inArray, notInArray } from "drizzle-orm";
+import { notifyWs } from "@/lib/wsNotify";
 
 const pickSchema = z.object({
   driver_user_id: z.string().uuid(),
@@ -230,6 +231,44 @@ export async function POST(request: Request, { id }: { id: string }) {
         },
       });
     });
+
+    // Z2: emissions after the tx resolves (v1 §D.1.5b / D.1.8)
+    try {
+      const [reqRow] = await db
+        .select({ rider_user_id: rentalRequests.rider_user_id, status: rentalRequests.status })
+        .from(rentalRequests)
+        .where(eq(rentalRequests.id, assignment.request_id))
+        .limit(1);
+      notifyWs([
+        {
+          event: "rental:driver_assigned",
+          to: [
+            ...(reqRow ? [{ kind: "user" as const, user_id: reqRow.rider_user_id }] : []),
+            { kind: "user", user_id: result.data.driver_user_id },
+          ],
+          payload: {
+            request_id: assignment.request_id,
+            assignment_id: assignment.id,
+            driver_user_id: result.data.driver_user_id,
+            vehicle_id: result.data.vehicle_id,
+            assigned_at: new Date().toISOString(),
+          },
+        },
+        {
+          event: "rental:status",
+          to: [{ kind: "fleet", fleet_id: assignment.fleet_id }],
+          payload: {
+            request_id: assignment.request_id,
+            status: reqRow?.status ?? "awarded",
+          },
+        },
+      ]);
+    } catch (e: unknown) {
+      logger.warn("[rental/pick] ws notify failed", {
+        assignmentId: id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
 
     return Response.json({ message: "Driver assigned" });
   } catch (err: unknown) {

@@ -9,6 +9,7 @@ import { rentalRequests, rentalBids, awardedBidAssignments, rentalRequestEvents,
 import { requireAnyRole } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
+import { notifyWs } from "@/lib/wsNotify";
 import * as errors from "@/lib/errors";
 import { eq, and, desc, sql, count as cnt, avg, inArray, isNull, notInArray } from "drizzle-orm";
 import { z } from "zod";
@@ -274,6 +275,33 @@ export async function POST(request: Request, { id }: { id: string }) {
     });
 
     if (guard) return guard;
+
+    // Z2: emit after the tx (v1 §D.1.8) — owner + all bidding fleets. The tx
+    // settled every bid to 'lost', so distinct remaining-bid fleets = the
+    // parties that need the terminal status.
+    try {
+      const biddingFleets = await db
+        .selectDistinct({ fleet_id: rentalBids.fleet_id })
+        .from(rentalBids)
+        .where(eq(rentalBids.request_id, id));
+      notifyWs([
+        {
+          event: "rental:status",
+          to: [
+            { kind: "user", user_id: req.rider_user_id },
+            ...biddingFleets
+              .filter((f) => f.fleet_id != null)
+              .map((f) => ({ kind: "fleet" as const, fleet_id: f.fleet_id as string })),
+          ],
+          payload: { request_id: id, status: "cancelled" },
+        },
+      ]);
+    } catch (e: unknown) {
+      logger.warn("[rental/cancel] ws notify failed", {
+        requestId: id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
 
     return Response.json({ message: "Request cancelled" });
   } catch (err: unknown) {
