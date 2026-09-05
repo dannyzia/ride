@@ -106,7 +106,49 @@ export async function POST(request: Request, { id }: { id: string }) {
 
       // Demotion path (§B.1)
       const reselectMinutes = await getConfigInt("rental_reselect_window_minutes", 10);
+      let guard: Response | null = null;
       await db.transaction(async (tx) => {
+        // R3-completion: the pre-tx reads above are UNLOCKED — a pick handler
+        // can commit between them and this tx. Lock the request row and
+        // re-verify BOTH conditions before any writes (same pattern as
+        // demoteWinner / sweepConfirmationDeadlines), else the bid UPDATEs
+        // below run unguarded and strand a live assignment on a collecting
+        // request.
+        const [lockedReq] = await tx
+          .select({ status: rentalRequests.status })
+          .from(rentalRequests)
+          .where(eq(rentalRequests.id, bid.request_id))
+          .for("update")
+          .limit(1);
+
+        if (!lockedReq || lockedReq.status !== "awarded") {
+          guard = Response.json(
+            { error: "invalid_transition", message: "Request is not in awarded state" },
+            { status: 409 },
+          );
+          return;
+        }
+
+        const [liveAssign] = await tx
+          .select({ assigned_driver_user_id: awardedBidAssignments.assigned_driver_user_id })
+          .from(awardedBidAssignments)
+          .where(
+            and(
+              eq(awardedBidAssignments.request_id, bid.request_id),
+              eq(awardedBidAssignments.winning_bid_id, id),
+              isNull(awardedBidAssignments.released_at),
+            ),
+          )
+          .limit(1);
+
+        if (liveAssign?.assigned_driver_user_id) {
+          guard = Response.json(
+            { error: "assignment_fulfilled", message: "Cannot withdraw after driver has been picked" },
+            { status: 403 },
+          );
+          return;
+        }
+
         await tx
           .update(rentalBids)
           .set({ status: "lost", settled_at: new Date() })
@@ -133,6 +175,8 @@ export async function POST(request: Request, { id }: { id: string }) {
               and(
                 eq(awardedBidAssignments.id, assignRows[0].id),
                 isNull(awardedBidAssignments.released_at),
+                // belt-and-suspenders: never release a fulfilled assignment
+                isNull(awardedBidAssignments.assigned_driver_user_id),
               ),
             );
         }
@@ -160,6 +204,8 @@ export async function POST(request: Request, { id }: { id: string }) {
           created_by: dbUser.id,
         });
       });
+
+      if (guard) return guard;
 
       return Response.json({ message: "Bid withdrawn, request returned to collecting" });
     }

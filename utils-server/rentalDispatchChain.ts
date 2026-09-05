@@ -61,6 +61,25 @@ export async function demoteWinner(
 
     if (!req || req.status !== "awarded") return { ok: false, reason: "not_awarded" };
 
+    // R3-completion (F3): re-check the live assignment UNDER the request lock.
+    // A racing pick handler can fulfil the assignment between the sweep's
+    // outer SELECT and this tx — demoting anyway would strand the driver with
+    // an orphan "live" assignment on a collecting request (winner→lost,
+    // superseded→active, request→collecting all fire unconditionally).
+    const [liveAssign] = await tx
+      .select({ assigned_driver_user_id: awardedBidAssignments.assigned_driver_user_id })
+      .from(awardedBidAssignments)
+      .where(
+        and(
+          eq(awardedBidAssignments.request_id, requestId),
+          isNull(awardedBidAssignments.released_at),
+        ),
+      )
+      .limit(1);
+    if (liveAssign?.assigned_driver_user_id) {
+      return { ok: false, reason: "driver_picked" };
+    }
+
     // Winner → lost
     if (req.awarded_bid_id) {
       await tx
@@ -80,7 +99,7 @@ export async function demoteWinner(
         ),
       );
 
-    // Release assignment (covers born-fulfilled tracking rows too)
+    // Release assignment — only if still unassigned (guards against racing pick handler)
     await tx
       .update(awardedBidAssignments)
       .set({
@@ -91,6 +110,7 @@ export async function demoteWinner(
         and(
           eq(awardedBidAssignments.request_id, requestId),
           isNull(awardedBidAssignments.released_at),
+          isNull(awardedBidAssignments.assigned_driver_user_id),
         ),
       );
 
@@ -185,7 +205,7 @@ export async function sweepDeadlines() {
 
     if (cnt > 0) {
       // Has bids → expired (not auto-awarded — customer-selects)
-      // Conditional WHERE guards against racing accept-bid (§B.0)
+      // Conditional WHERE mirrors the outer read: status + awarded_at + deadline
       const updated = await db
         .update(rentalRequests)
         .set({ status: "expired", updated_at: now })
@@ -194,6 +214,7 @@ export async function sweepDeadlines() {
             eq(rentalRequests.id, row.id),
             sql`${rentalRequests.status} IN ('broadcasting', 'collecting')`,
             isNull(rentalRequests.awarded_at),
+            lt(rentalRequests.soft_deadline_at, now),
           ),
         )
         .returning({ id: rentalRequests.id });
@@ -213,7 +234,7 @@ export async function sweepDeadlines() {
       await appendEvent(row.id, "expired", { active_bids: cnt });
     } else {
       // No bids → no_bidders
-      // Conditional WHERE guards against racing accept-bid (§B.0)
+      // Conditional WHERE mirrors the outer read: status + awarded_at + deadline
       const updated = await db
         .update(rentalRequests)
         .set({ status: "no_bidders", updated_at: now })
@@ -222,6 +243,7 @@ export async function sweepDeadlines() {
             eq(rentalRequests.id, row.id),
             sql`${rentalRequests.status} IN ('broadcasting', 'collecting')`,
             isNull(rentalRequests.awarded_at),
+            lt(rentalRequests.soft_deadline_at, now),
           ),
         )
         .returning({ id: rentalRequests.id });
@@ -349,14 +371,24 @@ export async function sweepConfirmationDeadlines() {
     logger.info("[scheduler] job 48: confirmation deadline", { requestId: row.id });
 
     await db.transaction(async (tx) => {
-      // Winner → lost
+      // Lock the request row and re-verify the sweep conditions BEFORE any
+      // bid writes — R3-completion (F4): the prior fix guarded the assignment
+      // and request UPDATEs but left the bid UPDATEs running unguarded, so a
+      // customer confirm racing the sweep produced a 'lost' bid on a
+      // 'confirmed' request.
       const [req] = await tx
-        .select({ awarded_bid_id: rentalRequests.awarded_bid_id })
+        .select({
+          status: rentalRequests.status,
+          awarded_bid_id: rentalRequests.awarded_bid_id,
+        })
         .from(rentalRequests)
         .where(eq(rentalRequests.id, row.id))
+        .for("update")
         .limit(1);
 
-      if (req?.awarded_bid_id) {
+      if (!req || req.status !== "awarded") return;
+
+      if (req.awarded_bid_id) {
         await tx
           .update(rentalBids)
           .set({ status: "lost", settled_at: now })
@@ -374,7 +406,7 @@ export async function sweepConfirmationDeadlines() {
           ),
         );
 
-      // Release assignment
+      // Release assignment — only if still unassigned (guards against racing pick handler)
       await tx
         .update(awardedBidAssignments)
         .set({ released_at: now, release_reason: "customer_overslept" })
@@ -382,10 +414,11 @@ export async function sweepConfirmationDeadlines() {
           and(
             eq(awardedBidAssignments.request_id, row.id),
             isNull(awardedBidAssignments.released_at),
+            isNull(awardedBidAssignments.assigned_driver_user_id),
           ),
         );
 
-      // Request → cancelled
+      // Request → cancelled — re-check deadline condition from the outer read
       await tx
         .update(rentalRequests)
         .set({
@@ -401,6 +434,7 @@ export async function sweepConfirmationDeadlines() {
           and(
             eq(rentalRequests.id, row.id),
             eq(rentalRequests.status, "awarded"),
+            sql`${rentalRequests.confirmation_deadline_at} IS NOT NULL`,
           ),
         );
 
