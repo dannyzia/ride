@@ -205,7 +205,7 @@ export async function POST(request: Request, { id }: { id: string }) {
           assigned_by_user_id: actor.id,
           assigned_at: new Date(),
         })
-        .where(and(eq(awardedBidAssignments.id, id), isNull(awardedBidAssignments.released_at)))
+        .where(and(eq(awardedBidAssignments.id, id), isNull(awardedBidAssignments.released_at), isNull(awardedBidAssignments.assigned_driver_user_id)))
         .returning({ id: awardedBidAssignments.id });
 
       if (fulfilled.length === 0) {

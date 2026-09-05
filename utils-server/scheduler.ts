@@ -878,7 +878,13 @@ export function startScheduler(): void {
             await db
               .update(rides)
               .set({ scheduled_dispatched_at: now })
-              .where(eq(rides.id, ride.id));
+              .where(
+                and(
+                  eq(rides.id, ride.id),
+                  eq(rides.status, "scheduled"),
+                  isNull(rides.scheduled_dispatched_at),
+                ),
+              );
           } else {
             logger.warn("[scheduler] scheduled dispatch trigger failed, will retry", { ride_id: ride.id });
           }
@@ -1008,7 +1014,13 @@ export function startScheduler(): void {
           await tx
             .update(vehicleTypeChanges)
             .set({ status: "approved" })
-            .where(eq(vehicleTypeChanges.id, change.id));
+            .where(
+              and(
+                eq(vehicleTypeChanges.id, change.id),
+                eq(vehicleTypeChanges.status, "cooling_off"),
+                lte(vehicleTypeChanges.effective_at, new Date()),
+              ),
+            );
           await tx
             .update(drivers)
             .set({ vehicle_type: change.new_vehicle_type as any })
@@ -1367,11 +1379,11 @@ export function startScheduler(): void {
               continue;
           }
 
-          // Update progress
+          // Update progress — guard against racing completion (idempotent if already done)
           await db
             .update(driverIncentives)
             .set({ current_progress: newProgress.toString(), updated_at: now })
-            .where(eq(driverIncentives.id, row.id));
+            .where(and(eq(driverIncentives.id, row.id), isNull(driverIncentives.completed_at)));
 
           // Check if target met — then issue reward inside a serializable
           // transaction with row-level lock to prevent double-issuance.
@@ -1539,7 +1551,13 @@ export function startScheduler(): void {
         for (const doc of due) {
           await db.update(documents)
             .set({ [col]: true })
-            .where(eq(documents.id, doc.id));
+            .where(
+              and(
+                eq(documents.id, doc.id),
+                isNull(documents.deleted_at),
+                eq(documents[col as keyof typeof documents] as any, false),
+              ),
+            );
           logger.info("[scheduler] document expiry alert", { driver_id: doc.driver_id, alert: label });
         }
       }
@@ -1584,7 +1602,9 @@ export function startScheduler(): void {
             { ride_id: ride.id },
             { idempotencyKey: `ride:${ride.id}:reminder_60` },
           );
-          await db.update(rides).set({ reminder_60_sent: true }).where(eq(rides.id, ride.id));
+          await db.update(rides).set({ reminder_60_sent: true }).where(
+            and(eq(rides.id, ride.id), eq(rides.status, "scheduled"), eq(rides.reminder_60_sent, false)),
+          );
         } catch (e) {
           logger.error("[scheduler] 60-min reminder failed, will retry", { rideId: ride.id, error: e });
         }
@@ -1620,7 +1640,9 @@ export function startScheduler(): void {
             { ride_id: ride.id },
             { idempotencyKey: `ride:${ride.id}:reminder_15` },
           );
-          await db.update(rides).set({ reminder_sent: true }).where(eq(rides.id, ride.id));
+          await db.update(rides).set({ reminder_sent: true }).where(
+            and(eq(rides.id, ride.id), eq(rides.status, "scheduled"), eq(rides.reminder_sent, false)),
+          );
         } catch (e) {
           logger.error("[scheduler] 15-min reminder failed, will retry", { rideId: ride.id, error: e });
         }
