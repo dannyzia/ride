@@ -65,7 +65,9 @@ import {
 // `SET LOCAL` is used here (it survives Supavisor transaction mode).
 // ═══════════════════════════════════════════════════════════════════════════
 
-type JobTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+import type { PgTx } from "./tx";
+
+type JobTx = PgTx;
 
 /** PG 57014 query_canceled — statement_timeout fired (server-side cancel). */
 export function isQueryCanceled(e: unknown): boolean {
@@ -2564,7 +2566,7 @@ export function startScheduler(): void {
       rentalActivationRunning = true;
       const { activateRentalRequests } = await import('../utils-server/activationJobs');
       const count =
-        (await withJobBudget(54, MARKETPLACE_TICK_BUDGET_MS, (_tx) => activateRentalRequests())) ?? 0;
+        (await withJobBudget(54, MARKETPLACE_TICK_BUDGET_MS, (tx) => activateRentalRequests(tx))) ?? 0;
       if (count > 0) {
         logger.info('[scheduler] job 54 rental activation', { broadcasts: count });
       }
@@ -2583,7 +2585,7 @@ export function startScheduler(): void {
       deliveryActivationRunning = true;
       const { activateDeliveryRequests } = await import('../utils-server/activationJobs');
       const count =
-        (await withJobBudget(55, MARKETPLACE_TICK_BUDGET_MS, (_tx) => activateDeliveryRequests())) ?? 0;
+        (await withJobBudget(55, MARKETPLACE_TICK_BUDGET_MS, (tx) => activateDeliveryRequests(tx))) ?? 0;
       if (count > 0) {
         logger.info('[scheduler] job 55 delivery activation', { broadcasts: count });
       }
@@ -2606,7 +2608,7 @@ export function startScheduler(): void {
       emergencyTtlRunning = true;
       const { sweepExpiredEmergencies } = await import('../utils-server/emergencyChain');
       const count =
-        (await withJobBudget(53, MARKETPLACE_TICK_BUDGET_MS, (_tx) => sweepExpiredEmergencies())) ?? 0;
+        (await withJobBudget(53, MARKETPLACE_TICK_BUDGET_MS, (tx) => sweepExpiredEmergencies(tx))) ?? 0;
       if (count > 0) {
         logger.info('[scheduler] job 53 emergency TTL sweep', { failed: count });
       }
@@ -2626,7 +2628,7 @@ export function startScheduler(): void {
       emergencyActivationRunning = true;
       const { activateEmergencyRequests } = await import('../utils-server/emergencyActivation');
       const count =
-        (await withJobBudget(56, MARKETPLACE_TICK_BUDGET_MS, (_tx) => activateEmergencyRequests())) ?? 0;
+        (await withJobBudget(56, MARKETPLACE_TICK_BUDGET_MS, (tx) => activateEmergencyRequests(tx))) ?? 0;
       if (count > 0) {
         logger.info('[scheduler] job 56 emergency activation', { reached: count });
       }

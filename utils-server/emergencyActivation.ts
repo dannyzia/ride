@@ -8,6 +8,7 @@
  * only 120s.
  */
 import { db } from '../src/db';
+import type { DbClient } from './tx';
 import { emergencyRequests } from '../src/db/schema';
 import { and, eq, gt } from 'drizzle-orm';
 import { logger } from '../lib/logger';
@@ -20,8 +21,8 @@ let emergencyWatermark: Date = new Date(0);
  * Job 56 scanner — broadcast broadcasting emergencies newer than the
  * watermark that have NOT expired to eligible certified drivers.
  */
-export async function activateEmergencyRequests(): Promise<number> {
-  const broadcasting = await db
+export async function activateEmergencyRequests(tx: DbClient = db): Promise<number> {
+  const broadcasting = await tx
     .select({
       id: emergencyRequests.id,
       pickup_address: emergencyRequests.pickup_address,

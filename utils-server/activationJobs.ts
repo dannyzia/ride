@@ -11,6 +11,7 @@
  * still-active rows (idempotent — doubles as crash recovery per TD-15).
  */
 import { db } from '../src/db';
+import type { DbClient } from './tx';
 import {
   rentalRequests,
   deliveryRequests,
@@ -35,9 +36,9 @@ let rentalWatermark: Date = new Date(0);
  * Scan for broadcasting rental requests newer than watermark,
  * then broadcast to eligible fleet members.
  */
-export async function activateRentalRequests(): Promise<number> {
+export async function activateRentalRequests(tx: DbClient = db): Promise<number> {
   // Find all still-broadcasting requests (watermark catches new + restart re-broadcast)
-  const broadcasting = await db
+  const broadcasting = await tx
     .select()
     .from(rentalRequests)
     .where(
@@ -62,7 +63,9 @@ export async function activateRentalRequests(): Promise<number> {
     if (eligibleFleetIds.length === 0) continue;
 
     // Get all active fleet members for eligible fleets
-    const members = await db
+    // (getEligibleFleets above stays on the global db — rentalDispatchChain is
+    // another lane's file this round; documented Phase-1 gap.)
+    const members = await tx
       .select({
         user_id: fleetMembers.user_id,
         fleet_id: fleetMembers.fleet_id,
@@ -141,8 +144,8 @@ let deliveryWatermark: Date = new Date(0);
  * then broadcast to eligible courier sockets.
  * Also emits shop:delivery_created (F24) for food delivery orders.
  */
-export async function activateDeliveryRequests(): Promise<number> {
-  const pending = await db
+export async function activateDeliveryRequests(tx: DbClient = db): Promise<number> {
+  const pending = await tx
     .select()
     .from(deliveryRequests)
     .where(
@@ -180,7 +183,7 @@ export async function activateDeliveryRequests(): Promise<number> {
     // to the customer via the rider/driver registry (sendToUser) + lib/notify fallback
     if (req.source_shop_order_id) {
       try {
-        const [shopOrder] = await db
+        const [shopOrder] = await tx
           .select({ rider_user_id: shopOrders.rider_user_id })
           .from(shopOrders)
           .where(eq(shopOrders.id, req.source_shop_order_id))

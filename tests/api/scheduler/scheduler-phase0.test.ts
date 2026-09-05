@@ -94,9 +94,28 @@ jest.mock('@/lib/forecast', () => ({
   upsertDemandForecasts: jest.fn(async () => 0),
 }));
 
+// activationJobs imports ./index -> dispatch -> lib/h3 (h3-js crashes on the
+// jest TextDecoder shim) — mock the h3 seam before those imports load.
+jest.mock('@/lib/h3', () => ({
+  latLngToCell: jest.fn(() => '882a1072ffffffff'),
+  gridDisk: jest.fn(() => []),
+  cellToBoundary: jest.fn(() => []),
+}));
+
+// activationJobs imports sendToUser from ./index, whose import-time env
+// validation (lib/env.ts) throws under jest — mock the WS-server module.
+jest.mock('@/utils-server/index', () => ({
+  sendToUser: jest.fn(),
+}));
+
 import { db } from '@/src/db';
 import { logger } from '@/lib/logger';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { startScheduler, withJobBudget } from '@/utils-server/scheduler';
+import { activateRentalRequests, activateDeliveryRequests } from '@/utils-server/activationJobs';
+import { sweepExpiredEmergencies } from '@/utils-server/emergencyChain';
+import { activateEmergencyRequests } from '@/utils-server/emergencyActivation';
 
 const mockLoggerInfo = logger.info as jest.Mock;
 
@@ -191,3 +210,98 @@ describe('A8 — withJobBudget', () => {
   });
 });
 
+
+// ══════════════════════════════════════════════════════════════════════
+// ADR Phase 1 — tx-threading for the four marketplace scans
+// ══════════════════════════════════════════════════════════════════════
+
+const SCHEDULER_SRC = readFileSync(
+  join(__dirname, "..", "..", "..", "utils-server", "scheduler.ts"),
+  "utf8",
+);
+
+describe("ADR Phase 1 — scheduler call sites pass tx", () => {
+  it("all four marketplace blocks thread the tx handle into the scan fn", () => {
+    expect(SCHEDULER_SRC).toContain("(tx) => activateRentalRequests(tx)");
+    expect(SCHEDULER_SRC).toContain("(tx) => activateDeliveryRequests(tx)");
+    expect(SCHEDULER_SRC).toContain("(tx) => sweepExpiredEmergencies(tx)");
+    expect(SCHEDULER_SRC).toContain("(tx) => activateEmergencyRequests(tx)");
+    // and the old ignored-tx form is gone
+    expect(SCHEDULER_SRC).not.toContain("(_tx) =>");
+  });
+
+  it("the four scan signatures accept a DbClient defaulting to db", () => {
+    const files = [
+      join(__dirname, "..", "..", "..", "utils-server", "activationJobs.ts"),
+      join(__dirname, "..", "..", "..", "utils-server", "emergencyChain.ts"),
+      join(__dirname, "..", "..", "..", "utils-server", "emergencyActivation.ts"),
+    ];
+    const combined = files.map((f) => readFileSync(f, "utf8")).join("\n");
+    expect(combined).toContain("activateRentalRequests(tx: DbClient = db)");
+    expect(combined).toContain("activateDeliveryRequests(tx: DbClient = db)");
+    expect(combined).toContain("sweepExpiredEmergencies(tx: DbClient = db)");
+    expect(combined).toContain("activateEmergencyRequests(tx: DbClient = db)");
+  });
+});
+
+describe("ADR Phase 1 — scans route queries through the tx handle", () => {
+  function mockTxHandle() {
+    const txSelect = jest.fn(() => {
+      const c: any = {};
+      c.from = jest.fn(() => c);
+      c.where = jest.fn(() => c);
+      c.innerJoin = jest.fn(() => c);
+      c.orderBy = jest.fn(() => c);
+      c.limit = jest.fn(() => c);
+      c.for = jest.fn(() => c);
+      c.then = (res?: unknown) => Promise.resolve([]).then(res);
+      return c;
+    });
+    const txUpdate = jest.fn(() => ({
+      set: jest.fn(() => ({
+        where: jest.fn(() => ({
+          returning: jest.fn(async () => []),
+        })),
+        returning: jest.fn(async () => []),
+      })),
+    }));
+    return { tx: { select: txSelect, update: txUpdate }, txSelect, txUpdate };
+  }
+
+  beforeEach(() => {
+    (db.select as jest.Mock).mockClear();
+    (db.update as jest.Mock).mockClear();
+  });
+
+  it("activateRentalRequests(tx) queries the tx, not global db", async () => {
+    const { tx, txSelect } = mockTxHandle();
+    const count = await activateRentalRequests(tx as never);
+    expect(count).toBe(0);
+    expect(txSelect).toHaveBeenCalled();
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it("activateDeliveryRequests(tx) queries the tx, not global db", async () => {
+    const { tx, txSelect } = mockTxHandle();
+    const count = await activateDeliveryRequests(tx as never);
+    expect(count).toBe(0);
+    expect(txSelect).toHaveBeenCalled();
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it("sweepExpiredEmergencies(tx) updates via the tx, not global db", async () => {
+    const { tx, txUpdate } = mockTxHandle();
+    const count = await sweepExpiredEmergencies(tx as never);
+    expect(count).toBe(0);
+    expect(txUpdate).toHaveBeenCalled();
+    expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it("activateEmergencyRequests(tx) queries the tx, not global db", async () => {
+    const { tx, txSelect } = mockTxHandle();
+    const count = await activateEmergencyRequests(tx as never);
+    expect(count).toBe(0);
+    expect(txSelect).toHaveBeenCalled();
+    expect(db.select).not.toHaveBeenCalled();
+  });
+});

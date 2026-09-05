@@ -10,6 +10,7 @@
  * requires_paramedic, pickup only. patient_condition is winner/caller-only.
  */
 import { db } from '../src/db';
+import type { DbClient } from './tx';
 import {
   emergencyRequests,
   ambulanceCertifications,
@@ -318,8 +319,8 @@ export async function cancelEmergencyRequest(
  * Job 53 — TTL sweep: broadcasting + expires_at < now() → failed (§B.5
  * system transition). Returns rows swept.
  */
-export async function sweepExpiredEmergencies(): Promise<number> {
-  const swept = await db
+export async function sweepExpiredEmergencies(tx: DbClient = db): Promise<number> {
+  const swept = await tx
     .update(emergencyRequests)
     .set({ status: "failed", failure_reason: "ttl_expired", updated_at: new Date() })
     .where(
