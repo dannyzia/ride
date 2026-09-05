@@ -24,6 +24,10 @@ let mockBidRows: Record<string, unknown>[] = [];
 let mockCourierRows: Record<string, unknown>[] = [];
 let mockDriverRows: Record<string, unknown>[] = [];
 let mockUserRows: Record<string, unknown>[] = [];
+// R3 round-2 (finding 5): §B.7 fixtures for the food-hero branch
+let mockEmergencyRows: Record<string, unknown>[] = [];
+let mockRentalRows: Record<string, unknown>[] = [];
+let mockAssignmentRows: Record<string, unknown>[] = [];
 const mockForTags: string[] = [];
 
 jest.mock("@/src/db", () => {
@@ -73,6 +77,9 @@ jest.mock("@/src/db", () => {
     if (t === T.couriers) return mockCourierRows;
     if (t === T.drivers) return mockDriverRows;
     if (t === T.users) return mockUserRows;
+    if (t === T.emergency) return mockEmergencyRows;
+    if (t === T.rental) return mockRentalRows;
+    if (t === T.assignments) return mockAssignmentRows;
     return [];
   };
 
@@ -158,6 +165,9 @@ describe("N13 — delivery accept-bid F37 common lock", () => {
     ];
     mockDriverRows = [];
     mockUserRows = [{ id: COURIER }]; // the locked users row exists
+    mockEmergencyRows = [];
+    mockRentalRows = [];
+    mockAssignmentRows = [];
     mockForTags.length = 0;
   });
 
@@ -184,5 +194,41 @@ describe("N13 — delivery accept-bid F37 common lock", () => {
     const res = await acceptDeliveryBid(makeAccept(), { id: DREQ });
     expect(res.status).toBe(200);
     expect(mockForTags).toContain("drivers");
+  });
+
+  // ── R3 round-2 (finding 5): food-hero branch runs §B.7 under its locks ──
+
+  it("finding 5: dual-role food hero with an ACTIVE emergency → 409 driver_already_committed", async () => {
+    mockCourierRows = [{ user_id: COURIER, courier_type: "food", status: "active" }];
+    mockDriverRows = [{ id: "driver-row-1" }];
+    mockEmergencyRows = [{ id: "emg-1" }]; // non-terminal emergency commitment
+
+    const res = await acceptDeliveryBid(makeAccept(), { id: DREQ });
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toBe("driver_already_committed");
+  });
+
+  it("finding 5: dual-role food hero with an active rental assignment → 409", async () => {
+    mockCourierRows = [{ user_id: COURIER, courier_type: "food", status: "active" }];
+    mockDriverRows = [{ id: "driver-row-1" }];
+    // §B.7 FROM table is awardedBidAssignments (the parent-status join filter
+    // is exercised in SQL; the mock drives row presence)
+    mockAssignmentRows = [
+      { id: "assign-1", assigned_driver_user_id: COURIER, released_at: null },
+    ];
+
+    const res = await acceptDeliveryBid(makeAccept(), { id: DREQ });
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toBe("driver_already_committed");
+  });
+
+  it("finding 5: dual-role food hero with NO rental/emergency commits (regression guard)", async () => {
+    mockCourierRows = [{ user_id: COURIER, courier_type: "food", status: "active" }];
+    mockDriverRows = [{ id: "driver-row-1" }];
+
+    const res = await acceptDeliveryBid(makeAccept(), { id: DREQ });
+    expect(res.status).toBe(200);
   });
 });

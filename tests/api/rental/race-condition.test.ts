@@ -15,6 +15,8 @@
 
 import { POST as pickAssignment } from "@/app/api/rental/assignments/[id]/pick+api";
 import { POST as withdrawBid } from "@/app/api/rental/bids/[id]/withdraw+api";
+import { POST as acceptBid } from "@/app/api/rental/requests/[id]/accept-bid+api";
+import { POST as cancelRequest } from "@/app/api/rental/requests/[id]+api";
 import {
   demoteWinner,
   sweepDeadlines,
@@ -46,6 +48,9 @@ let mockTxUpdateCalls: { vals: Record<string, unknown>; whereArgs: unknown[] }[]
 let mockTxAssignmentRows: Record<string, unknown>[] | null = null;
 // Same mechanism for request reads (confirm/cancel racing the force-withdraw tx).
 let mockTxReqRows: Record<string, unknown>[] | null = null;
+// R3 round-2 fixtures: subscription gate rows (accept) + emergency rows (§B.7).
+let mockSubRows: Record<string, unknown>[] = [];
+let mockEmergencyRows: Record<string, unknown>[] = [];
 
 // ── Mock DB ────────────────────────────────────────────────────────
 // Shared factory so both root-level db and tx-level db use the same routing.
@@ -72,6 +77,8 @@ jest.mock("@/src/db", () => {
     if (table === schema.vehicles) return mockVehicleRows;
     if (table === schema.rentalRequests) return mockReqRows;
     if (table === schema.rentalBids) return mockBidRows;
+    if (table === schema.fleetSubscriptions) return mockSubRows;
+    if (table === schema.emergencyRequests) return mockEmergencyRows;
     return [];
   };
 
@@ -224,6 +231,8 @@ beforeEach(() => {
   mockTxUpdateCalls = [];
   mockTxAssignmentRows = null;
   mockTxReqRows = null;
+  mockSubRows = [];
+  mockEmergencyRows = [];
 });
 
 // ══════════════════════════════════════════════════════════════════════
@@ -608,5 +617,292 @@ describe("R3-completion — force-withdraw mirrors the demoteWinner early-exit p
     const json = await res.json();
     expect(json.error).toBe("invalid_transition");
     expect(mockTxUpdateCalls).toHaveLength(0);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// R3 round-2 Item 2 #1 — REGRESSION: demoteWinner driver_picked must be
+// reason-aware. Tracking assignments are born-fulfilled; a blanket
+// driver_picked exit aborted every branch-(b) ack-timeout demote.
+// ══════════════════════════════════════════════════════════════════════
+describe("R3 round-2 Item 2 #1 — demoteWinner driver_picked is reason-aware", () => {
+  beforeEach(() => {
+    mockReqRows = [
+      { id: REQ_ID, status: "awarded", awarded_bid_id: BID_ID },
+    ];
+    // Born-fulfilled (tracking accept): driver assigned BEFORE any pick
+    mockAssignmentRows = [
+      {
+        id: ASSIGN_ID,
+        request_id: REQ_ID,
+        fleet_id: FLEET_ID,
+        assigned_driver_user_id: DRIVER_ID,
+        released_at: null,
+      },
+    ];
+    mockBidCount = 1;
+    mockTxReturningRows = [[{ id: ASSIGN_ID }]];
+  });
+
+  it("fleet_ack_timeout with a born-fulfilled driver demotes normally (F45 regression)", async () => {
+    const result = await demoteWinner(REQ_ID, "fleet_ack_timeout");
+    expect(result).toEqual({ ok: true, nextStatus: "collecting", standingBids: 1 });
+    // the driver is RELEASED, not orphaned
+    const release = mockTxUpdateCalls.find((c) => c.vals.released_at !== undefined);
+    expect(release).toBeDefined();
+  });
+
+  it("fleet_cancelled with a born-fulfilled driver demotes normally", async () => {
+    const result = await demoteWinner(REQ_ID, "fleet_cancelled");
+    expect(result).toEqual({ ok: true, nextStatus: "collecting", standingBids: 1 });
+    expect(mockTxUpdateCalls.find((c) => c.vals.released_at !== undefined)).toBeDefined();
+  });
+
+  it("sla_timeout with a picked driver STILL early-exits driver_picked (F3 holds)", async () => {
+    const result = await demoteWinner(REQ_ID, "sla_timeout");
+    expect(result).toEqual({ ok: false, reason: "driver_picked" });
+    expect(mockTxUpdateCalls).toHaveLength(0);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// R3 round-2 Item 2 #2 — force-withdraw must mirror demoteWinner's §B.1
+// branch: zero superseded bids ⇒ terminal no_bidders, never a bid-less
+// collecting that only sweeps to expired.
+// ══════════════════════════════════════════════════════════════════════
+describe("R3 round-2 Item 2 #2 — force-withdraw no_bidders branch", () => {
+  beforeEach(() => {
+    mockBidRows = [
+      { id: BID_ID, fleet_id: FLEET_ID, request_id: REQ_ID, status: "won" },
+    ];
+    mockReqRows = [
+      { id: REQ_ID, status: "awarded", tracking_required: false },
+    ];
+    mockAssignmentRows = [
+      {
+        id: ASSIGN_ID,
+        request_id: REQ_ID,
+        winning_bid_id: BID_ID,
+        assigned_driver_user_id: null,
+        released_at: null,
+      },
+    ];
+    mockBidCount = 0; // zero superseded bids
+  });
+
+  it("zero superseded bids → request UPDATE sets no_bidders, not collecting", async () => {
+    const res = await withdrawBid(makeRequest("POST", { force: true }), { id: BID_ID });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.message).toContain("no_bidders");
+
+    const noBidders = mockTxUpdateCalls.find((c) => c.vals.status === "no_bidders");
+    expect(noBidders).toBeDefined();
+    expect(mockTxUpdateCalls.find((c) => c.vals.status === "collecting")).toBeUndefined();
+  });
+
+  it("standing superseded bids → collecting branch still fires (regression guard)", async () => {
+    mockBidCount = 1;
+    const res = await withdrawBid(makeRequest("POST", { force: true }), { id: BID_ID });
+    expect(res.status).toBe(200);
+
+    const collecting = mockTxUpdateCalls.find((c) => c.vals.status === "collecting");
+    expect(collecting).toBeDefined();
+    expect(collecting!.vals.reselect_deadline_at).toEqual(expect.any(Date));
+    expect(mockTxUpdateCalls.find((c) => c.vals.status === "no_bidders")).toBeUndefined();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// R3 round-2 1g — plain withdraw serializes on the request row lock
+// before the COUNT / F35 branch UPDATEs.
+// ══════════════════════════════════════════════════════════════════════
+describe("R3 round-2 1g — plain withdraw request-lock serialization", () => {
+  beforeEach(() => {
+    mockBidRows = [
+      { id: BID_ID, fleet_id: FLEET_ID, request_id: REQ_ID, status: "active" },
+    ];
+    mockReqRows = [
+      {
+        id: REQ_ID,
+        status: "collecting",
+        rider_user_id: "auth-actor",
+        awarded_at: null,
+        bidding_window_seconds: 1200,
+      },
+    ];
+    mockTxReturningRows = [[{ id: BID_ID }]];
+  });
+
+  it("request no longer collecting at tx time → 409 invalid_transition, zero writes", async () => {
+    // e.g. a confirm/cancel committed between the pre-tx read and the tx
+    mockTxReqRows = [{ id: REQ_ID, status: "confirmed" }];
+
+    const res = await withdrawBid(makeRequest("POST", {}), { id: BID_ID });
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toBe("invalid_transition");
+    expect(mockTxUpdateCalls).toHaveLength(0);
+  });
+
+  it("F35 broadcasting UPDATE mirrors collecting + awarded_at IS NULL (predicate)", async () => {
+    mockBidCount = 0; // no remaining active bids → broadcasting branch
+    const res = await withdrawBid(makeRequest("POST", {}), { id: BID_ID });
+    expect(res.status).toBe(200);
+
+    const broadcast = mockTxUpdateCalls.find((c) => c.vals.status === "broadcasting");
+    expect(broadcast).toBeDefined();
+    const rendered = getWhereSql(broadcast!.whereArgs);
+    expect(rendered.params).toContain("collecting");
+    expect(rendered.sql).toContain("awarded_at");
+    expect(rendered.sql.toLowerCase()).toContain("is null");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// R3 round-2 1b — accept's bid→won flip is conditional on status='active';
+// a raced withdraw must 409 bid_no_longer_active instead of awarding a
+// withdrawn bid.
+// ══════════════════════════════════════════════════════════════════════
+describe("R3 round-2 1b — accept bid flip conditional on active", () => {
+  beforeEach(() => {
+    mockReqRows = [
+      {
+        id: REQ_ID,
+        status: "collecting",
+        rider_user_id: "auth-actor",
+        tracking_required: false,
+      },
+    ];
+    mockBidRows = [
+      {
+        id: BID_ID,
+        request_id: REQ_ID,
+        fleet_id: FLEET_ID,
+        status: "active",
+        driver_user_id: null,
+        vehicle_id: null,
+      },
+    ];
+    mockSubRows = [
+      {
+        fleet_status: "ACTIVE",
+        plan_features: { marketplace_bidding: true },
+        period_end: null,
+      },
+    ];
+  });
+
+  it("raced withdraw (flip 0-rows) → 409 bid_no_longer_active, no award write", async () => {
+    mockTxReturningRows = [[]]; // the withdraw won the race
+
+    const res = await acceptBid(makeRequest("POST", { bid_id: BID_ID }), { id: REQ_ID });
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toBe("bid_no_longer_active");
+    expect(mockTxUpdateCalls.find((c) => c.vals.status === "awarded")).toBeUndefined();
+  });
+
+  it("happy accept: flip WHERE pins status='active' (predicate)", async () => {
+    mockTxReturningRows = [[{ id: BID_ID }]];
+
+    const res = await acceptBid(makeRequest("POST", { bid_id: BID_ID }), { id: REQ_ID });
+    expect(res.status).toBe(200);
+
+    const flip = mockTxUpdateCalls.find((c) => c.vals.status === "won");
+    expect(flip).toBeDefined();
+    const rendered = getWhereSql(flip!.whereArgs);
+    expect(rendered.params).toContain("active");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// R3 round-2 1i — tracking accept assigns the driver DIRECTLY, so §B.7
+// cross-vertical checks must run at accept (they previously only ran at
+// pick, which tracking skips).
+// ══════════════════════════════════════════════════════════════════════
+describe("R3 round-2 1i — tracking accept runs §B.7 checks", () => {
+  beforeEach(() => {
+    mockReqRows = [
+      {
+        id: REQ_ID,
+        status: "collecting",
+        rider_user_id: "auth-actor",
+        tracking_required: true,
+      },
+    ];
+    mockBidRows = [
+      {
+        id: BID_ID,
+        request_id: REQ_ID,
+        fleet_id: FLEET_ID,
+        status: "active",
+        driver_user_id: DRIVER_ID,
+        vehicle_id: null,
+      },
+    ];
+    mockDriverRows = [{ id: "driver-row-1", user_id: DRIVER_ID, fleet_id: FLEET_ID, status: "active" }];
+    mockAssignmentRows = []; // no prior rental commitments
+    mockSubRows = [
+      {
+        fleet_status: "ACTIVE",
+        plan_features: { marketplace_bidding: true },
+        period_end: null,
+      },
+    ];
+  });
+
+  it("driver with an ACTIVE emergency → 409 driver_already_committed", async () => {
+    mockEmergencyRows = [{ id: "emg-1" }];
+
+    const res = await acceptBid(makeRequest("POST", { bid_id: BID_ID }), { id: REQ_ID });
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.message).toBe("driver_already_committed");
+  });
+
+  it("clean driver → tracking accept proceeds to awarded (regression guard)", async () => {
+    mockTxReturningRows = [[{ id: BID_ID }]];
+
+    const res = await acceptBid(makeRequest("POST", { bid_id: BID_ID }), { id: REQ_ID });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.status).toBe("awarded");
+    // the born-fulfilled assignment was inserted with the driver set
+    expect(json.assignment_id).toBe("gen-uuid");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// R3 round-2 Extra — cancel handler must not stomp a terminal state: the
+// request UPDATE is now locked + conditional (completed→cancelled race).
+// ══════════════════════════════════════════════════════════════════════
+describe("R3 round-2 Extra — cancel handler terminal-state guard", () => {
+  it("confirmed→completed race: 409, request stays completed, zero writes", async () => {
+    mockReqRows = [
+      { id: REQ_ID, status: "confirmed", rider_user_id: "auth-actor" },
+    ];
+    mockTxReqRows = [{ id: REQ_ID, status: "completed" }];
+
+    const res = await cancelRequest(makeRequest("POST", {}), { id: REQ_ID });
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.message).toContain("completed");
+    expect(mockTxUpdateCalls).toHaveLength(0);
+  });
+
+  it("cancel still succeeds from confirmed when no race (regression guard)", async () => {
+    mockReqRows = [
+      { id: REQ_ID, status: "confirmed", rider_user_id: "auth-actor" },
+    ];
+    mockTxReturningRows = [[{ id: REQ_ID }]];
+
+    const res = await cancelRequest(makeRequest("POST", {}), { id: REQ_ID });
+    expect(res.ok).toBe(true);
+    const cancel = mockTxUpdateCalls.find((c) => c.vals.status === "cancelled");
+    expect(cancel).toBeDefined();
+    // bid settlement still fires (active/won/superseded → lost)
+    const settle = mockTxUpdateCalls.find((c) => c.vals.status === "lost");
+    expect(settle).toBeDefined();
   });
 });
