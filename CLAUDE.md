@@ -130,6 +130,9 @@ Two independently-typed packages:
 See AGENTS.md for the complete command reference. Key commands:
 
 ```bash
+# Device-testing env (run BEFORE expo start; laptop IP differs WiFi vs hotspot — see TEST-SETUP.md)
+node scripts/dev-env-sync.js    # Sync .env.local dev IPs to current LAN IP
+
 # Expo app
 npx expo start                  # Dev server  (alias: `npm start`)
 npx expo run:android            # Native build (required after plugin changes)
@@ -330,6 +333,7 @@ See `docs/Plan/18-KNOWN-ISSUES.md` before fixing bugs. Key issues:
 
 ## Testing
 
+- **Before ANY device/emulator session: read `TEST-SETUP.md` (repo root) and run `node scripts/dev-env-sync.js`** — the laptop LAN IP differs between broadband WiFi and hotspot; a stale `EXPO_PUBLIC_DEV_LAN_IP` breaks all device API calls (env is inlined at bundle time; there is no runtime fallback in `lib/config.ts`).
 - `npx jest --testPathPattern="name"` — single test
 - At phase gates run: `npx jest --watchAll=false` (full suite)
 - **Dispatch invariants (Phase D — sequential dispatch, debit-on-offer)** that must always pass: (1) exactly one outstanding offer per ride at any time, (2) single deduction per `(ride_id, driver_id)`, (3) `calls_remaining = 0` drivers never in candidate pool, (4) daily cap exceeded drivers never in candidate pool, (5) no driver receives the same offer twice, (6) every offered driver has a `call_ledger` deduction row regardless of outcome, (7) declined/expired offer → next candidate offered, (8) rider cancel mid-chain → chain aborts, no further offers, no refunds, (9) re-dispatch → previously billed drivers not re-billed, (10) billing atomicity — `dispatch_offers` row + deduction commit in ONE transaction.
