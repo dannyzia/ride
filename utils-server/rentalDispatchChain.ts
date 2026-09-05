@@ -19,6 +19,40 @@ import {
 import { eq, and, isNull, lt, sql, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { getConfigInt } from "../lib/platformConfig";
+import { sendToBidder, sendToFleetMembers } from "./rentalHandler";
+
+/**
+ * Z2: best-effort rental:status emit for sweep-driven transitions (v1 §D.1.8).
+ * Never throws — a WS outage must not fail a sweep.
+ */
+async function emitRentalStatus(
+  requestId: string,
+  status: string,
+  fleetId?: string | null,
+): Promise<void> {
+  try {
+    const [owner] = await db
+      .select({ rider_user_id: rentalRequests.rider_user_id })
+      .from(rentalRequests)
+      .where(eq(rentalRequests.id, requestId))
+      .limit(1);
+    if (owner) {
+      sendToBidder(owner.rider_user_id, "rental:status", {
+        request_id: requestId,
+        status,
+      });
+    }
+    if (fleetId) {
+      await sendToFleetMembers(fleetId, "rental:status", { request_id: requestId, status });
+    }
+  } catch (e: unknown) {
+    logger.warn("[rentalDispatchChain] ws notify failed", {
+      requestId,
+      status,
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+}
 
 /**
  * Append an event to rental_request_events (append-only, F21).
@@ -59,7 +93,7 @@ export async function demoteWinner(
       .where(eq(rentalRequests.id, requestId))
       .for("update");
 
-    if (!req || req.status !== "awarded") return { ok: false, reason: "not_awarded" };
+    if (!req || req.status !== "awarded") return { ok: false as const, reason: "not_awarded" };
 
     // R3-completion (F3): re-check the live assignment UNDER the request lock.
     // A racing pick handler can fulfil the assignment between the sweep's
@@ -84,7 +118,7 @@ export async function demoteWinner(
       // deliver (tracking assignments are born-fulfilled, so a blanket exit
       // would abort every branch-(b) ack-timeout demote); the demote proceeds
       // and the conditional release UPDATE releases the driver normally.
-      return { ok: false, reason: "driver_picked" };
+      return { ok: false as const, reason: "driver_picked" };
     }
 
     // Winner → lost
@@ -147,7 +181,7 @@ export async function demoteWinner(
 
       await appendEvent(requestId, "no_bidders", { reason }, undefined, tx);
 
-      return { ok: true, nextStatus: "no_bidders" as const };
+      return { ok: true as const, nextStatus: "no_bidders" as const };
     }
 
     // Standing bids exist → collecting with reselect window (ruling 8: admin-tunable)
@@ -171,8 +205,30 @@ export async function demoteWinner(
       reselect_deadline_at: reselectDeadline.toISOString(),
     }, undefined, tx);
 
-    return { ok: true, nextStatus: "collecting" as const, standingBids: cnt };
+    return { ok: true as const, nextStatus: "collecting" as const, standingBids: cnt };
   });
+
+  // Z2: sweep demotion emits (owner + the demoted winning fleet). The tx's
+  // `req` is closure-scoped, so re-read the post-demotion row here.
+  if (result.ok && result.nextStatus) {
+    let demotedFleetId: string | null = null;
+    const [postRow] = await db
+      .select({
+        awarded_bid_id: rentalRequests.awarded_bid_id,
+      })
+      .from(rentalRequests)
+      .where(eq(rentalRequests.id, requestId))
+      .limit(1);
+    if (result.nextStatus === "collecting" && postRow?.awarded_bid_id) {
+      const [winningBid] = await db
+        .select({ fleet_id: rentalBids.fleet_id })
+        .from(rentalBids)
+        .where(eq(rentalBids.id, postRow.awarded_bid_id))
+        .limit(1);
+      demotedFleetId = winningBid?.fleet_id ?? null;
+    }
+    await emitRentalStatus(requestId, result.nextStatus, demotedFleetId);
+  }
 
   return result;
 }
@@ -239,6 +295,7 @@ export async function sweepDeadlines() {
         );
 
       await appendEvent(row.id, "expired", { active_bids: cnt });
+      await emitRentalStatus(row.id, "expired");
     } else {
       // No bids → no_bidders
       // Conditional WHERE mirrors the outer read: status + awarded_at + deadline
@@ -258,6 +315,7 @@ export async function sweepDeadlines() {
       if (updated.length === 0) continue; // raced — skip
 
       await appendEvent(row.id, "no_bidders", {});
+      await emitRentalStatus(row.id, "no_bidders");
     }
   }
 
@@ -302,6 +360,7 @@ export async function sweepDeadlines() {
       );
 
     await appendEvent(row.id, "expired", { reason: "reselect_window_lapsed" });
+    await emitRentalStatus(row.id, "expired");
   }
 }
 
@@ -446,6 +505,7 @@ export async function sweepConfirmationDeadlines() {
         );
 
       await appendEvent(row.id, "customer_overslept", {}, undefined, tx);
+      await emitRentalStatus(row.id, "cancelled");
     });
   }
 }
