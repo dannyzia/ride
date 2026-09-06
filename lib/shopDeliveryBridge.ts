@@ -10,6 +10,7 @@ import { db } from '@/src/db';
 import { deliveryRequests, shopOrders, shops } from '@/src/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { logger } from './logger';
+import { getConfigInt } from './platformConfig';
 
 /**
  * Create a delivery request from a food delivery shop order.
@@ -77,9 +78,9 @@ export async function createFromShopOrder(
   }
 
   // Create delivery request from shop order
-  // FLAGGED follow-up: the 10-minute bidding window is hardcoded — moving it
-  // behind a platform_config key is pending the spec owner's key decision.
-  const deadline = new Date(Date.now() + 10 * 60 * 1000);
+  // Bidding window is a config key; change via admin config dashboard, not here.
+  const biddingWindowSeconds = await getConfigInt('food_delivery_bidding_window_seconds', 600);
+  const deadline = new Date(Date.now() + biddingWindowSeconds * 1000);
 
   const [delivery] = await (tx ?? db)
     .insert(deliveryRequests)

@@ -121,6 +121,10 @@ The following variables are documented as configurable but are currently **hardc
 
 `DISPATCH_PAUSED` is documented as an env var startup fallback but the implementation only reads from the `system_config` table via `isDispatchPaused()` in `utils-server/dispatch.ts`. For runtime control, use `POST /api/admin/dispatch-toggle`.
 
+### Marketplace bidding window (DB-only, no env fallback)
+
+`food_delivery_bidding_window_seconds` — shop→delivery bridge bidding window in seconds. Default `600` (10 minutes). Read fresh from `platform_config` by `lib/shopDeliveryBridge.ts` via `getConfigInt` on every delivery-request creation; override at runtime via the admin config dashboard (`PATCH /api/admin/config`), no restart needed.
+
 ---
 
 ## Scripts — seed and utility variables (`scripts/`)

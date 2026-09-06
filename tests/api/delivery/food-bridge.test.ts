@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 // @ts-nocheck — Jest mock factories produce untyped chains; runtime tests verify correctness.
 /**
  * Phase 4 — Food bridge tests.
@@ -6,12 +6,15 @@
  */
 import { jest } from '@jest/globals';
 import { createFromShopOrder } from '@/lib/shopDeliveryBridge';
+import { getConfigInt } from '@/lib/platformConfig';
 
 // ─── Mock DB ──────────────────────────────────────────────────────────────
 
 let mockSelectResults: any[] = [];
 let mockUpdateCalls: any[] = [];
 let mockInsertCalls: any[] = [];
+// A5: when set, getConfigInt returns this instead of the schema fallback
+let mockBiddingWindowSeconds: number | null = null;
 
 function mockChain(rows: any[] = []) {
   const chain: any = { _rows: rows };
@@ -92,6 +95,11 @@ jest.mock('@/src/db', () => ({
   },
 }));
 
+jest.mock('@/lib/platformConfig', () => ({
+  getConfigInt: jest.fn(async (_key: string, fallback: number) =>
+    mockBiddingWindowSeconds !== null ? mockBiddingWindowSeconds : fallback),
+}));
+
 jest.mock('@/lib/logger', () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
 }));
@@ -165,10 +173,41 @@ describe('Phase 4 — Food bridge', () => {
       expect(mockInsertCalls[0].dropoff_lat).toBe('23.8103');
     });
 
+    it('A5: bidding window comes from food_delivery_bidding_window_seconds, not a hardcode', async () => {
+      (getConfigInt as jest.Mock).mockClear();
+      mockBiddingWindowSeconds = 300; // admin override: 5 minutes
+      mockSelectResults.push([]); // no existing delivery request
+      mockSelectResults.push([
+        { address_line: '12 Gulshan Ave', lat: '23.7925', lng: '90.4078' },
+      ]);
+
+      const before = Date.now();
+      const result = await createFromShopOrder({
+        id: 'order-1',
+        rider_user_id: 'user-1',
+        shop_id: 'shop-1',
+        delivery_address: '123 Main St',
+        delivery_lat: '23.8103',
+        delivery_lng: '90.4125',
+        rider_notes: null,
+        subtotal_bdt: 50000,
+        total_bdt: 50000,
+      });
+
+      expect(result).not.toBeNull();
+      // the bridge must consult the platform_config key with the 600 default
+      expect(getConfigInt).toHaveBeenCalledWith('food_delivery_bidding_window_seconds', 600);
+      // deadline_at = now + configured window (300s), not the old 10-minute hardcode
+      const deadline = mockInsertCalls[0].deadline_at as Date;
+      expect(Number(deadline)).toBeGreaterThanOrEqual(before + 300_000 - 1_000);
+      expect(Number(deadline)).toBeLessThanOrEqual(before + 300_000 + 5_000);
+      expect(Number(deadline)).toBeLessThan(before + 600_000); // provably not the old hardcode
+      mockBiddingWindowSeconds = null;
+    });
+
     it('A5: shop with missing address or coords → null, no insert', async () => {
       mockSelectResults.push([]); // no existing delivery request
       mockSelectResults.push([{ address_line: null, lat: '23.7925', lng: '90.4078' }]);
-
       const result = await createFromShopOrder({
         id: 'order-1',
         rider_user_id: 'user-1',

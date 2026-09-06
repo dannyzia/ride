@@ -140,6 +140,16 @@ export async function getConfigValue(
 }
 
 /**
+ * Marketplace knobs (platform_config keys) — read fresh via getConfigInt /
+ * getConfigValue at call time; admin-editable via PATCH /api/admin/config
+ * (AGENTS.md: never cache platform_config).
+ */
+export const MARKETPLACE_CONFIG_KEYS = [
+  // Shop→delivery bridge bidding window; default 600 (10 minutes).
+  'food_delivery_bidding_window_seconds',
+] as const;
+
+/**
  * Read a platform_config value as integer, returning the fallback if absent/NaN.
  */
 export async function getConfigInt(
