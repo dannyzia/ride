@@ -166,7 +166,7 @@ export default function RequestDetailScreen() {
   const secondsLeft = Math.max(0, Math.floor((deadline % 60000) / 1000));
 
   const isActive = ["broadcasting", "collecting"].includes(request?.status ?? "");
-  const isAwarded = ["awarded", "confirmed"].includes(request?.status ?? "");
+  
 
   if (loading) {
     return (

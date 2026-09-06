@@ -20,6 +20,10 @@ import type { SyncCapability, SyncResult, AdapterError } from "./types";
 import { AdapterError as AdapterErrorClass } from "./types";
 import { BaseFleetAdapter } from "./baseAdapter";
 
+// ── Register built-in adapters ───────────────────────────────────────────
+
+import { MockRidePlatformAdapter } from "./mockRidePlatform";
+
 // ── Adapter Registry ──────────────────────────────────────────────────────
 
 const adapterRegistry = new Map<string, () => BaseFleetAdapter>();
@@ -217,8 +221,4 @@ export async function getIntegrationsNeedingAttention(
     last_error_at: r.last_error_at instanceof Date ? r.last_error_at.toISOString() : r.last_error_at,
   }));
 }
-
-// ── Register built-in adapters ───────────────────────────────────────────
-
-import { MockRidePlatformAdapter } from "./mockRidePlatform";
 registerAdapter("mock_platform", () => new MockRidePlatformAdapter());

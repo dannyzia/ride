@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 // @ts-nocheck — Jest mock factories produce untyped chains; runtime tests verify correctness.
 /**
  * F46 Activation seam tests — Jobs 54-55.

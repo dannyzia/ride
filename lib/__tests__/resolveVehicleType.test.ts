@@ -5,11 +5,11 @@
  * Tests the actual H2 model-metadata merge and C1 manual-review rejection.
  */
 // Mock premiumAllowlist to avoid DB import in test environment
+import { resolveVehicleType, ManualReviewRequiredError, EligibilityError } from '../resolveVehicleType';
+
 jest.mock('../premiumAllowlist', () => ({
   isPremiumAllowlisted: jest.fn(),
 }));
-
-import { resolveVehicleType, ManualReviewRequiredError, EligibilityError } from '../resolveVehicleType';
 
 /** Stub: premium check always returns false (not on allowlist). */
 const notPremium = async () => false;

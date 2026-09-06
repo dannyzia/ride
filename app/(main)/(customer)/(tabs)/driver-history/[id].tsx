@@ -52,29 +52,29 @@ export default function DriverTripDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true); setError("");
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) { setError(t('wallet.not_authenticated')); setLoading(false); return; }
-        const res = await fetch(`${API_URL}/api/ride/get-all`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = await res.json();
-        if (!res.ok) { setError(json.error || t('driver_history.failed_to_load_trip')); return; }
-        const found = (json.data || []).find((r: { ride_id: string }) => r.ride_id === id);
-        if (!cancelled) setTrip(found ?? null);
-      } catch (err) {
-        if (!cancelled) setError((err instanceof Error ? err.message : String(err)) || t('wallet.network_error'));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [id]);
+useEffect(() => {
+     let cancelled = false;
+     (async () => {
+       try {
+         setLoading(true); setError("");
+         const { data: { session } } = await supabase.auth.getSession();
+         const token = session?.access_token;
+         if (!token) { setError(t('wallet.not_authenticated')); setLoading(false); return; }
+         const res = await fetch(`${API_URL}/api/ride/get-all`, {
+           headers: { Authorization: `Bearer ${token}` },
+         });
+         const json = await res.json();
+         if (!res.ok) { setError(json.error || t('driver_history.failed_to_load_trip')); return; }
+         const found = (json.data || []).find((r: { ride_id: string }) => r.ride_id === id);
+         if (!cancelled) setTrip(found ?? null);
+       } catch (err) {
+         if (!cancelled) setError((err instanceof Error ? err.message : String(err)) || t('wallet.network_error'));
+       } finally {
+         if (!cancelled) setLoading(false);
+       }
+     })();
+     return () => { cancelled = true; };
+   }, [id, t]);
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>

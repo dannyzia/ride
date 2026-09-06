@@ -1461,6 +1461,20 @@ wss.on("connection", (ws: WebSocket) => {
             ride_id: rideId,
             status: "driver_arrived",
           });
+          // Push notification (plan §B13 broadcast matrix) — fire-and-forget;
+          // an Expo push failure must never fail the WS transition.
+          sendNotification(
+            updatedRide.user_id,
+            "driver:arrived",
+            "Your driver has arrived",
+            "Meet your driver at the pickup point.",
+            { ride_id: rideId },
+          ).catch((e: unknown) =>
+            logger.error("[ws] driver_arrived push failed", {
+              ride_id: rideId,
+              error: e instanceof Error ? e.message : String(e),
+            }),
+          );
           send(ws, { type: "ride:arrived", ride_id: rideId });
         } else if (
           action === "start" &&

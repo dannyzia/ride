@@ -23,6 +23,8 @@ export const PLAN05_CONFIG_KEYS = [
   'auto_redispatch_checkin_minutes',
   'auto_redispatch_delay_ms',
   'auto_redispatch_max_attempts',
+  // Hotspot map — zone_heat reading freshness window (minutes)
+  'hotspot_freshness_minutes',
 ] as const;
 
 export type Plan05ConfigKey = (typeof PLAN05_CONFIG_KEYS)[number];
@@ -39,6 +41,7 @@ const DEFAULTS: Record<Plan05ConfigKey, string> = {
   auto_redispatch_checkin_minutes: '3',    // 3 minutes before rider check-in
   auto_redispatch_delay_ms: '15000',       // 15s delay before first re-dispatch
   auto_redispatch_max_attempts: '3',       // give up (expired) after N redispatch attempts
+  hotspot_freshness_minutes: '10',         // zone_heat readings older than this are stale
 };
 
 /**

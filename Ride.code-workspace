@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"json.schemaDownload.trustedDomains": {
+			"https://app.kilo.ai/config.json": true
+		}
+	}
+}

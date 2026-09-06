@@ -54,25 +54,25 @@ export default function BiddingScreen() {
   const [accepting, setAccepting] = useState(false);
   const [requestDetail, setRequestDetail] = useState<RentalRequestDetail | null>(null);
 
-  const fetchBids = useCallback(async () => {
-    if (!activeRequest) return;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) return;
+const fetchBids = useCallback(async () => {
+     if (!activeRequest) return;
+     try {
+       const { data: { session } } = await supabase.auth.getSession();
+       const token = session?.access_token;
+       if (!token) return;
 
-      const res = await fetch(
-        `${SERVER_URL}/api/rental/requests/${activeRequest.id}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (!res.ok) return;
-      const data: { request?: RentalRequestDetail; bids?: typeof bids } = await res.json();
-      if (data.request) setRequestDetail(data.request);
-      setBids(data.bids ?? []);
-    } catch (err) {
-      logger.error("[bidding] fetch error", err);
-    }
-  }, [activeRequest?.id]);
+       const res = await fetch(
+         `${SERVER_URL}/api/rental/requests/${activeRequest.id}`,
+         { headers: { Authorization: `Bearer ${token}` } },
+       );
+       if (!res.ok) return;
+       const data: { request?: RentalRequestDetail; bids?: typeof bids } = await res.json();
+       if (data.request) setRequestDetail(data.request);
+       setBids(data.bids ?? []);
+     } catch (err) {
+       logger.error("[bidding] fetch error", err);
+     }
+   }, [activeRequest, setBids]);
 
   useEffect(() => {
     fetchBids();

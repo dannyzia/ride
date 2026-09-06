@@ -1,7 +1,4 @@
 // Mock ambulanceCerts to prevent h3-js TextDecoder issue in Jest
-jest.mock("@/lib/ambulanceCerts", () => ({
-  serviceLevelSatisfies: jest.fn(() => true),
-}));
 /**
  * Marketplace admin tests — RBAC, vertical flags, writer-surface tests.
  *
@@ -17,6 +14,14 @@ import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import { POST as serviceZonesPost, DELETE as serviceZonesDelete } from "@/app/api/admin/marketplace/service-zones+api";
 import { PATCH as couriersPatch } from "@/app/api/admin/marketplace/couriers+api";
 import { GET as overviewGet } from "@/app/api/admin/marketplace/overview+api";
+
+// ─── Tests ──────────────────────────────────────────────────────────────────
+
+import { roleHasPermission } from "@/lib/adminRbac";
+import { isVerticalEnabled } from "@/lib/platformConfig";
+jest.mock("@/lib/ambulanceCerts", () => ({
+  serviceLevelSatisfies: jest.fn(() => true),
+}));
 
 // ─── Mock DB infrastructure (queue-based chain, mirrors shops.test.ts) ───────
 let mockSelectQueue: (() => unknown[])[] = [];
@@ -239,11 +244,6 @@ function makeRequest(
     ...(body ? { body: JSON.stringify(body) } : {}),
   }) as Request;
 }
-
-// ─── Tests ──────────────────────────────────────────────────────────────────
-
-import { roleHasPermission } from "@/lib/adminRbac";
-import { isVerticalEnabled } from "@/lib/platformConfig";
 
 describe("Marketplace admin RBAC", () => {
   it("owner has marketplace.write", () => {

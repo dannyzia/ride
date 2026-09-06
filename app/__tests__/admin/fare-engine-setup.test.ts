@@ -9,6 +9,14 @@
  */
 
 // Mock supabase to avoid env var requirements in test environment.
+import {
+  getDefaultFuelParams,
+  computeBikeOrCngRates,
+  computeCarRates,
+} from '@/lib/tierRateDerivation';
+import { PICKUP_CATEGORY, type VehicleTypeEnum, VEHICLE_TYPES } from '@/lib/vehicleTypes';
+import { ADMIN_ROLES } from '@/lib/adminRbac';
+
 jest.mock('@/lib/supabase', () => ({
   supabase: { auth: {}, from: jest.fn() },
 }));
@@ -18,14 +26,6 @@ jest.mock('@/lib/supabaseServer', () => ({
 jest.mock('@/lib/logger', () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
-
-import {
-  getDefaultFuelParams,
-  computeBikeOrCngRates,
-  computeCarRates,
-} from '@/lib/tierRateDerivation';
-import { PICKUP_CATEGORY, type VehicleTypeEnum, VEHICLE_TYPES } from '@/lib/vehicleTypes';
-import { ADMIN_ROLES } from '@/lib/adminRbac';
 
 // ── (a) Copy Truth Rule ──
 

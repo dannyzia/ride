@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 /**
  * Delivery bid auth — courier type matching (FIX 1).
  *

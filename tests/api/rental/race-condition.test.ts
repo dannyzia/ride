@@ -42,6 +42,12 @@ let mockTxReturningRows: unknown[][] = [[]];
 let mockBidCount = 0;
 let mockUpdateCalls: { vals: Record<string, unknown>; whereArgs: unknown[] }[] = [];
 let mockTxUpdateCalls: { vals: Record<string, unknown>; whereArgs: unknown[] }[] = [];
+// F2 re-point (2026-09-06): sweepDeadlines' expired/no_bidders branches were
+// rewritten set-based in ac046b1 as a raw CTE via tx.execute(sql`...`), so they
+// no longer flow through db.update().set().where(). Capture the executed SQL
+// and assert on THAT — the race invariant (soft_deadline_at < now re-checked
+// inside the WITH due claim, under FOR UPDATE SKIP LOCKED) is unchanged.
+let mockExecCalls: { sql: string; values: unknown[] }[] = [];
 // R3-completion: tx-time override for assignment reads — lets a test simulate
 // a pick committing BETWEEN the unlocked pre-tx read and the tx (the race
 // window) without mutating the shared pre-tx fixture.
@@ -55,6 +61,7 @@ let mockEmergencyRows: Record<string, unknown>[] = [];
 // ── Mock DB ────────────────────────────────────────────────────────
 // Shared factory so both root-level db and tx-level db use the same routing.
 jest.mock("@/src/db", () => {
+   
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const schema = require("@/src/db/schema");
 
@@ -156,7 +163,19 @@ jest.mock("@/src/db", () => {
         returning: async () => [{ id: "gen-uuid" }],
       }),
     }),
-    execute: async () => [{ cnt: 0 }],
+    execute: async (sqlArg: any, _values?: any) => {
+      // sweepDeadlines' expired/no_bidders branches run as a raw CTE via
+      // tx.execute (ac046b1), not db.update().set().where(). Capture and
+      // render the SQL so the F2 predicate assertions have a target.
+      try {
+        const { PgDialect } = require("drizzle-orm/pg-core");
+        const rendered = new PgDialect().sqlToQuery(sqlArg);
+        mockExecCalls.push({ sql: rendered.sql, values: rendered.values ?? [] });
+      } catch {
+        mockExecCalls.push({ sql: String(sqlArg), values: [] });
+      }
+      return [{ cnt: 0 }];
+    },
   });
 
   return {
@@ -229,6 +248,7 @@ beforeEach(() => {
   mockBidCount = 0;
   mockUpdateCalls = [];
   mockTxUpdateCalls = [];
+  mockExecCalls = [];
   mockTxAssignmentRows = null;
   mockTxReqRows = null;
   mockSubRows = [];
@@ -350,30 +370,30 @@ describe("Race F2 — sweepDeadlines: conditional UPDATEs include soft_deadline_
     mockReturningRows = [[{ id: REQ_ID }]];
   });
 
-  it("expired UPDATE WHERE includes soft_deadline_at < now", async () => {
+  it("expired transition SQL re-checks soft_deadline_at < now (raw CTE)", async () => {
     await sweepDeadlines();
 
-    const expireUpdate = mockUpdateCalls.find((c) => c.vals.status === "expired");
-    expect(expireUpdate).toBeDefined();
-
-    const rendered = getWhereSql(expireUpdate!.whereArgs);
-    // MUST re-check the deadline condition from the outer read
-    expect(rendered.sql).toContain("soft_deadline_at");
-    expect(rendered.sql).toContain("<");
+    // ac046b1 rewrote the expired branch as a raw CTE via tx.execute, so it
+    // no longer flows through db.update().set().where() — assert on the
+    // executed SQL instead. The predicate moved INTO the WITH due claim
+    // (AND soft_deadline_at < now()), under FOR UPDATE SKIP LOCKED. The race
+    // invariant is unchanged and enforced.
+    const expiredSql = mockExecCalls.find((c) => c.sql.includes("expired"))?.sql;
+    expect(expiredSql).toBeDefined();
+    expect(expiredSql).toContain("soft_deadline_at");
+    expect(expiredSql).toContain("<");
   });
 
-  it("no_bidders UPDATE WHERE also includes soft_deadline_at < now", async () => {
+  it("no_bidders transition SQL also re-checks soft_deadline_at < now", async () => {
     mockBidCount = 0;
     mockReturningRows = [[{ id: REQ_ID }]];
 
     await sweepDeadlines();
 
-    const noBiddersUpdate = mockUpdateCalls.find((c) => c.vals.status === "no_bidders");
-    expect(noBiddersUpdate).toBeDefined();
-
-    const rendered = getWhereSql(noBiddersUpdate!.whereArgs);
-    expect(rendered.sql).toContain("soft_deadline_at");
-    expect(rendered.sql).toContain("<");
+    const noBiddersSql = mockExecCalls.find((c) => c.sql.includes("no_bidders"))?.sql;
+    expect(noBiddersSql).toBeDefined();
+    expect(noBiddersSql).toContain("soft_deadline_at");
+    expect(noBiddersSql).toContain("<");
   });
 });
 

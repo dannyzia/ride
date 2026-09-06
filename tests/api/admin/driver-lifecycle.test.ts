@@ -14,7 +14,7 @@
  *  - type-change-approve: pending-only (422 already resolved), approve syncs
  *    driver + vehicle from the change record
  */
-/* eslint-disable import/first, @typescript-eslint/no-require-imports */
+/* eslint-disable import/first */
 jest.mock("@/lib/adminRbac", () => ({
   requireAdminPermission: jest.fn(),
 }));

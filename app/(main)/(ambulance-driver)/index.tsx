@@ -24,7 +24,6 @@ import {
   ensureEmergencySocket,
   sendEmergencyMessage,
 } from "@/lib/emergencySocket";
-import { logger } from "@/lib/logger";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 void SERVER_URL;

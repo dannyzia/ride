@@ -71,12 +71,12 @@ export async function POST(request: Request) {
 
       const productMap = new Map(products.map((p) => [p.id, p]));
       let subtotal = 0;
-      const orderItems: Array<{
+      const orderItems: {
         product_id: string;
         quantity: number;
         unit_price_bdt: number;
         line_total_bdt: number;
-      }> = [];
+      }[] = [];
 
       for (const item of body.items) {
         const product = productMap.get(item.product_id);

@@ -12,6 +12,21 @@
  * DB (drivers/pricing) and the Barikoi route client are mocked.
  */
 
+import { getRouteDistance } from '../barikoi';
+import {
+  pickupQuoteRange,
+  type PickupQuoteConfig,
+} from '../pickupQuote';
+import {
+  applyBackstop,
+  computeFeeKm,
+  haversineKm,
+  pickupFeePaisa,
+  ratePerKmPaisa,
+  referenceKm,
+} from '../pickupFee';
+import type { VehicleTypeEnum } from '../vehicleTypes';
+
 const mockState = {
   pricingRows: [] as { per_km_bdt: number }[],
   driverRows: [] as { id: string; lat: string | null; lng: string | null }[],
@@ -50,21 +65,6 @@ jest.mock('../barikoi', () => ({
 jest.mock('../h3', () => ({
   getH3Ring: jest.fn(() => ['cell-1', 'cell-2', 'cell-3']),
 }));
-
-import { getRouteDistance } from '../barikoi';
-import {
-  pickupQuoteRange,
-  type PickupQuoteConfig,
-} from '../pickupQuote';
-import {
-  applyBackstop,
-  computeFeeKm,
-  haversineKm,
-  pickupFeePaisa,
-  ratePerKmPaisa,
-  referenceKm,
-} from '../pickupFee';
-import type { VehicleTypeEnum } from '../vehicleTypes';
 
 const getRouteDistanceMock = getRouteDistance as jest.Mock;
 

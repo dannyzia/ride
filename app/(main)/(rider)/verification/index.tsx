@@ -114,7 +114,7 @@ export default function VerificationScreen() {
   // Initial fetch
   useEffect(() => {
     void fetchStatus(false);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);  
 
   // Auto-poll while pending
   useEffect(() => {

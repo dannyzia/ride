@@ -1,7 +1,4 @@
 // Mock ambulanceCerts to prevent h3-js TextDecoder issue in Jest
-jest.mock("@/lib/ambulanceCerts", () => ({
-  serviceLevelSatisfies: jest.fn(() => true),
-}));
 /**
  * Phase 1 Marketplace — Shop tests.
  *
@@ -18,6 +15,9 @@ import { jest } from "@jest/globals";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { isVerticalEnabled } from "@/lib/platformConfig";
 import { roleHasPermission } from "@/lib/adminRbac";
+jest.mock("@/lib/ambulanceCerts", () => ({
+  serviceLevelSatisfies: jest.fn(() => true),
+}));
 
 // ─── Mock DB infrastructure ───────────────────────────────────────────────
 let mockSelectQueue: (() => unknown[])[] = [];
@@ -119,7 +119,7 @@ jest.mock("@/lib/logger", () => ({
 
 // Mock supabaseAdmin — supabase-js chain: from().select().eq().eq().maybeSingle()
 jest.mock("@/lib/supabaseServer", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const chain: any = {};
   chain.select = jest.fn().mockReturnValue(chain);
   chain.eq = jest.fn().mockReturnValue(chain);

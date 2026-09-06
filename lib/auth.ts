@@ -35,7 +35,7 @@ export type AnyRole = 'rider' | 'driver' | AdminRole;
  *
  * Usage: await requireAnyRole(['admin', 'owner'])(request)
  */
-export function requireAnyRole(roles: Array<'rider' | 'driver' | 'admin' | AdminRole>) {
+export function requireAnyRole(roles: ('rider' | 'driver' | 'admin' | AdminRole)[]) {
   return async (request: Request): Promise<{ supabaseUser: User; dbUser: DbUser }> => {
     const supabaseUser = await resolveToken(request);
 

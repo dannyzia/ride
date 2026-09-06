@@ -22,6 +22,11 @@ jest.mock("../../src/db", () => {
     fleetMembers: schema.fleetMembers,
     shopOrders: schema.shopOrders,
     fleets: schema.fleets,
+    // A8 batching (ac046b1): job 54 now computes eligibility once per batch
+    // from fleet_service_zones (+ global fleets) BEFORE reading members. The
+    // fixture must provide an active zone row or eligibleFleetIds stays empty
+    // and no push is ever fired.
+    zones: schema.fleetServiceZones,
   };
 
   const chainable = (rows: unknown[]) => {
@@ -40,6 +45,7 @@ jest.mock("../../src/db", () => {
   let mockDeliveryRows: Record<string, unknown>[] = [];
   let mockMemberRows: Record<string, unknown>[] = [];
   let mockShopRows: Record<string, unknown>[] = [];
+  let mockZoneRows: Record<string, unknown>[] = [];
 
   const fromQ = (t: unknown) => {
     const resolveRows = () => {
@@ -49,6 +55,7 @@ jest.mock("../../src/db", () => {
       if (t === T.delivery) return mockDeliveryRows;
       if (t === T.fleetMembers) return mockMemberRows;
       if (t === T.shopOrders) return mockShopRows;
+      if (t === T.zones) return mockZoneRows;
       return [];
     };
     const q: any = {};
@@ -99,6 +106,7 @@ jest.mock("../../src/db", () => {
     if (patch.delivery) mockDeliveryRows = patch.delivery;
     if (patch.fleetMembers) mockMemberRows = patch.fleetMembers;
     if (patch.shopOrders) mockShopRows = patch.shopOrders;
+    if (patch.zones) mockZoneRows = patch.zones;
   };
   return { db: dbMock };
 });
@@ -191,6 +199,10 @@ describe("N11 — activation jobs pass idempotency keys to sendNotification", ()
           pickup_address: "Sector 7",
         },
       ],
+      // A8 batching: eligibility is computed from fleet_service_zones (+
+      // global fleets) once per batch. Without an active zone row for f1 the
+      // members query is never reached and no push fires.
+      zones: [{ fleet_id: "f1", is_active: true }],
       fleetMembers: [{ user_id: "member-1", fleet_id: "f1" }],
       delivery: [
         {

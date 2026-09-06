@@ -80,7 +80,7 @@ export default function SavedAddresses() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchAddresses();

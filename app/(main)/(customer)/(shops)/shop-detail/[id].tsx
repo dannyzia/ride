@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,22 +33,22 @@ export default function ShopDetailScreen() {
     useShopStore();
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-    (async () => {
-      try {
-        const res = await fetch(`${SERVER_URL}/api/shop/${id}`);
-        if (!res.ok) throw new Error("Failed to fetch shop");
-        const data = await res.json();
-        setSelectedShop(data.shop);
-        setSelectedProducts(data.products);
-      } catch (err) {
-        logger.error("[shop-detail] fetch error", err);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id]);
+useEffect(() => {
+     if (!id) return;
+     (async () => {
+       try {
+         const res = await fetch(`${SERVER_URL}/api/shop/${id}`);
+         if (!res.ok) throw new Error("Failed to fetch shop");
+         const data = await res.json();
+         setSelectedShop(data.shop);
+         setSelectedProducts(data.products);
+       } catch (err) {
+         logger.error("[shop-detail] fetch error", err);
+       } finally {
+         setLoading(false);
+       }
+     })();
+   }, [id, setSelectedShop, setSelectedProducts]);
 
   const cartTotal = cart.reduce((sum, i) => sum + i.price_bdt * i.quantity, 0);
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);

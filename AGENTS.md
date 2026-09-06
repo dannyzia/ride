@@ -83,6 +83,92 @@ Protocol (non-negotiable):
 4. **Handoffs are artifacts** (`.kilo/plans/*.md`), not chat history. Implementers start from disk state, with round-verification notes appended at the bottom.
 5. **Orchestrator reports are verdict-first.** One-line verdict + short messages to the models concerned. Detail lives in the artifact files.
 
+## Agent Coordination with Rhizome
+
+Rhizome MCP is the required coordination system for this repository. The tools are accessed via the `rhizome` MCP server (resources are listed under `list_mcp_resources` → `server: rhizome`; the workflow guides are at `rhizome://guides/{agent-workflow,issue-lifecycle,multi-agent-handoff}` — read them before your first issue of the session).
+
+### Workflow (summary; the guides are authoritative)
+
+1. **Orient**: call `open_project` with the absolute repo root. Retain the `project_ref` and pass it on every project-scoped call. Call `get_project` for project instructions, limits, and the latest event ID.
+2. **Find work**: use `get_planning_graph` for dependency-aware selection or `list_issues` with `is_claimable: true` for a narrow ready queue. `search` is for historical knowledge, not current state.
+3. **Load context**: call `get_work_context` before claiming. Request the sections you need (parent epic, relations, recent comments, decision content, attempt history, artifacts, project instructions, or changes since the previous attempt).
+4. **Claim before execution**: call `claim_issue` only for a claimable `ready` or `review` issue. The returned `attempt_id` and lease token are private — keep them until the attempt ends. For long work, `renew_attempt` before expiry. A lost or expired lease must not be treated as ownership.
+5. **Reserve shared resources**: before editing any shared or high-risk file (the high-risk list below), pass `resources` to `claim_issue` to acquire atomically, or call `reserve_resources` later. Conflicts fail the whole call with `RESOURCE_RESERVATION_CONFLICT` naming the conflicting reservation. Reservations coordinate cooperating agents; they do not lock the filesystem. Released by `release_resources`, by `finish_attempt`, and by lease expiry.
+6. **Execute durably**: use `save_attempt_note` for restartable checkpoints, important findings, warnings, and concrete next steps. Attach durable artifacts (commits, branches, files, URLs, logs). Use comments for collaboration and decisions for durable architectural or product choices. Use `update_issue` / `archive_issue` with the current issue version; on conflict, refetch and reconcile.
+7. **Finish every attempt**: call `finish_attempt` exactly once when work completes, fails, becomes blocked, or is handed off. Review attempts set `review_outcome` (`approved` → issue `done`; `changes_requested` → issue `ready`; `blocked` → issue `blocked`). Never leave an attempt active just because the agent is stopping.
+
+### Issue types and statuses
+
+Types: `epic`, `task`, `bug`. Use parent relationships for decomposition and `blocks` relations for execution order. `related_to` adds context without scheduling; `duplicates` identifies equivalent work.
+
+Stored statuses: `open`, `ready`, `blocked`, `review`, `done`, `cancelled`. **`in_progress` is an effective status derived from an active leased attempt** — never write it as an issue status. If a lease expires, the effective status falls back to the stored state so work cannot remain permanently stuck.
+
+Mutations use optimistic concurrency: read the issue, retain its `version`, submit that as `expected_version`. On conflict, refetch and reconcile all intervening changes — do not retry a stale patch blindly. Use `validate_plan` for bounded multi-issue plans before atomic application.
+
+### Task ownership
+
+A claimed Rhizome task represents the agent's current work.
+
+- Do not work on another agent's claimed task without an explicit handoff (the receiving agent calls `open_project` + `get_work_context` to load checkpoint + artifacts + decisions; never reuse another agent's `attempt_id` or lease token).
+- Do not claim a task that has unresolved dependencies.
+- Do not create a second task for work already represented in Rhizome.
+- Do not re-plan a feature that another orchestrator owns.
+- If work crosses ownership boundaries, create a dependency or handoff task instead.
+- Do not assume that another agent has completed work unless its Rhizome task or checkpoint says so.
+
+### High-risk resource list (reserve before editing)
+
+`package.json`, `app.config.js`, Drizzle schema files, Drizzle migrations, `utils-server/leadBilling.ts`, `lib/activateSubscription.ts`, authentication middleware, payment routes, shared API types, WebSocket event definitions, Supabase configuration. Reservations coordinate cooperating agents; they do not lock the filesystem against processes that bypass this server.
+
+### Required completion checkpoint
+
+Before calling `finish_attempt` with `review` (implementation attempt) or `approved` (review attempt), the most recent `save_attempt_note` must contain:
+
+- Summary of what was implemented
+- Files added, changed, or deleted
+- Database schema or migration changes
+- API contract changes
+- Environment variable changes
+- Tests and commands executed
+- Test results
+- Known limitations
+- Unfinished work
+- Follow-up tasks
+- Any decisions that another agent needs to know (and a `record_decision` call for durable ones)
+
+Use this format:
+
+```text
+Implemented:
+- ...
+
+Files changed:
+- ...
+
+Database changes:
+- ...
+
+API changes:
+- ...
+
+Environment changes:
+- ...
+
+Tests run:
+- ...
+
+Known limitations:
+- ...
+
+Follow-up work:
+- ...
+
+Handoff notes:
+- ...
+```
+
+§`.kilo/plans/rhizome-upstream-reports.md` for the install command, data-root config, and the Kilo client-side rendering caveat (older clients drop `structuredContent`). The three rhizome guides at `rhizome://guides/*` are the authoritative API reference.
+
 ## Essential Commands
 
 ```bash

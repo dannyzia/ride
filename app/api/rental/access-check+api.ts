@@ -54,7 +54,7 @@ export async function GET(request: Request) {
 
     // Filter to fleets with active marketplace-enabled subscriptions
     const fleetIds = [...new Set(members.map((m) => m.fleet_id))];
-    const qualifying: Array<{ fleet_id: string; fleet_name: string; role: string }> = [];
+    const qualifying: { fleet_id: string; fleet_name: string; role: string }[] = [];
 
     for (const fleetId of fleetIds) {
       const { data: sub } = await supabaseAdmin
@@ -67,9 +67,9 @@ export async function GET(request: Request) {
 
       if (!sub) continue;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const fleet = sub.fleet as unknown as { id: string; name: string; status: string } | null;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const plan = sub.plan as unknown as { id: string; active: boolean; features: Record<string, unknown> | null } | null;
 
       if (

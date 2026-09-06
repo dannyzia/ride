@@ -39,30 +39,30 @@ export default function ActivityTopUp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) return;
-        const res = await fetch(`${API_URL}/api/rider/wallet`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setWalletBalance(data.balance_bdt ?? 0);
-          setTransactions(data.recent_transactions ?? []);
-        } else {
-          setError(t('wallet.failed_to_load'));
-        }
-      } catch (e) {
-        setError(t('wallet.failed_to_load'));
-        logger.error("[top-up] fetch failed", e);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+useEffect(() => {
+     (async () => {
+       try {
+         const { data: { session } } = await supabase.auth.getSession();
+         const token = session?.access_token;
+         if (!token) return;
+         const res = await fetch(`${API_URL}/api/rider/wallet`, {
+           headers: { Authorization: `Bearer ${token}` },
+         });
+         if (res.ok) {
+           const data = await res.json();
+           setWalletBalance(data.balance_bdt ?? 0);
+           setTransactions(data.recent_transactions ?? []);
+         } else {
+           setError(t('wallet.failed_to_load'));
+         }
+       } catch (e) {
+         setError(t('wallet.failed_to_load'));
+         logger.error("[top-up] fetch failed", e);
+       } finally {
+         setLoading(false);
+       }
+     })();
+   }, [t]);
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>

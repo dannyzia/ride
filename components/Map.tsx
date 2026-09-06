@@ -282,7 +282,7 @@ const Map = ({ origin, destination, route, hotspots, vehicleMarkers, onMapPress 
           {hexFeatures && hexFeatures.length > 0 && ShapeSource && FillLayer && (
             <ShapeSource
               id="hotspots-hex-source"
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+               
               shape={{ type: "FeatureCollection", features: hexFeatures } as any}
             >
               <FillLayer
@@ -302,7 +302,7 @@ const Map = ({ origin, destination, route, hotspots, vehicleMarkers, onMapPress 
             !FillLayer && (
               <ShapeSource
                 id="hotspots-circle-source"
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 shape={{
                   type: "FeatureCollection",
                   features: hexFeatures.map((f) => ({

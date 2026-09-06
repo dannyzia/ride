@@ -67,7 +67,7 @@ function mockSelectQueue(queue: ChainResult[][]) {
         limit: jest.fn(async () => rows),
       })),
       // Terminal .where() (no .limit) — thenable so `await ...where()` resolves to rows
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       then: (resolve: any, reject: any) =>
         Promise.resolve(rows).then(resolve, reject),
     };

@@ -9,6 +9,8 @@
  */
 
 // Mock getFareFrameworkConfig to return controlled thresholds
+import { GET } from '@/app/api/admin/fare-gate-metrics+api';
+
 const mockGetConfig = jest.fn();
 jest.mock('@/lib/fareFrameworkConfig', () => ({
   getFareFrameworkConfig: (...args: unknown[]) => mockGetConfig(...args),
@@ -67,8 +69,6 @@ jest.mock('@/src/db', () => ({
     }),
   },
 }));
-
-import { GET } from '@/app/api/admin/fare-gate-metrics+api';
 
 function apiRequest(): Request {
   return {

@@ -99,7 +99,7 @@ export default function FareDispute() {
     } finally {
       setRideLoading(false);
     }
-  }, [rideId]);
+  }, [rideId, t]);
 
   useEffect(() => {
     fetchRide();

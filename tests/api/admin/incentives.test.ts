@@ -5,7 +5,7 @@
  * one driver_incentives row per driver with ON CONFLICT DO NOTHING so
  * re-creation can never duplicate enrollments.
  */
-/* eslint-disable import/first, @typescript-eslint/no-require-imports */
+/* eslint-disable import/first */
 jest.mock("@/lib/adminRbac", () => ({
   requireAdminPermission: jest.fn(),
 }));

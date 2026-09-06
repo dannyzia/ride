@@ -74,8 +74,10 @@ describe("POST /api/ride/nearby-markers", () => {
 
     const res = await POST(jsonRequest(BODY));
     expect(res.status).toBe(200);
+    // zone_tier is the additive hotspot tier (null when the marker is
+    // outside every zone with a fresh heat reading).
     expect((await getJson(res)).markers).toEqual([
-      { id: "d1", lat: 23.82, lng: 90.42, vehicle_type: "bike_basic" },
+      { id: "d1", lat: 23.82, lng: 90.42, vehicle_type: "bike_basic", zone_tier: null },
     ]);
   });
 

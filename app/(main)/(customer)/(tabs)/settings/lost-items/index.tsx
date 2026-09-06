@@ -73,7 +73,7 @@ export default function RiderLostItems() {
       if (res.ok) setItems((await res.json()).items ?? []);
     } catch (e) { setError(t('lost_items.load_failed')); logger.error("Fetch lost items failed", e); }
     finally { setLoading(false); }
-  }, []);
+  }, [t]);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 

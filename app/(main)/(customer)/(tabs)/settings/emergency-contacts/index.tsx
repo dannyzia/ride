@@ -88,7 +88,7 @@ export default function SettingsEmergencyContacts() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchContacts();

@@ -36,7 +36,7 @@ function getJson(res: Response): Promise<Record<string, unknown>> {
   return res.json() as Promise<Record<string, unknown>>;
 }
 
-const sessionUpdates: Array<Record<string, unknown>> = [];
+const sessionUpdates: Record<string, unknown>[] = [];
 const driverUpdates: Row[] = [];
 
 beforeEach(() => {

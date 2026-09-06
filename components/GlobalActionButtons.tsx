@@ -80,6 +80,7 @@ const DRIVER_ITEMS: NavItem[] = [
   { route: "/(main)/(rider)/incentives", label: "Incentives", icon: "trophy", group: "Programs" },
   { route: "/(main)/(rider)/call-ledger", label: "Call Ledger", icon: "clipboard", group: "Programs" },
   { route: "/(main)/(rider)/hotspot-map", label: "Hotspot Map", icon: "map", group: "Programs" },
+  { route: "/(main)/(rider)/(tabs)/hotspot", label: "Hotspot", icon: "flame", group: "Programs" },
   { route: "/(main)/(rider)/documents", label: "Documents", icon: "document-text", group: "Compliance" },
   { route: "/(main)/(rider)/verification", label: "Verification", icon: "checkmark-circle", group: "Compliance" },
   { route: "/(main)/(rider)/vehicle-management", label: "Vehicles", icon: "car", group: "Compliance" },

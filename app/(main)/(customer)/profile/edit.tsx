@@ -140,7 +140,7 @@ export default function EditProfile() {
     } finally {
       setSaving(false);
     }
-  }, [name, photo]);
+  }, [name, photo, t]);
 
   const saveDisabled = saving || name.trim().length < 2;
   const saveButtonBg = saveDisabled

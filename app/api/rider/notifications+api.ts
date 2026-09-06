@@ -1,26 +1,37 @@
-import { db } from '@/src/db';
-import { users, notifications } from '@/src/db/schema';
-import { eq, desc } from 'drizzle-orm';
-import { verifySupabaseToken } from '@/lib/auth';
+import { requireAnyRole } from '@/lib/auth';
+import {
+  listNotifications,
+  DEFAULT_PAGE_SIZE,
+} from '@/lib/notifications/server';
 import { logger } from '@/lib/logger';
-import * as errors from '@/lib/errors';
 
+/**
+ * GET /api/rider/notifications?limit=20&before=<ISO cursor>&unread_only=true
+ * Cursor-paginated inbox (created_at DESC), 20 per page. Soft-deleted rows
+ * are excluded; unread_count covers the whole inbox regardless of cursor.
+ */
 export async function GET(request: Request) {
   try {
-    const supabaseUser = await verifySupabaseToken(request);
-    const [appUser] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
-    if (!appUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
+    const { dbUser } = await requireAnyRole(['rider'])(request);
 
-    const rows = await db
-      .select()
-      .from(notifications)
-      .where(eq(notifications.user_id, appUser.id))
-      .orderBy(desc(notifications.sent_at))
-      .limit(50);
-    return Response.json({ notifications: rows });
+    const url = new URL(request.url);
+    const limitRaw = parseInt(url.searchParams.get('limit') ?? String(DEFAULT_PAGE_SIZE), 10);
+    const before = url.searchParams.get('before') ?? undefined;
+    const unreadOnly = url.searchParams.get('unread_only') === 'true';
+
+    const page = await listNotifications(dbUser.id, {
+      limit: Number.isFinite(limitRaw) ? limitRaw : DEFAULT_PAGE_SIZE,
+      before,
+      unreadOnly,
+    });
+
+    return Response.json(page);
   } catch (err: unknown) {
-    if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[rider/notifications] error', err);
+    const status = (err as { status?: number }).status;
+    if (status === 400) return Response.json({ error: 'invalid_cursor', message: 'Invalid pagination cursor' }, { status: 400 });
+    if (status === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+    if (status === 403) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+    logger.error('[rider/notifications] GET error', err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
 }

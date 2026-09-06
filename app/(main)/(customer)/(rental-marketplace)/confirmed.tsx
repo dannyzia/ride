@@ -26,7 +26,7 @@ const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080"
 export default function RentalConfirmedScreen() {
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
-  const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
+  
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
@@ -58,7 +58,7 @@ export default function RentalConfirmedScreen() {
     } catch (err) {
       logger.error("[confirmed] poll error", err);
     }
-  }, [activeRequest?.id]);
+  }, [activeRequest, updateRequestStatus]);
 
   useEffect(() => {
     if (!polling || !activeRequest) return;

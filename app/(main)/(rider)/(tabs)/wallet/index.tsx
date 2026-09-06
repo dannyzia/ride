@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback , useState as useStateModal } from "react";
 import { API_URL } from "@/lib/config";
 import {
   View,
@@ -18,7 +18,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT } from "@/lib/format";
 import { useDriverStore } from "@/store/useDriverStore";
-import { useState as useStateModal } from "react";
+
 import PaymentWebView from "@/components/PaymentWebView";
 import { useTranslation } from "react-i18next";
 

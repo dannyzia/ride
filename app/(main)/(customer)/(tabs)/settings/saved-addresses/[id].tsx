@@ -57,7 +57,7 @@ export default function AddressDetail() {
       }
     })();
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, t]);
 
   const handleDelete = async () => {
     Alert.alert(

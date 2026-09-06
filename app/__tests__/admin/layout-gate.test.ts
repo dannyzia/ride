@@ -9,6 +9,11 @@
  */
 
 // Mock supabase to avoid env var requirements.
+import { ADMIN_ROLES } from '@/lib/adminRbac';
+import type { AdminRole } from '@/lib/auth';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+
 jest.mock('@/lib/supabase', () => ({
   supabase: { auth: {}, from: jest.fn() },
 }));
@@ -18,11 +23,6 @@ jest.mock('@/lib/supabaseServer', () => ({
 jest.mock('@/lib/logger', () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
-
-import { ADMIN_ROLES } from '@/lib/adminRbac';
-import type { AdminRole } from '@/lib/auth';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
 
 // ── (a) Admin roles admitted ──
 
@@ -61,7 +61,7 @@ describe('Layout gate — error string safety', () => {
 
   beforeAll(() => {
     // Read the actual layout source file.
-    const layoutPath = resolve(__dirname, '../../app/admin/_layout.tsx');
+    const layoutPath = resolve(__dirname, '../../../app/admin/_layout.tsx');
     layoutSource = readFileSync(layoutPath, 'utf-8');
   });
 
@@ -113,7 +113,7 @@ describe('Layout gate — Method 2 server fallback', () => {
   let layoutSource: string;
 
   beforeAll(() => {
-    const layoutPath = resolve(__dirname, '../../app/admin/_layout.tsx');
+    const layoutPath = resolve(__dirname, '../../../app/admin/_layout.tsx');
     layoutSource = readFileSync(layoutPath, 'utf-8');
   });
 

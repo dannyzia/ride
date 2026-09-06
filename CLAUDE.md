@@ -30,7 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 For the most up-to-date command reference, critical rules, and architecture map, see **AGENTS.md**. This file focuses on implementation methodology, source of truth hierarchy, and what has changed from the original GlideX codebase.
 
-Model-chain orchestration (Owner / Architect / Orchestrator / Planning-Coding roles, verification protocol, rulings-beat-artifacts) is defined in **AGENTS.md § Model Chain & Orchestration** — it applies to every model working in this repo. The Copy Truth Rule (AGENTS.md § Critical Rules) binds all user-facing text: no copy references non-live behavior. The File Cross-Reference Convention (AGENTS.md § Critical Rules) binds every AI-written artifact: header block + concrete path anchors, not loose pointers.
+Model-chain orchestration (Owner / Architect / Orchestrator / Planning-Coding roles, verification protocol, rulings-beat-artifacts) is defined in **AGENTS.md § Model Chain & Orchestration** — it applies to every model working in this repo. The Copy Truth Rule (AGENTS.md § Critical Rules) binds all user-facing text: no copy references non-live behavior. The File Cross-Reference Convention (AGENTS.md § Critical Rules) binds every AI-written artifact: header block + concrete path anchors, not loose pointers. **Multi-agent task tracking and resource reservation are governed by Rhizome MCP** — see **AGENTS.md § Agent Coordination with Rhizome** (the rhizome://guides/{agent-workflow,issue-lifecycle,multi-agent-handoff} resources are the authoritative API reference; do not implement a feature that another agent's Rhizome task claims without an explicit handoff).
 
 ## Implementation Methodology
 

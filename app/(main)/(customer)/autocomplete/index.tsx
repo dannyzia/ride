@@ -143,7 +143,7 @@ const AutocompletePage = () => {
     }, 400); // 400ms debounce to avoid spamming the API on every keystroke
 
     return () => clearTimeout(timeoutId);
-  }, [query]);
+  }, [query, userLatitude, userLongitude]);
 
   const handlePlaceSelect = (place: PlaceSuggestion) => {
     // Barikoi autocomplete already returns lat/lng — no detail fetch needed.

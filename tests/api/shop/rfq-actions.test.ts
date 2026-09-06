@@ -13,6 +13,11 @@
  */
 import { jest } from "@jest/globals";
 
+import { PATCH as quoteRfq } from "@/app/api/shop/rfq/[id]/quote+api";
+import { POST as declineRfq } from "@/app/api/shop/rfq/[id]/decline+api";
+import { POST as acceptRfq } from "@/app/api/shop/rfq/[id]/accept+api";
+import { POST as cancelRfq } from "@/app/api/shop/rfq/[id]/cancel+api";
+
 let mockRfqRows: Record<string, unknown>[] = [];
 let mockUpdateRows: Record<string, unknown>[] = [{ id: "generated-uuid" }];
 let mockUpdateCalls: { vals: Record<string, unknown>; whereArgs: unknown[] }[] = [];
@@ -123,11 +128,6 @@ function rfqRow(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
-
-import { PATCH as quoteRfq } from "@/app/api/shop/rfq/[id]/quote+api";
-import { POST as declineRfq } from "@/app/api/shop/rfq/[id]/decline+api";
-import { POST as acceptRfq } from "@/app/api/shop/rfq/[id]/accept+api";
-import { POST as cancelRfq } from "@/app/api/shop/rfq/[id]/cancel+api";
 
 beforeEach(() => {
   mockRfqRows = [];

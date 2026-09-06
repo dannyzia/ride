@@ -40,6 +40,40 @@ interface DispatchToggleResponse {
   dispatch_paused?: boolean;
 }
 
+// ----- Section 4: Hotspots (platform_config freshness + zone_heat tiers) -----
+interface AdminHotspotRow {
+  zone_id: string;
+  zone_name: string;
+  zone_is_active: boolean;
+  tag: "hot" | "neutral" | "cold";
+  score: string;
+  idle_driver_count: number;
+  valid_from: string | null;
+  valid_to: string | null;
+  computed_at: string;
+  updated_at: string;
+}
+
+interface HotspotsResponse {
+  hotspots?: AdminHotspotRow[];
+  total?: number;
+}
+
+const HOTSPOT_TIER_OPTIONS = ["low", "medium", "high"] as const;
+type HotspotTierOption = (typeof HOTSPOT_TIER_OPTIONS)[number];
+const HOTSPOT_TIER_TO_TAG: Record<HotspotTierOption, AdminHotspotRow["tag"]> = {
+  low: "cold",
+  medium: "neutral",
+  high: "hot",
+};
+const HOTSPOT_TIER_DOT: Record<AdminHotspotRow["tag"], string> = {
+  cold: "#0CC25F",
+  neutral: "#FFC107",
+  hot: "#E31D1C",
+};
+const HOTSPOT_FRESHNESS_KEY = "hotspot_freshness_minutes";
+const HOTSPOT_FRESHNESS_DEFAULT = "10";
+
 // ----- Section 2: Platform Policy (platform_config) -----
 type PolicyType = "ratio" | "moneyTaka" | "integer";
 interface PolicyField {
@@ -266,6 +300,32 @@ export default function PlatformConfigScreen() {
   );
   const [savingOp, setSavingOp] = useState(false);
 
+  // Hotspots section state
+  const [hotspotFreshnessServer, setHotspotFreshnessServer] =
+    useState<string>(HOTSPOT_FRESHNESS_DEFAULT);
+  const [hotspotFreshnessEdit, setHotspotFreshnessEdit] = useState<string>(
+    HOTSPOT_FRESHNESS_DEFAULT,
+  );
+  const [hotspotRows, setHotspotRows] = useState<AdminHotspotRow[]>([]);
+  const [hotspotsLoading, setHotspotsLoading] = useState(true);
+  const [savingHotspot, setSavingHotspot] = useState(false);
+  const [hotspotZoneId, setHotspotZoneId] = useState("");
+  const [hotspotTier, setHotspotTier] = useState<HotspotTierOption>("high");
+  const [hotspotValidFrom, setHotspotValidFrom] = useState("");
+  const [hotspotValidTo, setHotspotValidTo] = useState("");
+
+  const loadHotspots = useCallback(async () => {
+    setHotspotsLoading(true);
+    const res = await adminFetch<HotspotsResponse>(
+      "/api/admin/hotspots?limit=100",
+      { method: "GET" },
+    );
+    if (!res.error && res.data?.hotspots) {
+      setHotspotRows(res.data.hotspots);
+    }
+    setHotspotsLoading(false);
+  }, []);
+
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
@@ -349,10 +409,20 @@ export default function PlatformConfigScreen() {
       const zoneVal = map["zone_multi_active_enabled"] === "true";
       setZoneMultiActive(zoneVal);
       setZoneMultiActiveOriginal(zoneVal);
+
+      // Hotspot freshness window (platform_config; falls back to the default)
+      const freshRow = (policyRes.data.config ?? []).find(
+        (r) => r.key === HOTSPOT_FRESHNESS_KEY,
+      );
+      const freshVal = freshRow?.value ?? HOTSPOT_FRESHNESS_DEFAULT;
+      setHotspotFreshnessServer(freshVal);
+      setHotspotFreshnessEdit(freshVal);
     }
 
+    loadHotspots().catch(() => setHotspotsLoading(false));
+
     setLoading(false);
-  }, [toast]);
+  }, [toast, loadHotspots]);
 
   useEffect(() => {
     fetchAll();
@@ -639,6 +709,106 @@ export default function PlatformConfigScreen() {
     setSavingOp(false);
   };
 
+  // ----- Hotspot save (Section 4) -----
+  const hotspotFreshnessDirty = hotspotFreshnessEdit !== hotspotFreshnessServer;
+
+  const handleSaveHotspotFreshness = async () => {
+    const n = Number(hotspotFreshnessEdit);
+    if (!Number.isInteger(n) || n <= 0) {
+      toast.show("Freshness window must be a positive integer (minutes)", "error");
+      return;
+    }
+    setSavingHotspot(true);
+    const { error, status } = await adminFetch<ConfigResponse>("/api/admin/config", {
+      method: "PATCH",
+      body: JSON.stringify({
+        updates: [{ key: HOTSPOT_FRESHNESS_KEY, value: String(n) }],
+      }),
+    });
+    if (error || status === 0) {
+      toast.show(
+        `Save failed: ${error ?? (status === 0 ? "network error" : "unknown")}`,
+        "error",
+      );
+      setSavingHotspot(false);
+      return;
+    }
+    setHotspotFreshnessServer(String(n));
+    toast.show("Hotspot settings saved", "success");
+    setSavingHotspot(false);
+  };
+
+  const handleAddHotspot = async () => {
+    const zoneId = hotspotZoneId.trim();
+    if (!zoneId) {
+      toast.show("Zone ID is required", "error");
+      return;
+    }
+    const item: {
+      zone_id: string;
+      tier: HotspotTierOption;
+      valid_from?: string;
+      valid_to?: string;
+    } = { zone_id: zoneId, tier: hotspotTier };
+    const from = hotspotValidFrom.trim();
+    const to = hotspotValidTo.trim();
+    if (from) {
+      const d = new Date(from);
+      if (Number.isNaN(d.getTime())) {
+        toast.show("Valid From must be an ISO date-time (e.g. 2026-09-06T00:00:00Z)", "error");
+        return;
+      }
+      item.valid_from = d.toISOString();
+    }
+    if (to) {
+      const d = new Date(to);
+      if (Number.isNaN(d.getTime())) {
+        toast.show("Valid To must be an ISO date-time (e.g. 2026-09-07T00:00:00Z)", "error");
+        return;
+      }
+      item.valid_to = d.toISOString();
+    }
+
+    setSavingHotspot(true);
+    const { error, status } = await adminFetch<{ added?: number }>(
+      "/api/admin/hotspots",
+      { method: "POST", body: JSON.stringify({ items: [item] }) },
+    );
+    if (error || status === 0) {
+      toast.show(
+        `Add failed: ${error ?? (status === 0 ? "network error" : "unknown")}`,
+        "error",
+      );
+      setSavingHotspot(false);
+      return;
+    }
+    setHotspotZoneId("");
+    setHotspotValidFrom("");
+    setHotspotValidTo("");
+    toast.show("Hotspot tier assigned", "success");
+    await loadHotspots();
+    setSavingHotspot(false);
+  };
+
+  const handleDeleteHotspot = async (zoneId: string) => {
+    setSavingHotspot(true);
+    const { error, status } = await adminFetch<{ ok?: boolean }>(
+      `/api/admin/hotspots?id=${encodeURIComponent(zoneId)}`,
+      { method: "DELETE" },
+    );
+    if (error || status === 0) {
+      toast.show(
+        `Delete failed: ${error ?? (status === 0 ? "network error" : "unknown")}`,
+        "error",
+      );
+      setSavingHotspot(false);
+      return;
+    }
+    toast.show("Hotspot removed", "success");
+    await loadHotspots();
+    setSavingHotspot(false);
+  };
+
   return (
     <AdminShell
       title="Platform Configuration"
@@ -915,6 +1085,171 @@ export default function PlatformConfigScreen() {
               </View>
             )}
           </View>
+
+          {/* ---------- Section 4: Hotspots ---------- */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Hotspots</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Demand-tier labels on the existing zone_heat table. Advisory
+                  only — never read by dispatch or fares. A pinned tier stays
+                  until its validity window ends and the heat engine
+                  recomputes the zone.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.formGrid}>
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>
+                  Freshness Window (minutes)
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={hotspotFreshnessEdit}
+                  onChangeText={setHotspotFreshnessEdit}
+                  placeholder={HOTSPOT_FRESHNESS_DEFAULT}
+                  placeholderTextColor={colors.textDisabledDark}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.helpText}>
+                  zone_heat readings older than this are treated as stale and
+                  hidden from the hotspot surface. Default: 10.
+                </Text>
+                <Pressable
+                  style={[
+                    styles.saveBtn,
+                    (!hotspotFreshnessDirty || savingHotspot) && styles.btnDisabled,
+                    { marginTop: 6 },
+                  ]}
+                  onPress={handleSaveHotspotFreshness}
+                  disabled={!hotspotFreshnessDirty || savingHotspot}
+                >
+                  <Text style={styles.saveBtnText}>Save Window</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Assign Tier (Zone ID)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={hotspotZoneId}
+                  onChangeText={setHotspotZoneId}
+                  placeholder="zone uuid"
+                  placeholderTextColor={colors.textDisabledDark}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Text style={styles.fieldLabel}>Tier</Text>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {HOTSPOT_TIER_OPTIONS.map((opt) => (
+                    <Pressable
+                      key={opt}
+                      style={[
+                        styles.hotspotTierChip,
+                        hotspotTier === opt && styles.hotspotTierChipActive,
+                      ]}
+                      onPress={() => setHotspotTier(opt)}
+                    >
+                      <View
+                        style={[
+                          styles.hotspotDot,
+                          { backgroundColor: HOTSPOT_TIER_DOT[HOTSPOT_TIER_TO_TAG[opt]] },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.hotspotTierChipText,
+                          hotspotTier === opt && styles.hotspotTierChipTextActive,
+                        ]}
+                      >
+                        {opt}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={styles.fieldLabel}>
+                  Validity (optional, ISO 8601)
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={hotspotValidFrom}
+                  onChangeText={setHotspotValidFrom}
+                  placeholder="valid_from e.g. 2026-09-06T00:00:00Z"
+                  placeholderTextColor={colors.textDisabledDark}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TextInput
+                  style={styles.input}
+                  value={hotspotValidTo}
+                  onChangeText={setHotspotValidTo}
+                  placeholder="valid_to e.g. 2026-09-07T00:00:00Z"
+                  placeholderTextColor={colors.textDisabledDark}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Pressable
+                  style={[
+                    styles.saveBtn,
+                    savingHotspot && styles.btnDisabled,
+                    { marginTop: 6 },
+                  ]}
+                  onPress={handleAddHotspot}
+                  disabled={savingHotspot}
+                >
+                  {savingHotspot ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>Assign Tier</Text>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+
+            <Text style={[styles.fieldLabel, { marginTop: 16 }]}>
+              Current Zone Heat Rows
+            </Text>
+            {hotspotsLoading ? (
+              <ActivityIndicator color={colors.adminAccent} style={{ marginTop: 12 }} />
+            ) : hotspotRows.length === 0 ? (
+              <Text style={styles.emptyText}>No zone_heat rows.</Text>
+            ) : (
+              <View style={{ gap: 8, marginTop: 8 }}>
+                {hotspotRows.map((h) => (
+                  <View key={h.zone_id} style={styles.hotspotRow}>
+                    <View
+                      style={[
+                        styles.hotspotDot,
+                        { backgroundColor: HOTSPOT_TIER_DOT[h.tag] },
+                      ]}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.hotspotRowTitle}>
+                        {h.zone_name}
+                        {!h.zone_is_active ? " (inactive)" : ""}
+                      </Text>
+                      <Text style={styles.hotspotRowSub}>
+                        tier {h.tag} · score {Number(h.score).toFixed(2)} · idle{" "}
+                        {h.idle_driver_count}
+                        {h.valid_from || h.valid_to
+                          ? ` · window ${h.valid_from ?? "…"} → ${h.valid_to ?? "…"}`
+                          : ""}
+                      </Text>
+                    </View>
+                    <Pressable
+                      style={styles.hotspotDeleteBtn}
+                      onPress={() => handleDeleteHotspot(h.zone_id)}
+                      disabled={savingHotspot}
+                    >
+                      <Text style={styles.hotspotDeleteText}>Remove</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
       )}
 
@@ -1108,6 +1443,64 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   btnDisabled: { opacity: 0.45 },
+  // --- Hotspot section ---
+  hotspotTierChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2A2D35",
+    backgroundColor: "#181A20",
+  },
+  hotspotTierChipActive: { borderColor: colors.adminAccent },
+  hotspotTierChipText: {
+    color: colors.textSecondaryDark,
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 12,
+  },
+  hotspotTierChipTextActive: { color: colors.textPrimaryDark },
+  hotspotDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  hotspotRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#181A20",
+    borderWidth: 1,
+    borderColor: "#2A2D35",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  hotspotRowTitle: {
+    color: colors.textPrimaryDark,
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 13,
+  },
+  hotspotRowSub: {
+    color: colors.textSecondaryDark,
+    fontFamily: "Jakarta-Regular",
+    fontSize: 11,
+    marginTop: 2,
+  },
+  hotspotDeleteBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
+  hotspotDeleteText: {
+    color: colors.danger,
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 11,
+  },
   // --- Modal ---
   modalBtn: {
     paddingHorizontal: 16,

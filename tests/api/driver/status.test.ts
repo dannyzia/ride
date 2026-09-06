@@ -7,6 +7,8 @@
 import { db } from "@/src/db";
 import { driverOnlineSessions } from "@/src/db/schema";
 
+import { POST } from "@/app/api/driver/status+api";
+
 jest.mock("@/src/db", () => ({
   db: {
     select: jest.fn(),
@@ -35,8 +37,6 @@ function createSelectChain(rows: any[]) {
   };
   return chain;
 }
-
-import { POST } from "@/app/api/driver/status+api";
 
 describe("driver/status M-4 driver_online_sessions", () => {
   beforeEach(() => {

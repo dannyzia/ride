@@ -114,7 +114,7 @@ export function requireShopMember(
 export interface FleetMarketplaceAuthResult {
   supabaseUser: User;
   dbUser: { id: string; role: string };
-  memberships: Array<{ fleet_id: string; role: string }>;
+  memberships: { fleet_id: string; role: string }[];
 }
 
 /**

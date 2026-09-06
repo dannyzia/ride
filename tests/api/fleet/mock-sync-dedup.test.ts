@@ -9,6 +9,8 @@
  * Mocks: DB layer only. Tests the actual adapter + base class logic.
  */
 
+import { MockRidePlatformAdapter } from "@/lib/integrations/mockRidePlatform";
+
 const mockMappingRows: Record<string, unknown>[] = [];
 
 function mockChainSelect() {
@@ -62,8 +64,6 @@ jest.mock("@/src/db", () => ({
 jest.mock("@/lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
 }));
-
-import { MockRidePlatformAdapter } from "@/lib/integrations/mockRidePlatform";
 
 const FLEET_ID = "test-fleet-11111111-1111-1111-1111-111111111111";
 

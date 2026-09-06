@@ -12,6 +12,11 @@
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
+import { validateWebhookSignature } from "@/lib/integrations/webhookHandler";
+import { AdapterError, type SyncResult, type AdapterCapabilities } from "@/lib/integrations/types";
+import { retryDelay, BaseFleetAdapter } from "@/lib/integrations/baseAdapter";
+import { getIntegrationsNeedingAttention } from "@/lib/integrations/syncEngine";
+
 const mockInsertResult = { id: "job-1" };
 
 function mockDbChainFn(resolveRows: unknown[] = []) {
@@ -53,11 +58,6 @@ jest.mock("@/src/db", () => ({
 jest.mock("@/lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
 }));
-
-import { validateWebhookSignature } from "@/lib/integrations/webhookHandler";
-import { AdapterError, type SyncResult, type AdapterCapabilities } from "@/lib/integrations/types";
-import { retryDelay, BaseFleetAdapter } from "@/lib/integrations/baseAdapter";
-import { getIntegrationsNeedingAttention } from "@/lib/integrations/syncEngine";
 
 // ── Concrete mock adapter for testing base class ──────────────────────────
 

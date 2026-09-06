@@ -8,6 +8,15 @@
  */
 import { jest } from '@jest/globals';
 
+import { db } from '@/src/db';
+import { logger } from '@/lib/logger';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { startScheduler, withJobBudget } from '@/utils-server/scheduler';
+import { activateRentalRequests, activateDeliveryRequests } from '@/utils-server/activationJobs';
+import { sweepExpiredEmergencies } from '@/utils-server/emergencyChain';
+import { activateEmergencyRequests } from '@/utils-server/emergencyActivation';
+
 let mockPendingConfigKeys: Set<string> = new Set();
 
 jest.mock('@/src/db', () => {
@@ -108,15 +117,6 @@ jest.mock('@/utils-server/index', () => ({
   sendToUser: jest.fn(),
 }));
 
-import { db } from '@/src/db';
-import { logger } from '@/lib/logger';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { startScheduler, withJobBudget } from '@/utils-server/scheduler';
-import { activateRentalRequests, activateDeliveryRequests } from '@/utils-server/activationJobs';
-import { sweepExpiredEmergencies } from '@/utils-server/emergencyChain';
-import { activateEmergencyRequests } from '@/utils-server/emergencyActivation';
-
 const mockLoggerInfo = logger.info as jest.Mock;
 
 let siSpy: jest.SpyInstance;
@@ -147,8 +147,9 @@ describe('A8 — honest job counter', () => {
     // The counter must equal the ACTUAL number of registered timers — never
     // a hardcoded string again.
     expect(logged).toBe(jest.getTimerCount());
-    // And the current registration count is 57 (R3.3 check-in reverted).
-    expect(logged).toBe(57);
+    // And the current registration count is 58 (57 + job 57 notification
+    // retention sweep).
+    expect(logged).toBe(58);
   });
 });
 

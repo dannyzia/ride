@@ -38,28 +38,28 @@ export default function RideHistoryDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true); setError("");
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) { setError(t('wallet.not_authenticated')); setLoading(false); return; }
-        const res = await fetch(`${API_URL}/api/ride/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (!res.ok) { setError(data.error || t('history_detail.failed_to_load')); return; }
-        if (!cancelled) setRide(data.ride);
-      } catch (err) {
-        if (!cancelled) setError((err instanceof Error ? err.message : String(err)) || t('wallet.network_error'));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [id]);
+useEffect(() => {
+     let cancelled = false;
+     (async () => {
+       try {
+         setLoading(true); setError("");
+         const { data: { session } } = await supabase.auth.getSession();
+         const token = session?.access_token;
+         if (!token) { setError(t('wallet.not_authenticated')); setLoading(false); return; }
+         const res = await fetch(`${API_URL}/api/ride/${id}`, {
+           headers: { Authorization: `Bearer ${token}` },
+         });
+         const data = await res.json();
+         if (!res.ok) { setError(data.error || t('history_detail.failed_to_load')); return; }
+         if (!cancelled) setRide(data.ride);
+       } catch (err) {
+         if (!cancelled) setError((err instanceof Error ? err.message : String(err)) || t('wallet.network_error'));
+       } finally {
+         if (!cancelled) setLoading(false);
+       }
+     })();
+     return () => { cancelled = true; };
+   }, [id, t]);
 
   const formatDate = (iso: string) => {
     try {

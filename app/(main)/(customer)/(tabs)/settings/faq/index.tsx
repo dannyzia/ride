@@ -86,18 +86,17 @@ export default function SettingsFAQ() {
   const textDisabled = isDark
     ? colors.textDisabledDark
     : colors.textDisabledLight;
-  const skeletonBlock = isDark ? colors.darkSecondary : colors.gray100;
+const skeletonBlock = isDark ? colors.darkSecondary : colors.gray100;
 
-  const toFaqItems = (fallbacks: typeof FAQ_FALLBACKS) =>
-    fallbacks.map((f) => ({
-      id: f.id,
-      question: t(f.questionKey),
-      answer: t(f.answerKey),
-    }));
-
-  const load = useCallback(async () => {
+   const load = useCallback(async () => {
     setLoading(true);
-    try {
+    const toFaqItems = (fallbacks: typeof FAQ_FALLBACKS) =>
+       fallbacks.map((f) => ({
+         id: f.id,
+         question: t(f.questionKey),
+         answer: t(f.answerKey),
+       }));
+     try {
       const res = await fetch(`${API_URL}/api/faqs?role=rider`);
       const data = (await res.json()) as FaqsResponse;
       const rows = Array.isArray(data.faqs) ? data.faqs : [];

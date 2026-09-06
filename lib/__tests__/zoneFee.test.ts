@@ -13,11 +13,11 @@
  */
 
 // Mock the DB module before any imports that transitively load it
-jest.mock('@/src/db', () => ({ db: {} }));
-
 import { shouldApplyZoneFee } from '../zoneRecovery';
 import { deriveZoneFee } from '../zoneFee';
 import { calculateV6Fare, type V6FareInput, type V6PricingRow } from '../fareCalc';
+
+jest.mock('@/src/db', () => ({ db: {} }));
 
 // ══════════════════════════════════════════════════════════════════════
 // T-A4: Zone-fee hysteresis

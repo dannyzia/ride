@@ -84,6 +84,9 @@ const ALLOWED_KEYS = new Set([
   'heat_tag_cold_pct',
   'heat_idle_threshold_minutes',
 
+  // Hotspot map — zone_heat freshness window (minutes)
+  'hotspot_freshness_minutes',
+
   // Fare framework — dawdle guard
   'dawdle_rolling_pickups',
   'dawdle_median_threshold',
@@ -342,6 +345,11 @@ function validateKeyValue(key: string, value: string): string | null {
   // Heat idle threshold minutes: positive
   if (key === 'heat_idle_threshold_minutes') {
     if (v <= 0) return `${key} must be > 0`;
+  }
+
+  // Hotspot freshness window minutes: positive integer
+  if (key === 'hotspot_freshness_minutes') {
+    if (!Number.isInteger(v) || v <= 0) return `${key} must be a positive integer`;
   }
 
   // Dawdle rolling pickups: positive integer

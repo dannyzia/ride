@@ -171,7 +171,7 @@ export default function OperationsHub() {
       active = false;
       abortRef.current?.abort();
     };
-  }, [tab, fleetId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tab, fleetId]);  
 
   // ── Pull to refresh ──────────────────────────────────────────────────
 

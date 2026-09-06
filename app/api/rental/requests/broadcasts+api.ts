@@ -91,11 +91,11 @@ export async function GET(request: Request) {
     // ── Step 4: Join caller's own bids ───────────────────────────────────
     const requestIds = eligibleRequests.map((r) => r.id);
 
-    let callerBids: Array<{
+    let callerBids: {
       request_id: string;
       status: string;
       quoted_price_bdt: number;
-    }> = [];
+    }[] = [];
     if (requestIds.length > 0) {
       callerBids = await db
         .select({

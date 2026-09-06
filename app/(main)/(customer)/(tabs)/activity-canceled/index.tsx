@@ -31,31 +31,31 @@ export default function ActivityCanceled() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true); setError("");
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) { setError(t('wallet.not_authenticated')); setLoading(false); return; }
-        const res = await fetch(`${API_URL}/api/ride/get-all`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (!res.ok) { setError(data.error || t('activity_canceled.failed_to_load')); return; }
-        if (!cancelled) {
-          const allRides = data.data || [];
-          setRides(allRides.filter((r: { status: string }) => r.status === "cancelled"));
-        }
-      } catch (err) {
-        if (!cancelled) setError((err instanceof Error ? err.message : String(err)) || t('wallet.network_error'));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+useEffect(() => {
+     let cancelled = false;
+     (async () => {
+       try {
+         setLoading(true); setError("");
+         const { data: { session } } = await supabase.auth.getSession();
+         const token = session?.access_token;
+         if (!token) { setError(t('wallet.not_authenticated')); setLoading(false); return; }
+         const res = await fetch(`${API_URL}/api/ride/get-all`, {
+           headers: { Authorization: `Bearer ${token}` },
+         });
+         const data = await res.json();
+         if (!res.ok) { setError(data.error || t('activity_canceled.failed_to_load')); return; }
+         if (!cancelled) {
+           const allRides = data.data || [];
+           setRides(allRides.filter((r: { status: string }) => r.status === "cancelled"));
+         }
+       } catch (err) {
+         if (!cancelled) setError((err instanceof Error ? err.message : String(err)) || t('wallet.network_error'));
+       } finally {
+         if (!cancelled) setLoading(false);
+       }
+     })();
+     return () => { cancelled = true; };
+   }, [t]);
 
   const formatDate = (iso: string) => {
     try {

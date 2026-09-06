@@ -163,7 +163,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               // should force-close and reopen.
               if (__DEV__) {
                 try {
-                  // eslint-disable-next-line @typescript-eslint/no-require-imports
+                   
                   const RNReload = require("react-native").DevSettings?.reload;
                   if (RNReload) RNReload();
                 } catch {

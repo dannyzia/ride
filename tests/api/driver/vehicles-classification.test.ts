@@ -9,6 +9,12 @@
 
 // ── Mock queue (prefixed "mock" → allowed in jest.mock factories) ──────────
 
+// ── Imports ──────────────────────────────────────────────────────────────────
+
+import { db } from '@/src/db';
+import { isPremiumAllowlisted } from '@/lib/premiumAllowlist';
+import { POST } from '@/app/api/driver/vehicles+api';
+
 const mockSelectQueue: (() => Record<string, jest.Mock>)[] = [];
 const mockInsertQueue: (() => Record<string, jest.Mock>)[] = [];
 
@@ -104,12 +110,6 @@ jest.mock('@/lib/fleetAssignment', () => ({
     code: string;
   },
 }));
-
-// ── Imports ──────────────────────────────────────────────────────────────────
-
-import { db } from '@/src/db';
-import { isPremiumAllowlisted } from '@/lib/premiumAllowlist';
-import { POST } from '@/app/api/driver/vehicles+api';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

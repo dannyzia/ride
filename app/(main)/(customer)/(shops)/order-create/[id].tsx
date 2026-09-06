@@ -31,15 +31,14 @@ export default function OrderCreateScreen() {
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
-  const {
-    cart,
-    cartFulfillment,
-    setCartFulfillment,
-    deliveryAddress,
-    setDeliveryAddress,
-    selectedShop,
-    clearCart,
-  } = useShopStore();
+const {
+  cart,
+  cartFulfillment,
+  setCartFulfillment,
+  deliveryAddress,
+  setDeliveryAddress,
+  clearCart,
+} = useShopStore();
 
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);

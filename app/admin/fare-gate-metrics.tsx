@@ -489,7 +489,7 @@ function DeviationDetailPanel({ detail }: { detail: DeviationDetail }) {
   ];
   const maxBucket = Math.max(...distValues, 1);
 
-  const buckets: Array<{ label: string; count: number; color: string }> = [
+  const buckets: { label: string; count: number; color: string }[] = [
     { label: "0–5%", count: detail.distribution["0-5%"], color: "#22c55e" },
     { label: "5–10%", count: detail.distribution["5-10%"], color: "#84cc16" },
     { label: "10–15%", count: detail.distribution["10-15%"], color: "#f59e0b" },

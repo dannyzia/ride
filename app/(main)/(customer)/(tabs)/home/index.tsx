@@ -22,9 +22,7 @@ import { fetchRouteGeometry } from "@/lib/routeGeometry";
 import { useCustomer } from "@/store";
 import {
   useRiderStore,
-  type BookingStep,
   type VehicleCategory,
-  type FareEstimate,
   getCachedEstimates,
   setCachedEstimates,
 } from "@/store/useRiderStore";
@@ -76,32 +74,31 @@ function getTypesForCategory(cat: VehicleCategory): VehicleTypeEnum[] {
 const SNAP_POINTS = ["50%", "70%"];
 
 export default function HomeScreen() {
-  const {
-    service,
-    rebook_origin,
-    rebook_dest,
-    rebook_origin_lat,
-    rebook_origin_lng,
-    rebook_dest_lat,
-    rebook_dest_lng,
-    vehicle_type: rebookVehicleType,
-  } = useLocalSearchParams<{
-    service?: string;
-    rebook_origin?: string;
-    rebook_dest?: string;
-    rebook_origin_lat?: string;
-    rebook_origin_lng?: string;
-    rebook_dest_lat?: string;
-    rebook_dest_lng?: string;
-    vehicle_type?: string;
-  }>();
+const {
+     service,
+     rebook_origin,
+     rebook_dest,
+     rebook_origin_lat,
+     rebook_origin_lng,
+     rebook_dest_lat,
+     rebook_dest_lng,
+   } = useLocalSearchParams<{
+     service?: string;
+     rebook_origin?: string;
+     rebook_dest?: string;
+     rebook_origin_lat?: string;
+     rebook_origin_lng?: string;
+     rebook_dest_lat?: string;
+     rebook_dest_lng?: string;
+     vehicle_type?: string;
+   }>();
 
   const { t } = useTranslation();
   const isDark = useIsDark();
   const { language, setTheme } = useAppearance();
 
   // ── Theme tokens ───────────────────────────────────────────────
-  const bg = isDark ? colors.bgDark : colors.bgLight;
+  
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
   const textPrimary = isDark
@@ -200,174 +197,174 @@ export default function HomeScreen() {
     : null;
 
   // ── Init: set pickup from GPS ──────────────────────────────────
-  useEffect(() => {
-    if (userLatitude && userLongitude && !pickup) {
-      setPickup({
-        id: "current",
-        label: "Current Location",
-        address: userAddress || t('rider_home.current_location'),
-        lat: userLatitude,
-        lng: userLongitude,
-      });
-      setPickupCoords({ lat: userLatitude, lng: userLongitude });
-    }
-  }, [userLatitude, userLongitude, userAddress, t]);
+useEffect(() => {
+     if (userLatitude && userLongitude && !pickup) {
+       setPickup({
+         id: "current",
+         label: "Current Location",
+         address: userAddress || t('rider_home.current_location'),
+         lat: userLatitude,
+         lng: userLongitude,
+       });
+       setPickupCoords({ lat: userLatitude, lng: userLongitude });
+     }
+   }, [userLatitude, userLongitude, userAddress, t, pickup, setPickup, setPickupCoords]);
 
   // ── Init: set category from service param ──────────────────────
-  useEffect(() => {
-    if (service) {
-      const cat = VEHICLE_CATEGORIES.find((c) => c.key === service);
-      if (cat) setSelectedCategory(cat.key as VehicleCategory);
-    }
-  }, [service]);
+useEffect(() => {
+     if (service) {
+       const cat = VEHICLE_CATEGORIES.find((c) => c.key === service);
+       if (cat) setSelectedCategory(cat.key as VehicleCategory);
+     }
+   }, [service, setSelectedCategory]);
 
   // ── Rebook prefill ─────────────────────────────────────────────
-  useEffect(() => {
-    if (!rebook_origin || !rebook_dest) return;
-    const parseCoord = (v?: string): number | null => {
-      const n = v ? parseFloat(v) : NaN;
-      return Number.isFinite(n) && n !== 0 ? n : null;
-    };
-    const oLat = parseCoord(rebook_origin_lat);
-    const oLng = parseCoord(rebook_origin_lng);
-    const dLat = parseCoord(rebook_dest_lat);
-    const dLng = parseCoord(rebook_dest_lng);
-    if (!oLat || !oLng || !dLat || !dLng) return;
+useEffect(() => {
+     if (!rebook_origin || !rebook_dest) return;
+     const parseCoord = (v?: string): number | null => {
+       const n = v ? parseFloat(v) : NaN;
+       return Number.isFinite(n) && n !== 0 ? n : null;
+     };
+     const oLat = parseCoord(rebook_origin_lat);
+     const oLng = parseCoord(rebook_origin_lng);
+     const dLat = parseCoord(rebook_dest_lat);
+     const dLng = parseCoord(rebook_dest_lng);
+     if (!oLat || !oLng || !dLat || !dLng) return;
 
-    setPickup({
-      id: "rebook-pickup",
-      label: "Pickup",
-      address: rebook_origin,
-      lat: oLat,
-      lng: oLng,
-    });
-    setPickupCoords({ lat: oLat, lng: oLng });
-    setDestination({
-      id: "rebook-dest",
-      label: "Destination",
-      address: rebook_dest,
-      lat: dLat,
-      lng: dLng,
-    });
-    setDropoffCoords({ lat: dLat, lng: dLng });
-    setBookingStep("FARES");
-    sheetRef.current?.snapToIndex(1);
-  }, [rebook_origin, rebook_dest]);
+     setPickup({
+       id: "rebook-pickup",
+       label: "Pickup",
+       address: rebook_origin,
+       lat: oLat,
+       lng: oLng,
+     });
+     setPickupCoords({ lat: oLat, lng: oLng });
+     setDestination({
+       id: "rebook-dest",
+       label: "Destination",
+       address: rebook_dest,
+       lat: dLat,
+       lng: dLng,
+     });
+     setDropoffCoords({ lat: dLat, lng: dLng });
+     setBookingStep("FARES");
+     sheetRef.current?.snapToIndex(1);
+   }, [rebook_origin, rebook_dest, rebook_origin_lat, rebook_origin_lng, rebook_dest_lat, rebook_dest_lng, setBookingStep, setDropoffCoords, setPickupCoords]);
 
   // ── Sync local pickup from rider store (autocomplete sets store directly) ──
-  useEffect(() => {
-    if (pickupCoords && pickupCoords.lat !== 0) {
-      const store = useRiderStore.getState();
-      if (store.pickupAddress && (!pickup || pickup.lat !== pickupCoords.lat || pickup.lng !== pickupCoords.lng)) {
-        setPickup({
-          id: "pickup",
-          label: "Pickup",
-          address: store.pickupAddress,
-          lat: pickupCoords.lat,
-          lng: pickupCoords.lng,
-        });
-      }
-    }
-  }, [pickupCoords?.lat, pickupCoords?.lng]);
+useEffect(() => {
+     if (pickupCoords && pickupCoords.lat !== 0) {
+       const store = useRiderStore.getState();
+       if (store.pickupAddress && (!pickup || pickup.lat !== pickupCoords.lat || pickup.lng !== pickupCoords.lng)) {
+         setPickup({
+           id: "pickup",
+           label: "Pickup",
+           address: store.pickupAddress,
+           lat: pickupCoords.lat,
+           lng: pickupCoords.lng,
+         });
+       }
+     }
+   }, [pickupCoords, pickup]);
 
   // ── Sync local destination from rider store (autocomplete sets store directly) ──
-  useEffect(() => {
-    if (dropoffCoords && dropoffCoords.lat !== 0) {
-      const store = useRiderStore.getState();
-      if (store.dropoffAddress && (!destination || destination.lat !== dropoffCoords.lat || destination.lng !== dropoffCoords.lng)) {
-        setDestination({
-          id: "dest",
-          label: "Destination",
-          address: store.dropoffAddress,
-          lat: dropoffCoords.lat,
-          lng: dropoffCoords.lng,
-        });
-      }
-    }
-  }, [dropoffCoords?.lat, dropoffCoords?.lng]);
+useEffect(() => {
+     if (dropoffCoords && dropoffCoords.lat !== 0) {
+       const store = useRiderStore.getState();
+       if (store.dropoffAddress && (!destination || destination.lat !== dropoffCoords.lat || destination.lng !== dropoffCoords.lng)) {
+         setDestination({
+           id: "dest",
+           label: "Destination",
+           address: store.dropoffAddress,
+           lat: dropoffCoords.lat,
+           lng: dropoffCoords.lng,
+         });
+       }
+     }
+   }, [dropoffCoords, destination]);
 
   // ── Fetch saved + recent places ────────────────────────────────
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) return;
-        const headers = { Authorization: `Bearer ${token}` };
+useEffect(() => {
+     let active = true;
+     (async () => {
+       try {
+         const {
+           data: { session },
+         } = await supabase.auth.getSession();
+         const token = session?.access_token;
+         if (!token) return;
+         const headers = { Authorization: `Bearer ${token}` };
 
-        const [addrRes, ridesRes] = await Promise.all([
-          fetch(`${API_URL}/api/rider/addresses`, { headers }),
-          fetch(`${API_URL}/api/ride/get-all`, { headers }),
-        ]);
-        if (!active) return;
+         const [addrRes, ridesRes] = await Promise.all([
+           fetch(`${API_URL}/api/rider/addresses`, { headers }),
+           fetch(`${API_URL}/api/ride/get-all`, { headers }),
+         ]);
+         if (!active) return;
 
-        if (addrRes.ok) {
-          const data: {
-            addresses?: {
-              id: string;
-              label: string;
-              address: string;
-              lat: string;
-              lng: string;
-            }[];
-          } = await addrRes.json();
-          const places: SavedPlace[] = (data.addresses ?? [])
-            .map((a) => ({
-              id: a.id,
-              label: a.label,
-              address: a.address,
-              lat: parseFloat(a.lat),
-              lng: parseFloat(a.lng),
-            }))
-            .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
-          if (active) setSavedPlaces(places);
-        }
+         if (addrRes.ok) {
+           const data: {
+             addresses?: {
+               id: string;
+               label: string;
+               address: string;
+               lat: string;
+               lng: string;
+             }[];
+           } = await addrRes.json();
+           const places: SavedPlace[] = (data.addresses ?? [])
+             .map((a) => ({
+               id: a.id,
+               label: a.label,
+               address: a.address,
+               lat: parseFloat(a.lat),
+               lng: parseFloat(a.lng),
+             }))
+             .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+           if (active) setSavedPlaces(places);
+         }
 
-        if (ridesRes.ok) {
-          const data: {
-            data?: {
-              ride_id: string;
-              destination_address: string | null;
-              destination_latitude: string | null;
-              destination_longitude: string | null;
-              status: string;
-            }[];
-          } = await ridesRes.json();
-          const seen = new Set<string>();
-          const places: SavedPlace[] = [];
-          for (const r of data.data ?? []) {
-            if (!r.destination_address || r.status !== "completed") continue;
-            if (seen.has(r.destination_address)) continue;
-            const lat = r.destination_latitude
-              ? parseFloat(r.destination_latitude)
-              : NaN;
-            const lng = r.destination_longitude
-              ? parseFloat(r.destination_longitude)
-              : NaN;
-            if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-            seen.add(r.destination_address);
-            places.push({
-              id: r.ride_id,
-              label: "Recent",
-              address: r.destination_address,
-              lat,
-              lng,
-            });
-            if (places.length >= 5) break;
-          }
-          if (active) setRecentPlaces(places);
-        }
-      } catch (e) {
-        logger.error("[home] saved/recent fetch failed", e);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+         if (ridesRes.ok) {
+           const data: {
+             data?: {
+               ride_id: string;
+               destination_address: string | null;
+               destination_latitude: string | null;
+               destination_longitude: string | null;
+               status: string;
+             }[];
+           } = await ridesRes.json();
+           const seen = new Set<string>();
+           const places: SavedPlace[] = [];
+           for (const r of data.data ?? []) {
+             if (!r.destination_address || r.status !== "completed") continue;
+             if (seen.has(r.destination_address)) continue;
+             const lat = r.destination_latitude
+               ? parseFloat(r.destination_latitude)
+               : NaN;
+             const lng = r.destination_longitude
+               ? parseFloat(r.destination_longitude)
+               : NaN;
+             if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+             seen.add(r.destination_address);
+             places.push({
+               id: r.ride_id,
+               label: "Recent",
+               address: r.destination_address,
+               lat,
+               lng,
+             });
+             if (places.length >= 5) break;
+           }
+           if (active) setRecentPlaces(places);
+         }
+       } catch (e) {
+         logger.error("[home] saved/recent fetch failed", e);
+       }
+     })();
+     return () => {
+       active = false;
+     };
+   }, [t]);
 
   // ── Fetch estimates when both coords valid ─────────────────────
   const fetchEstimates = useCallback(async () => {
@@ -424,7 +421,7 @@ export default function HomeScreen() {
     } finally {
       setEstimateLoading(false);
     }
-  }, [pickupCoords, dropoffCoords, stops, t]);
+  }, [pickupCoords, dropoffCoords, stops, t, setEstimateError, setEstimateLoading, setEstimates]);
 
   useEffect(() => {
     if (hasRoute) fetchEstimates();
@@ -499,7 +496,7 @@ export default function HomeScreen() {
     fetchNearby();
     const id = setInterval(fetchNearby, 30_000);
     return () => { active = false; clearInterval(id); };
-  }, [pickupCoords?.lat, pickupCoords?.lng, bookingStep, selectedCategory]);
+  }, [pickupCoords, bookingStep, selectedCategory]);
 
   // Clear markers when leaving FARES
   useEffect(() => {
@@ -523,7 +520,7 @@ export default function HomeScreen() {
       if (active) setRouteGeo(geo);
     })();
     return () => { active = false; };
-  }, [pickupCoords?.lat, pickupCoords?.lng, dropoffCoords?.lat, dropoffCoords?.lng, hasRoute]);
+  }, [pickupCoords, dropoffCoords, hasRoute]);
 
   // Clear route when leaving LOCATIONS
   useEffect(() => {
@@ -535,7 +532,7 @@ export default function HomeScreen() {
     if (bookingStep === "FARES" && categoryEstimates.length > 0 && !selectedVehicleType) {
       setSelectedVehicleType(categoryEstimates[0].vehicle_type as VehicleTypeEnum);
     }
-  }, [bookingStep, categoryEstimates, selectedVehicleType]);
+  }, [bookingStep, categoryEstimates, selectedVehicleType, setSelectedVehicleType]);
 
   // ── Map press handler (select on map) ────────────────────────
   const handleMapPress = useCallback(async (coords: { lat: number; lng: number }) => {
@@ -622,9 +619,9 @@ export default function HomeScreen() {
           address: location.address,
         });
       }
-    },
-    [],
-  );
+},
+     [setPickup, setPickupCoords, setUserLocation, setDestination, setDropoffCoords, setDestinationLocation],
+   );
 
   const handleMapPinConfirm = useCallback(
     (type: "from" | "to") => {
@@ -647,7 +644,7 @@ export default function HomeScreen() {
     setBookingStep("FARES");
     sheetRef.current?.snapToIndex(1);
     fetchEstimates();
-  }, [fetchEstimates]);
+  }, [fetchEstimates, setBookingStep]);
 
   const handleCallForRide = useCallback(async () => {
     if (!pickupCoords || !dropoffCoords || !selectedVehicleType) return;
@@ -711,16 +708,21 @@ export default function HomeScreen() {
     } finally {
       setRequesting(false);
     }
-  }, [
-    pickupCoords,
-    dropoffCoords,
-    selectedVehicleType,
-    pickup,
-    destination,
-    stops,
-    selectedPromo,
-    t,
-  ]);
+}, [
+     pickupCoords,
+     dropoffCoords,
+     selectedVehicleType,
+     pickup,
+     destination,
+     stops,
+     selectedPromo,
+     t,
+     setRideStatus,
+     setRiderDropoff,
+     setRiderPickup,
+     setRiderVehicleType,
+     setSearchingRideId,
+   ]);
 
   // ── Backdrop ───────────────────────────────────────────────────
   const renderBackdrop = useCallback(

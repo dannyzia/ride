@@ -1666,6 +1666,11 @@ export const notifications = pgTable(
     data: jsonb("data"),
     sent_at: timestamptz("sent_at").notNull().defaultNow(),
     delivered_at: timestamptz("delivered_at"),
+    // Inbox read tracking — set when the user views/taps the notification.
+    read_at: timestamptz("read_at"),
+    // Soft delete — 30-day retention sweep (scheduler job 57) and user
+    // swipe-delete never hard-remove rows.
+    deleted_at: timestamptz("deleted_at"),
     failed_reason: varchar("failed_reason", { length: 255 }),
     idempotency_key: varchar("idempotency_key", { length: 128 }),
     created_at: timestamptz("created_at").notNull().defaultNow(),
@@ -1674,6 +1679,12 @@ export const notifications = pgTable(
     index("notifications_user_idx").on(t.user_id),
     index("notifications_sent_idx").on(t.sent_at),
     uniqueIndex("notifications_idempotency_idx").on(t.idempotency_key),
+    index("notifications_user_unread_idx")
+      .on(t.user_id, t.read_at)
+      .where(sql`deleted_at IS NULL`),
+    index("notifications_user_created_idx")
+      .on(t.user_id, t.created_at)
+      .where(sql`deleted_at IS NULL`),
   ],
 );
 
@@ -2238,6 +2249,11 @@ export const zoneHeat = pgTable("zone_heat", {
   // v6: median driver recovery time (dropoff → next accepted dispatch), minutes
   recovery_time_min: numeric("recovery_time_min", { precision: 7, scale: 2 }),
   recovery_sample_count: integer("recovery_sample_count").notNull().default(0),
+  // Hotspot admin tier-assignment validity window (nullable). NULL = the
+  // heat engine owns the tag; non-null = admin-pinned tier active in
+  // [valid_from, valid_to]. Advisory only — never read by dispatch.
+  valid_from: timestamptz("valid_from"),
+  valid_to: timestamptz("valid_to"),
   computed_at: timestamptz("computed_at").notNull().defaultNow(),
   updated_at: timestamptz("updated_at").notNull().defaultNow(),
 }, (t) => [

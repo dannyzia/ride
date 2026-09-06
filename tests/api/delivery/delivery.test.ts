@@ -1,9 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 // @ts-nocheck — Jest mock factories produce untyped chains; runtime tests verify correctness.
 // Mock ambulanceCerts to prevent h3-js TextDecoder issue in Jest
-jest.mock("@/lib/ambulanceCerts", () => ({
-  serviceLevelSatisfies: jest.fn(() => true),
-}));
 /**
  * Phase 3 Marketplace — Delivery tests.
  * Covers §H.3: requireCourier guards, schema validation, admin RBAC, handler basics,
@@ -14,6 +11,9 @@ import { requireCourier } from '@/lib/marketplaceRbac';
 import { isVerticalEnabled } from '@/lib/platformConfig';
 import { roleHasPermission } from '@/lib/adminRbac';
 import { sweepStaleCouriers, getConnectedCourierCount, handleHeartbeat, registerCourier, unregisterCourier } from '@/utils-server/deliveryHandler';
+jest.mock("@/lib/ambulanceCerts", () => ({
+  serviceLevelSatisfies: jest.fn(() => true),
+}));
 
 // Schema imports via requireActual to bypass mock-type mismatches
 const schemaModule = jest.requireActual('@/src/db/schema') as Record<string, any>;

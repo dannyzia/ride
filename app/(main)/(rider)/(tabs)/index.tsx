@@ -129,7 +129,7 @@ export default function DriverHome() {
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
   // §F.0(b) — fleet marketplace bidder entry card
-  const [marketplaceAccess, setMarketplaceAccess] = useState<Array<{ fleet_id: string; fleet_name: string; role: string }> | null>(null);
+  const [marketplaceAccess, setMarketplaceAccess] = useState<{ fleet_id: string; fleet_name: string; role: string }[] | null>(null);
 
   const markerPulseAnim = useRef(new Animated.Value(1)).current;
   const goOnlinePulse = useRef(new Animated.Value(0)).current;
@@ -218,7 +218,7 @@ export default function DriverHome() {
     );
     loops.forEach((l) => l.start());
     return () => loops.forEach((l) => l.stop());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [isOnline, reduceMotion]);
 
   // ── Session recovery on mount + foreground ──────────────────────

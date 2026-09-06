@@ -147,7 +147,7 @@ export async function POST(request: Request, { id }: { id: string }) {
         .from(awardedBidAssignments)
         .where(and(eq(awardedBidAssignments.request_id, id), isNull(awardedBidAssignments.released_at)))
         .limit(1);
-      const to: Array<{ kind: "user"; user_id: string } | { kind: "fleet"; fleet_id: string }> = [];
+      const to: ({ kind: "user"; user_id: string } | { kind: "fleet"; fleet_id: string })[] = [];
       if (reqRow) to.push({ kind: "user", user_id: reqRow.rider_user_id });
       if (fleetRow) to.push({ kind: "fleet", fleet_id: fleetRow.fleet_id });
       notifyWs([

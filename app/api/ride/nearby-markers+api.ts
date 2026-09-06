@@ -6,6 +6,7 @@ import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
 import { getH3Ring } from "@/lib/h3";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
+import { getHotspotZone } from "@/lib/hotspot";
 import { logger } from "@/lib/logger";
 
 const MARKER_RING_K = 30;
@@ -54,14 +55,27 @@ export async function POST(request: Request) {
       .where(and(...whereConditions))
       .limit(50);
 
-    const markers = rows
-      .filter((r) => r.lat != null && r.lng != null)
-      .map((r) => ({
+    const markers = [];
+    for (const r of rows) {
+      if (r.lat == null || r.lng == null) continue;
+      // Advisory demand tier at the marker's zone (zone_heat tag). Strict
+      // mode — no any-zone fallback, so markers outside every zone stay
+      // null. Response shape is unchanged; zone_tier is additive.
+      let zone_tier: "low" | "medium" | "high" | null = null;
+      try {
+        const hz = await getHotspotZone(Number(r.lat), Number(r.lng), { strict: true });
+        zone_tier = hz?.tier ?? null;
+      } catch {
+        zone_tier = null;
+      }
+      markers.push({
         id: r.id,
         lat: Number(r.lat),
         lng: Number(r.lng),
         vehicle_type: r.vehicle_type,
-      }));
+        zone_tier,
+      });
+    }
 
     return Response.json({ markers });
   } catch (err: unknown) {

@@ -8,6 +8,13 @@
 
 // ── Mocks (hoisted before imports by babel-jest) ──────────────────────────────
 
+// ── Imports (resolved after mocks) ────────────────────────────────────────────
+
+import { db } from '../../src/db';
+import { getAvailableDiscounts, applySelectedDiscount } from '../discountEngine';
+import { getStagedPromo } from '@/lib/promoCache';
+import { getIntroDiscount } from '@/lib/introIncentive';
+
 jest.mock('../../src/db/schema', () => ({
   users: { rider_wallet_balance_bdt: 'wallet_col', id: 'id_col' },
   riderSubscriptions: {
@@ -57,13 +64,6 @@ jest.mock('@/lib/promoCache', () => ({
 jest.mock('@/lib/introIncentive', () => ({
   getIntroDiscount: jest.fn(),
 }));
-
-// ── Imports (resolved after mocks) ────────────────────────────────────────────
-
-import { db } from '../../src/db';
-import { getAvailableDiscounts, applySelectedDiscount } from '../discountEngine';
-import { getStagedPromo } from '@/lib/promoCache';
-import { getIntroDiscount } from '@/lib/introIncentive';
 
 const mockDbSelect = db.select as jest.Mock;
 const mockGetStagedPromo = getStagedPromo as jest.Mock;

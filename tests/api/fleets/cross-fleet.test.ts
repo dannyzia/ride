@@ -18,6 +18,11 @@
 // - mockSelectQueue / mockUpdateQueue: Drizzle `db` used by the routes
 //   themselves (fleets SELECT on GET, fleets UPDATE on PATCH).
 
+// ── Imports ──────────────────────────────────────────────────────────────
+
+import { GET, PATCH } from '@/app/api/fleets/[id]+api';
+import { supabaseAdmin } from '@/lib/supabaseServer';
+
 const mockQueryQueue: (() => Record<string, jest.Mock>)[] = [];
 const mockSelectQueue: (() => Record<string, jest.Mock>)[] = [];
 const mockUpdateQueue: (() => Record<string, jest.Mock>)[] = [];
@@ -90,11 +95,6 @@ jest.mock('@/lib/supabaseServer', () => ({
 jest.mock('@/lib/logger', () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
 }));
-
-// ── Imports ──────────────────────────────────────────────────────────────
-
-import { GET, PATCH } from '@/app/api/fleets/[id]+api';
-import { supabaseAdmin } from '@/lib/supabaseServer';
 
 const FLEET_A = '11111111-1111-1111-1111-111111111111';
 const FLEET_B = '22222222-2222-2222-2222-222222222222';

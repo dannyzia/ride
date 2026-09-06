@@ -85,7 +85,7 @@ describe("GET /api/driver/performance", () => {
     expect(body.cancellation_rate).toBe(8); // 4/50
     expect(body.acceptance_rate).toBe(92.5);
 
-    const earnings = body.earnings_series as Array<{ label: string; value_bdt: number }>;
+    const earnings = body.earnings_series as { label: string; value_bdt: number }[];
     expect(earnings).toHaveLength(7); // rolling week, empty days included
     const friday = earnings.find((e) => e.label === "Fri")!;
     expect(friday.value_bdt).toBe(20_000);
@@ -108,7 +108,7 @@ describe("GET /api/driver/performance", () => {
 
     const res = await GET(request("month"));
     const body = await getJson(res);
-    const earnings = body.earnings_series as Array<{ label: string; value_bdt: number }>;
+    const earnings = body.earnings_series as { label: string; value_bdt: number }[];
     expect(earnings.map((e) => e.label)).toEqual(["W1", "W2", "W3", "W4", "W5"]);
     expect(earnings[0].value_bdt).toBe(5_000);
     expect(earnings[2].value_bdt).toBe(7_000);

@@ -9,7 +9,7 @@ import * as Notifications from "expo-notifications";
 import * as Application from "expo-application";
 import SplashAnimation from "@/components/SplashAnimation";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { ToastHost } from "@/components/Toast";
+import { ToastHost, showToast } from "@/components/Toast";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useAppearance } from "@/lib/useAppearance";
@@ -21,6 +21,7 @@ import NetInfo from "@react-native-community/netinfo";
 import * as Linking from "expo-linking";
 import { routeNotification, routeDeepLink } from "@/lib/notificationRouter";
 import { useOtaBackgroundPolling } from "@/lib/otaBackgroundUpdate";
+import { useInboxStore, type InboxEndpointBase } from "@/lib/notifications/inbox";
 
 const isWeb = Platform.OS === "web";
 
@@ -47,6 +48,34 @@ async function registerPushForUser(token: string) {
 // Only prevent auto-hide on native — on web the splash is handled differently.
 if (!isWeb) {
   SplashScreen.preventAutoHideAsync().catch(() => {});
+}
+
+/** Resolve the caller's app role via verify-token (rider | driver). */
+async function deriveSessionRole(): Promise<"rider" | "driver"> {
+  let role: "rider" | "driver" = "driver";
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (token) {
+      const res = await fetch(`${API_URL}/api/auth/verify-token`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const authData = await res.json();
+        if (authData.role === "rider" || authData.role === "driver") role = authData.role;
+      }
+    }
+  } catch {
+    // Default to driver if role derivation fails
+  }
+  return role;
+}
+
+function inboxBaseFor(role: "rider" | "driver"): InboxEndpointBase {
+  return role === "rider"
+    ? "/api/rider/notifications"
+    : "/api/driver/notifications";
 }
 
 export default function RootLayout() {
@@ -229,6 +258,25 @@ export default function RootLayout() {
       }),
     });
 
+    // ── Foreground receipt handler ─────────────────────────────────
+    // In-app toast + refresh the inbox mirror so unread counts stay true
+    // even when the inbox screen is not mounted. The OS banner itself is
+    // handled by setNotificationHandler above.
+    const receivedSub = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        const content = notification.request.content;
+        showToast(content.title ?? "Notification", "info");
+        deriveSessionRole()
+          .then((role) => {
+            useInboxStore
+              .getState()
+              .fetch(inboxBaseFor(role), { reset: true })
+              .catch(() => {});
+          })
+          .catch(() => {});
+      },
+    );
+
     // ── Background / cold-start tap handler ───────────────────────
     // This fires when the user taps a notification that opened the app.
     // Expo Router's initial URL is already handled by the linking config
@@ -240,23 +288,7 @@ export default function RootLayout() {
       if (!data) return;
 
       // H1: Derive role from session instead of hardcoding "driver"
-      let role: "rider" | "driver" = "driver";
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (token) {
-          const res = await fetch(`${API_URL}/api/auth/verify-token`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const authData = await res.json();
-            if (authData.role === "rider" || authData.role === "driver") role = authData.role;
-          }
-        }
-      } catch {
-        // Default to driver if role derivation fails
-      }
+      const role = await deriveSessionRole();
 
       // Route via the centralized router (handles all notification types)
       const routed = routeNotification(data, role);
@@ -273,7 +305,10 @@ export default function RootLayout() {
       }
     });
 
-    return () => sub.remove();
+    return () => {
+      receivedSub.remove();
+      sub.remove();
+    };
   }, [router]);
 
   // ── Deep-link handling (R5a) ───────────────────────────────────

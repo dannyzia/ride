@@ -8,6 +8,8 @@
  * DB (maps_provider toggle) and fetch are mocked.
  */
 
+import type * as BarikoiModule from '../barikoi';
+
 const mockState = {
   systemConfigRows: [] as { value: string }[],
 };
@@ -32,8 +34,6 @@ jest.mock('@/lib/logger', () => ({
     debug: jest.fn(),
   },
 }));
-
-import type * as BarikoiModule from '../barikoi';
 
 const BARIKOI_POLYLINE = '_p~iF~ps|U_ulLnnqC_mf`~_ceh~u@';
 const GOOGLE_POLYLINE = 'gptsE~qvyU_eq@sjlb@';

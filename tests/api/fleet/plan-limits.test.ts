@@ -11,6 +11,8 @@
  * Only the DB layer is mocked. The checkLimit function is the SUT.
  */
 
+import { checkVehicleLimit, checkDriverLimit } from "@/lib/fleetLimits";
+
 const mockSelectQueue: (() => unknown[])[] = [];
 
 function mockSelectChain(rows: unknown[]) {
@@ -58,8 +60,6 @@ jest.mock("@/src/db", () => ({
 jest.mock("@/lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
 }));
-
-import { checkVehicleLimit, checkDriverLimit } from "@/lib/fleetLimits";
 
 const FLEET_ID = "11111111-1111-1111-1111-111111111111";
 const PLAN_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";

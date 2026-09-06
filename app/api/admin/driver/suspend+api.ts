@@ -4,6 +4,7 @@ import { db } from '@/src/db';
 import { drivers } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAdminPermission } from '@/lib/adminRbac';
+import { notifyAccountStatus } from '@/lib/notify';
 import { logger } from '@/lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
@@ -35,6 +36,10 @@ export async function POST(request: Request) {
       reason,
       adminId: admin.id,
     });
+
+    // Plan §B13 broadcast matrix — account_status push to the driver
+    // (fire-and-forget; never fails the admin action).
+    notifyAccountStatus(driver.user_id, true, reason);
 
     return Response.json({ driver_id, status: 'suspended' });
   } catch (err: unknown) {

@@ -39,7 +39,7 @@ export default function CustomerChatRoute() {
         setCtx(await res.json());
       })
       .catch(() => setError(t('wallet.network_error')));
-  }, [rideId]);
+  }, [rideId, t]);
 
   if (error) {
     return (

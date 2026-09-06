@@ -18,7 +18,7 @@ import { router } from "expo-router";
 import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { useShopStore } from "@/store/useShopStore";
-import { supabase } from "@/lib/supabase";
+
 import { logger } from "@/lib/logger";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
@@ -41,7 +41,7 @@ export default function ShopListScreen() {
     async (page: number, searchQuery?: string) => {
       setShopsLoading(true);
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        
         const params = new URLSearchParams({ page: String(page), limit: "20" });
         if (searchQuery) params.set("search", searchQuery);
         const res = await fetch(`${SERVER_URL}/api/shop/list?${params}`);
@@ -59,12 +59,12 @@ export default function ShopListScreen() {
         setShopsLoading(false);
       }
     },
-    [shops],
+    [shops, setShops, setShopsLoading],
   );
 
-  useEffect(() => {
-    fetchShops(1, search);
-  }, []);
+useEffect(() => {
+     fetchShops(1, search);
+   }, [fetchShops, search]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

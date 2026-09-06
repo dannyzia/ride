@@ -156,3 +156,23 @@ export function notifyRideCompleted(riderId: string, _driverId: string): void {
 export function notifyDriverArrived(riderId: string): void {
   sendNotification(riderId, 'driver:arrived', 'Driver Arrived', 'Your driver has arrived at the pickup location.').catch(() => {});
 }
+
+/**
+ * Admin status change (suspend/activate) → driver push. Type strings match
+ * lib/notificationRouter's DRIVER_NOTIFICATION_ROUTES so the tap deep-links.
+ */
+export function notifyAccountStatus(
+  driverUserId: string,
+  suspended: boolean,
+  reason?: string,
+): void {
+  sendNotification(
+    driverUserId,
+    suspended ? 'account:suspended' : 'account:approved',
+    suspended ? 'Account suspended' : 'Account activated',
+    suspended
+      ? `Your account has been suspended.${reason ? ` Reason: ${reason}` : ' Tap for details.'}`
+      : 'Your account is active again. Welcome back!',
+    { suspended: String(suspended) },
+  ).catch(() => {});
+}

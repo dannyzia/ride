@@ -38,7 +38,7 @@ import { parseJsonBody } from '@/lib/parseBody';
 let auditInsertValues: Record<string, unknown> | null = null;
 let auditInsertCalled = false;
 
-function mockSelect(existingRows: Array<{ key: string; value: string | null }> = []) {
+function mockSelect(existingRows: { key: string; value: string | null }[] = []) {
   (db.select as jest.Mock).mockImplementation(() => {
     const promise = Promise.resolve(existingRows);
     return {
@@ -180,7 +180,7 @@ describe('T-A9 — config audit log on PATCH', () => {
       };
     });
 
-    const insertCalls: Array<{ config_key: string; old_value: string | null; new_value: string | null }> = [];
+    const insertCalls: { config_key: string; old_value: string | null; new_value: string | null }[] = [];
     (db.insert as jest.Mock).mockImplementation((table: unknown) => ({
       values: jest.fn(async (v: Record<string, unknown>) => {
         if (table === configAuditLog) {

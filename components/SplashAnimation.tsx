@@ -61,7 +61,7 @@ export default function SplashAnimation({ loadComplete, onHidden }: SplashAnimat
     tryHide();
   }, [loadComplete, tryHide]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => {
     opacity.value = withSequence(
       withTiming(1, { duration: 600, easing: Easing.out(Easing.ease) }),
