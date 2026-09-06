@@ -78,17 +78,28 @@ export function isQueryCanceled(e: unknown): boolean {
   );
 }
 
-// PROVISIONAL budget derivation (recorded for the Phase 2 gate):
+// PROVISIONAL budget derivation (Phase 0 record):
 // - Formula per execution order: budget = max(2000, 10 × observed median),
 //   capped at 30000.
-// - Local idle-tick measurement was NOT possible in this environment (no live
+// - Local idle-tick measurement was NOT possible at Phase 0 (no live
 //   DB/pooler), so no median was observed. The only measured data available:
 //   healthy remote round-trips ~1.5s, cold connects ~5.8s, and the global
 //   per-connection statement_timeout of 30s (all in src/db/index.ts).
 // - 10_000 = 10 × a 1_000ms PROVISIONAL median estimate for a LIMIT-bounded
 //   watermark scan — 3.3× headroom below the 30s global ceiling so a wedged
 //   tick cannot hold a pooler slot for the full global budget.
-// Unmeasured — flagged; re-derive from live tick telemetry at the Phase 2 gate.
+//
+// Zia ruling required: BUDGET OVERFLOW (A8 local rig, measured 2026-09-06 —
+// script: scripts/load-gen-marketplace.ts, report:
+// .kilo/plans/2026-09-06-a8-local-rig-report.md). Observed p99 with a
+// 200-request synthetic seed: job 54 = 229,634ms, job 46 = 282,905ms — both
+// far above the 9.5s overflow threshold (iterations 2-5 idle at ~280ms).
+// Root cause: per-row SEQUENTIAL round-trips to the remote DB (RTT
+// amplification over ~1000 queries per tick), not query cost. Do NOT simply
+// raise this budget — a larger budget lets the slow tick hold pooler slots
+// longer. Zia decides: batch/set-based scan queries, a budget raise, or
+// accept per-tick overruns until the hosted load test. Budget unchanged at
+// 10_000ms pending that ruling; re-derive at the Phase 2 gate.
 const MARKETPLACE_TICK_BUDGET_MS = 10_000;
 
 // Pool occupancy (spec part 3): node-postgres Pool exposes totalCount/
@@ -2643,6 +2654,24 @@ export function startScheduler(): void {
       emergencyActivationRunning = false;
     }
   }, 2_000); // 2s — TTL is 120s
+
+  // Job 57 — Notification 30-day soft delete (every 1h). Read notifications
+  // older than the retention window get deleted_at stamped; unread rows are
+  // never swept. Predicate lives in lib/notifications/server.ts
+  // (sweepExpiredNotifications) so tests and the sweep share one source.
+  let notificationSweepRunning = false;
+  registerJob(async () => {
+    if (notificationSweepRunning) return;
+    notificationSweepRunning = true;
+    try {
+      const { sweepExpiredNotifications } = await import('../lib/notifications/server');
+      await sweepExpiredNotifications(new Date());
+    } catch (e) {
+      logger.error('[scheduler] job 57 notification cleanup error', e);
+    } finally {
+      notificationSweepRunning = false;
+    }
+  }, 3_600_000); // 1 hour
 
   logger.info(`[scheduler] started (${registeredJobs} jobs)`);
 }
