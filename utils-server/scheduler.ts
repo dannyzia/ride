@@ -88,18 +88,17 @@ export function isQueryCanceled(e: unknown): boolean {
 // - 10_000 = 10 × a 1_000ms PROVISIONAL median estimate for a LIMIT-bounded
 //   watermark scan — 3.3× headroom below the 30s global ceiling so a wedged
 //   tick cannot hold a pooler slot for the full global budget.
-//
-// Zia ruling required: BUDGET OVERFLOW (A8 local rig, measured 2026-09-06 —
-// script: scripts/load-gen-marketplace.ts, report:
-// .kilo/plans/2026-09-06-a8-local-rig-report.md). Observed p99 with a
-// 200-request synthetic seed: job 54 = 229,634ms, job 46 = 282,905ms — both
-// far above the 9.5s overflow threshold (iterations 2-5 idle at ~280ms).
-// Root cause: per-row SEQUENTIAL round-trips to the remote DB (RTT
-// amplification over ~1000 queries per tick), not query cost. Do NOT simply
-// raise this budget — a larger budget lets the slow tick hold pooler slots
-// longer. Zia decides: batch/set-based scan queries, a budget raise, or
-// accept per-tick overruns until the hosted load test. Budget unchanged at
-// 10_000ms pending that ruling; re-derive at the Phase 2 gate.
+// Budget derived from the A8 local rig POST-BATCHING (2026-09-06, commit
+// measured on the ac046b1 lineage; script: scripts/load-gen-marketplace.ts,
+// report: .kilo/plans/2026-09-06-a8-local-rig-report.md + v2 section).
+// Scan SQL p99 after batching: job 46 = 1.9s, job 54 SQL = sub-second (4
+// statements), jobs 55/56/47/48 = 0.3-0.9s. 10_000ms keeps ≥5x headroom over
+// the worst scan (job 46) under the 30s global ceiling.
+// KNOWN RESIDUAL (not budget-governed): job 54 wall-clock p99 = 14.2s from
+// per-push expo HTTP + serialized sendNotification dedup queries inside
+// lib/notify (single postgres-js connection) — a lib/notify concern, flagged
+// for a follow-up round; statement_timeout cannot bound external HTTP.
+// Re-derive on the hosted load test.
 const MARKETPLACE_TICK_BUDGET_MS = 10_000;
 
 // Pool occupancy (spec part 3): node-postgres Pool exposes totalCount/
