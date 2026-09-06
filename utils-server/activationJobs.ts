@@ -16,13 +16,13 @@ import {
   rentalRequests,
   deliveryRequests,
   fleetMembers,
+  fleetServiceZones,
   shopOrders,
   fleets,
 } from '../src/db/schema';
 import { eq, and, gt, sql, inArray } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { getConnectedBidderIds, sendToBidder } from './rentalHandler';
-import { getEligibleFleets } from './rentalDispatchChain';
 import { broadcastToCouriers, sendToCourier } from './deliveryHandler';
 import { sendNotification } from '../lib/notify';
 import { sendToUser } from './index';
@@ -50,26 +50,38 @@ export async function activateRentalRequests(tx: DbClient = db): Promise<number>
 
   if (broadcasting.length === 0) return 0;
 
-  const connectedBidders = new Set(getConnectedBidderIds());
-  let broadcastCount = 0;
+  // A8 batch: eligibility is request-INDEPENDENT (F11 has no geo filter yet —
+  // the Phase 2+ H3 follow-up), so the zoned + global fleet sets are computed
+  // once for the whole batch instead of once per request (the first rig run
+  // measured 229s p99 from that per-request loop).
+  const zoned = await tx
+    .select({ fleet_id: fleetServiceZones.fleet_id })
+    .from(fleetServiceZones)
+    .where(eq(fleetServiceZones.is_active, true))
+    .groupBy(fleetServiceZones.fleet_id);
 
-  for (const req of broadcasting) {
-    // Get eligible fleets for this request's pickup location
-    const eligibleFleetIds = await getEligibleFleets(
-      Number(req.pickup_lat),
-      Number(req.pickup_lng),
+  const globalFleets = await tx
+    .select({ id: fleets.id })
+    .from(fleets)
+    .where(
+      and(
+        eq(fleets.status, 'ACTIVE'),
+        sql`NOT EXISTS (
+          SELECT 1 FROM ${fleetServiceZones}
+          WHERE ${fleetServiceZones.fleet_id} = ${fleets.id}
+          AND ${fleetServiceZones.is_active} = true
+        )`,
+      ),
     );
 
-    if (eligibleFleetIds.length === 0) continue;
+  const eligibleFleetIds = [
+    ...new Set([...zoned.map((z) => z.fleet_id), ...globalFleets.map((f) => f.id)]),
+  ];
 
-    // Get all active fleet members for eligible fleets
-    // (getEligibleFleets above stays on the global db — rentalDispatchChain is
-    // another lane's file this round; documented Phase-1 gap.)
+  let memberUserIds: string[] = [];
+  if (eligibleFleetIds.length > 0) {
     const members = await tx
-      .select({
-        user_id: fleetMembers.user_id,
-        fleet_id: fleetMembers.fleet_id,
-      })
+      .select({ user_id: fleetMembers.user_id })
       .from(fleetMembers)
       .where(
         and(
@@ -77,8 +89,20 @@ export async function activateRentalRequests(tx: DbClient = db): Promise<number>
           eq(fleetMembers.status, 'active'),
         ),
       );
+    memberUserIds = members.map((m) => m.user_id);
+  }
 
-    // Send to connected bidders who are members of eligible fleets
+  const connectedBidders = new Set(getConnectedBidderIds());
+  let broadcastCount = 0;
+  const pushTuples: Array<{
+    userId: string;
+    urgency: string;
+    category: string;
+    pickupAddress: string;
+    requestId: string;
+  }> = [];
+
+  for (const req of broadcasting) {
     const broadcastPayload = {
       request_id: req.id,
       category: req.category,
@@ -96,32 +120,46 @@ export async function activateRentalRequests(tx: DbClient = db): Promise<number>
       duration_hours: req.duration_hours,           // Ruling 14: rental duration
     };
 
-    for (const member of members) {
-      if (connectedBidders.has(member.user_id)) {
-        sendToBidder(member.user_id, 'rental:bid_request', broadcastPayload);
+    // WS: in-memory registry send — no DB round-trip
+    for (const userId of memberUserIds) {
+      if (connectedBidders.has(userId)) {
+        sendToBidder(userId, 'rental:bid_request', broadcastPayload);
         broadcastCount++;
       }
     }
 
-    // Push notification via lib/notify (alarm channel when urgency='alarm').
-    // N11: deterministic idempotency key — job 54's watermark re-broadcasts on
-    // restart (TD-15 recovery); without the key every restart re-pushes the
-    // same activation to every member.
-    try {
-      const memberUserIds = members.map((m) => m.user_id);
-      for (const userId of memberUserIds) {
-        await sendNotification(
-          userId,
-          req.urgency === 'alarm' ? 'alarm' : 'default',
-          req.urgency === 'alarm' ? '🚨 Urgent Rental Request' : 'New Rental Request',
-          `${req.category} — ${req.pickup_address}`,
-          { request_id: req.id, type: 'rental_bid_request' },
-          { idempotencyKey: `rental_activation:${req.id}:${userId}` },
-        );
-      }
-    } catch (err) {
-      logger.warn('[activation] rental push notification failed', { request_id: req.id, err });
+    // Push tuples collected here, fired in parallel after the loop (A8: the
+    // sequential awaited pushes per member were the dominant job-54 cost).
+    // N11: deterministic idempotency key — restart re-broadcasts must not
+    // re-push the same activation to every member.
+    for (const userId of memberUserIds) {
+      pushTuples.push({
+        userId,
+        urgency: req.urgency,
+        category: req.category,
+        pickupAddress: req.pickup_address,
+        requestId: req.id,
+      });
     }
+  }
+
+  if (pushTuples.length > 0) {
+    await Promise.all(
+      pushTuples.map(async (p) => {
+        try {
+          await sendNotification(
+            p.userId,
+            p.urgency === 'alarm' ? 'alarm' : 'default',
+            p.urgency === 'alarm' ? '🚨 Urgent Rental Request' : 'New Rental Request',
+            `${p.category} — ${p.pickupAddress}`,
+            { request_id: p.requestId, type: 'rental_bid_request' },
+            { idempotencyKey: `rental_activation:${p.requestId}:${p.userId}` },
+          );
+        } catch (err) {
+          logger.warn('[activation] rental push notification failed', { request_id: p.requestId, err });
+        }
+      }),
+    );
   }
 
   // Advance watermark past the newest request

@@ -16,7 +16,7 @@ import {
   fleets,
   fleetServiceZones,
 } from "../src/db/schema";
-import { eq, and, isNull, lt, sql, desc } from "drizzle-orm";
+import { eq, and, isNull, lt, sql, desc, inArray } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { getConfigInt } from "../lib/platformConfig";
 import { sendToBidder, sendToFleetMembers } from "./rentalHandler";
@@ -241,86 +241,134 @@ export async function demoteWinner(
  * - reselect_deadline_at < now() (F39) → expired (re-select window lapsed)
  */
 export async function sweepDeadlines() {
+  // A8 batch: the per-row loop was N×4 sequential round-trips (282s p99 at
+  // N=200 in the first rig run). One transaction, set-based statements with
+  // FOR UPDATE SKIP LOCKED claims — same transition semantics, ~5 RTTs total.
+  const expiredWithBids: { id: string; active_bids: number }[] = [];
+  const noBidderIds: string[] = [];
   const now = new Date();
 
-  // 1. Soft deadline: broadcasting|collecting, awarded_at IS NULL, deadline passed, ≥1 active bid → expired
-  const expiredRows = await db
-    .select({ id: rentalRequests.id })
-    .from(rentalRequests)
-    .where(
-      and(
-        sql`${rentalRequests.status} IN ('broadcasting', 'collecting')`,
-        isNull(rentalRequests.awarded_at),
-        lt(rentalRequests.soft_deadline_at, now),
-      ),
-    );
+  await db.transaction(async (tx) => {
+    // 1. Expire overdue requests that HAVE standing active bids.
+    //    active_bids is counted in the same statement (pre-bid-flip state).
+    const claimed = await tx.execute(sql`
+      WITH due AS (
+        SELECT id FROM rental_requests
+        WHERE status IN ('broadcasting', 'collecting')
+          AND awarded_at IS NULL
+          AND soft_deadline_at < now()
+        FOR UPDATE SKIP LOCKED
+      ), has_bids AS (
+        SELECT d.id,
+               (SELECT count(*)::int FROM rental_bids b
+                WHERE b.request_id = d.id AND b.status = 'active') AS active_bids
+        FROM due d
+        WHERE EXISTS (SELECT 1 FROM rental_bids b
+                      WHERE b.request_id = d.id AND b.status = 'active')
+      )
+      UPDATE rental_requests r
+      SET status = 'expired', updated_at = now()
+      FROM has_bids hb
+      WHERE r.id = hb.id
+      RETURNING r.id, hb.active_bids
+    `);
+    const claimedRows =
+      ((claimed as { rows?: Record<string, unknown>[] }).rows ??
+        (claimed as unknown as Record<string, unknown>[])) ?? [];
+    for (const row of claimedRows) {
+      expiredWithBids.push({
+        id: String(row.id),
+        active_bids: Number(row.active_bids ?? 0),
+      });
+    }
 
-  for (const row of expiredRows) {
-    // Check if there are active bids
-    const [{ cnt }] = await db
-      .select({ cnt: sql<number>`count(*)::int` })
-      .from(rentalBids)
-      .where(
-        and(
-          eq(rentalBids.request_id, row.id),
-          eq(rentalBids.status, "active"),
-        ),
-      );
-
-    if (cnt > 0) {
-      // Has bids → expired (not auto-awarded — customer-selects)
-      // Conditional WHERE mirrors the outer read: status + awarded_at + deadline
-      const updated = await db
-        .update(rentalRequests)
-        .set({ status: "expired", updated_at: now })
-        .where(
-          and(
-            eq(rentalRequests.id, row.id),
-            sql`${rentalRequests.status} IN ('broadcasting', 'collecting')`,
-            isNull(rentalRequests.awarded_at),
-            lt(rentalRequests.soft_deadline_at, now),
-          ),
-        )
-        .returning({ id: rentalRequests.id });
-
-      if (updated.length === 0) continue; // raced — skip
-
-      await db
+    // 2. Flip their standing active bids → expired (one statement, all rows)
+    if (expiredWithBids.length > 0) {
+      await tx
         .update(rentalBids)
         .set({ status: "expired", expired_at: now })
         .where(
           and(
-            eq(rentalBids.request_id, row.id),
             eq(rentalBids.status, "active"),
+            inArray(
+              rentalBids.request_id,
+              expiredWithBids.map((r) => r.id),
+            ),
           ),
         );
 
-      await appendEvent(row.id, "expired", { active_bids: cnt });
-      await emitRentalStatus(row.id, "expired");
-    } else {
-      // No bids → no_bidders
-      // Conditional WHERE mirrors the outer read: status + awarded_at + deadline
-      const updated = await db
-        .update(rentalRequests)
-        .set({ status: "no_bidders", updated_at: now })
-        .where(
-          and(
-            eq(rentalRequests.id, row.id),
-            sql`${rentalRequests.status} IN ('broadcasting', 'collecting')`,
-            isNull(rentalRequests.awarded_at),
-            lt(rentalRequests.soft_deadline_at, now),
-          ),
-        )
-        .returning({ id: rentalRequests.id });
+      // 3. Events — one INSERT, all rows
+      await tx.insert(rentalRequestEvents).values(
+        expiredWithBids.map((r) => ({
+          request_id: r.id,
+          event_type: "expired",
+          payload: { active_bids: r.active_bids },
+        })),
+      );
+    }
 
-      if (updated.length === 0) continue; // raced — skip
+    // 4. Expire overdue requests with NO standing active bids → no_bidders
+    //    (rows already expired by statement 1 no longer match the predicate)
+    const nb = await tx.execute(sql`
+      WITH due AS (
+        SELECT id FROM rental_requests
+        WHERE status IN ('broadcasting', 'collecting')
+          AND awarded_at IS NULL
+          AND soft_deadline_at < now()
+        FOR UPDATE SKIP LOCKED
+      )
+      UPDATE rental_requests r
+      SET status = 'no_bidders', updated_at = now()
+      FROM due d
+      WHERE r.id = d.id
+        AND NOT EXISTS (SELECT 1 FROM rental_bids b
+                        WHERE b.request_id = r.id AND b.status = 'active')
+      RETURNING r.id
+    `);
+    const nbRows =
+      ((nb as { rows?: Record<string, unknown>[] }).rows ??
+        (nb as unknown as Record<string, unknown>[])) ?? [];
+    for (const row of nbRows) {
+      noBidderIds.push(String(row.id));
+    }
 
-      await appendEvent(row.id, "no_bidders", {});
-      await emitRentalStatus(row.id, "no_bidders");
+    if (noBidderIds.length > 0) {
+      await tx.insert(rentalRequestEvents).values(
+        noBidderIds.map((id) => ({
+          request_id: id,
+          event_type: "no_bidders",
+          payload: {},
+        })),
+      );
+    }
+  });
+
+  // Z2: batched status emissions — one owner lookup, in-memory fan-out
+  // (identical events/recipients to the old per-row emitRentalStatus calls).
+  const allIds = [...expiredWithBids.map((r) => r.id), ...noBidderIds];
+  if (allIds.length > 0) {
+    try {
+      const owners = await db
+        .select({ id: rentalRequests.id, rider_user_id: rentalRequests.rider_user_id })
+        .from(rentalRequests)
+        .where(inArray(rentalRequests.id, allIds));
+      const expiredSet = new Set(expiredWithBids.map((r) => r.id));
+      for (const o of owners) {
+        sendToBidder(
+          o.rider_user_id,
+          "rental:status",
+          { request_id: o.id, status: expiredSet.has(o.id) ? "expired" : "no_bidders" },
+        );
+      }
+    } catch (e: unknown) {
+      logger.warn("[rentalDispatchChain] sweepDeadlines ws notify failed", {
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 
   // 2. Reselect window lapsed (F39): collecting + reselect_deadline_at < now
+  //    (per-row kept: bounded by confirm-timeout volume; not a rig hotspot)
   const reselectExpired = await db
     .select({ id: rentalRequests.id })
     .from(rentalRequests)
@@ -406,7 +454,9 @@ export async function sweepAssignmentSla() {
         eq(rentalRequests.status, "awarded"),
         eq(rentalRequests.tracking_required, true),
         isNull(rentalRequests.fleet_ack_at),
-        sql`${rentalRequests.awarded_at} + interval '1 minute' * ${ackSlaMinutes} < ${now}`,
+        // ISO string, NOT a raw Date — postgres-js cannot serialize a Date
+        // object into an untyped sql-template param (A8 rig finding).
+        sql`${rentalRequests.awarded_at} + interval '1 minute' * ${ackSlaMinutes} < ${now.toISOString()}`,
       ),
     );
 
