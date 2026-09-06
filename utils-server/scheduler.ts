@@ -2621,6 +2621,11 @@ export function startScheduler(): void {
 
   // Job 56 — Emergency activation: broadcast new broadcasting emergencies
   // to eligible certified drivers (REST→WS bridge, watermark pattern)
+  // Interval rationale (Zia ruling 2026-09-06): <5s required for
+  // life-safety. 2s chosen — lower latency for emergency broadcasts at the
+  // cost of higher scan-job DB pressure; bump to 5s if DB pressure grows at
+  // marketplace-active volumes (both within connection pool capacity at
+  // dormant-marketplace load).
   let emergencyActivationRunning = false;
   registerJob(async () => {
     if (emergencyActivationRunning) return;
