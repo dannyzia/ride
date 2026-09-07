@@ -2574,12 +2574,18 @@ export function startScheduler(): void {
     if (rentalActivationRunning) return;
     try {
       rentalActivationRunning = true;
-      const { activateRentalRequests } = await import('../utils-server/activationJobs');
-      const count =
-        (await withJobBudget(54, MARKETPLACE_TICK_BUDGET_MS, (tx) => activateRentalRequests(tx))) ?? 0;
+      const { activateRentalRequests, dispatchNotifyQueue } = await import('../utils-server/activationJobs');
+      const { count, notifyQueue } =
+        (await withJobBudget(54, MARKETPLACE_TICK_BUDGET_MS, (tx) => activateRentalRequests(tx))) ?? {
+          count: 0,
+          notifyQueue: [],
+        };
       if (count > 0) {
         logger.info('[scheduler] job 54 rental activation', { broadcasts: count });
       }
+      // Audit-fix M4: pushes dispatch AFTER the budget tx — Expo HTTP can no
+      // longer hold the scheduler connection idle-in-transaction.
+      await dispatchNotifyQueue(notifyQueue);
     } catch (e) {
       logger.error('[scheduler] job 54 rental activation error', e);
     } finally {
@@ -2593,12 +2599,17 @@ export function startScheduler(): void {
     if (deliveryActivationRunning) return;
     try {
       deliveryActivationRunning = true;
-      const { activateDeliveryRequests } = await import('../utils-server/activationJobs');
-      const count =
-        (await withJobBudget(55, MARKETPLACE_TICK_BUDGET_MS, (tx) => activateDeliveryRequests(tx))) ?? 0;
+      const { activateDeliveryRequests, dispatchNotifyQueue } = await import('../utils-server/activationJobs');
+      const { count, notifyQueue } =
+        (await withJobBudget(55, MARKETPLACE_TICK_BUDGET_MS, (tx) => activateDeliveryRequests(tx))) ?? {
+          count: 0,
+          notifyQueue: [],
+        };
       if (count > 0) {
         logger.info('[scheduler] job 55 delivery activation', { broadcasts: count });
       }
+      // Audit-fix M4: customer push dispatches AFTER the budget tx.
+      await dispatchNotifyQueue(notifyQueue);
     } catch (e) {
       logger.error('[scheduler] job 55 delivery activation error', e);
     } finally {
@@ -2642,11 +2653,20 @@ export function startScheduler(): void {
     try {
       emergencyActivationRunning = true;
       const { activateEmergencyRequests } = await import('../utils-server/emergencyActivation');
-      const count =
-        (await withJobBudget(56, MARKETPLACE_TICK_BUDGET_MS, (tx) => activateEmergencyRequests(tx))) ?? 0;
+      const { dispatchNotifyQueue } = await import('../utils-server/activationJobs');
+      const { count, notifyQueue } =
+        (await withJobBudget(56, MARKETPLACE_TICK_BUDGET_MS, (tx) => activateEmergencyRequests(tx))) ?? {
+          count: 0,
+          notifyQueue: [],
+        };
       if (count > 0) {
         logger.info('[scheduler] job 56 emergency activation', { reached: count });
       }
+      // Audit-fix M4+M5: alarm pushes dispatch AFTER the budget tx, as ONE
+      // batched sendNotifications call with emergency_activation idempotency
+      // keys (the old sequential per-driver sendNotification ran inside the
+      // budget and had no dedup keys).
+      await dispatchNotifyQueue(notifyQueue);
     } catch (e) {
       logger.error('[scheduler] job 56 emergency activation error', e);
     } finally {

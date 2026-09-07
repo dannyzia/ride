@@ -24,7 +24,7 @@ import {
 import { eq, and, lt, inArray, notInArray, ne, isNull } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { emergencySendToUser } from './emergencyBus';
-import { sendNotification } from '../lib/notify';
+import { sendNotifications, type NotificationRequest } from '../lib/notify';
 import { getEligibleEmergencyDriverUserIds } from '../lib/ambulanceCerts';
 
 /** §B.5 transition table. 'failed' is SYSTEM-only (TTL sweep) from broadcasting. */
@@ -336,16 +336,27 @@ export async function sweepExpiredEmergencies(tx: DbClient = db): Promise<number
 /**
  * §D.2.1 broadcast — F41 payload: NO patient_condition. Eligible = verified
  * cert, service_level covers, online, not on break, within k-ring.
+ *
+ * M4+M5 (audit-fix): the per-driver sequential alarm pushes are REPLACED by
+ * a notifyQueue the scheduler dispatches via one sendNotifications batch
+ * AFTER the budget tx (Expo HTTP no longer holds the scheduler connection;
+ * the batch also parallelizes the fan-out). M5: every alarm push carries the
+ * deterministic idempotency key `emergency_activation:{req.id}:{userId}` —
+ * the watermark's restart-rebroadcast must not re-push every live alarm to
+ * every certified driver (alarm fatigue in the life-safety vertical).
  */
-export async function broadcastEmergencyNewRequest(req: {
-  id: string;
-  pickup_address: string;
-  pickup_lat: string | number;
-  pickup_lng: string | number;
-  service_level: string | null;
-  requires_paramedic: boolean;
-  expires_at: Date | string;
-}): Promise<number> {
+export async function broadcastEmergencyNewRequest(
+  req: {
+    id: string;
+    pickup_address: string;
+    pickup_lat: string | number;
+    pickup_lng: string | number;
+    service_level: string | null;
+    requires_paramedic: boolean;
+    expires_at: Date | string;
+  },
+  notifyQueue?: NotificationRequest[],
+): Promise<number> {
   if (!req.service_level) return 0;
 
   const driverUserIds = await getEligibleEmergencyDriverUserIds(
@@ -369,16 +380,32 @@ export async function broadcastEmergencyNewRequest(req: {
 
   for (const userId of driverUserIds) {
     emergencySendToUser(userId, payload);
-    try {
-      await sendNotification(
+    if (notifyQueue) {
+      notifyQueue.push({
         userId,
-        "alarm",
-        "🚨 Emergency ambulance call",
-        `${req.service_level} needed — ${req.pickup_address}`,
-        { request_id: req.id, type: "emergency_new_request" },
-      );
-    } catch (err) {
-      logger.warn("[emergencyChain] alarm push failed", { request_id: req.id, userId, err });
+        type: "alarm",
+        title: "🚨 Emergency ambulance call",
+        body: `${req.service_level} needed — ${req.pickup_address}`,
+        data: { request_id: req.id, type: "emergency_new_request" },
+        // M5: deterministic key — dedup suppresses the restart re-push.
+        idempotencyKey: `emergency_activation:${req.id}:${userId}`,
+      });
+    } else {
+      // Legacy direct-dispatch path (no queue supplied): still idempotent (M5).
+      try {
+        await sendNotifications([
+          {
+            userId,
+            type: "alarm",
+            title: "🚨 Emergency ambulance call",
+            body: `${req.service_level} needed — ${req.pickup_address}`,
+            data: { request_id: req.id, type: "emergency_new_request" },
+            idempotencyKey: `emergency_activation:${req.id}:${userId}`,
+          },
+        ]);
+      } catch (err) {
+        logger.warn("[emergencyChain] alarm push failed", { request_id: req.id, userId, err });
+      }
     }
   }
 

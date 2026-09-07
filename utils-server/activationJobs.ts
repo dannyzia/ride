@@ -9,6 +9,14 @@
  *
  * Uses in-memory watermark for efficiency; restarts re-broadcast all
  * still-active rows (idempotent — doubles as crash recovery per TD-15).
+ *
+ * M4 (audit-fix): the scans run INSIDE the withJobBudget transaction — the
+ * budget's SET LOCAL statement_timeout applies only to the work queries, and
+ * Expo push HTTP held the scheduler connection idle-in-transaction
+ * (unbounded wall-clock, derivation undermined). The scans now return a
+ * notifyQueue; the scheduler dispatches pushes AFTER withJobBudget returns
+ * (see scheduler.ts jobs 54/55). Pushes keep N11 deterministic idempotency
+ * keys so the watermark restart-rebroadcast never re-pushes.
  */
 import { db } from '../src/db';
 import type { DbClient } from './tx';
@@ -23,11 +31,29 @@ import {
 import { eq, and, gt, sql, inArray } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { getConnectedBidderIds, sendToBidder } from './rentalHandler';
-import { broadcastToCouriers, sendToCourier } from './deliveryHandler';
-// sendNotification: single-recipient path (job 55 customer push).
-// sendNotifications: batched path (job 54 member fan-out, A8 residual).
-import { sendNotification, sendNotifications } from '../lib/notify';
+import { broadcastToCouriers } from './deliveryHandler';
+// sendNotifications: batched push path (job 54 member fan-out + job 55
+// customer pushes) — dispatched by the scheduler OUTSIDE the budget tx (M4).
+import { sendNotifications, type NotificationRequest } from '../lib/notify';
 import { sendToUser } from './index';
+
+/** A push tuple deferred out of the budget tx for post-tx dispatch (M4). */
+export type NotifyQueue = NotificationRequest[];
+
+/** Fire a notify queue OUTSIDE any budget tx (M4). Never throws. */
+export async function dispatchNotifyQueue(queue: NotifyQueue): Promise<void> {
+  if (queue.length === 0) return;
+  try {
+    // ONE sendNotifications call for the whole batch — lib/notify does a
+    // single dedup SELECT for all idempotency keys, one multi-row INSERT,
+    // and chunked parallel expo pushes. N11: deterministic idempotency keys
+    // — restart re-broadcasts must not re-push the same notification.
+    await sendNotifications(queue);
+  } catch (err) {
+    // sendNotifications never throws by contract; guard kept defensive.
+    logger.warn('[activation] push batch failed', { err });
+  }
+}
 
 // ── Job 54: Rental activation ────────────────────────────────────────────
 
@@ -37,8 +63,14 @@ let rentalWatermark: Date = new Date(0);
 /**
  * Scan for broadcasting rental requests newer than watermark,
  * then broadcast to eligible fleet members.
+ *
+ * M4: WS fan-out stays here (in-memory, no HTTP); the expo pushes are
+ * RETURNED as a notifyQueue for post-budget dispatch by the scheduler.
  */
-export async function activateRentalRequests(tx: DbClient = db): Promise<number> {
+export async function activateRentalRequests(tx: DbClient = db): Promise<{
+  count: number;
+  notifyQueue: NotifyQueue;
+}> {
   // Find all still-broadcasting requests (watermark catches new + restart re-broadcast)
   const broadcasting = await tx
     .select()
@@ -50,7 +82,7 @@ export async function activateRentalRequests(tx: DbClient = db): Promise<number>
       ),
     );
 
-  if (broadcasting.length === 0) return 0;
+  if (broadcasting.length === 0) return { count: 0, notifyQueue: [] };
 
   // A8 batch: eligibility is request-INDEPENDENT (F11 has no geo filter yet —
   // the Phase 2+ H3 follow-up), so the zoned + global fleet sets are computed
@@ -96,13 +128,7 @@ export async function activateRentalRequests(tx: DbClient = db): Promise<number>
 
   const connectedBidders = new Set(getConnectedBidderIds());
   let broadcastCount = 0;
-  const pushTuples: Array<{
-    userId: string;
-    urgency: string;
-    category: string;
-    pickupAddress: string;
-    requestId: string;
-  }> = [];
+  const notifyQueue: NotifyQueue = [];
 
   for (const req of broadcasting) {
     const broadcastPayload = {
@@ -122,7 +148,7 @@ export async function activateRentalRequests(tx: DbClient = db): Promise<number>
       duration_hours: req.duration_hours,           // Ruling 14: rental duration
     };
 
-    // WS: in-memory registry send — no DB round-trip
+    // WS: in-memory registry send — no DB round-trip, safe inside the budget
     for (const userId of memberUserIds) {
       if (connectedBidders.has(userId)) {
         sendToBidder(userId, 'rental:bid_request', broadcastPayload);
@@ -130,43 +156,20 @@ export async function activateRentalRequests(tx: DbClient = db): Promise<number>
       }
     }
 
-    // Push tuples collected here, fired in parallel after the loop (A8: the
-    // sequential awaited pushes per member were the dominant job-54 cost).
-    // N11: deterministic idempotency key — restart re-broadcasts must not
+    // M4: push tuples are COLLECTED, not sent — the scheduler fires them via
+    // dispatchNotifyQueue AFTER withJobBudget returns (Expo HTTP can no
+    // longer hold the scheduler connection idle-in-transaction).
+    // N11: deterministic idempotency key — restart re-broadcast must not
     // re-push the same activation to every member.
     for (const userId of memberUserIds) {
-      pushTuples.push({
+      notifyQueue.push({
         userId,
-        urgency: req.urgency,
-        category: req.category,
-        pickupAddress: req.pickup_address,
-        requestId: req.id,
+        type: req.urgency === 'alarm' ? 'alarm' : 'default',
+        title: req.urgency === 'alarm' ? '🚨 Urgent Rental Request' : 'New Rental Request',
+        body: `${req.category} — ${req.pickup_address}`,
+        data: { request_id: req.id, type: 'rental_bid_request' },
+        idempotencyKey: `rental_activation:${req.id}:${userId}`,
       });
-    }
-  }
-
-  if (pushTuples.length > 0) {
-    // A8 residual (notify batching): ONE sendNotifications call for the whole
-    // batch — lib/notify now does a single dedup SELECT for all idempotency
-    // keys, one multi-row INSERT, and chunked parallel expo pushes. The
-    // per-recipient serialized dedup round-trips that made job 54's wall p99
-    // 14.2s are gone (see .kilo/plans/2026-09-06-a8-local-rig-report.md v2).
-    // N11: deterministic idempotency keys — restart re-broadcasts must not
-    // re-push the same activation to every member.
-    try {
-      await sendNotifications(
-        pushTuples.map((p) => ({
-          userId: p.userId,
-          type: p.urgency === 'alarm' ? 'alarm' : 'default',
-          title: p.urgency === 'alarm' ? '🚨 Urgent Rental Request' : 'New Rental Request',
-          body: `${p.category} — ${p.pickupAddress}`,
-          data: { request_id: p.requestId, type: 'rental_bid_request' },
-          idempotencyKey: `rental_activation:${p.requestId}:${p.userId}`,
-        })),
-      );
-    } catch (err) {
-      // sendNotifications never throws by contract; guard kept defensive.
-      logger.warn('[activation] rental push batch failed', { err });
     }
   }
 
@@ -177,7 +180,7 @@ export async function activateRentalRequests(tx: DbClient = db): Promise<number>
   );
   rentalWatermark = newest;
 
-  return broadcastCount;
+  return { count: broadcastCount, notifyQueue };
 }
 
 // ── Job 55: Delivery activation ──────────────────────────────────────────
@@ -189,8 +192,14 @@ let deliveryWatermark: Date = new Date(0);
  * Scan for pending delivery requests newer than watermark,
  * then broadcast to eligible courier sockets.
  * Also emits shop:delivery_created (F24) for food delivery orders.
+ *
+ * M4: the customer push is RETURNED in the notifyQueue (with its N11 key)
+ * for post-budget dispatch; the WS send stays here (in-memory).
  */
-export async function activateDeliveryRequests(tx: DbClient = db): Promise<number> {
+export async function activateDeliveryRequests(tx: DbClient = db): Promise<{
+  count: number;
+  notifyQueue: NotifyQueue;
+}> {
   const pending = await tx
     .select()
     .from(deliveryRequests)
@@ -201,9 +210,10 @@ export async function activateDeliveryRequests(tx: DbClient = db): Promise<numbe
       ),
     );
 
-  if (pending.length === 0) return 0;
+  if (pending.length === 0) return { count: 0, notifyQueue: [] };
 
   let broadcastCount = 0;
+  const notifyQueue: NotifyQueue = [];
 
   for (const req of pending) {
     // Broadcast to all connected couriers (they filter by eligibility client-side
@@ -226,7 +236,7 @@ export async function activateDeliveryRequests(tx: DbClient = db): Promise<numbe
     broadcastCount++;
 
     // F24: if food delivery (has source_shop_order_id), emit shop:delivery_created
-    // to the customer via the rider/driver registry (sendToUser) + lib/notify fallback
+    // to the customer via the rider/driver registry (sendToUser) + push fallback
     if (req.source_shop_order_id) {
       try {
         const [shopOrder] = await tx
@@ -242,19 +252,19 @@ export async function activateDeliveryRequests(tx: DbClient = db): Promise<numbe
             delivery_request_id: req.id,
           };
 
-          // Try WS first via rider/driver registry
+          // Try WS first via rider/driver registry (in-memory — budget-safe)
           sendToUser(shopOrder.rider_user_id, payload);
 
-          // Always send push notification as well (user may not be on WS).
+          // M4: push deferred to post-budget dispatch.
           // N11: idempotency key — restart re-broadcast must not re-push.
-          await sendNotification(
-            shopOrder.rider_user_id,
-            'default',
-            'Your order is being delivered',
-            'A courier has been assigned to your food order',
-            { order_id: req.source_shop_order_id, type: 'delivery_created' },
-            { idempotencyKey: `delivery_created:${req.id}` },
-          );
+          notifyQueue.push({
+            userId: shopOrder.rider_user_id,
+            type: 'default',
+            title: 'Your order is being delivered',
+            body: 'A courier has been assigned to your food order',
+            data: { order_id: req.source_shop_order_id, type: 'delivery_created' },
+            idempotencyKey: `delivery_created:${req.id}`,
+          });
         }
       } catch (err) {
         logger.warn('[activation] shop:delivery_created failed', {
@@ -272,5 +282,5 @@ export async function activateDeliveryRequests(tx: DbClient = db): Promise<numbe
   );
   deliveryWatermark = newest;
 
-  return broadcastCount;
+  return { count: broadcastCount, notifyQueue };
 }

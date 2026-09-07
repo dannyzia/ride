@@ -93,6 +93,7 @@ jest.mock('@/lib/supabaseServer', () => ({
 
 jest.mock('@/lib/notify', () => ({
   sendNotification: jest.fn(async () => ({ id: 'n' })),
+  sendNotifications: jest.fn(async () => []),
 }));
 
 jest.mock('@/lib/safety', () => ({
@@ -276,7 +277,7 @@ describe("ADR Phase 1 — scans route queries through the tx handle", () => {
 
   it("activateRentalRequests(tx) queries the tx, not global db", async () => {
     const { tx, txSelect } = mockTxHandle();
-    const count = await activateRentalRequests(tx as never);
+    const { count } = await activateRentalRequests(tx as never);
     expect(count).toBe(0);
     expect(txSelect).toHaveBeenCalled();
     expect(db.select).not.toHaveBeenCalled();
@@ -284,7 +285,7 @@ describe("ADR Phase 1 — scans route queries through the tx handle", () => {
 
   it("activateDeliveryRequests(tx) queries the tx, not global db", async () => {
     const { tx, txSelect } = mockTxHandle();
-    const count = await activateDeliveryRequests(tx as never);
+    const { count } = await activateDeliveryRequests(tx as never);
     expect(count).toBe(0);
     expect(txSelect).toHaveBeenCalled();
     expect(db.select).not.toHaveBeenCalled();
@@ -300,7 +301,7 @@ describe("ADR Phase 1 — scans route queries through the tx handle", () => {
 
   it("activateEmergencyRequests(tx) queries the tx, not global db", async () => {
     const { tx, txSelect } = mockTxHandle();
-    const count = await activateEmergencyRequests(tx as never);
+    const { count } = await activateEmergencyRequests(tx as never);
     expect(count).toBe(0);
     expect(txSelect).toHaveBeenCalled();
     expect(db.select).not.toHaveBeenCalled();

@@ -154,7 +154,11 @@ jest.mock("../index", () => ({
 
 const { db } = require("../../src/db");
 const { transitionEmergencyRequest } = require("../emergencyChain");
-const { activateRentalRequests, activateDeliveryRequests } = require("../activationJobs");
+const {
+  activateRentalRequests,
+  activateDeliveryRequests,
+  dispatchNotifyQueue,
+} = require("../activationJobs");
 const { sendNotification, sendNotifications } = require("../../lib/notify");
 
 // ══════════════════════════════════════════════════════════════════════
@@ -220,24 +224,29 @@ describe("N11 — activation jobs pass idempotency keys to sendNotification", ()
     });
   });
 
-  it("job 54 rental activation uses rental_activation:{request_id}:{user_id}", async () => {
-    await activateRentalRequests();
-    // A8 residual (notify batching): the fan-out goes through the batched
-    // entry point — ONE sendNotifications call for the whole member batch,
-    // each tuple carrying its deterministic N11 key.
+  it("job 54 rental activation queues rental_activation:{request_id}:{user_id}", async () => {
+    const { notifyQueue } = await activateRentalRequests();
+    // M4 (audit-fix): pushes are RETURNED as a notifyQueue for post-budget
+    // dispatch — the scan itself must not send.
+    expect(sendNotifications).not.toHaveBeenCalled();
+    expect(notifyQueue).toHaveLength(1);
+    expect(notifyQueue[0].userId).toBe("member-1");
+    expect(notifyQueue[0].data.request_id).toBe("rreq-1");
+    expect(notifyQueue[0].idempotencyKey).toBe("rental_activation:rreq-1:member-1");
+    // And the dispatcher forwards the whole queue through the batched entry
+    // point in ONE call.
+    await dispatchNotifyQueue(notifyQueue);
     expect(sendNotifications).toHaveBeenCalledTimes(1);
-    const [batch] = (sendNotifications as any).mock.calls[0];
-    expect(batch).toHaveLength(1);
-    expect(batch[0].userId).toBe("member-1");
-    expect(batch[0].data.request_id).toBe("rreq-1");
-    expect(batch[0].idempotencyKey).toBe("rental_activation:rreq-1:member-1");
+    expect(sendNotifications).toHaveBeenCalledWith(notifyQueue);
   });
 
   it("job 55 delivery-created push uses delivery_created:{request_id}", async () => {
-    await activateDeliveryRequests();
-    expect(sendNotification).toHaveBeenCalledTimes(1);
-    const [userId, , , , data, options] = (sendNotification as any).mock.calls[0];
-    expect(userId).toBe("rider-1");
-    expect(options.idempotencyKey).toBe("delivery_created:dreq-1");
+    const { notifyQueue } = await activateDeliveryRequests();
+    expect(sendNotification).not.toHaveBeenCalled();
+    expect(notifyQueue).toHaveLength(1);
+    expect(notifyQueue[0].userId).toBe("rider-1");
+    expect(notifyQueue[0].idempotencyKey).toBe("delivery_created:dreq-1");
+    await dispatchNotifyQueue(notifyQueue);
+    expect(sendNotifications).toHaveBeenCalledWith(notifyQueue);
   });
 });

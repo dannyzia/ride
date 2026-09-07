@@ -148,7 +148,7 @@ async function main(): Promise<void> {
   console.log("[a8-rig] seed complete");
 
   // ── measure ────────────────────────────────────────────────────────────────
-  const { activateRentalRequests, activateDeliveryRequests } = await import(
+  const { activateRentalRequests, activateDeliveryRequests, dispatchNotifyQueue } = await import(
     "../utils-server/activationJobs"
   );
   const { activateEmergencyRequests } = await import("../utils-server/emergencyActivation");
@@ -171,10 +171,25 @@ async function main(): Promise<void> {
   const jobFailures: Record<string, string[]> = {};
   for (const name of jobNames) durations[name] = [];
 
-  const runners: Array<(tx: unknown) => Promise<number> | Promise<void>> = [
-    (tx) => activateRentalRequests(tx as never),
-    (tx) => activateDeliveryRequests(tx as never),
-    (tx) => activateEmergencyRequests(tx as never),
+  // Audit-fix M4: the scans return { count, notifyQueue } — pushes dispatch
+  // AFTER the scan tx, mirroring the production scheduler jobs. Timed
+  // together so the rig still measures full job wall-clock.
+  const runners: Array<(tx: unknown) => Promise<unknown>> = [
+    async (tx) => {
+      const { count, notifyQueue } = await activateRentalRequests(tx as never);
+      await dispatchNotifyQueue(notifyQueue);
+      return count;
+    },
+    async (tx) => {
+      const { count, notifyQueue } = await activateDeliveryRequests(tx as never);
+      await dispatchNotifyQueue(notifyQueue);
+      return count;
+    },
+    async (tx) => {
+      const { count, notifyQueue } = await activateEmergencyRequests(tx as never);
+      await dispatchNotifyQueue(notifyQueue);
+      return count;
+    },
     () => sweepDeadlines(),
     () => sweepAssignmentSla(),
     () => sweepConfirmationDeadlines(),

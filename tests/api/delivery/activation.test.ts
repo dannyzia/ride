@@ -34,6 +34,7 @@ jest.mock('@/lib/logger', () => ({
 
 jest.mock('@/lib/notify', () => ({
   sendNotification: jest.fn().mockResolvedValue(undefined),
+  sendNotifications: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/utils-server/rentalHandler', () => ({
@@ -65,7 +66,7 @@ describe('F46 Activation seam (Jobs 54-55)', () => {
   describe('Job 54 — Rental activation', () => {
     it('returns 0 when no broadcasting requests exist', async () => {
       mockSelectResults.push([]); // no broadcasting requests
-      const count = await activateRentalRequests();
+      const { count } = await activateRentalRequests();
       expect(count).toBe(0);
     });
 
@@ -90,12 +91,12 @@ describe('F46 Activation seam (Jobs 54-55)', () => {
       // First tick: one broadcasting request
       mockSelectResults.push([req]);
       mockSelectResults.push([]); // eligible fleets (empty for test)
-      const count1 = await activateRentalRequests();
+      const { count: count1 } = await activateRentalRequests();
       expect(count1).toBe(0); // no eligible fleets → 0 broadcasts
 
       // Second tick: same request should NOT appear (watermark advanced)
       mockSelectResults.push([]); // no new requests
-      const count2 = await activateRentalRequests();
+      const { count: count2 } = await activateRentalRequests();
       expect(count2).toBe(0);
     });
 
@@ -111,7 +112,7 @@ describe('F46 Activation seam (Jobs 54-55)', () => {
   describe('Job 55 — Delivery activation', () => {
     it('returns 0 when no pending requests exist', async () => {
       mockSelectResults.push([]); // no pending requests
-      const count = await activateDeliveryRequests();
+      const { count } = await activateDeliveryRequests();
       expect(count).toBe(0);
     });
 
@@ -135,7 +136,7 @@ describe('F46 Activation seam (Jobs 54-55)', () => {
       };
 
       mockSelectResults.push([req]);
-      const count = await activateDeliveryRequests();
+      const { count } = await activateDeliveryRequests();
       expect(count).toBe(1); // broadcast to all connected couriers
     });
   });
