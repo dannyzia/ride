@@ -7,7 +7,7 @@ import { requireAnyRole, requireFleetMember } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { notifyWs } from "@/lib/wsNotify";
 import * as errors from "@/lib/errors";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
@@ -77,6 +77,33 @@ export async function POST(request: Request, { id }: { id: string }) {
       return Response.json(
         { error: "invalid_transition", message: "Request must be confirmed" },
         { status: 409 },
+      );
+    }
+
+    // Audit-fix M2: only the AWARDED fleet may complete. The pre-tx authz
+    // above runs on the PASSED bid's fleet — a losing fleet's staff could
+    // complete a confirmed request mid-service for the winning fleet (the
+    // completion WS then notified the completer's fleet, not the winner's).
+    // The live assignment is the authoritative awarded-fleet source: the bid
+    // must be the one the live assignment was created from.
+    const [liveAwardedAssign] = await db
+      .select({ winning_bid_id: awardedBidAssignments.winning_bid_id })
+      .from(awardedBidAssignments)
+      .where(
+        and(
+          eq(awardedBidAssignments.request_id, bid.request_id),
+          isNull(awardedBidAssignments.released_at),
+        ),
+      )
+      .limit(1);
+
+    if (!liveAwardedAssign || liveAwardedAssign.winning_bid_id !== bid.id) {
+      return Response.json(
+        {
+          error: "forbidden",
+          message: "Only the awarded fleet can complete this ride",
+        },
+        { status: 403 },
       );
     }
 

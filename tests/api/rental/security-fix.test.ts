@@ -896,7 +896,11 @@ describe("A7 — POST /api/rental/bids/[id]/complete", () => {
     mockBidRows = [
       { id: mockBidUuid, request_id: mockReqUuid, fleet_id: mockFleetUuid, status: "won" },
     ];
-    mockAssignmentRows = [{ assigned_driver_user_id: mockDriverUuid }];
+    // M2 (audit-fix): the new awarded-fleet gate reads the LIVE assignment
+    // (released_at IS NULL) and requires winning_bid_id === bid.id.
+    mockAssignmentRows = [
+      { assigned_driver_user_id: mockDriverUuid, winning_bid_id: mockBidUuid, released_at: null },
+    ];
     mockReqRows = [{ id: mockReqUuid, status: "confirmed" }];
 
     const res = await completeBid(makeRequest("POST", null), { id: mockBidUuid });
@@ -912,7 +916,9 @@ describe("A7 — POST /api/rental/bids/[id]/complete", () => {
     mockBidRows = [
       { id: mockBidUuid, request_id: mockReqUuid, fleet_id: mockFleetUuid, status: "won" },
     ];
-    mockAssignmentRows = [{ assigned_driver_user_id: mockDriverUuid }];
+    mockAssignmentRows = [
+      { assigned_driver_user_id: mockDriverUuid, winning_bid_id: mockBidUuid, released_at: null },
+    ];
     mockReqRows = [{ id: mockReqUuid, status: "confirmed" }];
     mockUpdateRows = []; // racing cancel: conditional UPDATE matched 0 rows
 
