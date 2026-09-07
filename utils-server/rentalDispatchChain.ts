@@ -251,8 +251,8 @@ export async function demoteWinner(
     // winner's fleet (its bid genuinely settled won→lost). Re-standing
     // bidders (superseded→active) get NO bid_settled — their bids are no
     // longer settled — and keep receiving the request-level rental:status
-    // above. The losing-bid set captured in-tx is retained for potential
-    // future use but is intentionally not emitted.
+    // above. The losing-bid set is not captured at all — Ruling B removed
+    // it with the emit.
     try {
       if (demotedFleetId && demotedBidId) {
         await sendToFleetMembers(demotedFleetId, "rental:bid_settled", {
