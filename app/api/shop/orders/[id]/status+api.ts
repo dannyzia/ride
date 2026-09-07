@@ -39,6 +39,11 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 
 export async function PATCH(request: Request, { id }: { id: string }) {
   try {
+    // B7/L1: UUID guard before any DB access
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return Response.json({ error: "invalid_uuid", message: "Invalid order id" }, { status: 400 });
+    }
+
     const result = await parseJsonBody(request, statusSchema);
     if (!result.ok) return result.response;
     const targetStatus = result.data.status;

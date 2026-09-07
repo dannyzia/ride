@@ -13,8 +13,6 @@ import {
   rentalBids,
   awardedBidAssignments,
   rentalRequestEvents,
-  fleets,
-  fleetServiceZones,
 } from "../src/db/schema";
 import { eq, and, isNull, lt, sql, desc, inArray } from "drizzle-orm";
 import { logger } from "../lib/logger";
@@ -463,34 +461,47 @@ export async function sweepDeadlines() {
     );
 
   for (const row of reselectExpired) {
-    // Conditional WHERE guards against racing accept-bid (§B.0)
-    const updated = await db
-      .update(rentalRequests)
-      .set({ status: "expired", reselect_deadline_at: null, updated_at: now })
-      .where(
-        and(
-          eq(rentalRequests.id, row.id),
-          eq(rentalRequests.status, "collecting"),
-          lt(rentalRequests.reselect_deadline_at, now),
-          sql`${rentalRequests.reselect_deadline_at} IS NOT NULL`,
-        ),
-      )
-      .returning({ id: rentalRequests.id });
+    // L2 (audit-fix): the per-row work now runs in ONE transaction with a
+    // FOR UPDATE re-read of the request row — previously the request UPDATE,
+    // bid flip, and event insert ran as three autocommit statements, so a
+    // racing accept-bid could interleave (e.g. award the request between the
+    // status flip and the bid expiry, stranding a won bid on an expired
+    // request). The conditional WHERE + locked re-read serialize against it.
+    await db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select({ id: rentalRequests.id })
+        .from(rentalRequests)
+        .where(
+          and(
+            eq(rentalRequests.id, row.id),
+            eq(rentalRequests.status, "collecting"),
+            lt(rentalRequests.reselect_deadline_at, now),
+            sql`${rentalRequests.reselect_deadline_at} IS NOT NULL`,
+          ),
+        )
+        .limit(1)
+        .for("update");
+      if (!locked) return; // raced — skip
 
-    if (updated.length === 0) continue; // raced — skip
+      // Request → expired (locked re-read already satisfies the guard)
+      await tx
+        .update(rentalRequests)
+        .set({ status: "expired", reselect_deadline_at: null, updated_at: now })
+        .where(eq(rentalRequests.id, row.id));
 
-    // Set standing active bids → expired
-    await db
-      .update(rentalBids)
-      .set({ status: "expired", expired_at: now })
-      .where(
-        and(
-          eq(rentalBids.request_id, row.id),
-          eq(rentalBids.status, "active"),
-        ),
-      );
+      // Set standing active bids → expired
+      await tx
+        .update(rentalBids)
+        .set({ status: "expired", expired_at: now })
+        .where(
+          and(
+            eq(rentalBids.request_id, row.id),
+            eq(rentalBids.status, "active"),
+          ),
+        );
 
-    await appendEvent(row.id, "expired", { reason: "reselect_window_lapsed" });
+      await appendEvent(row.id, "expired", { reason: "reselect_window_lapsed" }, undefined, tx);
+    });
     await emitRentalStatus(row.id, "expired");
   }
 }
@@ -653,42 +664,5 @@ export async function sweepConfirmationDeadlines() {
   }
 }
 
-/**
- * Filter eligible fleets for a broadcast based on service zones (F11).
- * A fleet with NO active zone rows is GLOBAL (receives everything).
- * A fleet with rows but all is_active=false is also global (dead-fleet edge fix).
- */
-export async function getEligibleFleets(
-  pickupLat: number,
-  pickupLng: number,
-): Promise<string[]> {
-  // Get all fleets with at least one active zone row
-  const activeZones = await db
-    .select({ fleet_id: fleetServiceZones.fleet_id })
-    .from(fleetServiceZones)
-    .where(eq(fleetServiceZones.is_active, true))
-    .groupBy(fleetServiceZones.fleet_id);
-
-  const zonedFleetIds = activeZones.map((z) => z.fleet_id);
-
-  // Global fleets: fleets with NO active zone rows at all
-  const globalFleets = await db
-    .select({ id: fleets.id })
-    .from(fleets)
-    .where(
-      and(
-        eq(fleets.status, "ACTIVE"),
-        sql`NOT EXISTS (
-          SELECT 1 FROM ${fleetServiceZones}
-          WHERE ${fleetServiceZones.fleet_id} = ${fleets.id}
-          AND ${fleetServiceZones.is_active} = true
-        )`,
-      ),
-    );
-
-  const globalFleetIds = globalFleets.map((f) => f.id);
-
-  // TODO: Phase 2+ — geo-filter zoned fleets by H3 cell proximity
-  // For now, all zoned fleets receive (polygon→hex tooling is a follow-up)
-  return [...new Set([...zonedFleetIds, ...globalFleetIds])];
-}
+// L3 (audit-fix): getEligibleFleets deleted — zero production callers (the
+// batched eligibility computation in activationJobs.ts is the live path).

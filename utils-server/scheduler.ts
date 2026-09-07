@@ -94,11 +94,13 @@ export function isQueryCanceled(e: unknown): boolean {
 // Scan SQL p99 after batching: job 46 = 1.9s, job 54 SQL = sub-second (4
 // statements), jobs 55/56/47/48 = 0.3-0.9s. 10_000ms keeps ≥5x headroom over
 // the worst scan (job 46) under the 30s global ceiling.
-// KNOWN RESIDUAL (not budget-governed): job 54 wall-clock p99 = 14.2s from
-// per-push expo HTTP + serialized sendNotification dedup queries inside
-// lib/notify (single postgres-js connection) — a lib/notify concern, flagged
-// for a follow-up round; statement_timeout cannot bound external HTTP.
-// Re-derive on the hosted load test.
+// RESIDUAL HISTORY (L4, updated 2026-09-07): the old residual — job 54
+// wall-clock p99 14.2s from per-push expo HTTP inside the budget tx — is
+// resolved on two fronts: lib/notify batching (0263f90 — one dedup SELECT,
+// one multi-row INSERT, chunked parallel pushes) and M4 (3431672 — jobs
+// 54/55/56 defer ALL pushes to dispatchNotifyQueue AFTER withJobBudget
+// returns; the budget tx now covers pure SQL only). Post-fix in-budget SQL
+// p99: job 54 sub-second. Re-derive wall-clock on the hosted load test.
 const MARKETPLACE_TICK_BUDGET_MS = 10_000;
 
 // Pool occupancy (spec part 3): node-postgres Pool exposes totalCount/

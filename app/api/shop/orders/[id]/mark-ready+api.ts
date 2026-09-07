@@ -16,6 +16,11 @@ import { eq, and } from "drizzle-orm";
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
+    // B7/L1: UUID guard before any DB access
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return Response.json({ error: "invalid_uuid", message: "Invalid order id" }, { status: 400 });
+    }
+
     let guard: Response | null = null;
     await db.transaction(async (tx) => {
       // A2 (§C.1): the order row is read under FOR UPDATE; the status write,
