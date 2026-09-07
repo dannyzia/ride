@@ -267,6 +267,10 @@ export async function POST(request: Request, { id }: { id: string }) {
     }
 
     // Plain withdraw (pre-settle) — §B.0 atomic transition
+    // M1 (audit-fix): the WS emit after the tx needs the POST-tx request
+    // status; branches inside capture it here. Default = pre-tx status (the
+    // no-transition branch); F35 branches overwrite it.
+    let withdrewTo: string = req.status;
     await db.transaction(async (tx) => {
       // R3 round-2 (1g): lock the request row FIRST — the COUNT and the F35
       // branch UPDATEs below must serialize against a racing bid-submit's own
@@ -333,6 +337,7 @@ export async function POST(request: Request, { id }: { id: string }) {
           payload: { reason: "last_bid_withdrawn" },
           created_by: dbUser.id,
         });
+        withdrewTo = "no_bidders";
       } else if (f35Branch === "broadcasting") {
         // Never awarded: revert collecting → broadcasting with fresh window (F35)
         const biddingWindow = req.bidding_window_seconds || 1200;
@@ -356,6 +361,7 @@ export async function POST(request: Request, { id }: { id: string }) {
           payload: { bid_id: id, reopened: true },
           created_by: dbUser.id,
         });
+        withdrewTo = "broadcasting";
       } else {
         await tx.insert(rentalRequestEvents).values({
           request_id: bid.request_id,
@@ -363,6 +369,7 @@ export async function POST(request: Request, { id }: { id: string }) {
           payload: { bid_id: id },
           created_by: dbUser.id,
         });
+        // No request transition — the default (pre-tx status) already holds.
       }
     });
 
@@ -376,7 +383,7 @@ export async function POST(request: Request, { id }: { id: string }) {
             request_id: bid.request_id,
             bid_id: id,
             reason: "withdrawn",
-            status: req.status,
+            status: withdrewTo, // M1: post-tx actual status, not the stale pre-tx read
           },
         },
         {
@@ -385,7 +392,7 @@ export async function POST(request: Request, { id }: { id: string }) {
             { kind: "user", user_id: req.rider_user_id },
             { kind: "fleet", fleet_id: bid.fleet_id },
           ],
-          payload: { request_id: bid.request_id, status: req.status },
+          payload: { request_id: bid.request_id, status: withdrewTo },
         },
       ]);
     } catch (e: unknown) {
