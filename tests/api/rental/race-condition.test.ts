@@ -936,3 +936,109 @@ describe("R3 round-2 Extra — cancel handler terminal-state guard", () => {
     expect(settle).toBeDefined();
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════
+// C1 close-out (.kilo/plans/test-agent-c1-m2-guards.md Test 1, 2026-09-07
+// audit round) — branch-(b) demote releases the born-fulfilled assignment
+// AND a subsequent accept-bid for a standing bid SUCCEEDS.
+//
+// Pre-cae5e53 the demote release UPDATE carried
+// isNull(assigned_driver_user_id), matched 0 rows for every tracking demote
+// (tracking assignments are born-fulfilled — driver set at accept), and the
+// stranded live assignment made every re-award INSERT violate
+// awarded_bid_assignments_live_idx (23505 → 500 on accept; accept-bid has no
+// 23505 handler). The 200 below IS the regression guard.
+// ══════════════════════════════════════════════════════════════════════
+describe("C1 close-out — branch-(b) demote releases; re-award succeeds", () => {
+  const OLD_BID_ID = "77777777-7777-4777-8777-777777777777";
+  const STANDING_BID_ID = "88888888-8888-4888-8888-888888888888";
+
+  it("tracking accept → no ack → fleet_ack_timeout demote → re-accept 200 (no 23505/500)", async () => {
+    // ── Phase 1: awarded tracking request, born-fulfilled live assignment,
+    // one standing superseded bid (the re-select candidate).
+    mockReqRows = [
+      {
+        id: REQ_ID,
+        status: "awarded",
+        awarded_bid_id: OLD_BID_ID,
+        rider_user_id: "auth-actor",
+        tracking_required: true,
+        urgency: "standard",
+      },
+    ];
+    mockAssignmentRows = [
+      {
+        id: ASSIGN_ID,
+        request_id: REQ_ID,
+        fleet_id: FLEET_ID,
+        winning_bid_id: OLD_BID_ID,
+        assigned_driver_user_id: DRIVER_ID, // born-fulfilled (tracking accept)
+        released_at: null,
+      },
+    ];
+    // mockBidRows[0] doubles as demoteWinner's post-tx winning-bid fleet lookup
+    mockBidRows = [
+      { id: OLD_BID_ID, request_id: REQ_ID, fleet_id: FLEET_ID, status: "won" },
+      { id: STANDING_BID_ID, request_id: REQ_ID, fleet_id: FLEET_ID, status: "superseded" },
+    ];
+    mockBidCount = 1; // one standing bid survives the demote
+
+    const demote = await demoteWinner(REQ_ID, "fleet_ack_timeout");
+    expect(demote).toEqual({ ok: true, nextStatus: "collecting", standingBids: 1 });
+
+    // The release fired…
+    const release = mockTxUpdateCalls.find((c) => c.vals.released_at !== undefined);
+    expect(release).toBeDefined();
+    expect(release!.vals.release_reason).toBe("sla_timeout");
+    // …and its WHERE keys on request_id + released_at IS NULL ONLY. The
+    // assigned_driver_user_id IS NULL over-guard WAS the C1 defect — a
+    // born-fulfilled row can never match it.
+    const rendered = getWhereSql(release!.whereArgs);
+    expect(rendered.sql.toLowerCase()).toContain("released_at");
+    expect(rendered.sql.toLowerCase()).toContain("is null");
+    expect(rendered.sql).not.toContain("assigned_driver_user_id");
+
+    // ── Phase 2: post-demote state. Request collecting; the old assignment
+    // is released (§B.7 Check 1's released_at IS NULL filter excludes it, so
+    // the WHERE-resolved rows are empty); the standing bid is active again
+    // with driver+vehicle (tracking re-award).
+    mockReqRows = [
+      { id: REQ_ID, status: "collecting", rider_user_id: "auth-actor", tracking_required: true },
+    ];
+    mockAssignmentRows = []; // the released row no longer matches the live filter
+    mockBidRows = [
+      {
+        id: STANDING_BID_ID,
+        request_id: REQ_ID,
+        fleet_id: FLEET_ID,
+        status: "active",
+        driver_user_id: DRIVER_ID,
+        vehicle_id: VEHICLE_ID,
+      },
+    ];
+    mockDriverRows = [
+      { id: "driver-row-1", user_id: DRIVER_ID, fleet_id: FLEET_ID, status: "active" },
+    ];
+    mockVehicleRows = [{ id: VEHICLE_ID, fleet_id: FLEET_ID }];
+    mockSubRows = [
+      { fleet_status: "ACTIVE", plan_features: { marketplace_bidding: true }, period_end: null },
+    ];
+    mockEmergencyRows = [];
+    mockTxReturningRows = [[{ id: STANDING_BID_ID }]]; // winning-bid flip matches
+
+    const res = await acceptBid(makeRequest("POST", { bid_id: STANDING_BID_ID }), { id: REQ_ID });
+    // Pre-C1 this 500'd: the assignment INSERT hit the live-idx unique
+    // constraint because the old (never-released) row was still live.
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.status).toBe("awarded");
+    expect(json.assignment_id).toBe("gen-uuid"); // the new assignment row was written
+    expect(json.bid_id).toBe(STANDING_BID_ID);
+
+    // …and the award write-set targeted the standing bid.
+    const award = mockTxUpdateCalls.find(
+      (c) => c.vals.status === "awarded" && c.vals.awarded_bid_id === STANDING_BID_ID,
+    );
+    expect(award).toBeDefined();
+  });
+});

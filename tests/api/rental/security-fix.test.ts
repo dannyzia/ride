@@ -1009,6 +1009,78 @@ describe("A7 — POST /api/rental/bids/[id]/complete", () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════
+// M2 close-out (.kilo/plans/test-agent-c1-m2-guards.md Test 2, 2026-09-07
+// audit round) — only the winning-bid fleet can complete. The M2 gate
+// (complete+api.ts:89-108) reads the LIVE assignment and requires
+// winning_bid_id === bid.id; pre-a9cacc8 any bid's fleet staff could
+// complete a confirmed request mid-service for the winning fleet.
+// ══════════════════════════════════════════════════════════════════════
+describe("M2 — complete is gated to the awarded bid's fleet", () => {
+  const WINNING_BID_ID = mockBidUuid;
+  const LOSING_BID_ID = "00000000-0000-4000-8000-0000000000f1";
+  const OTHER_FLEET_ID = "00000000-0000-4000-8000-0000000000f2";
+  const STAFF_USER_ID = "00000000-0000-4000-8000-0000000000f3";
+
+  beforeEach(() => {
+    mockReqRows = [{ id: mockReqUuid, status: "confirmed" }];
+    // The live assignment was created from the WINNING bid
+    mockAssignmentRows = [
+      { assigned_driver_user_id: mockDriverUuid, winning_bid_id: WINNING_BID_ID, released_at: null },
+    ];
+    mockBidRows = [];
+    mockUpdateCalls = [];
+    mockInsertCalls = [];
+    mockUpdateRows = [{ id: "generated-uuid" }];
+    mockFleetAuthOk = true; // staff auth passes; the GATE must reject losers
+  });
+
+  afterEach(() => {
+    mockFleetAuthOk = false; // restore the harness default for later describes
+  });
+
+  it("staff of a LOSING bid's fleet → 403, zero writes", async () => {
+    // Staff of ANOTHER fleet passing their (settled) losing bid's id —
+    // requireFleetMember succeeds (they ARE staff of that fleet); only the
+    // winning-bid gate can stop the completion.
+    mockAuthUser = { id: STAFF_USER_ID, role: "driver" };
+    mockBidRows = [
+      { id: LOSING_BID_ID, request_id: mockReqUuid, fleet_id: OTHER_FLEET_ID, status: "superseded" },
+    ];
+
+    const res = await completeBid(makeRequest("POST", null), { id: LOSING_BID_ID });
+    expect(res.status).toBe(403);
+    const json = await res.json();
+    expect(json.error).toBe("forbidden");
+    expect(json.message).toBe("Only the awarded fleet can complete this ride");
+    expect(mockUpdateCalls).toHaveLength(0);
+    expect(mockInsertCalls).toHaveLength(0);
+  });
+
+  it("staff of the WINNING bid's fleet (≠ assigned driver) → 200 + completed", async () => {
+    mockAuthUser = { id: STAFF_USER_ID, role: "driver" };
+    mockBidRows = [
+      { id: WINNING_BID_ID, request_id: mockReqUuid, fleet_id: mockFleetUuid, status: "won" },
+    ];
+
+    const res = await completeBid(makeRequest("POST", null), { id: WINNING_BID_ID });
+    expect(res.status).toBe(200);
+    expect(mockUpdateCalls.find((c) => c.vals.status === "completed")).toBeDefined();
+    expect(mockInsertCalls.find((v) => v.event_type === "completed")).toBeDefined();
+  });
+
+  it("assigned driver of the winning bid → 200 (regression)", async () => {
+    mockAuthUser = { id: mockDriverUuid, role: "driver" };
+    mockBidRows = [
+      { id: WINNING_BID_ID, request_id: mockReqUuid, fleet_id: mockFleetUuid, status: "won" },
+    ];
+
+    const res = await completeBid(makeRequest("POST", null), { id: WINNING_BID_ID });
+    expect(res.status).toBe(200);
+    expect(mockUpdateCalls.find((c) => c.vals.status === "completed")).toBeDefined();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
 // B6 — PATCH /api/rental/requests/[id] terms: tx-wrapped doc-only write
 // ══════════════════════════════════════════════════════════════════════
 describe("B6 — PATCH /api/rental/requests/[id] terms (tx discipline)", () => {
