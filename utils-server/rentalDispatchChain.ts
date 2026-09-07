@@ -497,6 +497,12 @@ export async function sweepConfirmationDeadlines() {
   for (const row of overdueRows) {
     logger.info("[scheduler] job 48: confirmation deadline", { requestId: row.id });
 
+    // Audit-fix M3: capture the emit inputs inside the tx and emit AFTER the
+    // tx resolves — an emit inside the callback fires even when the tx later
+    // rolls back (phantom notification). Same shape as emergencyChain's
+    // transitionEmergencyRequest (.then() relay). Z2 invariant: emit AFTER tx.
+    let overslept = false;
+
     await db.transaction(async (tx) => {
       // Lock the request row and re-verify the sweep conditions BEFORE any
       // bid writes — R3-completion (F4): the prior fix guarded the assignment
@@ -566,8 +572,12 @@ export async function sweepConfirmationDeadlines() {
         );
 
       await appendEvent(row.id, "customer_overslept", {}, undefined, tx);
-      await emitRentalStatus(row.id, "cancelled");
+      overslept = true;
     });
+
+    if (overslept) {
+      await emitRentalStatus(row.id, "cancelled");
+    }
   }
 }
 
