@@ -24,7 +24,9 @@ import { eq, and, gt, sql, inArray } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { getConnectedBidderIds, sendToBidder } from './rentalHandler';
 import { broadcastToCouriers, sendToCourier } from './deliveryHandler';
-import { sendNotification } from '../lib/notify';
+// sendNotification: single-recipient path (job 55 customer push).
+// sendNotifications: batched path (job 54 member fan-out, A8 residual).
+import { sendNotification, sendNotifications } from '../lib/notify';
 import { sendToUser } from './index';
 
 // ── Job 54: Rental activation ────────────────────────────────────────────
@@ -144,22 +146,28 @@ export async function activateRentalRequests(tx: DbClient = db): Promise<number>
   }
 
   if (pushTuples.length > 0) {
-    await Promise.all(
-      pushTuples.map(async (p) => {
-        try {
-          await sendNotification(
-            p.userId,
-            p.urgency === 'alarm' ? 'alarm' : 'default',
-            p.urgency === 'alarm' ? '🚨 Urgent Rental Request' : 'New Rental Request',
-            `${p.category} — ${p.pickupAddress}`,
-            { request_id: p.requestId, type: 'rental_bid_request' },
-            { idempotencyKey: `rental_activation:${p.requestId}:${p.userId}` },
-          );
-        } catch (err) {
-          logger.warn('[activation] rental push notification failed', { request_id: p.requestId, err });
-        }
-      }),
-    );
+    // A8 residual (notify batching): ONE sendNotifications call for the whole
+    // batch — lib/notify now does a single dedup SELECT for all idempotency
+    // keys, one multi-row INSERT, and chunked parallel expo pushes. The
+    // per-recipient serialized dedup round-trips that made job 54's wall p99
+    // 14.2s are gone (see .kilo/plans/2026-09-06-a8-local-rig-report.md v2).
+    // N11: deterministic idempotency keys — restart re-broadcasts must not
+    // re-push the same activation to every member.
+    try {
+      await sendNotifications(
+        pushTuples.map((p) => ({
+          userId: p.userId,
+          type: p.urgency === 'alarm' ? 'alarm' : 'default',
+          title: p.urgency === 'alarm' ? '🚨 Urgent Rental Request' : 'New Rental Request',
+          body: `${p.category} — ${p.pickupAddress}`,
+          data: { request_id: p.requestId, type: 'rental_bid_request' },
+          idempotencyKey: `rental_activation:${p.requestId}:${p.userId}`,
+        })),
+      );
+    } catch (err) {
+      // sendNotifications never throws by contract; guard kept defensive.
+      logger.warn('[activation] rental push batch failed', { err });
+    }
   }
 
   // Advance watermark past the newest request

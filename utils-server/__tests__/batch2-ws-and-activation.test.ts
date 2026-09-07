@@ -123,6 +123,9 @@ jest.mock("../emergencyBus", () => ({
 
 jest.mock("../../lib/notify", () => ({
   sendNotification: jest.fn().mockResolvedValue({ sent: 1, failed: 0 }),
+  // A8 residual (notify batching): job 54 fans out through the batched entry
+  // point — one call, one dedup SELECT, one multi-row INSERT.
+  sendNotifications: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("../../lib/ambulanceCerts", () => ({
@@ -152,7 +155,7 @@ jest.mock("../index", () => ({
 const { db } = require("../../src/db");
 const { transitionEmergencyRequest } = require("../emergencyChain");
 const { activateRentalRequests, activateDeliveryRequests } = require("../activationJobs");
-const { sendNotification } = require("../../lib/notify");
+const { sendNotification, sendNotifications } = require("../../lib/notify");
 
 // ══════════════════════════════════════════════════════════════════════
 // N14 — WS relay strictly after commit
@@ -188,6 +191,7 @@ describe("N11 — activation jobs pass idempotency keys to sendNotification", ()
   beforeEach(() => {
     mockSeq.length = 0;
     (sendNotification as any).mockClear?.();
+    (sendNotifications as any).mockClear?.();
     db.__setMockRows({
       rental: [
         {
@@ -218,11 +222,15 @@ describe("N11 — activation jobs pass idempotency keys to sendNotification", ()
 
   it("job 54 rental activation uses rental_activation:{request_id}:{user_id}", async () => {
     await activateRentalRequests();
-    expect(sendNotification).toHaveBeenCalledTimes(1);
-    const [userId, , , , data, options] = (sendNotification as any).mock.calls[0];
-    expect(userId).toBe("member-1");
-    expect(data.request_id).toBe("rreq-1");
-    expect(options.idempotencyKey).toBe("rental_activation:rreq-1:member-1");
+    // A8 residual (notify batching): the fan-out goes through the batched
+    // entry point — ONE sendNotifications call for the whole member batch,
+    // each tuple carrying its deterministic N11 key.
+    expect(sendNotifications).toHaveBeenCalledTimes(1);
+    const [batch] = (sendNotifications as any).mock.calls[0];
+    expect(batch).toHaveLength(1);
+    expect(batch[0].userId).toBe("member-1");
+    expect(batch[0].data.request_id).toBe("rreq-1");
+    expect(batch[0].idempotencyKey).toBe("rental_activation:rreq-1:member-1");
   });
 
   it("job 55 delivery-created push uses delivery_created:{request_id}", async () => {
