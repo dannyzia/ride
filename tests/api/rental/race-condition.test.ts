@@ -314,11 +314,17 @@ describe("Race F1 — pick handler: conditional UPDATE includes assigned_driver_
 
 // ══════════════════════════════════════════════════════════════════════
 // Finding 3 — demoteWinner (called by sweepAssignmentSla Job 47)
-// sweepAssignmentSla reads assignments with `assigned_driver_user_id IS NULL`
-// then calls demoteWinner which releases the assignment. The release UPDATE
-// must re-check the same condition to avoid releasing a just-picked row.
+// RE-POINTED 2026-09-07 (audit-fix round, commit C1): the old predicate
+// asserted the release UPDATE carries assigned_driver_user_id IS NULL. The
+// code-skeptic audit proved that guard is the C1 bug — tracking assignments
+// are BORN-FULFILLED (driver set at accept), so the guard matched 0 rows for
+// every branch-(b) demote, stranding the live assignment and bricking re-award
+// (23505 → 500). The guard against releasing a just-picked assignment now
+// lives in the reason-aware EARLY-EXIT (sla_timeout only), not the WHERE.
+// The corrected invariant: the release WHERE has released_at IS NULL and NO
+// assigned_driver_user_id condition.
 // ══════════════════════════════════════════════════════════════════════
-describe("Race F3 — demoteWinner: assignment release includes assigned_driver_user_id IS NULL", () => {
+describe("Race F3 (re-pointed C1) — demoteWinner: release fires for born-fulfilled tracking assignments", () => {
   beforeEach(() => {
     mockReqRows = [
       {
@@ -331,7 +337,7 @@ describe("Race F3 — demoteWinner: assignment release includes assigned_driver_
     mockBidCount = 1;
   });
 
-  it("assignment release UPDATE WHERE includes IS NULL on assigned_driver_user_id", async () => {
+  it("assignment release UPDATE WHERE has released_at IS NULL and no assigned_driver_user_id guard", async () => {
     await demoteWinner(REQ_ID, "sla_timeout");
 
     const releaseUpdate = mockTxUpdateCalls.find(
@@ -342,9 +348,13 @@ describe("Race F3 — demoteWinner: assignment release includes assigned_driver_
     expect(releaseUpdate).toBeDefined();
 
     const rendered = getWhereSql(releaseUpdate!.whereArgs);
-    // MUST check assigned_driver_user_id IS NULL — prevents releasing a picked assignment
-    expect(rendered.sql).toContain("assigned_driver_user_id");
+    // released_at IS NULL stays (idempotence — never double-release)
+    expect(rendered.sql.toLowerCase()).toContain("released_at");
     expect(rendered.sql.toLowerCase()).toContain("is null");
+    // C1: the assigned_driver_user_id IS NULL guard is REMOVED — born-fulfilled
+    // tracking assignments (branch b) must be releasable. A picked-assignment
+    // race is handled by the reason-aware early-exit above the release.
+    expect(rendered.sql).not.toContain("assigned_driver_user_id");
   });
 });
 

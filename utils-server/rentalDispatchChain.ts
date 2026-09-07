@@ -115,13 +115,17 @@ export async function demoteWinner(
       )
       .limit(1);
     if (liveAssign?.assigned_driver_user_id && reason === "sla_timeout") {
-      // Reason-aware (R3 round-2, Item 2 #1): an empty assignment becoming
-      // non-empty before a sla_timeout demote means fleet staff PICKED while
-      // we were sweeping — the customer must not be demoted for it. For
-      // fleet_ack_timeout / fleet_cancelled the FLEET is the one failing to
-      // deliver (tracking assignments are born-fulfilled, so a blanket exit
-      // would abort every branch-(b) ack-timeout demote); the demote proceeds
-      // and the conditional release UPDATE releases the driver normally.
+      // Reason-aware (R3 round-2, Item 2 #1; audit-fix C1 comment correction):
+      // If a non-branch-b reason (sla_timeout) finds a driver already picked
+      // (the pick raced between the sweep's SELECT and demoteWinner's call),
+      // exit — the customer must not be demoted for it. For `fleet_ack_timeout`
+      // and `fleet_cancelled` on a tracking assignment — which is BORN-FULFILLED
+      // (the driver is set at accept, so assigned_driver_user_id is never
+      // null) — the early-exit does NOT apply; the release proceeds normally
+      // and the driver is freed. The release UPDATE below therefore does NOT
+      // guard on isNull(assigned_driver_user_id): that guard matched 0 rows
+      // for every branch-(b) demote, stranding the live assignment and
+      // bricking re-award (unique-constraint 23505 on accept → 500).
       return { ok: false as const, reason: "driver_picked" };
     }
 
@@ -144,7 +148,14 @@ export async function demoteWinner(
         ),
       );
 
-    // Release assignment — only if still unassigned (guards against racing pick handler)
+    // Audit-fix C1: release the assignment for whatever reason reached here.
+    // The old isNull(assigned_driver_user_id) guard matched 0 rows for
+    // branch-(b) demotes (tracking assignments are born-fulfilled), leaving
+    // the assignment live and bricking re-award (23505 → 500 on accept).
+    // Race safety is preserved by: (a) the sla_timeout early-exit above (a
+    // racing pick aborts the demote before any write), and (b) the whole
+    // write-set running under the rentalRequests FOR UPDATE lock. The only
+    // guard kept is released_at IS NULL (idempotence — never double-release).
     await tx
       .update(awardedBidAssignments)
       .set({
@@ -155,7 +166,6 @@ export async function demoteWinner(
         and(
           eq(awardedBidAssignments.request_id, requestId),
           isNull(awardedBidAssignments.released_at),
-          isNull(awardedBidAssignments.assigned_driver_user_id),
         ),
       );
 
