@@ -262,8 +262,11 @@ export async function POST(request: Request, { id }: { id: string }) {
     // Z2: per-state-change WS emissions — AFTER the tx resolves (v1 §D).
     // Fire-and-forget; a WS outage must not fail the committed transition.
     try {
-      const losingFleets = await db
-        .selectDistinct({ fleet_id: rentalBids.fleet_id })
+      // M6 (audit-fix): each losing fleet gets bid_settled with ITS OWN bid id
+      // and status 'lost' (spec §D payload contract) — the winner's bid id and
+      // 'awarded' were leaking into losing fleets' payloads.
+      const losingBids = await db
+        .select({ fleet_id: rentalBids.fleet_id, bid_id: rentalBids.id })
         .from(rentalBids)
         .where(
           and(
@@ -285,16 +288,16 @@ export async function POST(request: Request, { id }: { id: string }) {
             tracking_required: req.tracking_required,
           },
         },
-        ...losingFleets
-          .filter((f) => f.fleet_id !== acceptedBid.fleet_id)
-          .map((f) => ({
+        ...losingBids
+          .filter((b) => b.fleet_id !== acceptedBid.fleet_id)
+          .map((b) => ({
             event: "rental:bid_settled",
-            to: [{ kind: "fleet" as const, fleet_id: f.fleet_id }],
+            to: [{ kind: "fleet" as const, fleet_id: b.fleet_id }],
             payload: {
               request_id: id,
-              bid_id: acceptedBid.id,
-              reason: "accepted",
-              status: "awarded",
+              bid_id: b.bid_id,
+              reason: "lost_to_competitor",
+              status: "lost",
             },
           })),
         {

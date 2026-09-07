@@ -15,6 +15,7 @@ import { POST as confirmRequest } from "@/app/api/rental/requests/[id]/confirm+a
 import { POST as completeBid } from "@/app/api/rental/bids/[id]/complete+api";
 import { POST as pickAssignment } from "@/app/api/rental/assignments/[id]/pick+api";
 import { POST as fleetAck } from "@/app/api/rental/requests/[id]/fleet-ack+api";
+import { notifyWs } from "@/lib/wsNotify";
 
 // ── Mock state (mock* prefix required for jest.mock factory access) ──────
 const mockReqUuid = "00000000-0000-4000-8000-000000000001";
@@ -192,6 +193,10 @@ jest.mock("@/lib/marketplaceRbac", () => ({
 jest.mock("@/lib/platformConfig", () => ({
   isVerticalEnabled: async () => mockVerticalEnabled,
   getConfigInt: async (_key: string, fallback: number) => fallback,
+}));
+
+jest.mock("@/lib/wsNotify", () => ({
+  notifyWs: jest.fn(),
 }));
 
 function makeRequest(method: string, body: unknown) {
@@ -420,6 +425,78 @@ describe("N2 — POST /api/rental/requests/[id]/accept-bid (accept-side re-check
     // No award writes happened
     expect(mockUpdateCalls).toHaveLength(0);
     expect(mockInsertCalls).toHaveLength(0);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// M6 (audit-fix) — accept-bid losing-fleet bid_settled payload contract
+// ══════════════════════════════════════════════════════════════════════
+describe("M6 — accept-bid bid_settled carries each loser's OWN bid id + status 'lost'", () => {
+  beforeEach(() => {
+    mockReqRows = [];
+    mockBidRows = [];
+    mockDriverRows = [];
+    mockVehicleRows = [];
+    mockFleetSubRows = [];
+    mockInsertCalls = [];
+    mockUpdateCalls = [];
+    mockAuthUser = { id: mockUserUuid, role: "rider" };
+    (notifyWs as jest.Mock).mockClear();
+  });
+
+  it("emits bid_settled with the losing bid's id, status 'lost', reason 'lost_to_competitor'", async () => {
+    const losingFleetUuid = "00000000-0000-4000-8000-00000000000a";
+    const losingBidUuid = "00000000-0000-4000-8000-00000000000b";
+    mockReqRows = [
+      {
+        id: mockReqUuid,
+        status: "collecting",
+        rider_user_id: mockUserUuid,
+        tracking_required: false,
+      },
+    ];
+    mockBidRows = [
+      {
+        id: mockBidUuid,
+        fleet_id: mockFleetUuid,
+        status: "active",
+        driver_user_id: null,
+        vehicle_id: null,
+      },
+      {
+        id: losingBidUuid,
+        // The mock returns raw rows (no SQL projection), so the losing-bids
+        // select ({ fleet_id, bid_id }) reads `bid_id` straight off the fixture.
+        bid_id: losingBidUuid,
+        fleet_id: losingFleetUuid,
+        status: "superseded",
+        driver_user_id: null,
+        vehicle_id: null,
+      },
+    ];
+    mockFleetSubRows = [
+      {
+        fleet_status: "ACTIVE",
+        plan_features: { marketplace_bidding: true },
+        current_period_end: new Date(Date.now() + 3_600_000),
+      },
+    ];
+    const res = await acceptBid(makeRequest("POST", { bid_id: mockBidUuid }), {
+      id: mockReqUuid,
+    });
+    expect(res.status).toBe(200);
+
+    const settled = (notifyWs as jest.Mock).mock.calls[0][0].filter(
+      (e: { event: string }) => e.event === "rental:bid_settled",
+    );
+    expect(settled).toHaveLength(1);
+    // The losing fleet is told about ITS OWN bid — never the winner's bid id —
+    // and the status is a legal §D value ('lost'), not the winner's 'awarded'.
+    expect(settled[0].payload.bid_id).toBe(losingBidUuid);
+    expect(settled[0].payload.bid_id).not.toBe(mockBidUuid);
+    expect(settled[0].payload.status).toBe("lost");
+    expect(settled[0].payload.reason).toBe("lost_to_competitor");
+    expect(settled[0].to[0].fleet_id).toBe(losingFleetUuid);
   });
 });
 

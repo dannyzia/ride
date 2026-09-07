@@ -293,8 +293,10 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     // Z2: emit after the tx (v1 §D.3 — delivery:bid_won / bid_settled / status)
     try {
-      const losingCouriers = await db
-        .selectDistinct({ courier_user_id: deliveryBids.courier_user_id })
+      // M6 (audit-fix): mirror of the rental fix — each losing courier gets
+      // bid_settled with ITS OWN bid id and status 'lost' (spec §D contract).
+      const losingBids = await db
+        .select({ courier_user_id: deliveryBids.courier_user_id, bid_id: deliveryBids.id })
         .from(deliveryBids)
         .where(and(eq(deliveryBids.request_id, id), eq(deliveryBids.status, 'lost')));
       const customer = await db
@@ -314,12 +316,17 @@ export async function POST(request: Request, { id }: { id: string }) {
             status: 'assigned',
           },
         },
-        ...losingCouriers
-          .filter((c) => c.courier_user_id !== result.bid.courier_user_id)
-          .map((c): WsNotifyEvent => ({
+        ...losingBids
+          .filter((b) => b.courier_user_id !== result.bid.courier_user_id)
+          .map((b): WsNotifyEvent => ({
             event: 'delivery:bid_settled',
-            to: [{ kind: 'user', user_id: c.courier_user_id }],
-            payload: { request_id: id, bid_id, reason: 'accepted', status: 'assigned' },
+            to: [{ kind: 'user', user_id: b.courier_user_id }],
+            payload: {
+              request_id: id,
+              bid_id: b.bid_id,
+              reason: 'lost_to_competitor',
+              status: 'lost',
+            },
           })),
         {
           event: 'delivery:status',
