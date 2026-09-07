@@ -297,7 +297,10 @@ export async function POST(request: Request, { id }: { id: string }) {
               request_id: id,
               bid_id: b.bid_id,
               reason: "lost_to_competitor",
-              status: "lost",
+              // Ruling A (2026-09-07): status mirrors the losing bid's actual
+              // post-accept transition ('superseded', spec §B.1 accept row),
+              // not 'lost' — the bid is re-standing-eligible on demotion.
+              status: "superseded",
             },
           })),
         {

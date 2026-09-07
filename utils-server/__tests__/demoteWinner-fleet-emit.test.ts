@@ -43,23 +43,22 @@ const LOSING_FLEET_ID = "fleet-2";
 function scriptTxAndPostRead(): void {
   let selectCall = 0;
   (db.select as jest.Mock).mockImplementation(() => {
-    // call 1 (in-tx): request row · call 2 (in-tx, M7): losing-bid set ·
-    // call 3 (in-tx): live assignment · call 4 (in-tx): standing-bid count ·
-    // call 5 (post-tx): winning-bid fleet lookup (keyed on the closure
-    // demotedBidId) · call 6: emitRentalStatus owner lookup
+    // call 1 (in-tx): request row · call 2 (in-tx): live assignment ·
+    // call 3 (in-tx): standing-bid count · call 4 (post-tx): winning-bid
+    // fleet lookup (keyed on the closure demotedBidId) · call 5: emitRentalStatus
+    // owner lookup. (Ruling B: the M7 losing-bid-set select was removed —
+    // re-standing bidders get no bid_settled.)
     selectCall++;
     const rows: Row[] =
       selectCall === 1
         ? [{ id: REQUEST_ID, status: "awarded", awarded_bid_id: DEMOTED_BID_ID, rider_user_id: "rider-1", urgency: "alarm" }]
         : selectCall === 2
-          ? [{ id: LOSING_BID_ID, fleet_id: LOSING_FLEET_ID }]
+          ? [{ assigned_driver_user_id: null }]
           : selectCall === 3
-            ? [{ assigned_driver_user_id: null }]
+            ? [{ cnt: 2 }]
             : selectCall === 4
-              ? [{ cnt: 2 }]
-              : selectCall === 5
-                ? [{ fleet_id: DEMOTED_FLEET_ID }]
-                : [{ rider_user_id: "rider-1" }];
+              ? [{ fleet_id: DEMOTED_FLEET_ID }]
+              : [{ rider_user_id: "rider-1" }];
     const chain: any = {
       from: () => chain,
       where: () => chain,
@@ -101,17 +100,23 @@ describe("demoteWinner — demoted-fleet WS emit (Z2 finding)", () => {
       expect.objectContaining({ request_id: REQUEST_ID, status: "collecting" }),
     );
 
-    // M7: bid_settled reaches ALL bidding fleets — the demoted fleet's bid
-    // settled → 'lost', and every losing bidder gets its OWN bid id.
+    // M7 → Ruling B: bid_settled goes ONLY to the demoted winner's fleet
+    // (won→lost). Re-standing bidders are suppressed — they keep the
+    // request-level rental:status only.
     expect(sendToFleetMembers).toHaveBeenCalledWith(
       DEMOTED_FLEET_ID,
       "rental:bid_settled",
       expect.objectContaining({ request_id: REQUEST_ID, bid_id: DEMOTED_BID_ID, status: "lost" }),
     );
-    expect(sendToFleetMembers).toHaveBeenCalledWith(
+    const bidSettledCalls = (sendToFleetMembers as jest.Mock).mock.calls.filter(
+      ([, event]: [string, string]) => event === "rental:bid_settled",
+    );
+    expect(bidSettledCalls).toHaveLength(1);
+    expect(bidSettledCalls[0][0]).toBe(DEMOTED_FLEET_ID);
+    expect(sendToFleetMembers).not.toHaveBeenCalledWith(
       LOSING_FLEET_ID,
       "rental:bid_settled",
-      expect.objectContaining({ request_id: REQUEST_ID, bid_id: LOSING_BID_ID, status: "superseded" }),
+      expect.anything(),
     );
 
     // M7: the customer gets a push (alarm channel — urgency='alarm' fixture).
@@ -134,12 +139,10 @@ describe("demoteWinner — demoted-fleet WS emit (Z2 finding)", () => {
         selectCall === 1
           ? [{ id: REQUEST_ID, status: "awarded", awarded_bid_id: DEMOTED_BID_ID, rider_user_id: "rider-1" }]
           : selectCall === 2
-            ? [] // M7: no losing bids on this fixture
+            ? [{ assigned_driver_user_id: null }]
             : selectCall === 3
-              ? [{ assigned_driver_user_id: null }]
-              : selectCall === 4
-                ? [{ cnt: 0 }] // no standing bids → no_bidders
-                : [{ rider_user_id: "rider-1" }];
+              ? [{ cnt: 0 }] // no standing bids → no_bidders
+              : [{ rider_user_id: "rider-1" }];
       const chain: any = {
         from: () => chain,
         where: () => chain,

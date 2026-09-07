@@ -444,7 +444,7 @@ describe("M6 — accept-bid bid_settled carries each loser's OWN bid id + status
     (notifyWs as jest.Mock).mockClear();
   });
 
-  it("emits bid_settled with the losing bid's id, status 'lost', reason 'lost_to_competitor'", async () => {
+  it("emits bid_settled with the losing bid's id, status 'superseded' (Ruling A), reason 'lost_to_competitor'", async () => {
     const losingFleetUuid = "00000000-0000-4000-8000-00000000000a";
     const losingBidUuid = "00000000-0000-4000-8000-00000000000b";
     mockReqRows = [
@@ -491,10 +491,11 @@ describe("M6 — accept-bid bid_settled carries each loser's OWN bid id + status
     );
     expect(settled).toHaveLength(1);
     // The losing fleet is told about ITS OWN bid — never the winner's bid id —
-    // and the status is a legal §D value ('lost'), not the winner's 'awarded'.
+    // and the status mirrors the losing bid's actual transition ('superseded',
+    // Ruling A 2026-09-07), not the winner's 'awarded'.
     expect(settled[0].payload.bid_id).toBe(losingBidUuid);
     expect(settled[0].payload.bid_id).not.toBe(mockBidUuid);
-    expect(settled[0].payload.status).toBe("lost");
+    expect(settled[0].payload.status).toBe("superseded");
     expect(settled[0].payload.reason).toBe("lost_to_competitor");
     expect(settled[0].to[0].fleet_id).toBe(losingFleetUuid);
   });

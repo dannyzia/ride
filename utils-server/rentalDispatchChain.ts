@@ -89,11 +89,10 @@ export async function demoteWinner(
   // the post-tx block cannot re-read it — pass the pre-null id out via this
   // closure variable (set inside the tx, before the nulling write).
   let demotedBidId: string | null = null;
-  // M7: losing-bid set captured INSIDE the tx before the winner→lost and
-  // superseded→active flips — each losing-bidding fleet gets a post-tx
-  // bid_settled with its own bid id (spec §B.1 demote row).
-  let losingBids: { id: string; fleet_id: string }[] = [];
-  // M7: customer push fields — read off the locked req row inside the tx.
+  // M7 → Ruling B (2026-09-07): customer push fields — read off the locked
+  // req row inside the tx. (The earlier losing-bid-set capture was removed:
+  // re-standing bidders get no bid_settled per Ruling B, so there is nothing
+  // to capture.)
   let customerUserId: string | null = null;
   let customerUrgency: string | null = null;
   const result = await db.transaction(async (tx) => {
@@ -106,19 +105,6 @@ export async function demoteWinner(
     if (!req || req.status !== "awarded") return { ok: false as const, reason: "not_awarded" };
     customerUserId = req.rider_user_id;
     customerUrgency = req.urgency;
-
-    // M7: capture the losing-bid set BEFORE the status flips. On an awarded
-    // request the non-winner bids are 'superseded' ('active' included
-    // defensively per the round wording).
-    losingBids = await tx
-      .select({ id: rentalBids.id, fleet_id: rentalBids.fleet_id })
-      .from(rentalBids)
-      .where(
-        and(
-          eq(rentalBids.request_id, requestId),
-          inArray(rentalBids.status, ["active", "superseded"]),
-        ),
-      );
 
     // R3-completion (F3): re-check the live assignment UNDER the request lock.
     // A racing pick handler can fulfil the assignment between the sweep's
@@ -261,11 +247,12 @@ export async function demoteWinner(
     }
     await emitRentalStatus(requestId, result.nextStatus, demotedFleetId);
 
-    // M7: bid_settled to ALL bidding fleets (spec §B.1 demote row) —
-    // previously only rental:status fired, so losing bidders never learned
-    // the winner was demoted. The demoted fleet's bid settled → 'lost';
-    // re-standing bidders get their own bid id with their last settled
-    // status ('superseded') + reason 'winner_demoted'.
+    // M7 → Ruling B (2026-09-07): bid_settled goes ONLY to the demoted
+    // winner's fleet (its bid genuinely settled won→lost). Re-standing
+    // bidders (superseded→active) get NO bid_settled — their bids are no
+    // longer settled — and keep receiving the request-level rental:status
+    // above. The losing-bid set captured in-tx is retained for potential
+    // future use but is intentionally not emitted.
     try {
       if (demotedFleetId && demotedBidId) {
         await sendToFleetMembers(demotedFleetId, "rental:bid_settled", {
@@ -273,15 +260,6 @@ export async function demoteWinner(
           bid_id: demotedBidId,
           reason,
           status: "lost",
-        });
-      }
-      for (const b of losingBids) {
-        if (b.fleet_id === demotedFleetId) continue; // handled above
-        await sendToFleetMembers(b.fleet_id, "rental:bid_settled", {
-          request_id: requestId,
-          bid_id: b.id,
-          reason: "winner_demoted",
-          status: "superseded",
         });
       }
     } catch (e: unknown) {
