@@ -9,6 +9,11 @@
  * N11 — activationJobs (jobs 54/55) pass deterministic idempotency keys to
  *       sendNotification so watermark re-broadcasts (TD-15 restart recovery)
  *       never double-push.
+ * M5 — emergencyChain.broadcastEmergencyNewRequest carries the same contract:
+ *       every alarm push (queue path AND legacy direct path) uses the
+ *       deterministic key `emergency_activation:{req.id}:{userId}` so a
+ *       restart re-broadcast never re-pushes live alarms to certified
+ *       drivers (alarm fatigue in the life-safety vertical).
  */
 const mockSeq: string[] = [];
 
@@ -153,7 +158,8 @@ jest.mock("../index", () => ({
 }));
 
 const { db } = require("../../src/db");
-const { transitionEmergencyRequest } = require("../emergencyChain");
+const { transitionEmergencyRequest, broadcastEmergencyNewRequest } = require("../emergencyChain");
+const { getEligibleEmergencyDriverUserIds } = require("../../lib/ambulanceCerts");
 const {
   activateRentalRequests,
   activateDeliveryRequests,
@@ -248,5 +254,89 @@ describe("N11 — activation jobs pass idempotency keys to sendNotification", ()
     expect(notifyQueue[0].idempotencyKey).toBe("delivery_created:dreq-1");
     await dispatchNotifyQueue(notifyQueue);
     expect(sendNotifications).toHaveBeenCalledWith(notifyQueue);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// M5 — emergency alarm pushes carry the deterministic key in BOTH dispatch
+//      paths (notifyQueue and legacy direct). A watermark restart-rebroadcast
+//      must dedup, not re-push every live alarm to every certified driver.
+// ══════════════════════════════════════════════════════════════════════
+describe("M5 — emergency alarm pushes use emergency_activation:{req.id}:{userId}", () => {
+  const EMERGENCY_REQ = {
+    id: "ereq-1",
+    pickup_address: "House 12, Road 5, Dhanmondi",
+    pickup_lat: 23.7509,
+    pickup_lng: 90.3934,
+    service_level: "basic",
+    requires_paramedic: false,
+    expires_at: new Date(Date.now() + 15 * 60 * 1000),
+  };
+
+  beforeEach(() => {
+    mockSeq.length = 0;
+    (sendNotification as any).mockClear?.();
+    (sendNotifications as any).mockClear?.();
+    (getEligibleEmergencyDriverUserIds as any).mockClear?.();
+    (getEligibleEmergencyDriverUserIds as any).mockResolvedValue([
+      "driver-1",
+      "driver-2",
+    ]);
+  });
+
+  it("notifyQueue path: every alarm push carries emergency_activation:{req.id}:{userId}", async () => {
+    const notifyQueue: unknown[] = [];
+    const count = await broadcastEmergencyNewRequest(EMERGENCY_REQ, notifyQueue);
+
+    expect(count).toBe(2);
+    // M4: the scan itself never sends — the scheduler dispatches post-budget.
+    expect(sendNotifications).not.toHaveBeenCalled();
+    expect(sendNotification).not.toHaveBeenCalled();
+    expect(notifyQueue).toHaveLength(2);
+    expect(notifyQueue.map((n) => (n as any).userId)).toEqual([
+      "driver-1",
+      "driver-2",
+    ]);
+    for (const push of notifyQueue) {
+      expect((push as any).idempotencyKey).toBe(
+        `emergency_activation:ereq-1:${(push as any).userId}`,
+      );
+      expect((push as any).type).toBe("alarm");
+      expect((push as any).data.request_id).toBe("ereq-1");
+    }
+  });
+
+  it("legacy direct path (no queue): still sends with the same deterministic key", async () => {
+    const count = await broadcastEmergencyNewRequest(EMERGENCY_REQ);
+
+    expect(count).toBe(2);
+    expect(sendNotifications).toHaveBeenCalledTimes(2);
+    for (const call of (sendNotifications as any).mock.calls) {
+      expect(call[0]).toHaveLength(1);
+      expect(call[0][0].idempotencyKey).toBe(
+        `emergency_activation:ereq-1:${call[0][0].userId}`,
+      );
+    }
+  });
+
+  it("re-broadcast (restart recovery): keys are deterministic — identical for the same request+driver", async () => {
+    const first: unknown[] = [];
+    const second: unknown[] = [];
+    await broadcastEmergencyNewRequest(EMERGENCY_REQ, first);
+    await broadcastEmergencyNewRequest(EMERGENCY_REQ, second);
+
+    expect(first).toHaveLength(2);
+    expect(second).toHaveLength(2);
+    for (let i = 0; i < 2; i++) {
+      expect((second[i] as any).idempotencyKey).toBe(
+        (first[i] as any).idempotencyKey,
+      );
+    }
+    // The dedup property M5 buys: dispatching both queues in sequence means
+    // every second push collides with its first-pass key, not a fresh one.
+    const firstKeys = new Set(first.map((n) => (n as any).idempotencyKey));
+    for (const n of second) {
+      expect(firstKeys.has((n as any).idempotencyKey)).toBe(true);
+    }
   });
 });
