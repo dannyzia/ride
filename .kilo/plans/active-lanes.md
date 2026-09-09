@@ -261,3 +261,20 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Fix shape (fix lane):** bdtDayOfWeek/bdtHourOfDay helpers in lib/time.ts + 4 call sites + tests.
 - **Artifacts:** findings file .kilo/plans/findings/2026-09-09-theme5-time-audit.md (COMPLETE);
   ISSUE-40 comment 01M23HTKM574CV6CA17SZHXDPQ. T5 closed for ISSUE-40 sweep; T9 remains.
+## 2026-09-09 — T9 audit (dispatch stale-eligibility) — COMPLETE
+
+- **Verdict:** calls_remaining/daily-cap, subscription expiry, online status, and ride status are
+  all re-verified at the right boundaries (FOR-UPDATE debit re-checks, live socket registry,
+  between-offer DB status re-read, atomic status='dispatching' match guard). The dispatch
+  pipeline never admits stale balance/online/ride-state.
+- **F-9.1 (MEDIUM):** drivers.status is checked ONLY at pool build — the chain holds an in-memory
+  ID snapshot; debit tx checks subscription but not drivers.status, and executeMatchFlow has no
+  status/is_online re-check before the match commit. A suspended-after-pool-build driver can be
+  debited, offered, and matched. Fix: one status guard in debit tx + one in executeMatchFlow.
+- **F-9.2 (LOW):** /internal/driver/force-offline (index.ts:526) is fully implemented but has
+  ZERO callers — admin suspend+api.ts never notifies the dispatch server, so the suspended
+  driver's socket stays connected and admin:suspended is never delivered. Wiring the call closes
+  most of F-9.1's window at the source.
+- **Artifacts:** findings file .kilo/plans/findings/2026-09-09-theme9-stale-eligibility-audit.md;
+  ISSUE-40 comment 01M23JHX1SCPF0M3R7RMTXAG58. Deferred-depth arc (T5+T6+T9) COMPLETE — ISSUE-40
+  sweep fully closed; fixes F-5.1..F-5.4, F-9.1, F-9.2 routed to the fix lane.
