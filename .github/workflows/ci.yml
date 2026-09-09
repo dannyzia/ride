@@ -1,0 +1,64 @@
+# CI — Ride monorepo (Expo app + utils-server).
+#
+# Purpose:     Hosted gate on every push/PR: lint → typecheck (both packages) →
+#               vacuous-assertion gate → full jest suite. Complements the local
+#               pre-commit/pre-push hooks (scripts/git-hooks/*).
+# Owner:       Coding model (test lane)
+# Status:      ACTIVE
+# Related (concrete paths):
+#   - scripts/check-vacuous-assertions.js — vacuous gate CLI (also inside test:all)
+#   - tests/meta/vacuous-assertion-gate.test.ts — in-suite meta gate
+#   - package.json — scripts: lint / test:all / check:vacuous
+# Last verified: 2026-09-09, coding model — workflow YAML validated; steps mirror
+#   the locally proven gate sequence (1943/1943, tsc 0/0, lint 0 errors).
+# How to update: keep step order aligned with the house validation order
+#   (lint → typecheck → test); do not add deploy steps here.
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop, implementation]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: lint + typecheck + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # Root workspace (Expo app, API routes, tests). `npm ci` requires the
+      # committed package-lock.json — keeps CI reproducible.
+      - name: Install root dependencies
+        run: npm ci
+
+      # utils-server is an independently-typed package (AGENTS.md) with its own
+      # manifest and no lockfile; its deps are needed by the root jest suite
+      # (utils-server/__tests__ import its sources).
+      - name: Install utils-server dependencies
+        run: npm install --no-audit --no-fund
+        working-directory: utils-server
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck (root)
+        run: npx tsc --noEmit
+
+      - name: Typecheck (utils-server)
+        run: npx tsc --noEmit
+        working-directory: utils-server
+
+      # test:all = check:vacuous (vacuous-assertion gate) && jest --ci.
+      # The vacuous gate fails the run if any placeholder assertion
+      # (expect(true).toBe(true), expect(N).toBeDefined(), …) exists in a
+      # test file — see scripts/vacuous-assertion-scanner.js for the rule set.
+      - name: Vacuous-assertion gate + full test suite
+        run: npm run test:all
