@@ -328,3 +328,20 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Deploy note:** migration 0056 must be applied (drizzle-kit push or psql the SQL file) before
   the API ships — the routes fail closed to 500 on a missing table. TD-31 GRANT not required
   (server-side Drizzle only; no PostgREST surface).
+## 2026-09-09 — Audit fix batch EXECUTED (F-9.1/F-9.2 dispatch safety + F-5.1..F-5.4 time fixes + CI audit gate)
+
+- **F-9.1:** debit-tx account-status guard (leadBilling.ts step 4b — live drivers read,
+  status/!is_online → billed=false zero writes) + accept-side re-verification in executeMatchFlow
+  (ineligible → race_lost semantics, no reply, lead stays billed).
+- **F-9.2:** suspend+api.ts → POST /internal/driver/force-offline (Bearer WEBSOCKET_INTERNAL_SECRET,
+  5s timeout, fire-and-forget); admin:suspended + socket close + H3 eviction + pending-offer
+  resolution now fire on suspension.
+- **F-5.1/F-5.2:** admin + fleet dashboard today-boundaries → prevBdtMidnightUtc().
+- **F-5.3/F-5.4:** scheduler jobs 37/41 gate on new lib/time.ts bdtDayOfWeek/bdtHourOfDay
+  (fixed UTC+6, no Intl) — Stage 0 exit-gate input no longer host-TZ dependent.
+- **CI:** blocking `npm audit --audit-level=critical` step in ci.yml (critical=0 today; future
+  critical fails the build) + weekly scheduled audit-scan.yml (informational, always-green).
+- **Tests:** +13 (bdtClockHelpers 6 · leadBilling F-9.1 4 · driver-lifecycle F-9.2 3).
+- **Gates:** eq(col,null) CLEAN · root tsc 0 · utils-server tsc 0 · lint 0 errors (286 warnings) ·
+  jest 2020 passed / 2 skipped / 159 suites.
+- Findings files stamped RESOLUTION; ISSUE-40 closure comment posted with the fix-batch digest.

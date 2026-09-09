@@ -48,3 +48,12 @@ Helper sanity re-verified: nextBdtMidnightUtc() is correct at 23:30 Dhaka (→ +
 ## Verdict
 
 **Zero money-path or limit-path boundary bugs.** Every daily reset, expiry writeoff, and earnings window rides the lib/time helpers correctly — the X-1/T6 discipline extends to time. Four findings, all in telemetry/display surfaces: two dashboard "today" boundaries (LOW) and two weekly jobs anchored to host-local instead of Dhaka time (MEDIUM, monitor-only). Recommended fix shape: one small lib/time.ts addition (bdtDayOfWeek/bdtHourOfDay) + 4 call-site changes — routed to the fix lane; T5 is CLOSED for ISSUE-40's sweep.
+
+## RESOLUTION — 2026-09-09 fix batch
+
+All four findings fixed and gated:
+- F-5.1: app/api/admin/dashboard+api.ts today-boundary → prevBdtMidnightUtc()
+- F-5.2: app/api/fleet/dashboard+api.ts todayStart → prevBdtMidnightUtc()
+- F-5.3: scheduler job 37 gates on bdtDayOfWeek/bdtHourOfDay (new lib/time.ts helpers, Intl-free fixed +6)
+- F-5.4: scheduler job 41 same fix
+Helper coverage: lib/__tests__/bdtClockHelpers.test.ts (6 tests, incl. the 18:00 UTC Dhaka-midnight rollover).

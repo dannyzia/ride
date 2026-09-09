@@ -57,3 +57,19 @@ Exposure window = chain duration (bounded per-offer by the 15s TTL, but a long p
 | socket on suspend | — | stays connected (no caller of force-offline) | — | — | F-9.2 |
 
 Fix routing: F-9.1 → fix lane (two small guards); F-9.2 → fix lane (one fetch call in suspend+api.ts + config). T9 CLOSED for ISSUE-40's sweep — the deferred-depth audit arc (T5, T6, T9) is complete.
+
+## RESOLUTION — 2026-09-09 fix batch
+
+Both findings fixed and gated:
+- F-9.1 (debit side): leadBilling.ts step 4b re-reads the live drivers row INSIDE the debit tx —
+  status!=="active" || is_online!==true → billed=false, zero writes. Not FOR UPDATE (nothing else
+  writes status online-path; skip-on-drift is cheap and idempotent).
+- F-9.1 (accept side): executeMatchFlow re-verifies status/is_online from the driverRow select
+  before the match commit; ineligible → "race_lost" semantics (no reply, ride stays dispatching,
+  lead stays billed per ruling 8).
+- F-9.2: app/api/admin/driver/suspend+api.ts now calls /internal/driver/force-offline
+  (WEBSOCKET_INTERNAL_SECRET Bearer, 5s timeout, fire-and-forget — never fails the admin action).
+  The admin:suspended WS message, socket close, H3 eviction, and pending-offer resolution now
+  actually fire on suspension.
+Tests: leadBilling F-9.1 describe (4 cases incl. zero-writes), driver-lifecycle F-9.2 cases (3: URL/
+auth/payload pinning, failure non-blocking, secret-unset skip), bdtClockHelpers (6).
