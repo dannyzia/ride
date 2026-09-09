@@ -177,3 +177,11 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Commit:** b346ec4 (pushed; CI run #3 to verify hosted).
 
 **Erratum (same day, post-commit verification):** the b346ec4 commit message and the row above call the deleted utils-server/package-lock.json "stale relative to the 6-dep manifest" — that claim is WRONG. grep of the deleted blob shows supabase-js and dotenv entries present (7 hits): the nested lockfile accurately described its manifest. The correct deletion rationale is only "superseded by the workspace" (one root lockfile; a nested lockfile under a workspace is inert/misleading and npm ci at the root ignores it). Recorded here because b346ec4 is pushed and its message cannot be amended without a history rewrite.
+
+## 2026-09-09 — Fleet exit/dues-gate: BD-1..3 RULED (spec §4 closed)
+
+- **Driver:** Zia directive — rule BD-1..3 so the exit/dues-gate build has no open decisions left.
+- **Rulings (all three = the spec defaults, CONFIRMED with evidence):** BD-1 block entirely (no acknowledgment/e-sign infra exists; settle path app/api/driver/wallet/topup+api.ts exists; zero new infrastructure). BD-2 platform-admin-only, audited (lib/adminRbac requireAdminPermission + audit_logs schema.ts:2649; abuse direction: a fleet manager benefits from trapping an indebted driver). BD-3 fleet-owed dues block BOTH fleet-switch and platform-level exit; due-class registry must carry scope fleet|platform.
+- **Evidence:** greps on implementation @ 5144940. Spec updated 5093 to 7046 chars; §4 heading now RULED; header status RULINGS RECORDED (still DEFERRED; §5 feature freeze intact).
+- **Consequence:** exit/dues-gate build is fully specified the moment the freeze lifts; only remaining inputs are implementation-time, not business-time. Decision record posted to Rhizome ISSUE-36.
+- **Files:** .kilo/plans/fleet-exit-dues-gate-spec.md (untracked, ignored) + this ledger row (tracked).
