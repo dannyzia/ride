@@ -304,3 +304,27 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Findings file:** .kilo/plans/findings/2026-09-09-npm-audit-triage.md stamped EXECUTED with
   execution log. Remaining dispositions unchanged (eas-cli at next build cycle; RN/Metro +
   navigation/nanoid accepted; ~52 moderates re-checked at the SDK upgrade).
+## 2026-09-09 — ISSUE-37 IMPLEMENTED (idempotency-key convention: storage + helper + four money POSTs)
+
+- **Commit:** bd65eaa (16 files, +782/−77). Decision 01M23628A1566SK1D5XXV1NT5G; all five AC met.
+- **Storage:** idempotency_keys table (schema.ts + hand-authored migration 0056, journal idx 54) —
+  (route, key) unique barrier, stored response_status/response_body, user_id co-scope.
+- **Helper:** lib/idempotency.ts — two-phase claim (in-flight marker → execute → store outcome);
+  duplicate ⇒ replay original outcome (Idempotency-Replayed: true, handler never re-executes);
+  in-flight ⇒ 409 idempotency_key_in_progress; 23505 race loser ⇒ read-and-return winner;
+  failures stored (client retries replay typed failures); crash-left claim ⇒ 409 + fresh key.
+  Exempt list documented in code: SOS insert (R3.1), /internal/*, PortPos callback (verifyIPN +
+  in-tx paid-guard).
+- **Wired:** rider/driver wallet topup + rider passes (header OPTIONAL — absent → fresh server key,
+  legacy behavior) and package purchase (header REQUIRED — client already sends it, contract pinned
+  by tests). Claim precedes the invoice round-trip; the client key flows into
+  payment_events.idempotency_key so the payment barrier and the convention barrier align.
+- **Tests:** tests/api/idempotency-convention.test.ts (12) — claim matrix, race loser, co-scope,
+  AC-5 end-to-end through the real topup handler (same key twice → exactly one payment row +
+  replayed response). Money-route/package suites updated: fake Requests got text()/headers, db
+  mocks got insert/update stubs.
+- **Gates:** eq(col,null) CLEAN · root tsc 0 · utils-server tsc 0 · lint 0 errors (286 warnings)
+  · jest 2007 passed / 2 skipped / 157 suites. AGENTS.md + CLAUDE.md convention sections synced.
+- **Deploy note:** migration 0056 must be applied (drizzle-kit push or psql the SQL file) before
+  the API ships — the routes fail closed to 500 on a missing table. TD-31 GRANT not required
+  (server-side Drizzle only; no PostgREST surface).
