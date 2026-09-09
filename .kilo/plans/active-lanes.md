@@ -278,3 +278,16 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Artifacts:** findings file .kilo/plans/findings/2026-09-09-theme9-stale-eligibility-audit.md;
   ISSUE-40 comment 01M23JHX1SCPF0M3R7RMTXAG58. Deferred-depth arc (T5+T6+T9) COMPLETE — ISSUE-40
   sweep fully closed; fixes F-5.1..F-5.4, F-9.1, F-9.2 routed to the fix lane.
+## 2026-09-09 — ISSUE-40 CLOSED (deferred-depth sweep T5+T6+T9)
+
+- **Final sweep verdict:** the deferred-depth audit arc is complete. T6 (paisa/percent units, b4db69c),
+  T5 (UTC vs Asia/Dhaka boundaries, 62ca4c0), T9 (dispatch stale-eligibility, 121fe4c).
+- **Arc totals:** zero money-path or limit-path defects across all three sweeps. Findings, all
+  telemetry/monitor/display surfaces: F-5.1/F-5.2 (LOW, dashboard server-local midnight),
+  F-5.3/F-5.4 (MEDIUM, jobs 37/41 host-local gating — F-5.3 feeds the Stage 0 exit gate input),
+  F-9.1 (MEDIUM, suspension checked only at pool build — debit tx + executeMatchFlow lack
+  status/is_online re-check), F-9.2 (LOW, /internal/driver/force-offline has zero callers).
+- **Rhizome:** ISSUE-40 finished → done (work attempt 01M23JRRJH5S4FARVRNDAPS155, full completion
+  checkpoint, 5 artifacts: commits 62ca4c0/121fe4c/b4db69c + both findings files).
+- **Remaining on the audit fix backlog:** the six findings above, routed to the fix lane. Recommended
+  order: F-9.1+F-9.2 (dispatch safety) first, T5 quartile rides along (~30 min total).
