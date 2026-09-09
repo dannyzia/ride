@@ -291,3 +291,16 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
   checkpoint, 5 artifacts: commits 62ca4c0/121fe4c/b4db69c + both findings files).
 - **Remaining on the audit fix backlog:** the six findings above, routed to the fix lane. Recommended
   order: F-9.1+F-9.2 (dispatch safety) first, T5 quartile rides along (~30 min total).
+## 2026-09-09 — npm audit cheap-kills batch EXECUTED (82 → 66 findings)
+
+- **Actions:** removed `@narasimhaponnada/mermaid-mcp-server` (zero code references verified);
+  added `overrides` { tar ^7.5.22, postcss ^8.5.23, nanoid ^3.3.18 } to package.json (resolved
+  7.5.22 / 8.5.28 / 3.3.18); bumped drizzle-orm ^0.42.0 → ^0.45.2 in BOTH manifests (root +
+  utils-server — workspace single physical copy, closing the one runtime-relevant HIGH).
+- **Audit delta:** 82 → 66 findings; critical 1 → 0; high 24 → 14.
+- **Gates:** eq(col,null) CLEAN · root tsc 0 · utils-server tsc 0 · lint 0 errors (283 warnings, −2) ·
+  jest 1995 passed / 2 skipped / 156 suites — first fully-green suite (the 3 pre-existing
+  pickup-move failures no longer reproduce after the shop-test rebuild).
+- **Findings file:** .kilo/plans/findings/2026-09-09-npm-audit-triage.md stamped EXECUTED with
+  execution log. Remaining dispositions unchanged (eas-cli at next build cycle; RN/Metro +
+  navigation/nanoid accepted; ~52 moderates re-checked at the SDK upgrade).
