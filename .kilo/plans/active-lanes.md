@@ -247,3 +247,17 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Cheap kills identified:** overrides `tar ^7.5.22` (kills the critical — symlink-extraction CVE, dev-machine vector), `postcss ^8.5.23`, `nanoid ^3.3.18`; REMOVE unused `@narasimhaponnada/mermaid-mcp-server` devDep (kills 6 highs, zero repo references); upgrade `eas-cli → ^23.2.0` at next build cycle (audit's `fixAvailable: eas-cli@0.52.0` is a re-resolution artifact, latest is 23.2.0).
 - **Accept-with-reason:** react-native 0.79.2 chain (metro/image-size DoS — bundler-time only; fix = Expo SDK crossing, gated on next planned SDK upgrade with device tests) and @react-navigation (see above).
 - **Findings file:** `.kilo/plans/findings/2026-09-09-npm-audit-triage.md` (PROPOSED — actions gated on the two Zia calls: mermaid-mcp-server removal, drizzle-orm bump timing; CI suppression policy: advisory scan only, no blanket audit suppression).
+## 2026-09-09 — T5 audit (scheduler UTC vs Asia/Dhaka boundaries) — COMPLETE
+
+- **Verdict:** zero money-path or limit-path boundary bugs. Every daily reset (scheduler.ts:925),
+  expiry writeoff (activateSubscription.ts:44), gamification/intro-incentive/zone day windows, and
+  earnings dashboards correctly ride lib/time.ts helpers (nextBdtMidnightUtc family); helpers
+  re-verified at the 23:30/00:30/00:00 Dhaka edges; no DST hazard (fixed +6).
+- **Findings (4, all telemetry/display):** F-5.1 (LOW) admin dashboard today-boundary uses
+  server-local midnight (app/api/admin/dashboard+api.ts:13); F-5.2 (LOW) fleet dashboard same
+  (app/api/fleet/dashboard+api.ts:50); F-5.3 (MEDIUM, monitor-only) job 37 heat backtest gates on
+  server-local getDay/getHours (scheduler.ts:2155); F-5.4 (MEDIUM, monitor-only) job 41 decline
+  monitoring same (scheduler.ts:2268).
+- **Fix shape (fix lane):** bdtDayOfWeek/bdtHourOfDay helpers in lib/time.ts + 4 call sites + tests.
+- **Artifacts:** findings file .kilo/plans/findings/2026-09-09-theme5-time-audit.md (COMPLETE);
+  ISSUE-40 comment 01M23HTKM574CV6CA17SZHXDPQ. T5 closed for ISSUE-40 sweep; T9 remains.
