@@ -175,3 +175,5 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Changes:** root workspaces field + private; utils-server/package-lock.json deleted (superseded, stale vs the 6-dep manifest); ci.yml single workspace-root npm ci step.
 - **Gates:** lockfile diff additive-only; post-npm ci clean install: lint 0, tsc 0/0, test:all 1976/1976 (155 suites).
 - **Commit:** b346ec4 (pushed; CI run #3 to verify hosted).
+
+**Erratum (same day, post-commit verification):** the b346ec4 commit message and the row above call the deleted utils-server/package-lock.json "stale relative to the 6-dep manifest" — that claim is WRONG. grep of the deleted blob shows supabase-js and dotenv entries present (7 hits): the nested lockfile accurately described its manifest. The correct deletion rationale is only "superseded by the workspace" (one root lockfile; a nested lockfile under a workspace is inert/misleading and npm ci at the root ignores it). Recorded here because b346ec4 is pushed and its message cannot be amended without a history rewrite.
