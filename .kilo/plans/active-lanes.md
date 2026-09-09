@@ -224,3 +224,11 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Deleted:** `app/(main)/(customer)/confirm-ride,index.tsx` (git rm; 719 lines removed). One route file remains.
 - **Commit:** `41ab0ae` (2 files, +3/−719). Gates: tsc 0, lint 0 errors (282-warning house baseline), i18n smoke 4/4.
 - **T6 findings file F-6.1:** now disposed; F-6.2 remains INFO-only.
+
+## 2026-09-09 — Fleet add-flows Phase B (ISSUE-35 §4.3)
+
+- **Scope:** plan §4.3 attach-or-transfer (Phase B; §4.4 already landed in Phase A by the R4 pull-forward).
+- **Shipped (commit 4c498e0):** `POST /api/fleet/drivers` — A1 provision (pending + `bike_basic` register-default, schema-NOT-NULL delta) · A2 409 `already_in_fleet` · B1 single-UPDATE transfer (no active assignment, offline) · B2 409 `driver_transfer_blocked` (active assignment OR online) · 404 `user_not_found` · 403 plan-limit in-tx behind `takeFleetLimitLock`, before branch dispatch.
+- **Deltas recorded in the plan execution row:** vehicle_type NOT NULL default; D1 "own no vehicles" subsumed by the assignment guard.
+- **Gates:** fleet suites 90/90 · full 1995/1995 (156 suites) · tsc 0/0 · lint 0 errors (stash-verified zero warning delta) · eq(col,null) clean.
+- **Board:** ISSUE-35 finish_attempt → done (epic complete incl. Phase A+B; Phase C remains a separate deferred issue).
