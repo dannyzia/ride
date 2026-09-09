@@ -119,9 +119,9 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 
 ### Architecture Boundaries
 
-Two independently-typed packages:
+npm workspace (since 2026-09-09, commit `b346ec4`) with two independently-typed packages — ONE root lockfile, ONE `npm ci` at the repo root installs both; never install inside `utils-server/` (see AGENTS.md "Why a workspace" for the drizzle two-copy rationale):
 1. **Root** (`package.json`): Expo app — React Native mobile client + Expo API routes (`app/api/`)
-2. **`utils-server/`** (`utils-server/package.json`): WebSocket dispatch server with separate `tsconfig.json` and dependencies
+2. **`utils-server/`** (`utils-server/package.json`): WebSocket dispatch server with separate `tsconfig.json` and own manifest — a workspace member, not a nested install
 
 `tsconfig.json` excludes `utils-server/` and `functions/` (functions/ doesn't exist). ESLint ignores `utils-server/` and `_reference/`.
 
@@ -132,6 +132,9 @@ See AGENTS.md for the complete command reference. Key commands:
 ```bash
 # Device-testing env (run BEFORE expo start; laptop IP differs WiFi vs hotspot — see TEST-SETUP.md)
 node scripts/dev-env-sync.js    # Sync .env.local dev IPs to current LAN IP
+
+# Install (workspace root ONLY — never npm install/ci inside utils-server/)
+npm ci
 
 # Expo app
 npx expo start                  # Dev server  (alias: `npm start`)
@@ -198,7 +201,7 @@ If you cannot confirm the six Section 20 gates are complete, **do not generate f
 
 ### Backend Services (implemented)
 1. **Expo API Routes** (`app/api/`) — Business logic, DB queries, rate limiting. Supabase JWT required (unless marked `[public]` or using `requireRole`).
-2. **Utils Server** (`utils-server/`) — WebSocket dispatch, sequential chains with debit-on-offer lead billing (leadBilling.ts), H3 index, scheduler, compensation worker. Separate package.json with own dependencies.
+2. **Utils Server** (`utils-server/`) — WebSocket dispatch, sequential chains with debit-on-offer lead billing (leadBilling.ts), H3 index, scheduler, compensation worker. Own package.json/manifest as an npm workspace member (single root lockfile; deps hoisted to root).
 
 ### Auth Flow (implemented)
 ```

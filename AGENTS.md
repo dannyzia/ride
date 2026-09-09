@@ -42,9 +42,11 @@ All core features are **fully implemented**:
 
 **Verification:** No Clerk, Stripe, or Firebase references remain in the codebase (checked 2026-06).
 
-This repo has **two independently-typed packages**:
+This repo is an **npm workspace** (since 2026-09-09, commit `b346ec4`): ONE root lockfile (`package-lock.json`), ONE `npm ci` at the repo root installs both packages. The two packages remain independently **typed**:
 - **Root** (`package.json`): Expo app — React Native mobile client + Expo API routes (`app/api/`).
-- **`utils-server/`** (`utils-server/package.json`): WebSocket dispatch server (`index.ts`, `dispatch.ts`, `dispatchChain.ts`, `leadBilling.ts`, `h3Index.ts`, `scheduler.ts`, `compensationWorker.ts`, `coldDrop.ts`, `trace.ts`, `firmQuote.ts`, `barikoiRoute.ts`, `polyline.ts`, `offPlatform.ts`). Separate `tsconfig.json`, separate dependencies.
+- **`utils-server/`** (`utils-server/package.json`): WebSocket dispatch server (`index.ts`, `dispatch.ts`, `dispatchChain.ts`, `leadBilling.ts`, `h3Index.ts`, `scheduler.ts`, `compensationWorker.ts`, `coldDrop.ts`, `trace.ts`, `firmQuote.ts`, `barikoiRoute.ts`, `polyline.ts`, `offPlatform.ts`). Separate `tsconfig.json` and own manifest — but a workspace **member**, not a nested install.
+
+**Why a workspace (do not undo):** drizzle-orm's `SQL` class carries a private field, so two physical copies of the same version (root + a nested `utils-server/node_modules`) are nominal-incompatible types and break root `tsc` — even at identical versions. The workspace hoists every dependency to a single physical copy at the root. The old `utils-server/package-lock.json` is DELETED: never recreate it, never run `npm install`/`npm ci` inside `utils-server/` — install from the root only.
 
 `tsconfig.json` excludes `utils-server/` and `functions/`. ESLint ignores `utils-server/` and `_reference/`.
 
@@ -174,6 +176,9 @@ Handoff notes:
 ```bash
 # Device-testing env (run BEFORE expo start — laptop IP differs WiFi vs hotspot; see TEST-SETUP.md)
 node scripts/dev-env-sync.js                # Sync .env.local dev IPs to current LAN IP
+
+# Install (workspace root ONLY — single lockfile covers root + utils-server)
+npm ci                                       # Clean install for both packages; NEVER npm install inside utils-server/
 
 # Expo app
 npx expo start                              # Dev server
