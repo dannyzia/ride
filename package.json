@@ -17,14 +17,6 @@
     "check:all": "npm run check:fast && npm run check:web-export",
     "check:web-imports": "node scripts/check-web-imports.js"
   },
-  "jest": {
-    "preset": "jest-expo",
-    "testPathIgnorePatterns": [
-      "/_reference/",
-      "/node_modules/",
-      "/admin-test-results/"
-    ]
-  },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@gorhom/bottom-sheet": "^5.1.2",

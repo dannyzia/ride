@@ -166,53 +166,70 @@ describe("Phase 1 — Shops", () => {
     mockUpdateQueue.length = 0;
   });
 
-  describe("RFQ state machine (§B.6)", () => {
-    // Spec §B.6 transitions (tested as pure state logic — handler auth mocking
-    // is in the integration suite; these verify the transition rules are correct).
-    const VALID_RFQ_TRANSITIONS: Record<string, string[]> = {
-      open: ["quoted", "awarded", "declined", "expired", "cancelled"],
-      quoted: ["awarded", "declined", "expired", "cancelled"],
-      // awarded, declined, expired, cancelled are terminal — no outgoing transitions
-    };
+  describe("Suspension guard (F15) — read depth (B2, queue-drift guard)", () => {
+    // The positional select-queue silently serves `[]` to any select beyond the
+    // pushed fixtures — the classic way stale tests keep passing while production
+    // adds reads. These tests pin requireShopMember's EXACT db.select count so a
+    // new production read breaks them loudly instead of drifting silently.
+    // Production order (lib/marketplaceRbac.ts): supabase users lookup (separate
+    // mock) → ① shop_members select → role check → ② shops status select.
 
-    it("open → quoted (shop quotes) is valid", () => {
-      expect(VALID_RFQ_TRANSITIONS.open).toContain("quoted");
+    async function runGuard(roles?: ("OWNER" | "MANAGER" | "STAFF")[]) {
+      const { db } = require("@/src/db");
+      const { supabaseAdmin } = require("@/lib/supabaseServer");
+      (db.select as jest.Mock).mockClear();
+      supabaseAdmin.auth.getUser.mockResolvedValue({
+        data: { user: { id: "auth-1" } },
+      });
+      supabaseAdmin.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockReturnValue(
+              Promise.resolve({ data: { id: "db-user-1", role: "driver" } }),
+            ),
+          }),
+        }),
+      });
+      const guard = requireShopMember("shop-1", roles);
+      const result = await guard(makeRequest("GET")).catch((e: unknown) => e);
+      return { result, selectCount: (db.select as jest.Mock).mock.calls.length };
+    }
+
+    it("happy path consumes exactly 2 selects: membership → shop status", async () => {
+      pushSelectRows([
+        { id: "mem-1", shop_id: "shop-1", user_id: "db-user-1", role: "OWNER", status: "active", removed_at: null },
+      ]);
+      pushSelectRows([{ status: "active" }]);
+
+      const { result, selectCount } = await runGuard();
+      expect(result).toMatchObject({ membership: { role: "OWNER" } });
+      expect(selectCount).toBe(2);
     });
 
-    it("open → awarded (customer accepts quote) is valid", () => {
-      expect(VALID_RFQ_TRANSITIONS.open).toContain("awarded");
+    it("no membership → 1 select (short-circuits before the shop read)", async () => {
+      pushSelectRows([]);
+      const { result, selectCount } = await runGuard();
+      expect(result).toMatchObject({ status: 403 });
+      expect(selectCount).toBe(1);
     });
 
-    it("quoted → awarded (customer accepts) is valid", () => {
-      expect(VALID_RFQ_TRANSITIONS.quoted).toContain("awarded");
+    it("role rejection → 1 select (role check precedes the shop-status read)", async () => {
+      pushSelectRows([
+        { id: "mem-1", shop_id: "shop-1", user_id: "db-user-1", role: "STAFF", status: "active", removed_at: null },
+      ]);
+      const { result, selectCount } = await runGuard(["OWNER", "MANAGER"]);
+      expect(result).toMatchObject({ status: 403 });
+      expect(selectCount).toBe(1);
     });
 
-    it("quoted → expired (job 50 sweeps past deadline) is valid", () => {
-      expect(VALID_RFQ_TRANSITIONS.quoted).toContain("expired");
-    });
-
-    it("open → cancelled (customer cancels) is valid", () => {
-      expect(VALID_RFQ_TRANSITIONS.open).toContain("cancelled");
-    });
-
-    it("awarded is terminal — no outgoing transitions", () => {
-      expect(VALID_RFQ_TRANSITIONS.awarded).toBeUndefined();
-    });
-
-    it("declined is terminal", () => {
-      expect(VALID_RFQ_TRANSITIONS.declined).toBeUndefined();
-    });
-
-    it("expired is terminal", () => {
-      expect(VALID_RFQ_TRANSITIONS.expired).toBeUndefined();
-    });
-
-    it("cancelled is terminal", () => {
-      expect(VALID_RFQ_TRANSITIONS.cancelled).toBeUndefined();
-    });
-
-    it("quoted → open is NOT valid (no backward transitions)", () => {
-      expect(VALID_RFQ_TRANSITIONS.quoted).not.toContain("open");
+    it("suspended shop → 2 selects (membership ok, shop read happens and rejects)", async () => {
+      pushSelectRows([
+        { id: "mem-1", shop_id: "shop-1", user_id: "db-user-1", role: "OWNER", status: "active", removed_at: null },
+      ]);
+      pushSelectRows([{ status: "suspended" }]);
+      const { result, selectCount } = await runGuard();
+      expect(result).toMatchObject({ status: 403 });
+      expect(selectCount).toBe(2);
     });
   });
 

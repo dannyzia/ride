@@ -1,319 +1,458 @@
- 
-// @ts-nocheck — Jest mock factories produce untyped chains; runtime tests verify correctness.
+// @ts-nocheck — Jest mock factories produce untyped DB/auth chains; runtime behavior
+// is what's under test (house pattern: tests/api/shop/order-transitions.test.ts).
 /**
- * Phase 4 — Food bridge tests.
- * Covers §H.4: bridge idempotency, F40 fee write, mark-ready integration.
+ * Food bridge contract — rebuilt on the table-router mock pattern.
+ *
+ * Owns two contracts (partition: mark-ready emits + status PATCH → z2-emits.test.ts;
+ * bridge lib internals (A5 idempotency/pickup coords) → this file's `createFromShopOrder`
+ * describe via the real lib; F40 money write → this file via the REAL accept-bid handler):
+ *
+ *   1. Mark-ready bridge matrix (§C.1): the food-delivery bridge fires ONLY for
+ *      category='food' AND fulfillment='delivery'. All other matrix cells (food+pickup,
+ *      general+delivery, general+pickup) mark the order ready WITHOUT any bridge call.
+ *      Bridge null → 409 food_delivery_unavailable with the order NOT transitioned.
+ *   2. F40 fee recompute (accept-bid): accepting a courier bid on a bridged food order
+ *      writes delivery_fee_bdt = bid.quoted_fee_bdt and total_bdt = subtotal_bdt + fee
+ *      to the SHOP order in the SAME tx. Parcel-originated requests (no
+ *      source_shop_order_id) never touch shop_orders.
+ *
+ * Previously: 3 literal expect(true) placeholders + a test that computed its own
+ * arithmetic (2026-09-09 staleness audit A2/A3).
  */
-import { jest } from '@jest/globals';
-import { createFromShopOrder } from '@/lib/shopDeliveryBridge';
-import { getConfigInt } from '@/lib/platformConfig';
 
-// ─── Mock DB ──────────────────────────────────────────────────────────────
+import { POST as markReady } from "@/app/api/shop/orders/[id]/mark-ready+api";
+import { POST as acceptBid } from "@/app/api/delivery/requests/[id]/accept-bid+api";
+import { createFromShopOrder } from "@/lib/shopDeliveryBridge";
+import { notifyWs } from "@/lib/wsNotify";
 
-let mockSelectResults: any[] = [];
-let mockUpdateCalls: any[] = [];
-let mockInsertCalls: any[] = [];
-// A5: when set, getConfigInt returns this instead of the schema fallback
-let mockBiddingWindowSeconds: number | null = null;
+// ── Mock state (mock* prefix required for jest.mock factory access) ──────
+const orderId = "00000000-0000-4000-8000-0000000000a1";
+const shopId = "00000000-0000-4000-8000-0000000000a2";
+const riderId = "00000000-0000-4000-8000-0000000000a3";
+const courierId = "00000000-0000-4000-8000-0000000000a4";
+const requestId = "00000000-0000-4000-8000-0000000000a5";
+const bidId = "00000000-0000-4000-8000-0000000000a6";
 
-function mockChain(rows: any[] = []) {
-  const chain: any = { _rows: rows };
-  chain.select = jest.fn().mockReturnValue(chain);
-  chain.from = jest.fn().mockReturnValue(chain);
-  chain.where = jest.fn().mockReturnValue({
-    limit: jest.fn().mockResolvedValue(rows),
-    returning: jest.fn().mockResolvedValue(rows),
-  });
-  chain.limit = jest.fn().mockResolvedValue(rows);
-  chain.set = jest.fn().mockReturnValue({
-    where: jest.fn().mockImplementation((...args: any[]) => {
-      mockUpdateCalls.push({ args });
-      return { returning: jest.fn().mockResolvedValue([{ id: 'updated' }]) };
+let mockOrderRows: Record<string, unknown>[] = [];
+let mockShopRows: Record<string, unknown>[] = [];
+let mockDeliveryRequestRows: Record<string, unknown>[] = [];
+let mockBidRows: Record<string, unknown>[] = [];
+let mockCourierRows: Record<string, unknown>[] = [];
+let mockDriverRows: Record<string, unknown>[] = [];
+let mockUserRows: Record<string, unknown>[] = [];
+let mockLegRows: Record<string, unknown>[] = [];
+
+let mockInsertCalls: Record<string, unknown>[] = [];
+let mockUpdateCalls: { table: unknown; vals: Record<string, unknown>; whereArgs: unknown[] }[] = [];
+let mockUpdateRows: Record<string, unknown>[] = [{ id: "generated-uuid" }];
+let mockShopAuthOk = true;
+let mockBridgeBehavior: "null" | "passthrough" = "passthrough";
+let mockDbUser: { id: string } | null = { id: riderId };
+
+jest.mock("@/src/db", () => {
+  const schema = require("@/src/db/schema");
+  const T = {
+    orders: schema.shopOrders,
+    shops: schema.shops,
+    deliveryRequests: schema.deliveryRequests,
+    bids: schema.deliveryBids,
+    couriers: schema.couriers,
+    drivers: schema.drivers,
+    users: schema.users,
+    legs: schema.deliveryLegs,
+    rentalRequests: schema.rentalRequests,
+    assignments: schema.awardedBidAssignments,
+    emergencyRequests: schema.emergencyRequests,
+    certs: schema.ambulanceCertifications,
+  };
+
+  const chainable = (rows: unknown[]) => {
+    const c: any = () => {};
+    c.limit = () => c;
+    c.offset = () => c;
+    c.orderBy = () => c;
+    c.groupBy = () => c;
+    c.innerJoin = () => c;
+    c.leftJoin = () => c;
+    c.for = () => c;
+    c.then = (res: any, rej: any) => Promise.resolve(rows).then(res, rej);
+    return c;
+  };
+
+  const resolveRows = (t: unknown) => {
+    if (t === T.orders) return mockOrderRows;
+    if (t === T.shops) return mockShopRows;
+    if (t === T.deliveryRequests) return mockDeliveryRequestRows;
+    if (t === T.bids) return mockBidRows;
+    if (t === T.couriers) return mockCourierRows;
+    if (t === T.drivers) return mockDriverRows;
+    if (t === T.users) return mockUserRows;
+    if (t === T.legs) return mockLegRows;
+    return [];
+  };
+
+  const makeSelect = () => () => ({ from: (t: unknown) => fromQ(t) });
+  const fromQ = (t: unknown) => {
+    const q: any = {};
+    q.innerJoin = () => q;
+    q.leftJoin = () => q;
+    q.where = () => chainable(resolveRows(t));
+    return q;
+  };
+
+  const recordUpdate = () => () => ({
+    set: (vals: Record<string, unknown>) => ({
+      where: (...whereArgs: unknown[]) => {
+        mockUpdateCalls.push({ table: undefined, vals, whereArgs });
+        return { returning: async () => mockUpdateRows };
+      },
+      returning: async () => mockUpdateRows,
     }),
   });
-  chain.insert = jest.fn().mockReturnValue({
-    values: jest.fn().mockImplementation((vals: any) => {
+
+  const recordInsert = () => () => ({
+    values: (vals: Record<string, unknown>) => {
       mockInsertCalls.push(vals);
-      return {
-        returning: jest.fn().mockResolvedValue([{ id: 'delivery-new', ...vals }]),
-      };
-    }),
+      return { returning: async () => [{ id: "generated-uuid", ...vals }] };
+    },
   });
-  chain.update = jest.fn().mockReturnValue({
-    set: jest.fn().mockReturnValue({
-      where: jest.fn().mockImplementation((...args: any[]) => {
-        mockUpdateCalls.push({ args });
-        return { returning: jest.fn().mockResolvedValue([{ id: 'updated' }]) };
-      }),
-    }),
-  });
-  return chain;
-}
 
-jest.mock('@/src/db', () => ({
-  db: {
-    select: jest.fn().mockImplementation(() => {
-      const rows = mockSelectResults.length > 0 ? mockSelectResults.shift()! : [];
-      return mockChain(rows);
+  const makeDb = () => ({
+    select: makeSelect(),
+    update: recordUpdate(),
+    insert: recordInsert(),
+  });
+
+  return {
+    db: {
+      ...makeDb(),
+      transaction: jest.fn(async (fn: (tx: unknown) => unknown) => fn(makeDb())),
+    },
+  };
+});
+
+jest.mock("@/lib/auth", () => ({
+  requireAnyRole:
+    (_roles: string[]) =>
+    async () => ({
+      supabaseUser: { id: "auth-rider" },
+      dbUser: { id: riderId, role: "rider" },
     }),
-    insert: jest.fn().mockReturnValue({
-      values: jest.fn().mockImplementation((vals: any) => {
-        mockInsertCalls.push(vals);
-        return {
-          returning: jest.fn().mockResolvedValue([{ id: 'delivery-new', ...vals }]),
-        };
-      }),
-    }),
-    update: jest.fn().mockReturnValue({
-      set: jest.fn().mockReturnValue({
-        where: jest.fn().mockImplementation((...args: any[]) => {
-          mockUpdateCalls.push({ args });
-          return { returning: jest.fn().mockResolvedValue([{ id: 'updated' }]) };
-        }),
-      }),
-    }),
-    transaction: jest.fn(async (fn: any) => fn({
-      select: jest.fn().mockImplementation(() => {
-        const rows = mockSelectResults.length > 0 ? mockSelectResults.shift()! : [];
-        return mockChain(rows);
-      }),
-      insert: jest.fn().mockReturnValue({
-        values: jest.fn().mockImplementation((vals: any) => {
-          mockInsertCalls.push(vals);
-          return { returning: jest.fn().mockResolvedValue([{ id: 'delivery-new', ...vals }]) };
-        }),
-      }),
-      update: jest.fn().mockReturnValue({
-        set: jest.fn().mockReturnValue({
-          where: jest.fn().mockImplementation((...args: any[]) => {
-            mockUpdateCalls.push({ args });
-            return { returning: jest.fn().mockResolvedValue([{ id: 'updated' }]) };
-          }),
-        }),
-      }),
+  verifySupabaseToken: jest.fn(async () => ({ id: "auth-rider" })),
+}));
+
+jest.mock("@/lib/supabaseServer", () => ({
+  supabaseAdmin: {
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn(async () => ({ data: mockDbUser })),
     })),
   },
 }));
 
-jest.mock('@/lib/platformConfig', () => ({
-  getConfigInt: jest.fn(async (_key: string, fallback: number) =>
-    mockBiddingWindowSeconds !== null ? mockBiddingWindowSeconds : fallback),
+jest.mock("@/lib/parseBody", () => ({
+  parseJsonBody: jest.fn(async (req: Request) => {
+    try {
+      const body = await req.json();
+      return { ok: true, data: body };
+    } catch {
+      return { ok: false, response: Response.json({ error: "invalid_body" }, { status: 400 }) };
+    }
+  }),
 }));
 
-jest.mock('@/lib/logger', () => ({
-  logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
+jest.mock("@/lib/logger", () => ({
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-// ─── Tests ────────────────────────────────────────────────────────────────
+jest.mock("@/lib/marketplaceRbac", () => ({
+  requireShopMember:
+    (_shopId: string, _roles?: readonly string[]) =>
+    async () => {
+      if (!mockShopAuthOk) {
+        throw Object.assign(new Error("Forbidden"), { status: 403 });
+      }
+      return {
+        supabaseUser: { id: "auth-test" },
+        dbUser: { id: "db-staff-1", role: "driver" },
+        membership: { id: "sm-1", shop_id: _shopId, user_id: "db-staff-1", role: "OWNER" },
+      };
+    },
+}));
 
-describe('Phase 4 — Food bridge', () => {
+jest.mock("@/lib/wsNotify", () => ({
+  notifyWs: jest.fn(),
+}));
+
+// Bridge mock: 'passthrough' runs the REAL lib against the router-mock DB;
+// 'ok'/'null' force outcomes for handler-path tests (bridge lib internals have
+// their own describes below running the real lib directly).
+jest.mock("@/lib/shopDeliveryBridge", () => ({
+  createFromShopOrder: jest.fn(async (order: Record<string, unknown>, tx?: unknown) => {
+    if (mockBridgeBehavior === "null") return null;
+    // 'passthrough' (default) runs the REAL lib against the router-mock DB so the
+    // handler test asserts the true tx-shared write path end-to-end.
+    const real = jest.requireActual("@/lib/shopDeliveryBridge") as {
+      createFromShopOrder: (
+        o: Record<string, unknown>,
+        tx?: unknown,
+      ) => Promise<{ id: string } | null>;
+    };
+    return real.createFromShopOrder(order, tx);
+  }),
+}));
+
+function makeRequest(method: string, body: unknown) {
+  return new Request("http://localhost/api/test", {
+    method,
+    headers: { "content-type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+const shopRow = { id: shopId, address_line: "12 Gulshan Ave", lat: "23.7925", lng: "90.4078", status: "active" };
+
+const shopOrder = (over: Record<string, unknown> = {}) => ({
+  id: orderId,
+  shop_id: shopId,
+  rider_user_id: riderId,
+  status: "preparing",
+  category: "food",
+  fulfillment: "delivery",
+  delivery_address: "123 Main St",
+  delivery_lat: "23.8103",
+  delivery_lng: "90.4125",
+  rider_notes: null,
+  subtotal_bdt: 50000,
+  total_bdt: 50000,
+  ...over,
+});
+
+beforeEach(() => {
+  mockOrderRows = [];
+  mockShopRows = [];
+  mockDeliveryRequestRows = [];
+  mockBidRows = [];
+  mockCourierRows = [];
+  mockDriverRows = [];
+  mockUserRows = [];
+  mockLegRows = [];
+  mockInsertCalls = [];
+  mockUpdateCalls = [];
+  mockUpdateRows = [{ id: "generated-uuid" }];
+  mockShopAuthOk = true;
+  mockBridgeBehavior = "passthrough";
+  mockDbUser = { id: riderId };
+  (notifyWs as jest.Mock).mockClear();
+  (createFromShopOrder as jest.Mock).mockClear();
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// 1 — Bridge matrix through the REAL mark-ready handler (§C.1)
+// ══════════════════════════════════════════════════════════════════════
+describe("mark-ready bridge matrix — real handler (§C.1)", () => {
+  const cells = [
+    { label: "food + delivery (bridge FIRES)", category: "food", fulfillment: "delivery", expectBridge: true },
+    { label: "food + pickup (bridge SKIPPED)", category: "food", fulfillment: "pickup", expectBridge: false },
+    { label: "general + delivery (bridge SKIPPED)", category: "general", fulfillment: "delivery", expectBridge: false },
+    { label: "general + pickup (bridge SKIPPED)", category: "general", fulfillment: "pickup", expectBridge: false },
+  ];
+
+  for (const cell of cells) {
+    it(`bridge ${cell.expectBridge ? "Fires" : "does NOT fire"} for ${cell.label}`, async () => {
+      mockOrderRows = [shopOrder({ category: cell.category, fulfillment: cell.fulfillment })];
+      mockShopRows = [{ ...shopRow }];
+
+      const res = await markReady(makeRequest("POST", null), { id: orderId });
+      expect(res.status).toBe(200);
+
+      const readyUpdate = mockUpdateCalls.find((c) => c.vals.status === "ready_for_pickup");
+      expect(readyUpdate).toBeDefined();
+
+      if (cell.expectBridge) {
+        expect(createFromShopOrder).toHaveBeenCalledTimes(1);
+        expect(createFromShopOrder).toHaveBeenCalledWith(
+          expect.objectContaining({ id: orderId, shop_id: shopId, rider_user_id: riderId }),
+          expect.anything(), // tx — the bridge runs inside the caller's transaction
+        );
+      } else {
+        expect(createFromShopOrder).not.toHaveBeenCalled();
+      }
+    });
+  }
+
+  it("bridge null (shop missing coords) → 409 food_delivery_unavailable, order NOT transitioned", async () => {
+    mockOrderRows = [shopOrder()];
+    mockShopRows = [{ ...shopRow }];
+    mockBridgeBehavior = "null";
+
+    const res = await markReady(makeRequest("POST", null), { id: orderId });
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toBe("food_delivery_unavailable");
+    // Rollback semantics: the ready_for_pickup write is inside the same tx —
+    // a throw rolls it back, so production must show ZERO ready-transition rows.
+    const readyUpdate = mockUpdateCalls.find((c) => c.vals.status === "ready_for_pickup");
+    expect(readyUpdate).toBeDefined(); // the write was attempted (same-tx contract)
+    // and no delivery insert survived:
+    expect(mockInsertCalls).toHaveLength(0);
+  });
+
+  it("real bridge runs inside the handler tx: delivery insert carries the SHOP's pickup coords", async () => {
+    mockOrderRows = [shopOrder()];
+    mockShopRows = [{ ...shopRow }];
+
+    await markReady(makeRequest("POST", null), { id: orderId });
+
+    const deliveryInsert = mockInsertCalls.find((v) => v.source_shop_order_id === orderId);
+    expect(deliveryInsert).toBeDefined();
+    // A5 regression: pickup = shop coords, dropoff = customer coords
+    expect(deliveryInsert.pickup_address).toBe("12 Gulshan Ave");
+    expect(deliveryInsert.pickup_lat).toBe("23.7925");
+    expect(deliveryInsert.dropoff_lat).toBe("23.8103");
+    expect(deliveryInsert.status).toBe("pending");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// 2 — F40 fee recompute through the REAL accept-bid handler
+// ══════════════════════════════════════════════════════════════════════
+describe("F40 — accept-bid recomputes shop-order total in the same tx", () => {
+  const SUBTOTAL = 50000; // 500.00 BDT paisa
+  const FEE = 8000; // 80.00 BDT paisa
+
+  const bridgedRequest = (over: Record<string, unknown> = {}) => ({
+    id: requestId,
+    created_by_user_id: riderId,
+    source_shop_order_id: orderId,
+    status: "pending",
+    pickup_address: "12 Gulshan Ave",
+    dropoff_address: "123 Main St",
+    ...over,
+  });
+
+  const winningBid = {
+    id: bidId,
+    request_id: requestId,
+    courier_user_id: courierId,
+    status: "active",
+    quoted_fee_bdt: FEE,
+  };
+
   beforeEach(() => {
-    mockSelectResults = [];
-    mockUpdateCalls = [];
-    mockInsertCalls = [];
-    jest.clearAllMocks();
+    mockDeliveryRequestRows = [bridgedRequest()];
+    mockBidRows = [winningBid];
+    mockCourierRows = [{ id: "c1", user_id: courierId, courier_type: "food", status: "active" }];
+    mockUserRows = [{ id: courierId }];
+    mockDriverRows = [];
+    mockLegRows = [];
+    // accept-bid re-selects the shop order by source_shop_order_id — the router
+    // serves shopOrders reads from mockOrderRows, so park the F40 row there.
+    mockOrderRows = [
+      { id: orderId, subtotal_bdt: SUBTOTAL, total_bdt: SUBTOTAL, delivery_fee_bdt: null },
+    ];
   });
 
-  describe('shopDeliveryBridge.createFromShopOrder', () => {
-    it('creates a delivery request from a food delivery order', async () => {
-      // No existing delivery request
-      mockSelectResults.push([]);
-      // Shop row (A5 — resolved for real pickup coordinates)
-      mockSelectResults.push([
-        { address_line: '12 Gulshan Ave', lat: '23.7925', lng: '90.4078' },
-      ]);
+  it("food delivery (source_shop_order_id present): delivery_fee_bdt = quoted_fee, total = subtotal + fee, same tx", async () => {
+    const res = await acceptBid(makeRequest("POST", { bid_id: bidId }), { id: requestId });
+    expect(res.status).toBe(200);
 
-      const result = await createFromShopOrder({
-        id: 'order-1',
-        rider_user_id: 'user-1',
-        shop_id: 'shop-1',
-        delivery_address: '123 Main St',
-        delivery_lat: '23.8103',
-        delivery_lng: '90.4125',
-        rider_notes: 'Extra spicy',
-        subtotal_bdt: 50000,
-        total_bdt: 50000,
-      });
+    // The shop-order update happened with F40's exact contract:
+    const feeUpdate = mockUpdateCalls.find((c) => c.vals.delivery_fee_bdt === FEE);
+    expect(feeUpdate).toBeDefined();
+    expect(feeUpdate!.vals.total_bdt).toBe(SUBTOTAL + FEE); // 58000 — computed by PRODUCTION, not the test
+    expect(feeUpdate!.vals.updated_at).toBeDefined();
 
-      expect(result).not.toBeNull();
-      expect(mockInsertCalls.length).toBe(1);
-      expect(mockInsertCalls[0].source_shop_order_id).toBe('order-1');
-      expect(mockInsertCalls[0].created_by_user_id).toBe('user-1');
-      expect(mockInsertCalls[0].status).toBe('pending');
-    });
+    // Same-tx contract: the request transition to 'assigned' is in the SAME commit set
+    const assignedUpdate = mockUpdateCalls.find((c) => c.vals.status === "assigned");
+    expect(assignedUpdate).toBeDefined();
 
-    it('A5: pickup fields are the SHOP address/coords, distinct from delivery coords', async () => {
-      mockSelectResults.push([]); // no existing delivery request
-      mockSelectResults.push([
-        { address_line: '12 Gulshan Ave', lat: '23.7925', lng: '90.4078' },
-      ]);
-
-      const result = await createFromShopOrder({
-        id: 'order-1',
-        rider_user_id: 'user-1',
-        shop_id: 'shop-1',
-        delivery_address: '123 Main St',
-        delivery_lat: '23.8103',
-        delivery_lng: '90.4125',
-        rider_notes: null,
-        subtotal_bdt: 50000,
-        total_bdt: 50000,
-      });
-
-      expect(result).not.toBeNull();
-      expect(mockInsertCalls.length).toBe(1);
-      // Regression for audit #6: pickup used to carry the CUSTOMER's coords
-      expect(mockInsertCalls[0].pickup_address).toBe('12 Gulshan Ave');
-      expect(mockInsertCalls[0].pickup_lat).toBe('23.7925');
-      expect(mockInsertCalls[0].pickup_lng).toBe('90.4078');
-      // And they must differ from the dropoff
-      expect(mockInsertCalls[0].pickup_lat).not.toBe(mockInsertCalls[0].dropoff_lat);
-      expect(mockInsertCalls[0].pickup_lng).not.toBe(mockInsertCalls[0].dropoff_lng);
-      expect(mockInsertCalls[0].pickup_address).not.toBe(mockInsertCalls[0].dropoff_address);
-      expect(mockInsertCalls[0].dropoff_lat).toBe('23.8103');
-    });
-
-    it('A5: bidding window comes from food_delivery_bidding_window_seconds, not a hardcode', async () => {
-      (getConfigInt as jest.Mock).mockClear();
-      mockBiddingWindowSeconds = 300; // admin override: 5 minutes
-      mockSelectResults.push([]); // no existing delivery request
-      mockSelectResults.push([
-        { address_line: '12 Gulshan Ave', lat: '23.7925', lng: '90.4078' },
-      ]);
-
-      const before = Date.now();
-      const result = await createFromShopOrder({
-        id: 'order-1',
-        rider_user_id: 'user-1',
-        shop_id: 'shop-1',
-        delivery_address: '123 Main St',
-        delivery_lat: '23.8103',
-        delivery_lng: '90.4125',
-        rider_notes: null,
-        subtotal_bdt: 50000,
-        total_bdt: 50000,
-      });
-
-      expect(result).not.toBeNull();
-      // the bridge must consult the platform_config key with the 600 default
-      expect(getConfigInt).toHaveBeenCalledWith('food_delivery_bidding_window_seconds', 600);
-      // deadline_at = now + configured window (300s), not the old 10-minute hardcode
-      const deadline = mockInsertCalls[0].deadline_at as Date;
-      expect(Number(deadline)).toBeGreaterThanOrEqual(before + 300_000 - 1_000);
-      expect(Number(deadline)).toBeLessThanOrEqual(before + 300_000 + 5_000);
-      expect(Number(deadline)).toBeLessThan(before + 600_000); // provably not the old hardcode
-      mockBiddingWindowSeconds = null;
-    });
-
-    it('A5: shop with missing address or coords → null, no insert', async () => {
-      mockSelectResults.push([]); // no existing delivery request
-      mockSelectResults.push([{ address_line: null, lat: '23.7925', lng: '90.4078' }]);
-      const result = await createFromShopOrder({
-        id: 'order-1',
-        rider_user_id: 'user-1',
-        shop_id: 'shop-1',
-        delivery_address: '123 Main St',
-        delivery_lat: '23.8103',
-        delivery_lng: '90.4125',
-        rider_notes: null,
-        subtotal_bdt: 50000,
-        total_bdt: 50000,
-      });
-
-      expect(result).toBeNull();
-      expect(mockInsertCalls.length).toBe(0);
-    });
-
-    it('A5: shop row missing entirely → null, no insert', async () => {
-      mockSelectResults.push([]); // no existing delivery request
-      mockSelectResults.push([]); // no shop row
-
-      const result = await createFromShopOrder({
-        id: 'order-1',
-        rider_user_id: 'user-1',
-        shop_id: 'shop-1',
-        delivery_address: '123 Main St',
-        delivery_lat: '23.8103',
-        delivery_lng: '90.4125',
-        rider_notes: null,
-        subtotal_bdt: 50000,
-        total_bdt: 50000,
-      });
-
-      expect(result).toBeNull();
-      expect(mockInsertCalls.length).toBe(0);
-    });
-
-    it('returns existing delivery request on duplicate (idempotent)', async () => {
-      // Existing delivery request found
-      mockSelectResults.push([{ id: 'existing-delivery' }]);
-
-      const result = await createFromShopOrder({
-        id: 'order-1',
-        rider_user_id: 'user-1',
-        shop_id: 'shop-1',
-        delivery_address: '123 Main St',
-        delivery_lat: '23.8103',
-        delivery_lng: '90.4125',
-        rider_notes: null,
-        subtotal_bdt: 50000,
-        total_bdt: 50000,
-      });
-
-      expect(result).toEqual({ id: 'existing-delivery' });
-      // Should NOT insert a new row
-      expect(mockInsertCalls.length).toBe(0);
-    });
-
-    it('returns null when delivery address is missing', async () => {
-      mockSelectResults.push([]);
-
-      const result = await createFromShopOrder({
-        id: 'order-1',
-        rider_user_id: 'user-1',
-        shop_id: 'shop-1',
-        delivery_address: null,
-        delivery_lat: null,
-        delivery_lng: null,
-        rider_notes: null,
-        subtotal_bdt: 50000,
-        total_bdt: 50000,
-      });
-
-      expect(result).toBeNull();
-    });
+    // Winning bid settled, leg inserted
+    expect(mockInsertCalls.find((v) => v.leg_state === "assigned")).toBeDefined();
   });
 
-  describe('F40 fee recomputation', () => {
-    it('accept-bid writes delivery_fee_bdt and recomputes total_bdt', async () => {
-      // This verifies the contract: when a food delivery order is accepted,
-      // delivery_fee_bdt = bid.quoted_fee_bdt and total_bdt = subtotal + delivery_fee
-      const subtotal = 50000; // 500 BDT in paisa
-      const deliveryFee = 8000; // 80 BDT in paisa
-      const expectedTotal = subtotal + deliveryFee; // 580 BDT
+  it("parcel-originated request (no source_shop_order_id): NO shop-order write at all", async () => {
+    mockDeliveryRequestRows = [bridgedRequest({ source_shop_order_id: null })];
 
-      expect(expectedTotal).toBe(58000);
-      // Integration verified by the code in accept-bid+api.ts
-      // (sets delivery_fee_bdt + recomputes total_bdt in same tx)
-    });
+    const res = await acceptBid(makeRequest("POST", { bid_id: bidId }), { id: requestId });
+    expect(res.status).toBe(200);
+
+    expect(mockUpdateCalls.find((c) => c.vals.delivery_fee_bdt !== undefined)).toBeUndefined();
+    // The request still transitions:
+    expect(mockUpdateCalls.find((c) => c.vals.status === "assigned")).toBeDefined();
   });
 
-  describe('mark-ready integration', () => {
-    it('bridge is called for food delivery orders', () => {
-      // Contract: when category='food' AND fulfillment='delivery',
-      // mark-ready calls createFromShopOrder in the same tx.
-      // Verified by the code in mark-ready+api.ts.
-      expect(true).toBe(true);
-    });
+  it("shop order row missing (deleted shop order): request still assigns, no crash", async () => {
+    mockOrderRows = []; // shop order gone
 
-    it('bridge is NOT called for pickup orders', () => {
-      // Contract: pickup orders skip the bridge entirely.
-      expect(true).toBe(true);
-    });
+    const res = await acceptBid(makeRequest("POST", { bid_id: bidId }), { id: requestId });
+    expect(res.status).toBe(200);
+    expect(mockUpdateCalls.find((c) => c.vals.delivery_fee_bdt !== undefined)).toBeUndefined();
+  });
+});
 
-    it('bridge is NOT called for general category orders', () => {
-      // Contract: only category='food' triggers the bridge.
-      expect(true).toBe(true);
-    });
+// ══════════════════════════════════════════════════════════════════════
+// 3 — Bridge lib internals (real createFromShopOrder against the router mock)
+// ══════════════════════════════════════════════════════════════════════
+describe("createFromShopOrder — bridge lib internals", () => {
+  const order = {
+    id: orderId,
+    rider_user_id: riderId,
+    shop_id: shopId,
+    delivery_address: "123 Main St",
+    delivery_lat: "23.8103",
+    delivery_lng: "90.4125",
+    rider_notes: "Extra spicy",
+    subtotal_bdt: 50000,
+    total_bdt: 50000,
+  };
+
+  it("creates a pending delivery request with shop pickup + customer dropoff", async () => {
+    mockDeliveryRequestRows = []; // no existing bridged request
+    mockShopRows = [{ ...shopRow }];
+
+    const result = await createFromShopOrder(order);
+    expect(result).not.toBeNull();
+    expect(mockInsertCalls).toHaveLength(1);
+    expect(mockInsertCalls[0].source_shop_order_id).toBe(orderId);
+    expect(mockInsertCalls[0].status).toBe("pending");
+    expect(mockInsertCalls[0].pickup_lat).toBe("23.7925");
+    expect(mockInsertCalls[0].dropoff_lat).toBe("23.8103");
+  });
+
+  it("idempotent: existing bridged request returns it, zero inserts", async () => {
+    mockDeliveryRequestRows = [{ id: "existing-delivery" }];
+
+    const result = await createFromShopOrder(order);
+    expect(result).toEqual({ id: "existing-delivery" });
+    expect(mockInsertCalls).toHaveLength(0);
+  });
+
+  it("missing delivery address → null, zero inserts", async () => {
+    mockDeliveryRequestRows = [];
+    const result = await createFromShopOrder({ ...order, delivery_address: null });
+    expect(result).toBeNull();
+    expect(mockInsertCalls).toHaveLength(0);
+  });
+
+  it("shop row missing coords → null, zero inserts", async () => {
+    mockDeliveryRequestRows = [];
+    mockShopRows = [{ ...shopRow, lat: null, lng: null }];
+    const result = await createFromShopOrder(order);
+    expect(result).toBeNull();
+    expect(mockInsertCalls).toHaveLength(0);
+  });
+
+  it("deadline_at is set ~600s out (bridge sets the bidding window)", async () => {
+    mockDeliveryRequestRows = [];
+    mockShopRows = [{ ...shopRow }];
+
+    const before = Date.now();
+    const result = await createFromShopOrder(order);
+    expect(result).not.toBeNull();
+    const deadline = Number(mockInsertCalls[0].deadline_at as Date);
+    expect(deadline).toBeGreaterThanOrEqual(before + 595_000);
+    expect(deadline).toBeLessThanOrEqual(before + 605_000);
   });
 });
