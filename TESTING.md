@@ -11,7 +11,7 @@
   - `docs/testing plan/manual-testing-full-flow.md` — human operator walkthrough
   - `plans/test-coverage-gap-ledger.md` — Track B full-coverage gap ledger (live artifact)
   - `TEST-SETUP.md` — device/network bring-up runbook (run `node scripts/dev-env-sync.js` before any device session)
-**Last verified:** 2026-09-06, by Orchestrator (full `test:all` run, **1891/1891 tests green** across 143 suites — Track B P0 + P1 COMPLETE; P2 in progress: driver lifecycle, rider moderation, tickets, incentives, catalog CRUD, ops routes, promos landed; preferences/admin-point-offers/fleet portal/accounting/marketplace-residual/misc slices remain)
+**Last verified:** 2026-09-07, by Orchestrator (full `npx jest --watchAll=false` run, **1898/1898 tests green across 148 suites** in 27.8s; supersedes the 2026-09-06 figure of 1891/1891 — delta is the 10-test `utils-server/__tests__/notify-batching.test.ts` added by the implementation agent's `0263f90` round, plus a handful of other small test additions landed between the two runs; Track B P0 + P1 COMPLETE, P2 slices landing incrementally — see `.kilo/plans/active-lanes.md` for the live slice state)
 **How to update:** any new test home must be listed here the same commit it appears; if a location dies, delete its row.
 
 ## Canonical test locations
