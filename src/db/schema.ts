@@ -3418,3 +3418,29 @@ export const deliveryLegs = pgTable("delivery_legs", {
   index("delivery_legs_courier_state_idx").on(t.courier_user_id, t.leg_state),
   index("delivery_legs_request_idx").on(t.request_id),
 ]);
+
+/**
+ * Idempotency-Key convention storage (decision 01M23628A1566SK1D5XXV1NT5G).
+ * One row per (route, key) attempt. Two-phase: the claim insert carries a
+ * null response_status (in-flight marker, protected by the unique barrier);
+ * the executing handler's outcome is stored back, and any duplicate claim —
+ * from a client retry, a double-submit, or a 23505 race loser — returns the
+ * stored outcome without re-executing the handler body. Rows are retained:
+ * the barrier is unique forever, so a retry after success replays instead
+ * of re-charging (TD-15: DB-backed, never in-memory).
+ */
+export const idempotencyKeys = pgTable("idempotency_keys", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  route: varchar("route", { length: 120 }).notNull(),
+  key: varchar("key", { length: 255 }).notNull(),
+  user_id: uuid("user_id"),
+  request_fingerprint: varchar("request_fingerprint", { length: 64 }),
+  response_status: integer("response_status"),
+  response_body: jsonb("response_body"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("idempotency_keys_route_key_uq").on(t.route, t.key),
+  index("idempotency_keys_user_idx").on(t.user_id),
+  index("idempotency_keys_created_at_idx").on(t.created_at),
+]);

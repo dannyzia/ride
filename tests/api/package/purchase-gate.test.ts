@@ -14,7 +14,12 @@ jest.mock("@/lib/auth", () => ({
   verifySupabaseToken: jest.fn(async () => ({ id: "supa-user-1" })),
 }));
 jest.mock("@/src/db", () => ({
-  db: { select: jest.fn() },
+  db: {
+    select: jest.fn(),
+    // idempotency claim/outcome writes (lib/idempotency.ts) — fire-and-forget
+    insert: jest.fn(() => ({ values: jest.fn(async () => undefined) })),
+    update: jest.fn(() => ({ set: jest.fn(() => ({ where: jest.fn(async () => undefined) })) })),
+  },
 }));
 jest.mock("@/lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
@@ -58,6 +63,7 @@ const USER_ID = "11111111-1111-4111-a111-111111111111";
 const DRIVER_ID = "33333333-3333-4333-8333-333333333333";
 const PACKAGE_ID = "9adf6c88-0000-4000-8000-000000000001";
 const IDEMPOTENCY_KEY = "44444444-4444-4444-8444-444444444444";
+const BODY = { package_id: PACKAGE_ID, provider: "portpos" };
 
 const USER_ROW = [{ id: USER_ID }];
 const DRIVER_ROW = [{ id: DRIVER_ID, status: "active", vehicle_type: "bike_basic" }];
@@ -75,9 +81,9 @@ const PACKAGE_ROW = [
 function makeRequest(): Request {
   return {
     headers: { get: (name: string) => (name === "Idempotency-Key" ? IDEMPOTENCY_KEY : null) },
+    text: async () => JSON.stringify(BODY),
   } as unknown as Request;
 }
-
 function mockSelectQueue(queue: Row[][]): void {
   let callIndex = 0;
   (db.select as jest.Mock).mockImplementation(() => {

@@ -261,6 +261,12 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 - `app/api/payment/portpos/callback+api.ts` is a public endpoint that credits wallets / activates subscriptions. It MUST call `portposClient.verifyIPN(invoiceId, amountTaka)` (secret-bearing) and Zod-validate the PortPos response BEFORE touching any state. Never remove the signature check.
 - The callback compares the invoice amount against the locally-stored `payment_events.amount_bdt` in integer paisa (never float taka).
 
+### Idempotency-Key Convention (decision `01M23628A1566SK1D5XXV1NT5G`)
+- All state-changing POSTs SHOULD accept an `Idempotency-Key` header; the `(route, key)` pair is the barrier, stored DB-backed in `idempotency_keys` (never in-memory — TD-15). Storage + helper: `lib/idempotency.ts`; canonical route ids: `IDEMPOTENCY_ROUTES`.
+- Replay semantics: a duplicate claim returns the ORIGINAL outcome (stored status/body, `Idempotency-Replayed: true` header) and never re-executes the handler; a still-in-flight key returns `409 idempotency_key_in_progress`; the 23505 race loser reads and returns the winner's recorded outcome. Failures must call `storeIdempotencyOutcome` so client retries replay the typed failure instead of re-entering the flow; a claim left in-flight by a crash 409s until a fresh key is used.
+- Wired routes (required on `package/purchase`, optional elsewhere; absent key → fresh server key = legacy behavior): `app/api/rider/wallet/topup+api.ts`, `app/api/driver/wallet/topup+api.ts`, `app/api/rider/passes+api.ts`, `app/api/package/purchase+api.ts`. Extend `IDEMPOTENCY_ROUTES` when wiring a new route.
+- Exempt (documented in `lib/idempotency.ts`): SOS insert (unconditional per R3.1 design), internal scheduler endpoints, PortPos callbacks (verifyIPN + in-tx paid-guard). Interim per-surface deterministic keys (`cancel_fee_${rideId}`, `payment_events.idempotency_key`, leadBilling 23505 barriers) remain authoritative for unwired routes.
+
 ### Auth
 Supabase phone OTP. Client uses `lib/supabase.ts` (`EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY`). Server uses `lib/supabaseServer.ts` (`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`). Protected API routes call `verifySupabaseToken(request)` or `requireRole(request, role)` from `lib/auth.ts`. **No exceptions.** No `x-user-id` header substitution.
 

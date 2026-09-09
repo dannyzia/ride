@@ -379,6 +379,13 @@
       "when": 1788400000000,
       "tag": "0055_driver_earnings_goals",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1788486400000,
+      "tag": "0056_idempotency_keys",
+      "breakpoints": true
     }
   ]
 }

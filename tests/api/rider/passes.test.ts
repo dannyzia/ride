@@ -12,7 +12,12 @@ jest.mock("@/lib/auth", () => ({
   verifySupabaseToken: jest.fn(),
 }));
 jest.mock("@/src/db", () => ({
-  db: { select: jest.fn() },
+  db: {
+    select: jest.fn(),
+    // idempotency claim/outcome writes (lib/idempotency.ts) — fire-and-forget
+    insert: jest.fn(() => ({ values: jest.fn(async () => undefined) })),
+    update: jest.fn(() => ({ set: jest.fn(() => ({ where: jest.fn(async () => undefined) })) })),
+  },
 }));
 jest.mock("@/lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
@@ -44,7 +49,11 @@ const PASS: Row = {
 };
 
 function jsonRequest(body?: unknown): Request {
-  return { json: body === undefined ? undefined : async () => body } as unknown as Request;
+  return {
+    json: body === undefined ? undefined : async () => body,
+    text: async () => (body === undefined ? "" : JSON.stringify(body)),
+    headers: { get: () => null },
+  } as unknown as Request;
 }
 
 function getJson(res: Response): Promise<Record<string, unknown>> {

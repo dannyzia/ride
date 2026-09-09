@@ -18,6 +18,13 @@ import { eq, and, gte, inArray, sql } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { isConfigured } from "@/lib/portpos";
 import { initiatePortposPayment, createZeroAmountPaymentEvent } from "@/lib/paymentEvents";
+import {
+  beginIdempotencyClaim,
+  storeIdempotencyOutcome,
+  extractIdempotencyKey,
+  sha256Fingerprint,
+  IDEMPOTENCY_ROUTES,
+} from "@/lib/idempotency";
 import { activateSubscription } from "@/lib/activateSubscription";
 import {
   getFareFrameworkConfig,
@@ -143,11 +150,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const parsed = await parseJsonBody(request, purchaseSchema);
+    // Raw body captured for the idempotency fingerprint BEFORE parseJsonBody
+    // consumes the stream; Zod validation runs on a re-parse.
+    const rawBody: string = await request.text();
+    const bodyForParse = new Request("http://internal/parse", { method: "POST", body: rawBody, headers: { "content-type": "application/json" } });
+    const parsed = await parseJsonBody(bodyForParse, purchaseSchema);
     if (!parsed.ok) return parsed.response;
     const { package_id } = parsed.data;
 
-    const idempotencyKey = request.headers.get("Idempotency-Key");
+    // ── Idempotency-Key convention (decision 01M23628A1566SK1D5XXV1NT5G).
+    // REQUIRED on this route (existing client contract, header was already
+    // mandated here): the (route, key) barrier claims BEFORE any package
+    // reads or invoice work; a duplicate replays the stored outcome without
+    // re-executing the purchase flow.
+    const idempotencyKey = extractIdempotencyKey(request);
     if (
       !idempotencyKey ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -162,6 +178,13 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    const claim = await beginIdempotencyClaim({
+      route: IDEMPOTENCY_ROUTES.packagePurchase,
+      key: idempotencyKey,
+      userId: user.id,
+      requestFingerprint: sha256Fingerprint("POST", rawBody),
+    });
+    if (claim.kind !== "execute") return claim.response;
 
     const [pkg] = await db
       .select()
@@ -245,11 +268,13 @@ export async function POST(request: Request) {
           purpose: "driver_package",
         });
         await activateSubscription(evt.id);
-        return Response.json({
+        const trialResponse = Response.json({
           payment_url: null,
           payment_event_id: evt.id,
           activated: true,
         });
+        await storeIdempotencyOutcome({ route: IDEMPOTENCY_ROUTES.packagePurchase, key: idempotencyKey }, trialResponse);
+        return trialResponse;
       }
     }
 
@@ -278,14 +303,18 @@ export async function POST(request: Request) {
         .where(eq(paymentEvents.idempotency_key, idempotencyKey))
         .limit(1);
       if (existing) {
-        return Response.json({
+        const replayResponse = Response.json({
           payment_url: null,
           payment_event_id: existing.id,
         });
+        await storeIdempotencyOutcome({ route: IDEMPOTENCY_ROUTES.packagePurchase, key: idempotencyKey }, replayResponse);
+        return replayResponse;
       }
     }
 
-    return Response.json({ payment_url: initiated!.payment_url, payment_event_id: initiated!.payment_event_id });
+    const finalResponse = Response.json({ payment_url: initiated!.payment_url, payment_event_id: initiated!.payment_event_id });
+    await storeIdempotencyOutcome({ route: IDEMPOTENCY_ROUTES.packagePurchase, key: idempotencyKey }, finalResponse);
+    return finalResponse;
   } catch (e: unknown) {
     if (errors.getErrorStatus(e) === 401) {
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
