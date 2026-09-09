@@ -193,7 +193,9 @@ const ConfirmRidePage = () => {
     };
 
     fetchRoute();
-  }, []);
+    // Deps per exhaustive-deps: coordinates are guarded by the early return and
+    // never written here (no re-fetch loop); t + displayEstimate are read in body.
+  }, [destinationLatitude, destinationLongitude, displayEstimate, t, userLatitude, userLongitude]);
 
   useEffect(() => {
     if (!selectedVehicleType || !userLatitude || !userLongitude || !destinationLatitude || !destinationLongitude) return;
