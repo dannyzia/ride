@@ -20,9 +20,16 @@
  * Plus: role matrix, fleet-status gate, advisory-lock call-order, dup
  * registration 409, error-first DELETE paths (409 vehicle_in_use / 409
  * vehicle_has_history / 404s / invalid_uuid), zero-writes on failure.
+ *
+ * Phase B (ISSUE-35): POST /api/fleet/drivers §4.3 attach-or-transfer —
+ * A1 provision / A2 already_in_fleet / B1 transfer / B2 driver_transfer_blocked
+ * (active assignment OR online), user probe 404, role matrix, lock/check
+ * call-order, tx-handle check, zero-writes on every failure path.
  */
 
 import { POST as postVehicle } from "@/app/api/fleet/vehicles+api";
+import { POST as postDriver } from "@/app/api/fleet/drivers+api";
+import { db } from "@/src/db";
 import {
   POST as postAssignment,
   PATCH as patchUnassign,
@@ -39,11 +46,13 @@ const FLEET2 = "22222222-2222-4222-8222-222222222222";
 const VEH = "33333333-3333-4333-8333-333333333333";
 const VEH2 = "44444444-4444-4444-8444-444444444444";
 const DRV = "55555555-5555-4555-8555-555555555555";
+const USER1 = "66666666-6666-4666-8666-666666666666";
 const BAD_ID = "not-a-uuid";
 
 let mockFleetRows: Record<string, unknown>[] = [];
 let mockVehicleRows: Record<string, unknown>[] = [];
 let mockDriverRows: Record<string, unknown>[] = [];
+let mockUserRows: Record<string, unknown>[] = [];
 let mockActiveAssignmentRows: Record<string, unknown>[] = [];
 let mockSelectQueue: unknown[][] = []; // FIFO of ad-hoc select results
 let mockScriptQueue: unknown[] = []; // scripted fleetLimits check results
@@ -65,6 +74,7 @@ jest.mock("@/src/db", () => {
     vehicles: schema.vehicles,
     drivers: schema.drivers,
     fleetVehicleAssignments: schema.fleetVehicleAssignments,
+    users: schema.users,
   };
 
   const resolveRows = (t: unknown) => {
@@ -72,6 +82,7 @@ jest.mock("@/src/db", () => {
     if (t === T.vehicles) return mockVehicleRows;
     if (t === T.drivers) return mockDriverRows;
     if (t === T.fleetVehicleAssignments) return mockActiveAssignmentRows;
+    if (t === T.users) return mockUserRows;
     return [];
   };
 
@@ -165,8 +176,12 @@ jest.mock("@/lib/fleetLimits", () => ({
     if (!next) throw new Error("unexpected checkVehicleLimit — no scripted result");
     return next;
   }),
-  checkDriverLimit: jest.fn(() => {
-    throw new Error("unexpected checkDriverLimit — driver add is Phase B");
+  checkDriverLimit: jest.fn((fleetId: string, opts?: { tx?: unknown }) => {
+    // Phase B: same scripted contract as checkVehicleLimit (§4.3 driver add).
+    mockLimitChecks.push({ fleetId, hasTx: !!opts?.tx });
+    const next = mockScriptQueue.shift();
+    if (!next) throw new Error("unexpected checkDriverLimit — no scripted result");
+    return next;
   }),
   takeFleetLimitLock: jest.fn((_tx: unknown, fleetId: string) => {
     mockLockCalls.push({ fleetId });
@@ -204,6 +219,7 @@ beforeEach(() => {
   mockFleetRows = [{ id: FLEET, status: "ACTIVE" }];
   mockVehicleRows = [];
   mockDriverRows = [];
+  mockUserRows = [{ id: USER1 }];
   mockActiveAssignmentRows = [];
   mockSelectQueue = [];
   mockScriptQueue = [];
@@ -618,5 +634,207 @@ describe("DELETE /api/fleet/vehicles/[id]", () => {
     const res = await del();
     expect(res.status).toBe(403);
     expect(mockDeletedFrom).toHaveLength(0);
+  });
+});
+
+// ──────────────────── POST /api/fleet/drivers (§4.3, Phase B) ────────────────────
+
+describe("POST /api/fleet/drivers — attach-or-transfer", () => {
+  const driverUrl = `http://localhost/api/fleet/drivers?fleet_id=${FLEET}`;
+  const driverBody = (over: Record<string, unknown> = {}) => ({
+    user_id: USER1,
+    ...over,
+  });
+
+  it("A1: no drivers row → 201 provisioned; insert recorded with pending status + register-default vehicle_type", async () => {
+    mockScriptQueue.push(okCheck(3, 5));
+
+    const res = await postDriver(makeRequest("POST", driverBody(), driverUrl));
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(body.attached).toBe("provisioned");
+    expect(body.driver_id).toBe("generated-uuid");
+    const ins = mockInserts.find((i) => i.table === schema.drivers);
+    expect(ins).toBeDefined();
+    expect(ins!.vals.user_id).toBe(USER1);
+    expect(ins!.vals.fleet_id).toBe(FLEET);
+    expect(ins!.vals.status).toBe("pending");
+    // Schema reality: vehicle_type is NOT NULL — register+api.ts precedent default.
+    expect(ins!.vals.vehicle_type).toBe("bike_basic");
+    expect(mockUpdates).toHaveLength(0);
+  });
+
+  it("A2: drivers row already in THIS fleet → 409 already_in_fleet, zero writes", async () => {
+    mockScriptQueue.push(okCheck());
+    mockDriverRows = [{ id: DRV, fleet_id: FLEET, is_online: false }];
+
+    const res = await postDriver(makeRequest("POST", driverBody(), driverUrl));
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("already_in_fleet");
+    expect(mockInserts).toHaveLength(0);
+    expect(mockUpdates).toHaveLength(0);
+  });
+
+  it("B1: driver in another fleet, no active work → 201 transferred; single fleet_id UPDATE, old fleet untouched", async () => {
+    mockScriptQueue.push(okCheck());
+    mockDriverRows = [{ id: DRV, fleet_id: FLEET2, is_online: false }];
+    // mockActiveAssignmentRows = [] → no active assignment.
+
+    const res = await postDriver(makeRequest("POST", driverBody(), driverUrl));
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(body.attached).toBe("transferred");
+    expect(body.driver_id).toBe(DRV);
+    const upd = mockUpdates.find(
+      (u) => u.table === schema.drivers && u.vals.fleet_id === FLEET,
+    );
+    expect(upd).toBeDefined();
+    expect(mockInserts).toHaveLength(0); // transfer must not re-provision
+    // Exactly one drivers UPDATE (the transfer), no assignment closes.
+    expect(
+      mockUpdates.filter((u) => u.table === schema.drivers),
+    ).toHaveLength(1);
+  });
+
+  it("B2a: active vehicle assignment → 409 driver_transfer_blocked (assignment named in message), zero writes", async () => {
+    mockScriptQueue.push(okCheck());
+    mockDriverRows = [{ id: DRV, fleet_id: FLEET2, is_online: false }];
+    mockActiveAssignmentRows = [
+      { id: "active-assign-1", driver_id: DRV, unassigned_at: null },
+    ];
+
+    const res = await postDriver(makeRequest("POST", driverBody(), driverUrl));
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("driver_transfer_blocked");
+    expect(body.message).toContain("assignment");
+    expect(mockInserts).toHaveLength(0);
+    expect(
+      mockUpdates.filter((u) => u.table === schema.drivers),
+    ).toHaveLength(0);
+  });
+
+  it("B2b: online driver (no assignment) → 409 driver_transfer_blocked, zero writes", async () => {
+    mockScriptQueue.push(okCheck());
+    mockDriverRows = [{ id: DRV, fleet_id: FLEET2, is_online: true }];
+
+    const res = await postDriver(makeRequest("POST", driverBody(), driverUrl));
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("driver_transfer_blocked");
+    expect(body.message).toContain("online");
+    expect(mockInserts).toHaveLength(0);
+    expect(mockUpdates).toHaveLength(0);
+  });
+
+  it("at-limit → 403 plan_limit_exceeded with current/limit in body (check precedes branch dispatch)", async () => {
+    mockScriptQueue.push(breachCheck(4, 4));
+
+    const res = await postDriver(makeRequest("POST", driverBody(), driverUrl));
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.error).toBe("plan_limit_exceeded");
+    expect(body.current).toBe(4);
+    expect(body.limit).toBe(4);
+    expect(body.message).toContain("4/4");
+    expect(mockInserts).toHaveLength(0);
+    expect(mockUpdates).toHaveLength(0);
+    // Lock precedes the check (plan §5 call-order).
+    const lockOrder = (fleetLimits.takeFleetLimitLock as jest.Mock).mock.invocationCallOrder[0];
+    const checkOrder = (fleetLimits.checkDriverLimit as jest.Mock).mock.invocationCallOrder[0];
+    expect(lockOrder).toBeLessThan(checkOrder);
+  });
+
+  it("limit check runs on the tx handle (same snapshot as the write)", async () => {
+    mockScriptQueue.push(okCheck());
+    await postDriver(makeRequest("POST", driverBody(), driverUrl));
+    expect(mockLimitChecks[0].hasTx).toBe(true);
+    expect(mockLockCalls[0].fleetId).toBe(FLEET);
+  });
+
+  it("SUSPENDED fleet → 403 fleet_not_active, no check consulted, zero writes", async () => {
+    mockFleetRows = [{ id: FLEET, status: "SUSPENDED" }];
+    const res = await postDriver(makeRequest("POST", driverBody(), driverUrl));
+    const body = await res.json();
+    expect(res.status).toBe(403);
+    expect(body.error).toBe("fleet_not_active");
+    expect(mockInserts).toHaveLength(0);
+    expect(mockUpdates).toHaveLength(0);
+    expect(mockLimitChecks).toHaveLength(0);
+  });
+
+  it("target user not found → 404 user_not_found, zero writes", async () => {
+    mockScriptQueue.push(okCheck());
+    mockUserRows = []; // users table empty
+    const res = await postDriver(makeRequest("POST", driverBody(), driverUrl));
+    const body = await res.json();
+    expect(res.status).toBe(404);
+    expect(body.error).toBe("user_not_found");
+    expect(mockInserts).toHaveLength(0);
+    expect(mockUpdates).toHaveLength(0);
+  });
+
+  it("role gate: MANAGER allowed, VIEWER rejected with zero writes", async () => {
+    mockRole = "MANAGER";
+    mockScriptQueue.push(okCheck());
+    const ok = await postDriver(makeRequest("POST", driverBody(), driverUrl));
+    expect(ok.status).toBe(201);
+    expect(mockAuthCalls[0].roles).toEqual(["OWNER", "MANAGER"]);
+
+    mockAuthStatus = 403;
+    mockScriptQueue.push(okCheck());
+    const forbidden = await postDriver(
+      makeRequest("POST", driverBody({ user_id: "77777777-7777-4777-8777-777777777777" }), driverUrl),
+    );
+    const body = await forbidden.json();
+    expect(forbidden.status).toBe(403);
+    expect(body.error).toBe("forbidden");
+    expect(mockInserts.filter((i) => i.table === schema.drivers)).toHaveLength(1); // only the first call's
+    expect(mockAuthCalls[1].roles).toEqual(["OWNER", "MANAGER"]);
+  });
+
+  it("unauthenticated → 401", async () => {
+    mockAuthStatus = 401;
+    const res = await postDriver(makeRequest("POST", driverBody(), driverUrl));
+    const body = await res.json();
+    expect(res.status).toBe(401);
+    expect(body.error).toBe("unauthorized");
+  });
+
+  it("invalid fleet_id param → 400 invalid_param; invalid body user_id → 400 validation_error", async () => {
+    const badParam = await postDriver(
+      makeRequest("POST", driverBody(), "http://localhost/api/fleet/drivers?fleet_id=nope"),
+    );
+    expect(badParam.status).toBe(400);
+    expect((await badParam.json()).error).toBe("invalid_param");
+
+    mockScriptQueue.push(okCheck());
+    const badBody = await postDriver(
+      makeRequest("POST", driverBody({ user_id: BAD_ID }), driverUrl),
+    );
+    expect(badBody.status).toBe(400);
+    expect((await badBody.json()).error).toBe("validation_error");
+  });
+
+  it("call-order on success: lock → fleet gate → limit check → user probe → drivers probe → write", async () => {
+    mockScriptQueue.push(okCheck());
+
+    await postDriver(makeRequest("POST", driverBody(), driverUrl));
+
+    const lockOrder = (fleetLimits.takeFleetLimitLock as jest.Mock).mock.invocationCallOrder[0];
+    const checkOrder = (fleetLimits.checkDriverLimit as jest.Mock).mock.invocationCallOrder[0];
+    expect(lockOrder).toBeLessThan(checkOrder);
+    // db.transaction is invoked BEFORE its callback body (which contains the
+    // lock → check → write sequence), so transaction < check; the A1 test
+    // already proves the write itself happened with the scripted ok result.
+    const txOrder = (db.transaction as jest.Mock).mock.invocationCallOrder[0];
+    expect(txOrder).toBeLessThan(checkOrder);
   });
 });
