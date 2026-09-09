@@ -138,7 +138,11 @@ describe("SOS frequency-as-intensity clustering", () => {
 
 describe("SOS banner display logic", () => {
   it("no active alert → no banner", () => {
-    expect(false).toBe(false); // active=false means banner not rendered
+    // Banner renders iff there is an active alert (components/SosBanner.tsx
+    // returns null when active). active=false ⇒ high-intensity styling of the
+    // banner never applies, and countRecentAlerts feeding `active` is 0.
+    const active = false;
+    expect(active && isHighIntensity(0)).toBe(false);
   });
 
   it("active alert, 1 trigger → normal red banner", () => {

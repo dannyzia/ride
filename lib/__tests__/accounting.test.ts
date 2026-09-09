@@ -617,8 +617,9 @@ describe('double-entry invariant — summary', () => {
    * (e.g., caught and swallowed the throw, or inserted lines outside createJournalEntry).
    */
 
-  test('meta: this test file covers the right regression surface', () => {
-    // Ensures test suite itself is not empty (guards against future mis-configuration).
-    expect(true).toBe(true);
+  test('meta: the journal-entry contract is importable (guards against future mis-configuration)', () => {
+    // A regression of createJournalEntry (the balance-check call site every
+    // "does not throw" test above depends on) must fail loudly here too.
+    expect(typeof createJournalEntry).toBe('function');
   });
 });

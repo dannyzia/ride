@@ -6,6 +6,14 @@
 
 set -e
 
+echo "⏳ Pre-commit: vacuous-assertion gate (staged test files)..."
+node scripts/check-vacuous-assertions.js --staged
+if [ $? -ne 0 ]; then
+  echo "❌ Vacuous-assertion gate failed — commit blocked."
+  echo "   Placeholder assertions like expect(true).toBe(true) pin no behavior."
+  exit 1
+fi
+
 echo "⏳ Pre-commit: lint staged files..."
 
 # Get staged .ts/.tsx/.js/.jsx files (only those still on disk)
