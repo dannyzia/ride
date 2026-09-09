@@ -1745,6 +1745,13 @@ async function handleDriverDisconnect(driverId: string) {
   // a gone driver; the lead stays billed, pipeline offers the next driver).
   resolvePendingOfferForDriver(driverId, "disconnected");
 
+  // M2: evict from the in-memory H3 index immediately. Without this the
+  // driver lingers in the index until the next refreshH3Index() cycle (30 s
+  // TTL), and a dispatch tick in that window re-fetches their ID from
+  // getDriversInCells() only to drop them at the drivers.is_online filter.
+  // is_online already flipped to false above — this just trims the index.
+  removeDriver(driverId);
+
   // Clean up zone hysteresis state
   zoneHysteresis.delete(driverId);
 

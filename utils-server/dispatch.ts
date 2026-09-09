@@ -520,6 +520,21 @@ export async function buildCandidateList(
       heartbeatAgeSec < 90  ? 0.5 :
       0.0;  // >90s: should have been excluded by H3 index refresh, but guard here
 
+    // M2: hard-exclude drivers whose last heartbeat is so stale that the
+    // socket may be alive but the app is effectively dead (iOS background
+    // suspension, silent network partition — no close frame, so
+    // is_online never flips and the H3 index never evicts them). Threshold
+    // is 120s (not 90s) to give GPS-outage drivers (tunnels, dead zones)
+    // one or two 10s heartbeat ticks of grace before exclusion; the 90s
+    // onlineScore=0.0 boundary still applies below that.
+    if (heartbeatAgeSec >= 120) {
+      logger.debug('[dispatch] driver filtered — heartbeat stale beyond 120s (socket may be alive but app dead)', {
+        driverId: d.id,
+        heartbeatAgeSec: Math.round(heartbeatAgeSec),
+      });
+      continue;
+    }
+
     let score =
       W.distance   * distanceScore   +
       W.rating     * ratingScore     +
