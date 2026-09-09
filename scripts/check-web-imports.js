@@ -211,6 +211,7 @@ function findNodeOnlyImports() {
       "lib/supabaseServer.ts",
       "lib/adminRbac.ts",
       "lib/auth.ts",
+      "lib/idempotency.ts",
       "lib/integrations/webhookHandler.ts",
     ];
     if (SERVER_ONLY.includes(rel)) return;
