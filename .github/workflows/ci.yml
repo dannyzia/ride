@@ -19,6 +19,8 @@
 #   types (private-field split), even at identical versions. The workspace
 #   guarantees a single copy. Sequence re-proven locally post-npm-ci:
 #   1976/1976, tsc 0/0, lint 0 errors.
+#   2026-09-09 (actions bump): checkout/setup-node v4 → v7 — both run on the
+#   Node 24 runner runtime, clearing the Node 20 deprecation annotation.
 # How to update: keep step order aligned with the house validation order
 #   (lint → typecheck → test); do not add deploy steps here.
 
@@ -35,9 +37,9 @@ jobs:
     name: lint + typecheck + tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
