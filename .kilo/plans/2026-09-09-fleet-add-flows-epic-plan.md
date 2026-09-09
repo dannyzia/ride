@@ -29,6 +29,9 @@ Ruling embedded in AC 2: the lib is called **inside the mutation**, the response
 
 ## 2. What exists vs. what gets built (disk-verified 2026-09-09)
 
+> **SUPERSEDED as an existence claim** — Rhizome decision `01M2394HC217WCKQW5BTP1J3JQ` (active, on ISSUE-35): the assignments route DID exist (54c8466) despite this table's claim, and trusting the table caused the Phase A PATCH-clobber (repaired in df3c669, disclosure in the execution record below). Per that decision, every "Today" cell here is a hypothesis to RE-VERIFY against the live tree at implementation time — never authority to create/overwrite a file. The invariants (I-1..I-6) below remain binding.
+
+
 | Surface | Today | Epic builds |
 |---|---|---|
 | Staff add/invite (staff roles) | `POST /api/fleet/staff` (OWNER-only → `fleet_members` row) | Exists — untouched |

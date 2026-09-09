@@ -232,3 +232,10 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Deltas recorded in the plan execution row:** vehicle_type NOT NULL default; D1 "own no vehicles" subsumed by the assignment guard.
 - **Gates:** fleet suites 90/90 · full 1995/1995 (156 suites) · tsc 0/0 · lint 0 errors (stash-verified zero warning delta) · eq(col,null) clean.
 - **Board:** ISSUE-35 finish_attempt → done (epic complete incl. Phase A+B; Phase C remains a separate deferred issue).
+
+## 2026-09-09 — §2 supersession decision (assignments-route clobber lesson)
+
+- **Decision recorded:** `01M2394HC217WCKQW5BTP1J3JQ` (active, on ISSUE-35) — "Plans are hypotheses: verify negative existence claims against the live tree before writing."
+- **Incident anchored:** plan §2 claimed "no route exposes assignVehicleToDriver"; the route shipped in `54c8466` (POST + the only PATCH unassign path); the Phase A implementer trusted the table and clobbered `app/api/fleet/assignments+api.ts`; repaired same-day in `df3c669` with full merge-delta disclosure.
+- **Binding rule:** re-read the live file at HEAD before any create/overwrite; plans' existence claims (esp. negative) are never authority; foreign files get a full read + lost-functionality diff first; plan-vs-file conflicts resolve in favor of the file with the divergence recorded back; repairs restore verbatim before layering deltas.
+- **Plan annotated:** §2 now carries the supersession banner pointing at the decision; I-1..I-6 remain binding.
