@@ -23,6 +23,7 @@ import {
   packages,
   callLedger,
   dispatchOffers,
+  drivers,
 } from "../../src/db/schema";
 import { debitLeadForOffer, debitLeadForOfferTx } from "../leadBilling";
 
@@ -33,6 +34,7 @@ interface FakeState {
   packages: Row[];
   callLedger: Row[];
   dispatchOffers: Row[];
+  drivers: Row[];
 }
 
 interface TxLike {
@@ -40,6 +42,8 @@ interface TxLike {
   insert: (table: unknown) => { values: (v: Row) => unknown };
   update: (table: unknown) => { set: (s: Row) => { where: () => Promise<unknown> } };
 }
+
+const ACTIVE_DRIVER: Row = { id: "driver-1", status: "active", is_online: true };
 
 function makePgError(code: string): Error & { code: string } {
   const err = new Error("duplicate key value violates unique constraint") as Error & { code: string };
@@ -57,6 +61,12 @@ function buildDbMock(initial: Partial<FakeState>): {
     packages: initial.packages ?? [],
     callLedger: initial.callLedger ?? [],
     dispatchOffers: initial.dispatchOffers ?? [],
+    // F-9.1: default seed — an ACTIVE, ONLINE driver row, matching the
+    // pre-guard world where only the pool filter (status='active') existed.
+    // Tests that exercise the status guard override or clear this.
+    drivers: initial.drivers ?? [
+      { id: "driver-1", status: "active", is_online: true },
+    ],
   };
   const updates: { table: unknown; set: Row }[] = [];
 
@@ -65,6 +75,7 @@ function buildDbMock(initial: Partial<FakeState>): {
     if (table === packages) return state.packages;
     if (table === callLedger) return state.callLedger;
     if (table === dispatchOffers) return state.dispatchOffers;
+    if (table === drivers) return state.drivers;
     return [];
   };
 
@@ -154,6 +165,7 @@ function buildDbMock(initial: Partial<FakeState>): {
         state.packages = snapshot.packages;
         state.callLedger = snapshot.callLedger;
         state.dispatchOffers = snapshot.dispatchOffers;
+        state.drivers = snapshot.drivers;
         throw e;
       }
     },
@@ -334,8 +346,14 @@ describe("debitLeadForOfferTx — atomicity (invariant 10)", () => {
       select: () => ({
         from: (table: unknown) => ({
           where: () => {
+            // F-9.1: the drivers row read (step 4b) + the subscription and
+            // package reads all flow through here.
             const rows =
-              table === packages ? mock.state.packages : mock.state.subscriptions;
+              table === packages
+                ? mock.state.packages
+                : table === drivers
+                  ? mock.state.drivers
+                  : mock.state.subscriptions;
             const chain: Record<string, unknown> = {
               orderBy: () => chain,
               for: () => chain,
@@ -368,6 +386,7 @@ describe("debitLeadForOfferTx — atomicity (invariant 10)", () => {
           mock.state.packages = snapshot.packages;
           mock.state.callLedger = snapshot.callLedger;
           mock.state.dispatchOffers = snapshot.dispatchOffers;
+          mock.state.drivers = snapshot.drivers;
           throw e;
         }
       },
@@ -395,5 +414,63 @@ describe("debitLeadForOffer — caller-owned tx passthrough", () => {
     const res = await debitLeadForOffer(mock.tx, { rideId: "ride-9", driverId: "driver-1" });
     expect(res.billed).toBe(true);
     expect(res.balanceAfter).toBe(4);
+  });
+});
+
+describe("debitLeadForOfferTx — account-status guard (F-9.1)", () => {
+  test("suspended-after-pool-build driver is NOT debited and NOT offered", async () => {
+    const { state } = buildDbMock({
+      subscriptions: [{ ...ACTIVE_SUB }],
+      packages: [{ ...PACKAGE }],
+      drivers: [{ id: "driver-1", status: "suspended", is_online: true }],
+    });
+
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+
+    expect(res).toEqual({ billed: false, balanceAfter: null });
+    expect(state.dispatchOffers).toHaveLength(0);
+    expect(state.callLedger).toHaveLength(0);
+    expect(state.subscriptions[0].calls_remaining).toBe(5); // untouched
+  });
+
+  test("driver gone offline since pool build is skipped with zero writes", async () => {
+    const { state } = buildDbMock({
+      subscriptions: [{ ...ACTIVE_SUB }],
+      packages: [{ ...PACKAGE }],
+      drivers: [{ id: "driver-1", status: "active", is_online: false }],
+    });
+
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+
+    expect(res).toEqual({ billed: false, balanceAfter: null });
+    expect(state.dispatchOffers).toHaveLength(0);
+    expect(state.callLedger).toHaveLength(0);
+  });
+
+  test("missing drivers row is skipped (defensive — driver deleted mid-chain)", async () => {
+    const { state } = buildDbMock({
+      subscriptions: [{ ...ACTIVE_SUB }],
+      packages: [{ ...PACKAGE }],
+      drivers: [],
+    });
+
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+
+    expect(res).toEqual({ billed: false, balanceAfter: null });
+    expect(state.dispatchOffers).toHaveLength(0);
+  });
+
+  test("active+online driver passes the guard and the debit proceeds (guard ordering: after balance guard)", async () => {
+    const { state } = buildDbMock({
+      subscriptions: [{ ...ACTIVE_SUB }],
+      packages: [{ ...PACKAGE }],
+      drivers: [{ ...ACTIVE_DRIVER }],
+    });
+
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+
+    expect(res).toEqual({ billed: true, balanceAfter: 4 });
+    expect(state.dispatchOffers).toHaveLength(1);
+    expect(state.callLedger).toHaveLength(1);
   });
 });

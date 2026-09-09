@@ -34,7 +34,7 @@ import {
 import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte, inArray } from "drizzle-orm";
 import { detectStationaryAnomaly } from "../lib/safety";
 import { logger } from "../lib/logger";
-import { nextBdtMidnightUtc } from "../lib/time";
+import { nextBdtMidnightUtc, bdtDayOfWeek, bdtHourOfDay } from "../lib/time";
 import { resetAllBudgets } from "../lib/zoneBudget";
 import { evaluateGraduation } from "../lib/zoneLifecycle";
 import { expireCredits, expireRiderFeeDeductions } from "../lib/walletCashback";
@@ -2151,8 +2151,10 @@ export function startScheduler(): void {
   registerJob(async () => {
     if (backtestRunning.value) return;
     const now = new Date();
-    // Fire once per week (Sunday at 3 AM)
-    if (now.getDay() !== 0 || now.getHours() !== 3) return;
+    // Fire once per week (Sunday 03:00 ASIA/DHAKA — F-5.3 of the theme5 time
+    // audit: host-local getDay/getHours anchored the week to the deploy host's
+    // timezone; the Stage 0 exit-gate correlation input must be the Dhaka day).
+    if (bdtDayOfWeek(now) !== 0 || bdtHourOfDay(now) !== 3) return;
     backtestRunning.value = true;
     try {
       // Simplified: compute Pearson correlation between zone scores and
@@ -2265,7 +2267,8 @@ export function startScheduler(): void {
   let declineMonitorRunning = false;
   registerJob(async () => {
     const now = new Date();
-    if (now.getDay() !== 6 || now.getHours() !== 4) return;
+    // Saturday 04:00 ASIA/DHAKA (F-5.4 — same host-local-anchor fix as job 37).
+    if (bdtDayOfWeek(now) !== 6 || bdtHourOfDay(now) !== 4) return;
     if (declineMonitorRunning) return;
     declineMonitorRunning = true;
     try {

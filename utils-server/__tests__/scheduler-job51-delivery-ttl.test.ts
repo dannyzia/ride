@@ -26,7 +26,15 @@ jest.mock("../../lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
 jest.mock("../../lib/safety", () => ({ detectStationaryAnomaly: jest.fn() }));
-jest.mock("../../lib/time", () => ({ nextBdtMidnightUtc: jest.fn(() => new Date()) }));
+jest.mock("../../lib/time", () => ({
+  nextBdtMidnightUtc: jest.fn(() => new Date()),
+  // F-5.3/F-5.4: jobs 37/41 now gate on the Dhaka clock helpers — return
+  // "Sunday 03:00 Dhaka"-neutral values that never match a gate so the
+  // time-gated jobs stay dormant in this job-51 harness (same posture as
+  // the old host-local getDay()/getHours() at a neutral instant).
+  bdtDayOfWeek: jest.fn(() => 1),
+  bdtHourOfDay: jest.fn(() => 0),
+}));
 jest.mock("../../lib/zoneBudget", () => ({ resetAllBudgets: jest.fn() }));
 jest.mock("../../lib/zoneLifecycle", () => ({ evaluateGraduation: jest.fn() }));
 jest.mock("../../lib/walletCashback", () => ({ expireCredits: jest.fn(), expireRiderFeeDeductions: jest.fn() }));

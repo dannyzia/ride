@@ -140,3 +140,18 @@ export function bdtMonthStartUtc(): Date {
     Date.UTC(todayStart.getUTCFullYear(), todayStart.getUTCMonth(), 1) - BDT_OFFSET_MS,
   );
 }
+
+/**
+ * Day-of-week (0=Sunday..6=Saturday) and hour-of-day (0..23) of an instant
+ * AS OBSERVED IN ASIA/DHAKA (fixed UTC+6, same convention as dhakaTodayKey).
+ * Scheduler jobs (37 heat backtest, 41 decline monitoring) gate on these
+ * instead of the host-local getDay()/getHours(), whose values drift with the
+ * deploy host's timezone (F-5.3/F-5.4 of the theme5 time audit).
+ */
+export function bdtDayOfWeek(now: Date = new Date()): number {
+  return new Date(now.getTime() + BDT_OFFSET_MS).getUTCDay();
+}
+
+export function bdtHourOfDay(now: Date = new Date()): number {
+  return new Date(now.getTime() + BDT_OFFSET_MS).getUTCHours();
+}

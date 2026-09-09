@@ -2,6 +2,7 @@ import { db } from '@/src/db';
 import { drivers, rides, documents } from '@/src/db/schema';
 import { eq, and, sql, gte } from 'drizzle-orm';
 import { requireAdminPermission } from '@/lib/adminRbac';
+import { prevBdtMidnightUtc } from '@/lib/time';
 import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
 
@@ -9,8 +10,10 @@ export async function GET(request: Request) {
   try {
     await requireAdminPermission('admin.read')(request);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // F-5.1 (theme5 time audit): "today" is the ASIA/DHAKA civil day, not the
+    // host's local midnight — a UTC host shifted the boundary to 06:00 Dhaka,
+    // showing yesterday's Dhaka rides as "today" until 06:00 local.
+    const today = prevBdtMidnightUtc();
 
     const [activeDrivers] = await db
       .select({ count: sql<number>`count(*)` })

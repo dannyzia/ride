@@ -21,6 +21,7 @@ import {
 import { and, count, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireFleetMember } from "@/lib/auth";
+import { prevBdtMidnightUtc } from "@/lib/time";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 
@@ -45,9 +46,10 @@ export async function GET(request: Request) {
     // Cross-fleet guard — binds this request to fleetId only.
     await requireFleetMember(fleetId)(request);
 
-    const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
+    // F-5.2 (theme5 time audit): the "today" window is the ASIA/DHAKA civil
+    // day, not the host's local midnight (a UTC host shifted the boundary to
+    // 06:00 Dhaka). prevBdtMidnightUtc is now-relative on its own.
+    const todayStart = prevBdtMidnightUtc();
 
     // Parallel queries for dashboard metrics.
     const [fleetRow] = await db

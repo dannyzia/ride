@@ -69,3 +69,11 @@ jobs:
       # test file — see scripts/vacuous-assertion-scanner.js for the rule set.
       - name: Vacuous-assertion gate + full test suite
         run: npm run test:all
+
+      # Dependency audit gate (npm-audit-triage suppression policy, 2026-09-09):
+      # blocking only on CRITICAL advisories. After the cheap-kills batch the
+      # count is 0; a future critical must be a same-day flag to Zia, never a
+      # silent accept. High/moderate remain advisory (re-checked at the SDK
+      # upgrade); see .kilo/plans/findings/2026-09-09-npm-audit-triage.md.
+      - name: Dependency audit gate (critical)
+        run: npm audit --audit-level=critical

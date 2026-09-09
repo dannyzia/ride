@@ -1952,6 +1952,8 @@ async function executeMatchFlow(
       phone: users.phone,
       rating: drivers.rating,
       vehicle_type: drivers.vehicle_type,
+      status: drivers.status,
+      is_online: drivers.is_online,
       last_location_lat: drivers.last_location_lat,
       last_location_lng: drivers.last_location_lng,
       last_location_at: drivers.last_location_at,
@@ -1960,6 +1962,22 @@ async function executeMatchFlow(
     .innerJoin(users, eq(users.id, drivers.user_id))
     .where(eq(drivers.id, driverId))
     .limit(1);
+
+  // F-9.1 (theme9 stale-eligibility audit): the accept boundary re-verifies
+  // account status before the match commit. Pool build filtered
+  // status='active' + is_online, but that snapshot can be minutes stale by
+  // the time the driver's accept arrives (TTL-bounded per offer, not per
+  // chain). A suspended driver who accepts must never be matched. No reply
+  // is sent — the ride stays dispatching and the chain/TTL proceeds (their
+  // lead stays billed per ruling 8; the status guard at debit blocks any
+  // FUTURE billing). Mirror of the race_lost handling below.
+  if (!driverRow || driverRow.status !== 'active' || driverRow.is_online !== true) {
+    logger.warn("[dispatch] accept rejected — driver no longer eligible (suspended/offline since pool build)", {
+      ride_id: rideId,
+      driverId,
+    });
+    return "race_lost";
+  }
 
   // Generate a 4-digit ride-start PIN (rider reads aloud, driver enters it)
   const startPin = String(crypto.randomInt(1000, 10000));

@@ -23,6 +23,7 @@ import {
   packages,
   dispatchOffers,
   callLedger,
+  drivers,
 } from '../src/db/schema';
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { logger } from '../lib/logger';
@@ -62,6 +63,11 @@ class SkipBillingError extends Error {
  * 2. SELECT ... FOR UPDATE on subscription (Z-4 serialization)
  * 3. Daily-cap guard (defense-in-depth behind the pool filter)
  * 4. Balance guard (-1 = unlimited sentinel)
+ * 4b. Account-status guard (F-9.1, theme9 stale-eligibility audit) — the pool
+ *     filtered drivers.status='active' at build time, but the chain holds an
+ *     in-memory ID snapshot; a driver suspended after pool build must not be
+ *     debited or offered. Reads the live drivers row (plain read — the pool
+ *     query never mutates drivers; skip-on-drift is cheap and idempotent).
  * 5. Insert dispatch_offers row (onConflictDoNothing + returning — zero rows
  *    returned means a (ride_id, driver_id) conflict → skip driver entirely)
  * 6. Insert call_ledger deduction row (reason='offer_sent'); a 23505 unique
@@ -119,6 +125,21 @@ export async function debitLeadForOffer(
   // 4. Balance guard (-1 = unlimited)
   const callsRemaining = lockedSub.calls_remaining;
   if (callsRemaining !== -1 && callsRemaining <= 0) {
+    return { billed: false, balanceAfter: null };
+  }
+
+  // 4b. Account-status guard (F-9.1): re-read the live drivers row INSIDE the
+  // debit tx. The candidate pool checked status='active' + is_online at build
+  // time, but pool build and this debit can be minutes apart on a long chain —
+  // a driver suspended (or gone offline) in between must not be debited or
+  // offered. Not FOR UPDATE: nothing else writes status online-path; a stale
+  // read here only costs one skipped candidate, never a wrong charge.
+  const [driverRow] = await tx
+    .select({ status: drivers.status, is_online: drivers.is_online })
+    .from(drivers)
+    .where(eq(drivers.id, driverId))
+    .limit(1);
+  if (!driverRow || driverRow.status !== 'active' || driverRow.is_online !== true) {
     return { billed: false, balanceAfter: null };
   }
 

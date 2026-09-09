@@ -275,6 +275,50 @@ describe("POST /api/admin/driver/suspend", () => {
     expect(directUpdates[0].table).toBe(drivers);
     expect(directUpdates[0].set).toMatchObject({ status: "suspended", is_online: false });
   });
+
+  test("F-9.2: notifies the dispatch server's force-offline endpoint (fire-and-forget, correct auth + payload)", async () => {
+    grant("safety.write", true);
+    mockDriverRow({ ...DRIVER_PENDING, status: "active", is_online: true });
+    const fetchMock = jest.fn(async () => ({ ok: true }));
+    (globalThis as unknown as { fetch: unknown }).fetch = fetchMock;
+    process.env.WEBSOCKET_INTERNAL_SECRET = "test-internal-secret";
+    process.env.UTILS_SERVER_PORT = "3001";
+
+    const res = await suspendPOST(jsonRequest({ driver_id: DRIVER_ID, reason: REASON }));
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("http://127.0.0.1:3001/internal/driver/force-offline");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer test-internal-secret");
+    expect(JSON.parse(String(init.body))).toEqual({ driver_id: DRIVER_ID, reason: `suspended: ${REASON}` });
+    delete process.env.WEBSOCKET_INTERNAL_SECRET;
+  });
+
+  test("F-9.2: force-offline failure never fails the admin action (suspension still returns 200)", async () => {
+    grant("safety.write", true);
+    mockDriverRow({ ...DRIVER_PENDING, status: "active", is_online: true });
+    (globalThis as unknown as { fetch: unknown }).fetch = jest.fn(async () => {
+      throw new Error("connection refused");
+    });
+    process.env.WEBSOCKET_INTERNAL_SECRET = "test-internal-secret";
+
+    const res = await suspendPOST(jsonRequest({ driver_id: DRIVER_ID, reason: REASON }));
+    expect(res.status).toBe(200);
+    expect(await getJson(res)).toEqual({ driver_id: DRIVER_ID, status: "suspended" });
+    delete process.env.WEBSOCKET_INTERNAL_SECRET;
+  });
+
+  test("F-9.2: skips the notification entirely when the internal secret is unset (local dev)", async () => {
+    grant("safety.write", true);
+    mockDriverRow({ ...DRIVER_PENDING, status: "active", is_online: true });
+    const fetchMock = jest.fn(async () => ({ ok: true }));
+    (globalThis as unknown as { fetch: unknown }).fetch = fetchMock;
+    delete process.env.WEBSOCKET_INTERNAL_SECRET;
+
+    const res = await suspendPOST(jsonRequest({ driver_id: DRIVER_ID, reason: REASON }));
+    expect(res.status).toBe(200);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("POST /api/admin/driver/activate", () => {
