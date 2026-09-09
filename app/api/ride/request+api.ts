@@ -398,6 +398,11 @@ export async function POST(request: Request) {
       // ride_id — the old pre-tx insert used a zero-UUID placeholder and left
       // an orphaned redemption (already consuming promo quota) if the ride
       // insert rolled back.
+      // P1-1 (Bug Survey theme 7 TOCTOU): the redeem-time cap checks are
+      // advisory only — the authoritative budget re-validation runs INSIDE
+      // the ride tx under the per-promo advisory lock. This pre-tx block
+      // therefore only checks the code the rider typed against the staged
+      // promo; liveness/caps are enforced in-tx.
       if (discountType === "promo") {
         const staged = getStagedPromo(user.id);
         if (staged) {
@@ -416,16 +421,15 @@ export async function POST(request: Request) {
               );
             }
           }
+          // P1-1: accept + capture here even if the promo lapsed between
+          // redeem and request — the in-tx re-check below is authoritative
+          // and rejects with promo_no_longer_valid (nothing is written).
           const [promoRow] = await db
-            .select()
+            .select({ id: promoCodes.id })
             .from(promoCodes)
             .where(eq(promoCodes.id, staged.promoCodeId))
             .limit(1);
-          if (
-            promoRow &&
-            promoRow.is_active &&
-            promoRow.expires_at > new Date()
-          ) {
+          if (promoRow) {
             promoCodeId = staged.promoCodeId;
             stagedDiscountType = staged.discountType;
             stagedDiscountValue = staged.discountValue;
@@ -541,6 +545,63 @@ export async function POST(request: Request) {
       }
 
       if (promoCodeId) {
+        // P1-1: re-validate the staged promo's budget INSIDE the ride tx.
+        // (1) per-promo advisory lock serializes concurrent redemptions of
+        // the same promo — the count reads below cannot interleave with
+        // another tx's redemption insert (Bug Survey theme 7);
+        // (2) the count re-checks run on the tx snapshot, sharing it with
+        // the redemption insert (the X-1 pattern applied to promos);
+        // (3) any breach throws { status: 409, errorCode:
+        // promo_no_longer_valid } — the whole tx aborts with NOTHING
+        // written (no ride, no stops, no redemption), and the outer
+        // handler maps it to a typed 409 response.
+        await tx.execute(
+          sql`SELECT pg_advisory_xact_lock(hashtext('promo_' || ${promoCodeId}))`,
+        );
+
+        const [promo] = await tx
+          .select({
+            is_active: promoCodes.is_active,
+            expires_at: promoCodes.expires_at,
+            max_uses: promoCodes.max_uses,
+            max_uses_per_rider: promoCodes.max_uses_per_rider,
+          })
+          .from(promoCodes)
+          .where(eq(promoCodes.id, promoCodeId))
+          .limit(1);
+        const promoBreach = (msg: string): never => {
+          throw Object.assign(new Error(msg), {
+            status: 409,
+            errorCode: "promo_no_longer_valid",
+          });
+        };
+        if (!promo || !promo.is_active || promo.expires_at <= new Date()) {
+          promoBreach("Promo is no longer valid");
+        }
+        if (promo.max_uses_per_rider != null) {
+          const [{ perRider }] = await tx
+            .select({ perRider: sql<number>`count(*)::int` })
+            .from(promoRedemptions)
+            .where(
+              and(
+                eq(promoRedemptions.promo_code_id, promoCodeId),
+                eq(promoRedemptions.rider_id, user.id),
+              ),
+            );
+          if (perRider >= promo.max_uses_per_rider) {
+            promoBreach("Promo per-rider cap reached");
+          }
+        }
+        if (promo.max_uses != null) {
+          const [{ globalUses }] = await tx
+            .select({ globalUses: sql<number>`count(*)::int` })
+            .from(promoRedemptions)
+            .where(eq(promoRedemptions.promo_code_id, promoCodeId));
+          if (globalUses >= promo.max_uses) {
+            promoBreach("Promo global cap reached");
+          }
+        }
+
         await tx.insert(promoRedemptions).values({
           promo_code_id: promoCodeId,
           rider_id: user.id,
@@ -662,6 +723,16 @@ export async function POST(request: Request) {
       status: "pending",
     });
   } catch (err: unknown) {
+    // P1-1: in-tx promo budget breach (liveness/caps re-validated under the
+    // per-promo advisory lock). The tx rolled back with NOTHING written —
+    // no ride, no stops, no redemption — surface it as a typed 409.
+    const promoErr = err as { status?: number; errorCode?: string };
+    if (promoErr?.status === 409 && promoErr?.errorCode === "promo_no_longer_valid") {
+      return Response.json(
+        { error: "promo_no_longer_valid", message: "This promo code is no longer available" },
+        { status: 409 },
+      );
+    }
     if (errors.getErrorStatus(err) === 401)
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[ride/request] error", err);
