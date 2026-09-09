@@ -2,6 +2,10 @@
   "name": "ride",
   "main": "./index.js",
   "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "utils-server"
+  ],
   "scripts": {
     "start": "expo start",
     "push": "npx drizzle-kit push",

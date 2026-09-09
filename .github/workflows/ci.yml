@@ -9,10 +9,16 @@
 #   - scripts/check-vacuous-assertions.js — vacuous gate CLI (also inside test:all)
 #   - tests/meta/vacuous-assertion-gate.test.ts — in-suite meta gate
 #   - package.json — scripts: lint / test:all / check:vacuous
-# Last verified: 2026-09-09 (run #2 fix) — dropped the separate utils-server
-#   install (run #1 failed: ^-ranges resolved drizzle-orm 0.45.2 there, and
-#   root tsc type-checks utils-server sources via root test imports).
-#   Sequence re-proven locally post-npm-ci: 1976/1976, tsc 0/0, lint 0 errors.
+# Last verified: 2026-09-09 (npm workspace conversion) — root package.json
+#   declares "workspaces": ["utils-server"], so ONE `npm ci` at the root
+#   installs both packages from the single root package-lock.json (utils-server
+#   has no nested lockfile; its deps resolve from the hoisted root node_modules).
+#   History: run #1 failed because a separate utils-server install put a SECOND
+#   physical drizzle-orm copy on the resolution path, and root tsc — which pulls
+#   utils-server sources in via root test imports — saw nominal-incompatible
+#   types (private-field split), even at identical versions. The workspace
+#   guarantees a single copy. Sequence re-proven locally post-npm-ci:
+#   1976/1976, tsc 0/0, lint 0 errors.
 # How to update: keep step order aligned with the house validation order
 #   (lint → typecheck → test); do not add deploy steps here.
 
@@ -36,20 +42,14 @@ jobs:
           node-version: 24
           cache: npm
 
-      # Root workspace (Expo app, API routes, tests). `npm ci` requires the
-      # committed package-lock.json — keeps CI reproducible.
-      - name: Install root dependencies
+      # Single npm workspace (root + utils-server). One `npm ci` installs both
+      # packages reproducibly from the committed root package-lock.json; every
+      # dependency exists as ONE physical copy (hoisted to root node_modules),
+      # so utils-server sources type-check against the exact versions the
+      # local gates were proven with. Do NOT add a separate utils-server
+      # install step — see header history (run #1's two-copy drizzle failure).
+      - name: Install dependencies (workspace root)
         run: npm ci
-
-      # utils-server resolves its runtime deps from the ROOT node_modules —
-      # exactly like local dev, where utils-server/node_modules does not exist
-      # (every local gate pass runs that way). Installing utils-server deps
-      # separately would resolve its ^-ranges to newer majors (drizzle-orm
-      # ^0.42.0 -> 0.45.2) and root tsc — which pulls utils-server sources in
-      # via root test imports — would then type-check them against drifted
-      # typings. Run #1 failed exactly that way; this step must stay absent
-      # until utils-server gets its own committed lockfile (a schema/dep
-      # decision for Zia).
 
       - name: Lint
         run: npm run lint
