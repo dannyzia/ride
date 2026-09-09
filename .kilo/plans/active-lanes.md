@@ -185,3 +185,9 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Evidence:** greps on implementation @ 5144940. Spec updated 5093 to 7046 chars; §4 heading now RULED; header status RULINGS RECORDED (still DEFERRED; §5 feature freeze intact).
 - **Consequence:** exit/dues-gate build is fully specified the moment the freeze lifts; only remaining inputs are implementation-time, not business-time. Decision record posted to Rhizome ISSUE-36.
 - **Files:** .kilo/plans/fleet-exit-dues-gate-spec.md (untracked, ignored) + this ledger row (tracked).
+
+## 2026-09-09 — CI round outcome + requested-rounds reconciliation
+
+- **CI verification complete:** run #3 (b346ec4 — first run to install and type-check the workspace as a unit) completed/success; run #4 (5144940, docs-only erratum delta) completed/success. The hosted gate is green on the npm-workspace architecture; pre-push hook green through the final push.
+- **Erratum landed:** 5144940 — nested lockfile was NOT stale (supabase-js/dotenv present in the deleted blob); deletion rationale is workspace supersession only. Details in the erratum paragraph on the workspace row above.
+- **Reconciliation (Zia asked to append today: ISSUE-23 close, CI push, fleet epic plan, ISSUE-36):** all four were already recorded piecemeal as they happened — ISSUE-23 CLOSED (2026-09-09 table row, evidence 2db2964, Rhizome v2 done), CI workspace conversion (## row + erratum), fleet epic plan (R1-R4 ruling row + Phase A execution row + Phase A repair-disclosure row), ISSUE-36 (product-gap row + BD-1..3 ## row, decision 01M232BWPV0TBFABB84M571R2X active). Only the CI run outcomes were missing; this row closes that gap. No duplicate rows created (dedupe checked by grep before appending).
