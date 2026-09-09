@@ -215,3 +215,12 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **F-6.2 (INFO):** fare-gate-metrics complaint rate ×1000 is per-mille, honestly labeled (`>{threshold}/1k rides → red`, :258) — recorded so nobody "fixes" it to percent.
 - **Board:** ISSUE-40 comment `01M237A06B6XGADPJC5V7125XN` records T6 CLOSED; remaining in ISSUE-40: T5 (scheduler UTC/Dhaka boundaries), T9 (dispatch pool stale-eligibility).
 - **Status:** findings untracked (`.kilo/` gitignored); file tools blocked on `.kilo/` — written via the node-script pattern. No code touched; no gates affected.
+
+## 2026-09-09 — F-6.1 duplicate-route disposition (T6 follow-up)
+
+- **Evidence-driven split ruling:** the duplicate `confirm-ride,index.tsx` held a bulk exhaustive-deps edit applied to exactly the two adjacent `}, []);` arrays — one legitimate, one not.
+  - **Adopted (fetchRoute, :196):** body genuinely reads all six deps (`userLongitude/userLatitude/destinationLongitude/destinationLatitude` guarded by an early return that never writes them — no re-fetch loop; `t` + `displayEstimate` read in body). Expansion is the correct exhaustive-deps fix; stale-closure window is benign (fetch-on-pinned-coordinates only). Applied with explanatory comment.
+  - **Rejected (fee-deduction fetch, :114):** body reads no reactive values — `[]` was already exhaustive-correct; the 5-dep expansion would add spurious re-fetches on coordinate/estimate changes.
+- **Deleted:** `app/(main)/(customer)/confirm-ride,index.tsx` (git rm; 719 lines removed). One route file remains.
+- **Commit:** `41ab0ae` (2 files, +3/−719). Gates: tsc 0, lint 0 errors (282-warning house baseline), i18n smoke 4/4.
+- **T6 findings file F-6.1:** now disposed; F-6.2 remains INFO-only.
