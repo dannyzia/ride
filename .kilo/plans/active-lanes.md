@@ -205,3 +205,13 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Board triage (apply_issue_plan, atomic):** ISSUE-37 P2-1 implementation (ready, medium, 5 acceptance criteria) | ISSUE-38 P2-2 activationJobs replay stance (open, low) | ISSUE-39 P3-1 payout pre-ship checklist (blocked, low) | ISSUE-40 deferred-depth sweep T5/T6/T9 (open, low) | ISSUE-41 WS recipient audit theme 13 (open, low). P1-2 remainder NOT duplicated — lives in ISSUE-35 Phase B.
 - **Findings file stamped:** status now reflects decision + board mapping; recommended-action item 3 marked DECIDED.
 - **Board after:** open/ready = ISSUE-22, ISSUE-35, ISSUE-37, ISSUE-38, ISSUE-40, ISSUE-41; blocked = ISSUE-36, ISSUE-39.
+
+## 2026-09-09 — T6 unit-convention audit (theme 6, ISSUE-40)
+
+- **Scope:** theme-6 deferred-depth sweep (paisa/BDT + percent/decimal) across all six boundary classes — read-only audit, feeds ISSUE-40.
+- **Verdict:** ZERO unit-convention bugs. Schema (94 integer `*_bdt` cols) / PortPos handoff (paisa at rest, taka only at verifyIPN/initiate) / config (`fareFrameworkConfig` paisa+pct×100) / rate math (uniform `(x*pct)/100`) / client display+wire boundaries / utils-server (×100 = percentage math only) — all clean.
+- **Findings file:** `.kilo/plans/findings/2026-09-09-theme6-unit-audit.md` (COMPLETE).
+- **F-6.1 (LOW, routed to fix lane):** `app/(main)/(customer)/confirm-ride,index.tsx` is a git-TRACKED duplicate route of `confirm-ride/index.tsx` (718 lines each, committed `0069f07`), diverging only by two useEffect dep arrays — comma file holds a newer exhaustive-deps edit (`[destinationLatitude, destinationLongitude, displayEstimate, t, userLatitude, userLongitude]`) the real file lacks (`[]`). Disposition: verify dep edit runtime safety, apply-or-discard on the real file, then `git rm` the comma file. Not a units bug.
+- **F-6.2 (INFO):** fare-gate-metrics complaint rate ×1000 is per-mille, honestly labeled (`>{threshold}/1k rides → red`, :258) — recorded so nobody "fixes" it to percent.
+- **Board:** ISSUE-40 comment `01M237A06B6XGADPJC5V7125XN` records T6 CLOSED; remaining in ISSUE-40: T5 (scheduler UTC/Dhaka boundaries), T9 (dispatch pool stale-eligibility).
+- **Status:** findings untracked (`.kilo/` gitignored); file tools blocked on `.kilo/` — written via the node-script pattern. No code touched; no gates affected.
