@@ -6,8 +6,8 @@
  * lines 2293–2688) can execute under jest's CJS VM. See
  * jest-dynamic-import-transform.cjs for the rationale. The preset +
  * testPathIgnorePatterns moved here from package.json's `jest` key (jest
- * forbids implicit multi-config; package.json.backup-jest-key.json preserves
- * the original key contents).
+ * forbids implicit multi-config (the original package.json `jest` key was
+ * folded into this file; git history holds the pre-config state).
  */
 const expoPreset = require("jest-expo/jest-preset.js");
 
