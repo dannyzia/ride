@@ -198,3 +198,10 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Tests:** tests/api/ride/promo-cap-tx.test.ts (6) — real handler, call-order assertion (ride lock -> active-ride re-check -> ride insert -> promo lock -> re-read -> counts -> redemption insert), zero-writes-on-breach for global/per-rider/liveness breaches, no-promo path untouched.
 - **Gates:** eq(col,null) clean; tsc 0/0 both packages; lint 0 errors; full suite 1982/1982 (156 suites, +6).
 - **Bookkeeping:** primitive-audit findings file stamped FIXED @ 8315120. One process incident this round, disclosed: a corrupted full-file write to request+api.ts was restored from git before any gate ran; the landed fix is three targeted edits.
+
+## 2026-09-09 — P2-1 decided + primitive-audit triage onto the board (ISSUE-37..41)
+
+- **Decision (01M23628A1566SK1D5XXV1NT5G, active, on ISSUE-37):** platform-wide Idempotency-Key convention for state-changing POSTs — DB-backed storage (in-memory prohibited per TD-15), replay-returns-original-outcome, unique (route, key) barrier with 23505-read-and-return, client-generated keys <= 255 chars (deterministic server keys only where a natural business key exists). Rollout: four money POSTs first (paymentEvents callers); exempt list documented in code (SOS per R3.1, internal scheduler endpoints, PortPos callbacks); existing per-surface keys remain authoritative until each route migrates. Supersede-path documented.
+- **Board triage (apply_issue_plan, atomic):** ISSUE-37 P2-1 implementation (ready, medium, 5 acceptance criteria) | ISSUE-38 P2-2 activationJobs replay stance (open, low) | ISSUE-39 P3-1 payout pre-ship checklist (blocked, low) | ISSUE-40 deferred-depth sweep T5/T6/T9 (open, low) | ISSUE-41 WS recipient audit theme 13 (open, low). P1-2 remainder NOT duplicated — lives in ISSUE-35 Phase B.
+- **Findings file stamped:** status now reflects decision + board mapping; recommended-action item 3 marked DECIDED.
+- **Board after:** open/ready = ISSUE-22, ISSUE-35, ISSUE-37, ISSUE-38, ISSUE-40, ISSUE-41; blocked = ISSUE-36, ISSUE-39.
