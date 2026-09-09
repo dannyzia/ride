@@ -131,12 +131,22 @@ describe("mock sync deduplication", () => {
     expect(ids1).toEqual(ids2);
   });
 
-  it("external trips retain source_type = external_api", () => {
-    // Verify that mock trip data includes metadata marking it as external
-    const trips = (adapter as unknown as { fetchTrips: () => Promise<unknown[]> }).fetchTrips();
-    // The mock adapter marks all data with source: "mock_platform" in metadata
-    // This is the provenance marker that distinguishes external from native
-    expect(trips).toBeDefined();
+  it("external trips retain provenance: metadata.source = mock_platform and fleet scoping", async () => {
+    // F1 (2026-09-09 driver/fleet staleness sweep): the previous body never
+    // awaited the promise and asserted a defined Promise — vacuous. The real
+    // contract: every fetched trip carries metadata.source = provider, and the
+    // adapter stamps its own fleetId into the payload (dedup and
+    // external-vs-native classification depend on both).
+    const trips = await (
+      adapter as unknown as { fetchTrips: () => Promise<Record<string, unknown>[]> }
+    ).fetchTrips();
+
+    expect(Array.isArray(trips)).toBe(true);
+    expect(trips.length).toBeGreaterThan(0);
+    for (const trip of trips) {
+      expect((trip.metadata as Record<string, unknown>)?.source).toBe("mock_platform");
+      expect((trip.metadata as Record<string, unknown>)?.fleet_id).toBe(FLEET_ID);
+    }
   });
 
   it("syncVehicles with existing mappings → unchanged", async () => {
