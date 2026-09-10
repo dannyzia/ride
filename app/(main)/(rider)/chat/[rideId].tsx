@@ -6,6 +6,7 @@ import { useLocalSearchParams, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ChatScreen from "@/components/ChatScreen";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface RideContext {
   current_user_id: string;
@@ -19,6 +20,7 @@ export default function DriverChatRoute() {
   const [ctx, setCtx] = useState<RideContext | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
   const bg = isDark ? colors.bgDark : colors.bgLight;
@@ -31,12 +33,12 @@ export default function DriverChatRoute() {
     fetch(`${API_URL}/api/ride/${rideId}/details`)
       .then(async (res) => {
         if (!res.ok) {
-          setError("Failed to load chat");
+          setError(t("chat.failed_to_load"));
           return;
         }
         setCtx(await res.json());
       })
-      .catch(() => setError("Network error"));
+      .catch(() => setError(t("common.network_error")));
   }, [rideId]);
 
   if (error) {
@@ -92,7 +94,7 @@ export default function DriverChatRoute() {
       <Stack.Screen
         options={{
           headerShown: false,
-          title: `Chat with ${ctx.other_user_name}`,
+          title: t("chat.title", { name: ctx.other_user_name }),
         }}
       />
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />

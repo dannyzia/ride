@@ -8,6 +8,7 @@ import PinInput from "@/components/PinInput";
 import { useRideOfferStore, useWSStore } from "@/store";
 import { router } from "expo-router";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 const EnterOtp = () => {
   const [pinInput, setPinInput] = useState("");
@@ -15,6 +16,7 @@ const EnterOtp = () => {
   const [verifying, setVerifying] = useState(false);
   const { ws } = useWSStore();
   const { activeRideId } = useRideOfferStore();
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -65,7 +67,7 @@ const EnterOtp = () => {
         } else if (msg.type === "ride:start_failed") {
           clearVerifyTimeout();
           setVerifying(false);
-          setError("Incorrect Ride Pin. Ask your rider and try again.");
+          setError(t("enter_otp.incorrect_pin"));
           setPinInput("");
         }
       } catch {
@@ -80,11 +82,11 @@ const EnterOtp = () => {
     if (verifying) return;
     setError("");
     if (pinInput.length !== 4 || !activeRideId) {
-      setError("Please enter the 4-digit Ride Pin.");
+      setError(t("enter_otp.enter_pin"));
       return;
     }
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      setError("Not connected to server. Please try again.");
+      setError(t("enter_otp.not_connected"));
       return;
     }
     setVerifying(true);
@@ -97,7 +99,7 @@ const EnterOtp = () => {
     );
     verifyTimeoutRef.current = setTimeout(() => {
       setVerifying(false);
-      setError("No response from server. Please try again.");
+      setError(t("enter_otp.no_response"));
     }, 15_000);
   };
 
@@ -139,7 +141,7 @@ const EnterOtp = () => {
             marginBottom: spacing.md,
           }}
         >
-          Ride Pin
+          {t("enter_otp.title")}
         </Text>
         <Text
           style={{
@@ -150,7 +152,7 @@ const EnterOtp = () => {
             marginBottom: spacing["2xl"],
           }}
         >
-          Enter the 4-digit Ride Pin your rider gave you to start the ride.
+          {t("enter_otp.description")}
         </Text>
 
         <Animated.View
@@ -196,7 +198,7 @@ const EnterOtp = () => {
         )}
 
         <CustomButton
-          title={verifying ? "Starting..." : "Start Ride"}
+          title={verifying ? t("enter_otp.starting") : t("enter_otp.start_ride")}
           onPress={handleVerify}
           bgVariant="primary"
           textVariant="primary"

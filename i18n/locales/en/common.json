@@ -454,15 +454,13 @@
   },
   "enter_otp": {
     "title": "Ride Pin",
-    "enter_pin": "Enter the 4-digit Ride Pin your rider gave you to start the ride.",
+    "description": "Enter the 4-digit Ride Pin your rider gave you to start the ride.",
     "incorrect_pin": "Incorrect Ride Pin. Ask your rider and try again.",
-    "please_enter_pin": "Please enter the 4-digit Ride Pin.",
+    "enter_pin": "Please enter the 4-digit Ride Pin.",
     "not_connected": "Not connected to server. Please try again.",
     "no_response": "No response from server. Please try again.",
     "starting": "Starting...",
-    "start_ride": "Start Ride",
-    "switch_light_theme": "Switch to light theme",
-    "switch_dark_theme": "Switch to dark theme"
+    "start_ride": "Start Ride"
   },
   "break_mode": {
     "title": "Break Mode",
@@ -598,5 +596,9 @@
     "not_authenticated": "Not authenticated",
     "failed_to_load": "Failed to load vehicles",
     "network_error": "Network error"
+  },
+  "chat": {
+    "title": "Chat with {{name}}",
+    "failed_to_load": "Failed to load chat"
   }
 }
