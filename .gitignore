@@ -144,3 +144,6 @@ driver_ui.xml
 
 *storybook.log
 storybook-static
+
+# Stitch AI upload scratch (regenerated per session)
+/stitch-upload/
