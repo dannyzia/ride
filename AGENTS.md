@@ -387,6 +387,17 @@ All tables: uuid PKs, created_at/updated_at timestamptz. Append-only tables (`ca
 ### ESLint
 Legacy `.eslintrc.json` config (NOT flat config). Always lint via `npm run lint` (script sets `ESLINT_USE_FLAT_CONFIG=false`). Unused vars with `_` prefix allowed. Config ignores `_reference/` and `utils-server/`.
 
+### Agent Coding Conduct (Karpathy guidelines — all agents, any tool)
+
+Bias caution over speed; use judgment for trivial tasks. Applies to every agent editing this repo regardless of tool.
+
+1. **Think before coding** — state assumptions explicitly; if multiple interpretations exist, present them, don't pick silently; push back when a simpler approach exists; stop and ask when confused.
+2. **Simplicity first** — no features beyond what was asked; no speculative abstractions or configurability; no error handling for impossible scenarios; if 200 lines could be 50, rewrite.
+3. **Surgical changes** — touch only what the task requires; don't "improve" adjacent code, comments, or formatting; match existing style; remove only orphans your own change created (mention pre-existing dead code — don't delete). Every changed line must trace to the request.
+4. **Goal-driven execution** — convert tasks into verifiable goals ("fix the bug" → write a reproducing test, make it pass); loop until verified per the validation order (lint → tsc → jest).
+
+Source: `multica-ai/andrej-karpathy-skills`. Mirrored in CLAUDE.md § Agent Coding Conduct (keep in sync).
+
 ## Environment Variables
 
 Two `.env` files:

@@ -141,3 +141,6 @@ driver_ui.xml
 
 # Tooling state
 .agents/
+
+*storybook.log
+storybook-static

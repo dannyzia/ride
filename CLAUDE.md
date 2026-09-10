@@ -32,6 +32,15 @@ For the most up-to-date command reference, critical rules, and architecture map,
 
 Model-chain orchestration (Owner / Architect / Orchestrator / Planning-Coding roles, verification protocol, rulings-beat-artifacts) is defined in **AGENTS.md § Model Chain & Orchestration** — it applies to every model working in this repo. The Copy Truth Rule (AGENTS.md § Critical Rules) binds all user-facing text: no copy references non-live behavior. The File Cross-Reference Convention (AGENTS.md § Critical Rules) binds every AI-written artifact: header block + concrete path anchors, not loose pointers. **Multi-agent task tracking and resource reservation are governed by Rhizome MCP** — see **AGENTS.md § Agent Coordination with Rhizome** (the rhizome://guides/{agent-workflow,issue-lifecycle,multi-agent-handoff} resources are the authoritative API reference; do not implement a feature that another agent's Rhizome task claims without an explicit handoff).
 
+## Agent Coding Conduct
+
+**All agents editing this repo, any tool** (mirrored from AGENTS.md § Agent Coding Conduct — keep in sync). Bias caution over speed; use judgment for trivial tasks.
+
+1. **Think before coding** — state assumptions explicitly; if multiple interpretations exist, present them, don't pick silently; push back when a simpler approach exists; stop and ask when confused.
+2. **Simplicity first** — no features beyond what was asked; no speculative abstractions or configurability; no error handling for impossible scenarios; if 200 lines could be 50, rewrite.
+3. **Surgical changes** — touch only what the task requires; don't "improve" adjacent code, comments, or formatting; match existing style; remove only orphans your own change created (mention pre-existing dead code — don't delete). Every changed line must trace to the request.
+4. **Goal-driven execution** — convert tasks into verifiable goals ("fix the bug" → write a reproducing test, make it pass); loop until verified (validation order: lint → tsc → jest).
+
 ## Implementation Methodology
 
 This is a **modification of existing GlideX code**, not a greenfield build. Follow these execution rules:
