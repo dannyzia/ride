@@ -25,7 +25,9 @@
     "check:fast": "npm run lint && npx tsc --noEmit && npm run check:vacuous",
     "check:all": "npm run check:fast && npm run check:web-export",
     "check:web-imports": "node scripts/check-web-imports.js",
-    "check:vacuous": "node scripts/check-vacuous-assertions.js"
+    "check:vacuous": "node scripts/check-vacuous-assertions.js",
+    "storybook:ios": "cross-env STORYBOOK_ENABLED=true expo run:ios",
+    "storybook:android": "cross-env STORYBOOK_ENABLED=true expo run:android"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
@@ -33,9 +35,15 @@
     "@mapbox/polyline": "^1.2.1",
     "@maplibre/maplibre-react-native": "10.4.2",
     "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-native-community/datetimepicker": "^8.4.1",
     "@react-native-community/netinfo": "^11.5.2",
+    "@react-native-community/slider": "^4.5.6",
     "@react-navigation/bottom-tabs": "7.2.0",
     "@react-navigation/native": "7.0.14",
+    "@storybook/addon-ondevice-actions": "10.6.0",
+    "@storybook/addon-ondevice-controls": "10.6.0",
+    "@storybook/react-native": "10.6.0",
+    "@storybook/react-native-ui-lite": "10.6.0",
     "@supabase/supabase-js": "^2.106.2",
     "@turf/turf": "^7.3.5",
     "barikoiapis": "^1.0.8",
@@ -98,6 +106,7 @@
     "react-native-webview": "13.13.5",
     "react-native-worklets": "file:shims/react-native-worklets",
     "react-navigation": "^5.0.0",
+    "storybook": "^10.6.0",
     "tailwindcss": "3.4.17",
     "ws": "^8.21.0",
     "zod": "^3.22.0",
@@ -105,8 +114,12 @@
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
+    "@chromatic-com/storybook": "^5.3.1",
     "@react-native-community/cli": "^18.0.0",
     "@react-native/gradle-plugin": "^0.72.9",
+    "@storybook/addon-designs": "^11.1.4",
+    "@storybook/addon-mcp": "^10.6.0",
+    "@storybook/addon-themes": "^10.6.0",
     "@types/jest": "^29.5.12",
     "@types/jsonwebtoken": "^9.0.0",
     "@types/mapbox__polyline": "^1.0.5",
@@ -122,6 +135,5 @@
     "jest-expo": "^53.0.0",
     "patch-package": "^8.0.1",
     "typescript": "~5.8.3"
-  },
-  "private": true
+  }
 }

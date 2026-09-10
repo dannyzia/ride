@@ -1,3 +1,7 @@
+const {
+  withStorybook,
+} = require('@storybook/react-native/withStorybook');
+
 const { getDefaultConfig } = require("@expo/metro-config");
 const { withNativeWind } = require("nativewind/metro");
 const path = require("path");
@@ -58,6 +62,6 @@ config.resolver.alias = {
     // "@stripe/stripe-react-native": path.resolve(__dirname, "mocks/empty.js"),
     "react-native/Libraries/Utilities/codegenNativeCommands": path.resolve(__dirname, "mocks/empty.js"),
 };
-module.exports = withNativeWind(config, {
+module.exports = withStorybook(withNativeWind(config, {
     input: "./global.css",
-});
+}));
