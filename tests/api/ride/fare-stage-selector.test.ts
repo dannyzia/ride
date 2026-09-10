@@ -81,12 +81,6 @@ function v6Fare() {
   });
 }
 
-function selector(): "v2" | "v6" {
-  return (isStage1Plus as jest.Mock).mock.results[0]?.value
-    ? "v6"
-    : "v2";
-}
-
 // ── Tests ────────────────────────────────────────────────────────────
 describe("D0 stage-aware fare selector", () => {
   beforeEach(() => {
