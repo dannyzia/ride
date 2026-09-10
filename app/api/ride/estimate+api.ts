@@ -4,6 +4,8 @@ import { eq, and, inArray } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
 import { calculateFare, haversineKm } from '@/lib/fareCalc';
+import { isStage1Plus } from '@/lib/fareFrameworkConfig';
+import { calculateV6Fare, type V6PricingRow } from '@/lib/fareCalc';
 
 import { getAvailableDiscounts } from '@/lib/discountEngine';
 import { detectOriginCity, isIntercity } from '@/lib/cityBoundary';
@@ -151,6 +153,33 @@ export async function POST(request: Request) {
         brta_fare_ceiling_bdt: activePricing.brta_fare_ceiling_bdt,
         platform_commission_percent: Number(activePricing.platform_commission_percent ?? 0),
       }, insideKm, 0, undefined, outsideKm, origin_city, intercity);
+      const stage1 = await isStage1Plus();
+      const v6FareBreakdown = calculateV6Fare({
+        pricing: {
+          base_fare_bdt: activePricing.base_fare_bdt,
+          base_km: Number(activePricing.base_km ?? 0),
+          initiation_minutes: activePricing.initiation_minutes ?? 4,
+          per_km_bdt: activePricing.per_km_bdt,
+          intercity_per_km_bdt: activePricing.intercity_per_km_bdt ?? 0,
+          per_min_bdt: activePricing.per_min_bdt,
+          floor_length_km: Number(activePricing.floor_length_km ?? 0),
+          floor_min: activePricing.floor_min ?? 0,
+          brta_fare_ceiling_bdt: activePricing.brta_fare_ceiling_bdt,
+          platform_commission_percent: 0,
+        } as V6PricingRow,
+        trip_km: insideKm + outsideKm,
+        ride_time_min: 0,
+        night_mult: 1.0,
+        grace_min: activePricing.free_wait_minutes ?? 3,
+        wait_min: 0,
+        pickup_fee_bdt: 0,
+        zone_fee_bdt: 0,
+        inside_km: insideKm,
+        outside_km: outsideKm,
+        origin_city,
+        is_intercity: intercity,
+      });
+      const authoritative = stage1 ? v6FareBreakdown : fare;
 
       // ── Pickup fee range (Phase F quote state 1; ruling 5: ≤2 route
       // calls for the quote — nearest + p75-reference — separate from the
@@ -177,7 +206,7 @@ export async function POST(request: Request) {
       });
 
       const vtDef = VEHICLE_TYPES.find(v => v.key === vehicle_type);
-      const driverFare = fare.total_bdt + preferenceSurchargeBdt;
+      const driverFare = authoritative.total_bdt + preferenceSurchargeBdt;
       const etaTable = await getEtaTable();
       const etaBucket = timeBucket(new Date());
       const etaMin = computeEtaMinutes(totalDistanceKm, etaSpeedKmh(vehicle_type, etaBucket, etaTable));
@@ -191,11 +220,11 @@ export async function POST(request: Request) {
           display_en:  vtDef?.display_en ?? vehicle_type,
           display_bn:  vtDef?.display_bn ?? vehicle_type,
           seats:       vtDef?.seats ?? 1,
-          fare_breakdown: fare,
-          base_fare_bdt:        fare.base_fare_bdt,
-          distance_charge_bdt:  fare.distance_charge_bdt,
-          total_bdt:            fare.total_bdt,
-          distance_km:          fare.distance_km,
+          fare_breakdown: authoritative,
+          base_fare_bdt:        authoritative.base_fare_bdt,
+          distance_charge_bdt:  authoritative.distance_charge_bdt,
+          total_bdt:            authoritative.total_bdt,
+          distance_km:          authoritative.distance_km,
           preference_surcharge_bdt: preferenceSurchargeBdt,
           driver_fare_bdt: driverFare,
           rider_payable_bdt: driverFare,
@@ -210,8 +239,8 @@ export async function POST(request: Request) {
         } : {}),
         // Non-binding fare range (Phase F §6): ±15% of estimated total.
         // Labeled as estimate — never a contractual offer.
-        fare_range_low_bdt: Math.round(fare.total_bdt * 0.85),
-        fare_range_high_bdt: Math.round(fare.total_bdt * 1.15),
+        fare_range_low_bdt: Math.round(authoritative.total_bdt * 0.85),
+        fare_range_high_bdt: Math.round(authoritative.total_bdt * 1.15),
         }],
         distance_km: totalDistanceKm,
         preferences_applied: preference_ids ?? [],
@@ -239,6 +268,7 @@ export async function POST(request: Request) {
     // per pool, 0 route calls). One config read shared by every pool.
     const fwCfg = await getFareFrameworkConfig(PICKUP_QUOTE_CONFIG_KEYS);
     const pickupFeeEnabled = parseConfigBool(fwCfg.pickup_fee_enabled);
+    const stage1 = await isStage1Plus();
 
     const estimates = await Promise.all(pricings.map(async (p) => {
       const fare = calculateFare({
@@ -251,6 +281,32 @@ export async function POST(request: Request) {
         brta_fare_ceiling_bdt: p.brta_fare_ceiling_bdt,
         platform_commission_percent: Number(p.platform_commission_percent ?? 0),
       }, insideKm, 0, undefined, outsideKm, origin_city, intercity);
+      const v6FareBreakdown = calculateV6Fare({
+        pricing: {
+          base_fare_bdt: p.base_fare_bdt,
+          base_km: Number(p.base_km ?? 0),
+          initiation_minutes: p.initiation_minutes ?? 4,
+          per_km_bdt: p.per_km_bdt,
+          intercity_per_km_bdt: p.intercity_per_km_bdt ?? 0,
+          per_min_bdt: p.per_min_bdt,
+          floor_length_km: Number(p.floor_length_km ?? 0),
+          floor_min: p.floor_min ?? 0,
+          brta_fare_ceiling_bdt: p.brta_fare_ceiling_bdt,
+          platform_commission_percent: 0,
+        } as V6PricingRow,
+        trip_km: insideKm + outsideKm,
+        ride_time_min: 0,
+        night_mult: 1.0,
+        grace_min: p.free_wait_minutes ?? 3,
+        wait_min: 0,
+        pickup_fee_bdt: 0,
+        zone_fee_bdt: 0,
+        inside_km: insideKm,
+        outside_km: outsideKm,
+        origin_city,
+        is_intercity: intercity,
+      });
+      const authoritative = stage1 ? v6FareBreakdown : fare;
 
       const availableDiscounts = await getAvailableDiscounts({
         riderId: rider.id,
@@ -260,7 +316,7 @@ export async function POST(request: Request) {
       });
 
       const vtDef = VEHICLE_TYPES.find(v => v.key === p.vehicle_type);
-      const driverFare = fare.total_bdt + preferenceSurchargeBdt;
+      const driverFare = authoritative.total_bdt + preferenceSurchargeBdt;
       const etaMin = computeEtaMinutes(totalDistanceKm, etaSpeedKmh(p.vehicle_type, etaBucket, etaTable));
       const pickupQuote = pickupFeeEnabled
         ? await pickupQuoteRange({
@@ -278,11 +334,11 @@ export async function POST(request: Request) {
         display_en:    vtDef?.display_en ?? p.vehicle_type,
         display_bn:    vtDef?.display_bn ?? p.vehicle_type,
         seats:         vtDef?.seats ?? 1,
-        fare_breakdown: fare,
-        base_fare_bdt:        fare.base_fare_bdt,
-        distance_charge_bdt:  fare.distance_charge_bdt,
-        total_bdt:            fare.total_bdt,
-        distance_km:          fare.distance_km,
+        fare_breakdown: authoritative,
+        base_fare_bdt:        authoritative.base_fare_bdt,
+        distance_charge_bdt:  authoritative.distance_charge_bdt,
+        total_bdt:            authoritative.total_bdt,
+        distance_km:          authoritative.distance_km,
         preference_surcharge_bdt: preferenceSurchargeBdt,
         driver_fare_bdt: driverFare,
         rider_payable_bdt: driverFare,
@@ -295,8 +351,8 @@ export async function POST(request: Request) {
           pickup_fee_range_low_confidence: pickupQuote.lowConfidence,
         } : {}),
         // Non-binding fare range (Phase F §6): ±15% of estimated total.
-        fare_range_low_bdt: Math.round(fare.total_bdt * 0.85),
-        fare_range_high_bdt: Math.round(fare.total_bdt * 1.15),
+        fare_range_low_bdt: Math.round(authoritative.total_bdt * 0.85),
+        fare_range_high_bdt: Math.round(authoritative.total_bdt * 1.15),
       };
     }));
 

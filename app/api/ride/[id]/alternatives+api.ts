@@ -8,6 +8,8 @@ import { z } from 'zod';
 
 import { getDriversInCells } from '@/utils-server/h3Index';
 import { calculateFare } from '@/lib/fareCalc';
+import { isStage1Plus } from '@/lib/fareFrameworkConfig';
+import { calculateV6Fare, type V6PricingRow } from '@/lib/fareCalc';
 import { VEHICLE_TYPE_VALUES } from '@/lib/vehicleTypes';
 import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
@@ -41,6 +43,7 @@ export async function GET(request: Request, { id }: { id: string }) {
       available_drivers: number;
     }[] = [];
 
+    const stage1 = await isStage1Plus();
     for (const vt of VEHICLE_TYPE_VALUES) {
       if (vt === ride.vehicle_type) continue;
       const driverIds = getDriversInCells(cells, vt);
@@ -68,9 +71,35 @@ export async function GET(request: Request, { id }: { id: string }) {
         null,
         false,
       );
+      const v6FareBreakdown = calculateV6Fare({
+        pricing: {
+          base_fare_bdt: pricingRow.base_fare_bdt,
+          base_km: Number(pricingRow.base_km ?? 0),
+          initiation_minutes: pricingRow.initiation_minutes ?? 4,
+          per_km_bdt: pricingRow.per_km_bdt,
+          intercity_per_km_bdt: pricingRow.intercity_per_km_bdt ?? 0,
+          per_min_bdt: pricingRow.per_min_bdt,
+          floor_length_km: Number(pricingRow.floor_length_km ?? 0),
+          floor_min: pricingRow.floor_min ?? 0,
+          brta_fare_ceiling_bdt: pricingRow.brta_fare_ceiling_bdt,
+          platform_commission_percent: 0,
+        } as V6PricingRow,
+        trip_km: parseFloat(ride.distance_km?.toString() ?? '0'),
+        ride_time_min: 0,
+        night_mult: 1.0,
+        grace_min: pricingRow.free_wait_minutes ?? 3,
+        wait_min: 0,
+        pickup_fee_bdt: 0,
+        zone_fee_bdt: 0,
+        inside_km: parseFloat(ride.distance_km?.toString() ?? '0'),
+        outside_km: 0,
+        origin_city: null,
+        is_intercity: false,
+      });
+      const authoritative = stage1 ? v6FareBreakdown : breakdown;
       alternatives.push({
         vehicle_type:      vt,
-        fare_breakdown:    breakdown,
+        fare_breakdown:    authoritative,
         available_drivers: driverIds.length,
       });
     }

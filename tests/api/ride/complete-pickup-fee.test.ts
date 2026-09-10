@@ -40,6 +40,10 @@ jest.mock("@/lib/gamification", () => ({ evaluateStreaks: jest.fn(async () => {}
 jest.mock("@/lib/walletCashback", () => ({ earnCashback: jest.fn(async () => {}) }));
 jest.mock("@/lib/zoneBudget", () => ({ spendZoneBudget: jest.fn(async () => {}) }));
 jest.mock("@/lib/notify", () => ({ sendNotification: jest.fn(() => Promise.resolve()) }));
+jest.mock("@/lib/fareFrameworkConfig", () => {
+  const actual = jest.requireActual("@/lib/fareFrameworkConfig");
+  return { ...actual, isStage1Plus: jest.fn(async () => false) };
+});
 
 import { db } from "@/src/db";
 import { recordRideCompletion } from "@/lib/accounting";

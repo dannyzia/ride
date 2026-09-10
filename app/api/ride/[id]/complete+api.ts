@@ -14,6 +14,7 @@ import { earnCashback } from '@/lib/walletCashback';
 import { spendZoneBudget } from '@/lib/zoneBudget';
 import { computeCompletionWalletReceivable } from '@/lib/rideCompletionWallet';
 import { getFareFrameworkConfig, parseConfigBool, parseConfigNumber } from '@/lib/fareFrameworkConfig';
+import { isStage1Plus } from '@/lib/fareFrameworkConfig';
 import { PICKUP_CATEGORY } from '@/lib/vehicleTypes';
 import { PICKUP_TRUEUP_CONFIG_KEYS, computePickupTrueup, type PickupTrueupResult } from '@/lib/pickupTrueup';
 import { pickupFeeV6 } from '@/lib/pickupFee';
@@ -204,6 +205,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
       PICKUP_CATEGORY[ride.vehicle_type],
     );
 
+    const stage1 = await isStage1Plus();
     const v6FareBreakdown = calculateV6Fare({
       pricing: {
         base_fare_bdt: pricingRow.base_fare_bdt,
@@ -229,6 +231,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
       origin_city: originCity,
       is_intercity: isIntercity,
     });
+    const authoritative = stage1 ? v6FareBreakdown : fare;
 
     // Ruling 18: the true-up's %-of-fare backstop re-check basis — the
     // completion-recalculated TRIP fare (base + distance + time, post-floor),
@@ -383,11 +386,11 @@ const rideId = segments[segments.indexOf("ride") + 1];
         .set({
           status: "completed",
           completed_at: completedAt,
-          platform_commission_bdt: fare.platform_commission_bdt,
-          fare_breakdown: fare as any,
+          platform_commission_bdt: authoritative.platform_commission_bdt,
+          fare_breakdown: authoritative as any,
           updated_at: completedAt,
-          rider_payable_bdt: fare.total_bdt + storedPrefSurcharge - appliedDiscountBdt + (tipApplied ? upfrontTip : 0),
-          driver_fare_bdt: fare.driver_net_bdt + storedPrefSurcharge + (fare.platform_commission_bdt ?? 0),
+          rider_payable_bdt: authoritative.total_bdt + storedPrefSurcharge - appliedDiscountBdt + (tipApplied ? upfrontTip : 0),
+          driver_fare_bdt: authoritative.driver_net_bdt + storedPrefSurcharge + (authoritative.platform_commission_bdt ?? 0),
           upfront_tip_forfeited_bdt: upfrontTipForfeitedBdt,
           // Phase F quote state 3: one-time 'firm' → 'trued' transition.
           // Fee off (Stage 0) → final/delta stay null: nothing was charged.
@@ -568,10 +571,10 @@ const rideId = segments[segments.indexOf("ride") + 1];
         body: JSON.stringify({
           ride_id: rideId,
           rider_user_id: ride.user_id,
-          total_bdt: fare.total_bdt,
-          driver_net_bdt: fare.driver_net_bdt,
+          total_bdt: authoritative.total_bdt,
+          driver_net_bdt: authoritative.driver_net_bdt,
           ride_time_min: rideTimeMin,
-          fare_breakdown: fare,
+          fare_breakdown: authoritative,
         }),
       }).catch((e) =>
         logger.warn("[ride/complete] WS emit failed", { error: errors.getErrorMessage(e) }),
@@ -595,7 +598,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
       // subtract it twice (H-B).
       rider_payable_bdt: finalRiderPayableBdt,
       wallet_debit_bdt: walletDebitBdt,
-      cash_to_collect_bdt: fare.total_bdt + storedPrefSurcharge - appliedDiscountBdt,
+      cash_to_collect_bdt: authoritative.total_bdt + storedPrefSurcharge - appliedDiscountBdt,
     });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) {

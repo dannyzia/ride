@@ -4,6 +4,7 @@ import { eq, and, sql, gte } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { validatePickupZone } from '@/lib/zone';
 import { calculateFare, calculateV6Fare, haversineKm, type V6PricingRow } from '@/lib/fareCalc';
+import { isStage1Plus } from '@/lib/fareFrameworkConfig';
 import { detectOriginCity, isIntercity } from '@/lib/cityBoundary';
 import { splitRoute } from '@/lib/routeSplit';
 import { getRouteDistance } from '@/lib/barikoi';
@@ -151,6 +152,7 @@ export async function POST(request: Request) {
     );
 
     // v6 shadow (PATCH 1)
+    const stage1 = await isStage1Plus();
     const v6FareBreakdown = calculateV6Fare({
       pricing: {
         base_fare_bdt: activePricing.base_fare_bdt,
@@ -176,6 +178,7 @@ export async function POST(request: Request) {
       origin_city,
       is_intercity: intercity,
     });
+    const authoritative = stage1 ? v6FareBreakdown : fareBreakdown;
 
     let preferenceSurchargeBdt = 0;
     if (preference_ids && preference_ids.length > 0) {
@@ -250,7 +253,7 @@ export async function POST(request: Request) {
         destination_longitude: String(dropoff_lng),
         vehicle_type: vehicle_type as any,
         status: 'scheduled',
-        fare_breakdown: fareBreakdown as any,
+        fare_breakdown: authoritative as any,
         distance_km: String(fareBreakdown.distance_km),
         scheduled_at: scheduledDate,
         dispatch_window_start: dispatchWindowStart,
@@ -264,7 +267,7 @@ export async function POST(request: Request) {
         is_booked_for_someone_else: !!(secondary_rider_phone || secondary_rider_name),
         upfront_tip_bdt: upfront_tip_bdt ?? 0,
         // v6 shadow (PATCH 1)
-        fare_v6_shadow: v6FareBreakdown as any,
+        fare_v6_shadow: fareBreakdown as any,
         fare_v6_shadow_computed_at: new Date(),
        }).returning();
 

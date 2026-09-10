@@ -12,6 +12,7 @@ import {
   parseConfigBool,
   parseConfigNumber,
 } from '@/lib/fareFrameworkConfig';
+import { isStage1Plus } from '@/lib/fareFrameworkConfig';
 import { PICKUP_QUOTE_CONFIG_KEYS, pickupQuoteRange } from '@/lib/pickupQuote';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -214,6 +215,7 @@ export async function POST(request: Request, { id }: { id: string }) {
     );
 
     // v6 shadow (PATCH 1)
+    const stage1 = await isStage1Plus();
     const v6FareBreakdown = calculateV6Fare({
       pricing: {
         base_fare_bdt: activePricing.base_fare_bdt,
@@ -239,6 +241,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       origin_city,
       is_intercity: intercity,
     });
+    const authoritative = stage1 ? v6FareBreakdown : fareBreakdown;
 
     // ── Pickup fee range refresh (only when the fee is enabled) ──────
     const pickupQuote = pickupFeeEnabled
@@ -266,7 +269,7 @@ export async function POST(request: Request, { id }: { id: string }) {
           origin_address: address,
           updated_at: new Date(),
           distance_km: String(fareBreakdown.distance_km),
-          fare_breakdown: fareBreakdown,
+          fare_breakdown: authoritative,
           route_polyline: route?.polyline ?? null,
           ...(pickupFeeEnabled
             ? {
@@ -276,7 +279,7 @@ export async function POST(request: Request, { id }: { id: string }) {
               }
             : {}),
           // v6 shadow (PATCH 1)
-          fare_v6_shadow: v6FareBreakdown as any,
+          fare_v6_shadow: fareBreakdown as any,
           fare_v6_shadow_computed_at: new Date(),
           ...(forced
             ? {

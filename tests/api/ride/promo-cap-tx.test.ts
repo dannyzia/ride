@@ -134,6 +134,7 @@ jest.mock("@/lib/routeSplit", () => ({
 jest.mock("@/lib/fareFrameworkConfig", () => ({
   getFareFrameworkConfig: async () => ({ pickup_fee_enabled: "false" }),
   parseConfigBool: () => false,
+  isStage1Plus: jest.fn(async () => false),
 }));
 
 // request+api.ts imports pickupQuote (which pulls h3-js → expo TextDecoder

@@ -17,7 +17,7 @@ import { sendSms } from "@/lib/dprelay";
 import { detectOriginCity, isIntercity } from "@/lib/cityBoundary";
 import { splitRoute } from "@/lib/routeSplit";
 import { getRouteDistance } from "@/lib/barikoi";
-import { getFareFrameworkConfig, parseConfigBool } from "@/lib/fareFrameworkConfig";
+import { getFareFrameworkConfig, parseConfigBool, isStage1Plus } from "@/lib/fareFrameworkConfig";
 import { PICKUP_QUOTE_CONFIG_KEYS, pickupQuoteRange } from "@/lib/pickupQuote";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
@@ -273,6 +273,7 @@ export async function POST(request: Request) {
     // TODO(v6): import parseNightSchedule + getNightMultiplierForDate from lib/nightSchedule
     // For Stage 0, night_mult ships at 1.0 (disabled)
     const v6NightMult = 1.0; // will use getNightMultiplierForDate when night_mult_value > 1
+    const stage1 = await isStage1Plus();
     const v6FareBreakdown = calculateV6Fare({
       pricing: {
         base_fare_bdt: activePricing.base_fare_bdt,
@@ -298,6 +299,7 @@ export async function POST(request: Request) {
       origin_city,
       is_intercity: intercity,
     });
+    const authoritative = stage1 ? v6FareBreakdown : fareBreakdown;
 
     // ── Pickup fee range snapshot (Phase F quote state 1; ruling 5: ≤2
     // route calls for the quote — nearest + p75-reference — separate from
@@ -489,7 +491,7 @@ export async function POST(request: Request) {
           destination_longitude: String(dropoff_lng),
           vehicle_type: vehicle_type as any,
           status: "pending",
-          fare_breakdown: fareBreakdown as any,
+          fare_breakdown: authoritative as any,
           distance_km: String(fareBreakdown.distance_km),
            scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
            promo_code_id: promoCodeId,
@@ -522,7 +524,7 @@ export async function POST(request: Request) {
           cancellation_fee_applied: false,
 
           // v6 shadow (PATCH 1): log alongside v2 fare, never billed in Stage 0
-          fare_v6_shadow: v6FareBreakdown as any,
+          fare_v6_shadow: fareBreakdown as any,
           fare_v6_shadow_computed_at: new Date(),
          })
         .returning();
@@ -609,8 +611,8 @@ export async function POST(request: Request) {
           discount_type: (stagedDiscountType ?? "promo") as any,
           discount_value: stagedDiscountValue ?? appliedDiscountBdt,
           discounted_amount_bdt: appliedDiscountBdt,
-          driver_fare_bdt: fareBreakdown.total_bdt + preferenceSurchargeBdt,
-          rider_payable_bdt: fareBreakdown.total_bdt + preferenceSurchargeBdt - appliedDiscountBdt,
+          driver_fare_bdt: authoritative.total_bdt + preferenceSurchargeBdt,
+          rider_payable_bdt: authoritative.total_bdt + preferenceSurchargeBdt - appliedDiscountBdt,
           platform_subsidy_bdt: platformSubsidyBdt,
         });
       }
@@ -719,7 +721,7 @@ export async function POST(request: Request) {
 
     return Response.json({
       ride_id: rideId,
-      fare_breakdown: fareBreakdown,
+      fare_breakdown: authoritative,
       status: "pending",
     });
   } catch (err: unknown) {

@@ -42,6 +42,7 @@ jest.mock("@/lib/fareFrameworkConfig", () => ({
   parseConfigNumber: (value: string, fallback: number) =>
     Number.isFinite(Number(value)) ? Number(value) : fallback,
   parseConfigCsv: (value: string) => value.split(",").map((s) => s.trim()).filter(Boolean),
+  isStage1Plus: jest.fn(async () => false),
 }));
 jest.mock("@/lib/pickupQuote", () => ({
   pickupQuoteRange: jest.fn(),

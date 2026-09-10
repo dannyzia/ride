@@ -67,6 +67,7 @@ jest.mock("@/lib/fareFrameworkConfig", () => ({
     const n = Number(v);
     return Number.isFinite(n) ? n : fallback;
   },
+  isStage1Plus: jest.fn(async () => false),
 }));
 
 import { db } from "@/src/db";

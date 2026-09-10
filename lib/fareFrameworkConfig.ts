@@ -547,3 +547,14 @@ export function parseConfigCsv(value: string): string[] {
     .map((s) => s.trim())
     .filter(Boolean);
 }
+
+/**
+ * Check if fare framework stage is 1 or higher (authoritative v6).
+ * Reads fresh from DB every call (platform_config rule: never cache).
+ * At stage0, v2 is authoritative and v6 is shadow.
+ * At stage1+, v6 becomes authoritative.
+ */
+export async function isStage1Plus(): Promise<boolean> {
+  const stage = await getFareFrameworkConfigValue('fare_framework_stage');
+  return stage === 'stage1' || stage === 'stage2';
+}
