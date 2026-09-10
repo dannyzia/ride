@@ -45,8 +45,8 @@
 | 7 | Enable location permission | Missing (client-only screen) | YES | YES — rider onboarding chain, non-blocking |
 | 8 | Push token registration | YES (`user/device`) | YES | YES — global in `_layout.tsx` on auth |
 | **Home** | | | | |
-| 9 | Map view (MapLibre + Barikoi) | Partial | YES | YES |
-| 10 | Current location + reverse geocode | Partial | YES | YES |
+| 9 | Map view (MapLibre + Barikoi) | YES | YES | YES — verdict: `docs/FeatureList/finding-c4-barikoi-geocode.md` (Map.tsx MapLibre+Barikoi tiles, route/markers/hotspots, home:1284) |
+| 10 | Current location + reverse geocode | YES | YES | YES — verdict: `docs/FeatureList/finding-c4-barikoi-geocode.md` (store coords + 2 live reverse-geocode sites home:545/:958; v1→v2 helper cleanup noted as residue) |
 | 11 | Recent rides list | YES | YES | YES |
 | 12 | Search destination | YES | YES | YES — H-3 wired: BarikoiAutocomplete in home DESTINATION sheet; Saved places (GET `/api/rider/addresses`) + Recent (deduped completed-ride dropoffs, ≤5) tabs; Book Now hands off to confirm-ride (which POSTs `ride/request`) |
 | 13 | Sign out | YES | YES | YES — `lib/authCleanup.ts` clears all 7 stores + tears down WS first |
