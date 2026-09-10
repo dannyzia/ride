@@ -147,3 +147,5 @@ storybook-static
 
 # Stitch AI upload scratch (regenerated per session)
 /stitch-upload/
+# RNRs scaffold scratch (unrelated template project, owner workspace)
+/my-app/
