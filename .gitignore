@@ -138,3 +138,6 @@ admin-test-results.zip
 list.txt
 FileList.ps1
 driver_ui.xml
+
+# Tooling state
+.agents/

@@ -58,7 +58,7 @@
 | 16a | Nearby driver markers on home map | YES (`POST /api/ride/nearby-markers`) | YES | YES — H3 K-ring (k=30) query returns nearby online drivers by vehicle type; home map renders markers |
 | 17 | Ride estimate (8 vehicle types + heat tag + pass discount) | YES | YES | YES — heat score tags (hot/neutral/cold) replace surge; rider pass discount applied; `quote_valid_until` (5 min) on estimate response. No surge fields remain. |
 | 18 | Vehicle selection (Bike Basic → Car XL) | YES | YES | YES |
-| 19 | Promo code apply | YES | Partial | Partial — `lib/discountEngine.ts` + staged-promo server flow done (`promo/redeem` stages via `lib/promoCache.ts`, consumed in ride tx); **screen ALREADY sends code + vehicle_type + coords** (stale "sends {code} only" claim corrected v19); **remaining: pass-first precedence not enforced** (rider-selectable; server should reject if active pass exists for vehicle_type) |
+| 19 | Promo code apply | YES | Partial | Partial — `lib/discountEngine.ts` + staged-promo server flow done (`promo/redeem` stages via `lib/promoCache.ts`, consumed in ride tx); **screen ALREADY sends code + vehicle_type + coords** (stale "sends {code} only" claim corrected v19); **pass-first precedence DONE (R1.2)** — server rejects if active pass exists for vehicle_type |
 | 20 | Ride preference chips | YES | YES | YES |
 | 21 | Confirm ride + Request | YES | YES | YES |
 | 22 | Scheduled ride (conditional endpoint + push reminder) | YES (`ride/schedule`) | YES | YES — "schedule for later" branches to `ride/schedule` (config-driven +30m/+7d bounds); `ride-scheduled` confirmation; `components/ScheduleRideSheet.tsx` (Dhaka tz, client bounds mirror, overlap poll tolerating missing endpoint); scheduler promotes to dispatch + T-60m/T-15m reminder push (idempotent) + cutoff cancellation. NOTE: schedule-ride + no-drivers-available routes are REFERENCED (FloatingNavMenu, finding-driver) — retained; scheduling-user-ride + schedule-ride-after-promo are true orphans |
@@ -188,7 +188,7 @@
 | 53 | FAQ | YES | YES | YES |
 | 54 | Contact support | YES | YES | YES |
 | 55 | Report issue | YES | YES | YES |
-| 56 | Safety hub | Missing (static screen) | YES | YES — tel:999 + tel:16263 links, emergency-contacts link, safety tips; no API |
+| 56 | Safety hub | YES (`GET /api/driver/safety`) | YES | YES — dynamic: fetches emergency hotlines, recent SOS alerts, safety tips from API; tel:999 + tel:16263 links, emergency-contacts link |
 | 57 | Emergency contacts (CRUD) | YES | YES | YES |
 | 58 | Referral program | YES | YES | YES — reads from API |
 | 59 | App appearance | YES (`useAppearance` + AsyncStorage) | YES | YES — persisted + applied |
@@ -201,7 +201,7 @@
 | 62b | Insurance (M-24) | YES (`GET /api/driver/insurance`) | YES | YES — platform_config `driver_insurance` (admin-editable, never cached, Zod-validated, default fallback); covered status, policy number, coverage cards, support call |
 | **Future / Partial** | | | | |
 | 63 | Auto-accept (high-rated drivers) | YES | YES | YES — dispatch reads `auto_accept_enabled` + `auto_accept_radius_meters` (gated rating ≥ 4.8, default 500m); settings screen loads GET me + PATCHes both fields (Zod 100–5000m) — IMPLEMENTED (was schema-only at v13) |
-| 64 | Driver promo codes | Partial | Missing | Missing — scheduler job 23 auto-credits driver wallets for `target_role='driver'` promos (10-min cadence) but admin form is rider-only and no driver promo UI exists |
+| 64 | Driver promo codes | YES | Partial | API fields exist (target_role, metric, target_value, validity_days); driver promos dashboard built (R3.5); admin form needs B2 to expose the fields |
 
 ---
 
@@ -348,7 +348,7 @@
 - **SOS lifecycle (R3.1 frequency-as-intensity)**: insert `open` → creator-only `resolve` OR 30-min scheduler auto-resolve; **server time-cooldown REMOVED** — every trigger creates a new alert, clustering via `recent_alert_count` / `is_high_intensity` (≥3 in 60s) + admin clustering API with intensity sort; client: hold-to-confirm dialog + 5s debounce + 10s active-alert polling (`lib/useSosActive.ts` — banner on rider + driver home screens) + offline queue (`lib/sosQueue.ts`); SMS to `user_emergency_contacts` (best-effort + 1 retry; SOS-only hourly circuit breaker in `lib/dprelay.ts` — OTP unaffected); push to user + admin; 201 on new insert
 - **Cancellation**: `lib/cancellation.ts` (DB-driven policy tiers); cancel-preview full contract (`fee_bdt`/`free_until`/`server_now`/`policy`/`ride_status`/`reason_required`); atomic cancel (conditional UPDATE in tx, 409 loser) + fee event via `lib/paymentEvents.ts` in-tx
 - **Scheduling**: config-driven +30m/+7d bounds (`schedule_min_lead_minutes`/`schedule_max_lead_days`); estimate carries `quote_valid_until` (5 min); overlap-window semantics via `lib/scheduleUtils.ts` + `/api/ride/schedule/overlap`; book-for-other FULLY hardened via `lib/bookForOther.ts` (BD phone regex, self-phone rejection, consent boolean + timestamp freshness, 5-per-hour SMS limit) enforced in schedule + request APIs; still pending: quote in schedule response
-- **Discount engine**: `lib/discountEngine.ts` (intro/promo/pass/wallet options — rider-SELECTABLE, pass-first precedence NOT enforced); staged promos via `lib/promoCache.ts` (in-memory 10-min TTL, single-instance documented); consumed + cleared only on ride-tx success
+- **Discount engine**: `lib/discountEngine.ts` (intro/promo/pass/wallet options — rider-SELECTABLE, pass-first precedence DONE (R1.2, pass_precedence at redeem+api.ts:62)); staged promos via `lib/promoCache.ts` (in-memory 10-min TTL, single-instance documented); consumed + cleared only on ride-tx success
 - **platform_config**: `lib/platformConfig.ts` with 6 Plan-05 keys (`sos_cooldown_seconds`, `sos_auto_resolve_seconds`, `schedule_min_lead_minutes`, `schedule_max_lead_days`, `cancel_grace_period_seconds`, `zone_multi_active_enabled`), always fresh-read; all 6 admin-settable via `PATCH /api/admin/config` with range validation + UI toggle; `zone_multi_active_enabled` seeded as `false`
 - **Fare Framework v1 (Phase F16)**: Surge fully removed (no tables/columns/code/UI). Heat engine replaces surge: `zone_heat` + `zone_heat_history` tables, EWMA demand/supply scoring (0–1), heat tags (hot/neutral/cold), Lever 0 (baseline) / Lever 1 (live EWMA) / Lever 2 (cold-drop boost, temporary multiplier ~15 min decay) / Lever 3 (return-lead affinity, pickup zone matches recent cold drop zone). Pickup fee 3-state lifecycle: range (estimate at request) → firm (Barikoi route distance at accept) → trued (completion, 1.25× cap down, uncapped up). Gated by `pickup_fee_enabled` config. Fraud protocol: `fraud_flags` table + dawdle guard (inflated realized/firm ratio, rolling 30 charged pickups, zone-relative thresholds), off-platform detection, cancel-rate monitoring, heat manipulation detection. `cancel_surveys` for structured post-cancel feedback. `zone_recalibration_queue` for heat backtest adjustments. ~50 fare framework keys in `platform_config` (admin-editable via `PATCH /api/admin/config`). 4 new admin screens: `fare-config`, `heat-monitor`, `pickup-analytics`, `trust-safety`. New scheduler jobs: 37 (heat_backtest_correlation, weekly), 38 (dawdle detection), 39 (zone recalibration), 40 (response ladder), 41 (decline monitoring). New lib files: `pickupFee.ts`, `pickupQuote.ts`, `pickupTrueup.ts`, `fareFrameworkConfig.ts`. New utils-server files: `leadBilling.ts`, `dispatchChain.ts`, `coldDrop.ts`, `trace.ts`, `firmQuote.ts`, `barikoiRoute.ts`, `polyline.ts`, `offPlatform.ts`. `BARIKOI_API_KEY` now required in utils-server/.env.
 - **Fare Framework v6.4 Stage 0 (shadow mode)**: `fare_framework_stage='stage0'` — v6 fares are computed in shadow for telemetry/gating WITHOUT touching rider-quoted v2 fares (`shadow-isolation` test). New engines: **zone fee** (`lib/zoneFee.ts` — published flat monthly schedule `zone_fee_schedule` per zone × vehicle_category × effective_month; structurally incapable of acting as a live multiplier; driver receives 100%, not commission base; derivation ≈ recovery_time_min × time_rate × coverage_factor 0.55; gated by `zone_fee_enabled=false`); **zone recovery** (`lib/zoneRecovery.ts` — median driver recovery per zone from `zone_recovery_samples` written at ride completion; >30 min → cold (fee applies), <20 min → warm (retires), 10-min hysteresis band; scheduler job 42); **night multiplier** (`lib/nightSchedule.ts` — config JSON schedule + `night_mult_value`, applies ONLY to time_rate terms, ships disabled); **per-tier rate derivation** (`lib/tierRateDerivation.ts`, REV-4 — bike/CNG stack bottom-up fuel/km + driver_maint/km + joma/km, parking owner-borne inside joma; car back-solves from `daily_target`, owner takes 50% of net; AU-6/7: all tier params in taka, engine converts to paisa); **fuel engine** (`lib/fuelConfig.ts` — global fuel prices + per-tier efficiency in platform_config, per-bike-tier joma overrides, seeded via `scripts/seed-fuel-config.js`, admin "Fare Engine Setup" section in fare-config with CSV export). Rider surfaces: `ZoneFeeExplainerSheet` (first-run, `users.zone_fee_explained`), `PickupFeeExplainerSheet` wired into confirm-ride; driver: `DriverPricingReference` (stage-gated v6 formula card, `GET /api/driver/pricing-reference`). New tables: `zone_fee_schedule`, `zone_recovery_samples`, `trip_time_samples`, `config_audit_log`. Stage-gate metrics dashboard (admin fare-gate-metrics) gates Stage 1 promotion.
@@ -362,7 +362,7 @@
 - **SMS** (dpRelay): OTP + book-for-others + SOS (scoped breaker) + phone normalization
 - **Tax engine**: VAT 5% on commission + subscription, AIT 1% on driver payouts. Auto-calculated on ride completion, instant-pay, subscription sale, wallet top-up, rider pass purchase, cancellation fee. Daily summaries auto-populated via PostgreSQL trigger.
 - **Double-entry accounting**: Chart of accounts (14 accounts), journal entries with Dr=Cr validation, auto-generated entry numbers (JV-YYYYMMDD-NNNN), auto-balance via trigger. External API for QuickBooks/Tally integration (entries, balance, trial-balance, CSV export).
-- **Deep linking**: scheme `ride` declared (app.config.js W-4); expo-linking is a dependency but imported NOWHERE — push taps route via router.push; no ride://promo→apply-promos mapping
+- **Deep linking**: scheme `ride` declared (app.config.js W-4); expo-linking fully wired in `app/_layout.tsx:314-338` (cold-start `getInitialURL` + warm `addEventListener`); route dispatch via `lib/notificationRouter.ts routeDeepLink` — patterns for `driver|rider/ride-tracking/{uuid}` (:233,:293) and `apply-promos` (:177)
 
 ---
 
@@ -445,7 +445,7 @@
 | Admin RBAC (REV-5) | DONE | 4 roles, 10-permission map, wired into all 64 admin routes; owner-only keys + pickup guardrails; migration 0047; no self-escalation. |
 | Admin sidebar role filtering + badge | DONE | AdminShell filters nav by role; role badge in sidebar header. |
 | GlobalActionButtons | DONE | FloatingNavMenu + SOSButton deleted; draggable hamburger (stacked above SOS, bottom-right) mounted in `app/(main)/_layout.tsx` Stack sibling; rider/driver/admin role-aware; theme-toggle attempt reverted. |
-| SOS offline queue | DONE | `lib/sosQueue.ts` — user-scoped AsyncStorage queue, reconnect replay w/ exponential backoff, dedupe; 5s client debounce. Active-SOS polling + server cooldown still open (§9). |
+| SOS offline queue | DONE | `lib/sosQueue.ts` — user-scoped AsyncStorage queue, reconnect replay w/ exponential backoff, dedupe; 5s client debounce. Active-SOS polling DONE (`useSosActive.ts`, 10s); server cooldown REMOVED (R3.1 frequency-as-intensity). |
 | Driver zombie-session recovery | DONE (UNCOMMITTED) | `driver_online_sessions` + `POST /api/driver/session/force-end` + `useDriverStore` session fields. |
 | Silent background OTA | DONE (UNCOMMITTED) | `lib/otaBackgroundUpdate.ts` — pre-download while online+active; instant cold boot preserved. |
 | Nearby driver markers | DONE (UNCOMMITTED) | `POST /api/ride/nearby-markers` (H3 k=30 ring); wired into customer home map. |
@@ -492,13 +492,13 @@
 | H-3 home booking wiring | DONE | real autocomplete + saved/recent places; fake "finding" state deleted; confirm-ride owns stops/promo/tip; `as any` vehicle-type cast killed |
 | Plan 05 Wave 0 | DONE | ErrorBanner/OfflineIndicator (a11y + tokens + retry/cleanup), ScheduleRideSheet (400 lines), amberLight/infoLight/successLight tokens, NetInfo dep, `lib/time.ts` toUtcIso/dhakaTodayKey/msUntil |
 | Plan 05 cancellation (W1) | DONE | full preview contract + atomic cancel + payment-event ownership in tx |
-| Plan 05 SOS (W2) | DONE (1 gap) | active/resolve + auto-resolve + SMS/push + SOS-scoped breaker; cooldown value read but not time-applied; no offline retry/polling on screen |
+| Plan 05 SOS (W2) | DONE | active/resolve + auto-resolve + SMS/push + SOS-scoped breaker; server cooldown REMOVED (R3.1 frequency-as-intensity); offline retry via `sosQueue.ts`; polling via `useSosActive.ts` (10s); admin clustering API + intensity sort |
 | Plan 05 scheduling (W1) | PARTIAL | bounds + estimate quote_valid_until done; overlap windows, book-for-other hardening, schedule-response quote pending |
 | Plan 05 discount engine (R5) | PARTIAL | engine + server staging done; pass-first precedence not enforced (rider-selectable); apply-promos screen contract bug (sends `{code}`, API needs vehicle_type+coords) |
 | Zone foundation | DONE | Z-1/2/3/4/5/6/7/8 all done; flag admin-settable + seeded; sentinel writes removed; 3-beat hysteresis |
 | EAS | DONE | production android buildType apk→appBundle (Play Store AAB) |
 | RideOfferSheet slide-accept | DONE | SlideButton 64dp primary + full-width Decline ≥56dp; handshakes byte-identical |
-| Driver earnings goal | **REGRESSION** | goal UI absent from tree (0 grep hits; earnings-tab rebuild af364075); breakdown API remains |
+| Driver earnings goal | DONE | goal UI restored (R2.1); API + tests + 0055 migration all present; earnings-tab wired |
 | Splash W-4 scheme | DONE | `ride` scheme (was "myapp" placeholder) |
 
 ### v13 UI/UX Rethink Plans 01–05 (originally verified 2026-08-16 — updated dispositions)
@@ -511,7 +511,7 @@
 | Plan 05 route deletions | **RE-SCOPED** | scheduling-user-ride + schedule-ride-after-promo = true orphans (delete candidates); schedule-ride (used by FloatingNavMenu, no-drivers-available, hosts ScheduleRideSheet) + no-drivers-available (used by finding-driver ×2) are LIVE — FINAL's delete-list was wrong |
 | cancel-preview `free_until` | **DONE** | Full contract: fee_bdt/free_until/server_now/policy/ride_status/reason_required |
 | payout-method GET | **GAP** | POST only; management screen pending (D10) |
-| `/track` auth exemption | **DONE** | root `_layout.tsx` exempts `track` in all 3 redirect paths; deep linking (expo-linking) still unwired |
+| `/track` auth exemption | **DONE** | root `_layout.tsx` exempts `track` in all 3 redirect paths; deep linking (expo-linking) fully wired (_layout.tsx:314-338 + lib/notificationRouter.ts) |
 | Legal content | **DONE (differently)** | Real inline content on 4 screens ("Last updated July 15 2026"); `lib/legalContent.ts` never created; owner review unconfirmed |
 | Zone foundation Z-1…Z-8 | **DONE** | See §4 Backend Summary; all gaps resolved |
 
@@ -631,7 +631,7 @@ Implemented by coding model, verified through 3 audit rounds. All code from `doc
 | Driver earnings goal — restore or formally drop | Medium | **DONE (v20 correction)** — goal UI restored in earning tab (C-3); `driver_user_id` FK contract + regression tests (`856b68e`); regression closed |
 | Payout methods (D10) | Medium | **API CRUD DONE (v19)** — GET returns ALL methods masked (`maskAccount`), POST/PATCH/DELETE live, bkash/nagad/bank, DELETE auto-promotes next active; **remaining: driver-facing management screen** — `payout-method/index.tsx` is still the onboarding capture form (0 list/edit/delete UI) |
 | Min-rate settings screen (D9, reuse MinRateSlider + slider-config) | Medium | **DONE (v20 correction)** — screen live at `(rider)/min-rate`; slider + config API wired |
-| Pass-first discount precedence (currently rider-selectable) | Low | Engine exists; precedence not enforced — **see ride-hailing completion plan v2 R1.2** |
+| Pass-first discount precedence | Low | **DONE (R1.2)** - pass_precedence at app/api/promo/redeem+api.ts:62; server rejects if active pass exists for vehicle_type |
 | Commit the fleet work (portal + APIs + libs + admin screens + auth guard + tests relocation) | **High** | **DONE** — committed `54c8466` (2026-08-31); schema push `d99c089` prior |
 | Fare Framework v6 Stage 1 promotion | High (gated) | Blocked on fare-gate-metrics thresholds going green; zone fee + night mult + pickup charge stay inert until then |
 | Orphan route deletion: scheduling-user-ride, schedule-ride-after-promo | Low | True orphans (schedule-ride + no-drivers-available are referenced — KEEP) |
