@@ -24,9 +24,12 @@ config.resolver.assetExts = [...(config.resolver.assetExts ?? []), "riv"];
 // Keep in sync with scripts/check-web-imports.js NODE_ONLY list.
 // ─────────────────────────────────────────────────────────────
 const NODE_BLOCKLIST = [
-    // ws — WebSocket client lib; leaked into bundle via supabaseServer
-    /\/node_modules\/ws\//,
-    /\/node_modules\/ws$/, // bare import: require('ws')
+    // ws is NOT unconditionally blocked here — see resolver.resolveRequest
+    // below. lib/supabaseServer.ts is a documented, legitimate server-only
+    // exception (kept in sync with SERVER_ONLY in scripts/check-web-imports.js).
+    // A blanket regex block here would also break the λ (API route) bundle,
+    // which legitimately needs ws — that's what caused the 2026-09-08/09-10
+    // Render build failures.
     // Node stdlib — unavailable or broken in React Native
     /\/node_modules\/stream\/index\.js$/, // require('stream')
     /\/node_modules\/buffer\/index\.js$/, // require('buffer')
@@ -62,6 +65,33 @@ config.resolver.alias = {
     // "@stripe/stripe-react-native": path.resolve(__dirname, "mocks/empty.js"),
     "react-native/Libraries/Utilities/codegenNativeCommands": path.resolve(__dirname, "mocks/empty.js"),
 };
+
+// ─────────────────────────────────────────────────────────────
+// ws exception: blocked everywhere EXCEPT the one documented
+// server-only origin (kept in sync with SERVER_ONLY in
+// scripts/check-web-imports.js). Plain regex blockList can't be
+// conditioned on the importing file, so this uses resolveRequest
+// instead. Any other origin importing 'ws' still hard-fails, same
+// as before.
+// ─────────────────────────────────────────────────────────────
+const { resolve: metroResolve } = require("metro-resolver");
+const WS_ALLOWED_ORIGINS = [
+    path.resolve(__dirname, "lib/supabaseServer.ts"),
+];
+const previousResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+    if (moduleName === "ws" && !WS_ALLOWED_ORIGINS.includes(context.originModulePath)) {
+        throw new Error(
+            `Blocked: 'ws' is Node-only and must not be imported from ${context.originModulePath}. ` +
+            `Move the import to a server-only file (see lib/supabaseServer.ts) or use 'import type'.`
+        );
+    }
+    if (previousResolveRequest) {
+        return previousResolveRequest(context, moduleName, platform);
+    }
+    return metroResolve(context, moduleName, platform);
+};
+
 module.exports = withStorybook(withNativeWind(config, {
     input: "./global.css",
 }));
