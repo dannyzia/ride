@@ -43,6 +43,11 @@ interface PromoRow {
   expires_at: string;
   is_active: boolean;
   times_used: number;
+  // R3.5 driver-targeting fields (GET already projects them)
+  target_role: "rider" | "driver";
+  metric: string | null;
+  target_value: number | null;
+  validity_days: number;
 }
 
 interface PromosResponse {
@@ -79,6 +84,11 @@ interface PromoForm {
   valid_from: string | null;
   expires_at: string | null;
   is_active: boolean;
+  // R3.5 driver-targeting fields
+  target_role: "rider" | "driver";
+  metric: string; // '' = none
+  target_value: string; // '' = none
+  validity_days: string; // '' = API default (7)
 }
 
 const EMPTY_FORM: PromoForm = {
@@ -95,7 +105,25 @@ const EMPTY_FORM: PromoForm = {
   valid_from: null,
   expires_at: null,
   is_active: true,
+  // R3.5 driver-targeting defaults
+  target_role: "rider",
+  metric: "",
+  target_value: "",
+  validity_days: "7",
 };
+
+// MUST mirror metricConfig keys in utils-server/scheduler.ts — unknown metrics are silently skipped by the auto-credit job
+const METRIC_OPTIONS = [
+  { label: "(none)", value: "" },
+  { label: "Rides completed", value: "rides_completed" },
+  { label: "Earnings (৳)", value: "earnings_bdt" },
+  { label: "Distance (km)", value: "trips_duration" },
+];
+
+const TARGET_ROLE_OPTIONS = [
+  { label: "Rider", value: "rider" },
+  { label: "Driver", value: "driver" },
+];
 
 function discountDisplay(p: PromoRow): string {
   if (p.discount_type === "percent") return `${p.discount_value}%`;
@@ -166,6 +194,11 @@ export default function PromosScreen() {
       valid_from: p.valid_from,
       expires_at: p.expires_at,
       is_active: p.is_active,
+      // R3.5 driver-targeting fields
+      target_role: p.target_role ?? "rider",
+      metric: p.metric ?? "",
+      target_value: p.target_value == null ? "" : String(p.target_value),
+      validity_days: p.validity_days == null ? "7" : String(p.validity_days),
     });
     setModalVisible(true);
   };
@@ -260,6 +293,29 @@ export default function PromosScreen() {
       return null;
     }
 
+    // R3.5: driver-targeting validation
+    const targetRole = form.target_role || "rider";
+    const metric = form.metric || null;
+    let targetValue: number | null = null;
+    let validityDays = 7;
+
+    if (metric) {
+      const tvParsed = parseOptionalInt(form.target_value, "Target value");
+      if (tvParsed == null || tvParsed <= 0) {
+        toast.show("Target value is required and must be a positive integer when metric is set", "error");
+        return null;
+      }
+      targetValue = tvParsed;
+    }
+    if (form.validity_days.trim()) {
+      const vdParsed = parseOptionalInt(form.validity_days, "Validity days", { allowZero: false });
+      if (vdParsed == null || vdParsed <= 0) {
+        toast.show("Validity days must be a positive integer", "error");
+        return null;
+      }
+      validityDays = vdParsed;
+    }
+
     return {
       code,
       title: String(form.title).trim() || undefined,
@@ -274,6 +330,11 @@ export default function PromosScreen() {
       valid_from: validFrom,
       expires_at: expiresAt,
       is_active: Boolean(form.is_active),
+      // R3.5 driver-targeting fields
+      target_role: targetRole,
+      metric,
+      target_value: targetValue,
+      validity_days: validityDays,
     };
   };
 
@@ -453,6 +514,29 @@ export default function PromosScreen() {
       required: true,
     },
     { name: "is_active", label: "Active", type: "boolean" },
+    // R3.5 driver-targeting fields
+    { name: "target_role", label: "Audience", type: "select", options: TARGET_ROLE_OPTIONS, required: true },
+    {
+      name: "metric",
+      label: "Auto-credit Metric",
+      type: "select",
+      options: METRIC_OPTIONS,
+      helpText: "Driver auto-credit promos only — metric/target drive the scheduler reward job.",
+    },
+    {
+      name: "target_value",
+      label: "Target Value",
+      type: "number",
+      step: 1,
+      helpText: "Required when driver + metric set. Positive integer threshold.",
+    },
+    {
+      name: "validity_days",
+      label: "Validity Days",
+      type: "number",
+      step: 1,
+      helpText: "Window for auto-credit check. Default 7.",
+    },
   ];
 
   // AdminForm works on Record<string, unknown>; bridge to/from PromoForm.
@@ -543,6 +627,14 @@ export default function PromosScreen() {
         <Text style={styles.cellText}>
           {new Date(p.expires_at).toLocaleString()}
         </Text>
+      ),
+    },
+    {
+      key: "target_role",
+      header: "Audience",
+      width: 90,
+      render: (p) => (
+        <Text style={styles.cellText}>{p.target_role === "driver" ? "Driver" : "Rider"}</Text>
       ),
     },
     {
