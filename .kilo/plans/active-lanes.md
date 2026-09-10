@@ -345,3 +345,12 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Gates:** eq(col,null) CLEAN · root tsc 0 · utils-server tsc 0 · lint 0 errors (286 warnings) ·
   jest 2020 passed / 2 skipped / 159 suites.
 - Findings files stamped RESOLUTION; ISSUE-40 closure comment posted with the fix-batch digest.
+
+## 2026-09-10 — Rhizome board reconciliation (chatbox work-coverage audit)
+
+- **Trigger:** Zia asked whether this chatbox's work was recorded on the Rhizome board.
+- **Audit result:** verified the full board (open/blocked/done lists + decisions). Found the bulk of chatbox work already tracked: ISSUE-12/13/14 (closed), ISSUE-23 close-out, ISSUE-30–35 (closed), ISSUE-37 (closed + idempotency decision 01M23628A1566SK1D5XXV1NT5G), ISSUE-40 (closed + fix-batch closure comment 01M24GG8WTBCG86ACA8KBW9WVE), ISSUE-36/38/39/41 (triaged). Three standing decisions verified on the board (F2 fleetLimits ruling, vacuous-assertion gate, idempotency convention) plus the 3-jest-failures ruling.
+- **Gaps found and closed (retroactive record):**
+  - **ISSUE-42** [done] — P1-1 promo max_uses TOCTOU fix + real-Postgres concurrency harness (commits 8315120, ad05b42, 04ca580) had no board record.
+  - **ISSUE-43** [done] — npm-audit triage (82→66, critical→0) + cheap-kills dependency batch (78d097f) + hosted audit gates (in 57d1c5f) had no board record.
+- **Commits:** none new to code this round — board-only reconciliation (2 issues created; ledger row via this script).
