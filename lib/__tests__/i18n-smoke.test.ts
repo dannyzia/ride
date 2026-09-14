@@ -23,21 +23,12 @@ const BN_LOCALE = path.resolve(__dirname, '../../i18n/locales/bn/common.json');
  * t() wiring was correct but the keys never existed in either locale file.
  * Flat-key scan (no imports) so it runs without mocking the module graph.
  *
- * Enforcement is two-tier (2026-09-15):
- *  - rider_home.* keys: HARD FAIL — the ISSUE-59 namespace must never regress.
- *  - all other namespaces: shrink-only BASELINE. The R2.4 sweep wired t() into
- *    60+ screens without backfilling every namespace, leaving ~730 pre-existing
- *    raw-key sites (file a separate issue to repay that debt). New code may not
- *    ADD to the baseline: the fail count here may only go DOWN. When it hits
- *    zero, delete the baseline and the guard becomes total.
+ * Enforcement is TOTAL (2026-09-15, ISSUE-61):
+ *  - every t('ns.key') literal under app/ and components/ must resolve in BOTH
+ *    locales — no baseline, no exceptions. The shrink-only tier introduced with
+ *    the ISSUE-59 guard was deleted when the last namespace was repaid (426 → 0).
  */
 const HARD_NAMESPACE = 'rider_home';
-
-/** Pre-existing missing-key count at guard introduction, in GUARD units (per file
- * occurrence; 733 unique keys at introduction ≈ 745 here). Shrink-only: CI fails if
- * the count rises above this. Update downwards as namespaces are repaid; must never
- * be increased. At 0, delete this constant and the soft tier — the guard is total. */
-const MISSING_KEY_BASELINE = 426;
 
 describe('i18n locale completeness — every t() key resolves', () => {
   const en = JSON.parse(fs.readFileSync(EN_LOCALE, 'utf-8'));
@@ -72,6 +63,7 @@ describe('i18n locale completeness — every t() key resolves', () => {
   }
 
   const hardMissing: Record<string, string[]> = {};
+  const missingByFile: Array<[string, string[]]> = [];
   let softMissingCount = 0;
   for (const dir of [
     path.resolve(__dirname, '../../app'),
@@ -91,6 +83,7 @@ describe('i18n locale completeness — every t() key resolves', () => {
       const hard = missing.filter((k) => k.startsWith(`${HARD_NAMESPACE}.`));
       if (hard.length > 0) hardMissing[rel] = hard;
       softMissingCount += missing.length;
+      missingByFile.push([rel, missing]);
     }
   }
 
@@ -106,15 +99,17 @@ describe('i18n locale completeness — every t() key resolves', () => {
     expect(hardMissing).toEqual({});
   });
 
-  it(`non-rider_home missing-key count does not exceed the shrink-only baseline (${MISSING_KEY_BASELINE})`, () => {
+  it('every missing t() key is a hard failure (no baseline — the guard is total)', () => {
     if (softMissingCount > 0) {
       // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
       console.log(
-        `\n⚠️  pre-existing raw-key debt: ${softMissingCount} missing t() keys ` +
-          `(baseline ${MISSING_KEY_BASELINE} — shrink-only; repay namespaces and lower it)`,
+        `\n❌ ${softMissingCount} t() key(s) missing from locale files:\n` +
+          missingByFile
+            .map(([f, keys]) => `  ${f}:\n    ${keys.join('\n    ')}`)
+            .join('\n'),
       );
     }
-    expect(softMissingCount).toBeLessThanOrEqual(MISSING_KEY_BASELINE);
+    expect(softMissingCount).toBe(0);
   });
 
   it('en and bn locale files have identical key sets', () => {

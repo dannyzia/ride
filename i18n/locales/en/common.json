@@ -264,7 +264,9 @@
     "title": "Settings",
     "profile": "Profile",
     "notifications": "Notifications",
-    "appearance": "Appearance",
+    "appearance": {
+      "toggle_theme": "Appearance"
+    },
     "language": "Language",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
@@ -286,7 +288,8 @@
     "data_analytics": "Data & Analytics",
     "request_data": "Request Your Data",
     "delete_data": "Delete My Data",
-    "delete_account": "Delete Account"
+    "delete_account": "Delete Account",
+    "emergency_contacts": "Emergency Contacts"
   },
   "earnings": {
     "daily_goal": "Daily Goal",
@@ -765,7 +768,8 @@
     "a11y_inbox": "Open inbox",
     "inbox": "Inbox",
     "a11y_referral": "Open referral programme",
-    "referral": "Referral"
+    "referral": "Referral",
+    "no_fare_dispute": "You have no pending fare disputes."
   },
   "saved_addresses": {
     "error_label": "Please enter a label",
@@ -801,7 +805,8 @@
     "set_destination": "Use as destination",
     "edit": "Edit",
     "delete_address": "Delete address",
-    "not_found": "This address no longer exists"
+    "not_found": "This address no longer exists",
+    "delete_failed": "Couldn't delete this address"
   },
   "ride_tracking": {
     "cancel_ride_confirm": "Cancel this ride?",
@@ -830,7 +835,12 @@
     "share": "Share",
     "ride_complete": "Ride complete",
     "pay_driver_cash": "Please pay the driver in cash",
-    "rate_your_driver": "Rate your driver"
+    "rate_your_driver": "Rate your driver",
+    "could_not_load": "Couldn't load your ride",
+    "ride_was_cancelled": "This ride was cancelled.",
+    "could_not_cancel": "Couldn't cancel the ride",
+    "network_error": "Network error — reconnecting...",
+    "eta_minutes": "{{minutes}} min"
   },
   "emergency_contacts": {
     "not_authenticated": "Please log in to manage emergency contacts",
@@ -860,7 +870,8 @@
     "a11y_add": "Add an emergency contact",
     "a11y_retry": "Retry loading emergency contacts",
     "empty_title": "No emergency contacts",
-    "empty_subtitle": "Add someone we can alert during your ride"
+    "empty_subtitle": "Add someone we can alert during your ride",
+    "delete_failed": "Couldn't delete the contact"
   },
   "ride_detail": {
     "could_not_load": "Couldn't load this ride",
@@ -943,7 +954,9 @@
     "custom_tip_placeholder": "Enter amount",
     "block_this_driver": "Block this driver",
     "wont_be_matched_again": "You won't be matched with this driver again",
-    "submit_rating": "Submit rating"
+    "submit_rating": "Submit rating",
+    "failed_to_unblock": "Couldn't unblock the driver",
+    "failed": "Couldn't submit your rating"
   },
   "find_ride": {
     "enter_or_choose_location": "Enter or choose a location",
@@ -1271,7 +1284,8 @@
     "driver_info": "Driver Info",
     "min_away": "{{count}} min away",
     "no_active_rides": "No active rides",
-    "no_active_rides_sub": "When you book a ride, it will show up here."
+    "no_active_rides_sub": "When you book a ride, it will show up here.",
+    "driver": "Driver"
   },
   "ride_pass": {
     "title": "Ride Passes",
@@ -1284,7 +1298,8 @@
     "buy": "Buy Pass",
     "activated": "Pass activated!",
     "failed": "Couldn't load ride passes",
-    "purchase_failed": "Purchase didn't complete — try again."
+    "purchase_failed": "Purchase didn't complete — try again.",
+    "payment_failed": "Payment didn't complete"
   },
   "share_receipt": {
     "title": "Receipts",
@@ -1368,5 +1383,101 @@
     "a11y_view_schedule": "View your scheduled ride",
     "a11y_back_to_home": "Back to home",
     "toggle_theme": "Toggle light or dark theme"
+  },
+  "add_payment": {
+    "title": "Add Payment Method",
+    "coming_soon": "More payment methods coming soon",
+    "coming_soon_desc": "Right now you can pay with wallet balance or cash."
+  },
+  "add_tip": {
+    "failed": "Couldn't add the tip",
+    "driver": "Driver",
+    "tip_amount": "Tip Amount",
+    "no_tip": "No Tip",
+    "custom_amount_placeholder": "Custom amount"
+  },
+  "app_appearance": {
+    "title": "Appearance",
+    "toggle_theme": "Toggle light or dark theme",
+    "theme": "Theme",
+    "hint": "Choose light, dark, or follow your system setting."
+  },
+  "autocomplete": {
+    "title": "Search Address",
+    "search_pickup": "Search pickup point",
+    "search_stop": "Search stop"
+  },
+  "chat_list": {
+    "title": "Chats",
+    "no_messages": "No messages",
+    "empty_sub": "Your ride conversations will appear here."
+  },
+  "data_analytics": {
+    "privacy_settings": "Privacy Settings",
+    "share_usage": "Share usage data",
+    "personalized_ads": "Personalized promotions"
+  },
+  "faq": {
+    "toggle_theme": "Toggle light or dark theme",
+    "showing_common": "Showing common questions",
+    "retry_loading_a11y": "Retry loading the FAQ"
+  },
+  "linked_accounts": {
+    "connected_services": "Connected Services",
+    "empty": "No linked accounts yet",
+    "connected": "Connected",
+    "add_account": "Add Account"
+  },
+  "logout_confirmation": {
+    "title": "Log out?",
+    "message": "You'll need to verify your phone number to sign back in.",
+    "log_out_a11y": "Log out of Ride"
+  },
+  "no_drivers_available": {
+    "title": "No Drivers Available",
+    "message": "There are no drivers nearby for this vehicle type right now.",
+    "try_again": "Try Again",
+    "schedule_for_later": "Schedule for Later"
+  },
+  "rider_tabs": {
+    "chat": "Chat",
+    "account": "Account"
+  },
+  "top_up": {
+    "wallet_balance": "Wallet Balance",
+    "no_transactions": "No transactions yet",
+    "top_up_wallet": "Top Up Wallet"
+  },
+  "top_up_details": {
+    "title": "Transaction Details",
+    "transaction_details": "Transaction Details",
+    "date": "Date",
+    "method": "Method",
+    "amount": "Amount",
+    "download_receipt": "Download Receipt"
+  },
+  "top_up_method": {
+    "payment_failed": "Payment failed",
+    "payment": "Payment",
+    "amount": "Amount",
+    "redirect_notice": "You'll be redirected to complete the payment securely.",
+    "pay": "Pay"
+  },
+  "top_up_settings": {
+    "enter_amount": "Enter Amount",
+    "continue": "Continue"
+  },
+  "top_up_success": {
+    "title": "Top Up Successful!",
+    "added": "৳{{amount}} added to your wallet.",
+    "usable": "You can use this balance on your next ride.",
+    "view_transactions": "View Transactions"
+  },
+  "user_arrived": {
+    "title": "Your driver has arrived",
+    "your_driver": "Your Driver",
+    "subtitle": "Please head to the pickup point now.",
+    "rate_your_driver": "Rate your driver",
+    "skip": "Skip"
   }
 }

@@ -264,7 +264,9 @@
     "title": "সেটিংস",
     "profile": "প্রোফাইল",
     "notifications": "বিজ্ঞপ্তি",
-    "appearance": "চেহারা",
+    "appearance": {
+      "toggle_theme": "চেহারা"
+    },
     "language": "ভাষা",
     "privacy": "গোপনীয়তা নীতি",
     "terms": "সেবার শর্তাবলী",
@@ -286,7 +288,8 @@
     "data_analytics": "ডেটা ও অ্যানালিটিক্স",
     "request_data": "আপনার তথ্যের অনুরোধ করুন",
     "delete_data": "আমার তথ্য মুছুন",
-    "delete_account": "অ্যাকাউন্ট মুছুন"
+    "delete_account": "অ্যাকাউন্ট মুছুন",
+    "emergency_contacts": "জরুরি পরিচিতজন"
   },
   "earnings": {
     "daily_goal": "দৈনিক লক্ষ্য",
@@ -765,7 +768,8 @@
     "a11y_inbox": "ইনবক্স খুলুন",
     "inbox": "ইনবক্স",
     "a11y_referral": "রেফারেল প্রোগ্রাম খুলুন",
-    "referral": "রেফারেল"
+    "referral": "রেফারেল",
+    "no_fare_dispute": "আপনার কোনো অমীমাংসিত ভাড়া বিরোধ নেই।"
   },
   "saved_addresses": {
     "error_label": "একটি লেবেল দিন",
@@ -801,7 +805,8 @@
     "set_destination": "গন্তব্য হিসেবে ব্যবহার করুন",
     "edit": "সম্পাদনা",
     "delete_address": "ঠিকানা মুছে ফেলুন",
-    "not_found": "এই ঠিকানাটি আর নেই"
+    "not_found": "এই ঠিকানাটি আর নেই",
+    "delete_failed": "এই ঠিকানা মুছে ফেলা যায়নি"
   },
   "ride_tracking": {
     "cancel_ride_confirm": "এই রাইডটি বাতিল করবেন?",
@@ -830,7 +835,12 @@
     "share": "শেয়ার",
     "ride_complete": "রাইড সম্পন্ন",
     "pay_driver_cash": "অনুগ্রহ করে ড্রাইভারকে নগদে পরিশোধ করুন",
-    "rate_your_driver": "ড্রাইভারকে রেটিং দিন"
+    "rate_your_driver": "ড্রাইভারকে রেটিং দিন",
+    "could_not_load": "আপনার রাইড লোড করা যায়নি",
+    "ride_was_cancelled": "এই রাইডটি বাতিল করা হয়েছে।",
+    "could_not_cancel": "রাইড বাতিল করা যায়নি",
+    "network_error": "নেটওয়ার্ক সমস্যা — পুনরায় সংযোগ হচ্ছে...",
+    "eta_minutes": "{{minutes}} মিনিট"
   },
   "emergency_contacts": {
     "not_authenticated": "ইমার্জেন্সি যোগাযোগ ব্যবহার করতে লগ ইন করুন",
@@ -860,7 +870,8 @@
     "a11y_add": "ইমার্জেন্সি যোগাযোগ যোগ করুন",
     "a11y_retry": "ইমার্জেন্সি যোগাযোগ আবার লোড করুন",
     "empty_title": "কোনো ইমার্জেন্সি যোগাযোগ নেই",
-    "empty_subtitle": "রাইডের সময় জানানোর জন্য একজনকে যোগ করুন"
+    "empty_subtitle": "রাইডের সময় জানানোর জন্য একজনকে যোগ করুন",
+    "delete_failed": "পরিচিতজন মুছে ফেলা যায়নি"
   },
   "ride_detail": {
     "could_not_load": "এই রাইড লোড করা যায়নি",
@@ -943,7 +954,9 @@
     "custom_tip_placeholder": "পরিমাণ লিখুন",
     "block_this_driver": "এই ড্রাইভারকে ব্লক করুন",
     "wont_be_matched_again": "এই ড্রাইভারের সাথে আর ম্যাচ হবেন না",
-    "submit_rating": "রেটিং জমা দিন"
+    "submit_rating": "রেটিং জমা দিন",
+    "failed_to_unblock": "ড্রাইভারকে আনব্লক করা যায়নি",
+    "failed": "আপনার রেটিং জমা দেওয়া যায়নি"
   },
   "find_ride": {
     "enter_or_choose_location": "একটি অবস্থান লিখুন বা নির্বাচন করুন",
@@ -1271,7 +1284,8 @@
     "driver_info": "ড্রাইভারের তথ্য",
     "min_away": "{{count}} মিনিট দূরে",
     "no_active_rides": "কোনো চলমান রাইড নেই",
-    "no_active_rides_sub": "রাইড বুক করলে সেটি এখানে দেখা যাবে।"
+    "no_active_rides_sub": "রাইড বুক করলে সেটি এখানে দেখা যাবে।",
+    "driver": "ড্রাইভার"
   },
   "ride_pass": {
     "title": "রাইড পাস",
@@ -1284,7 +1298,8 @@
     "buy": "পাস কিনুন",
     "activated": "পাস সক্রিয় হয়েছে!",
     "failed": "রাইড পাস লোড করা যায়নি",
-    "purchase_failed": "কেনা সম্পন্ন হয়নি — আবার চেষ্টা করুন।"
+    "purchase_failed": "কেনা সম্পন্ন হয়নি — আবার চেষ্টা করুন।",
+    "payment_failed": "পেমেন্ট সম্পন্ন হয়নি"
   },
   "share_receipt": {
     "title": "রিসিট",
@@ -1368,5 +1383,101 @@
     "a11y_view_schedule": "আপনার নির্ধারিত রাইড দেখুন",
     "a11y_back_to_home": "হোমে ফিরে যান",
     "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন"
+  },
+  "add_payment": {
+    "title": "পেমেন্ট পদ্ধতি যোগ করুন",
+    "coming_soon": "শীঘ্রই আরও পেমেন্ট পদ্ধতি আসছে",
+    "coming_soon_desc": "এই মুহূর্তে ওয়ালেট ব্যালেন্স বা নগদে পরিশোধ করা যায়।"
+  },
+  "add_tip": {
+    "failed": "টিপ যোগ করা যায়নি",
+    "driver": "ড্রাইভার",
+    "tip_amount": "টিপের পরিমাণ",
+    "no_tip": "টিপ নেই",
+    "custom_amount_placeholder": "নিজের পছন্দের পরিমাণ"
+  },
+  "app_appearance": {
+    "title": "চেহারা",
+    "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন",
+    "theme": "থিম",
+    "hint": "লাইট, ডার্ক বা সিস্টেমের সেটিং অনুসরণ করুন।"
+  },
+  "autocomplete": {
+    "title": "ঠিকানা খুঁজুন",
+    "search_pickup": "পিকআপ পয়েন্ট খুঁজুন",
+    "search_stop": "স্টপ খুঁজুন"
+  },
+  "chat_list": {
+    "title": "চ্যাট",
+    "no_messages": "কোনো বার্তা নেই",
+    "empty_sub": "রাইড সংক্রান্ত কথোপকথন এখানে দেখা যাবে।"
+  },
+  "data_analytics": {
+    "privacy_settings": "প্রাইভেসি সেটিংস",
+    "share_usage": "ব্যবহারের তথ্য শেয়ার করুন",
+    "personalized_ads": "ব্যক্তিগতকৃত প্রোমোশন"
+  },
+  "faq": {
+    "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন",
+    "showing_common": "সাধারণ প্রশ্নগুলো দেখানো হচ্ছে",
+    "retry_loading_a11y": "সাধারণ প্রশ্ন লোড আবার চেষ্টা করুন"
+  },
+  "linked_accounts": {
+    "connected_services": "সংযুক্ত সেবা",
+    "empty": "এখনো কোনো সংযুক্ত অ্যাকাউন্ট নেই",
+    "connected": "সংযুক্ত",
+    "add_account": "অ্যাকাউন্ট যোগ করুন"
+  },
+  "logout_confirmation": {
+    "title": "লগ-আউট করবেন?",
+    "message": "আবার সাইন-ইন করতে আপনার ফোন নম্বর যাচাই করতে হবে।",
+    "log_out_a11y": "Ride থেকে লগ-আউট করুন"
+  },
+  "no_drivers_available": {
+    "title": "কোনো ড্রাইভার পাওয়া যায়নি",
+    "message": "এই গাড়ির ধরনের জন্য এই মুহূর্তে কাছে কোনো ড্রাইভার নেই।",
+    "try_again": "আবার চেষ্টা করুন",
+    "schedule_for_later": "পরে নির্ধারণ করুন"
+  },
+  "rider_tabs": {
+    "chat": "চ্যাট",
+    "account": "অ্যাকাউন্ট"
+  },
+  "top_up": {
+    "wallet_balance": "ওয়ালেট ব্যালেন্স",
+    "no_transactions": "এখনো কোনো লেনদেন নেই",
+    "top_up_wallet": "ওয়ালেটে টাকা যোগ করুন"
+  },
+  "top_up_details": {
+    "title": "লেনদেনের বিস্তারিত",
+    "transaction_details": "লেনদেনের বিস্তারিত",
+    "date": "তারিখ",
+    "method": "পদ্ধতি",
+    "amount": "পরিমাণ",
+    "download_receipt": "রিসিট ডাউনলোড করুন"
+  },
+  "top_up_method": {
+    "payment_failed": "পেমেন্ট ব্যর্থ হয়েছে",
+    "payment": "পেমেন্ট",
+    "amount": "পরিমাণ",
+    "redirect_notice": "নিরাপদে পেমেন্ট সম্পন্ন করতে আপনাকে রিডাইরেক্ট করা হবে।",
+    "pay": "পরিশোধ করুন"
+  },
+  "top_up_settings": {
+    "enter_amount": "পরিমাণ লিখুন",
+    "continue": "চালিয়ে যান"
+  },
+  "top_up_success": {
+    "title": "টপ-আপ সফল হয়েছে!",
+    "added": "৳{{amount}} আপনার ওয়ালেটে যোগ হয়েছে।",
+    "usable": "পরবর্তী রাইডে এই ব্যালেন্স ব্যবহার করতে পারবেন।",
+    "view_transactions": "লেনদেন দেখুন"
+  },
+  "user_arrived": {
+    "title": "আপনার ড্রাইভার পৌঁছে গেছেন",
+    "your_driver": "আপনার ড্রাইভার",
+    "subtitle": "অনুগ্রহ করে এখনই পিকআপ পয়েন্টে চলে আসুন।",
+    "rate_your_driver": "আপনার ড্রাইভারকে রেট করুন",
+    "skip": "এড়িয়ে যান"
   }
 }

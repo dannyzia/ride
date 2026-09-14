@@ -272,7 +272,7 @@ const Profile = () => {
           <>
             <SettingsRow
               icon="sunny-outline"
-              label={t('settings.appearance')}
+              label={t('app_appearance.title')}
               onPress={() => router.push(APPEARANCE_ROUTE)}
             />
             <SettingsRow
