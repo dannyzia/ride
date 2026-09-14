@@ -11,15 +11,15 @@ import point from "@/assets/icons/point.png";
 import profile from "@/assets/icons/profile.png";
 import search from "@/assets/icons/search.png";
 import to from "@/assets/icons/to.png";
-import cab from "@/assets/icons/cab.png";
+import cab from "@/assets/icons/cab.webp";
 import origin from "@/assets/icons/origin.png";
 import destination from "@/assets/icons/destination.png";
-import dutyOff from "@/assets/icons/switch_off.png";
-import dutyOn from "@/assets/icons/switch_on.png";
+import dutyOff from "@/assets/icons/switch_off.webp";
+import dutyOn from "@/assets/icons/switch_on.webp";
 import userNotFound from "@/assets/icons/userNotFound.png";
 import target from "@/assets/icons/target.png";
 import message from "@/assets/images/message.png";
-import noResult from "@/assets/images/no-result.png";
+import noResult from "@/assets/images/no-result.webp";
 
 export const images = {
     noResult,
