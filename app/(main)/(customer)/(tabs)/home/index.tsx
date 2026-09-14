@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import * as Location from 'expo-location';
 import {
   View,
   Text,
@@ -197,19 +198,55 @@ const {
     ? VEHICLE_TYPES.find((v) => v.key === selectedVehicleType)
     : null;
 
+  // ── Init: get GPS position on mount ──────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // Try last known position first (no permission needed, non-blocking)
+        let loc = await Location.getLastKnownPositionAsync();
+        if (loc && !cancelled) {
+          setUserLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            address: `${loc.coords.latitude.toFixed(4)}, ${loc.coords.longitude.toFixed(4)}`,
+          });
+          return;
+        }
+        // Fallback: check permission status (non-blocking) then get fresh fix
+        const perm = await Location.getForegroundPermissionsAsync();
+        if (perm.status !== 'granted' || cancelled) return;
+        loc = await Promise.race([
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          new Promise<null>((r) => setTimeout(() => r(null), 8000)),
+        ]);
+        if (loc && !cancelled) {
+          setUserLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            address: `${loc.coords.latitude.toFixed(4)}, ${loc.coords.longitude.toFixed(4)}`,
+          });
+        }
+      } catch (e) {
+        logger.warn('[home] GPS init failed:', e instanceof Error ? e.message : e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // ── Init: set pickup from GPS ──────────────────────────────────
-useEffect(() => {
-     if (userLatitude && userLongitude && !pickup) {
-       setPickup({
-         id: "current",
-         label: "Current Location",
-         address: userAddress || t('rider_home.current_location'),
-         lat: userLatitude,
-         lng: userLongitude,
-       });
-       setPickupCoords({ lat: userLatitude, lng: userLongitude });
-     }
-   }, [userLatitude, userLongitude, userAddress, t, pickup, setPickup, setPickupCoords]);
+  useEffect(() => {
+    if (userLatitude && userLongitude && !pickup) {
+      setPickup({
+        id: "current",
+        label: "Current Location",
+        address: userAddress || t('rider_home.current_location'),
+        lat: userLatitude,
+        lng: userLongitude,
+      });
+      setPickupCoords({ lat: userLatitude, lng: userLongitude });
+    }
+  }, [userLatitude, userLongitude, userAddress, t, pickup, setPickup, setPickupCoords]);
 
   // ── Init: set category from service param ──────────────────────
 useEffect(() => {
