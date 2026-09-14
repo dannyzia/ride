@@ -37,7 +37,7 @@ const HARD_NAMESPACE = 'rider_home';
  * occurrence; 733 unique keys at introduction ≈ 745 here). Shrink-only: CI fails if
  * the count rises above this. Update downwards as namespaces are repaid; must never
  * be increased. At 0, delete this constant and the soft tier — the guard is total. */
-const MISSING_KEY_BASELINE = 646;
+const MISSING_KEY_BASELINE = 611;
 
 describe('i18n locale completeness — every t() key resolves', () => {
   const en = JSON.parse(fs.readFileSync(EN_LOCALE, 'utf-8'));
