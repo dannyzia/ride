@@ -941,5 +941,30 @@
     "no_vehicles_route": "No vehicles available for this route",
     "set_route_to_see_fares": "Set your route to see fares",
     "confirm_ride": "Confirm ride"
+  },
+  "referral": {
+    "share_reward": "Your friend gets {{amount}} on their first ride — and so do you!",
+    "share_message": "Join me on Ride with my code {{code}}!",
+    "unknown": "Unknown number",
+    "rewarded": "Rewarded",
+    "pending": "Pending",
+    "title": "Refer & earn",
+    "toggle_theme": "Toggle light or dark theme",
+    "load_failed": "Couldn't load your referrals",
+    "pull_to_retry": "Pull down to retry",
+    "no_referrals": "No referrals yet",
+    "no_referrals_sub": "Share your code — you both earn when they ride",
+    "your_code": "Your referral code",
+    "no_code": "No code yet",
+    "a11y_share_code": "Share your referral code",
+    "share": "Share",
+    "a11y_copy_code": "Copy referral code",
+    "copied": "Copied!",
+    "copy": "Copy",
+    "invited": "Invited",
+    "successful": "Successful",
+    "earned": "Earned",
+    "recent": "Recent referrals",
+    "recent_empty": "People you refer will appear here"
   }
 }
