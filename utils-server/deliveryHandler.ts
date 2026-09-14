@@ -6,7 +6,7 @@
 import type { WebSocket } from 'ws';
 import { db } from '../src/db';
 import { couriers } from '../src/db/schema';
-import { eq, and, lt, sql } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 
 // Courier socket registry — Map<userId, WebSocket>
@@ -78,16 +78,19 @@ export function handleHeartbeat(userId: string, lat: number, lng: number): void 
  * Called periodically by scheduler job 52.
  */
 export async function sweepStaleCouriers(): Promise<number> {
-  const staleThreshold = new Date(Date.now() - PRESENCE_STALE_MS);
-  // ISSUE-47: must use the typed lt() operator — a raw sql`${col} < ${date}`
-  // interpolation bypasses the column's mapToDriverValue and hands postgres.js
-  // a raw Date param (TypeError: Buffer.byteLength on Date, drizzle-orm 0.45.x).
+  // ISSUE-47: the staleness threshold is computed IN-SQL from the database clock
+  // (now() - $N * interval '1 second') — no JS Date is ever bound. A raw
+  // sql`${col} < ${date}` interpolation bypasses the column's mapToDriverValue
+  // and hands postgres.js a raw Date param (TypeError: Buffer.byteLength on
+  // Date, drizzle-orm 0.45.x); interpolating the plain number $N is safe and
+  // also keeps app/DB clock skew out of the threshold (same shape as
+  // scheduler.ts stale-offer sweep).
   const result = await db
     .update(couriers)
     .set({ is_online: false })
     .where(and(
       eq(couriers.is_online, true),
-      lt(couriers.last_seen_at, staleThreshold),
+      sql`${couriers.last_seen_at} < now() - (${PRESENCE_STALE_MS / 1000} * interval '1 second')`,
     ));
   // Drizzle's update().where() returns RowList; rowCount is on the driver result
   return (result as unknown as { rowCount?: number }).rowCount ?? 0;

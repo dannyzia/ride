@@ -332,12 +332,13 @@ describe('Delivery Marketplace (Phase 3)', () => {
 
     it('sweepStaleCouriers binds last_seen_at threshold as a string param, never a raw Date (ISSUE-47 regression)', async () => {
       // ISSUE-47: raw sql`${col} < ${date}` handed postgres.js a raw Date param
-      // (Buffer.byteLength TypeError) — job 52 failed every tick. The fix uses
-      // the typed lt() operator so the Date routes through the column's
-      // mapToDriverValue. Regression: call the REAL handler against the mocked
-      // db, capture the WHERE fragment it actually passed, compile it via
-      // drizzle's public sqlToQuery(), and assert no raw Date reaches params.
-      // If the handler ever reverts to raw Date interpolation, this fails.
+      // (Buffer.byteLength TypeError) — job 52 failed every tick. The fix
+      // computes the threshold IN-SQL from the DB clock (now() - $N * interval
+      // '1 second') so no JS Date is ever bound. Regression: call the REAL
+      // handler against the mocked db, capture the WHERE fragment it actually
+      // passed, compile it via drizzle's public sqlToQuery(), and assert no raw
+      // Date reaches params. If the handler ever reverts to raw Date
+      // interpolation, this fails.
       const { sql: drizzleSql } = jest.requireActual('drizzle-orm') as Record<string, any>;
       const { PgDialect } = jest.requireActual('drizzle-orm/pg-core');
       const { db } = jest.requireMock('@/src/db') as { db: any };
@@ -349,14 +350,28 @@ describe('Delivery Marketplace (Phase 3)', () => {
       const capturedWhere = whereMock.mock.calls.at(-1)[0];
 
       const dialect = new PgDialect();
-      const { params } = dialect.sqlToQuery(drizzleSql`${capturedWhere}`);
+      const compiled = dialect.sqlToQuery(drizzleSql`${capturedWhere}`);
 
       // The compiled params must all be bindable primitives (never a raw Date).
-      expect(params.length).toBeGreaterThan(0);
-      for (const p of params) {
+      expect(compiled.params.length).toBeGreaterThan(0);
+      for (const p of compiled.params) {
         expect(p instanceof Date).toBe(false);
         expect(['string', 'number', 'boolean']).toContain(typeof p);
       }
+      // The threshold lives IN the SQL text from the DB clock, not in a bound
+      // JS Date: `last_seen_at < now() - ($N * interval '1 second')`.
+      expect(compiled.sql).toMatch(/last_seen_at" < now\(\) - \(\$\d+ \* interval '1 second'\)/);
+      // The interval length binds as the plain number of seconds
+      // (PRESENCE_STALE_MS = 90_000 → 90).
+      expect(compiled.params).toContain(90);
+    });
+
+    it('sweepStaleCouriers resolves without a Date-binding TypeError (ISSUE-47 contract)', async () => {
+      // The production failure was a REJECTED PROMISE (TypeError from
+      // postgres.js param encoding), not a wrong result. Pin the contract:
+      // the sweep must resolve with a numeric row count.
+      const count = await sweepStaleCouriers();
+      expect(typeof count).toBe('number');
     });
 
     it('getConnectedCourierCount starts at 0', () => {
