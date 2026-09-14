@@ -1009,5 +1009,26 @@
     "confirm_send_body": "Your location and ride details go to our safety team immediately.",
     "call_999_send_a11y": "Call 999 and send the emergency alert",
     "call_999_send": "Call 999 + Send"
+  },
+  "schedule_ride": {
+    "set_pickup": "Please set a pickup point",
+    "enter_destination": "Please enter a destination",
+    "min_lead": "Scheduled rides must be at least 30 minutes ahead",
+    "max_lead": "Scheduled rides can be at most 7 days ahead",
+    "not_authenticated": "You are not signed in.",
+    "could_not_schedule": "Couldn't schedule the ride",
+    "network_error": "Network error — please try again.",
+    "go_back": "Go back",
+    "title": "Schedule Ride",
+    "toggle_theme": "Toggle light or dark theme",
+    "pickup": "Pickup",
+    "current_location": "Current location",
+    "destination": "Destination",
+    "enter_destination_placeholder": "Enter destination",
+    "vehicle": "Vehicle",
+    "select_vehicle": "Select {{name}} as your vehicle",
+    "date_time": "Date & Time",
+    "a11y_schedule": "Schedule this ride",
+    "schedule_ride": "Schedule Ride"
   }
 }
