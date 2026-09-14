@@ -24,7 +24,7 @@ import ReactNativeModal from "react-native-modal";
 import CustomButton from "@/components/CustomButton";
 import RideLayout from "@/components/RideLayout";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTranslation } from "react-i18next";
 
 interface CompletionSummary {

@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import PaymentWebView from "@/components/PaymentWebView";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";

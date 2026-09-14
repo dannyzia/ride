@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";

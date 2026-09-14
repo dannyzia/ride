@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, Animated } from "react-native";
 import { useRef, useEffect } from "react";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Haptics from "expo-haptics";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useWSStore } from "@/store";

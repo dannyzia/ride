@@ -11,7 +11,7 @@
 // avoids safe-area hooks so it works without a SafeAreaProvider ancestor.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Text, TouchableOpacity, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors, radii, spacing } from "@/theme/goRide";
 
 type ToastType = "success" | "info" | "error";

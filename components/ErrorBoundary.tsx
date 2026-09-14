@@ -1,6 +1,6 @@
 import React, { Component, type ReactNode } from "react";
 import { View, Text, TouchableOpacity, Appearance, type ColorSchemeName } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { logger } from "@/lib/logger";
 

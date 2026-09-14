@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, Image } from 'react-native'
 import React from 'react'
-import { Ionicons } from '@expo/vector-icons'
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { icons } from '@/constants/data'
 import { useSignOut } from '@/lib/session'
 import { router } from 'expo-router'

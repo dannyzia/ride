@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, Alert, StatusBar, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { API_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";

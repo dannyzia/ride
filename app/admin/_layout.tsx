@@ -9,7 +9,7 @@ import {
 import { Stack, router, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { AntDesign } from "@expo/vector-icons";
+import AntDesign from "@expo/vector-icons/AntDesign";
 import GlobalActionButtons from "@/components/GlobalActionButtons";
 import { logger } from "@/lib/logger";
 import { AdminToastProvider } from "@/components/admin/AdminToast";

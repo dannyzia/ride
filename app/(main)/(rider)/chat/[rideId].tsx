@@ -3,7 +3,7 @@ import { API_URL } from "@/lib/config";
 import React, { useEffect, useState } from "react";
 import { View, ActivityIndicator, Text, Linking, TouchableOpacity, StatusBar } from "react-native";
 import { useLocalSearchParams, Stack } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import ChatScreen from "@/components/ChatScreen";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";

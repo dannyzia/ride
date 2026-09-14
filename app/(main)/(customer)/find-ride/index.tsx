@@ -27,7 +27,7 @@ import {
 } from "@/store/useRiderStore";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Location from "expo-location";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";

@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import { View, Text } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import OfflineIndicator from "@/components/OfflineIndicator";
 
 import { colors } from "@/theme/goRide";

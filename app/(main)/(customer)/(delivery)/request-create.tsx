@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useIsDark } from '@/lib/useAppearance';
 import { colors } from '@/theme/goRide';
 import { supabase } from '@/lib/supabase';

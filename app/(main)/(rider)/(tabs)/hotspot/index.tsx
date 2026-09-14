@@ -20,7 +20,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Location from "expo-location";
 import { useTranslation } from "react-i18next";
 import { API_URL } from "@/lib/config";

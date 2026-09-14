@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, Text } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 
 // Offline bars are always-dark by convention (matches every major ride app) —

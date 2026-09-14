@@ -3,7 +3,7 @@ import { API_URL } from "@/lib/config";
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 

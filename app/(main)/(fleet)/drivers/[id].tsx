@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { useFleetStore } from "@/store/useFleetStore";

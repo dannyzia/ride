@@ -6,7 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors, radii } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { API_URL } from "@/lib/config";

@@ -13,7 +13,8 @@ import {
   View,
 } from "react-native";
 import { router, usePathname } from "expo-router";
-import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
+import AntDesign from "@expo/vector-icons/AntDesign";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { supabase } from "@/lib/supabase";
 import { teardownAdminSocket } from "@/lib/adminSocket";
 import { authCleanup } from "@/lib/authCleanup";

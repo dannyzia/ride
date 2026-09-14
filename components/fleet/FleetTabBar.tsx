@@ -4,7 +4,7 @@
  * Uses router.push for navigation (not tab navigation).
  */
 import { View, Text, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "@/theme/goRide";

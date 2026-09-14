@@ -15,7 +15,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";

@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import FleetScreen from "@/components/fleet/FleetScreen";

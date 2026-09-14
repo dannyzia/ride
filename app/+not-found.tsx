@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, Platform, StatusBar } from "react-native";
 import { colors, spacing } from "@/theme/goRide";
 import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 const isWeb = Platform.OS === "web";

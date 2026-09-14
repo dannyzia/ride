@@ -17,7 +17,7 @@ import Map from "@/components/Map";
 import { fetchRouteGeometry } from "@/lib/routeGeometry";
 import TollParkingModal from "@/components/TollParkingModal";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTranslation } from "react-i18next";
 
 // Route-line refetch policy for the pickup map (master plan §7.2): the

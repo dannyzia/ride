@@ -1,6 +1,6 @@
 import { colors, spacing } from "@/theme/goRide";
 import { View, Text, Animated, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import React, { useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomButton from "@/components/CustomButton";

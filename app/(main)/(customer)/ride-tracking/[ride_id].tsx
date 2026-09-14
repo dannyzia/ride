@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import MapLibreGL from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { useWSStore } from "@/store";

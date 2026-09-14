@@ -1,6 +1,6 @@
 import { Image, Text, View, TextInput, TouchableOpacity, Alert, Modal, StatusBar } from "react-native";
 import { API_URL } from "@/lib/config";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import RideLayout from "@/components/RideLayout";
 import { useCustomer } from "@/store";
 import { icons } from "@/constants/data";

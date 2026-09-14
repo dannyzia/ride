@@ -10,7 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";

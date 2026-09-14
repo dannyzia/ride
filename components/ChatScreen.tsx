@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'rea
 import { GiftedChat, Send, Bubble, IMessage, InputToolbar } from 'react-native-gifted-chat';
 import type { AvatarProps, BubbleProps, InputToolbarProps, SendProps } from 'react-native-gifted-chat';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from 'expo-router';
 import { useChatStore, ChatMessage } from '@/store/useChatStore';
 import { colors } from '@/theme/goRide';

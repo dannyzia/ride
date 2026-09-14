@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { View, Text, Pressable, TextInput, ActivityIndicator, Alert, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";

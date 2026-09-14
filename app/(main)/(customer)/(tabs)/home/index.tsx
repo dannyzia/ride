@@ -12,7 +12,7 @@ import {
   TextInput,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import BottomSheet, {
   BottomSheetScrollView,
   BottomSheetBackdrop,

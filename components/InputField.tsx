@@ -1,7 +1,7 @@
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useState } from "react";
 import { InputFieldProps } from "@/types/type";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 

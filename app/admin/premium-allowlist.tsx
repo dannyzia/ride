@@ -12,7 +12,7 @@ import {
   StatusBar,
 } from "react-native";
 import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";

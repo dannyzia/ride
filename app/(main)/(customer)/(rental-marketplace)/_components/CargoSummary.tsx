@@ -6,7 +6,7 @@
  * when those lanes land (briefing A7 / ruling V4).
  */
 import { View, Text } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { describeVehicleType } from "../_truckCatalog";

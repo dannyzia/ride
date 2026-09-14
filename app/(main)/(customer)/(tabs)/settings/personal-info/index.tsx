@@ -7,7 +7,7 @@ import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useRiderStore } from "@/store/useRiderStore";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";

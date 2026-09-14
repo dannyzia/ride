@@ -10,7 +10,7 @@
  */
 import { useState } from "react";
 import { View, Text, TouchableOpacity, Modal } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { colors, spacing, radii } from "@/theme/goRide";

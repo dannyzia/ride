@@ -1,7 +1,7 @@
 import { colors } from '@/theme/goRide';
 import React, { useRef } from 'react';
 import { View, Text, Animated, PanResponder, Dimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

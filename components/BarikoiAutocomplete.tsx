@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { BarikoiInputProps } from "@/types/type";
 import { useCustomer } from "@/store";
 import { getBarikoiAutocompleteUrl } from "@/lib/useBarikoiMapStyle";

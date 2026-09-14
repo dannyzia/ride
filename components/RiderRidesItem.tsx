@@ -2,7 +2,7 @@ import { View, Text, Image, TouchableOpacity, Dimensions } from 'react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import Animated, { FadeInLeft, FadeOutRight } from 'react-native-reanimated';
 import { icons } from '@/constants/data';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { RideOfferDetails } from '@/types/type';
 import { colors, spacing, radii } from '@/theme/goRide';
 

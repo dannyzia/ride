@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from '@/theme/goRide';
 import { useIsDark } from '@/lib/useAppearance';
 

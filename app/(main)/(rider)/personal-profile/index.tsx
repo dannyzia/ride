@@ -4,7 +4,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityInd
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { supabase } from "@/lib/supabase";
 import { uploadImage } from "@/lib/imageToURL";
 import { logger } from "@/lib/logger";

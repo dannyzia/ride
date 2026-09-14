@@ -1,7 +1,7 @@
 import { View, Text, Image, TouchableOpacity, Linking } from 'react-native'
 import { useCustomer, useDriverStore } from '@/store'
 import { icons } from '@/constants/data'
-import { Ionicons } from '@expo/vector-icons'
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { logger } from "@/lib/logger";
 
 const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid: (value: boolean) => void, page: string, number?: string }) => {

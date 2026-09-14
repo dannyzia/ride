@@ -2,7 +2,7 @@
 // Closes on backdrop click and ESC (web only).
 import { ReactNode, useEffect } from "react";
 import { Modal, Pressable, View, Text, StyleSheet, ScrollView, Platform } from "react-native";
-import { AntDesign } from "@expo/vector-icons";
+import AntDesign from "@expo/vector-icons/AntDesign";
 import { colors } from "@/theme/goRide";
 
 interface AdminModalProps {

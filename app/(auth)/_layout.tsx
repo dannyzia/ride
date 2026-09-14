@@ -2,7 +2,7 @@ import { Stack, useSegments } from 'expo-router';
 import { View, TouchableOpacity } from "react-native";
 import { colors } from '@/theme/goRide';
 import { useIsDark, useAppearance } from '@/lib/useAppearance';
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 function ThemeToggle() {
   const isDark = useIsDark();

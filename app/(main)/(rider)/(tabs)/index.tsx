@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, Alert, Animated, StyleSheet, AccessibilityInfo, ActivityIndicator, AppState, type AppStateStatus } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { API_URL, WS_URL } from "@/lib/config";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
