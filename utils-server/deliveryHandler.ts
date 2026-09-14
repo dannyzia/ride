@@ -6,7 +6,7 @@
 import type { WebSocket } from 'ws';
 import { db } from '../src/db';
 import { couriers } from '../src/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, lt, sql } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 
 // Courier socket registry — Map<userId, WebSocket>
@@ -79,12 +79,15 @@ export function handleHeartbeat(userId: string, lat: number, lng: number): void 
  */
 export async function sweepStaleCouriers(): Promise<number> {
   const staleThreshold = new Date(Date.now() - PRESENCE_STALE_MS);
+  // ISSUE-47: must use the typed lt() operator — a raw sql`${col} < ${date}`
+  // interpolation bypasses the column's mapToDriverValue and hands postgres.js
+  // a raw Date param (TypeError: Buffer.byteLength on Date, drizzle-orm 0.45.x).
   const result = await db
     .update(couriers)
     .set({ is_online: false })
     .where(and(
       eq(couriers.is_online, true),
-      sql`${couriers.last_seen_at} < ${staleThreshold}`,
+      lt(couriers.last_seen_at, staleThreshold),
     ));
   // Drizzle's update().where() returns RowList; rowCount is on the driver result
   return (result as unknown as { rowCount?: number }).rowCount ?? 0;
