@@ -454,3 +454,13 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - Owner-directed refinement of the closed fix: sweepStaleCouriers now computes the 90s staleness threshold IN-SQL — `sql\`${couriers.last_seen_at} < now() - (${PRESENCE_STALE_MS / 1000} * interval '1 second')\`` — replacing the typed lt() Date binding from `1628c82`. No JS Date enters the binding path (bug class eliminated, not just corrected); threshold measured on the DB clock (clock-skew immune). Same shape as scheduler.ts:1533. Live-DB probe: `SELECT 90 * interval '1 second'` → `00:01:30`.
 - Tests: ISSUE-47 binding regression now also pins the in-SQL predicate + 90s interval param; new contract test asserts the sweep resolves with a numeric count. Red-green re-verified against the ORIGINAL raw-Date shape. Suite: 27/27; full gates: jest 2044/2 skipped · tsc 0 ×2 · lint 0.
 - Board: ISSUE-47 stays done; refinement recorded as a comment. Commit `b049c0b`.
+
+## 2026-09-15 — Size Remediation Pass 1 (ISSUE-60) — Phase 1 done, Phase 2 reported, issue → review
+
+- **Owner:** Coding model (this lane). Zia freeze-lift authorization recorded on the ISSUE-60 attempt.
+- **Phase 1 complete (7 items, 7 commits):** d4655b5 Storybook→devDeps · 372a299 italic TTFs · 90ef9c5 9 dead packages + animations · 3611c8c PNG→WebP pairs · bac94bf per-family icon imports (220 files) · cf60762 splash 4.5 MB→482 KB (+ pre-commit xargs chunking fix) · 39a4b98 assetBundlePatterns scoped.
+- **Measured:** export HBC −158,516 B; export assets −2,608,632 B (−46%); TTF 26→10 (MD5-verified); splash −3.99 MB native/OTA (NOT in metro export — verified); modules 2,536→2,493.
+- **Phase 2 (report only, docs/size-audit.md §7):** API routes ABSENT from native bundle (theory dead); 57 admin modules / ~687 KB source carry MCI+AntDesign 1.22 MB — metro-stub exclusion plan recommended; h3-js single UMD module via Map.tsx→lib/h3.ts (~230 KB) — server-fed boundary recommended; supabase subpackages not tree-shakeable; axios enters via barikoiapis (§1 correction).
+- **Gates after every step:** lint 0 · tsc 0 ×2 · vacuous clean · web-imports 14/0 · jest 2044+2skipped · module-isolation 2 · expo-doctor unchanged-5.
+- **Deviations recorded:** notification_icon keeps PNG (native notification resource, .webp twin deleted instead — plan mandated smaller-format switch, PNG is the referenced format there).
+- **Rhizome:** ISSUE-60 → review (attempt 01M2GKGG42NZRX4MSEY9TV4TWG completed, checkpoint + 8 artifacts attached). Phase 3 NOT started (STOP gate). Dev build required next session (autolink set changed).
