@@ -36,7 +36,7 @@ const HARD_NAMESPACE = 'rider_home';
 /** Pre-existing missing-key count at guard introduction (2026-09-15, measured).
  * Shrink-only: CI fails if the count rises above this. Update downwards as
  * namespaces are repaid; must never be increased. */
-const MISSING_KEY_BASELINE = 733;
+const MISSING_KEY_BASELINE = 672;
 
 describe('i18n locale completeness — every t() key resolves', () => {
   const en = JSON.parse(fs.readFileSync(EN_LOCALE, 'utf-8'));
