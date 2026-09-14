@@ -23,7 +23,7 @@ import { useTranslation } from "react-i18next";
 // Route-line refetch policy for the pickup map (master plan §7.2): the
 // location watch ticks every 10s, so the Barikoi route fetch is throttled to
 // one attempt per ROUTE_REFETCH_MS and only when the driver moved materially.
-const ROUTE_REFETCH_MS = 30_000;
+const ROUTE_REFETCH_MS = 60_000;
 // ~0.00025 degrees latitude is roughly 25m — the "moved materially" bar.
 const ROUTE_MOVE_THRESHOLD_DEG = 0.00025;
 
@@ -322,7 +322,7 @@ const ReachCustomer = () => {
   // and returns decoded [lat, lng] pairs — the exact shape Map's route prop
   // wants — with its own timeout and null-on-failure contract, so a failed
   // fetch just leaves the map on origin/destination markers. Throttled to
-  // ~30s and to material driver movement so the 10s location watch cannot
+  // ~60s and to material driver movement so the 10s location watch cannot
   // loop fetches.
   useEffect(() => {
     if (
