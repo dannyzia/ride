@@ -1222,6 +1222,46 @@
     "redeem": "রিডিম করুন",
     "redeemed": "রিওয়ার্ড রিডিম হয়েছে",
     "reward_amount": "৳{{amount}} আপনার ওয়ালেটে যোগ হয়েছে।",
-    "failed": "রিওয়ার্ড রিডিম করা যায়নি"
+    "failed": "রিওয়ার্ড রিডিম করা যায়নি",
+    "redeem_confirm_title": "এই রিওয়ার্ড রিডিম করবেন?",
+    "redeem_confirm_message": "আপনার পয়েন্ট ওয়ালেট ক্রেডিটে রূপান্তর হবে।"
+  },
+  "activity_canceled": {
+    "title": "বাতিল রাইড",
+    "canceled": "বাতিল",
+    "no_rides": "কোনো বাতিল রাইড নেই",
+    "failed_to_load": "আপনার রাইডগুলো লোড করা যায়নি",
+    "book_new_ride": "নতুন রাইড বুক করুন"
+  },
+  "activity_completed": {
+    "ride": "রাইড",
+    "pickup": "পিকআপ",
+    "destination": "গন্তব্য",
+    "fare": "ভাড়া",
+    "no_rides": "কোনো সম্পন্ন রাইড নেই",
+    "empty_desc": "আপনার সম্পন্ন রাইডগুলো এখানে দেখা যাবে।",
+    "view_receipt": "রিসিট দেখুন"
+  },
+  "activity_scheduled": {
+    "title": "নির্ধারিত রাইড",
+    "ride": "রাইড",
+    "pickup": "পিকআপ",
+    "destination": "গন্তব্য",
+    "fare": "ভাড়া",
+    "no_rides": "কোনো নির্ধারিত রাইড নেই",
+    "empty_desc": "আপনি নির্ধারণ করা রাইডগুলো এখানে দেখা যাবে।",
+    "view_details": "বিস্তারিত দেখুন"
+  },
+  "rider_activity": {
+    "ride": "রাইড",
+    "ongoing": "চলমান",
+    "pickup_label": "পিকআপ",
+    "destination_label": "গন্তব্য",
+    "fare_label": "ভাড়া",
+    "chat": "চ্যাট",
+    "driver_info": "ড্রাইভারের তথ্য",
+    "min_away": "{{count}} মিনিট দূরে",
+    "no_active_rides": "কোনো চলমান রাইড নেই",
+    "no_active_rides_sub": "রাইড বুক করলে সেটি এখানে দেখা যাবে।"
   }
 }

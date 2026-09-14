@@ -1222,6 +1222,46 @@
     "redeem": "Redeem",
     "redeemed": "Reward redeemed",
     "reward_amount": "৳{{amount}} has been added to your wallet.",
-    "failed": "Couldn't redeem the reward"
+    "failed": "Couldn't redeem the reward",
+    "redeem_confirm_title": "Redeem this reward?",
+    "redeem_confirm_message": "Your points will be exchanged for wallet credit."
+  },
+  "activity_canceled": {
+    "title": "Canceled Rides",
+    "canceled": "Canceled",
+    "no_rides": "No canceled rides",
+    "failed_to_load": "Couldn't load your rides",
+    "book_new_ride": "Book a New Ride"
+  },
+  "activity_completed": {
+    "ride": "Ride",
+    "pickup": "Pickup",
+    "destination": "Destination",
+    "fare": "Fare",
+    "no_rides": "No completed rides",
+    "empty_desc": "Your completed rides will show up here.",
+    "view_receipt": "View Receipt"
+  },
+  "activity_scheduled": {
+    "title": "Scheduled Rides",
+    "ride": "Ride",
+    "pickup": "Pickup",
+    "destination": "Destination",
+    "fare": "Fare",
+    "no_rides": "No scheduled rides",
+    "empty_desc": "Rides you schedule will show up here.",
+    "view_details": "View Details"
+  },
+  "rider_activity": {
+    "ride": "Ride",
+    "ongoing": "Ongoing",
+    "pickup_label": "Pickup",
+    "destination_label": "Destination",
+    "fare_label": "Fare",
+    "chat": "Chat",
+    "driver_info": "Driver Info",
+    "min_away": "{{count}} min away",
+    "no_active_rides": "No active rides",
+    "no_active_rides_sub": "When you book a ride, it will show up here."
   }
 }
