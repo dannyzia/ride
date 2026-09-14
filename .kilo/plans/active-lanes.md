@@ -448,3 +448,9 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Sibling sweep**: scheduler.ts:1533 number-param raw sql unaffected; typed .set() Date writes unaffected.
 - **Gates**: jest 2043/2 skipped (+1) · tsc 0 ×2 · lint 0 · pre-commit vacuous+lint green.
 - **Board**: ISSUE-47 → done (attempt 01M2FN61DVTC2WTRJ4S8GVKZPA, checkpoint saved). Housekeeping commit `3a8cf17` (iOS walkthrough + prior ledger rows). Same class of bug was ruled non-issue for D0: nearby-markers endpoint is Date-free (verified during R3.4).
+
+## 2026-09-14 — ISSUE-47 refinement: in-SQL threshold (b049c0b)
+
+- Owner-directed refinement of the closed fix: sweepStaleCouriers now computes the 90s staleness threshold IN-SQL — `sql\`${couriers.last_seen_at} < now() - (${PRESENCE_STALE_MS / 1000} * interval '1 second')\`` — replacing the typed lt() Date binding from `1628c82`. No JS Date enters the binding path (bug class eliminated, not just corrected); threshold measured on the DB clock (clock-skew immune). Same shape as scheduler.ts:1533. Live-DB probe: `SELECT 90 * interval '1 second'` → `00:01:30`.
+- Tests: ISSUE-47 binding regression now also pins the in-SQL predicate + 90s interval param; new contract test asserts the sweep resolves with a numeric count. Red-green re-verified against the ORIGINAL raw-Date shape. Suite: 27/27; full gates: jest 2044/2 skipped · tsc 0 ×2 · lint 0.
+- Board: ISSUE-47 stays done; refinement recorded as a comment. Commit `b049c0b`.
