@@ -33,10 +33,11 @@ const BN_LOCALE = path.resolve(__dirname, '../../i18n/locales/bn/common.json');
  */
 const HARD_NAMESPACE = 'rider_home';
 
-/** Pre-existing missing-key count at guard introduction (2026-09-15, measured).
- * Shrink-only: CI fails if the count rises above this. Update downwards as
- * namespaces are repaid; must never be increased. */
-const MISSING_KEY_BASELINE = 672;
+/** Pre-existing missing-key count at guard introduction, in GUARD units (per file
+ * occurrence; 733 unique keys at introduction ≈ 745 here). Shrink-only: CI fails if
+ * the count rises above this. Update downwards as namespaces are repaid; must never
+ * be increased. At 0, delete this constant and the soft tier — the guard is total. */
+const MISSING_KEY_BASELINE = 646;
 
 describe('i18n locale completeness — every t() key resolves', () => {
   const en = JSON.parse(fs.readFileSync(EN_LOCALE, 'utf-8'));
