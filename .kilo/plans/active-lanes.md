@@ -440,3 +440,11 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **ISSUE-45** (EAS fix + Batch 6): orphaned lease from session restart expired 08:17Z → reclaimed → review attempt `01M2FMN2TJVPVK8ZRZK74XCG2F` finished `approved` → **done** (v2). Artifacts attached: `95199d6`, `13d5310`, `b5b50f9`, EAS build `f4f03091` (FINISHED).
 - **ISSUE-57** created **blocked** (owner-decision): EAS build memory strategy — OOM chain root-caused and fixed (f4f03091 proof); Zia to rule on D-1 web-output permanence, D-2 headroom policy (2560MB verified sufficient; raise to 4096 / shrink graph / EAS plan upgrade), D-3 plan-upgrade necessity. Related to ISSUE-44/45. `resourceClass: large` remains paywalled on the free plan (reverted `78c2891`→`4ab2bc6`).
 - Board↔ledger: consistent.
+
+## 2026-09-14 — ISSUE-47 fixed (job 52 courier sweep Date-binding crash)
+
+- **Fix**: `deliveryHandler.ts` sweepStaleCouriers → typed `lt()` operator (raw sql Date interpolation bypassed mapToDriverValue under drizzle 0.45.x → postgres.js Buffer.byteLength TypeError every tick; courier online-decay never ran). Empirical dialect proof: old shape = RAW DATE param (matches prod error SQL byte-for-byte), new shape = ISO string param; SQL text unchanged. Commit `1628c82`.
+- **Regression test**: calls real handler, captures the actual WHERE fragment from the mocked db chain, compiles via PgDialect.sqlToQuery(), fails on any raw Date param. Red-green verified (temp revert → failed at line 357; fix restored → green).
+- **Sibling sweep**: scheduler.ts:1533 number-param raw sql unaffected; typed .set() Date writes unaffected.
+- **Gates**: jest 2043/2 skipped (+1) · tsc 0 ×2 · lint 0 · pre-commit vacuous+lint green.
+- **Board**: ISSUE-47 → done (attempt 01M2FN61DVTC2WTRJ4S8GVKZPA, checkpoint saved). Housekeeping commit `3a8cf17` (iOS walkthrough + prior ledger rows). Same class of bug was ruled non-issue for D0: nearby-markers endpoint is Date-free (verified during R3.4).
