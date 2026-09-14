@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         and(
           eq(riderSubscriptions.rider_id, user.id),
           eq(riderSubscriptions.status, 'active'),
-          sql`${riderSubscriptions.valid_until} > ${now}`,
+          sql`${riderSubscriptions.valid_until} > now()`,
           sql`${riderSubscriptions.rides_used} < COALESCE(${riderPasses.max_rides}, ${riderSubscriptions.rides_used} + 1)`
         )
       )

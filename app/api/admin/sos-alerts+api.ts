@@ -31,7 +31,6 @@ export async function GET(request: Request) {
       .where(conditions);
 
     // Fetch alerts with per-user recent alert count over trailing 60s
-    const windowStart = new Date(Date.now() - CLUSTER_WINDOW_MS);
 
     const rows = await db
       .select({
@@ -48,14 +47,14 @@ export async function GET(request: Request) {
         recent_alert_count: sql<number>`(
           SELECT count(*)::int FROM sos_alerts sa
           WHERE sa.user_id = ${sosAlerts.user_id}
-            AND sa.created_at >= ${windowStart}
+            AND sa.created_at >= now() - (${CLUSTER_WINDOW_MS / 1000} * interval '1 second')
         )`.as('recent_alert_count'),
       })
       .from(sosAlerts)
       .where(conditions)
       .orderBy(
         sortBy === 'intensity'
-          ? desc(sql`(SELECT count(*) FROM sos_alerts sa WHERE sa.user_id = ${sosAlerts.user_id} AND sa.created_at >= ${windowStart})`)
+          ? desc(sql`(SELECT count(*) FROM sos_alerts sa WHERE sa.user_id = ${sosAlerts.user_id} AND sa.created_at >= now() - (${CLUSTER_WINDOW_MS / 1000} * interval '1 second'))`)
           : desc(sosAlerts.created_at),
       )
       .limit(limit)

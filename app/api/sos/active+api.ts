@@ -64,14 +64,13 @@ export async function GET(request: Request) {
 
     // R3.1: Frequency-as-intensity — count alerts from this user in the
     // last 60 seconds. Three or more = high-intensity distress signal.
-    const windowStart = new Date(Date.now() - INTENSITY_WINDOW_SECONDS * 1000);
     const [recentCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(sosAlerts)
       .where(
         and(
           eq(sosAlerts.user_id, dbUser.id),
-          sql`${sosAlerts.created_at} >= ${windowStart}`,
+          sql`${sosAlerts.created_at} >= now() - (${INTENSITY_WINDOW_SECONDS} * interval '1 second')`,
         ),
       );
 
