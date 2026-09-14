@@ -277,7 +277,16 @@
     "referral": "Referral",
     "min_rate": "Minimum Rate",
     "payout_method": "Payout Method",
-    "packages": "Packages"
+    "packages": "Packages",
+    "personal_info": "Personal Information",
+    "linked_accounts": "Linked Accounts",
+    "help_support": "Help & Support",
+    "contact_support": "Contact Support",
+    "faq": "FAQ",
+    "data_analytics": "Data & Analytics",
+    "request_data": "Request Your Data",
+    "delete_data": "Delete My Data",
+    "delete_account": "Delete Account"
   },
   "earnings": {
     "daily_goal": "Daily Goal",
@@ -1263,5 +1272,29 @@
     "min_away": "{{count}} min away",
     "no_active_rides": "No active rides",
     "no_active_rides_sub": "When you book a ride, it will show up here."
+  },
+  "ride_pass": {
+    "title": "Ride Passes",
+    "active_pass": "Active Pass",
+    "rides_of": "{{used}} of {{total}} rides used",
+    "rides_unlimited": "Unlimited rides",
+    "expires": "Expires {{date}}",
+    "discount_days": "{{percent}}% off · valid {{days}} days",
+    "rides_suffix": " · up to {{count}} rides",
+    "buy": "Buy Pass",
+    "activated": "Pass activated!",
+    "failed": "Couldn't load ride passes",
+    "purchase_failed": "Purchase didn't complete — try again."
+  },
+  "share_receipt": {
+    "title": "Receipts",
+    "ride": "Ride",
+    "from": "From",
+    "to": "To",
+    "fare": "Fare",
+    "no_receipts": "No receipts yet",
+    "empty_desc": "Receipts from your completed rides appear here.",
+    "download": "Download",
+    "share": "Share"
   }
 }

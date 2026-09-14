@@ -277,7 +277,16 @@
     "referral": "রেফারেল",
     "min_rate": "সর্বনিম্ন হার",
     "payout_method": "পেমেন্ট পদ্ধতি",
-    "packages": "প্যাকেজ"
+    "packages": "প্যাকেজ",
+    "personal_info": "ব্যক্তিগত তথ্য",
+    "linked_accounts": "সংযুক্ত অ্যাকাউন্ট",
+    "help_support": "সাহায্য ও সহায়তা",
+    "contact_support": "সহায়তায় যোগাযোগ",
+    "faq": "সাধারণ প্রশ্ন",
+    "data_analytics": "ডেটা ও অ্যানালিটিক্স",
+    "request_data": "আপনার তথ্যের অনুরোধ করুন",
+    "delete_data": "আমার তথ্য মুছুন",
+    "delete_account": "অ্যাকাউন্ট মুছুন"
   },
   "earnings": {
     "daily_goal": "দৈনিক লক্ষ্য",
@@ -1263,5 +1272,29 @@
     "min_away": "{{count}} মিনিট দূরে",
     "no_active_rides": "কোনো চলমান রাইড নেই",
     "no_active_rides_sub": "রাইড বুক করলে সেটি এখানে দেখা যাবে।"
+  },
+  "ride_pass": {
+    "title": "রাইড পাস",
+    "active_pass": "সক্রিয় পাস",
+    "rides_of": "{{total}}টির মধ্যে {{used}}টি রাইড ব্যবহৃত",
+    "rides_unlimited": "আনলিমিটেড রাইড",
+    "expires": "মেয়াদ শেষ {{date}}",
+    "discount_days": "{{percent}}% ছাড় · {{days}} দিন বৈধ",
+    "rides_suffix": " · সর্বোচ্চ {{count}}টি রাইড",
+    "buy": "পাস কিনুন",
+    "activated": "পাস সক্রিয় হয়েছে!",
+    "failed": "রাইড পাস লোড করা যায়নি",
+    "purchase_failed": "কেনা সম্পন্ন হয়নি — আবার চেষ্টা করুন।"
+  },
+  "share_receipt": {
+    "title": "রিসিট",
+    "ride": "রাইড",
+    "from": "থেকে",
+    "to": "পর্যন্ত",
+    "fare": "ভাড়া",
+    "no_receipts": "এখনো কোনো রিসিট নেই",
+    "empty_desc": "সম্পন্ন রাইডের রিসিটগুলো এখানে দেখা যাবে।",
+    "download": "ডাউনলোড",
+    "share": "শেয়ার"
   }
 }
