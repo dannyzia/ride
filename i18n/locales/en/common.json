@@ -915,5 +915,31 @@
     "block_this_driver": "Block this driver",
     "wont_be_matched_again": "You won't be matched with this driver again",
     "submit_rating": "Submit rating"
+  },
+  "find_ride": {
+    "enter_or_choose_location": "Enter or choose a location",
+    "failed_to_fetch_estimates": "Couldn't fetch fares. Please try again.",
+    "permission_denied": "Location permission denied",
+    "location_permission_required": "Allow location access so we can pick you up at the right place.",
+    "location_unavailable": "Location unavailable",
+    "location_unavailable_message": "Your location is off. Enable GPS or type your pickup point.",
+    "gps_unavailable": "GPS unavailable",
+    "gps_unavailable_message": "We can't get a GPS fix right now. Move to an open area or type your pickup point.",
+    "seats_eta": "{{seats}} seats · {{minutes}} min",
+    "title": "Book a ride",
+    "pickup": "Pickup",
+    "getting_location": "Getting your location…",
+    "use_current_location": "Current location",
+    "get_my_location": "Use my location",
+    "stop_number": "Stop {{number}}",
+    "add_stop": "+ Add stop",
+    "destination": "Destination",
+    "enter_destination": "Where to?",
+    "choose_a_ride": "Choose a ride",
+    "finding_vehicles": "Finding vehicles near you…",
+    "eta_min": "{{minutes}} min away",
+    "no_vehicles_route": "No vehicles available for this route",
+    "set_route_to_see_fares": "Set your route to see fares",
+    "confirm_ride": "Confirm ride"
   }
 }

@@ -915,5 +915,31 @@
     "block_this_driver": "এই ড্রাইভারকে ব্লক করুন",
     "wont_be_matched_again": "এই ড্রাইভারের সাথে আর ম্যাচ হবেন না",
     "submit_rating": "রেটিং জমা দিন"
+  },
+  "find_ride": {
+    "enter_or_choose_location": "একটি অবস্থান লিখুন বা নির্বাচন করুন",
+    "failed_to_fetch_estimates": "ভাড়া আনা যায়নি। আবার চেষ্টা করুন।",
+    "permission_denied": "অবস্থানের অনুমতি দেওয়া হয়নি",
+    "location_permission_required": "সঠিক জায়গায় পিকআপ দিতে অবস্থানের অনুমতি দিন।",
+    "location_unavailable": "অবস্থান পাওয়া যাচ্ছে না",
+    "location_unavailable_message": "আপনার অবস্থান বন্ধ আছে। GPS চালু করুন বা পিকআপ লিখুন।",
+    "gps_unavailable": "GPS পাওয়া যাচ্ছে না",
+    "gps_unavailable_message": "এই মুহূর্তে GPS সংকেত পাওয়া যাচ্ছে না। খোলা জায়গায় যান বা পিকআপ লিখুন।",
+    "seats_eta": "{{seats}} আসন · {{minutes}} মিনিট",
+    "title": "রাইড বুক করুন",
+    "pickup": "পিকআপ",
+    "getting_location": "আপনার অবস্থান নেওয়া হচ্ছে…",
+    "use_current_location": "বর্তমান অবস্থান",
+    "get_my_location": "আমার অবস্থান ব্যবহার করুন",
+    "stop_number": "স্টপ {{number}}",
+    "add_stop": "+ স্টপ যোগ করুন",
+    "destination": "গন্তব্য",
+    "enter_destination": "কোথায় যাবেন?",
+    "choose_a_ride": "রাইড নির্বাচন করুন",
+    "finding_vehicles": "কাছাকাছি যানবাহন খোঁজা হচ্ছে…",
+    "eta_min": "{{minutes}} মিনিট দূরে",
+    "no_vehicles_route": "এই রুটে কোনো যানবাহন পাওয়া যায়নি",
+    "set_route_to_see_fares": "ভাড়া দেখতে রুট নির্ধারণ করুন",
+    "confirm_ride": "রাইড নিশ্চিত করুন"
   }
 }
