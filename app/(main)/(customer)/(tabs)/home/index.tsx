@@ -19,6 +19,7 @@ import BottomSheet, {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Map from "@/components/Map";
 import { fetchRouteGeometry } from "@/lib/routeGeometry";
+import { getBarikoiReverseGeocodeUrl } from "@/lib/useBarikoiMapStyle";
 import { useCustomer } from "@/store";
 import {
   useRiderStore,
@@ -535,25 +536,32 @@ useEffect(() => {
   }, [bookingStep, categoryEstimates, selectedVehicleType, setSelectedVehicleType]);
 
   // ── Map press handler (select on map) ────────────────────────
+  // Shared v2 reverse geocode (Barikoi optimization plan Batch 3): both map
+  // pin flows go through getBarikoiReverseGeocodeUrl (v2 envelope is a
+  // singular `place` object per the 2026-09-14 live probe). Silent-failure
+  // contract preserved — a failed fetch just leaves the address blank.
+  const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string> => {
+    try {
+      const res = await fetch(getBarikoiReverseGeocodeUrl(lat, lng));
+      if (!res.ok) return "";
+      const data = await res.json();
+      return data?.place?.address || data?.place?.name || "";
+    } catch {
+      return ""; // non-blocking
+    }
+  }, []);
+
   const handleMapPress = useCallback(async (coords: { lat: number; lng: number }) => {
     setMapPinCoords(coords);
     setMapPinLoading(true);
     setMapPinAddress("");
     try {
-      const BARIKOI_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
-      const res = await fetch(
-        `https://barikoi.xyz/v1/api/geocode/reverse/${BARIKOI_KEY}?lon=${coords.lng}&lat=${coords.lat}`,
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setMapPinAddress(data.address || data.name || "");
-      }
-    } catch {
-      // non-blocking
+      const address = await reverseGeocode(coords.lat, coords.lng);
+      if (address) setMapPinAddress(address);
     } finally {
       setMapPinLoading(false);
     }
-  }, []);
+  }, [reverseGeocode]);
 
   // ── Save place handler ─────────────────────────────────────────
   const handleSavePlace = useCallback(async () => {
@@ -950,22 +958,11 @@ useEffect(() => {
           setMapPinCoords(center);
           setMapPinAddress("");
           setMapPinLoading(true);
-          // Reverse geocode the center
+          // Reverse geocode the center (v2 via shared helper)
           (async () => {
-            try {
-              const BARIKOI_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
-              const res = await fetch(
-                `https://barikoi.xyz/v1/api/geocode/reverse/${BARIKOI_KEY}?lon=${center.lng}&lat=${center.lat}`,
-              );
-              if (res.ok) {
-                const data = await res.json();
-                setMapPinAddress(data.address || data.name || "");
-              }
-            } catch {
-              // non-blocking
-            } finally {
-              setMapPinLoading(false);
-            }
+            const address = await reverseGeocode(center.lat, center.lng);
+            if (address) setMapPinAddress(address);
+            setMapPinLoading(false);
           })();
         }}
       >
