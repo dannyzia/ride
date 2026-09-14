@@ -966,5 +966,28 @@
     "earned": "Earned",
     "recent": "Recent referrals",
     "recent_empty": "People you refer will appear here"
+  },
+  "emergency_sos": {
+    "acknowledged": "Acknowledged",
+    "active": "Active",
+    "active_alert_title": "Active SOS Alert",
+    "active_alert_subtitle": "An emergency alert is currently active.",
+    "alert_status_a11y": "Alert status: {{status}}",
+    "resolve_a11y": "Resolve this emergency alert",
+    "resolve_alert": "Resolve Alert",
+    "share_location_a11y": "Share your live location with emergency contacts",
+    "share_live_location": "Share Live Location",
+    "report_safety_a11y": "Report a safety issue",
+    "report_safety_issue": "Report Safety Issue",
+    "checking_active_alerts": "Checking for active alerts...",
+    "title": "Emergency SOS",
+    "tap_for_immediate_help": "Tap for immediate help — your alert reaches our safety team instantly.",
+    "send_sos_a11y": "Send SOS alert and call 999",
+    "send_sos_call_999": "SEND SOS + CALL 999",
+    "alert_queued": "Alert queued — sending...",
+    "confirm_send_title": "Send emergency alert?",
+    "confirm_send_body": "Your location and ride details go to our safety team immediately.",
+    "call_999_send_a11y": "Call 999 and send the emergency alert",
+    "call_999_send": "Call 999 + Send"
   }
 }
