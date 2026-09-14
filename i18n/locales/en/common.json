@@ -1186,5 +1186,42 @@
     "submit_a11y": "Submit the issue report",
     "support_will_review": "Our support team will review it shortly.",
     "toggle_theme": "Toggle light or dark theme"
+  },
+  "apply_promos": {
+    "not_authenticated": "You are not signed in.",
+    "title": "Promos & Vouchers",
+    "enter_code_label": "Enter promo code",
+    "enter_code_placeholder": "e.g. RIDE100",
+    "pass_precedence": "Your ride pass {{name}} ({{percent}}% off) takes precedence — a pass is applied automatically before promo codes.",
+    "applied": "Promo applied! It will show at checkout.",
+    "invalid_code": "Invalid or expired promo code",
+    "failed": "Couldn't apply the promo code",
+    "available": "Available Promotions",
+    "none": "No promotions available right now.",
+    "apply": "Apply"
+  },
+  "finding_driver": {
+    "finding": "Finding your driver",
+    "searching": "Searching nearby drivers...",
+    "nearby_driver": "{{count}} driver nearby",
+    "estimated_wait": "Estimated wait: ~{{minutes}} min",
+    "drivers_busy": "Drivers are busy right now",
+    "no_drivers": "No drivers available",
+    "no_drivers_message": "Try again in a moment — drivers may come online nearby.",
+    "connection_issue": "Connection issue",
+    "connection_message": "We lost contact with the dispatch server. Please check your internet.",
+    "try_again": "Try Again",
+    "cancel_booking": "Cancel Booking"
+  },
+  "loyalty": {
+    "title": "Loyalty Rewards",
+    "reward_points": "Reward Points",
+    "empty": "No rewards available yet — keep riding to earn points!",
+    "points": "{{points}} points",
+    "credit_suffix": " → ৳{{amount}} credit",
+    "redeem": "Redeem",
+    "redeemed": "Reward redeemed",
+    "reward_amount": "৳{{amount}} has been added to your wallet.",
+    "failed": "Couldn't redeem the reward"
   }
 }
