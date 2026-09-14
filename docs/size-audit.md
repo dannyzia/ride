@@ -12,7 +12,7 @@
   - `app.config.js:23-36` — `updates.enabled: false` config block
   - `app.config.js:100` — `@maplibre/maplibre-react-native` plugin
   - `.audit/android/metadata.json` — asset inventory with sizes
-**Last verified:** 2026-09-14, by Coding model, via `npx expo export -p android --source-maps` + source-map parsing script.
+**Last verified:** 2026-09-15, by Coding model, via `npx expo export -p android --source-maps` + source-map parsing script — re-verified after Remediation Pass 1 (§7).
 **How to update:** Re-run `npx expo export -p android --output-dir .audit/android --source-maps`, then re-run the parsing scripts in this file's appendix.
 
 ---
@@ -359,3 +359,57 @@ Parsing script: `node -e` scripts analyzing `sources`, `sourcesContent`, and `fi
 | `Ionicons.ttf` | 208 icon imports across app | 443 KB |
 | `MaterialCommunityIcons.ttf` | Icon usage | 1,150 KB |
 | `AntDesign.ttf` | 3 icon imports | 70.3 KB |
+
+---
+
+## 7. Remediation Pass 1 (ISSUE-60, executed 2026-09-14/15)
+
+**Authorization:** Zia feature-freeze lift for this item only (recorded on Rhizome ISSUE-60 attempt).
+**Method:** every number below is a measured `npx expo export -p android --output-dir .audit/android --source-maps` before/after — no estimates, no unmeasured claims.
+
+### 7.1 Before/after table
+
+| Step | Commit | HBC (B) | Δ HBC | Export assets (B) | Modules | Notes |
+|---|---|---|---|---|---|---|
+| Baseline | — | 6,137,784 | — | 79 files / 5,648,108 (26 TTF + 53 PNG) | 2,536 | §1 above |
+| 1.5 Storybook 5 pkgs → devDependencies | `d4655b5` | 6,137,784 | 0 | unchanged | — | already env-gated out of the production graph by `withStorybook` |
+| 1.6 7 Italic TTFs deleted | `372a299` | 6,137,784 | 0 | unchanged | — | italics were never bundled; repo hygiene only |
+| 1.4 9 dead packages removed + animations deleted + `riv` assetExt | `90ef9c5` | 6,137,784 | 0 | unchanged | 2,493 (−43) | savings are native autolink + install hygiene, not JS |
+| 1.2 4 PNG→WebP reference switches | `3611c8c` | 6,137,768 | −16 | 5,269,048 (−379,060); PNG 49, webp 4 | — | deviation recorded: `notification_icon` keeps PNG (expo-notifications config-plugin native resource; its unreferenced `.webp` deleted instead). `constants/data.ts` is the single import site |
+| 1.3 per-family icon imports (220 files) | `bac94bf` | 5,979,268 | −158,500 | 3,039,476 (−2,229,572); **TTF 26 → 10** | — | barrel `IconsLazy.js` statically requires all 19 family modules, each importing its TTF; 16 unused fonts dropped |
+| 1.1 splash 4,488,622 → 493,893 B PNG | `cf60762` | 5,979,268 | 0 | unchanged | — | splash is NOT in the metro export (verified: neither old nor new MD5 appears in metadata.json; largest exported PNG is 188 KB) — it compiles into the native binary and rides OTA via assetBundlePatterns; disk/native/OTA win −3,994,729 B; original preserved as `Splash_Screen_2.png.bak` (untracked, repo root) until device verification |
+| 1.7 assetBundlePatterns `**/*` → 8 real paths | `39a4b98` | 5,979,268 | 0 | unchanged | — | OTA payloads stop sweeping the entire repo |
+
+**Net measured (export bundle): HBC 6,137,784 → 5,979,268 B (−158,516 B, −2.6%); assets 5,648,108 → 3,039,476 B (−2,608,632 B, −46.2%); modules 2,536 → 2,493.**
+**Additional non-export wins:** splash asset −3.99 MB (native binary + every OTA payload); OTA asset sweep scoped; 9 native modules unlinked (autolink set changed — **dev build required** before next device session).
+
+TTF verification gate (1.3): the bundled set is exactly Ionicons (443 KB) + MaterialCommunityIcons (1,148 KB) + AntDesign (70 KB) + 7 PlusJakartaSans — verified by MD5-matching every exported TTF against its source font file.
+
+Gates after every step: lint 0 errors · tsc 0 errors · check:vacuous clean · check:web-imports 14 safe / 0 risky · jest 2044 passed + 2 skipped · tests/module-isolation green. expo-doctor: 5 pre-existing failures, unchanged, none referencing removed packages.
+
+Incident fixed en route: a 220-file staged list hit the Windows command-line limit in the pre-commit lint stage ("The command line is too long", exit 128) — fixed with `xargs -n 40` chunking, synced to `scripts/git-hooks/pre-commit` (`cf60762`).
+
+### 7.2 Phase 2 findings (investigation only — no code changed)
+
+**2a — API routes do NOT ship to phones.** The source map contains **0** modules under `/app/api/` and **0** `pg`/`pg-*` modules. The 9 "node-ish" matches are react-native's own DOM-event sources plus the userland `buffer/` polyfill documented in `metro.config.js`. Expo Router excludes `+api` routes from native bundles by design. The "270 API routes ship to phones" theory is dead. The real client-graph leaks are 2b and 2c.
+
+**2b — 57 admin modules ride in the native bundle (~687 KB unminified source) and carry 1.22 MB of fonts.** 51 `app/admin/*` + 6 `components/admin/*` modules are in the graph despite being web-only per AGENTS.md. They are why MaterialCommunityIcons.ttf (1,148 KB) + AntDesign.ttf (70 KB) must stay in the 10-TTF set. Native-side entries into admin: `app/+not-found.tsx` (unknown-route redirect → `/admin/login` — a string route, no static import of admin modules) and `components/GlobalActionButtons.tsx` (shared by `app/(main)/_layout.tsx` AND `app/admin/_layout.tsx`; embeds the ADMIN_ROUTES table).
+
+Options evaluated:
+1. **Metro `resolveRequest` stub for non-web platforms (RECOMMENDED).** On native, redirect any resolution under `app/admin/` or `components/admin/` to a stub module; `+not-found` keeps owning the native entry (admins use web). GlobalActionButtons' admin route table moves behind a `.web` extension or is injected via props. Effort ≈ 1 day incl. device regression; rollback = revert metro config. Unlocks ~1.22 MB fonts + admin HBC (~100–200 KB) per phone.
+2. Separate web-only admin app — cleanest long-term, largest migration (auth + deploy + repo split). Defer.
+3. Per-file `.web.tsx` extensions — 51 files of churn for the same result as (1) with worse diffs.
+4. Expo Router route filtering — no supported config in SDK 53.
+
+**2c — h3-js client leak confirmed; cheap to cut.** Exactly **1** h3-js module in the graph (single UMD file — tree-shaking is impossible, as suspected), pulled via `components/Map.tsx:11 → lib/h3.ts getH3Boundary`. Recommended: replace `getH3Boundary` in Map.tsx with a server-fed boundary (small `app/api/geo/h3-boundary+api.ts` backed by zone polygons already in the DB, cached) or a build-time precomputed JSON asset. Effort low; removes ~230 KB HBC from every phone. Do not attempt tree-shaking.
+
+**2d — Supabase client slimming: no safe change today.** Client bundle carries supabase-js(1), auth-js(18), realtime-js(13)+phoenix(1), postgrest-js(1), storage-js(1), functions-js(4) modules. Client code uses only `.auth.*` (lib/session.ts getSession/signOut; AdminShell signOut) and 15 `.from()` Postgrest queries — zero realtime/storage use client-side. But the supabase-js entry (`dist/index.mjs`) statically imports all subpackages — not tree-shakeable at 2.108.2. **Correction to §1:** axios (137 KB source) is NOT in the client via postgrest-js (2.x uses fetch) — it enters via `barikoiapis` (`utils/mapUtils.ts`; axios/dist/browser + 4 call-site modules). Dropping `barikoiapis` for the existing lib fetch wrappers removes axios from phones. Verdict-safe supabase action: none now; revisit on upstream subpath exports.
+
+### 7.3 Phase 3 plan (prioritized — NOT started)
+
+1. **Admin native exclusion (metro stub, 7.2 option 1)** — biggest lever: ~1.22 MB fonts + admin JS off every phone.
+2. **h3-js removal from client** (~230 KB HBC) via server-fed/precomputed boundary (7.2 2c).
+3. **barikoiapis → lib fetch wrappers** — drops axios from the client graph.
+4. **Supabase subpackage slimming** — blocked on upstream; no local change.
+
+Follow-up before any release build: dev build required (1.4 changed the autolink set); device verification of splash rendering (new PNG), map dark style (1.7), and one icon-heavy screen (1.3).
