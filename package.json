@@ -26,6 +26,7 @@
     "check:all": "npm run check:fast && npm run check:web-export",
     "check:web-imports": "node scripts/check-web-imports.js",
     "check:vacuous": "node scripts/check-vacuous-assertions.js",
+    "check:date-in-sql": "node scripts/check-date-in-sql.js",
     "storybook:ios": "cross-env STORYBOOK_ENABLED=true expo run:ios",
     "storybook:android": "cross-env STORYBOOK_ENABLED=true expo run:android"
   },

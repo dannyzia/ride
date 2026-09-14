@@ -56,6 +56,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Date-in-sql gate: blocks raw JS Date objects in drizzle sql templates
+      # (ISSUE-47 bug class — postgres.js TypeError on Date params under 0.45.x)
+      - name: Date-in-sql gate
+        run: npm run check:date-in-sql
+
       - name: Typecheck (root)
         run: npx tsc --noEmit
 
