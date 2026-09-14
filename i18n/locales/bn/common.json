@@ -28,7 +28,9 @@
     "hotspot_within_km": "আপনার {{km}} কিমির মধ্যে সক্রিয় জোন",
     "hotspot_all_zones": "সব সক্রিয় জোন (দূরত্ব অনুসারে সাজাতে লোকেশন চালু করুন)",
     "hotspot_list": "তালিকা",
-    "hotspot_map": "ম্যাপ"
+    "hotspot_map": "ম্যাপ",
+    "edit": "সম্পাদনা",
+    "network_error": "নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।"
   },
   "auth": {
     "phone_entry": "আপনার ফোন নম্বর লিখুন",
@@ -106,7 +108,9 @@
     "reupload_documents": "নথি পুনরায় আপলোড করুন",
     "contact_support": "সাপোর্টে যোগাযোগ করুন",
     "loading_profile": "প্রোফাইল লোড হচ্ছে...",
-    "document_expired": "নথির মেয়াদ শীঘ্রই শেষ হচ্ছে"
+    "document_expired": "নথির মেয়াদ শীঘ্রই শেষ হচ্ছে",
+    "trip_history_placeholder": "আপনার রাইডের ইতিহাস এখানে দেখা যাবে",
+    "vehicle_expired": "যানবাহনের ডকুমেন্টের মেয়াদ শেষের সতর্কতা"
   },
   "tabs": {
     "home": "হোম",
@@ -210,7 +214,8 @@
     },
     "bonus": "বোনাস",
     "total_pending": "মোট মুলতুবি",
-    "wallet_note": "ওয়ালেট ব্যালান্স রাইড সম্পন্ন হলে এবং গেমিফিকেশন পুরস্কার থেকে জমা হয়। উত্তোলন এখনো পাওয়া যায় না।"
+    "wallet_note": "ওয়ালেট ব্যালান্স রাইড সম্পন্ন হলে এবং গেমিফিকেশন পুরস্কার থেকে জমা হয়। উত্তোলন এখনো পাওয়া যায় না।",
+    "unlimited": "আনলিমিটেড"
   },
   "profile": {
     "edit_profile": "প্রোফাইল সম্পাদনা",
@@ -362,6 +367,49 @@
     "low_demand": "নিম্ন চাহিদা",
     "moderate_demand": "মাঝারি চাহিদা",
     "high_demand": "উচ্চ চাহিদা"
+  },
+  "rider_home": {
+    "pickup": "পিকআপ",
+    "current_location": "বর্তমান অবস্থান",
+    "current_location_placeholder": "বর্তমান অবস্থান",
+    "enter_destination": "কোথায় যাবেন?",
+    "add_stop": "স্টপ যোগ করুন",
+    "add_stop_button": "+ স্টপ যোগ করুন",
+    "stop_number": "স্টপ {{number}}",
+    "saved_places": "সংরক্ষিত স্থান",
+    "recent": "সাম্প্রতিক",
+    "select_on_map": "ম্যাপে নির্বাচন করুন",
+    "set_as_pickup": "পিকআপ হিসেবে নিন",
+    "set_as_destination": "গন্তব্য হিসেবে নিন",
+    "tap_location": "ম্যাপে অবস্থান নির্বাচন করতে ট্যাপ করুন",
+    "getting_address": "ঠিকানা নেওয়া হচ্ছে…",
+    "custom_label_placeholder": "লেবেল (যেমন বাসা, অফিস)",
+    "place_saved_title": "স্থান সংরক্ষিত",
+    "place_saved": "{{label}} আপনার স্থানগুলিতে সংরক্ষিত হয়েছে",
+    "save_place_failed": "এই স্থানটি সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।",
+    "next": "পরবর্তী",
+    "edit_route": "রুট সম্পাদনা",
+    "estimated_fare": "আনুমানিক ভাড়া",
+    "calculating_fares": "ভাড়া গণনা করা হচ্ছে…",
+    "estimates_failed": "ভাড়া পাওয়া যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।",
+    "drivers_nearby": "কাছাকাছি {{count}} জন ড্রাইভার",
+    "drivers_nearby_eta": " · ~{{minutes}} মিনিট দূরে",
+    "no_vehicles": "কোনো যানবাহন পাওয়া যায়নি",
+    "no_driver_found": "এই মুহূর্তে কোনো ড্রাইভার পাওয়া যাচ্ছে না। অল্প কিছুক্ষণ পর আবার চেষ্টা করুন।",
+    "min_pickup": "সর্বনিম্ন পিকআপ",
+    "min_trip": "সর্বনিম্ন ট্রিপ",
+    "km": "কিমি",
+    "seats": "আসন",
+    "call_for_ride": "রাইডের জন্য কল করুন",
+    "promos_vouchers": "প্রোমো ও ভাউচার",
+    "percent_off": "{{percent}}% ছাড়",
+    "amount_off": "৳{{amount}} ছাড়",
+    "not_authenticated": "রাইড বুক করতে লগ ইন করুন",
+    "request_failed": "রাইড অনুরোধ ব্যর্থ হয়েছে",
+    "network_error": "নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।",
+    "save_this_place": "এই স্থানটি সংরক্ষণ করুন",
+    "label_home": "বাসা",
+    "label_work": "কাজ"
   },
   "find_customer": {
     "error": "ত্রুটি",
@@ -597,6 +645,11 @@
   },
   "chat": {
     "title": "{{name}} ১২ সাথে চ্যাট",
-    "failed_to_load": "চ্যাট লোড করতে ব্যর্থ"
+    "failed_to_load": "চ্যাট লোড করতে ব্যর্থ",
+    "chat_with": "চ্যাট করুন"
+  },
+  "canceled": {
+    "ride_canceled": "রাইড বাতিল হয়েছে",
+    "ride_canceled_subtitle": "আপনার রাইড বাতিল করা হয়েছে"
   }
 }

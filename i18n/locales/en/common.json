@@ -28,7 +28,9 @@
     "hotspot_within_km": "Active zones within {{km}} km of you",
     "hotspot_all_zones": "All active zones (enable location to sort by distance)",
     "hotspot_list": "List",
-    "hotspot_map": "Map"
+    "hotspot_map": "Map",
+    "edit": "Edit",
+    "network_error": "Network error. Please try again."
   },
   "auth": {
     "phone_entry": "Enter your phone number",
@@ -212,7 +214,8 @@
     },
     "bonus": "bonus",
     "total_pending": "Total pending",
-    "wallet_note": "Wallet balance is credited at ride completion and from gamification rewards. Withdrawals are not yet available."
+    "wallet_note": "Wallet balance is credited at ride completion and from gamification rewards. Withdrawals are not yet available.",
+    "unlimited": "Unlimited"
   },
   "profile": {
     "edit_profile": "Edit Profile",
@@ -364,6 +367,49 @@
     "low_demand": "Low demand",
     "moderate_demand": "Moderate demand",
     "high_demand": "High demand"
+  },
+  "rider_home": {
+    "pickup": "Pickup",
+    "current_location": "Current Location",
+    "current_location_placeholder": "Current location",
+    "enter_destination": "Where to?",
+    "add_stop": "Add stop",
+    "add_stop_button": "+ Add stop",
+    "stop_number": "Stop {{number}}",
+    "saved_places": "Saved places",
+    "recent": "Recent",
+    "select_on_map": "Select on map",
+    "set_as_pickup": "Set as pickup",
+    "set_as_destination": "Set as destination",
+    "tap_location": "Tap to choose a location on the map",
+    "getting_address": "Getting address…",
+    "custom_label_placeholder": "Label (e.g. Home, Work)",
+    "place_saved_title": "Place saved",
+    "place_saved": "{{label}} has been saved to your places",
+    "save_place_failed": "Couldn't save this place. Try again.",
+    "next": "Next",
+    "edit_route": "Edit route",
+    "estimated_fare": "Estimated fare",
+    "calculating_fares": "Calculating fares…",
+    "estimates_failed": "Couldn't get fares. Check your connection and try again.",
+    "drivers_nearby": "{{count}} drivers nearby",
+    "drivers_nearby_eta": " · ~{{minutes}} min away",
+    "no_vehicles": "No vehicles available",
+    "no_driver_found": "No drivers are available right now. Please try again shortly.",
+    "min_pickup": "min pickup",
+    "min_trip": "min trip",
+    "km": "km",
+    "seats": "seats",
+    "call_for_ride": "Call for Ride",
+    "promos_vouchers": "Promos & Vouchers",
+    "percent_off": "{{percent}}% off",
+    "amount_off": "৳{{amount}} off",
+    "not_authenticated": "Please log in to book a ride",
+    "request_failed": "Ride request failed",
+    "network_error": "Network error. Please try again.",
+    "save_this_place": "Save this place",
+    "label_home": "Home",
+    "label_work": "Work"
   },
   "find_customer": {
     "error": "Error",
@@ -599,6 +645,11 @@
   },
   "chat": {
     "title": "Chat with {{name}}",
-    "failed_to_load": "Failed to load chat"
+    "failed_to_load": "Failed to load chat",
+    "chat_with": "Chat with"
+  },
+  "canceled": {
+    "ride_canceled": "Ride canceled",
+    "ride_canceled_subtitle": "Your ride has been canceled"
   }
 }
