@@ -30,9 +30,15 @@ const NODE_BLOCKLIST = [
     // A blanket regex block here would also break the λ (API route) bundle,
     // which legitimately needs ws — that's what caused the 2026-09-08/09-10
     // Render build failures.
-    // Node stdlib — unavailable or broken in React Native
-    /\/node_modules\/stream\/index\.js$/, // require('stream')
-    /\/node_modules\/buffer\/index\.js$/, // require('buffer')
+    // Node stdlib — unavailable or broken in React Native.
+    // NOTE: only the bare 'node:buffer' protocol import is blocked. The
+    // USERLAND buffer@5 npm polyfill (require('buffer/') from
+    // whatwg-url-without-unicode, pulled transitively by expo →
+    // react-native-url-polyfill) bundles fine on RN and MUST NOT be
+    // blocklisted — blocking its real entry (index.js) made the EAS
+    // EAGER_BUNDLE fail with "main module field could not be resolved"
+    // (build 65877413). Same class of bug as the blanket ws regex above.
+    /\/node_modules\/stream\/index\.js$/, // require('stream') — no userland stream polyfill in the graph
     /\/node_modules\/node:stream\//,
     /\/node_modules\/node:buffer\//,
     /\/node_modules\/node:fs\//,
