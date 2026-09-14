@@ -59,10 +59,17 @@ const BarikoiAutocomplete = ({
   useEffect(() => {
     if (query.length < 3) {
       setSuggestions([]);
+      setLoading(false);
       return;
     }
 
-    const fetchSuggestions = async () => {
+    // 400ms debounce — one API call per typing pause, not per keystroke.
+    // setLoading lives INSIDE the timeout so keystrokes don't flicker the
+    // spinner (same pattern as app/(main)/(customer)/autocomplete/index.tsx).
+    // Controller lives in the effect body so cleanup aborts an in-flight
+    // fetch on query change/unmount (same pattern as lib/routeGeometry.ts).
+    const controller = new AbortController();
+    const debounce = setTimeout(async () => {
       setLoading(true);
       try {
         const url = getBarikoiAutocompleteUrl(
@@ -70,20 +77,27 @@ const BarikoiAutocomplete = ({
           userLatitude ?? undefined,
           userLongitude ?? undefined,
         );
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) {
+          throw new Error(`Autocomplete HTTP ${response.status}`);
+        }
         const data = await response.json();
         const places = data.places || data.data || [];
         setSuggestions(places);
         setShowSuggestions(true);
       } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return; // superseded by a newer keystroke
         logger.error("Autocomplete fetch error:", err);
       } finally {
         setLoading(false);
       }
-    };
+    }, 400);
 
-    fetchSuggestions();
-  }, [query]);
+    return () => {
+      clearTimeout(debounce);
+      controller.abort();
+    };
+  }, [query, userLatitude, userLongitude]);
 
   const handleSelect = (place: BarikoiPlaceSuggestion) => {
     const lat = parseFloat(String(place.latitude || place.lat || 0));
