@@ -366,3 +366,11 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
   - v2 reverse geocode `v2/api/search/reverse/geocode?longitude=&latitude=&api_key=` → `{place:{id,address,area,city,distance_within_meters,...}, status:200}` — **SINGULAR `place`, NOT `places[]`** (plan §Batch3 expectation corrected; parse `data.place?.address`).
   - Parity gate: v1 dead → no v1↔v2 comparison possible; the >25% divergence STOP condition is inapplicable. v2 is the only working route source. PROCEED.
 - **Gates baseline:** jest 2035 passed / 2 skipped (immediate pre-change floor for this round).
+
+### Round closeout (2026-09-14, same day)
+
+- **Batches landed:** 1 autocomplete debounce `969f9f5` · 2 poll 60s `b9bdf3b` · 3 home v2 reverse `81adf49` · 4 confirm-ride v2 `2eeaa0c` · 5 dead-code prune `4ef6162` (163 lines) · 5b doc sync `6c1a051`.
+- **Gates:** root tsc 0 (my-app excluded) · utils-server tsc 0 · lint 0 errors (286 warnings, my-app excluded) · jest 2035 passed / 2 skipped — baseline held exactly.
+- **Device verification:** skipped — no execbro/device available this session (code-trace + gates only, per AGENTS.md fallback).
+- **Batch 6 (nav Tier-2):** decision-only; probe artifact above shows v2 has geojson + instruction-grade steps → full migration is feasible WITHOUT dropping steps (D-D geometry concern solved by `geometries=geojson`). Awaits Zia's pick; key fix EXPO_PUBLIC→BARIKOI_API_KEY applies only inside that migration.
+- **EAS:** metro buffer fix `5456c46` (root cause of build 65877413 EAGER_BUNDLE failure); build b1360ce3 then failed on Node heap OOM in EAGER_BUNDLE → NODE_OPTIONS 8GB in production profile `16873db`; build b0a68d74 also OOM'd (heap bump confirmed applied — 412s run) → medium resource class has ~8GB RAM total, an 8GB V8 heap can't fit → resourceClass large added `78c2891`; build 3 queued after that commit. iOS production blocked: Apple distribution credentials not set up (interactive Apple ID login needed — owner action). Push `78b0d84..c0e225f` green (tsc + native-import pre-push).
