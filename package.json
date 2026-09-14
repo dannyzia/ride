@@ -41,10 +41,6 @@
     "@react-native-community/slider": "^4.5.6",
     "@react-navigation/bottom-tabs": "7.2.0",
     "@react-navigation/native": "7.0.14",
-    "@storybook/addon-ondevice-actions": "10.6.0",
-    "@storybook/addon-ondevice-controls": "10.6.0",
-    "@storybook/react-native": "10.6.0",
-    "@storybook/react-native-ui-lite": "10.6.0",
     "@supabase/supabase-js": "^2.106.2",
     "@turf/turf": "^7.3.5",
     "barikoiapis": "^1.0.8",
@@ -107,7 +103,6 @@
     "react-native-webview": "13.13.5",
     "react-native-worklets": "file:shims/react-native-worklets",
     "react-navigation": "^5.0.0",
-    "storybook": "^10.6.0",
     "tailwindcss": "3.4.17",
     "ws": "^8.21.0",
     "zod": "^3.22.0",
@@ -135,6 +130,11 @@
     "jest": "~29.7.0",
     "jest-expo": "^53.0.0",
     "patch-package": "^8.0.1",
-    "typescript": "~5.8.3"
+    "typescript": "~5.8.3",
+    "@storybook/react-native": "10.6.0",
+    "@storybook/addon-ondevice-actions": "10.6.0",
+    "@storybook/addon-ondevice-controls": "10.6.0",
+    "@storybook/react-native-ui-lite": "10.6.0",
+    "storybook": "^10.6.0"
   }
 }
