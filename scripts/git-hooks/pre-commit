@@ -39,11 +39,15 @@ echo "  → Linting $(echo "$STAGED_FILES" | wc -l | tr -d ' ') file(s)..."
 
 # Set ESLINT_USE_FLAT_CONFIG directly (no cross-env dependency — that was the cold-start hang).
 # Add 30s hard timeout so a stuck eslint never blocks a commit silently.
+# xargs -n 40 chunks large staged lists: Windows command-line limit aborts
+# single-invocation eslint runs with "The command line is too long" (fails the
+# commit with exit 128 even when the code is clean). Chunks stay sequential;
+# any chunk failing blocks the commit.
 export ESLINT_USE_FLAT_CONFIG=false
 if command -v timeout >/dev/null 2>&1; then
-  echo "$STAGED_FILES" | xargs timeout 30 npx eslint --quiet
+  echo "$STAGED_FILES" | xargs -n 40 timeout 30 npx eslint --quiet
 else
-  echo "$STAGED_FILES" | xargs npx eslint --quiet
+  echo "$STAGED_FILES" | xargs -n 40 npx eslint --quiet
 fi
 if [ $? -ne 0 ]; then
   echo "❌ Lint failed — commit blocked."
