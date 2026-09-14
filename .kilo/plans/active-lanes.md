@@ -396,3 +396,47 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
   removed). 7 new handler tests (tests/api/navigation/route-v2.test.ts). FEATURES.md row 25 preserved.
   V1 call sites remaining: **0**.
 - Gates: tsc 0 both packages · lint 0 errors · jest 2042 passed / 2 skipped (+7).
+
+## 2026-09-14 — R3.4 nearby-driver markers: verification pass (device blocked on RSA; API-level pass COMPLETE)
+
+- **Scope (per `1788246222101-completion-plan-critique-v2.md` §A3):** device pass only — markers render, update on move, disappear offline; no new code unless defects found.
+- **Device state:** `adb devices` → `24261JEGR10296 unauthorized` across 3 retries incl. kill-server. RSA prompt needs physical acceptance on the phone. Per AGENTS.md: never block on device → delivered API-level + code-trace pass.
+- **Environment brought up:** dev-env-sync (LAN → 10.35.49.148), utils-server :3001, Metro :8081 — both running.
+- **DB drift found + fixed (additive, IF NOT EXISTS, matches schema):** `rides.redispatch_started_at` + `rides.redispatch_attempts` (R3.3 — every ride-scan scheduler query was failing), `zone_heat.valid_from` + `zone_heat.valid_to` (M-tier hotspot window). TD-31 GRANT check: rides/zone_heat pre-date 2026-10-30 → exempt.
+- **Real defect recorded (NOT fixed — shared serialization, out of R3.4 scope):** utils-server job 52 `sweepStaleCouriers` (deliveryHandler.ts:82) fails every tick: postgres.js `ERR_INVALID_ARG_TYPE` on Date params (`couriers.last_seen_at < now()-interval`). Likely drizzle-orm 0.45.2 interaction with postgres.js Date serialization in `update().where()` param binding. Marketplace-domain; affects online-flag decay only. Needs its own fix lane.
+- **API-level verification (all via live Metro server, HTTP):**
+  - `POST /api/ride/nearby-markers` → 200 `{"markers":[]}` for bike_standard probe (correct: only online driver is bike_plus)
+  - Same coords + bike_plus → 200 with the real driver `{id, lat, lng, vehicle_type, zone_tier}` — shape matches client contract exactly
+  - No vehicle_type → driver returned (universal path OK)
+  - Empty result was verified as correct H3-ring filtering, not a data break (driver has coords + h3_cell_res9)
+- **Render chain code-verified:** home/index.tsx:440 (30s poll, FARES step gate) → :1281 `<Map vehicleMarkers>` → Map.tsx:342-360 ShapeSource FeatureCollection + CircleLayer green dots.
+- **To finish R3.4 (needs phone in hand):** accept RSA prompt → launch app → FARES step with bike_plus category → markers visible; move driver, confirm 30s update; driver offline → dot disappears.
+
+## 2026-09-14 — EAS iOS production credentials walkthrough prepared (owner action ready)
+
+- **Deliverable:** `docs/eas-ios-credentials-walkthrough.md` — two vetted paths: (A, recommended) one-time interactive `eas credentials --platform ios` Apple-ID login, EAS stores creds server-side forever after; (B) fully non-interactive via ASC API key env vars (`EXPO_ASC_API_KEY_PATH` / `EXPO_ASC_KEY_ID` / `EXPO_ASC_ISSUER_ID` / `EXPO_APPLE_TEAM_ID` / `EXPO_APPLE_TEAM_TYPE` — contract verified against docs.expo.dev/build/building-on-ci/). Security rules for the .p8 included.
+- **Verified this session:** eas.json has NO appleTeam / app.config.js has NO ios.appleTeam (EAS-side credential lookup → prompts — consistent with the blocked build); bundleIdentifier com.ride.bd + projectId 3293078f-… present; `eas credentials:configure-build --platform ios` hard-requires stdin ("Input is required, but stdin is not readable"); with a dirty tree, eas build aborts at requireCommit BEFORE credential validation ("Commit all changes. Aborting...").
+- **No repo/config changes needed** — blocker is purely Apple-side auth (owner interactive action or ASC API key). Tree-cleanliness step included in the walkthrough because requireCommit aborts first.
+- **Agent-side terminal state:** everything except the Apple ID/ASC steps is ready; queue command = `npx eas build --platform ios --profile production --no-wait`.
+
+## 2026-09-14 — Ledger→board audit: 8 uncovered rounds backfilled (ISSUE-49..56)
+
+- **Method:** all 21 ledger round rows + the pre-ledger sessions cross-referenced against the full 44-issue board. The 2026-09-10 reconciliation had already closed its found gaps (ISSUE-42/43). Rounds fully covered by existing issues were excluded (T5/T6/T9→ISSUE-40; P1-1→ISSUE-42; P2-1→ISSUE-37; npm-audit→ISSUE-43; fleet add-flows→ISSUE-35; BD rulings→ISSUE-36; Phase B→ISSUE-35; §2 supersession→decision on ISSUE-35).
+- **8 rounds had NO board record — backfilled as [backfill] issues, status done, commit-cited:**
+  - ISSUE-49 plan-v2 six-item batch (a14f93f, 2026-09-03)
+  - ISSUE-50 ride-hailing backfill + pre-device audit fixes (3ee5b0c era)
+  - ISSUE-51 R2.4 i18n sweep + R2.4b language selector (b3fbb19)
+  - ISSUE-52 Wave B: B1 payout screen + B2 promo form (1177522, bc2d3d3)
+  - ISSUE-53 D0 stage-aware fare selector, 6 call sites (64318e5, 1fa9eb2)
+  - ISSUE-54 Wave C: C3 i18n dynamic routes + C4 Barikoi verdict (83cb893, 78b0d84)
+  - ISSUE-55 npm workspace / CI reproducibility (b346ec4, ee60e77, 5144940)
+  - ISSUE-56 tooling housekeeping batch (5e98daa, 2bc98ef, 2587a81, 8415864)
+- **Also verified covered by in-session issues:** ISSUE-44 (Barikoi 0–5b), ISSUE-45 (EAS fix + Batch 6, finish pending lease expiry), ISSUE-46/47 (R3.4 pass + job-52 bug), ISSUE-48 (iOS credentials walkthrough).
+- **Board after:** every ledger round now has a Rhizome record. No code touched; no gates affected.
+
+## 2026-09-14 — Batch 6 verified + ISSUE-45 review-closed + ISSUE-57 owner-decision issue
+
+- **Batch 6 (nav v1→v2)**: requested as new work; verified ALREADY LANDED at commit `13d5310` (endpoint `app/api/navigation/route+api.ts`: v2 URL + `geometries=geojson` + `steps=true`, server-side `BARIKOI_API_KEY`, client contract unchanged; 7-test suite `tests/api/navigation/route-v2.test.ts`). No redo. Test suite re-run live: 7/7 passed.
+- **ISSUE-45** (EAS fix + Batch 6): orphaned lease from session restart expired 08:17Z → reclaimed → review attempt `01M2FMN2TJVPVK8ZRZK74XCG2F` finished `approved` → **done** (v2). Artifacts attached: `95199d6`, `13d5310`, `b5b50f9`, EAS build `f4f03091` (FINISHED).
+- **ISSUE-57** created **blocked** (owner-decision): EAS build memory strategy — OOM chain root-caused and fixed (f4f03091 proof); Zia to rule on D-1 web-output permanence, D-2 headroom policy (2560MB verified sufficient; raise to 4096 / shrink graph / EAS plan upgrade), D-3 plan-upgrade necessity. Related to ISSUE-44/45. `resourceClass: large` remains paywalled on the free plan (reverted `78c2891`→`4ab2bc6`).
+- Board↔ledger: consistent.
