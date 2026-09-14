@@ -1296,5 +1296,77 @@
     "empty_desc": "Receipts from your completed rides appear here.",
     "download": "Download",
     "share": "Share"
+  },
+  "driver_history": {
+    "title": "Trip History",
+    "no_trips": "No trips yet",
+    "failed_to_load": "Couldn't load trips",
+    "trip_not_found": "Trip not found",
+    "failed_to_load_trip": "Couldn't load the trip",
+    "trip_details": "Trip Details",
+    "from": "From",
+    "to": "To",
+    "destination": "Destination"
+  },
+  "driver_info": {
+    "title": "Driver",
+    "driver": "Driver",
+    "call": "Call",
+    "chat": "Chat",
+    "na": "N/A"
+  },
+  "help_support": {
+    "quick_help": "Quick Help",
+    "faq_desc": "Answers to common questions",
+    "contact_desc": "Chat, email, or call us",
+    "emergency_desc": "Always call 999 in an emergency",
+    "legal": "Legal",
+    "call_support": "Call Support"
+  },
+  "history_detail": {
+    "driver": "Driver",
+    "from": "From",
+    "to": "To",
+    "distance_duration": "Distance & Duration",
+    "view_receipt": "View Receipt",
+    "not_found": "Ride not found",
+    "failed_to_load": "Couldn't load the ride"
+  },
+  "inbox": {
+    "title": "Inbox",
+    "no_notifications": "No notifications",
+    "no_notifications_sub": "Updates about your rides will appear here.",
+    "load_failed": "Couldn't load notifications",
+    "pull_to_retry": "Pull down to retry",
+    "using_sample_data": "Showing sample data",
+    "toggle_theme": "Toggle light or dark theme"
+  },
+  "notifications_screen": {
+    "alert_types": "Alert Types",
+    "channels": "Channels",
+    "load_failed": "Couldn't load preferences",
+    "save": "Save",
+    "save_failed": "Couldn't save preferences",
+    "saved": "Preferences saved",
+    "toggle_theme": "Toggle light or dark theme"
+  },
+  "ride_details_scheduled": {
+    "title": "Scheduled Ride",
+    "ride": "Ride",
+    "pickup_label": "Pickup",
+    "destination_label": "Destination",
+    "fare_label": "Fare",
+    "ride_not_found": "Ride not found",
+    "failed_to_load": "Couldn't load the ride"
+  },
+  "ride_scheduled": {
+    "title": "Ride Scheduled!",
+    "subtitle": "Your driver will arrive at the scheduled time.",
+    "pickup_at": "Pickup at {{time}}",
+    "reference": "Reference: {{ref}}",
+    "view_schedule": "View Schedule",
+    "a11y_view_schedule": "View your scheduled ride",
+    "a11y_back_to_home": "Back to home",
+    "toggle_theme": "Toggle light or dark theme"
   }
 }

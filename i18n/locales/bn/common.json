@@ -1296,5 +1296,77 @@
     "empty_desc": "সম্পন্ন রাইডের রিসিটগুলো এখানে দেখা যাবে।",
     "download": "ডাউনলোড",
     "share": "শেয়ার"
+  },
+  "driver_history": {
+    "title": "ট্রিপ ইতিহাস",
+    "no_trips": "এখনো কোনো ট্রিপ নেই",
+    "failed_to_load": "ট্রিপগুলো লোড করা যায়নি",
+    "trip_not_found": "ট্রিপ পাওয়া যায়নি",
+    "failed_to_load_trip": "ট্রিপটি লোড করা যায়নি",
+    "trip_details": "ট্রিপের বিস্তারিত",
+    "from": "থেকে",
+    "to": "পর্যন্ত",
+    "destination": "গন্তব্য"
+  },
+  "driver_info": {
+    "title": "ড্রাইভার",
+    "driver": "ড্রাইভার",
+    "call": "কল",
+    "chat": "চ্যাট",
+    "na": "প্রযোজ্য নয়"
+  },
+  "help_support": {
+    "quick_help": "দ্রুত সহায়তা",
+    "faq_desc": "সাধারণ প্রশ্নের উত্তর",
+    "contact_desc": "চ্যাট, ইমেইল বা কল করুন",
+    "emergency_desc": "জরুরি অবস্থায় সবসময় ৯৯৯-এ কল করুন",
+    "legal": "আইনি",
+    "call_support": "সহায়তায় কল করুন"
+  },
+  "history_detail": {
+    "driver": "ড্রাইভার",
+    "from": "থেকে",
+    "to": "পর্যন্ত",
+    "distance_duration": "দূরত্ব ও সময়",
+    "view_receipt": "রিসিট দেখুন",
+    "not_found": "রাইড পাওয়া যায়নি",
+    "failed_to_load": "রাইডটি লোড করা যায়নি"
+  },
+  "inbox": {
+    "title": "ইনবক্স",
+    "no_notifications": "কোনো নোটিফিকেশন নেই",
+    "no_notifications_sub": "আপনার রাইড সংক্রান্ত খবর এখানে দেখা যাবে।",
+    "load_failed": "নোটিফিকেশন লোড করা যায়নি",
+    "pull_to_retry": "আবার চেষ্টা করতে নিচে টানুন",
+    "using_sample_data": "নমুনা ডেটা দেখানো হচ্ছে",
+    "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন"
+  },
+  "notifications_screen": {
+    "alert_types": "সতর্কতার ধরন",
+    "channels": "চ্যানেল",
+    "load_failed": "পছন্দগুলো লোড করা যায়নি",
+    "save": "সংরক্ষণ",
+    "save_failed": "পছন্দগুলো সংরক্ষণ করা যায়নি",
+    "saved": "পছন্দগুলো সংরক্ষিত হয়েছে",
+    "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন"
+  },
+  "ride_details_scheduled": {
+    "title": "নির্ধারিত রাইড",
+    "ride": "রাইড",
+    "pickup_label": "পিকআপ",
+    "destination_label": "গন্তব্য",
+    "fare_label": "ভাড়া",
+    "ride_not_found": "রাইড পাওয়া যায়নি",
+    "failed_to_load": "রাইডটি লোড করা যায়নি"
+  },
+  "ride_scheduled": {
+    "title": "রাইড নির্ধারিত হয়েছে!",
+    "subtitle": "নির্ধারিত সময়ে আপনার ড্রাইভার পৌঁছে যাবেন।",
+    "pickup_at": "পিকআপ {{time}}-এ",
+    "reference": "রেফারেন্স: {{ref}}",
+    "view_schedule": "সময়সূচি দেখুন",
+    "a11y_view_schedule": "আপনার নির্ধারিত রাইড দেখুন",
+    "a11y_back_to_home": "হোমে ফিরে যান",
+    "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন"
   }
 }
