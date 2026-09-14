@@ -354,3 +354,15 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
   - **ISSUE-42** [done] — P1-1 promo max_uses TOCTOU fix + real-Postgres concurrency harness (commits 8315120, ad05b42, 04ca580) had no board record.
   - **ISSUE-43** [done] — npm-audit triage (82→66, critical→0) + cheap-kills dependency batch (78d097f) + hosted audit gates (in 57d1c5f) had no board record.
 - **Commits:** none new to code this round — board-only reconciliation (2 issues created; ledger row via this script).
+
+## 2026-09-14 — Barikoi optimization round (plan 1788928449599, Batches 0–5b)
+
+- **Intent:** Coding agent executes Batches 0–5b of the Barikoi optimization plan. Owner of: components/BarikoiAutocomplete.tsx, lib/useBarikoiMapStyle.ts, lib/calcRegion.ts, app/api/navigation/route+api.ts, app/(main)/(customer)/confirm-ride/index.tsx, app/(main)/(customer)/(tabs)/home/index.tsx, app/(main)/(rider)/find-customer/index.tsx. Batch 6 (nav Tier-2) is decision-only — probe recorded, awaits Zia.
+- **WRITE_DISCIPLINE R3:** index verified clean at round start (empty `git diff --cached --stat`).
+- **Pre-flight drift:** comma file `confirm-ride,index.tsx` ALREADY deleted in 41ab0ae (prior session, "adopt exhaustive-deps fix from stray duplicate route") — Batch 4 deletion item already satisfied; Batch 4 = confirm-ride URL swap only.
+- **PROBE ARTIFACT (live, 2026-09-14, OD pair Banani 23.7925,90.4078 → Gulshan 23.7975,90.4117):**
+  - v1 `v1/api/distance/directions/{key}?from=lng,lat&to=lng,lat` → **404 HTML ("Not Found")** — endpoint DEAD (confirms routeSplit.ts precedent). Both live v1 directions consumers (confirm-ride:163, navigation/route+api.ts:23) are hitting this.
+  - v2 `v2/api/route/lng,lat;lng,lat?api_key=&geometries=polyline|geojson&steps=true` → `code:"Ok"`, duration 276.8s, distance 973.6m, GeoJSON LineString geometry (geojson mode), instruction-grade `legs[].steps[].maneuver.instruction`, driving-side, street names (Bangla). Polyline mode: geometry string (expected). overview=false → geometry undefined (expected).
+  - v2 reverse geocode `v2/api/search/reverse/geocode?longitude=&latitude=&api_key=` → `{place:{id,address,area,city,distance_within_meters,...}, status:200}` — **SINGULAR `place`, NOT `places[]`** (plan §Batch3 expectation corrected; parse `data.place?.address`).
+  - Parity gate: v1 dead → no v1↔v2 comparison possible; the >25% divergence STOP condition is inapplicable. v2 is the only working route source. PROCEED.
+- **Gates baseline:** jest 2035 passed / 2 skipped (immediate pre-change floor for this round).

@@ -2938,7 +2938,7 @@ phases:
         required_exports:
           - "splitRoute(pickup: {lat,lng}, dropoff: {lat,lng}, originCityPolygon: Array<{lat,lng}>): Promise<{inside_km: number, outside_km: number}>"
         implementation_rules:
-          - "Primary path: call Barikoi Directions API (https://barikoi.xyz/v1/api/directions/v1/driving?geometries=polyline&overview=full) with BARIKOI_API_KEY."
+          - "Primary path: call the Barikoi v2 route API (https://barikoi.xyz/v2/api/route/{lng},{lat};{lng},{lat}?api_key=BARIKOI_API_KEY&geometries=polyline) with BARIKOI_API_KEY. The older v1/api/directions/v1/driving path is dead (HTTP 404)."
           - "Decode the Google-encoded polyline response using @mapbox/polyline into [lng, lat] coordinates."
           - "Convert decoded coordinates to GeoJSON LineString for Turf.js."
           - "Use @turf/turf booleanPointOnLine / booleanPointInPolygon to classify each segment point as inside or outside the origin city polygon."
