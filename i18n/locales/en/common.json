@@ -1088,5 +1088,41 @@
     "email_cant_change": "Email can't be changed — contact support to update it.",
     "save_profile_a11y": "Save profile changes",
     "save": "Save Changes"
+  },
+  "contact_support": {
+    "unavailable_title": "Support unavailable",
+    "unavailable_message": "No support channel is available right now.",
+    "something_went_wrong": "Something went wrong",
+    "could_not_open": "Couldn't open {{name}}",
+    "call_emergency": "Call 999",
+    "emergency_confirm": "This opens your phone app and dials 999. Continue?",
+    "call_999": "Call 999",
+    "toggle_theme": "Toggle light or dark theme",
+    "channels": "Contact Channels",
+    "live_chat": "Live Chat",
+    "email_support": "Email Support",
+    "call_us": "Call Us",
+    "email_prefix": "Email us at",
+    "phone_prefix": "Call us at",
+    "emergency": "In an emergency, always call 999 first.",
+    "call_emergency_a11y": "Call the national emergency number 999"
+  },
+  "lost_items": {
+    "load_failed": "Couldn't load your reports",
+    "validation": "Select a ride and describe the item (at least 3 characters).",
+    "reported": "Report submitted",
+    "driver_notified": "The driver has been notified about your lost item.",
+    "failed": "Couldn't submit the report",
+    "empty": "No lost item reports yet.",
+    "status_photo_provided": "Photo available from the ride record",
+    "return_method": "Return method: {{method}}",
+    "fee_amount": "Return fee: ৳{{amount}}",
+    "report": "Report Lost Item",
+    "select_ride": "Select the ride",
+    "ride_fallback": "Ride",
+    "describe_item": "Describe the item",
+    "placeholder": "e.g. Black umbrella in the back seat",
+    "submitting": "Submitting...",
+    "submit": "Submit Report"
   }
 }
