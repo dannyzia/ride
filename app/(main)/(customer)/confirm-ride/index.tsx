@@ -160,11 +160,19 @@ const ConfirmRidePage = () => {
 
     const fetchRoute = async () => {
       try {
-        const url = `https://barikoi.xyz/v1/api/distance/directions/${BARIKOI_API_KEY}?from=${userLongitude},${userLatitude}&to=${destinationLongitude},${destinationLatitude}`;
+        // v2 route (Barikoi optimization plan Batch 4) — the v1 directions
+        // endpoint is dead (live probe 2026-09-14 returned 404 HTML; same
+        // precedent as lib/routeSplit.ts). lng-first in BOTH path positions,
+        // same order as v1's from= (a lat/lng swap here is the classic
+        // silent bug). Proven endpoint — lib/routeGeometry.ts uses it in prod.
+        const url = `https://barikoi.xyz/v2/api/route/${userLongitude},${userLatitude};${destinationLongitude},${destinationLatitude}?api_key=${BARIKOI_API_KEY}&geometries=polyline`;
         const response = await fetch(url);
         const data = await response.json();
-        const seconds = data.duration || data.routes?.[0]?.duration || 0;
-        const meters = data.distance || data.routes?.[0]?.distance || 0;
+        if (data.code !== "Ok" || !data.routes?.length) {
+          throw new Error(`Barikoi route ${data.code ?? "error"}`);
+        }
+        const seconds = data.duration || data.routes[0]?.duration || 0;
+        const meters = data.distance || data.routes[0]?.distance || 0;
 
         const timeInMinutes = Math.round((seconds + 300) / 60);
         const duration =
