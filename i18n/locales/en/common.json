@@ -862,5 +862,33 @@
     "dispute_fare": "Dispute fare",
     "report_a11y": "Report an issue with this ride",
     "report_issue": "Report issue"
+  },
+  "fare_dispute": {
+    "not_authenticated": "Please log in to dispute a fare",
+    "failed_to_load_ride": "Couldn't load this ride",
+    "network_error": "Network error. Please try again.",
+    "failed_to_submit": "Couldn't submit your dispute. Please try again.",
+    "dispute_submitted_title": "Dispute submitted",
+    "refund_approved": "A refund of {{amount}} has been approved and will reach your wallet shortly.",
+    "will_review": "Our team will review your dispute and update you shortly.",
+    "title": "Dispute fare",
+    "toggle_theme": "Toggle light or dark theme",
+    "no_ride_title": "Nothing to dispute",
+    "no_ride_subtitle": "This ride doesn't exist or isn't eligible for a fare dispute",
+    "section_ride": "Ride",
+    "retry_load_a11y": "Retry loading the ride",
+    "fare_charged": "Fare charged",
+    "expected_fare": "What should you have paid?",
+    "zero_placeholder": "0",
+    "expected_fare_a11y": "The fare you believe is correct, in taka",
+    "what_should_you_pay": "Tell us what you expected to pay — we'll compare it with what was charged.",
+    "reason": "Reason",
+    "reason_a11y": "Dispute reason: {{label}}",
+    "details": "Details",
+    "explain_placeholder": "Explain what happened…",
+    "more_chars_needed": "{{count}} more characters needed",
+    "retry_submit_a11y": "Retry submitting the dispute",
+    "submit_a11y": "Submit fare dispute",
+    "submit_dispute": "Submit dispute"
   }
 }
