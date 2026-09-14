@@ -36,7 +36,7 @@
       "distribution": "store",
       "env": {
         "EAS_BUILD_PROFILE": "production",
-        "NODE_OPTIONS": "--max-old-space-size=8192"
+        "NODE_OPTIONS": "--max-old-space-size=2560"
       },
       "android": {
         "buildType": "app-bundle"

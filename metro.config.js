@@ -98,6 +98,16 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     return metroResolve(context, moduleName, platform);
 };
 
+// EAS build workers: the eager-bundle (export:embed) Node process must fit
+// INSIDE the medium resource class (~8 GB RAM total, shared with Metro
+// transformer workers). An 8GB old-space cap let V8 balloon until the
+// container OOM'd (EAS builds 65877413/b1360ce3/b0a68d74). 2560 MB is
+// verified sufficient locally, cold-cache (133s, 9.79 MB hbc, 2493 modules).
+// Same failure class as the buffer blocklist: default-worker OOM, not graph bloat.
+if (process.env.EAS_BUILD) {
+    config.transformer.maxWorkers = 2;
+}
+
 module.exports = withStorybook(withNativeWind(config, {
     input: "./global.css",
 }));
