@@ -374,3 +374,25 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Device verification:** skipped — no execbro/device available this session (code-trace + gates only, per AGENTS.md fallback).
 - **Batch 6 (nav Tier-2):** decision-only; probe artifact above shows v2 has geojson + instruction-grade steps → full migration is feasible WITHOUT dropping steps (D-D geometry concern solved by `geometries=geojson`). Awaits Zia's pick; key fix EXPO_PUBLIC→BARIKOI_API_KEY applies only inside that migration.
 - **EAS:** metro buffer fix `5456c46` (root cause of build 65877413 EAGER_BUNDLE failure); build b1360ce3 then failed on Node heap OOM in EAGER_BUNDLE → NODE_OPTIONS 8GB in production profile `16873db`; build b0a68d74 also OOM'd (heap bump confirmed applied — 412s run) → medium resource class has ~8GB RAM total, an 8GB V8 heap can't fit → resourceClass large attempted `78c2891` but EAS REJECTED it — paywalled (needs Production/Enterprise/On-Demand plan; account is free) — reverted `see revert commit`. EAGER_BUNDLE OOM on medium class is now an OWNER DECISION: subscribe to a paid plan, or shrink the eager-bundle graph. Blocker recorded; no further build attempts this round. iOS production blocked: Apple distribution credentials not set up (interactive Apple ID login needed — owner action). Push `78b0d84..c0e225f` green (tsc + native-import pre-push).
+
+## 2026-09-14 (evening) — EAS OOM root-caused+fixed; Batch 6 decided+landed
+
+- **EAS eager-bundle OOM — TRUE root cause found:** app.config.js resolves `web.output: 'server'` in
+  production → EAS export:embed runs exportStandaloneServerAsync → bundles every Expo API route as a
+  λ bundle in the SAME Node process. Log evidence (beb4f1ce): client bundle COMPLETED (2536 modules)
+  then OOM mid-lambda at the 4096MB cap. The 8GB/2560MB caps were misdiagnosis — the graph was never
+  the client's 2493 modules; it was client + ~40 server graphs.
+- **Fix `95199d6`:** EXPO_WEB_OUTPUT=single on the production profile (staging-profile precedent)
+  skips the server bundle — the AAB never needed it (API routes run server-side). Verified locally:
+  0 λ bundles, client-only export 50s at 2560MB. Heap cap set 2560 (`95199d6`).
+- **PROOF: EAS build f4f03091 FINISHED** (versionCode 27, commit 34fad49) on the free medium resource
+  class. AAB artifact produced. First successful EAS production build (65877413/b1360ce3/b0a68d74/
+  8fb3f09d/beb4f1ce all failed before it).
+- Parallel-session residue committed per owner precedent: docs/size-audit.md (156768d, with
+  fact-check note — its gifted-chat/svg "dead" claims are wrong, both imported) and .audit/ (34fad49).
+- Gate hygiene: my-app/ scaffold excluded from eslint (2d11e47) + tsc (c0e225f).
+- **Batch 6 DECIDED + LANDED `13d5310`:** nav Tier-2 v1→v2, geometries=geojson + steps=true, client
+  contract unchanged, 502 route_unavailable on non-Ok, key fix BARIKOI_API_KEY (EXPO_PUBLIC_ leak
+  removed). 7 new handler tests (tests/api/navigation/route-v2.test.ts). FEATURES.md row 25 preserved.
+  V1 call sites remaining: **0**.
+- Gates: tsc 0 both packages · lint 0 errors · jest 2042 passed / 2 skipped (+7).
