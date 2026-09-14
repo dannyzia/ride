@@ -37,7 +37,16 @@ export default {
     runtimeVersion: {
       policy: "appVersion",
     },
-    assetBundlePatterns: ["**/*"],
+    assetBundlePatterns: [
+      "assets/images/*",
+      "assets/fonts/*",
+      "assets/icons/*",
+      "assets/splash/*",
+      "assets/logo/*",
+      "assets/map-styles/*",
+      "assets/notification_sound.wav",
+      "assets/notification_sound_other.wav",
+    ],
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.ride.bd",
