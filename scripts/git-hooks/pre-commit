@@ -14,6 +14,15 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+echo "⏳ Pre-commit: Date-in-sql gate (staged files)..."
+node scripts/check-date-in-sql.js --staged
+if [ $? -ne 0 ]; then
+  echo "❌ Date-in-sql gate failed — commit blocked."
+  echo "   Raw JS Date objects in sql templates crash postgres.js (ISSUE-47)."
+  echo "   Use DB-side now() - interval or typed drizzle operators (lt/eq/gt)."
+  exit 1
+fi
+
 echo "⏳ Pre-commit: lint staged files..."
 
 # Get staged .ts/.tsx/.js/.jsx files (only those still on disk)
@@ -27,7 +36,15 @@ if [ -z "$STAGED_FILES" ]; then
 fi
 
 echo "  → Linting $(echo "$STAGED_FILES" | wc -l | tr -d ' ') file(s)..."
-echo "$STAGED_FILES" | xargs npx cross-env ESLINT_USE_FLAT_CONFIG=false eslint --quiet
+
+# Set ESLINT_USE_FLAT_CONFIG directly (no cross-env dependency — that was the cold-start hang).
+# Add 30s hard timeout so a stuck eslint never blocks a commit silently.
+export ESLINT_USE_FLAT_CONFIG=false
+if command -v timeout >/dev/null 2>&1; then
+  echo "$STAGED_FILES" | xargs timeout 30 npx eslint --quiet
+else
+  echo "$STAGED_FILES" | xargs npx eslint --quiet
+fi
 if [ $? -ne 0 ]; then
   echo "❌ Lint failed — commit blocked."
   exit 1
