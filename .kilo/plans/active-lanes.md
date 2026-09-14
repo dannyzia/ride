@@ -464,3 +464,12 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Gates after every step:** lint 0 · tsc 0 ×2 · vacuous clean · web-imports 14/0 · jest 2044+2skipped · module-isolation 2 · expo-doctor unchanged-5.
 - **Deviations recorded:** notification_icon keeps PNG (native notification resource, .webp twin deleted instead — plan mandated smaller-format switch, PNG is the referenced format there).
 - **Rhizome:** ISSUE-60 → review (attempt 01M2GKGG42NZRX4MSEY9TV4TWG completed, checkpoint + 8 artifacts attached). Phase 3 NOT started (STOP gate). Dev build required next session (autolink set changed).
+
+## 2026-09-15 — ISSUE-59 rider_home i18n fix + locale-completeness guard — done
+
+- **Push first:** 9 size-remediation commits (d4655b5..48e5764) → origin/implementation, pre-push gates green.
+- **Fix (596958d):** 41 rider_home.* keys restored to en+bn (real Bangla, interpolation params preserved). Guard added to i18n-smoke: hard-fail on rider_home.* missing / en-bn key drift / param drift; shrink-only baseline 733 for pre-existing debt. Red-check verified (phantom key fails suite).
+- **Stragglers also fixed:** driver drift ×2 (bn), common.edit/network_error, canceled.ride_canceled(+_subtitle), chat.chat_with, wallet.unlimited.
+- **Gates:** lint 0 · tsc 0 · vacuous clean · web-imports 14/0 · jest 2048+2skipped.
+- **Follow-up:** ISSUE-61 (ready, medium) — repay ~733 raw-key debt across 65 files, baseline shrinks as namespaces complete.
+- **Board:** ISSUE-59 → done (attempt 01M2GNZFQ12KNXRKJAP48D9VP8).
