@@ -890,5 +890,30 @@
     "retry_submit_a11y": "Retry submitting the dispute",
     "submit_a11y": "Submit fare dispute",
     "submit_dispute": "Submit dispute"
+  },
+  "rate_driver": {
+    "missing_ride_id": "Ride reference missing — reopen this screen from your ride history",
+    "unblock_title": "Unblock this driver?",
+    "unblock_message": "You'll be able to be matched with them again.",
+    "unblock": "Unblock",
+    "block_title": "Block this driver?",
+    "block_message": "You won't be matched with them again.",
+    "block": "Block",
+    "poor": "Poor",
+    "fair": "Fair",
+    "good": "Good",
+    "very_good": "Very good",
+    "excellent": "Excellent",
+    "tap_to_rate": "Tap to rate",
+    "how_was_ride": "How was your ride?",
+    "could_not_load_driver": "Couldn't load driver information",
+    "no_driver_info": "Driver details unavailable",
+    "driver": "Driver",
+    "add_tip_optional": "Add a tip (optional)",
+    "custom": "Custom",
+    "custom_tip_placeholder": "Enter amount",
+    "block_this_driver": "Block this driver",
+    "wont_be_matched_again": "You won't be matched with this driver again",
+    "submit_rating": "Submit rating"
   }
 }
