@@ -473,3 +473,10 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Gates:** lint 0 · tsc 0 · vacuous clean · web-imports 14/0 · jest 2048+2skipped.
 - **Follow-up:** ISSUE-61 (ready, medium) — repay ~733 raw-key debt across 65 files, baseline shrinks as namespaces complete.
 - **Board:** ISSUE-59 → done (attempt 01M2GNZFQ12KNXRKJAP48D9VP8).
+## 2026-09-15 — ISSUE-61 i18n debt repaid (733 keys → 0, guard total)
+
+- **Owner:** Buffy (this thread). Freeze lifted for ISSUE-61 only.
+- **Work:** 20 namespace batches (batches 1-40 in commit messages), 733 missing t() keys backfilled EN+BN (real Bangla). 1 call-site bug fixed: profile used flat settings.appearance clobbering the nested object payout-method needs → switched to app_appearance.title. Guard in lib/__tests__/i18n-smoke.test.ts upgraded from shrink-only baseline 733 to TOTAL (any missing key fails CI). Red-checks: phantom-key hard-fail verified twice.
+- **Commits:** 12d4d4d..1906971 (21 commits incl. 596958d ISSUE-59 + 2de04b2 ledger row), pushed origin/implementation (CI run pending).
+- **Gates:** lint 0 errors · tsc 0 (root + utils-server) · vacuous clean · jest 2048 passed + 2 skipped (floor 2048) · module-isolation green.
+- **Rhizome:** ISSUE-61 attempt note saved + closed done.
