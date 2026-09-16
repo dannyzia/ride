@@ -91,7 +91,7 @@
       "default": "ডিফল্ট",
       "edit_method": "পদ্ধতি সম্পাদনা",
       "delete_confirm_title": "পেআউট পদ্ধতি মুছুন?",
-      "delete_confirm_body": "{type} {number} মুছে ফেলুন?",
+      "delete_confirm_body": "{{type}} {{number}} মুছে ফেলুন?",
       "invalid_number": "অবৈধ নম্বর",
       "invalid_phone_hint": "অনুগ্রহ করে একটি বৈধ ১১ সংখ্যার ফোন নম্বর লিখুন (০১ দিয়ে শুরু)",
       "invalid_bank_hint": "অনুগ্রহ করে একটি বৈধ অ্যাকাউন্ট নম্বর লিখুন (৮-২০ সংখ্যা)",
