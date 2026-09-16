@@ -480,3 +480,14 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **Commits:** 12d4d4d..1906971 (21 commits incl. 596958d ISSUE-59 + 2de04b2 ledger row), pushed origin/implementation (CI run pending).
 - **Gates:** lint 0 errors · tsc 0 (root + utils-server) · vacuous clean · jest 2048 passed + 2 skipped (floor 2048) · module-isolation green.
 - **Rhizome:** ISSUE-61 attempt note saved + closed done.
+
+## 2026-09-16 — Device Day (ISSUE-22 QA + B1/B2/D0/i18n visual) — partial, physical-blocked
+
+- **Owner:** Buffy (this thread). LAN 10.35.49.148 · Metro :8081 · utils-server :3001 (local tree, M2 120s-staleness live-exercised).
+- **Prod DB check (disclosed):** .env.local DATABASE_URL = hosted Supabase — device day ran against prod. `drizzle-kit push` (additive: rides.redispatch_started_at/redispatch_attempts, notifications.read_at/deleted_at, idempotency_keys unique index) landed on prod, no data loss. information_schema re-verified: all 4 objects present.
+- **E2E verified:** ride `dabe1483` booked via real UI taps (Bike tile → GPS pickup → Savar destination → FARES ৳441/535/589 identical across sessions → Bike Plus). Offer delivered, debit-on-offer held; yesterday ride `c20eeffd` full accept→matched→"on the way" screen. M2 staleness filter live-verified (stale driver excluded; fresh heartbeat eligible).
+- **Fixes landed:** `c206079` fare-detail interpolation params (km/min/seats) + ghost driver-tabs Settings registration removed (404 fix, verified on-device); `3074f74` drawer navigate→push uniform (A/B-proven: all router.navigate (tabs) items 404'd on expo-router 5.0.7, push works). Gates each: lint 0 · tsc 0 ×2 · jest 2048.
+- **ISSUE-62 filed (critical/ready):** utils-server DB queue freezes while HTTP alive (Supavisor transaction-pooler prepared-statement wedge, ~30–60 min per restart cycle). Restart = current workaround.
+- **Rider-WS UX finding (low, recorded here — no new issue):** booking a ride while the rider WS is disconnected leaves the rider stuck on FARES (no searching state) even though dispatch delivers server-side. Client should poll/subscribe-or-refetch on ride:create when socket is down.
+- **Findings (open):** route-URL collisions `/wallet` (customer vs driver tabs — customer wallet/index.tsx unregistered), `/profile`; deep links `ride://` not in installed dev-client manifest (built pre-W-4); dev-launcher serves stale cached bundles after fixes (Reload required); RSA re-prompt after adb-server restarts; MIUI NotificationShade wedge on karna eats input (reboot fixes); Pixel PIN-locked blocks adb-only sessions.
+- **BLOCKED (physical):** B1 payout visual pass + C1 remaining verticals + i18n Bangla visual — need Zia to unlock the Pixel (PIN) and/or re-seat karna's USB cable. All code paths for B1 are unit-tested; only the visual pass is pending.
