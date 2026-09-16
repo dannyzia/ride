@@ -498,3 +498,12 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - **NEW finding (route collisions):** drawer Wallet/Profile STILL 404 with the push fix — `(customer)/(tabs)/wallet/index.tsx` + `(rider)/(tabs)/wallet/index.tsx` (and profile) resolve to identical bare URLs `/wallet`, `/profile` → expo-router 5.0.7 cannot disambiguate. Needs Zia decision: rename one side's segment (e.g. customer `wallet` → `rider-wallet`? or move customer wallet out of tabs). Affects GlobalActionButtons customer items + notificationRouter pushes.
 - **NEW i18n finding (ISSUE-61 class):** delete-confirm body renders literal `Remove {type} {number}?` — locale string has `{type}`/`{number}` (curly, not `{{type}}`/`{{number}}`) OR call-site passes params but the string lacks placeholders; fix in en+bn locales + verify params.
 - **Session state:** driver test account logged in on karna; Metro + utils-server up on broadband LAN (192.168.0.196).
+
+### 2026-09-16 — ISSUE-63 resolved: driver tab URLs role-prefixed under /d (restructure)
+
+- Ruling executed: `app/(main)/(rider)/(tabs)/` → `app/(main)/(rider)/d/(tabs)/` (7 tracked renames). Customer keeps bare /wallet, /profile.
+- `43633ff` move + all refs: GlobalActionButtons driver items, notificationRouter (8 sites + group-root), 11 group-root `router.replace("/(main)/(rider)")` sites. Server payloads verified clean; ride:// regexes unchanged (wire contract).
+- `76b11e3` device-found fix: push targets must be URL form — `(tabs)` is pathless, so `/d/(tabs)/wallet` is unresolvable; pushes now `/d/<tab>`. Retroactively explains the original 404s.
+- jest.config.js excludes `/.kilo/` (stale worktree caused 51 phantom failures).
+- Device-verified (karna, fresh pm-clear): /d home, Wallet (→Payout reachable), Earnings, Activity, Profile, Hotspot all navigate. OS-push tap-through not exercisable locally (no EXPO_ACCESS_TOKEN).
+- Gates: lint 0 · tsc 0 ×2 · vacuous clean · web-imports pass · jest 2048. Rhizome: ISSUE-63 → done (attempt 01M2N1131NQZGWSCTDK4ZQFH0P).
