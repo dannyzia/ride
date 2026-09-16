@@ -140,13 +140,6 @@ export default function DriverTabLayout() {
               tabBarIcon: ({ focused }) => <TabIcon label="Profile" focused={focused} />,
             }}
           />
-          {/* Settings is a push route, not a tab — hide from the tab bar */}
-          <Tabs.Screen
-            name="settings/index"
-            options={{
-              href: null,
-            }}
-          />
         </Tabs>
       </View>
   );
