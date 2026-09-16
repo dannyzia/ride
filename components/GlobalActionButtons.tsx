@@ -273,13 +273,13 @@ export default function GlobalActionButtons() {
   }, [groupOrder, navItems]);
 
   // ── Navigation ──
+  // router.push for ALL drawer routes: on expo-router 5.0.7, router.navigate
+  // with an absolute group path (/(main)/(rider)/(tabs)/wallet/index) builds an
+  // unmatched action state and lands on the +not-found screen — verified on
+  // device (navigate items 404, push items resolve). push resolves correctly.
   const navigateTo = useCallback((route: string) => {
     setMenuOpen(false);
-    if (route.includes("(tabs)")) {
-      router.navigate(route as never);
-    } else {
-      router.push(route as never);
-    }
+    router.push(route as never);
   }, []);
 
   // ── SOS handlers ──
