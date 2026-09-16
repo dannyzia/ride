@@ -70,17 +70,17 @@ const CUSTOMER_ITEMS: NavItem[] = [
 ];
 
 const DRIVER_ITEMS: NavItem[] = [
-  { route: "/(main)/(rider)/d/(tabs)/index", label: "Home", icon: "home", group: "Main" },
-  { route: "/(main)/(rider)/d/(tabs)/earning/index", label: "Earnings", icon: "cash", group: "Main" },
-  { route: "/(main)/(rider)/d/(tabs)/activity/index", label: "Activity", icon: "time", group: "Main" },
-  { route: "/(main)/(rider)/d/(tabs)/wallet/index", label: "Wallet", icon: "wallet", group: "Main" },
-  { route: "/(main)/(rider)/d/(tabs)/profile/index", label: "Profile", icon: "person", group: "Account" },
+  { route: "/(main)/(rider)/d", label: "Home", icon: "home", group: "Main" },
+  { route: "/(main)/(rider)/d/earning", label: "Earnings", icon: "cash", group: "Main" },
+  { route: "/(main)/(rider)/d/activity", label: "Activity", icon: "time", group: "Main" },
+  { route: "/(main)/(rider)/d/wallet", label: "Wallet", icon: "wallet", group: "Main" },
+  { route: "/(main)/(rider)/d/profile", label: "Profile", icon: "person", group: "Account" },
   { route: "/(main)/(rider)/settings", label: "Settings", icon: "settings", group: "Account" },
   { route: "/(main)/(rider)/packages", label: "Packages", icon: "cube", group: "Programs" },
   { route: "/(main)/(rider)/incentives", label: "Incentives", icon: "trophy", group: "Programs" },
   { route: "/(main)/(rider)/call-ledger", label: "Call Ledger", icon: "clipboard", group: "Programs" },
   { route: "/(main)/(rider)/hotspot-map", label: "Hotspot Map", icon: "map", group: "Programs" },
-  { route: "/(main)/(rider)/d/(tabs)/hotspot", label: "Hotspot", icon: "flame", group: "Programs" },
+  { route: "/(main)/(rider)/d/hotspot", label: "Hotspot", icon: "flame", group: "Programs" },
   { route: "/(main)/(rider)/documents", label: "Documents", icon: "document-text", group: "Compliance" },
   { route: "/(main)/(rider)/verification", label: "Verification", icon: "checkmark-circle", group: "Compliance" },
   { route: "/(main)/(rider)/vehicle-management", label: "Vehicles", icon: "car", group: "Compliance" },
@@ -274,7 +274,7 @@ export default function GlobalActionButtons() {
 
   // ── Navigation ──
   // router.push for ALL drawer routes: on expo-router 5.0.7, router.navigate
-  // with an absolute group path (/(main)/(rider)/d/(tabs)/wallet/index) builds an
+  // with an absolute group path (/(main)/(rider)/d/wallet) builds an
   // unmatched action state and lands on the +not-found screen — verified on
   // device (navigate items 404, push items resolve). push resolves correctly.
   const navigateTo = useCallback((route: string) => {
