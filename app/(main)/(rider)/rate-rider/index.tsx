@@ -82,7 +82,7 @@ export default function RateRider() {
     // pause lets the driver register the confirmation before navigating.
     if (goHomeTimerRef.current) clearTimeout(goHomeTimerRef.current);
     goHomeTimerRef.current = setTimeout(
-      () => router.replace("/(main)/(rider)"),
+      () => router.replace("/(main)/(rider)/d"),
       1400,
     );
   };

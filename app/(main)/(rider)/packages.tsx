@@ -167,7 +167,7 @@ export default function PackagesScreen() {
               {
                 text: "OK",
                 onPress: () => {
-                  router.replace("/(main)/(rider)");
+                  router.replace("/(main)/(rider)/d");
                 },
               },
             ]);

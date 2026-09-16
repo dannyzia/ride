@@ -57,7 +57,7 @@ export default function FleetMore() {
         <MenuItem icon="git-network" label="Integrations" onPress={() => {}} isDark={isDark} />
 
         <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 13, color: textSecondary, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 16, marginBottom: 8 }}>Switch Mode</Text>
-        <MenuItem icon="bicycle" label="Switch to Driver" onPress={() => { exitFleet("DRIVER"); router.replace("/(main)/(rider)"); }} isDark={isDark} />
+        <MenuItem icon="bicycle" label="Switch to Driver" onPress={() => { exitFleet("DRIVER"); router.replace("/(main)/(rider)/d"); }} isDark={isDark} />
         <MenuItem icon="person" label="Switch to Rider" onPress={() => { exitFleet("RIDER"); router.replace("/(main)/(customer)"); }} isDark={isDark} />
       </ScrollView>
       <FleetTabBar />

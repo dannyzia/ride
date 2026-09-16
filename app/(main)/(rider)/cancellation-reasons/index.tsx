@@ -85,7 +85,7 @@ export default function CancellationReasons() {
     ? colors.textSecondaryDark
     : colors.textSecondaryLight;
 
-  const goHome = () => router.replace("/(main)/(rider)");
+  const goHome = () => router.replace("/(main)/(rider)/d");
 
   const handleConfirm = async () => {
     if (!selected) return;

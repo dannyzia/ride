@@ -112,7 +112,7 @@ export default function Splash() {
         // registration flow picks up at phone-entry.
         redirect("/(auth)/phone-entry");
       } else if (data.role === "driver") {
-        redirect("/(main)/(rider)");
+        redirect("/(main)/(rider)/d");
       } else {
         redirect("/(main)/(customer)/services-hub");
       }

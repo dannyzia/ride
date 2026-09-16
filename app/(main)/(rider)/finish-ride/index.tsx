@@ -77,7 +77,7 @@ const FinishRide = () => {
   useEffect(() => {
     if (!ws) {
       Alert.alert(t('finish_ride.connection_lost'), t('finish_ride.not_connected_message'), [
-        { text: t('finish_ride.ok'), onPress: () => router.replace("/(main)/(rider)") },
+        { text: t('finish_ride.ok'), onPress: () => router.replace("/(main)/(rider)/d") },
       ]);
     }
   }, [ws, router]);
@@ -103,10 +103,10 @@ const FinishRide = () => {
           const cancelledBySystem = msg.cancelled_by === "system";
           if (!cancelledByDriver && !cancelledBySystem) {
             Alert.alert(t('finish_ride.ride_cancelled'), t('finish_ride.rider_cancelled_ride'), [
-              { text: t('finish_ride.ok'), onPress: () => router.replace("/(main)/(rider)") },
+              { text: t('finish_ride.ok'), onPress: () => router.replace("/(main)/(rider)/d") },
             ]);
           } else {
-            router.replace("/(main)/(rider)");
+            router.replace("/(main)/(rider)/d");
           }
           if (msg.ride_id) removeRideOffer(msg.ride_id);
           setActiveRideId(null);
@@ -294,7 +294,7 @@ const FinishRide = () => {
   };
 
   const handleGoHome = () => {
-    router.replace("/(main)/(rider)");
+    router.replace("/(main)/(rider)/d");
   };
 
   // Prefer the values recalculated server-side in the complete response;

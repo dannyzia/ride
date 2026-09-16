@@ -39,7 +39,7 @@ type NotificationHandler = (
 const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
   // Ride lifecycle
   "ride:offer": () => {
-    router.push("/(main)/(rider)" as never);
+    router.push("/(main)/(rider)/d" as never);
     return true;
   },
   "ride:matched": (data) => {
@@ -47,29 +47,29 @@ const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
       router.push(`/(main)/(rider)/find-customer` as never);
       return true;
     }
-    router.push("/(main)/(rider)" as never);
+    router.push("/(main)/(rider)/d" as never);
     return true;
   },
   "ride:cancelled": () => {
-    router.push("/(main)/(rider)" as never);
+    router.push("/(main)/(rider)/d" as never);
     return true;
   },
   "rider:cancelled": () => {
-    router.push("/(main)/(rider)" as never);
+    router.push("/(main)/(rider)/d" as never);
     return true;
   },
   "driver:arrived": () => {
-    router.push("/(main)/(rider)" as never);
+    router.push("/(main)/(rider)/d" as never);
     return true;
   },
 
   // Payment & subscription
   "payment:confirmed": () => {
-    router.push("/(main)/(rider)/(tabs)/wallet" as never);
+    router.push("/(main)/(rider)/d/(tabs)/wallet" as never);
     return true;
   },
   "package:activated": () => {
-    router.push("/(main)/(rider)/(tabs)/wallet" as never);
+    router.push("/(main)/(rider)/d/(tabs)/wallet" as never);
     return true;
   },
   "package:expiring": () => {
@@ -93,7 +93,7 @@ const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
 
   // Account
   "account:approved": () => {
-    router.push("/(main)/(rider)" as never);
+    router.push("/(main)/(rider)/d" as never);
     return true;
   },
   "account:suspended": () => {
@@ -102,7 +102,7 @@ const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
   },
   "account:rejected": (data) => {
     // If there's a reason in the payload, it's shown by DriverStatusGuard
-    router.push("/(main)/(rider)" as never);
+    router.push("/(main)/(rider)/d" as never);
     return true;
   },
 
@@ -114,7 +114,7 @@ const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
 
   // SOS
   "sos:acknowledged": () => {
-    router.push("/(main)/(rider)" as never);
+    router.push("/(main)/(rider)/d" as never);
     return true;
   },
 
@@ -237,7 +237,7 @@ const DEEP_LINK_ROUTES: DeepLinkRoute[] = [
   },
   {
     pattern: /^\/?driver\/wallet\/?$/,
-    handler: () => router.push("/(main)/(rider)/(tabs)/wallet" as never),
+    handler: () => router.push("/(main)/(rider)/d/(tabs)/wallet" as never),
   },
   {
     pattern: /^\/?driver\/packages\/?$/,
@@ -257,15 +257,15 @@ const DEEP_LINK_ROUTES: DeepLinkRoute[] = [
   },
   {
     pattern: /^\/?driver\/earnings\/?$/,
-    handler: () => router.push("/(main)/(rider)/(tabs)/earning" as never),
+    handler: () => router.push("/(main)/(rider)/d/(tabs)/earning" as never),
   },
   {
     pattern: /^\/?driver\/activity\/?$/,
-    handler: () => router.push("/(main)/(rider)/(tabs)/activity" as never),
+    handler: () => router.push("/(main)/(rider)/d/(tabs)/activity" as never),
   },
   {
     pattern: /^\/?driver\/profile\/?$/,
-    handler: () => router.push("/(main)/(rider)/(tabs)/profile" as never),
+    handler: () => router.push("/(main)/(rider)/d/(tabs)/profile" as never),
   },
   {
     pattern: /^\/?driver\/settings\/?$/,

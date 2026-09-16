@@ -79,7 +79,7 @@ export default function RegisterScreen() {
       }
 
       if (roleParam === "driver") {
-        router.replace("/(main)/(rider)");
+        router.replace("/(main)/(rider)/d");
       } else {
         router.replace("/(auth)/enable-location");
       }

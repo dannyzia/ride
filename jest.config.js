@@ -14,7 +14,7 @@ const expoPreset = require("jest-expo/jest-preset.js");
 module.exports = {
   ...expoPreset,
   preset: undefined,
-  testPathIgnorePatterns: ["/_reference/", "/node_modules/", "/admin-test-results/"],
+  testPathIgnorePatterns: ["/_reference/", "/node_modules/", "/admin-test-results/", "/.kilo/"],
   transform: {
     ...expoPreset.transform,
     "\\.[jt]sx?$": "<rootDir>/jest-dynamic-import-transform.cjs",

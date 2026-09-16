@@ -244,7 +244,7 @@ export default function SelectActiveVehicle() {
           <TouchableOpacity
             className="rounded-full w-full py-[16px] items-center"
             style={{ backgroundColor: colors.primary }}
-            onPress={() => router.replace("/(main)/(rider)/(tabs)")}
+            onPress={() => router.replace("/(main)/(rider)/d/(tabs)")}
           >
             <Text
               className="text-[16px] font-JakartaBold"

@@ -121,7 +121,7 @@ const ReachCustomer = () => {
   useEffect(() => {
     if (!ws) {
       Alert.alert(t('find_customer.connection_lost'), t('find_customer.not_connected_message'), [
-        { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)") },
+        { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)/d") },
       ]);
     }
   }, [ws, router]);
@@ -147,10 +147,10 @@ const ReachCustomer = () => {
           const cancelledBySystem = msg.cancelled_by === "system";
           if (!cancelledByDriver && !cancelledBySystem) {
             Alert.alert(t('find_customer.ride_cancelled'), t('find_customer.rider_cancelled_ride'), [
-              { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)") },
+              { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)/d") },
             ]);
           } else {
-            router.replace("/(main)/(rider)");
+            router.replace("/(main)/(rider)/d");
           }
           if (msg.ride_id) removeRideOffer(msg.ride_id);
           setActiveRideId(null);
@@ -262,7 +262,7 @@ const ReachCustomer = () => {
     // M-6: wait for server ack before navigating to enter-otp.
     if (!ws || ws.readyState !== WebSocket.OPEN || !activeRideId) {
       Alert.alert(t('find_customer.connection_lost'), t('find_customer.not_connected_server'), [
-        { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)") },
+        { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)/d") },
       ]);
       return;
     }
@@ -301,7 +301,7 @@ const ReachCustomer = () => {
       })
       .catch(() => {
         Alert.alert(t('find_customer.connection_lost'), t('find_customer.server_not_acknowledge'), [
-          { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)") },
+          { text: t('find_customer.ok'), onPress: () => router.replace("/(main)/(rider)/d") },
         ]);
       });
   };

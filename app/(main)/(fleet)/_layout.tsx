@@ -14,7 +14,7 @@ export default function FleetLayout() {
   useEffect(() => {
     if (activeMode !== "FLEET" || !activeFleetId) {
       logger.info("[fleet-layout] no fleet context, redirecting");
-      router.replace("/(main)/(rider)");
+      router.replace("/(main)/(rider)/d");
     }
   }, [activeMode, activeFleetId]);
 

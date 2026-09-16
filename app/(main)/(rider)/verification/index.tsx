@@ -145,7 +145,7 @@ export default function VerificationScreen() {
 
     const timer = setTimeout(() => {
       void fetchDriver();
-      router.replace("/(main)/(rider)/(tabs)");
+      router.replace("/(main)/(rider)/d/(tabs)");
     }, AUTO_NAVIGATE_DELAY_MS);
     return () => clearTimeout(timer);
   }, [status, fetchDriver, scaleAnim, opacityAnim]);
@@ -163,7 +163,7 @@ export default function VerificationScreen() {
   const handleReupload = () => router.push("/(main)/(rider)/onboarding");
   const handleGoHome = () => {
     void fetchDriver();
-    router.replace("/(main)/(rider)/(tabs)");
+    router.replace("/(main)/(rider)/d/(tabs)");
   };
 
   // ─── Loading ───
