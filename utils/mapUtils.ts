@@ -1,19 +1,8 @@
-import { setConfig } from "barikoiapis";
 import { Platform } from "react-native";
 import { logger } from "@/lib/logger";
 import type { MapLibreModule } from "./maplibreLoader";
 
-// ── Barikoi client initialiser (client-side) ───────────────
-
 const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
-
-export function createBarikoiClient(): void {
-  if (!BARIKOI_API_KEY) {
-    logger.warn("[mapUtils] BARIKOI_API_KEY not configured");
-    return;
-  }
-  setConfig({ apiKey: BARIKOI_API_KEY, version: "v1" });
-}
 
 // ── Map style presets ───────────────────────────────────────
 

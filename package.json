@@ -43,7 +43,6 @@
     "@react-navigation/native": "7.0.14",
     "@supabase/supabase-js": "^2.106.2",
     "@turf/turf": "^7.3.5",
-    "barikoiapis": "^1.0.8",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.0",
     "drizzle-orm": "^0.45.2",
