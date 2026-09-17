@@ -12,7 +12,7 @@
   - `app.config.js:23-36` — `updates.enabled: false` config block
   - `app.config.js:100` — `@maplibre/maplibre-react-native` plugin
   - `.audit/android/metadata.json` — asset inventory with sizes
-**Last verified:** 2026-09-15, by Coding model, via `npx expo export -p android --source-maps` + source-map parsing script — re-verified after Remediation Pass 1 (§7).
+**Last verified:** 2026-09-17, by Coding model, via `npx expo export -p android --source-maps` + source-map parsing — re-verified after Remediation Pass 3 (§7.4).
 **How to update:** Re-run `npx expo export -p android --output-dir .audit/android --source-maps`, then re-run the parsing scripts in this file's appendix.
 
 ---
@@ -413,3 +413,21 @@ Options evaluated:
 4. **Supabase subpackage slimming** — blocked on upstream; no local change.
 
 Follow-up before any release build: dev build required (1.4 changed the autolink set); device verification of splash rendering (new PNG), map dark style (1.7), and one icon-heavy screen (1.3).
+
+### 7.4 Remediation Pass 3 (ISSUE-64, executed 2026-09-17)
+
+**Scope:** §7.3 items 1–3. Every number is a measured `npx expo export -p android --source-maps --clear` before/after (NOTE: `--clear` is mandatory — the first post-change export was a byte-identical stale Metro cache). Baseline re-measured at round start: HBC 6,031,516 B / 2,461 modules / TTF 10 / 57 admin modules — it had drifted +52 KB from Pass 1's 5,979,268 B (the /d route restructure + i18n backfill landed since).
+
+| Step | Commit | HBC (B) | Δ HBC | Modules | Target removal (source-map verified) |
+|---|---|---|---|---|---|
+| P3.1 admin native exclusion (metro resolveRequest stub → `mocks/admin-excluded.native.js`) | `9191f32` | 6,031,516 → 5,502,664 | −528,852 | 2,461 → 2,395 (−66) | admin modules 57 (705,903 B) → 0; **TTF 10 → 8**: MaterialCommunityIcons (1,147,844 B) + AntDesign (70,344 B) were admin-only — remaining set = Ionicons (442,604) + 7 PlusJakartaSans (~94.8K each); assets −1,218,188 B |
+| P3.2 server-fed zone boundaries (h3-js leaves client) | `60b6514` | 5,502,664 → 5,297,260 | −205,404 | 2,395 → 2,393 | h3-js 471,261 B (1 UMD module + text-encoding polyfill chain) → 0; `GET /api/driver/hotspots` now returns the real zone polygon (`boundary`, [lng,lat] ring) and `components/Map.tsx` renders it instead of the res-9 hex approximation — behavior upgrade, dispatch h3 usage untouched |
+| P3.3 barikoiapis removal (config-only bridge; axios entered via it, NOT postgrest-js) | `8afae18` | 5,297,260 → 5,232,320 | −64,940 | 2,393 → 2,381 (−12) | axios 140,128 B → 0; barikoiapis 6,363 B (7 modules) → 0; package uninstalled from root workspace |
+
+**Net measured (Pass 3): HBC 6,031,516 → 5,232,320 B (−799,196 B, −13.2%); modules 2,461 → 2,381; TTF 10 → 8; assets 3,039,476 → 1,821,288 B.** Cumulative since the original audit baseline: HBC −905,464 B (−14.8%), assets −48.8%.
+
+Gates per step: lint 0 errors · tsc 0 ×2 · check:vacuous clean · check:web-imports 14 safe/0 risky · jest 2048 passed + 2 skipped · tests/module-isolation green. check:web-export EXIT=0 with admin UI verified present in the web client bundle (Render untouched). P3.1 evidence: the guard intercepts expo-router's ctx-module route discovery (instrumented: 7,411 resolution calls, 62 admin resolutions redirected on native); web platform bypasses it. Root cause of the first inert attempt: metro-resolver returns `{ filePath }` (camelCase).
+
+Notes: NativeWind `tailwind.config.js` content globs (`./app/**`, `./components/**`) still sweep admin files — bundle-harmless, and admin web styling depends on them (left untouched). `+not-found` Admin button and `GlobalActionButtons` ADMIN_ITEMS are string routes only (no static import) — no client guard needed. P3.3 verification: zero barikoiapis SDK call sites existed; only `setConfig` was invoked.
+
+STOP here per Zia's order — Phase 3 item 4 (Supabase subpackage slimming) remains blocked on upstream.
