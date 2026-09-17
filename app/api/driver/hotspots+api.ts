@@ -42,6 +42,12 @@ export async function GET(request: Request) {
           idle_driver_count: idleCount,
           suggest_score: score / (1 + idleCount),
           updated_at: row.updated_at,
+          // Zone boundary for map rendering, [lng, lat] pairs (GeoJSON
+          // order) — lets the client draw the real zone polygon instead of
+          // approximating it with an H3 hex (removes h3-js from the client
+          // bundle). Every hotspot here has a usable polygon (zones with
+          // unusable polygons are filtered out above).
+          boundary: polygon.map((p) => [p.lng, p.lat] as [number, number]),
         };
       })
       .filter((h): h is NonNullable<typeof h> => h !== null);

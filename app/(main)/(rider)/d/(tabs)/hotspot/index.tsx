@@ -40,6 +40,8 @@ interface HotspotRow {
   score: number;
   idle_driver_count: number;
   suggest_score: number;
+  /** Zone boundary ring, [lng, lat] pairs (GeoJSON order), server-fed. */
+  boundary?: [number, number][];
 }
 
 const WITHIN_KM = 5;
@@ -147,7 +149,12 @@ export default function HotspotScreen() {
 
   const mapHotspots: MapHotspot[] | undefined =
     rows && rows.length > 0
-      ? rows.map((h) => ({ lat: h.lat, lng: h.lng, intensity: h.suggest_score }))
+      ? rows.map((h) => ({
+          lat: h.lat,
+          lng: h.lng,
+          intensity: h.suggest_score,
+          boundary: h.boundary ?? [],
+        }))
       : undefined;
 
   const listEmpty = rows !== null && sorted.length === 0;

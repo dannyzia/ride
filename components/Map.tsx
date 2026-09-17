@@ -5,10 +5,8 @@ import { colors, spacing } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import {
   useBarikoiMapStyle,
-  createBarikoiClient,
 } from "@/utils/mapUtils";
 import MapLibreGL, { type MapLibreModule } from "@/utils/maplibreLoader";
-import { getH3Boundary } from "@/lib/h3";
 import type { ComponentRef } from "react";
 
 const MARKER_USER = require("@/assets/icons/marker-goride-Marker Navigation.png");
@@ -32,6 +30,8 @@ export interface MapHotspot {
   lng: number;
   /** 0..1 demand intensity — drives the green→amber→red heat color. */
   intensity: number;
+  /** Zone boundary ring, [lng, lat] pairs (GeoJSON order), server-fed. */
+  boundary: [number, number][];
 }
 
 interface VehicleMarker {
@@ -93,10 +93,6 @@ const Map = ({ origin, destination, route, hotspots, vehicleMarkers, onMapPress 
   } = useCustomer();
 
   useEffect(() => {
-    createBarikoiClient();
-  }, []);
-
-  useEffect(() => {
     if (!isStatic && userLatitude && userLongitude && cameraRef.current) {
       cameraRef.current.flyTo([userLongitude, userLatitude], 1200);
     }
@@ -155,30 +151,32 @@ const Map = ({ origin, destination, route, hotspots, vehicleMarkers, onMapPress 
     origin?.lng ??
     (hotspotBounds ? (hotspotBounds.ne[0] + hotspotBounds.sw[0]) / 2 : userLongitude);
 
-  // H3 hexagon polygon features for each hotspot zone.
-  // Built from zone centroids via h3-js cellToBoundary.
-  // (Declared before the GPS early-return below: React hooks must run in a
-  // consistent order on every render.)
+  // Hotspot zone polygon features for each hotspot zone.
+  // Server-fed: each hotspot carries `boundary` ([lng, lat] ring, GeoJSON
+  // order) from GET /api/driver/hotspots — the real zone polygon, not an
+  // approximation. (Declared before the GPS early-return below: React hooks
+  // must run in a consistent order on every render.)
   const hexFeatures = useMemo(() => {
     if (!hotspots || hotspots.length === 0) return null;
-    return hotspots.map((h) => {
-      const boundary = getH3Boundary(h.lat, h.lng);
-      // GeoJSON Polygon expects [lng, lat] and the ring must close.
-      const ring: [number, number][] = [...boundary, boundary[0]];
-      return {
-        type: "Feature" as const,
-        geometry: {
-          type: "Polygon" as const,
-          coordinates: [ring],
-        },
-        properties: {
-          color: heatColor(h.intensity),
-          fillOpacity: 0.25 + 0.45 * h.intensity,
-          strokeColor: heatColor(h.intensity),
-          strokeOpacity: 0.5 + 0.3 * h.intensity,
-        },
-      };
-    });
+    return hotspots
+      .filter((h) => h.boundary && h.boundary.length >= 3)
+      .map((h) => {
+        // GeoJSON Polygon expects [lng, lat] and the ring must close.
+        const ring: [number, number][] = [...h.boundary, h.boundary[0]];
+        return {
+          type: "Feature" as const,
+          geometry: {
+            type: "Polygon" as const,
+            coordinates: [ring],
+          },
+          properties: {
+            color: heatColor(h.intensity),
+            fillOpacity: 0.25 + 0.45 * h.intensity,
+            strokeColor: heatColor(h.intensity),
+            strokeOpacity: 0.5 + 0.3 * h.intensity,
+          },
+        };
+      });
   }, [hotspots]);
 
   if (displayLat == null || displayLng == null) {

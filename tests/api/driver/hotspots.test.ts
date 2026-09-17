@@ -81,6 +81,8 @@ describe("GET /api/driver/hotspots", () => {
       idle_driver_count: 3,
       // 80 / (1 + 3) = 20 — heat discounted by standing idle supply
       suggest_score: 20,
+      // server-fed zone boundary: [lng, lat] pairs for client polygon render
+      boundary: [[1, 1]],
     });
     expect(hotspots[1].suggest_score).toBe(50); // no idle supply → full heat
   });

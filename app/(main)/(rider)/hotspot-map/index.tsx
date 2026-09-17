@@ -28,6 +28,8 @@ interface HotspotRow {
   score: number;
   idle_driver_count: number;
   suggest_score: number;
+  /** Zone boundary ring, [lng, lat] pairs (GeoJSON order), server-fed. */
+  boundary?: [number, number][];
 }
 
 /** Auto-refresh interval (ms) */
@@ -98,7 +100,12 @@ export default function HotspotMapScreen() {
 
   const mapHotspots: MapHotspot[] | undefined =
     hotspots && hotspots.length > 0
-      ? hotspots.map((h) => ({ lat: h.lat, lng: h.lng, intensity: h.suggest_score }))
+      ? hotspots.map((h) => ({
+          lat: h.lat,
+          lng: h.lng,
+          intensity: h.suggest_score,
+          boundary: h.boundary ?? [],
+        }))
       : undefined;
 
   const showEmptyState = hotspots !== null && hotspots.length === 0;
