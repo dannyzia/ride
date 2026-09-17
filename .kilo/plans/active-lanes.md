@@ -507,3 +507,12 @@ No commit or push after this checkpoint without Zia’s go-ahead (standing close
 - jest.config.js excludes `/.kilo/` (stale worktree caused 51 phantom failures).
 - Device-verified (karna, fresh pm-clear): /d home, Wallet (→Payout reachable), Earnings, Activity, Profile, Hotspot all navigate. OS-push tap-through not exercisable locally (no EXPO_ACCESS_TOKEN).
 - Gates: lint 0 · tsc 0 ×2 · vacuous clean · web-imports pass · jest 2048. Rhizome: ISSUE-63 → done (attempt 01M2N1131NQZGWSCTDK4ZQFH0P).
+
+### NEXT SESSION (queued) — C1 remaining verticals + i18n Bangla visual pass
+
+- **Scope:** C1 remaining verticals (rental → delivery → shops → SOS) + i18n Bangla visual (ride-booking flow, confirm-ride, rides list — zero raw rider_home.*/confirm_ride.* keys).
+- **Prereq 1 — fresh dev-client APK FIRST:** autolink set changed in the size round (dead deps removed, expo-updates layer) — `NODE_OPTIONS=--max-old-space-size=8192 npx expo run:android --variant debug` before any on-device testing. Do NOT reuse the currently installed APK.
+- **Prereq 2 — `node scripts/dev-env-sync.js` before build:** env IPs are inlined at bundle time; stale `EXPO_PUBLIC_DEV_LAN_IP` silently breaks all API calls (verified live this round when broadband replaced the hotspot).
+- **Prereq 3 — backend target = LAN:** laptop IP at last session was 192.168.0.196 (broadband); re-check at session start. Metro :8081 + utils-server :3001 locally.
+- **Known environment traps (from this round):** adb dumps need the Node helper `.tmp/dd-dump.cjs` (MSYS mangles bare `/sdcard/...` paths); karna (MIUI) wedges on NotificationShade after reboots — Pixel 6a is the reliable driver device; dev-launcher serves stale cached bundles — `pm clear` + fresh login is the proven clean path; driver test account `1700000001` / `test1234`.
+- **Standing gates:** lint 0 → tsc 0 ×2 → vacuous → jest ≥2048 → web-imports. STOP on crash or fare mismatch, no silent fixes.
