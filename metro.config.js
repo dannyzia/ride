@@ -70,18 +70,37 @@ config.resolver.alias = {
     "react-native/Libraries/Utilities/codegenNativeCommands": path.resolve(__dirname, "mocks/empty.js"),
 };
 
-// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // ws exception: blocked everywhere EXCEPT the one documented
 // server-only origin (kept in sync with SERVER_ONLY in
 // scripts/check-web-imports.js). Plain regex blockList can't be
 // conditioned on the importing file, so this uses resolveRequest
 // instead. Any other origin importing 'ws' still hard-fails, same
 // as before.
-// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 const { resolve: metroResolve } = require("metro-resolver");
 const WS_ALLOWED_ORIGINS = [
     path.resolve(__dirname, "lib/supabaseServer.ts"),
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin native exclusion (P3.1, docs/size-audit.md §7.3 item 1): admin is a
+// WEB-ONLY surface (AGENTS.md). On native, any resolution landing under
+// app/admin/** or components/admin/** is redirected to a stub module, so the
+// ~57 admin screens/components (705 KB source) and the 1.22 MB
+// MaterialCommunityIcons + AntDesign icon fonts they carry never enter the
+// client graph. On web the real modules resolve normally — the Render deploy
+// is untouched. The only native-side references to admin are string routes
+// (GlobalActionButtons ADMIN_ITEMS, +not-found redirect), which resolve at
+// runtime through the router and carry no static import, so no client file
+// needs guarding.
+// Verified in the export: admin modules 57 → 0, TTF set 10 → 8.
+// ─────────────────────────────────────────────────────────────────────────────
+const ADMIN_EXCLUSION_STUB = path.resolve(__dirname, "mocks/admin-excluded.native.js");
+const isAdminPath = (p) => {
+    const norm = String(p).replace(/\\/g, "/");
+    return norm.includes("/app/admin/") || norm.includes("/components/admin/");
+};
 const previousResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
     if (moduleName === "ws" && !WS_ALLOWED_ORIGINS.includes(context.originModulePath)) {
@@ -90,7 +109,31 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
             `Move the import to a server-only file (see lib/supabaseServer.ts) or use 'import type'.`
         );
     }
-    if (previousResolveRequest) {
+    if (platform !== "web") {
+        try {
+            // Resolve relative to the ORIGIN file so that origin-relative
+            // imports out of app/admin/** (which only admin code makes) are
+            // caught too — plain moduleName strings can't distinguish
+            // "./AdminShell" made by components/admin/x from an identical
+            // string made elsewhere.
+            const resolution = metroResolve(
+                { ...context, resolveRequest: null },
+                moduleName,
+                platform
+            );
+            const resolvedPath =
+                typeof resolution === "string"
+                    ? resolution
+                    : resolution && (resolution.filePath || resolution.filepath);
+            if (resolvedPath && isAdminPath(resolvedPath)) {
+                return { type: "sourceFile", filePath: ADMIN_EXCLUSION_STUB };
+            }
+        } catch (_e) {
+            // Not resolvable via default resolution — fall through and let
+            // Metro produce its own (correct) error below.
+        }
+    }
+    if (previousResolveRequest && previousResolveRequest !== config.resolver.resolveRequest) {
         return previousResolveRequest(context, moduleName, platform);
     }
     return metroResolve(context, moduleName, platform);
