@@ -24,6 +24,13 @@ const client = postgres(DATABASE_URL, {
   connect_timeout: 30,
   // Recycle connections every 30min to prevent stale pooler connections
   max_lifetime: 60 * 30,
+  // ISSUE-62: keepalive every 15s (postgres.js default 60s is too slow for
+  // the half-open failure class on the transaction pooler — a dead peer can
+  // take ~12 min to detect with OS probe defaults, outliving the 30–60 min
+  // wedge window). Probes keep NAT mappings alive and force RSTs onto dead
+  // sockets quickly; the DB watchdog (utils-server/dbWatchdog.ts) remains
+  // the self-heal backstop.
+  keep_alive: 15,
   // Set statement_timeout to 30s so no query can hang forever (prevents
   // the 2-hour stuck UPDATE that blocked RLS migration).
   connection: {

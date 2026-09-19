@@ -32,6 +32,7 @@ import {
 import { recordColdDrop } from "./coldDrop";
 import { estimateEtaMinutes } from "./eta";
 import { db } from "../src/db";
+import { startDbWatchdog } from "./dbWatchdog";
 import {
   users,
   drivers,
@@ -2579,6 +2580,10 @@ async function startup() {
   startH3IndexRefresh();
   startCompensationWorker();
   startScheduler();
+  // ISSUE-62: DB wedge watchdog — probes the pool end-to-end every 15s and
+  // exits the process on a sustained freeze (supervisor/tsx-watch restarts;
+  // startup recovery below re-dispatches stuck rides after any restart).
+  startDbWatchdog();
 
   // RECOVERY: re-dispatch rides stuck in 'dispatching' for >60s.
   //
