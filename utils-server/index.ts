@@ -556,7 +556,12 @@ const server = http.createServer(async (req, res) => {
             reason: reason ?? "",
           });
           client.ws.close();
-          await handleDriverDisconnect(driver_id);
+          // Forced offline: this socket no longer owns the driver, so remove it
+          // before cleanup (same contract as handleDisconnect) and hand it over
+          // for the utilization row. An admin suspension must close the session
+          // AND clear is_online, not leave one of them behind.
+          connectedDrivers.delete(driver_id);
+          await handleDriverDisconnect(driver_id, client);
         }
 
         await db
@@ -1749,8 +1754,20 @@ async function handleDisconnect(client: WSClient) {
     // BUG FIX: Only tear down if THIS socket is still the registered one.
     // A newer reconnect will have replaced the map entry — don't wipe it.
     if (connectedDrivers.get(client.driverId) === client) {
-      await handleDriverDisconnect(client.driverId);
+      // Remove THIS socket BEFORE cleanup, so the cleanup's "is anyone still
+      // connected?" question is about ANOTHER socket rather than this one.
+      //
+      // Without this, the map still held the disconnecting client, so
+      // handleDriverDisconnect's guard was ALWAYS true and `is_online: false`
+      // was never written by this path — while the session close was
+      // unconditional. That is how `driver_online_sessions.went_offline_at`
+      // came to be set with `drivers.is_online` still true (observed live
+      // 2026-09-20: `open sessions: 0`, `is_online: true`), which in turn made
+      // the app's session recovery conclude "truly offline" and silently stop
+      // the driver's heartbeat. The stale-driver eviction below already used
+      // this ordering; this path now matches it.
       connectedDrivers.delete(client.driverId);
+      await handleDriverDisconnect(client.driverId, client);
     }
   }
   if (client.role === "rider" && client.userId) {
@@ -1792,7 +1809,7 @@ async function handleDisconnect(client: WSClient) {
   });
 }
 
-async function handleDriverDisconnect(driverId: string) {
+async function handleDriverDisconnect(driverId: string, disconnectingClient?: WSClient) {
   // Sequential chain: a disconnecting driver's outstanding offer resolves
   // immediately as 'disconnected' (treated like expiry — no dead TTL wait on
   // a gone driver; the lead stays billed, pipeline offers the next driver).
@@ -1802,11 +1819,35 @@ async function handleDriverDisconnect(driverId: string) {
   // driver lingers in the index until the next refreshH3Index() cycle (30 s
   // TTL), and a dispatch tick in that window re-fetches their ID from
   // getDriversInCells() only to drop them at the drivers.is_online filter.
-  // is_online already flipped to false above — this just trims the index.
+  // The DB writes that make a driver offline live at the end of this function;
+  // this only trims the index.
   removeDriver(driverId);
 
   // Clean up zone hysteresis state
   zoneHysteresis.delete(driverId);
+
+  // ── ONE ownership decision for the online state ─────────────────────────────
+  //
+  // A driver is offline only when no live connection remains. Both writes that
+  // express that — closing the session row AND clearing `drivers.is_online` —
+  // are gated by the SAME condition here. They used to disagree: the session was
+  // closed unconditionally while `is_online` was guarded, so the two halves of
+  // one fact could contradict each other, and did (live, 2026-09-20:
+  // `open sessions: 0` beside `is_online: true`). Nothing reconciled them, so the
+  // app's recovery read "no active session" and went silently offline while the
+  // DB still advertised the driver as online.
+  //
+  // The caller is responsible for making `has` mean "ANOTHER socket": it must
+  // remove the disconnecting socket from the map before calling this. All three
+  // callers do (handleDisconnect, the stale-driver sweep, force-offline), which
+  // is also what makes the guard below reachable — previously it was always true.
+  const stillConnected = connectedDrivers.has(driverId);
+  if (stillConnected) {
+    // A newer socket owns this driver. A socket change is not going offline, so
+    // neither the session nor the flag is touched; the new socket's heartbeat
+    // keeps the driver dispatchable.
+    return;
+  }
 
   // Close online session
   await db
@@ -1822,13 +1863,15 @@ async function handleDriverDisconnect(driverId: string) {
       ),
     );
 
-  // PATCH 4: close driver_sessions row for utilization denominator
-  const client = connectedDrivers.get(driverId);
-  if (client?.driverSessionId) {
+  // PATCH 4: close driver_sessions row for utilization denominator.
+  // The DISCONNECTING connection is passed in, because the map no longer holds
+  // it — reading the map here would have closed whichever connection came next.
+  const disconnecting = disconnectingClient;
+  if (disconnecting?.driverSessionId) {
     const sessionRow = await db
       .select({ session_start: driverSessions.session_start })
       .from(driverSessions)
-      .where(eq(driverSessions.id, client.driverSessionId))
+      .where(eq(driverSessions.id, disconnecting.driverSessionId))
       .limit(1);
     const onlineMs = sessionRow[0]
       ? Date.now() - new Date(sessionRow[0].session_start).getTime()
@@ -1839,17 +1882,14 @@ async function handleDriverDisconnect(driverId: string) {
         session_end: new Date(),
         online_minutes: Math.round(onlineMs / 60_000),
       })
-      .where(eq(driverSessions.id, client.driverSessionId));
+      .where(eq(driverSessions.id, disconnecting.driverSessionId));
   }
 
   // M1: Mark driver offline to prevent ghost entries in candidate pool.
-  // BUG FIX: Only flip is_online if no live connection exists (reconnect race).
-  if (!connectedDrivers.has(driverId)) {
-    await db
-      .update(drivers)
-      .set({ is_online: false, updated_at: new Date() })
-      .where(eq(drivers.id, driverId));
-  }
+  await db
+    .update(drivers)
+    .set({ is_online: false, updated_at: new Date() })
+    .where(eq(drivers.id, driverId));
 }
 
 // ── Pickup Distance / ETA Helpers ──────────────────────────────────────────

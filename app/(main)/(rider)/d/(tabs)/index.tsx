@@ -287,7 +287,19 @@ export default function DriverHome() {
         return;
       }
 
-      // CASE 4: Truly offline → ensure state matches
+      // CASE 4: Truly offline → ensure state matches.
+      //
+      // A deliberate go-online must not be undone SILENTLY. The server is
+      // authoritative here (a closed session now always comes with
+      // `is_online: false` — see handleDriverDisconnect in utils-server/index.ts),
+      // so the state does change; what must not happen is the driver losing it
+      // with no signal and no way back. Observed live 2026-09-20: this branch ran
+      // on a return-to-foreground, cleared isOnline, and the driver simply
+      // stopped reporting location — invisible from both ends.
+      if (driverStore.isOnline) {
+        logger.info('[driver] session no longer active — going offline on the server answer');
+        setSessionError('You are now offline. Tap Go Online to start a new session.');
+      }
       driverStore.setIsOnline(false);
       driverStore.setSessionId(null);
     } catch (err) {
