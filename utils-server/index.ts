@@ -35,6 +35,14 @@ import { estimateEtaMinutes } from "./eta";
 import { db } from "../src/db";
 import { startDbWatchdog } from "./dbWatchdog";
 import {
+  DRIVER_DISCONNECT_GRACE_MS,
+  decideDisconnect,
+  dueForClose,
+  noteDisconnect,
+  noteReconnect,
+  type PendingDisconnect,
+} from "./driverPresence";
+import {
   users,
   drivers,
   rides,
@@ -1068,7 +1076,7 @@ wss.on("connection", (ws: WebSocket) => {
                 // own decision, so cancel the pending expiry — the sweep must not
                 // close a session a fresh socket just re-joined. (An expiry that
                 // already fired simply finds no entry here.)
-                if (pendingDriverDisconnects.delete(driver.id)) {
+                if (noteReconnect(pendingDriverDisconnects, driver.id)) {
                   logger.info("[ws] driver reconnected inside grace — online state kept", {
                     driverId: driver.id,
                   });
@@ -1867,16 +1875,10 @@ async function handleDisconnect(client: WSClient) {
 // offline, and the driver silently fell out of dispatch (`drivers_indexed` 1→0)
 // until a human tapped "Go online" again.
 //
-// So: a lost socket holds online state for a bounded grace window. If the driver
-// reconnects inside it (the normal background/foreground cycle), nothing changed
-// and the driver stays dispatchable with nobody touching the phone. If the window
-// expires with no live connection, the state closes exactly as it did before.
-// A user decision (immediate) and an admin suspension skip the grace entirely.
-const DRIVER_DISCONNECT_GRACE_MS = 90_000;
-const pendingDriverDisconnects = new Map<
-  string,
-  { deadline: number; client?: WSClient }
->();
+// The policy (what a disconnect means, and when a held window expires) lives in
+// ./driverPresence as pure functions so it is unit-tested; this file owns the
+// registry, the socket map, and the DB writes it gates.
+const pendingDriverDisconnects = new Map<string, PendingDisconnect<WSClient>>();
 
 async function handleDriverDisconnect(
   driverId: string,
@@ -1923,25 +1925,25 @@ async function handleDriverDisconnect(
   }
 
   // Hold online state through a transient socket loss (see the grace note above
-  // the constants). `immediate` callers — an admin suspension, or the grace
+  // the registry). `immediate` callers — an admin suspension, or the grace
   // sweep below — go straight to the close.
-  if (!opts.immediate) {
-    const pending = pendingDriverDisconnects.get(driverId);
-    if (pending) {
-      // Already inside a grace window that has not expired: nothing to do.
-      if (Date.now() < pending.deadline) return;
-    } else {
-      pendingDriverDisconnects.set(driverId, {
-        deadline: Date.now() + DRIVER_DISCONNECT_GRACE_MS,
-        client: disconnectingClient,
-      });
-      logger.info(
-        "[ws] driver socket lost — online held for grace window",
-        { driverId, graceMs: DRIVER_DISCONNECT_GRACE_MS },
-      );
-      return;
-    }
+  const pending = pendingDriverDisconnects.get(driverId);
+  const disposition = decideDisconnect({
+    immediate: opts.immediate ?? false,
+    hasPending: pending !== undefined,
+    pendingDeadline: pending?.deadline,
+    now: Date.now(),
+  });
+  if (disposition === "hold") {
+    noteDisconnect(pendingDriverDisconnects, driverId, disconnectingClient, Date.now());
+    logger.info("[ws] driver socket lost — online held for grace window", {
+      driverId,
+      graceMs: DRIVER_DISCONNECT_GRACE_MS,
+    });
+    return;
   }
+  // Already inside an unexpired window: a repeat notification changes nothing.
+  if (disposition === "ignore") return;
   pendingDriverDisconnects.delete(driverId);
 
   // Close online session
@@ -2912,10 +2914,11 @@ async function startup() {
     // liveness check is deliberate — a reconnect racing this sweep must never be
     // closed by it, and a driver who did come back already cleared their entry on
     // register.
-    for (const [driverId, pending] of pendingDriverDisconnects) {
-      if (now < pending.deadline) continue;
-      pendingDriverDisconnects.delete(driverId);
-      if (connectedDrivers.has(driverId)) continue;
+    for (const [driverId, pending] of dueForClose(
+      pendingDriverDisconnects,
+      now,
+      (id) => connectedDrivers.has(id),
+    )) {
       handleDriverDisconnect(driverId, pending.client, { immediate: true }).catch((e) => {
         logger.error("[ws] disconnect grace expiry failed", { driverId, error: e.message });
       });
