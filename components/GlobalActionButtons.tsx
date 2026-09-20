@@ -57,15 +57,15 @@ interface NavItem {
 
 const CUSTOMER_ITEMS: NavItem[] = [
   { route: "/(main)/(customer)/services-hub", label: "Services Hub", icon: "grid", group: "Ride" },
-  { route: "/(main)/(customer)/(tabs)/home/index", label: "Home", icon: "home", group: "Ride" },
+  { route: "/(main)/(customer)/(tabs)/home", label: "Home", icon: "home", group: "Ride" },
   { route: "/(main)/(customer)/find-ride", label: "Book Ride", icon: "car", group: "Ride" },
   { route: "/(main)/(customer)/schedule-ride", label: "Schedule Ride", icon: "calendar", group: "Ride" },
-  { route: "/(main)/(customer)/(tabs)/rides/index", label: "My Rides", icon: "time", group: "Activity" },
-  { route: "/(main)/(customer)/(tabs)/inbox/index", label: "Inbox", icon: "mail", group: "Activity" },
-  { route: "/(main)/(customer)/(tabs)/referral/index", label: "Referrals", icon: "people", group: "Activity" },
-  { route: "/(main)/(customer)/(tabs)/profile/index", label: "Profile", icon: "person", group: "Account" },
-  { route: "/(main)/(customer)/(tabs)/wallet/index", label: "Wallet", icon: "wallet", group: "Account" },
-  { route: "/(main)/(customer)/(tabs)/settings/index", label: "Settings", icon: "settings", group: "Account" },
+  { route: "/(main)/(customer)/(tabs)/rides", label: "My Rides", icon: "time", group: "Activity" },
+  { route: "/(main)/(customer)/(tabs)/inbox", label: "Inbox", icon: "mail", group: "Activity" },
+  { route: "/(main)/(customer)/(tabs)/referral", label: "Referrals", icon: "people", group: "Activity" },
+  { route: "/(main)/(customer)/(tabs)/profile", label: "Profile", icon: "person", group: "Account" },
+  { route: "/(main)/(customer)/(tabs)/wallet", label: "Wallet", icon: "wallet", group: "Account" },
+  { route: "/(main)/(customer)/(tabs)/settings", label: "Settings", icon: "settings", group: "Account" },
   { route: "/(main)/(customer)/apply-promos", label: "Promos", icon: "ticket", group: "Account" },
 ];
 
