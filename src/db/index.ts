@@ -40,6 +40,14 @@ if (!DATABASE_URL) {
  *
  * The application pool stays at `max: 5`; see the connection-budget note below.
  */
+/**
+ * The application pool's connection count, exported so the freeze check can ask
+ * for exactly as many concurrent probes as the pool has slots — the freeze
+ * question is "how many slots are still usable", which is only answerable
+ * against the pool's real size.
+ */
+export const APP_POOL_SIZE = 5;
+
 function createPool() {
   /**
    * Supabase pooler is in ap-northeast-1 (Tokyo). A cold connect from BD can
@@ -55,7 +63,7 @@ function createPool() {
   const client = postgres(DATABASE_URL as string, {
     ssl: "require",
     prepare: false,
-    max: 5,
+    max: APP_POOL_SIZE,
     // 300s, not 30s. The failure that freezes this pool is a RECONNECT that
     // never completes (2026-09-20: the app pool stopped serving for ~2h while
     // the dedicated probe answered in 144-233ms and fresh connects from another
@@ -96,16 +104,52 @@ let pool = createPool();
  * importer (they all `import { db } from "../src/db"` and call `db.x()` at the
  * use site) transparently reach the fresh pool. Query builders are still
  * created by the real drizzle instance, so chaining and thenables are
- * untouched — only property lookup is forwarded.
+ * untouched — only property lookup is forwarded, and bound methods are cached
+ * per instance (see `boundMethods`).
  */
+/**
+ * Bound-method cache, keyed by the drizzle instance the bind was made against.
+ *
+ * Without it, `get` returned `value.bind(pool.db)` on EVERY property access — a
+ * fresh closure per `db.select` call site access, and an unstable identity
+ * (`db.select !== db.select`). Keying on the instance also makes the cache
+ * self-invalidating across `recyclePool()`: a replacement client is a new
+ * object, so it gets its own map and never yields a method bound to the dead
+ * pool.
+ */
+const boundMethods = new WeakMap<object, Map<string | symbol, unknown>>();
+
 export const db: DrizzleDb = new Proxy({} as DrizzleDb, {
   get(_target, prop) {
-    const value = (pool.db as unknown as Record<string | symbol, unknown>)[prop];
-    return typeof value === "function"
-      ? (value as (...a: unknown[]) => unknown).bind(pool.db)
-      : value;
+    const instance = pool.db as unknown as Record<string | symbol, unknown>;
+    const value = instance[prop];
+    if (typeof value !== "function") return value;
+    let cache = boundMethods.get(instance);
+    if (!cache) {
+      cache = new Map();
+      boundMethods.set(instance, cache);
+    }
+    const cached = cache.get(prop);
+    if (cached !== undefined) return cached;
+    const bound = (value as (...a: unknown[]) => unknown).bind(pool.db);
+    cache.set(prop, bound);
+    return bound;
   },
 });
+
+/**
+ * Result of an application-pool probe. The three outcomes mean OPPOSITE things
+ * and must not be collapsed into one boolean — see the probe's doc comment.
+ */
+export type AppPoolProbeResult =
+  | { ok: true }
+  /** No reply within the bound. The only outcome that proves frozen slots. */
+  | {
+      ok: false;
+      reason: "timeout";
+      timeoutMs: number;    }
+  /** The query REJECTED — it settled, so its slot was released. Not a freeze. */
+  | { ok: false; reason: "error"; error: string };
 
 /**
  * Liveness probe for the APPLICATION pool, bounded on the client side.
@@ -116,33 +160,119 @@ export const db: DrizzleDb = new Proxy({} as DrizzleDb, {
  * — because those two diverge in exactly the failure class above: the dedicated
  * probe keeps succeeding (the database is fine) while the app pool is frozen.
  *
- * CONTRACT — `false` means "the caller must recycle NOW", not "note it and
- * re-check later". A timed-out probe cannot release its own slot: the query it
- * abandoned is still parked on one of only `max: 5` connections, so an
- * unhealed false result is itself a slot leak. Counting false results up to a
- * threshold therefore makes the freeze worse with every tick — each trying
- * probe consumes another slot — which is why `utils-server/dbWatchdog.ts`
- * recycles on the FIRST false instead of accumulating.
+ * ── A REJECTION IS NOT A FREEZE (added 2026-09-20, measured) ────────────────
+ *
+ * This probe previously resolved `false` for BOTH "no reply" and "the query
+ * rejected", which made the watchdog unable to tell a frozen pool from a
+ * healthy one that had merely lost a connection. The two are opposite signals:
+ *
+ *   - a TIMEOUT means the query never settled, so its connection is still
+ *     reserved — genuine frozen slots, and the only case that warrants a
+ *     recycle;
+ *   - a REJECTION means the query SETTLED (with an error), so its slot was
+ *     released and the pool is demonstrably serving. The transaction pooler
+ *     reaping an idle backend produces exactly this on the next use.
+ *
+ * Measured live, 2026-09-20, with a 1 Hz probe of the same pool from outside
+ * the process: at the instant the watchdog logged `application pool frozen`
+ * (and then recycled), the pool was answering an equivalent query in 3-8 ms —
+ * 35 consecutive successful samples across the full 35 s window the internal
+ * probe spent waiting, and a 144 ms worst case across 224 samples. The pool was
+ * never frozen; the watchdog was destroying a healthy one every ~58 s, and each
+ * `recyclePool()` rejects that pool's in-flight queries with
+ * CONNECTION_DESTROYED — which is what dropped the device WebSockets and made
+ * rider/driver sessions die at the ~2-minute mark.
+ *
+ * CONTRACT — `{ ok: false, reason: "timeout" }` means "the caller must recycle
+ * NOW", not "note it and re-check later". A timed-out probe cannot release its
+ * own slot: the query it abandoned is still parked on one of only `max: 5`
+ * connections, so an unhealed timeout is itself a slot leak. Counting timeouts
+ * up to a threshold therefore makes the freeze worse with every tick — each
+ * trying probe consumes another slot — which is why
+ * `utils-server/dbWatchdog.ts` recycles on the FIRST timeout, and must NOT
+ * recycle on `reason: "error"`.
  *
  * `recyclePool()` is what releases that parked query: the old client is torn
  * down with `timeout: 0`, so the abandoned probe settles as an error and its
  * connection goes with it.
  */
-export async function probeAppPool(timeoutMs: number): Promise<boolean> {
+export async function probeAppPool(timeoutMs: number): Promise<AppPoolProbeResult> {
   const target = pool.db;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<boolean>((resolve) => {
-    timer = setTimeout(() => resolve(false), timeoutMs);
+  const timeout = new Promise<AppPoolProbeResult>((resolve) => {
+    timer = setTimeout(() => resolve({ ok: false, reason: "timeout", timeoutMs }), timeoutMs);
   });
+
+  // The verdict query is the shape callers actually use: a drizzle builder read
+  // of `system_config`, the same table the dispatch path reads first. A probe
+  // must exercise the path that has to work.
+  //
+  // It MUST NOT be `execute(sql\`select 1\`)` — the shape this probe used until
+  // 2026-09-20, and the whole cause of the recycle loop:
+  //
+  //   * that shape never settles on this pool (`executeShape: 'hung'` on every
+  //     timeout the watchdog recorded), and
+  //   * postgres.js keeps a connection reserved for a query that never settles,
+  //     so EVERY 10s probe tick permanently burnt one of the pool's five
+  //     connections. The pool therefore reached `0/5 probes settled` in ~50s, at
+  //     which point the watchdog dutifully diagnosed "frozen" and recycled —
+  //     giving the measured, endless ~58s recycle cadence. Each recycle rejected
+  //     that pool's in-flight queries (CONNECTION_DESTROYED) and dropped every
+  //     device WebSocket, which is what killed rider/driver sessions at the
+  //     ~2-minute mark.
+  //
+  // The app's own queries never showed it because they use this builder path,
+  // which kept working — proven by 35 consecutive 3-8ms reads taken from OUTSIDE
+  // the process, one per second, across the entire 35s window the internal probe
+  // spent waiting to be told the pool was frozen.
   const query = target
-    .execute(sql`select 1 as ok`)
-    .then(() => true)
-    .catch(() => false);
+    .select()
+    .from(schema.systemConfig)
+    .limit(1)
+    .then((): AppPoolProbeResult => ({ ok: true }))
+    .catch(
+      (e: Error): AppPoolProbeResult => ({
+        ok: false,
+        reason: "error",
+        error: e?.message ?? String(e),
+      }),
+    );
   try {
     return await Promise.race([query, timeout]);
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * How much of the pool can still serve a query — the measurement a single
+ * probe cannot make.
+ *
+ * Why this exists (live-measured 2026-09-20): a SINGLE timed-out probe does not
+ * prove the pool is frozen. From outside the process, an equivalent read of the
+ * same pool answered in 3–8ms on 35 consecutive 1 Hz samples spanning the exact
+ * 35s window the internal probe spent waiting, and again at the instant the
+ * watchdog logged `application pool frozen`. So at least one slot was serving
+ * while at least one `select 1` never settled: the pool was PARTIALLY wedged,
+ * and `recyclePool()` — which is all-or-nothing — turned a survivable
+ * degradation into a total outage by rejecting the healthy connections'
+ * in-flight queries (CONNECTION_DESTROYED) and dropping every device socket.
+ *
+ * This fires `attempts` probes concurrently (the caller passes the pool size)
+ * and counts how many settle. Zero settled is the only outcome that proves the
+ * pool has lost all capacity and must be recycled. postgres.js queues queries
+ * that arrive while every connection is busy, so a pool with even one usable
+ * slot still settles every probe — sequentially on that slot — which is
+ * precisely the "still alive" state we must not destroy.
+ */
+export async function probeAppPoolCapacity(
+  timeoutMs: number,
+  attempts: number = APP_POOL_SIZE,
+): Promise<{ settled: number; attempts: number }> {
+  const results = await Promise.all(
+    Array.from({ length: attempts }, () => probeAppPool(timeoutMs)),
+  );
+  return { settled: results.filter((r) => r.ok).length, attempts };
 }
 
 /**

@@ -15,7 +15,10 @@
  *    the exported binding — the whole point of the Proxy);
  *  - a function identity is stable while the pool is unchanged (bind is cached,
  *    so `db.select` is not a fresh closure per access);
- *  - `probeAppPool` is BOUNDED: a frozen pool yields `false`, never a hang;
+ *  - `probeAppPool` is BOUNDED: a frozen pool yields a TIMEOUT result, never a
+ *    hang, and a REJECTION is reported as a distinct, non-timeout outcome —
+ *    collapsing those two is what made the watchdog recycle a healthy pool
+ *    every ~58s on the live server (2026-09-20);
  *  - `recyclePool` builds a new client, force-closes the old one, and leaves the
  *    new one alone.
  *
@@ -34,12 +37,25 @@ jest.mock("postgres", () => ({
 }));
 
 jest.mock("drizzle-orm/postgres-js", () => ({
-  drizzle: jest.fn(() => ({
-    // A fresh object per instance, so tests can prove the Proxy switched
-    // targets by identity. Non-function, so it is returned unbound.
-    marker: {},
-    execute: jest.fn(() => Promise.resolve([{ ok: 1 }])),
-  })),
+  // Self-contained by necessity: a jest.mock factory may not close over
+  // anything outer. `_self.limit` is the terminal step of the query-builder
+  // chain probeAppPool verdicts on, so tests can override it per case.
+  drizzle: jest.fn(() => {
+    // Explicit type: the object references itself in `from`, which TypeScript
+    // cannot infer otherwise (TS7022).
+    const self: { from: () => unknown; limit: () => Promise<unknown[]> } = {
+      from: jest.fn(() => self),
+      limit: jest.fn(() => Promise.resolve([{ key: "dispatch_paused", value: "false" }])),
+    };
+    return {
+      // A fresh object per instance, so tests can prove the Proxy switched
+      // targets by identity. Non-function, so it is returned unbound.
+      marker: {},
+      execute: jest.fn(() => Promise.resolve([{ ok: 1 }])),
+      select: jest.fn(() => self),
+      _self: self,
+    };
+  }),
 }));
 
 // Avoid pulling the real (very large) drizzle schema into this unit test.
@@ -50,7 +66,11 @@ const drizzleMock = drizzle as unknown as jest.Mock;
 
 interface FacadeModule {
   db: Record<string, unknown>;
-  probeAppPool: (timeoutMs: number) => Promise<boolean>;
+  probeAppPool: (timeoutMs: number) => Promise<
+    | { ok: true }
+    | { ok: false; reason: "timeout"; timeoutMs: number }
+    | { ok: false; reason: "error"; error: string }
+  >;
   recyclePool: () => Promise<void>;
 }
 
@@ -67,7 +87,12 @@ function freshDb(): FacadeModule {
 }
 
 /** The drizzle instance most recently created by the mocked factory. */
-function lastInstance(): { marker: object; execute: jest.Mock } {
+function lastInstance(): {
+  marker: object;
+  execute: jest.Mock;
+  select: jest.Mock;
+  _self: { limit: jest.Mock };
+} {
   const results = drizzleMock.mock.results;
   return results[results.length - 1].value;
 }
@@ -92,30 +117,60 @@ describe("db facade", () => {
 });
 
 describe("probeAppPool", () => {
-  it("resolves true when the pool answers", async () => {
+  it("reports ok when the pool answers", async () => {
     const { probeAppPool } = freshDb();
-    await expect(probeAppPool(50)).resolves.toBe(true);
+    await expect(probeAppPool(50)).resolves.toEqual({ ok: true });
   });
 
-  it("resolves false at its bound when the pool is frozen (never a hang)", async () => {
+  it("reports a TIMEOUT at its bound when the pool is frozen (never a hang)", async () => {
     const { probeAppPool } = freshDb();
     // The hung-socket shape: the query never settles, and the pool's own
     // statement_timeout cannot bound it because the reply is what is missing.
-    lastInstance().execute.mockReturnValue(new Promise(() => {}));
+    const inst = lastInstance();
+    inst._self.limit.mockReturnValue(new Promise(() => {}));
     jest.useFakeTimers();
     try {
       const settled = probeAppPool(50);
       await jest.advanceTimersByTimeAsync(60);
-      await expect(settled).resolves.toBe(false);
+      await expect(settled).resolves.toEqual({
+        ok: false,
+        reason: "timeout",
+        timeoutMs: 50,
+      });
     } finally {
       jest.useRealTimers();
     }
   });
 
-  it("reports false when the pool errors", async () => {
+  it("probes with the QUERY-BUILDER shape, never `execute(sql`…`)`", async () => {
+    // The regression guard for the recycle loop of 2026-09-20. The old probe ran
+    // `execute(sql`select 1`)`, a shape that never settles on this pool, so every
+    // 10s tick burnt one of the five connections: the pool hit 0/5 in ~50s and
+    // the watchdog recycled it forever (~58s cadence), dropping every device
+    // socket. The probe must use the builder path the app itself uses.
+    const { probeAppPool, db } = freshDb();
+    const inst = lastInstance();
+    inst.execute.mockReturnValue(new Promise(() => {})); // would hang forever
+    await expect(probeAppPool(200)).resolves.toEqual({ ok: true });
+    // It still must not touch the hanging shape at all — a fire-and-forget
+    // `execute` would reserve a connection even though nothing awaits it.
+    expect(inst.execute).not.toHaveBeenCalled();
+    expect(typeof db.select).toBe("function");
+  });
+
+  it("reports a distinct ERROR (not a timeout) when the pool rejects the query", async () => {
+    // The two failures mean OPPOSITE things: a timeout leaves its slot reserved
+    // (a recycle is required), while a rejection has already released it. The
+    // watchdog was recycling a healthy pool every ~58s on the live server
+    // because both collapsed into one `false` — measured 2026-09-20, with the
+    // pool answering in 3-8ms during every window it was called frozen.
     const { probeAppPool } = freshDb();
-    lastInstance().execute.mockReturnValue(Promise.reject(new Error("pool closed")));
-    await expect(probeAppPool(50)).resolves.toBe(false);
+    lastInstance()._self.limit.mockReturnValue(Promise.reject(new Error("pool closed")));
+    await expect(probeAppPool(50)).resolves.toEqual({
+      ok: false,
+      reason: "error",
+      error: "pool closed",
+    });
   });
 });
 

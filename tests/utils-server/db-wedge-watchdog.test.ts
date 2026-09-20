@@ -16,6 +16,8 @@
  *    pinned in tests/utils-server/db-probe.test.ts, kept separate because this
  *    suite mocks that module wholesale.
  *  - a single failed probe must NOT exit (transient blip tolerance)
+ *  - only a pool-probe TIMEOUT recycles the pool; a rejected probe must NOT
+ *    (collapsing the two destroyed a healthy pool every ~58s, live 2026-09-20)
  *  - WEDGE_THRESHOLD (4) consecutive failures must exit(1) for supervisor restart
  *  - a success after failures must reset the counter (recovery is not a wedge)
  *  - probes are SERIALIZED: a still-pending probe must not be stacked by the
@@ -41,6 +43,7 @@ jest.mock("../../src/db", () => ({
   // themselves are covered against the real module in
   // tests/db/pool-recycle.test.ts.
   probeAppPool: jest.fn(),
+  probeAppPoolCapacity: jest.fn(),
   recyclePool: jest.fn(),
 }));
 
@@ -54,7 +57,7 @@ jest.mock("../../lib/logger", () => ({
 
 import { probeDbOnce, startDbWatchdog } from "../../utils-server/dbWatchdog";
 import { getProbeClient } from "../../utils-server/dbProbe";
-import { db, probeAppPool, recyclePool } from "../../src/db";
+import { db, probeAppPool, probeAppPoolCapacity, recyclePool } from "../../src/db";
 import { logger } from "../../lib/logger";
 
 /**
@@ -64,6 +67,7 @@ import { logger } from "../../lib/logger";
  */
 const mockExecute = db.execute as jest.Mock;
 const mockProbeAppPool = probeAppPool as jest.Mock;
+const mockProbeAppPoolCapacity = probeAppPoolCapacity as jest.Mock;
 const mockRecyclePool = recyclePool as jest.Mock;
 /** The tagged-template call on the dedicated probe client. */
 let probeQuery: jest.Mock;
@@ -78,11 +82,16 @@ beforeEach(() => {
   // Default: the application pool is healthy, so the pre-existing state-machine
   // tests exercise the reachability path only.
   mockProbeAppPool.mockReset();
-  mockProbeAppPool.mockResolvedValue(true);
+  mockProbeAppPool.mockResolvedValue({ ok: true });
+  // Default: the pool has LOST all capacity, so the timeout path recycles.
+  // The partial-wedge case (settled > 0) is covered by its own test below.
+  mockProbeAppPoolCapacity.mockReset();
+  mockProbeAppPoolCapacity.mockResolvedValue({ settled: 0, attempts: 5 });
   mockRecyclePool.mockReset();
   mockRecyclePool.mockResolvedValue(undefined);
   (logger.info as jest.Mock).mockClear();
   (logger.error as jest.Mock).mockClear();
+  (logger.warn as jest.Mock).mockClear();
   // Record-only (do not throw): process.exit fires inside a 150ms timer, and
   // a throwing mock inside a fake-timer callback surfaces as an unrelated
   // async error. The assertions below check the call itself.
@@ -200,12 +209,13 @@ describe("startDbWatchdog application-pool freeze detection", () => {
     probeQuery.mockReturnValue(Promise.resolve([]));
   });
 
-  it("recycles on the FIRST pool timeout — a timed-out probe cannot release its own slot", async () => {
+  it("recycles on the FIRST pool TIMEOUT — a timed-out probe cannot release its own slot", async () => {
     // The contract changed from "4 consecutive timeouts" precisely because
     // probeAppPool cannot release the connection it abandoned: every further
     // trying probe consumes another of the pool's five connections and deepens
-    // the freeze it is waiting to confirm. A false result IS the signal.
-    mockProbeAppPool.mockResolvedValue(false);
+    // the freeze it is waiting to confirm. A timeout IS the signal.
+    mockProbeAppPool.mockResolvedValue({ ok: false, reason: "timeout", timeoutMs: 35_000 });
+    mockProbeAppPoolCapacity.mockResolvedValue({ settled: 0, attempts: 5 });
     startDbWatchdog(1000);
     await jest.advanceTimersByTimeAsync(1000);
     expect(logger.error).toHaveBeenCalledWith(
@@ -232,14 +242,57 @@ describe("startDbWatchdog application-pool freeze detection", () => {
 
   it("logs recovery once the pool serves a query again", async () => {
     mockProbeAppPool
-      .mockResolvedValueOnce(false) // frozen → heal
-      .mockResolvedValue(true); // healthy from here on
+      .mockResolvedValueOnce({ ok: false, reason: "timeout", timeoutMs: 35_000 }) // frozen → heal
+      .mockResolvedValue({ ok: true }); // healthy from here on
     startDbWatchdog(1000);
     await jest.advanceTimersByTimeAsync(2000);
     expect(mockRecyclePool).toHaveBeenCalledTimes(1);
     expect(logger.info).toHaveBeenCalledWith(
       "[db-watchdog] application pool recovered",
       expect.anything(),
+    );
+  });
+
+  it("does NOT recycle while the pool still has capacity — a partial wedge is not a freeze", async () => {
+    // The measured live defect of 2026-09-20: one connection never settled, so
+    // the single probe timed out, but the pool served every other query in
+    // 3-8ms. Recycling then destroyed a working pool — rejecting the healthy
+    // connections' in-flight queries and dropping both phones' WebSockets. Only
+    // zero remaining capacity justifies a recycle.
+    mockProbeAppPool.mockResolvedValue({ ok: false, reason: "timeout", timeoutMs: 35_000 });
+    mockProbeAppPoolCapacity.mockResolvedValue({ settled: 2, attempts: 5 });
+    startDbWatchdog(1000);
+    await jest.advanceTimersByTimeAsync(3000);
+    expect(mockRecyclePool).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      "[db-watchdog] application pool partially wedged — still serving, NOT recycled",
+      expect.objectContaining({ settled: 2, attempts: 5 }),
+    );
+  });
+
+  it("does NOT recycle on a REJECTED probe — a released slot is not a frozen one", async () => {
+    // The regression guard for the live defect of 2026-09-20: the probe's
+    // `false` covered both "no reply" and "the query rejected", so a pooler
+    // reaping one idle connection made the watchdog destroy a healthy pool
+    // every ~58s. Each recycle rejected that pool's in-flight queries
+    // (CONNECTION_DESTROYED) and dropped every device WebSocket, which is what
+    // killed the phone sessions at the ~2-minute mark. Measured from outside
+    // the process, the pool answered in 3-8ms during all 35s the internal probe
+    // spent waiting.
+    mockProbeAppPool.mockResolvedValue({
+      ok: false,
+      reason: "error",
+      error: "write CONNECTION_DESTROYED",
+    });
+    startDbWatchdog(1000);
+    await jest.advanceTimersByTimeAsync(5000); // several ticks
+    expect(mockRecyclePool).not.toHaveBeenCalled();
+    // A rejection already released its slot, so there is no capacity question
+    // to ask — the capacity probe must not even run.
+    expect(mockProbeAppPoolCapacity).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      "[db-watchdog] application-pool probe rejected — pool is serving, not frozen",
+      expect.objectContaining({ error: "write CONNECTION_DESTROYED" }),
     );
   });
 

@@ -105,12 +105,51 @@
  *     run. The bound is now 35s, above both limits, so exceeding it means no
  *     reply arrived rather than a reply still in flight.
  *
+ *  3. IT COULD NOT TELL A REJECTION FROM A FREEZE (fixed 2026-09-20).
+ *     `probeAppPool` resolved one `false` for both "no reply within the bound"
+ *     and "the query rejected", so a single connection-level error was read as
+ *     the frozen-slot class and healed by destroying the pool. The two are
+ *     opposite signals: a timeout left its query parked on a slot, while a
+ *     rejection SETTLED and released it — the transaction pooler reaping an
+ *     idle backend produces exactly the latter on next use.
+ *
+ *     Measured live with a 1 Hz probe of the same pool from OUTSIDE the
+ *     process: at the instant this watchdog logged `application pool frozen`
+ *     (10:58:56 and 11:00:55), the pool answered an equivalent query in 8ms and
+ *     3ms, and across the whole 35s window the internal probe spent waiting it
+ *     returned 2–8ms on every one of 35 consecutive samples (144ms worst case
+ *     over 224 samples). The pool was never frozen; this watchdog was recycling
+ *     a healthy one every ~58s, and every `recyclePool()` rejects that pool's
+ *     in-flight queries with CONNECTION_DESTROYED — the burst this file's
+ *     sibling documents as "the heal working" — which is what dropped the
+ *     device WebSockets and killed rider/driver sessions at the ~2-minute mark.
+ *
+ *     A rejection is now logged at WARN with its underlying error (previously
+ *     swallowed) and leaves the pool alone.
+ *
+ *  4. A SINGLE TIMEOUT IS NOT A FREEZE EITHER (fixed 2026-09-20). After (3) was
+ *     released, `probe rejected` appeared ZERO times across the next runs — so
+ *     the recycles were genuine 35s timeouts, while the pool kept answering an
+ *     equivalent read in 3-8ms throughout. The pool was PARTIALLY wedged: one
+ *     connection never settled a `select 1` while the others served normally.
+ *     Since `recyclePool()` is all-or-nothing, one dead connection was enough
+ *     to destroy a working pool and drop every device socket.
+ *
+ *     The decision is now capacity-based: a timed-out probe triggers
+ *     `probeAppPoolCapacity` (src/db/index.ts), which asks the pool for as many
+ *     concurrent probes as it has slots and counts how many settle. A recycle
+ *     happens ONLY at `settled === 0` — no capacity left, the state this heal
+ *     exists for. Anything above zero is logged as a partial wedge and left
+ *     alone, because postgres.js queues queries onto whatever slot is free, so
+ *     one usable slot still serves the whole pool. Cost: a genuine total freeze
+ *     is detected in up to 2× the probe bound (~70s) instead of 35s.
+ *
  * Exiting on unreachability keeps its separate 4-failure tolerance: a pooler
  * reconnect storm can exceed one probe timeout, and there the cost of waiting
  * is only time a real outage has already cost.
  */
 import { getProbeClient } from "./dbProbe";
-import { probeAppPool, recyclePool } from "../src/db";
+import { probeAppPool, probeAppPoolCapacity, recyclePool } from "../src/db";
 import { logger } from "../lib/logger";
 
 const PROBE_INTERVAL_MS = 10_000;
@@ -152,6 +191,16 @@ const WEDGE_THRESHOLD = 4;
  * for why a second trying probe would consume another slot.
  */
 const APP_POOL_PROBE_TIMEOUT_MS = 35_000;
+/**
+ * The ONLY probe outcome that triggers a recycle is `reason: "timeout"`.
+ *
+ * A rejected probe is deliberately excluded (see the branch in `startDbWatchdog`
+ * and the `ProbeAppPoolResult` doc in src/db/index.ts). Collapsing the two into
+ * one boolean is what made this watchdog recycle a healthy pool every ~58s on
+ * 2026-09-20, live-measured at 3-8ms of real pool latency during every window
+ * it called "frozen". A rejection has already released its slot, so it cannot
+ * be the frozen-slot class this heal exists for; a genuine freeze still
+ * produces a timeout on this or a later tick and heals then.
 
 /**
  * One end-to-end reachability probe on the DEDICATED probe connection.
@@ -221,12 +270,13 @@ export function startDbWatchdog(intervalMs: number = PROBE_INTERVAL_MS): NodeJS.
         }
         consecutiveFailures = 0;
 
-        // The database answered on the dedicated connection, so a timeout on
-        // the application pool can only mean this process's own slots are
-        // frozen — the half-open case in the header — not a down database.
+        // The database answered on the dedicated connection, so a failure on
+        // the application pool can only concern this process's own slots — the
+        // half-open case in the header — not a down database.
         // Heal in-process: a recycle keeps every connected device socket, which
         // a supervisor restart would drop.
-        if (await probeAppPool(APP_POOL_PROBE_TIMEOUT_MS)) {
+        const poolProbe = await probeAppPool(APP_POOL_PROBE_TIMEOUT_MS);
+        if (poolProbe.ok) {
           if (poolFrozen) {
             logger.info("[db-watchdog] application pool recovered", {
               note: "pool serves queries again",
@@ -235,9 +285,47 @@ export function startDbWatchdog(intervalMs: number = PROBE_INTERVAL_MS): NodeJS.
           poolFrozen = false;
           return;
         }
+
+        // A REJECTION is not a freeze. The query settled (with an error), so
+        // its slot was released and the pool is demonstrably serving — the
+        // pooler reaping an idle backend produces exactly this on next use.
+        // Recycling here would destroy a HEALTHY pool: the recycle rejects
+        // that pool's in-flight queries (CONNECTION_DESTROYED) and drops every
+        // device WebSocket. Measured live 2026-09-20 — the watchdog logged
+        // `frozen` and recycled every ~58s while the pool answered in 3-8ms
+        // throughout, which is what killed the phone sessions. Only a TIMEOUT
+        // means slots are still reserved, so only a timeout heals.
+        if (poolProbe.reason === "error") {
+          logger.warn("[db-watchdog] application-pool probe rejected — pool is serving, not frozen", {
+            error: poolProbe.error,
+            note: "a released slot is not a frozen one; no recycle (a timeout on a later tick still heals a real freeze)",
+          });
+          return;
+        }
+
+        // A SINGLE timeout does not prove the pool is frozen — measured live
+        // 2026-09-20, the pool answered an equivalent query in 3-8ms on 35
+        // consecutive samples across the whole window this probe spent waiting.
+        // The pool was PARTIALLY wedged (one connection never settled while the
+        // others served), and recycling is all-or-nothing: it rejected the
+        // healthy connections' in-flight queries and dropped every device
+        // socket. So ask the pool directly how much capacity it still has, and
+        // destroy it only when it has none.
+        const capacity = await probeAppPoolCapacity(APP_POOL_PROBE_TIMEOUT_MS);
+        if (capacity.settled > 0) {
+          poolFrozen = false;
+          logger.warn("[db-watchdog] application pool partially wedged — still serving, NOT recycled", {
+            settled: capacity.settled,
+            attempts: capacity.attempts,
+            note: "some connection never settles; the others still serve, so a recycle would kill a working pool",
+          });
+          return;
+        }
+
         poolFrozen = true;
         logger.error("[db-watchdog] application pool frozen (database is reachable)", {
           probeTimeoutMs: APP_POOL_PROBE_TIMEOUT_MS,
+          capacity: `${capacity.settled}/${capacity.attempts} probes settled`,
           effect:
             "dispatch, scheduler ticks and rider/driver auth all park on DB access",
         });
