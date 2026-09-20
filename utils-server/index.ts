@@ -11,6 +11,7 @@ import {
   removeDriver,
   getDriversInCells,
   getIndexedDriverCount,
+  HEARTBEAT_STALE_MS,
 } from "./h3Index";
 import { startCompensationWorker } from "./compensationWorker";
 import { startScheduler } from "./scheduler";
@@ -986,6 +987,7 @@ wss.on("connection", (ws: WebSocket) => {
                     vehicle_type: drivers.vehicle_type,
                     last_location_lat: drivers.last_location_lat,
                     last_location_lng: drivers.last_location_lng,
+                    last_location_at: drivers.last_location_at,
                   })
                   .from(drivers)
                   .where(eq(drivers.user_id, user.id))
@@ -1034,7 +1036,7 @@ wss.on("connection", (ws: WebSocket) => {
                   .set({ is_online: true, updated_at: new Date() })
                   .where(eq(drivers.id, driver.id));
 
-                // BUG FIX: Index driver immediately — don't wait for first heartbeat.
+                // Index driver immediately — don't wait for first heartbeat.
                 // If h3_cell_res9 is NULL, compute from last known GPS coordinates.
                 let cell = driver.h3_cell_res9;
                 if (!cell && driver.last_location_lat != null && driver.last_location_lng != null) {
@@ -1047,14 +1049,38 @@ wss.on("connection", (ws: WebSocket) => {
                     .set({ h3_cell_res9: cell })
                     .where(eq(drivers.id, driver.id));
                 }
-                if (cell) {
+
+                // A cell alone does not make a driver dispatchable — the cell may
+                // be days old, because a socket can re-authenticate long after the
+                // app stopped reporting location. Indexing on presence alone put
+                // drivers in the pool that dispatch.ts's M2 rule always rejects.
+                // Live, 2026-09-20: this line re-indexed a driver whose last
+                // heartbeat was 4.25 days old at every reconnect, so a booking
+                // built `candidatesFound: 1` and then scored `0`, while the
+                // location-staleness was invisible. Gate on the same threshold
+                // the filter and refreshH3Index use; a heartbeat indexes them.
+                const lastFixMs = driver.last_location_at
+                  ? Date.now() - new Date(driver.last_location_at).getTime()
+                  : Infinity;
+                if (cell && lastFixMs < HEARTBEAT_STALE_MS) {
                   updateDriver(driver.id, cell, driver.vehicle_type);
+                  logger.info("[ws] driver indexed on auth", {
+                    driverId: driver.id,
+                    cell,
+                    hasGps: driver.last_location_lat != null,
+                  });
+                } else {
+                  // Not an error: an online driver who has not reported location
+                  // yet is simply not dispatchable. Logged because its absence
+                  // was what made the earlier investigation guess at the client.
+                  logger.warn("[ws] driver online but location stale — not indexed", {
+                    driverId: driver.id,
+                    lastFixAgeSeconds: Number.isFinite(lastFixMs)
+                      ? Math.round(lastFixMs / 1000)
+                      : null,
+                    staleAfterSeconds: HEARTBEAT_STALE_MS / 1000,
+                  });
                 }
-                logger.info("[ws] driver indexed on auth", {
-                  driverId: driver.id,
-                  cell,
-                  hasGps: driver.last_location_lat != null,
-                });
               }
             } else if (role === "rider") {
               const prevRider = connectedRiders.get(user.id);
