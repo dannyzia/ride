@@ -561,7 +561,9 @@ const server = http.createServer(async (req, res) => {
           // for the utilization row. An admin suspension must close the session
           // AND clear is_online, not leave one of them behind.
           connectedDrivers.delete(driver_id);
-          await handleDriverDisconnect(driver_id, client);
+          // An admin suspension is a decision, not a transient socket loss, so
+          // it closes the driver's online state at once (no grace window).
+          await handleDriverDisconnect(driver_id, client, { immediate: true });
         }
 
         await db
@@ -1062,6 +1064,15 @@ wss.on("connection", (ws: WebSocket) => {
                     ),
                   )
                   .limit(1);
+                // A reconnect inside the disconnect grace re-affirms the driver's
+                // own decision, so cancel the pending expiry — the sweep must not
+                // close a session a fresh socket just re-joined. (An expiry that
+                // already fired simply finds no entry here.)
+                if (pendingDriverDisconnects.delete(driver.id)) {
+                  logger.info("[ws] driver reconnected inside grace — online state kept", {
+                    driverId: driver.id,
+                  });
+                }
                 if (openSession) {
                   await db
                     .update(drivers)
@@ -1845,7 +1856,33 @@ async function handleDisconnect(client: WSClient) {
   });
 }
 
-async function handleDriverDisconnect(driverId: string, disconnectingClient?: WSClient) {
+// ── Socket loss is not a decision to go offline ─────────────────────────────
+//
+// `drivers.is_online` + the open `driver_online_sessions` row express ONE fact:
+// the driver deliberately went online (app/api/driver/status). A socket teardown
+// must not revoke that decision by itself, because a phone that sleeps, loses
+// signal, or is backgrounded drops its socket without the driver ever choosing
+// to stop working. Observed on-device 2026-09-20: a 45s background cycle ended
+// the session, so on return the app's recovery saw "no active session", went
+// offline, and the driver silently fell out of dispatch (`drivers_indexed` 1→0)
+// until a human tapped "Go online" again.
+//
+// So: a lost socket holds online state for a bounded grace window. If the driver
+// reconnects inside it (the normal background/foreground cycle), nothing changed
+// and the driver stays dispatchable with nobody touching the phone. If the window
+// expires with no live connection, the state closes exactly as it did before.
+// A user decision (immediate) and an admin suspension skip the grace entirely.
+const DRIVER_DISCONNECT_GRACE_MS = 90_000;
+const pendingDriverDisconnects = new Map<
+  string,
+  { deadline: number; client?: WSClient }
+>();
+
+async function handleDriverDisconnect(
+  driverId: string,
+  disconnectingClient?: WSClient,
+  opts: { immediate?: boolean } = {},
+) {
   // Sequential chain: a disconnecting driver's outstanding offer resolves
   // immediately as 'disconnected' (treated like expiry — no dead TTL wait on
   // a gone driver; the lead stays billed, pipeline offers the next driver).
@@ -1884,6 +1921,28 @@ async function handleDriverDisconnect(driverId: string, disconnectingClient?: WS
     // keeps the driver dispatchable.
     return;
   }
+
+  // Hold online state through a transient socket loss (see the grace note above
+  // the constants). `immediate` callers — an admin suspension, or the grace
+  // sweep below — go straight to the close.
+  if (!opts.immediate) {
+    const pending = pendingDriverDisconnects.get(driverId);
+    if (pending) {
+      // Already inside a grace window that has not expired: nothing to do.
+      if (Date.now() < pending.deadline) return;
+    } else {
+      pendingDriverDisconnects.set(driverId, {
+        deadline: Date.now() + DRIVER_DISCONNECT_GRACE_MS,
+        client: disconnectingClient,
+      });
+      logger.info(
+        "[ws] driver socket lost — online held for grace window",
+        { driverId, graceMs: DRIVER_DISCONNECT_GRACE_MS },
+      );
+      return;
+    }
+  }
+  pendingDriverDisconnects.delete(driverId);
 
   // Close online session
   await db
@@ -2842,8 +2901,25 @@ async function startup() {
             });
           }, 2000);
         });
-        logger.info("[ws] stale driver evicted", { driverId });
+        logger.info("[ws] stale driver connection evicted — online held for grace window", {
+          driverId,
+        });
       }
+    }
+
+    // Disconnect grace: a socket that never came back closes the driver's online
+    // state here, together with the session row (one owner, one condition). The
+    // liveness check is deliberate — a reconnect racing this sweep must never be
+    // closed by it, and a driver who did come back already cleared their entry on
+    // register.
+    for (const [driverId, pending] of pendingDriverDisconnects) {
+      if (now < pending.deadline) continue;
+      pendingDriverDisconnects.delete(driverId);
+      if (connectedDrivers.has(driverId)) continue;
+      handleDriverDisconnect(driverId, pending.client, { immediate: true }).catch((e) => {
+        logger.error("[ws] disconnect grace expiry failed", { driverId, error: e.message });
+      });
+      logger.info("[ws] disconnect grace expired — driver offline", { driverId });
     }
   }, CLEANUP_INTERVAL_MS);
 
