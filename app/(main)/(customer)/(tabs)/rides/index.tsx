@@ -656,7 +656,7 @@ export default function RidesScreen() {
             ]}
             onPress={() => setActiveFilter(tab)}
             accessibilityRole="button"
-            accessibilityLabel={t('rides_list.a11y_filter', { label: FILTER_LABELS[tab] })}
+            accessibilityLabel={t('rides_list.a11y_filter', { label: t(FILTER_LABELS[tab]) })}
           >
             <Text
               style={{
@@ -665,7 +665,7 @@ export default function RidesScreen() {
                 color: activeFilter === tab ? colors.white : textSecondary,
               }}
             >
-              {FILTER_LABELS[tab]}
+              {t(FILTER_LABELS[tab])}
             </Text>
           </TouchableOpacity>
         ))}

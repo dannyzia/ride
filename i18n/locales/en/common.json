@@ -769,7 +769,13 @@
     "inbox": "Inbox",
     "a11y_referral": "Open referral programme",
     "referral": "Referral",
-    "no_fare_dispute": "You have no pending fare disputes."
+    "no_fare_dispute": "You have no pending fare disputes.",
+    "filter_scheduled": "Scheduled",
+    "group_today": "Today",
+    "group_yesterday": "Yesterday",
+    "group_this_week": "This week",
+    "group_this_month": "This month",
+    "group_earlier": "Earlier"
   },
   "saved_addresses": {
     "error_label": "Please enter a label",

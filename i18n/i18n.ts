@@ -50,7 +50,18 @@ export async function setLanguage(lang: SupportedLanguage): Promise<void> {
 export async function initI18n(): Promise<void> {
   const lng = await loadPersistedLanguage();
 
-  i18n.use(initReactI18next).init({
+  // The synchronous init at the bottom of this module always runs first
+  // (lng: 'en'), and i18next makes a second init() call on an already
+  // initialized instance a no-op — so passing `lng` to init() here never
+  // hydrated the persisted choice. On startup that reverted every reload
+  // (and cold start) to English even though `ride:i18n:language` held 'bn'
+  // (device-verified). Hydrate via changeLanguage on the live instance.
+  if (i18n.default.isInitialized) {
+    await i18n.changeLanguage(lng);
+    return;
+  }
+
+  await i18n.use(initReactI18next).init({
     resources,
     lng,
     fallbackLng: 'en',

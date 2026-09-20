@@ -16,9 +16,9 @@ interface SettingsItem {
 const items: SettingsItem[] = [
   { labelKey: "settings.personal_info", route: "/(main)/(customer)/(tabs)/settings/personal-info", icon: "person-outline" },
   { labelKey: "settings.notifications", route: "/(main)/(customer)/(tabs)/settings/notifications", icon: "notifications-outline" },
-  { labelKey: "settings.app_appearance", route: "/(main)/(customer)/(tabs)/settings/app-appearance", icon: "color-palette-outline" },
+  { labelKey: "app_appearance.title", route: "/(main)/(customer)/(tabs)/settings/app-appearance", icon: "color-palette-outline" },
   { labelKey: "settings.language", route: "/(main)/(customer)/(tabs)/settings/app-language", icon: "language-outline" },
-  { labelKey: "settings.saved_addresses", route: "/(main)/(customer)/(tabs)/settings/saved-addresses", icon: "location" },
+  { labelKey: "saved_addresses.title", route: "/(main)/(customer)/(tabs)/settings/saved-addresses", icon: "location" },
   { labelKey: "settings.emergency_contacts", route: "/(main)/(customer)/(tabs)/settings/emergency-contacts", icon: "medkit-outline" },
   { labelKey: "settings.linked_accounts", route: "/(main)/(customer)/(tabs)/settings/linked-accounts", icon: "link-outline" },
   { labelKey: "settings.data_analytics", route: "/(main)/(customer)/(tabs)/settings/data-analytics", icon: "stats-chart-outline" },
