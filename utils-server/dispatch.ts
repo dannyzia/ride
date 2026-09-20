@@ -2,7 +2,7 @@ import { db } from '../src/db';
 import { drivers, rides, dispatchOffers, systemConfig, pricing, preferences, subscriptions, packages, driverCommutePreferences, driverBlocklists, callLedger } from '../src/db/schema';
 import { eq, and, inArray, sql, gte } from 'drizzle-orm';
 import { getH3Ring } from '../lib/h3';
-import { getDriversInCells } from './h3Index';
+import { getDriversInCells, HEARTBEAT_STALE_MS } from './h3Index';
 import { checkDriverEligibility } from '../lib/vehicleTypes';
 import { haversineKm } from '../lib/fareCalc';
 import { logger } from '../lib/logger';
@@ -523,11 +523,12 @@ export async function buildCandidateList(
     // M2: hard-exclude drivers whose last heartbeat is so stale that the
     // socket may be alive but the app is effectively dead (iOS background
     // suspension, silent network partition — no close frame, so
-    // is_online never flips and the H3 index never evicts them). Threshold
-    // is 120s (not 90s) to give GPS-outage drivers (tunnels, dead zones)
-    // one or two 10s heartbeat ticks of grace before exclusion; the 90s
-    // onlineScore=0.0 boundary still applies below that.
-    if (heartbeatAgeSec >= 120) {
+    // is_online never flips). Threshold is 120s (not 90s) to give GPS-outage
+    // drivers (tunnels, dead zones) one or two 10s heartbeat ticks of grace
+    // before exclusion; the 90s onlineScore=0.0 boundary still applies below
+    // that. The value is shared with h3Index.ts, whose refresh now drops the
+    // same rows, so the index no longer advertises drivers this line rejects.
+    if (heartbeatAgeSec >= HEARTBEAT_STALE_MS / 1000) {
       logger.debug('[dispatch] driver filtered — heartbeat stale beyond 120s (socket may be alive but app dead)', {
         driverId: d.id,
         heartbeatAgeSec: Math.round(heartbeatAgeSec),
