@@ -33,7 +33,7 @@ if (!url || !key) {
 }
 
 const TARGET_PASSWORD = process.env.PASSWORD ?? "test1234";
-const PHONES = ["+8801613249520", "+8801700000001"] as const;
+const PHONES = ["+8801613249520", "+8801700000001", "+8801700000002"] as const;
 
 const admin = createClient(url, key, { auth: { persistSession: false } });
 
