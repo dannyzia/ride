@@ -775,7 +775,8 @@
     "group_yesterday": "গতকাল",
     "group_this_week": "এই সপ্তাহে",
     "group_this_month": "এই মাসে",
-    "group_earlier": "আগের"
+    "group_earlier": "আগের",
+    "status_in_progress": "চলমান"
   },
   "saved_addresses": {
     "error_label": "একটি লেবেল দিন",

@@ -775,7 +775,8 @@
     "group_yesterday": "Yesterday",
     "group_this_week": "This week",
     "group_this_month": "This month",
-    "group_earlier": "Earlier"
+    "group_earlier": "Earlier",
+    "status_in_progress": "In progress"
   },
   "saved_addresses": {
     "error_label": "Please enter a label",
