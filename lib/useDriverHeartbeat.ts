@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import * as Location from "expo-location";
 import { logger } from "@/lib/logger";
+import { getDriverFix } from "@/lib/driverLocationFix";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useWSStore } from "@/store";
 
@@ -56,19 +56,16 @@ export function useDriverHeartbeat(): void {
       const liveWs = useWSStore.getState().ws;
       if (!liveWs || liveWs.readyState !== WebSocket.OPEN) return;
       try {
-        const perm = await Location.requestForegroundPermissionsAsync();
-        if (!perm.granted) {
-          logger.warn("[driver] foreground location permission not granted");
-          return;
-        }
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
+        // Bounded fix with a last-known fallback (lib/driverLocationFix): the
+        // unbounded call parks forever indoors, which silently starves the
+        // server's freshness rule and makes an online driver un-dispatchable.
+        const fix = await getDriverFix();
+        if (!fix) return;
         liveWs.send(
           JSON.stringify({
             type: "heartbeat",
-            lat: loc.coords.latitude,
-            lng: loc.coords.longitude,
+            lat: fix.lat,
+            lng: fix.lng,
             ts: new Date().toISOString(),
           }),
         );

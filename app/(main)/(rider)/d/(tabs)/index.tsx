@@ -21,6 +21,7 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import MapLibreGL from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { logger } from "@/lib/logger";
+import { getDriverFix } from "@/lib/driverLocationFix";
 import SosBanner from "@/components/SosBanner";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { relativeTime } from "@/lib/time";
@@ -315,13 +316,12 @@ export default function DriverHome() {
     let cancelled = false;
     (async () => {
       try {
-        const perm = await Location.requestForegroundPermissionsAsync();
-        if (!perm.granted || cancelled) return;
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
+        // Bounded fix + last-known fallback: the unbounded call left this screen
+        // on "Getting your location..." forever when indoors (GPS provider has
+        // no fix), and the go-online payload omits coords until it resolves.
+        const fix = await getDriverFix();
         if (!cancelled) {
-          setLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+          if (fix) setLocation(fix);
           setLocationLoading(false);
         }
       } catch (e) {
