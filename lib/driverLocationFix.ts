@@ -23,11 +23,83 @@ import { logger } from "@/lib/logger";
  * and the next tick usually gets a fresh one.
  */
 const FIX_TIMEOUT_MS = 8_000;
+/**
+ * Bound on the permission reads. They are awaited BEFORE the fix race and the
+ * last-known read, so an unbounded await here makes both of those unreachable —
+ * and this module is used by the driver heartbeat, whose silence is what makes
+ * an online driver un-dispatchable.
+ */
+const PERMISSION_TIMEOUT_MS = 3_000;
+/** The request prompt is slower than a read (it may show UI), so it gets more. */
+const PERMISSION_REQUEST_TIMEOUT_MS = 5_000;
+
+/**
+ * Resolve `p`, or `fallback` after `ms`. The loser is left to settle on its own.
+ */
+function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((resolve) => {
+      const timer = setTimeout(() => resolve(fallback), ms);
+      // Never hold the process open for a timer that only exists to stop waiting.
+      (timer as { unref?: () => void }).unref?.();
+    }),
+  ]);
+}
+
+/**
+ * Permission gate that CANNOT block the fix attempt.
+ *
+ * 2026-09-20, on-device: the app reported `hasGps: false` while
+ * ACCESS_FINE_LOCATION was granted, location services were on, and the OS held a
+ * fused last-known fix — with the driver home screen stuck on "Getting your
+ * location..." and zero heartbeat frames. The only unbounded await on that path
+ * was `requestForegroundPermissionsAsync()` at the top of this function, which
+ * sits BEFORE both the 8s fix race and the last-known read: if it never
+ * resolves, the last-known read is not merely slow, it is never reached. That is
+ * exactly the shape of a stale `hasGps`, and it makes every caller silent at
+ * once (mount effect, heartbeat, and the online toggle's coordinate payload).
+ *
+ * So: read the CURRENT permission first (no prompt, cheap), re-request only when
+ * it is actually missing, and bound both. A timeout or a throw is treated as
+ * "unknown", which proceeds to the fix attempt — a wrong guess there fails
+ * harmlessly in the try/catch below, whereas a wrong `return null` here would
+ * reproduce the exact bug: a driver who can never go online.
+ */
+async function ensureForegroundPermission(): Promise<boolean> {
+  try {
+    const current = await withTimeout(Location.getForegroundPermissionsAsync(), PERMISSION_TIMEOUT_MS, null);
+    if (current?.granted) return true;
+    // Not granted, or unreadable — ask, but do not wait forever for the answer.
+    const requested = await withTimeout(
+      Location.requestForegroundPermissionsAsync(),
+      PERMISSION_REQUEST_TIMEOUT_MS,
+      null,
+    );
+    if (requested && !requested.granted) return false;
+    return true;
+  } catch (e) {
+    logger.warn(
+      "[driver] permission read failed, attempting a fix anyway:",
+      e instanceof Error ? e.message : e,
+    );
+    return true;
+  }
+}
 
 export async function getDriverFix(): Promise<{ lat: number; lng: number } | null> {
-  const perm = await Location.requestForegroundPermissionsAsync();
-  if (!perm.granted) {
+  if (!(await ensureForegroundPermission())) {
     logger.warn("[driver] foreground location permission not granted");
+    // Still try the last-known read: it is a permission-independent cached value
+    // on Android, and a fresh prompt may simply not have been answerable.
+    try {
+      const cached = await Location.getLastKnownPositionAsync();
+      if (cached) {
+        return { lat: cached.coords.latitude, lng: cached.coords.longitude };
+      }
+    } catch {
+      // Nothing cached and no permission — no fix to report.
+    }
     return null;
   }
 

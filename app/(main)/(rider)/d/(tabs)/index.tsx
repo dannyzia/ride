@@ -1181,11 +1181,12 @@ export default function DriverHome() {
         {location && (
           <TouchableOpacity
             onPress={async () => {
+              // Bounded, with a last-known fallback — same reason as the mount
+              // effect above. The bare `getCurrentPositionAsync` here resolves
+              // only on a live lock, so indoors the button silently did nothing.
               try {
-                const loc = await Location.getCurrentPositionAsync({
-                  accuracy: Location.Accuracy.Balanced,
-                });
-                setLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+                const fix = await getDriverFix();
+                if (fix) setLocation(fix);
               } catch (e) {
                 logger.warn("[driver] recenter failed:", e instanceof Error ? e.message : e);
               }
