@@ -6,7 +6,7 @@
  * The broadcasts endpoint returns eligible open requests for ≥1 of the caller's
  * qualifying fleets (service-zone filter §A.2.4), with own-bid status joined.
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
@@ -81,6 +81,7 @@ export default function BidderRequestsScreen() {
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   const [requests, setRequests] = useState<BroadcastRequest[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string | null>(null);
@@ -91,29 +92,51 @@ export default function BidderRequestsScreen() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) return;
+      if (!token) {
+        setError("Session expired — sign in again to load requests.");
+        return;
+      }
 
       // Fleet discovery feed — eligible open requests for caller's qualifying fleets
       const res = await fetch(
         `${SERVER_URL}/api/rental/requests/broadcasts?page=${pageNum}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      if (res.ok) {
-        const data = await res.json();
-        const fetched: BroadcastRequest[] = data.requests ?? [];
-        setRequests((prev) => (pageNum === 1 ? fetched : [...prev, ...fetched]));
-        setHasMore(data.has_more ?? false);
+      if (!res.ok) {
+        // A non-2xx response used to fall through silently, so a 401/500 rendered
+        // as "No requests available" — indistinguishable from an empty feed and
+        // invisible in the logs. Surface it instead.
+        const body = await res.text().catch(() => "");
+        logger.error("[bidder-list] broadcasts request failed", {
+          status: res.status,
+          body: body.slice(0, 200),
+        });
+        setError(`Could not load requests (${res.status}). Pull down to retry.`);
+        return;
       }
+      const data = await res.json();
+      const fetched: BroadcastRequest[] = data.requests ?? [];
+      setRequests((prev) => (pageNum === 1 ? fetched : [...prev, ...fetched]));
+      setHasMore(data.has_more ?? false);
+      setError(null);
     } catch (err) {
       logger.error("[bidder-list] fetch error", err);
+      setError("Could not load requests. Pull down to retry.");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // Refetch on every focus, not just on mount. A bid submitted on bid-submit
+  // returns here through router.back(), which does not remount this screen — so
+  // the list kept showing the pre-bid state (no BIDDED chip, no status change),
+  // and a request broadcast while the screen was open never appeared at all.
+  useFocusEffect(
+    useCallback(() => {
+      setPage(1);
+      fetchData(1);
+    }, [fetchData]),
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -196,13 +219,19 @@ export default function BidderRequestsScreen() {
       >
         {filtered.length === 0 ? (
           <View style={{ padding: 40, alignItems: "center" }}>
-            <Ionicons name="car-outline" size={48} color={textSecondary} />
-            <Text style={{ fontSize: 15, fontFamily: "JakartaMedium", color: textSecondary, marginTop: 12 }}>
-              No requests available
+            <Ionicons
+              name={error ? "alert-circle-outline" : "car-outline"}
+              size={48}
+              color={error ? colors.danger : textSecondary}
+            />
+            <Text style={{ fontSize: 15, fontFamily: "JakartaMedium", color: error ? colors.danger : textSecondary, marginTop: 12, textAlign: "center" }}>
+              {error ?? "No requests available"}
             </Text>
-            <Text style={{ fontSize: 13, fontFamily: "Jakarta", color: textSecondary, marginTop: 4 }}>
-              New rental requests will appear here
-            </Text>
+            {!error && (
+              <Text style={{ fontSize: 13, fontFamily: "Jakarta", color: textSecondary, marginTop: 4 }}>
+                New rental requests will appear here
+              </Text>
+            )}
           </View>
         ) : (
           filtered.map((req) => {
