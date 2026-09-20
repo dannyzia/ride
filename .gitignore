@@ -142,6 +142,9 @@ driver_ui.xml
 # Tooling state
 .agents/
 
+# Local scratch: probe scripts, logs, exports and device captures (never committed)
+.tmp/
+
 *storybook.log
 storybook-static
 
