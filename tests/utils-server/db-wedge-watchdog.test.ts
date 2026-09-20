@@ -36,6 +36,12 @@ jest.mock("../../src/db", () => ({
   db: {
     execute: jest.fn(),
   },
+  // The application-pool probe and the in-process heal. Mocked here so this
+  // suite pins the watchdog's DECISION LOGIC; the probe/recycle mechanics
+  // themselves are covered against the real module in
+  // tests/db/pool-recycle.test.ts.
+  probeAppPool: jest.fn(),
+  recyclePool: jest.fn(),
 }));
 
 jest.mock("../../lib/logger", () => ({
@@ -48,11 +54,17 @@ jest.mock("../../lib/logger", () => ({
 
 import { probeDbOnce, startDbWatchdog } from "../../utils-server/dbWatchdog";
 import { getProbeClient } from "../../utils-server/dbProbe";
-import { db } from "../../src/db";
+import { db, probeAppPool, recyclePool } from "../../src/db";
 import { logger } from "../../lib/logger";
 
-/** The shared application pool — the probe must never touch this. */
+/**
+ * The shared application pool. The DEDICATED reachability probe must never
+ * touch this (guarded below) — the app-pool probe is a separate, deliberate
+ * caller and is mocked wholesale in this suite.
+ */
 const mockExecute = db.execute as jest.Mock;
+const mockProbeAppPool = probeAppPool as jest.Mock;
+const mockRecyclePool = recyclePool as jest.Mock;
 /** The tagged-template call on the dedicated probe client. */
 let probeQuery: jest.Mock;
 let exitSpy: jest.SpyInstance;
@@ -63,6 +75,12 @@ beforeEach(() => {
   (getProbeClient as jest.Mock).mockReset();
   (getProbeClient as jest.Mock).mockReturnValue(probeQuery);
   mockExecute.mockReset();
+  // Default: the application pool is healthy, so the pre-existing state-machine
+  // tests exercise the reachability path only.
+  mockProbeAppPool.mockReset();
+  mockProbeAppPool.mockResolvedValue(true);
+  mockRecyclePool.mockReset();
+  mockRecyclePool.mockResolvedValue(undefined);
   (logger.info as jest.Mock).mockClear();
   (logger.error as jest.Mock).mockClear();
   // Record-only (do not throw): process.exit fires inside a 150ms timer, and
@@ -147,7 +165,8 @@ describe("startDbWatchdog state machine", () => {
 
   it("never touches the shared application pool, even while exiting", async () => {
     // The regression guard for the whole class: if someone reintroduces
-    // `db.execute(...)` as the probe, this fails.
+    // `db.execute(...)` as the REACHABILITY probe, this fails. The app pool is
+    // still exercised deliberately — through probeAppPool, on the path below.
     probeQuery.mockImplementation(() => Promise.reject(new Error("boom")));
     startDbWatchdog(1000);
     await jest.advanceTimersByTimeAsync(4200);
@@ -169,5 +188,65 @@ describe("startDbWatchdog state machine", () => {
       "[db-watchdog] probe recovered",
       expect.objectContaining({ consecutiveFailures: 1 }),
     );
+  });
+});
+
+describe("startDbWatchdog application-pool freeze detection", () => {
+  beforeEach(() => {
+    // The database ITSELF is reachable in every case here — only this
+    // process's pool is unhealthy. That is the combination the dedicated probe
+    // cannot see, and the one that froze the live server on 2026-09-20:
+    // /health answered in 1.3ms while every DB-touching path parked forever.
+    probeQuery.mockReturnValue(Promise.resolve([]));
+  });
+
+  it("recycles on the FIRST pool timeout — a timed-out probe cannot release its own slot", async () => {
+    // The contract changed from "4 consecutive timeouts" precisely because
+    // probeAppPool cannot release the connection it abandoned: every further
+    // trying probe consumes another of the pool's five connections and deepens
+    // the freeze it is waiting to confirm. A false result IS the signal.
+    mockProbeAppPool.mockResolvedValue(false);
+    startDbWatchdog(1000);
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(logger.error).toHaveBeenCalledWith(
+      "[db-watchdog] application pool frozen (database is reachable)",
+      expect.objectContaining({ probeTimeoutMs: 35_000 }),
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      "[db-watchdog] recycling application pool",
+      expect.anything(),
+    );
+    expect(mockRecyclePool).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT recycle while the database itself is unreachable (that path exits instead)", async () => {
+    // A restart cannot help when the database is down, and recycling would
+    // discard a healthy pool for nothing. Reachability failure keeps its own
+    // (unchanged) contract.
+    probeQuery.mockImplementation(() => Promise.reject(new Error("db unreachable")));
+    startDbWatchdog(1000);
+    await jest.advanceTimersByTimeAsync(4200);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(mockRecyclePool).not.toHaveBeenCalled();
+  });
+
+  it("logs recovery once the pool serves a query again", async () => {
+    mockProbeAppPool
+      .mockResolvedValueOnce(false) // frozen → heal
+      .mockResolvedValue(true); // healthy from here on
+    startDbWatchdog(1000);
+    await jest.advanceTimersByTimeAsync(2000);
+    expect(mockRecyclePool).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith(
+      "[db-watchdog] application pool recovered",
+      expect.anything(),
+    );
+  });
+
+  it("checks the application pool on the application-pool path, after the dedicated probe", async () => {
+    startDbWatchdog(1000);
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(probeQuery).toHaveBeenCalledTimes(1);
+    expect(mockProbeAppPool).toHaveBeenCalledTimes(1);
   });
 });

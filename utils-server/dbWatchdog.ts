@@ -59,8 +59,58 @@
  * ~75s because in-flight ticks are skipped). One failed probe never exits: a
  * pooler reconnect storm can exceed the probe timeout transiently, and
  * tolerance here costs only the time a real wedge has already cost.
+ *
+ * ── The dedicated probe alone was NOT enough (added 2026-09-20) ──────────────
+ *
+ * Fixing the probe's ownership solved the false positives but silently dropped
+ * the signal this watchdog exists for. The header above describes the class as
+ * "postgres.js's slot never returns and the whole DB queue freezes while the
+ * HTTP layer stays responsive" — but a probe on its OWN connection cannot see
+ * that, because the dedicated connection is precisely the one that still works.
+ * The watchdog was left able to detect "the database is unreachable" and unable
+ * to detect "our pool is frozen", so it never fired for the failure it was
+ * built for.
+ *
+ * Live consequence, 2026-09-20: `/health` answered in 1.3ms while
+ * `/internal/dispatch` never answered (its first await is `isDispatchPaused()`,
+ * a `system_config` read), the scheduler stopped ticking entirely, and
+ * `connected_riders` sat at 0 for over two hours. Nothing self-healed, because
+ * nothing was watching the right thing.
+ *
+ * The two probes now discriminate: the DEDICATED probe says whether the
+ * database is reachable, and the bounded APPLICATION-POOL probe
+ * (probeAppPool, src/db/index.ts) says whether this process can still use it.
+ * A pool timeout while the database is reachable can only mean frozen slots, so
+ * that is healed in-process via recyclePool() — a fresh client — instead of
+ * exiting. Exiting is reserved for genuine unreachability, where a restart
+ * cannot help because the database itself is down.
+ *
+ * ── Heal on the FIRST pool timeout, above the pool's own limits ─────────────
+ *
+ * That in-process heal shipped in two shapes that both had to be corrected the
+ * same day (live-verified 2026-09-20):
+ *
+ *  1. A CONSECUTIVE-COUNT THRESHOLD (4) on the pool signal. It cannot work,
+ *     because probeAppPool cannot release the connection a timed-out probe
+ *     abandoned — so every probe that tries again consumes another slot of the
+ *     pool's five, and the watchdog deepens the freeze it is waiting to
+ *     confirm. On the live server that read as scheduler job durations
+ *     inflating 700ms → 11s across four consecutive ticks. The heal is now
+ *     immediate; a false result IS the signal.
+ *  2. A PROBE TIMEOUT (15s) BELOW THE POOL'S OWN LIMITS (connect_timeout and
+ *     statement_timeout are both 30s). A probe that has to open a connection —
+ *     routine, the pool's idle_timeout is 30s — could expire while the pool was
+ *     healthy. Observed: 3 consecutive "frozen" errors in a process only 147
+ *     seconds old, after which the pool answered again with no recycle having
+ *     run. The bound is now 35s, above both limits, so exceeding it means no
+ *     reply arrived rather than a reply still in flight.
+ *
+ * Exiting on unreachability keeps its separate 4-failure tolerance: a pooler
+ * reconnect storm can exceed one probe timeout, and there the cost of waiting
+ * is only time a real outage has already cost.
  */
 import { getProbeClient } from "./dbProbe";
+import { probeAppPool, recyclePool } from "../src/db";
 import { logger } from "../lib/logger";
 
 const PROBE_INTERVAL_MS = 10_000;
@@ -81,6 +131,27 @@ const PROBE_TIMEOUT_MS = 15_000;
  * had to use to avoid firing on its own pool.
  */
 const WEDGE_THRESHOLD = 4;
+/**
+ * Bound on the application-pool probe, in ms.
+ *
+ * MUST exceed the pool's own limits (`connect_timeout: 30s` and
+ * `statement_timeout: 30s`, both set in src/db/index.ts), or the probe expires
+ * while the pool is still working correctly. 15s did exactly that, live, on
+ * 2026-09-20: 3 consecutive "application pool frozen" errors fired inside a
+ * process that was only 147 seconds old, and the pool then recovered on its
+ * own with no recycle — because what timed out was a probe that had to OPEN a
+ * NEW CONNECTION (the pool is `idle_timeout: 30`, so reconnects are routine,
+ * and a cold BD→Tokyo connect is measured at ~5.8s with much worse tails),
+ * not a frozen slot. This is the same mistake the header records for the
+ * dedicated probe ("TIMEOUT BELOW THE POOL'S OWN LIMITS"), reintroduced on the
+ * application-pool path.
+ *
+ * 35s sits above both 30s limits, so a probe that exceeds it has genuinely
+ * received no reply — the half-open class this watchdog exists for. No
+ * consecutive-failure accumulation is needed on top of that: see the header
+ * for why a second trying probe would consume another slot.
+ */
+const APP_POOL_PROBE_TIMEOUT_MS = 35_000;
 
 /**
  * One end-to-end reachability probe on the DEDICATED probe connection.
@@ -118,6 +189,14 @@ export async function probeDbOnce(timeoutMs: number = PROBE_TIMEOUT_MS): Promise
  */
 export function startDbWatchdog(intervalMs: number = PROBE_INTERVAL_MS): NodeJS.Timeout {
   let consecutiveFailures = 0;
+  // Tracks whether the previous tick found the application pool frozen, so the
+  // recovery can be logged once instead of on every healthy tick. Deliberately
+  // a boolean and not a count: the two signals mean opposite things (one is
+  // "the database is gone", this one is "the database is fine and WE are
+  // broken"), and a false pool probe is healed on the spot rather than
+  // accumulated — every extra trying probe leaks another slot of the five the
+  // pool has.
+  let poolFrozen = false;
   // Serialization guard: without this, setInterval starts a new probe every
   // tick even when the previous one is still pending, so a single slow window
   // is counted as several "consecutive" failures (see header).
@@ -136,11 +215,41 @@ export function startDbWatchdog(intervalMs: number = PROBE_INTERVAL_MS): NodeJS.
     }
     probeInFlight = true;
     probeDbOnce()
-      .then(() => {
+      .then(async () => {
         if (consecutiveFailures > 0) {
           logger.info("[db-watchdog] probe recovered", { consecutiveFailures });
         }
         consecutiveFailures = 0;
+
+        // The database answered on the dedicated connection, so a timeout on
+        // the application pool can only mean this process's own slots are
+        // frozen — the half-open case in the header — not a down database.
+        // Heal in-process: a recycle keeps every connected device socket, which
+        // a supervisor restart would drop.
+        if (await probeAppPool(APP_POOL_PROBE_TIMEOUT_MS)) {
+          if (poolFrozen) {
+            logger.info("[db-watchdog] application pool recovered", {
+              note: "pool serves queries again",
+            });
+          }
+          poolFrozen = false;
+          return;
+        }
+        poolFrozen = true;
+        logger.error("[db-watchdog] application pool frozen (database is reachable)", {
+          probeTimeoutMs: APP_POOL_PROBE_TIMEOUT_MS,
+          effect:
+            "dispatch, scheduler ticks and rider/driver auth all park on DB access",
+        });
+        // Heal on the FIRST timeout, not after a threshold. The probe cannot
+        // release the slot it abandoned (see the CONTRACT note on
+        // probeAppPool), so each further trying probe would consume another of
+        // the pool's five connections and deepen the freeze it is waiting to
+        // confirm. recyclePool() is what releases the abandoned query.
+        logger.error("[db-watchdog] recycling application pool", {
+          note: "frozen slots are released by a fresh client; in-flight queries settle as errors",
+        });
+        await recyclePool();
       })
       .catch((e: Error) => {
         consecutiveFailures += 1;

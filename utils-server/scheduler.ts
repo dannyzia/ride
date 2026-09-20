@@ -830,7 +830,20 @@ export async function runDeclineMonitoring(): Promise<void> {
   }
 }
 
-export function startScheduler(): void {
+/**
+ * Dependencies the scheduler cannot own itself.
+ *
+ * `triggerDispatch` is the in-process dispatch trigger from index.ts. It is
+ * injected rather than imported because index.ts already imports
+ * `startScheduler` — the reverse import would be a cycle. Optional so the
+ * scheduler can still be started bare (unit tests); the production caller
+ * (index.ts) always passes it.
+ */
+export interface SchedulerDeps {
+  triggerDispatch?: (rideId: string, allowDowngrade: boolean) => Promise<unknown>;
+}
+
+export function startScheduler(deps: SchedulerDeps = {}): void {
   // ADR Phase 0 — honest job count: the '[scheduler] started (N jobs)' line is
   // derived from a counter incremented at each registration. It can never lie
   // again.
@@ -1202,10 +1215,32 @@ export function startScheduler(): void {
             lt(rides.created_at, staleThreshold),
           ),
         );
-      const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
-      const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
-      if (!internalSecret) return;
       for (const ride of stalled) {
+        // IN-PROCESS whenever a trigger was injected — index.ts always does.
+        // The loopback POST this replaces is why a ride could stay `pending`
+        // forever: it was bounded at 5s on the client side and its failure was
+        // swallowed by `.catch(log)`, so a frozen application pool left the
+        // ride with no terminal status and produced no log line that said so.
+        // Awaiting a direct call makes that failure a rejection with a caller.
+        if (deps.triggerDispatch) {
+          try {
+            await deps.triggerDispatch(ride.id, false);
+            logger.info("[scheduler] stale pending ride re-dispatched", {
+              ride_id: ride.id,
+            });
+          } catch (e) {
+            logger.error("[scheduler] stale dispatch retry error", {
+              ride_id: ride.id,
+              error: e,
+            });
+          }
+          continue;
+        }
+
+        // Fallback for a scheduler started without a trigger (unit tests).
+        const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
+        const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
+        if (!internalSecret) return;
         const dispatchUrl = `http://127.0.0.1:${wsPort}/internal/dispatch`;
         fetch(dispatchUrl, {
           method: "POST",

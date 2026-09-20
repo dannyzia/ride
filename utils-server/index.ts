@@ -53,6 +53,47 @@ import { getPlan05Int } from "../lib/platformConfig";
 import { getZoneForLocation } from "../lib/zone";
 import { getH3Cell, getH3Ring } from "../lib/h3";
 import { calculateFare, haversineKm } from "../lib/fareCalc";
+
+/**
+ * Bound on the app-pool reads that gate socket registration (auth:hello).
+ *
+ * Without a bound, a frozen application pool makes registration park SILENTLY
+ * forever: the handler's awaits never settle, so the `catch` that reports
+ * `server_unavailable` never runs, the client is never told anything, and
+ * `/health` reads `connected_riders: 0` indefinitely — measured live on
+ * 2026-09-20 as a 2-hour window in which no rider could register while the
+ * HTTP layer answered in 1.3ms.
+ *
+ * 15s is above an honest round trip (healthy ~150ms; hundreds of ms while the
+ * 58 scheduler jobs share the 5-connection pool) and below the point where a
+ * rider has effectively lost the ride. A timeout is not the whole fix — the
+ * pool itself has to heal (utils-server/dbWatchdog.ts) — but it converts an
+ * invisible permanent park into a truthful, retryable `auth:error`.
+ */
+const AUTH_DB_TIMEOUT_MS = 15_000;
+
+/**
+ * Settle a thenable within `ms`, rejecting on timeout. Drizzle query builders
+ * are thenables rather than Promises, hence `PromiseLike`.
+ */
+function withTimeout<T>(thenable: PromiseLike<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`timed out after ${ms}ms`)),
+      ms,
+    );
+    thenable.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err: unknown) => {
+        clearTimeout(timer);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      },
+    );
+  });
+}
 import { VEHICLE_TYPE_VALUES, PICKUP_CATEGORY, type VehicleTypeEnum } from "../lib/vehicleTypes";
 import {
   getFareFrameworkConfig,
@@ -480,43 +521,12 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        logger.info('[dispatch] received dispatch request', { ride_id, allow_downgrade });
-
-        if (await isDispatchPaused()) {
-          logger.warn("[dispatch] paused via system_config, rejecting ride", {
-            ride_id,
-          });
-          const status = allow_downgrade ? "pending" : "no_drivers";
-          await db.update(rides).set({ status }).where(eq(rides.id, ride_id));
-          writeJson(200, { ok: true, status: "paused" });
+        const result = await triggerDispatch(ride_id, !!allow_downgrade);
+        if (!result.ok) {
+          writeJson(404, { error: result.error });
           return;
         }
-
-        // Fetch ride details
-        const [ride] = await db
-          .select()
-          .from(rides)
-          .where(eq(rides.id, ride_id))
-          .limit(1);
-        if (!ride) {
-          writeJson(404, { error: "ride_not_found" });
-          return;
-        }
-
-        await db
-          .update(rides)
-          .set({ status: "dispatching" })
-          .where(eq(rides.id, ride_id));
-
-        // Start dispatch pipeline without awaiting (async, non-blocking)
-        dispatchRidePipeline(ride, !!allow_downgrade).catch((e) => {
-          logger.error("[index] dispatch pipeline error", {
-            ride_id,
-            error: e.message,
-          });
-        });
-
-        writeJson(200, { ok: true, status: "dispatching" });
+        writeJson(200, { ok: true, status: result.status });
       } catch {
         writeJson(400, { error: "invalid_body" });
       }
@@ -941,11 +951,14 @@ wss.on("connection", (ws: WebSocket) => {
               return;
             }
 
-            const [user] = await db
-              .select({ id: users.id, role: users.role })
-              .from(users)
-              .where(eq(users.auth_uid, supabaseUser.id))
-              .limit(1);
+            const [user] = await withTimeout(
+              db
+                .select({ id: users.id, role: users.role })
+                .from(users)
+                .where(eq(users.auth_uid, supabaseUser.id))
+                .limit(1),
+              AUTH_DB_TIMEOUT_MS,
+            );
             if (!user) {
               send(ws, { type: "auth:error", message: "user_not_found" });
               return;
@@ -964,18 +977,21 @@ wss.on("connection", (ws: WebSocket) => {
             client.role = role;
 
             if (role === "driver") {
-              const [driver] = await db
-                .select({
-                  id: drivers.id,
-                  status: drivers.status,
-                  h3_cell_res9: drivers.h3_cell_res9,
-                  vehicle_type: drivers.vehicle_type,
-                  last_location_lat: drivers.last_location_lat,
-                  last_location_lng: drivers.last_location_lng,
-                })
-                .from(drivers)
-                .where(eq(drivers.user_id, user.id))
-                .limit(1);
+              const [driver] = await withTimeout(
+                db
+                  .select({
+                    id: drivers.id,
+                    status: drivers.status,
+                    h3_cell_res9: drivers.h3_cell_res9,
+                    vehicle_type: drivers.vehicle_type,
+                    last_location_lat: drivers.last_location_lat,
+                    last_location_lng: drivers.last_location_lng,
+                  })
+                  .from(drivers)
+                  .where(eq(drivers.user_id, user.id))
+                  .limit(1),
+                AUTH_DB_TIMEOUT_MS,
+              );
               if (driver) {
                 // BUG-R2 FIX: Reject non-active drivers on WS reconnect too
                 if (driver.status !== 'active') {
@@ -1060,7 +1076,17 @@ wss.on("connection", (ws: WebSocket) => {
             send(ws, { type: "auth:ok", user_id: user.id, role });
             logger.info("[ws] auth:hello success", { userId: user.id, role });
           } catch (e: any) {
-            send(ws, { type: "auth:error", message: "invalid_token" });
+            // A thrown failure here is a transport/service failure, never a bad
+            // token: an invalid token is reported in the RESULT (the
+            // `error || !supabaseUser` branch above returns invalid_token), so
+            // reaching this catch means getUser() threw or the users lookup
+            // failed. Answering invalid_token for a DB outage told riders their
+            // credentials were wrong and invited a pointless re-login —
+            // observed 2026-09-20 while the application pool was frozen and no
+            // rider could register for over two hours. server_unavailable is
+            // the truth and is retryable; the client already closes and
+            // reconnects on any auth:error, so no client change is needed.
+            send(ws, { type: "auth:error", message: "server_unavailable" });
             logger.warn("[ws] auth:hello failed", { error: e.message });
           }
         } else if (action === "refresh") {
@@ -2202,6 +2228,64 @@ async function executeMatchFlow(
   return "matched";
 }
 
+/**
+ * The dispatch trigger, shared by the HTTP endpoint and the scheduler.
+ *
+ * Factored out of the `/internal/dispatch` handler for scheduler job 15
+ * (stale-pending recovery), which until now could only reach it by POSTing to
+ * its own loopback address. That hop was the mechanism behind permanently
+ * pending rides, live-verified 2026-09-20: the client bounded the call at 5s
+ * and SWALLOWED the failure (`fetch(...).catch(log)`), while the handler's
+ * first await — `isDispatchPaused()`, a plain `system_config` read — parks on
+ * the application pool whenever that pool freezes. A frozen pool therefore
+ * left rides `pending` with no terminal status, indefinitely, and the recovery
+ * job reported nothing at all. In-process the same failure is a rejected
+ * promise the caller handles, and there is no timeout to lose the work in.
+ */
+async function triggerDispatch(
+  rideId: string,
+  allowDowngrade: boolean,
+): Promise<
+  { ok: true; status: "paused" | "dispatching" } | { ok: false; error: "ride_not_found" }
+> {
+  logger.info("[dispatch] received dispatch request", {
+    ride_id: rideId,
+    allow_downgrade: allowDowngrade,
+  });
+
+  if (await isDispatchPaused()) {
+    logger.warn("[dispatch] paused via system_config, rejecting ride", {
+      ride_id: rideId,
+    });
+    const status = allowDowngrade ? "pending" : "no_drivers";
+    await db.update(rides).set({ status }).where(eq(rides.id, rideId));
+    return { ok: true, status: "paused" };
+  }
+
+  // Fetch ride details
+  const [ride] = await db
+    .select()
+    .from(rides)
+    .where(eq(rides.id, rideId))
+    .limit(1);
+  if (!ride) return { ok: false, error: "ride_not_found" };
+
+  await db
+    .update(rides)
+    .set({ status: "dispatching" })
+    .where(eq(rides.id, rideId));
+
+  // Start dispatch pipeline without awaiting (async, non-blocking)
+  dispatchRidePipeline(ride, allowDowngrade).catch((e) => {
+    logger.error("[index] dispatch pipeline error", {
+      ride_id: rideId,
+      error: e.message,
+    });
+  });
+
+  return { ok: true, status: "dispatching" };
+}
+
 // ── Dispatch Pipeline (sequential chain — Phase D, debit-on-offer) ─────────
 async function dispatchRidePipeline(
   ride: typeof rides.$inferSelect,
@@ -2579,7 +2663,7 @@ async function startup() {
   await refreshH3Index();
   startH3IndexRefresh();
   startCompensationWorker();
-  startScheduler();
+  startScheduler({ triggerDispatch });
   // ISSUE-62: DB wedge watchdog — probes the pool end-to-end every 15s and
   // exits the process on a sustained freeze (supervisor/tsx-watch restarts;
   // startup recovery below re-dispatches stuck rides after any restart).
