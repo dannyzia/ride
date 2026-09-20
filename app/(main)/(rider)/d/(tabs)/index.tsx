@@ -691,7 +691,31 @@ export default function DriverHome() {
 
     connect();
 
+    // ── Foreground reconnect ────────────────────────────────────────────────
+    // While the app is backgrounded the JS runtime — and with it this reconnect
+    // timer — is suspended, so a socket that drops in the background can leave
+    // the driver with NO socket at all on return. Observed on-device
+    // 2026-09-20: `heartbeat armed { socketReadyState: null }`, heartbeats
+    // skipped for ~100s after foregrounding, and `drivers_indexed` back to 0.
+    //
+    // The backoff (1s..30s capped, give up after 10 attempts) is the wrong tool
+    // for a foreground transition: returning to the app is a fresh opportunity,
+    // not a retry, so reconnect at once. Resetting the attempt budget is the
+    // other half — without it a driver who backgrounded through a flaky window
+    // could hit the give-up branch and stay dark until they touched the phone,
+    // which is exactly the silent disappearance this whole thread is about.
+    const appStateSub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if (next !== 'active') return;
+      const live = useWSStore.getState().ws;
+      if (live && live.readyState === WebSocket.OPEN) return;
+      reconnectAttempts = 0;
+      if (reconnectRef.current) clearTimeout(reconnectRef.current);
+      logger.info('[ws] foreground — reconnecting immediately');
+      connect();
+    });
+
     return () => {
+      appStateSub.remove();
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
       // H-4 + L-a: nulling the indirection detaches EVERY socket this screen
       // ever wired — the live one and any socket a later unmount-scheduled

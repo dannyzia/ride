@@ -1036,10 +1036,42 @@ wss.on("connection", (ws: WebSocket) => {
                   logger.warn('[ws] driver_sessions insert failed', { driverId: driver.id, error: String(e) });
                 }
 
-                // Re-online driver on WS reconnect.
-                await db.update(drivers)
-                  .set({ is_online: true, updated_at: new Date() })
-                  .where(eq(drivers.id, driver.id));
+                // ── A SOCKET LOGIN MUST NOT FABRICATE ONLINE-NESS ───────────────
+                //
+                // `drivers.is_online` is owned by the SESSION lifecycle: the app
+                // sets it when the driver deliberately goes online
+                // (app/api/driver/status), and handleDriverDisconnect clears it
+                // together with the session row. Writing it unconditionally here
+                // created a SECOND owner that could contradict the session —
+                // observed live 2026-09-20: `open sessions: 0` beside
+                // `is_online: true`, because this line ran on every reconnect and
+                // nothing ever reconciled the two.
+                //
+                // What a reconnect legitimately means: a driver who deliberately
+                // went online and whose session is still open stays online across
+                // a socket change — that is the case worth re-affirming. A driver
+                // with no open session stays offline; a socket alone is not a
+                // decision to work.
+                const [openSession] = await db
+                  .select({ id: driverOnlineSessions.id })
+                  .from(driverOnlineSessions)
+                  .where(
+                    and(
+                      eq(driverOnlineSessions.driver_id, driver.id),
+                      isNull(driverOnlineSessions.went_offline_at),
+                    ),
+                  )
+                  .limit(1);
+                if (openSession) {
+                  await db
+                    .update(drivers)
+                    .set({ is_online: true, updated_at: new Date() })
+                    .where(eq(drivers.id, driver.id));
+                } else {
+                  logger.info("[ws] socket login with no open session — not claiming online", {
+                    driverId: driver.id,
+                  });
+                }
 
                 // Index driver immediately — don't wait for first heartbeat.
                 // If h3_cell_res9 is NULL, compute from last known GPS coordinates.
@@ -1067,7 +1099,11 @@ wss.on("connection", (ws: WebSocket) => {
                 const lastFixMs = driver.last_location_at
                   ? Date.now() - new Date(driver.last_location_at).getTime()
                   : Infinity;
-                if (cell && lastFixMs < HEARTBEAT_STALE_MS) {
+                // `openSession` is part of dispatchability for the same reason
+                // the freshness check is: the pool filter drops offline drivers,
+                // so indexing one who never went online just re-creates the
+                // index/filter asymmetry this gate exists to close.
+                if (cell && openSession && lastFixMs < HEARTBEAT_STALE_MS) {
                   updateDriver(driver.id, cell, driver.vehicle_type);
                   logger.info("[ws] driver indexed on auth", {
                     driverId: driver.id,
