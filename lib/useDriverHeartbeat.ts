@@ -45,7 +45,22 @@ export function useDriverHeartbeat(): void {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    if (!isOnline) return;
+    // Every gate that can stop this hook is logged, because a driver silently
+    // disappearing from the H3 index is indistinguishable from a dead device
+    // otherwise — the server sees no heartbeats and the app looks idle. That is
+    // the decay observed on 2026-09-20: beats stopped while the Pixel was Awake
+    // and focused, `connected_drivers` held at 1, and `drivers_indexed` fell
+    // 1 -> 0. Symptom without a reason is what made that take an hour to find.
+    if (!isOnline) {
+      logger.info("[driver] heartbeat idle — app state is offline", {
+        note: "no beats are sent while offline; nothing else will report location",
+      });
+      return;
+    }
+    logger.info("[driver] heartbeat armed", {
+      intervalMs: HEARTBEAT_INTERVAL_MS,
+      socketReadyState: useWSStore.getState().ws?.readyState ?? null,
+    });
 
     const sendHeartbeat = async () => {
       // C2: read the socket LIVE from the store, never a per-mount ref. An
@@ -54,13 +69,21 @@ export function useDriverHeartbeat(): void {
       // socket forever — heartbeats silently died while the store (and the
       // green dot) still said connected.
       const liveWs = useWSStore.getState().ws;
-      if (!liveWs || liveWs.readyState !== WebSocket.OPEN) return;
+      if (!liveWs || liveWs.readyState !== WebSocket.OPEN) {
+        logger.warn("[driver] heartbeat skipped — socket not open", {
+          readyState: liveWs?.readyState ?? null,
+        });
+        return;
+      }
       try {
         // Bounded fix with a last-known fallback (lib/driverLocationFix): the
         // unbounded call parks forever indoors, which silently starves the
         // server's freshness rule and makes an online driver un-dispatchable.
         const fix = await getDriverFix();
-        if (!fix) return;
+        if (!fix) {
+          logger.warn("[driver] heartbeat skipped — no location fix available");
+          return;
+        }
         liveWs.send(
           JSON.stringify({
             type: "heartbeat",
