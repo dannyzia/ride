@@ -20,6 +20,60 @@ let connecting: Promise<WebSocket | null> | null = null;
 let reconnectAttempts = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
+// Sockets the server has answered `auth:hello` with `auth:ok`.
+//
+// readyState alone is NOT proof of a working channel, and this is the bug the
+// set exists to catch (device evidence 2026-09-20): connectRiderSocket puts the
+// socket into the shared slot the moment it is constructed — before `onopen`,
+// before `auth:hello`, before the server registers it — so a socket can be OPEN
+// and look perfectly healthy to any readyState check while the server has no way
+// to deliver a ride event to it. The WS server's /health read
+// `connected_clients: 2, connected_riders: 0` while the rider sat on the
+// searching screen: a connected client that was never a registered rider.
+// `auth:ok` is the server's own confirmation that THIS socket is the one it
+// forwards ride events to.
+const authedSockets = new WeakSet<WebSocket>();
+
+// When a socket opened. Used so a socket that is merely mid-handshake (auth:ok
+// costs a supabase getUser round-trip) is not torn down by a liveness check.
+const openedAt = new WeakMap<WebSocket, number>();
+const AUTH_GRACE_MS = 10_000;
+
+/** Parse a socket frame's `type` without throwing on non-JSON payloads. */
+function readMessageType(data: unknown): string | null {
+  try {
+    const parsed = JSON.parse(String(data)) as { type?: unknown };
+    return typeof parsed.type === "string" ? parsed.type : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether the store slot's socket is a channel the server will deliver on.
+ *
+ * Consumers that WAIT on server events (the searching screen) must use this
+ * rather than `ws != null` or `readyState`: an unregistered socket is silent in
+ * exactly the same way an empty candidate pool is, and the two mean opposite
+ * things to the rider.
+ */
+export function isRiderSocketReady(ws?: WebSocket | null): boolean {
+  return ws != null && ws.readyState === WebSocket.OPEN && authedSockets.has(ws);
+}
+
+/**
+ * A socket worth keeping: still handshaking, or OPEN and confirmed by the
+ * server. Anything else — closed, closing, or open but never registered past the
+ * grace window — is not a channel that can carry ride events and gets replaced.
+ */
+function isAdoptable(socket: WebSocket): boolean {
+  if (socket.readyState === WebSocket.CONNECTING) return true;
+  if (socket.readyState !== WebSocket.OPEN) return false;
+  if (authedSockets.has(socket)) return true;
+  const opened = openedAt.get(socket);
+  return opened !== undefined && Date.now() - opened < AUTH_GRACE_MS;
+}
+
 function scheduleReconnect(): void {
   if (reconnectTimer) return;
   // Exponential backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s, plus jitter.
@@ -59,10 +113,33 @@ async function connectRiderSocket(): Promise<WebSocket | null> {
     useWSStore.getState().setWebSocket(socket, "rider", userId);
     socket.onopen = () => {
       reconnectAttempts = 0;
+      openedAt.set(socket, Date.now());
       socket.send(
         JSON.stringify({ type: "auth:hello", access_token: token, role: "rider" }),
       );
     };
+    // Attached with addEventListener, not onmessage: ride screens attach their
+    // own message listeners (ride-tracking, finding-driver), and teardown
+    // nulls onmessage — the handshake watch must survive both.
+    socket.addEventListener("message", (event: MessageEvent) => {
+      const type = readMessageType(event.data);
+      if (type === "auth:ok") {
+        authedSockets.add(socket);
+      } else if (type === "auth:error") {
+        // The server refused this handshake and leaves the socket open, so no
+        // close event would ever arrive and nothing would replace it — the
+        // rider would keep an OPEN socket that never delivers anything. Close
+        // it ourselves so onclose runs the reconnect path (a fresh
+        // getSession() also picks up a refreshed token).
+        authedSockets.delete(socket);
+        logger.warn("[riderSocket] handshake rejected — reconnecting");
+        try {
+          socket.close();
+        } catch {
+          // already closing
+        }
+      }
+    });
     socket.onclose = () => {
       scheduleReconnect();
     };
@@ -107,10 +184,7 @@ export async function ensureRiderSocket(): Promise<WebSocket | null> {
   const state = useWSStore.getState();
   const existing = state.ws;
   if (existing && state.socketRole === "rider") {
-    if (
-      existing.readyState === WebSocket.OPEN ||
-      existing.readyState === WebSocket.CONNECTING
-    ) {
+    if (isAdoptable(existing)) {
       // Adopt ONLY our own socket: it must belong to the current session's
       // user (audit H-1). A socket surviving from a previous sign-in is
       // torn down and replaced, never reused.
@@ -128,8 +202,9 @@ export async function ensureRiderSocket(): Promise<WebSocket | null> {
       }
       teardownRiderSocket();
     } else {
-      // Closed/closing rider socket — clear the dead slot.
-      useWSStore.getState().resetWebSocket();
+      // Closed, closing, or OPEN but never registered with the server — not a
+      // channel that can deliver ride events. Replace it.
+      teardownRiderSocket();
     }
   } else if (existing) {
     // The slot holds a driver (or otherwise foreign) socket from a role

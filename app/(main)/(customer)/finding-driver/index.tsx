@@ -19,6 +19,8 @@ import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useRiderStore, type VehicleType } from "@/store/useRiderStore";
 import { useWSStore } from "@/store";
+import { ensureRiderSocket, isRiderSocketReady } from "@/lib/riderSocket";
+import { resolveTerminalFindingState } from "@/lib/findingTerminal";
 import { supabase } from "@/lib/supabase";
 import { useTranslation } from "react-i18next";
 
@@ -26,6 +28,9 @@ const POLL_INTERVAL_MS = 10000;
 const MAX_EMPTY_POLLS = 12;
 const WS_CONNECT_TIMEOUT = 30000;
 const FINDING_TIMEOUT = 120000;
+// How often the wait re-checks that its socket is a live channel. Short enough
+// that a socket lost mid-wait is replaced well inside WS_CONNECT_TIMEOUT.
+const SOCKET_LIVENESS_INTERVAL_MS = 5000;
 
 type FindingState = 'searching' | 'ws_timeout' | 'no_drivers';
 
@@ -57,6 +62,10 @@ export default function FindingDriver() {
   const [findingState, setFindingState] = useState<FindingState>('searching');
   const driverFound = useRef(false);
   const emptyPollCount = useRef(0);
+  // Latest successful /api/ride/nearby-drivers count, or null when the HTTP
+  // channel has not answered (or is erroring). Read by the terminal decision so
+  // that decision never depends on the WebSocket it is judging.
+  const latestNearbyCount = useRef<number | null>(null);
 
   const goToTracking = useCallback((rideId: string) => {
     router.replace(`/(main)/(customer)/ride-tracking/${rideId}`);
@@ -92,17 +101,63 @@ export default function FindingDriver() {
   // the store socket so a self-healing reconnect re-attaches.
   const ws = useWSStore((s) => s.ws);
 
-  // Timeout effects — after ws is declared
+  // This screen is the one that must not be wrong about the socket: it waits on
+  // server events and nothing else. So it MAINTAINS the session socket for the
+  // whole wait rather than adopting whatever the store held at mount.
+  //
+  // Device-observed failure (2026-09-20): the store held a socket that was not
+  // delivering (the server's /health read connected_clients: 2,
+  // connected_riders: 0 while this screen pulsed), so the listener below had
+  // nothing to receive from. ensureRiderSocket() handles exactly that — it
+  // re-verifies ownership, discards a closed/closing, foreign, or open-but-never-
+  // registered slot, and reconnects — but it used to run only at mount, so a
+  // socket lost mid-wait was never noticed.
+  useEffect(() => {
+    if (findingState !== 'searching') return;
+    const keepSocketLive = () => {
+      if (isRiderSocketReady(useWSStore.getState().ws)) return;
+      ensureRiderSocket().catch(() => {
+        /* the timeout guards below are the user-facing fallback */
+      });
+    };
+    keepSocketLive();
+    const interval = setInterval(keepSocketLive, SOCKET_LIVENESS_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [findingState]);
+
+  // Timeout effects.
+  //
+  // Anchored to the WAIT, not to socket identity: depending on `ws` let the
+  // keepalive above reset both deadlines every time it replaced a socket, so a
+  // persistent reconnect loop could pulse forever instead of ever reaching a
+  // terminal message. Liveness is read via getState() instead.
   useEffect(() => {
     const wsTimeout = setTimeout(() => {
-      if (!ws && findingState === 'searching') {
+      // Liveness, not presence: `!ws` could not see a socket that existed but
+      // had never been registered by the server — the state that produced the
+      // false "no drivers". An OPEN-but-unauthenticated socket is silent in the
+      // same way an empty pool is, and the two mean opposite things.
+      if (
+        !isRiderSocketReady(useWSStore.getState().ws) &&
+        findingState === 'searching'
+      ) {
         setFindingState('ws_timeout');
       }
     }, WS_CONNECT_TIMEOUT);
 
     const findingTimeout = setTimeout(() => {
       if (!driverFound.current && findingState === 'searching') {
-        setFindingState('no_drivers');
+        // A timeout alone cannot prove the pool is empty — the server's
+        // no-drivers signals arrive over the socket that may be the broken
+        // part. While that channel is not live we cannot be told anything, so
+        // report the connection truthfully; only a live channel plus an empty
+        // HTTP read earns a supply claim. See lib/findingTerminal.ts.
+        setFindingState(
+          resolveTerminalFindingState({
+            socketLive: isRiderSocketReady(useWSStore.getState().ws),
+            lastNearbyCount: latestNearbyCount.current,
+          }),
+        );
       }
     }, FINDING_TIMEOUT);
 
@@ -110,7 +165,7 @@ export default function FindingDriver() {
       clearTimeout(wsTimeout);
       clearTimeout(findingTimeout);
     };
-  }, [ws, findingState]);
+  }, [findingState]);
 
   useEffect(() => {
     if (!ws) return;
@@ -191,11 +246,14 @@ export default function FindingDriver() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         logger.error("[finding-driver] nearby failed", { status: res.status, error: data.error });
+        // HTTP channel down → nothing is proven about the pool.
+        latestNearbyCount.current = null;
         setError(true);
         return;
       }
 
       const data = await res.json();
+      latestNearbyCount.current = data.count;
       if (data.count > 0) {
         setCount(data.count);
         setEta(data.estimated_wait_minutes);
@@ -213,6 +271,7 @@ export default function FindingDriver() {
     } catch (e) {
       if (!(e instanceof Error) || e.name !== "AbortError") {
         logger.error("[finding-driver] nearby fetch failed", e);
+        latestNearbyCount.current = null;
         setError(true);
       }
     }
