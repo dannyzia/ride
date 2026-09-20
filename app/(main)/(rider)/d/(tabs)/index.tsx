@@ -103,7 +103,6 @@ export default function DriverHome() {
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
-  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectRef = useRef<NodeJS.Timeout | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
     null,
@@ -682,7 +681,6 @@ export default function DriverHome() {
 
     return () => {
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       // H-4 + L-a: nulling the indirection detaches EVERY socket this screen
       // ever wired — the live one and any socket a later unmount-scheduled
       // reconnect creates. Intentionally do NOT detach onclose and do NOT
@@ -706,60 +704,11 @@ export default function DriverHome() {
     setWsConnected,
   ]);
 
-  // ── Heartbeat (every 10s when online) ────────────────────────────
-  useEffect(() => {
-    if (!isOnline) {
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-        heartbeatRef.current = null;
-      }
-      return;
-    }
-
-    const sendHeartbeat = async () => {
-      // C2: read the socket LIVE from the store, never a per-mount ref.
-      // An unmounted mount's orphaned onclose kept rebuilding the socket and
-      // writing its own wsRef, so the current mount's ref could point at a
-      // dead socket forever — heartbeats silently died while the store (and
-      // the green dot) still said connected. The store is updated on every
-      // onopen, so it is always the current connection.
-      const ws = useWSStore.getState().ws;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      try {
-        const perm = await Location.requestForegroundPermissionsAsync();
-        if (!perm.granted) {
-          logger.warn("[driver] foreground location permission not granted");
-          return;
-        }
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        const lat = loc.coords.latitude;
-        const lng = loc.coords.longitude;
-        setLocation({ lat, lng });
-        ws.send(
-          JSON.stringify({
-            type: "heartbeat",
-            lat,
-            lng,
-            ts: new Date().toISOString(),
-          }),
-        );
-      } catch (e) {
-        logger.warn(
-          "[driver] heartbeat error:",
-          e instanceof Error ? e.message : e,
-        );
-      }
-    };
-
-    sendHeartbeat();
-    heartbeatRef.current = setInterval(sendHeartbeat, 10_000);
-
-    return () => {
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-    };
-  }, [isOnline, wsConnected]);
+  // Location reporting moved to lib/useDriverHeartbeat, mounted by the driver
+  // tab layout. It used to live here, which made it a property of THIS SCREEN:
+  // a driver who was online but had navigated to another tab (Activity, Wallet,
+  // Rental Requests) stopped reporting while `drivers.is_online` stayed true,
+  // and the server's 120s staleness rule then made them un-dispatchable.
 
   // ── Online/Offline Toggle ────────────────────────────────────────
   const toggleOnline = async () => {

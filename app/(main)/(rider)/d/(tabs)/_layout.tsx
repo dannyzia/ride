@@ -6,6 +6,7 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { useDriverStore } from "@/store/useDriverStore";
+import { useDriverHeartbeat } from "@/lib/useDriverHeartbeat";
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const isDark = useIsDark();
@@ -98,6 +99,11 @@ function WalletIcon({ focused }: { focused: boolean }) {
 }
 
 export default function DriverTabLayout() {
+  // Location reporting belongs to being ONLINE, not to one tab (see the hook
+  // header): a driver who navigated away from Home used to stop reporting and
+  // become un-dispatchable while still showing as online.
+  useDriverHeartbeat();
+
   return (
     <View style={{ flex: 1 }}>
       <OfflineIndicator />
