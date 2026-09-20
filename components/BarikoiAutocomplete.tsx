@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -166,11 +165,26 @@ const BarikoiAutocomplete = ({
       )}
 
       {showSuggestions && suggestions.length > 0 && (
-        <FlatList
-          data={suggestions}
-          keyExtractor={(item, idx) => item.place_id || item.id || String(idx)}
-          renderItem={({ item }) => (
+        // Plain map, deliberately NOT a FlatList. Every screen that renders
+        // this component wraps it in a BottomSheetScrollView (a plain
+        // ScrollView of the same orientation), and nesting a VirtualizedList
+        // there makes React Native raise "VirtualizedLists should never be
+        // nested inside plain ScrollViews…" the moment results appear. On a dev
+        // build that error opens the full-screen LogBox overlay, which swallows
+        // the next tap — it is what blocked reaching confirm-ride on device.
+        // The list is a handful of address suggestions, so virtualization bought
+        // nothing; the parent sheet provides the scrolling.
+        <View
+          className="mt-2 rounded-xl"
+          style={{
+            backgroundColor: suggestionBg,
+            borderWidth: 1,
+            borderColor: suggestionBorder,
+          }}
+        >
+          {suggestions.map((item, idx) => (
             <TouchableOpacity
+              key={item.place_id || item.id || String(idx)}
               onPress={() => handleSelect(item)}
               className="px-4 py-3"
               style={{
@@ -189,17 +203,8 @@ const BarikoiAutocomplete = ({
                   item.name}
               </Text>
             </TouchableOpacity>
-          )}
-          className="mt-2 max-h-60 rounded-xl"
-          style={{
-            backgroundColor: suggestionBg,
-            borderWidth: 1,
-            borderColor: suggestionBorder,
-          }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
-        />
+          ))}
+        </View>
       )}
     </KeyboardAvoidingView>
   );
