@@ -135,20 +135,71 @@
  *     Since `recyclePool()` is all-or-nothing, one dead connection was enough
  *     to destroy a working pool and drop every device socket.
  *
- *     The decision is now capacity-based: a timed-out probe triggers
- *     `probeAppPoolCapacity` (src/db/index.ts), which asks the pool for as many
- *     concurrent probes as it has slots and counts how many settle. A recycle
- *     happens ONLY at `settled === 0` — no capacity left, the state this heal
- *     exists for. Anything above zero is logged as a partial wedge and left
- *     alone, because postgres.js queues queries onto whatever slot is free, so
- *     one usable slot still serves the whole pool. Cost: a genuine total freeze
- *     is detected in up to 2× the probe bound (~70s) instead of 35s.
+ *     The decision became capacity-based: a timed-out probe triggers
+ *     `probeAppPoolCapacity`, and a recycle happens ONLY at `settled === 0`.
+ *     The intent was right and the MECHANISM was self-defeating — see (5) and
+ *     (6), which are the corrections.
+ *
+ *  5. THE CAPACITY CHECK WAS THE POOL'S LAST USER (fixed 2026-09-20). It asked
+ *     the pool for as many concurrent probes as the pool has SLOTS
+ *     (`attempts = APP_POOL_SIZE`), and `probeAppPool` cannot release the slot a
+ *     timed-out probe abandoned. The check therefore reserved every connection
+ *     for up to 35s, and the `0/5 probes settled` it then reported was produced
+ *     by the probes themselves: a cold start or a scheduler burst — the pool
+ *     legitimately busy for longer than the bound — is indistinguishable from a
+ *     wedge to a probe that cannot get a slot. Measured on the live server the
+ *     same day: 4 recycles and 4 of those verdicts in a 10-minute window, 522
+ *     CONNECTION_DESTROYED, one of them 12s after start, on a pool that was
+ *     serving real queries throughout.
+ *
+ *     The capacity step now costs ONE slot (`CAPACITY_PROBE_ATTEMPTS`). Its job
+ *     is to REFUSE: when the pool serves that probe, the recycle is cancelled.
+ *     A refusal also starts a cooldown, because the probe that timed out before
+ *     it has already abandoned a slot and re-asking on the next tick would bleed
+ *     the pool a slot at a time. The destroy-a-working-pool class described in
+ *     (3) stays guarded, and a genuine total freeze still reaches
+ *     `settled === 0`.
+ *
+ *  7. A PROBE WITH NO FREE SLOT MEASURES THE QUEUE, NOT THE POOL (fixed
+ *     2026-09-20). Warming up after a deploy and cooling down after a recycle
+ *     removed the boot recycle (12s → none) but NOT the mid-run ones: the next
+ *     measured run still logged 4 `capacity: '0/5 probes settled'` verdicts, 4
+ *     recycles and 411 CONNECTION_DESTROYED in 12 minutes — while the SAME log
+ *     recorded 1761 scheduler job completions (`duration_ms: 734, outcome: 'ok'`
+ *     and friends, ~2.4/second). The pool was completing two jobs a second while
+ *     being destroyed for being frozen. That is the original wrong-measurement
+ *     defect this file opens with, reintroduced on the application-pool path:
+ *     with `max: 5` against 58 jobs, a probe that cannot get a slot simply
+ *     waited. `probeAppPoolCapacity` at one slot cannot fix that by itself —
+ *     the single probe also had nowhere to run.
+ *
+ *     The verdict now requires EVIDENCE OF SERVICE, not the absence of a free
+ *     slot: the pool is only frozen when a probe cannot get a reply AND no work
+ *     has settled through it for `APP_POOL_LIVENESS_WINDOW_MS`
+ *     (utils-server/poolLiveness.ts, fed by every scheduler job settlement — ok,
+ *     server-side cancel, or error, all of which are round trips). A busy pool
+ *     keeps that clock fresh and is left alone; a wedged pool stops settling
+ *     anything, goes stale, and is healed. The trade is deliberate: a genuine
+ *     total freeze is now healed in ~2 minutes instead of ~35s, because the cost
+ *     of the alternative is rejecting a working pool's in-flight work and
+ *     dropping every device socket several times an hour.
+ *
+ *  6. TWO WINDOWS WHERE THE POOL IS NOT JUDGED AT ALL (fixed 2026-09-20). A
+ *     cold start saturates five connections with 58 scheduler jobs and startup
+ *     recovery, and a recycle leaves its own in-flight rejections and reconnect
+ *     work behind. Both are times the pool is busy without being wedged, and the
+ *     pre-fix watchdog recycled on exactly those (live: 12s after boot).
+ *     `WATCHDOG_WARMUP_MS` after start and `RECYCLE_COOLDOWN_MS` after a recycle
+ *     make that structurally impossible instead of improbable. Neither window
+ *     gates the dedicated reachability probe: genuine unreachability still exits
+ *     on the unchanged threshold.
  *
  * Exiting on unreachability keeps its separate 4-failure tolerance: a pooler
  * reconnect storm can exceed one probe timeout, and there the cost of waiting
  * is only time a real outage has already cost.
  */
 import { getProbeClient } from "./dbProbe";
+import { msSinceAppPoolWork } from "./poolLiveness";
 import { probeAppPool, probeAppPoolCapacity, recyclePool } from "../src/db";
 import { logger } from "../lib/logger";
 
@@ -191,6 +242,67 @@ const WEDGE_THRESHOLD = 4;
  * for why a second trying probe would consume another slot.
  */
 const APP_POOL_PROBE_TIMEOUT_MS = 35_000;
+
+/**
+ * Slots the capacity confirmation may occupy — deliberately ONE, not
+ * `APP_POOL_SIZE`.
+ *
+ * The step answers "can this pool still serve a query at all?", so it must not
+ * be what removes the pool's ability to serve. At full width it did exactly
+ * that: `probeAppPool` cannot release the slot a timed-out probe abandoned, so
+ * five concurrent probes reserved all five connections for up to 35s and the
+ * `0/5 probes settled` they reported was their own footprint (live measurement
+ * in the header, item 5). One slot answers the same question honestly – if the
+ * pool is merely saturated or partially wedged, postgres.js queues this probe
+ * onto whatever slot is free and it settles, which is the refusal this step
+ * exists to produce.
+ */
+export const CAPACITY_PROBE_ATTEMPTS = 1;
+
+/**
+ * No application-pool verdict for this long after start.
+ *
+ * A cold start is a burst by construction: 58 scheduler jobs and startup
+ * recovery open at once against five connections, so the pool is saturated for
+ * longer than any probe bound while being perfectly healthy. The pre-fix
+ * watchdog recycled on that burst 12s after boot (live 2026-09-20). Reachability
+ * is still watched throughout – this window suppresses only the pool verdict.
+ */
+export const WATCHDOG_WARMUP_MS = 120_000;
+
+/**
+ * No application-pool verdict for this long after a recycle.
+ *
+ * A recycle rejects that pool's in-flight queries (CONNECTION_DESTROYED), those
+ * callers retry, and the fresh client reconnects — work that makes a newly
+ * recycled pool look busy for a while. Judging it inside that window is what
+ * produced chained recycles (4 in 10 minutes, live 2026-09-20).
+ */
+export const RECYCLE_COOLDOWN_MS = 120_000;
+
+/**
+ * After a REFUSED verdict (the pool timed out, then served the capacity probe),
+ * wait this long before judging the pool again.
+ *
+ * Each timed-out probe leaves a slot abandoned until something recycles the
+ * pool, so re-asking on the next tick would bleed the pool one slot at a time –
+ * the defect the watchdog exists to heal, performed slowly by the watchdog
+ * itself. A partial wedge is logged and then left alone for a while.
+ */
+export const PARTIAL_WEDGE_COOLDOWN_MS = 60_000;
+
+/**
+ * How recently the pool must have settled real work for a no-free-slot probe to
+ * be treated as load rather than a freeze.
+ *
+ * 60s is set against a measured feed rate, not a guess: the live server logged
+ * 1761 scheduler job settlements in 733s (~2.4/s), so a healthy pool misses
+ * roughly 145 settlements inside this window before the clock could look stale.
+ * The window only ever makes the watchdog MORE reluctant to recycle, so a
+ * generous value costs heal latency and never a false positive — the opposite of
+ * the trade that produced 4 recycles in 12 minutes on a pool completing work.
+ */
+export const APP_POOL_LIVENESS_WINDOW_MS = 60_000;
 /**
  * The ONLY probe outcome that triggers a recycle is `reason: "timeout"`.
  *
@@ -250,11 +362,22 @@ export function startDbWatchdog(intervalMs: number = PROBE_INTERVAL_MS): NodeJS.
   // tick even when the previous one is still pending, so a single slow window
   // is counted as several "consecutive" failures (see header).
   let probeInFlight = false;
+  // Warm-up / cooldown bookkeeping (header items 5 and 6). Both windows exist so
+  // that a pool which is demonstrably busy-but-working cannot be read as wedged.
+  const startedAt = Date.now();
+  let lastRecycleAt = 0;
+  let poolProbeCooldownUntil = 0;
   logger.info("[db-watchdog] started", {
     intervalMs,
     probeTimeoutMs: PROBE_TIMEOUT_MS,
     wedgeThreshold: WEDGE_THRESHOLD,
     probeConnection: "dedicated (max: 1, cannot queue behind scheduler jobs)",
+    // Surfaced so a reader can tell why no pool verdict appears for the first
+    // two minutes after a deploy, and after any recycle.
+    appPoolWarmupMs: WATCHDOG_WARMUP_MS,
+    recycleCooldownMs: RECYCLE_COOLDOWN_MS,
+    capacityProbeAttempts: CAPACITY_PROBE_ATTEMPTS,
+    appPoolLivenessWindowMs: APP_POOL_LIVENESS_WINDOW_MS,
   });
   const timer = setInterval(() => {
     if (probeInFlight) {
@@ -269,6 +392,23 @@ export function startDbWatchdog(intervalMs: number = PROBE_INTERVAL_MS): NodeJS.
           logger.info("[db-watchdog] probe recovered", { consecutiveFailures });
         }
         consecutiveFailures = 0;
+
+        // ── Warm-up / cooldown: the pool is not judged inside these windows ──
+        // A cold start and the moments after a recycle are both periods when
+        // five connections are legitimately saturated (58 scheduler jobs,
+        // startup recovery, retries from the queries a recycle just rejected).
+        // They are also exactly what a wedged pool looks like to a probe, so
+        // the verdict is withheld rather than guessed at. Deliberately placed
+        // AFTER the reachability verdict above: unreachability is still
+        // detected and still exits on its unchanged threshold.
+        const now = Date.now();
+        if (now - startedAt < WATCHDOG_WARMUP_MS) {
+          poolFrozen = false;
+          return;
+        }
+        if (now - lastRecycleAt < RECYCLE_COOLDOWN_MS || now < poolProbeCooldownUntil) {
+          return;
+        }
 
         // The database answered on the dedicated connection, so a failure on
         // the application pool can only concern this process's own slots — the
@@ -311,9 +451,17 @@ export function startDbWatchdog(intervalMs: number = PROBE_INTERVAL_MS): NodeJS.
         // healthy connections' in-flight queries and dropped every device
         // socket. So ask the pool directly how much capacity it still has, and
         // destroy it only when it has none.
-        const capacity = await probeAppPoolCapacity(APP_POOL_PROBE_TIMEOUT_MS);
+        const capacity = await probeAppPoolCapacity(
+          APP_POOL_PROBE_TIMEOUT_MS,
+          CAPACITY_PROBE_ATTEMPTS,
+        );
         if (capacity.settled > 0) {
           poolFrozen = false;
+          // The pool served this probe, so it is NOT frozen — refuse the recycle
+          // and back off before asking again. The probe above already abandoned
+          // one slot, so a verdict every tick would bleed the pool toward a real
+          // freeze.
+          poolProbeCooldownUntil = Date.now() + PARTIAL_WEDGE_COOLDOWN_MS;
           logger.warn("[db-watchdog] application pool partially wedged — still serving, NOT recycled", {
             settled: capacity.settled,
             attempts: capacity.attempts,
@@ -322,10 +470,34 @@ export function startDbWatchdog(intervalMs: number = PROBE_INTERVAL_MS): NodeJS.
           return;
         }
 
+        // Capacity is exhausted — but a probe with nowhere to run measures the
+        // QUEUE, not the pool. So the verdict also requires that the pool has
+        // stopped DELIVERING: if real work settled recently, this is load and
+        // the pool must be left alone. Measured live 2026-09-20: 4 such verdicts
+        // and 4 recycles inside 12 minutes, against 1761 scheduler job
+        // completions in the same log, on the pool being recycled.
+        const sinceLastSettledMs = msSinceAppPoolWork();
+        if (sinceLastSettledMs < APP_POOL_LIVENESS_WINDOW_MS) {
+          poolFrozen = false;
+          poolProbeCooldownUntil = Date.now() + PARTIAL_WEDGE_COOLDOWN_MS;
+          logger.warn(
+            "[db-watchdog] no free slot for the pool probe, but the pool is delivering work — NOT recycled",
+            {
+              sinceLastSettledMs,
+              livenessWindowMs: APP_POOL_LIVENESS_WINDOW_MS,
+              capacity: `${capacity.settled}/${capacity.attempts} probes settled`,
+              note: "only a pool that has stopped settling work is frozen; a probe that cannot get a slot measures the queue",
+            },
+          );
+          return;
+        }
+
         poolFrozen = true;
         logger.error("[db-watchdog] application pool frozen (database is reachable)", {
           probeTimeoutMs: APP_POOL_PROBE_TIMEOUT_MS,
           capacity: `${capacity.settled}/${capacity.attempts} probes settled`,
+          // null = nothing has settled since this process started.
+          sinceLastSettledMs: Number.isFinite(sinceLastSettledMs) ? sinceLastSettledMs : null,
           effect:
             "dispatch, scheduler ticks and rider/driver auth all park on DB access",
         });
@@ -338,6 +510,10 @@ export function startDbWatchdog(intervalMs: number = PROBE_INTERVAL_MS): NodeJS.
           note: "frozen slots are released by a fresh client; in-flight queries settle as errors",
         });
         await recyclePool();
+        // Start the post-recycle cooldown, and clear any partial-wedge cooldown:
+        // the fresh client makes that earlier verdict moot.
+        lastRecycleAt = Date.now();
+        poolProbeCooldownUntil = 0;
       })
       .catch((e: Error) => {
         consecutiveFailures += 1;

@@ -34,6 +34,7 @@ import {
 import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte, inArray } from "drizzle-orm";
 import { detectStationaryAnomaly } from "../lib/safety";
 import { logger } from "../lib/logger";
+import { markAppPoolWorkSettled } from "./poolLiveness";
 import { nextBdtMidnightUtc, bdtDayOfWeek, bdtHourOfDay } from "../lib/time";
 import { resetAllBudgets } from "../lib/zoneBudget";
 import { evaluateGraduation } from "../lib/zoneLifecycle";
@@ -184,6 +185,14 @@ export async function withJobBudget<T>(
       ...poolOccupancy(),
     });
     throw e;
+  } finally {
+    // Every settlement — ok, server-side cancel ("timeout"), or error — proves
+    // this pool completed a round trip, which is the liveness the DB watchdog
+    // consults before it recycles the pool. A wedged slot produces none of them
+    // (the query hangs), which is precisely why the pool cannot be judged by a
+    // probe that has to wait for a free slot: measured live 2026-09-20, 4
+    // recycles landed on a pool that completed 1761 jobs in the same window.
+    markAppPoolWorkSettled();
   }
 }
 
