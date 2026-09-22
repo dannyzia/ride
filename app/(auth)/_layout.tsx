@@ -3,6 +3,7 @@ import { View, TouchableOpacity } from "react-native";
 import { colors } from '@/theme/goRide';
 import { useIsDark, useAppearance } from '@/lib/useAppearance';
 import Ionicons from "@expo/vector-icons/Ionicons";
+import LanguageToggle from "@/components/LanguageToggle";
 
 function ThemeToggle() {
   const isDark = useIsDark();
@@ -48,7 +49,26 @@ export default function AuthLayout() {
           animation: 'slide_from_right',
         }}
       />
-      {!isSplash && <ThemeToggle />}
+      {/* Theme toggle at right:20; language toggle beside it (right:76 =
+          theme's right edge 64 + 12 gap; language's hitSlop 12 ends exactly
+          at right:64 — adjacent, zero overlap, fits ≥320dp screens). */}
+      {!isSplash && (
+        <>
+          <ThemeToggle />
+          <View
+            style={{
+              position: "absolute",
+              top: 50,
+              right: 76,
+              width: 44,
+              height: 44,
+              zIndex: 100,
+            }}
+          >
+            <LanguageToggle />
+          </View>
+        </>
+      )}
     </View>
   );
 }

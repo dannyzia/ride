@@ -19,6 +19,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, usePathname, useSegments } from "expo-router";
 import { useIsDark } from "@/lib/useAppearance";
+import LanguageToggle from "@/components/LanguageToggle";
 import { API_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
 import * as Location from "expo-location";
@@ -111,9 +112,14 @@ const SOS_API_URL = API_URL;
 const SOS_COOLDOWN_SECONDS = 5;
 
 // ─── Floating button stack geometry / drag ─────────────────────────
-// Both buttons are the same size and sit in one draggable stack:
-// hamburger ABOVE SOS with a fixed gap. The stack position is the
-// top-left of the hamburger; dragging either button moves the pair.
+// Three members in one draggable stack (top → bottom): LANGUAGE,
+// hamburger, SOS — fixed BTN_GAP between them. The stack position is
+// the top-left of the LANGUAGE button (the topmost member); dragging
+// any button moves the whole stack. The language member is native-only
+// (hasLang, Platform-gated) — admin web renders hamburger + SOS only.
+// Crowning language on top (smallest `top` offset) preserves the
+// pixel positions of hamburger and SOS for existing users, because RN
+// `top` grows DOWNWARD and the cached offset anchors bottom-right.
 const BTN_SIZE = 48;
 const BTN_GAP = 12;
 const EDGE_RIGHT = 16; // default distance from the right screen edge
@@ -168,10 +174,14 @@ export default function GlobalActionButtons() {
 
   // ── All hooks MUST be before any early return (rules-of-hooks) ──
 
-  // ── Draggable stack position (hamburger top-left anchor) ──
+  // ── Draggable stack position (language button top-left anchor) ──
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const hasSos = role !== "admin";
-  const stackHeight = hasSos ? BTN_SIZE * 2 + BTN_GAP : BTN_SIZE;
+  // Language toggle is native-only (plan D5): the web GAB member is
+  // Platform-gated off for admin web; no web floating toggle anywhere.
+  const hasLang = Platform.OS !== "web";
+  const memberCount = 1 + (hasLang ? 1 : 0) + (hasSos ? 1 : 0);
+  const stackHeight = BTN_SIZE * memberCount + BTN_GAP * (memberCount - 1);
 
   // The buttons must clear the system nav bar (Android 3-button / gesture).
   // SafeAreaProvider is wired at app root, but insets.bottom is unreliable
@@ -402,16 +412,35 @@ export default function GlobalActionButtons() {
 
   const isCooldownActive = cooldownRemaining > 0;
   const showSos = hasSos;
+  const showLang = hasLang;
 
   // ── Menu title by role ──
   const menuTitle = role === "customer" ? "Menu" : role === "driver" ? "Driver Menu" : "Admin Menu";
 
   return (
     <>
-      {/* ═══ HAMBURGER BUTTON (top of the draggable stack) ═══ */}
+      {/* ═══ LANGUAGE BUTTON (topmost member of the draggable stack) ═══ */}
+      {showLang && (
+        <View
+          {...panResponder.panHandlers}
+          style={[styles.dragWrapper, { left: stackPos.x, top: stackPos.y }]}
+        >
+          <LanguageToggle />
+        </View>
+      )}
+
+      {/* ═══ HAMBURGER BUTTON (middle of the draggable stack) ═══ */}
       <View
         {...panResponder.panHandlers}
-        style={[styles.dragWrapper, { left: stackPos.x, top: stackPos.y }]}
+        style={[
+          styles.dragWrapper,
+          {
+            left: stackPos.x,
+            top:
+              stackPos.y +
+              (showLang ? BTN_SIZE + BTN_GAP : 0),
+          },
+        ]}
       >
         <Pressable
           onPress={() => setMenuOpen(true)}
@@ -436,7 +465,14 @@ export default function GlobalActionButtons() {
           {...panResponder.panHandlers}
           style={[
             styles.dragWrapper,
-            { left: stackPos.x, top: stackPos.y + BTN_SIZE + BTN_GAP },
+            {
+              left: stackPos.x,
+              top:
+                stackPos.y +
+                (showLang ? BTN_SIZE + BTN_GAP : 0) +
+                BTN_SIZE +
+                BTN_GAP,
+            },
           ]}
         >
           <TouchableOpacity

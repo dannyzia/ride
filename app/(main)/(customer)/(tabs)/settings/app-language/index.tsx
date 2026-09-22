@@ -12,7 +12,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
-import { setLanguage } from "@/i18n/i18n";
+import { applyLanguage } from "@/i18n/i18n";
 
 type LanguageCode = "en" | "bn";
 
@@ -90,7 +90,7 @@ export default function SettingsAppLanguage() {
                 accessibilityLabel={lang.label}
                 accessibilityState={{ selected: activeLanguage === lang.code }}
                 activeOpacity={0.7}
-                onPress={() => setLanguage(lang.code)}
+                onPress={() => applyLanguage(lang.code)}
                 style={styles.row}
               >
                 <Text style={styles.flag}>{lang.flag}</Text>

@@ -6,7 +6,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTranslation } from "react-i18next";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
-import { setLanguage as persistLanguage } from "@/i18n/i18n";
+import { applyLanguage } from "@/i18n/i18n";
 
 interface LanguageOption {
   code: string;
@@ -34,7 +34,7 @@ export default function DriverSettingsLanguage() {
 
   const selectLang = (code: string) => {
     setSelected(code);
-    persistLanguage(code as 'en' | 'bn');
+    applyLanguage(code as 'en' | 'bn');
   };
 
   return (
