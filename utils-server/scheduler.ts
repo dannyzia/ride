@@ -158,6 +158,18 @@ export async function withJobBudget<T>(
   try {
     const result = await db.transaction(async (tx) => {
       await tx.execute(sql.raw(`SET LOCAL statement_timeout = ${budget}`));
+      // ISSUE-62: bound the time this transaction may sit IDLE, not just the time
+      // any one statement may run. `statement_timeout` cannot see an abandoned
+      // transaction (nothing is executing — the backend is `idle in transaction`
+      // holding a statement that already completed), so an abandoned job
+      // transaction used to pin 1 of the pool's 5 slots until the watchdog
+      // recycled the pool. Here the job's own budget is the right bound: a job
+      // whose transaction has been idle for longer than the deadline it was given
+      // is already finished, and the server reclaims the backend on its own
+      // (reproduced: reaped in ~21s for a 15s bound, `.tmp/abandon-fix2.cjs`).
+      // This overrides the 120s pool-wide default from src/db/index.ts, which
+      // still covers every non-scheduler transaction in both processes.
+      await tx.execute(sql.raw(`SET LOCAL idle_in_transaction_session_timeout = ${budget}`));
       return fn(tx);
     });
     logger.info(`[scheduler] job ${jobN} tick`, {

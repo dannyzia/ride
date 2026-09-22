@@ -155,7 +155,7 @@ describe('A8 — honest job counter', () => {
 });
 
 describe('A8 — withJobBudget', () => {
-  it('ok path passes the result through, logs outcome ok, SET LOCAL is the first tx statement', async () => {
+  it('ok path passes the result through, logs outcome ok, both SET LOCAL bounds precede the job body', async () => {
     const executed: unknown[] = [];
     (db as any).transaction = jest.fn(async (fn: any) =>
       fn({
@@ -169,8 +169,16 @@ describe('A8 — withJobBudget', () => {
     const result = await withJobBudget(54, 10_000, async () => 42);
 
     expect(result).toBe(42);
-    expect(executed).toHaveLength(1);
+    expect(executed).toHaveLength(2);
     expect(JSON.stringify(executed[0])).toContain('SET LOCAL statement_timeout = 10000');
+    // ISSUE-62: statement_timeout cannot bound a transaction that is IDLE (an
+    // abandoned transaction has no executing statement left), so the job's
+    // budget is also applied to idle-in-transaction time. Without this an
+    // abandoned job transaction pinned 1 of the pool's 5 slots until the
+    // watchdog recycled the pool (live measurement 2026-09-21).
+    expect(JSON.stringify(executed[1])).toContain(
+      'SET LOCAL idle_in_transaction_session_timeout = 10000',
+    );
 
     const tick = mockLoggerInfo.mock.calls.find((c) => String(c[0]).includes('job 54 tick'));
     expect(tick).toBeDefined();
@@ -193,6 +201,28 @@ describe('A8 — withJobBudget', () => {
     const tick = mockLoggerInfo.mock.calls.find((c) => String(c[0]).includes('job 55 tick'));
     expect(tick).toBeDefined();
     expect(tick![1]).toMatchObject({ job: 55, outcome: 'timeout' });
+  });
+
+  it('bounds idle-in-transaction time by the job\'s OWN budget, per job', async () => {
+    // The bound must be the deadline the job was given, not a global constant: a
+    // job whose transaction has been idle longer than its budget is already
+    // finished, and the server reclaims the backend on its own.
+    const executed: unknown[] = [];
+    (db as any).transaction = jest.fn(async (fn: any) =>
+      fn({
+        execute: jest.fn(async (s: unknown) => {
+          executed.push(s);
+          return [];
+        }),
+      }),
+    );
+
+    await withJobBudget(57, 4_500, async () => undefined);
+
+    const bounds = executed.map((s) => JSON.stringify(s));
+    expect(bounds).toHaveLength(2);
+    expect(bounds[0]).toContain('SET LOCAL statement_timeout = 4500');
+    expect(bounds[1]).toContain('SET LOCAL idle_in_transaction_session_timeout = 4500');
   });
 
   it('non-timeout errors log outcome error and propagate to the job catch', async () => {

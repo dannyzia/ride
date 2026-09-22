@@ -47,6 +47,9 @@ jest.mock("drizzle-orm/postgres-js", () => ({
       from: jest.fn(() => self),
       limit: jest.fn(() => Promise.resolve([{ key: "dispatch_paused", value: "false" }])),
     };
+    // The transaction handle handed to callers. Exposed as `_tx` so tests can
+    // read exactly which statements the wrapper issued before the callback ran.
+    const tx = { execute: jest.fn(() => Promise.resolve([])) };
     return {
       // A fresh object per instance, so tests can prove the Proxy switched
       // targets by identity. Non-function, so it is returned unbound.
@@ -54,6 +57,8 @@ jest.mock("drizzle-orm/postgres-js", () => ({
       execute: jest.fn(() => Promise.resolve([{ ok: 1 }])),
       select: jest.fn(() => self),
       _self: self,
+      _tx: tx,
+      transaction: jest.fn((fn: (t: typeof tx) => Promise<unknown>) => fn(tx)),
     };
   }),
 }));
@@ -92,6 +97,9 @@ function lastInstance(): {
   execute: jest.Mock;
   select: jest.Mock;
   _self: { limit: jest.Mock };
+  /** Transaction handle the wrapper hands the callback (the idle-bound tests). */
+  _tx: { execute: jest.Mock };
+  transaction: jest.Mock;
 } {
   const results = drizzleMock.mock.results;
   return results[results.length - 1].value;
@@ -171,6 +179,69 @@ describe("probeAppPool", () => {
       reason: "error",
       error: "pool closed",
     });
+  });
+});
+
+describe("transaction idle bound", () => {
+  // ISSUE-62, live-reproduced 2026-09-21: a postgres.js transaction whose promise
+  // the caller stops awaiting keeps an open BEGIN, and its last statement has
+  // already completed — so the backend sits `idle in transaction` and
+  // `statement_timeout` can never fire. Measured on the live pool: one backend
+  // parked that way for 88% of a 1.94h window (xact age to 6188s) while the pool
+  // read 0/1 usable. Every abandoned transaction permanently burnt one of five
+  // slots, and only `recyclePool()` ever got them back. The pool must therefore
+  // bound IDLE transaction time server-side, before the callback runs.
+  interface RawSql {
+    queryChunks: { value: string[] }[];
+  }
+  const textOf = (q: unknown) => (q as RawSql).queryChunks[0].value.join("");
+
+  it("issues the idle-in-transaction bound BEFORE the callback's own work", async () => {
+    const { db } = freshDb();
+    const inst = lastInstance();
+    const seen: string[] = [];
+    inst._tx.execute.mockImplementation((q: unknown) => {
+      seen.push(textOf(q));
+      return Promise.resolve([]);
+    });
+
+    await (
+      db.transaction as (fn: (tx: typeof inst._tx) => Promise<unknown>) => Promise<unknown>
+    )(async (tx) => {
+      seen.push("job-body");
+      await tx.execute({ queryChunks: [{ value: ["job-body-statement"] }] });
+      return undefined;
+    });
+
+    expect(seen[0]).toBe("SET LOCAL idle_in_transaction_session_timeout = 120000");
+    expect(seen[1]).toBe("job-body");
+    expect(seen[2]).toBe("job-body-statement");
+  });
+
+  it("propagates the callback's rejection (the wrapper must not swallow it)", async () => {
+    const { db } = freshDb();
+    await expect(
+      (db.transaction as (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>)(async () => {
+        throw new Error("job failed");
+      }),
+    ).rejects.toThrow("job failed");
+  });
+
+  it("still bounds transactions after a recycle installs a fresh pool", async () => {
+    const { db, recyclePool } = freshDb();
+    await recyclePool();
+    const inst = lastInstance();
+    const seen: string[] = [];
+    inst._tx.execute.mockImplementation((q: unknown) => {
+      seen.push(textOf(q));
+      return Promise.resolve([]);
+    });
+
+    await (db.transaction as (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>)(
+      async () => undefined,
+    );
+
+    expect(seen).toEqual(["SET LOCAL idle_in_transaction_session_timeout = 120000"]);
   });
 });
 

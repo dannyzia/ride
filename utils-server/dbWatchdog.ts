@@ -200,7 +200,12 @@
  */
 import { getProbeClient } from "./dbProbe";
 import { msSinceAppPoolWork } from "./poolLiveness";
-import { probeAppPool, probeAppPoolCapacity, recyclePool } from "../src/db";
+import {
+  APP_TXN_IDLE_BOUND_MS,
+  probeAppPool,
+  probeAppPoolCapacity,
+  recyclePool,
+} from "../src/db";
 import { logger } from "../lib/logger";
 
 const PROBE_INTERVAL_MS = 10_000;
@@ -372,6 +377,12 @@ export function startDbWatchdog(intervalMs: number = PROBE_INTERVAL_MS): NodeJS.
     probeTimeoutMs: PROBE_TIMEOUT_MS,
     wedgeThreshold: WEDGE_THRESHOLD,
     probeConnection: "dedicated (max: 1, cannot queue behind scheduler jobs)",
+    // ISSUE-62: proof-at-boot that the running process loaded the transaction
+    // idle bound (src/db/index.ts) — an abandoned transaction is reclaimed by the
+    // server after this many ms instead of pinning one of the pool's five slots
+    // until a recycle. Read from the same constant the bound is issued from, so a
+    // stale process cannot report the new value.
+    appTxnIdleBoundMs: APP_TXN_IDLE_BOUND_MS,
     // Surfaced so a reader can tell why no pool verdict appears for the first
     // two minutes after a deploy, and after any recycle.
     appPoolWarmupMs: WATCHDOG_WARMUP_MS,

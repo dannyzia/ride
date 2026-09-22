@@ -48,6 +48,89 @@ if (!DATABASE_URL) {
  */
 export const APP_POOL_SIZE = 5;
 
+/**
+ * How long ANY transaction on this pool may sit `idle in transaction` before the
+ * SERVER closes its backend — the bound that stops an abandoned transaction from
+ * pinning one of only `max: 5` slots (ISSUE-62, live-reproduced 2026-09-21).
+ *
+ * The failure this closes, reproduced end-to-end with no repo code involved
+ * (`.tmp/abandon-tx.cjs` -> `.tmp/abandon-fix2.cjs`):
+ *
+ *   - A postgres.js transaction (`sql.begin` / `db.transaction`) whose promise the
+ *     caller stops awaiting leaves its connection holding an open BEGIN. The last
+ *     statement inside it has ALREADY COMPLETED, so the backend sits
+ *     `state = 'idle in transaction'` holding that statement text
+ *     (measured: `select 1`, xact age growing 9s -> 65s, unbounded).
+ *   - `statement_timeout` cannot bound it — nothing is executing. Measured on the
+ *     live pool: one backend parked `idle in transaction` for 88% of a 1.94h
+ *     window, `xact_start` age up to 6188s (over 100 minutes), while the pool's
+ *     jobs queued 0.7s -> 10-12s and `probeAppPoolCapacity` read `0/1`.
+ *   - Each abandonment permanently burns one slot; the pool only ever got those
+ *     slots back when `recyclePool()` tore the sockets down, which is why the
+ *     recycle "healed" the wedge it did not cause.
+ *
+ * Why a transaction-scoped `SET LOCAL` and not a client option: this DATABASE_URL
+ * is Supavisor in transaction mode, which does NOT forward client connection
+ * parameters to the backend. Proved both ways — `application_name` set by the
+ * client is overwritten with `Supavisor` on the server, and
+ * `connection: { idle_in_transaction_session_timeout }` left the parked backend
+ * untouched for a full 60s window. The same bound issued as SQL inside the
+ * transaction reaped it in ~21s (bound 15s), with no client action and no
+ * recycle. The server enforces it, so it works even when the client has stopped
+ * caring.
+ *
+ * 120s is chosen against measurement, not comfort: every transaction body in this
+ * repo was statically audited for work that can idle with the transaction open
+ * (network calls, awaits on the global pool) and **zero of 95** contain any, so a
+ * gap this long cannot be a slow-but-live transaction — it is an abandoned one.
+ * It also sits well above the 30s `statement_timeout` (nothing that is executing
+ * can be pre-empted) and above the longest measured legitimate transaction
+ * (~20s).
+ */
+export const APP_TXN_IDLE_BOUND_MS = 120_000;
+
+/** Minimal transaction surface the idle bound needs (drizzle's `PgTransaction`). */
+type IdleBoundTx = {
+  execute: (query: ReturnType<typeof sql.raw>) => Promise<unknown>;
+};
+
+/**
+ * Give every transaction on `instance` a server-side idle bound.
+ *
+ * One choke point, deliberately: ~90 `.transaction()` call sites exist across
+ * `lib/`, `app/api/`, `utils-server/` and `src/`, and instruments inside job
+ * bodies only ever cover the job path (the SOS sweep and other bare `registerJob`
+ * handlers bypass `withJobBudget` entirely). Wrapping the pool's `transaction`
+ * covers every caller in BOTH long-running processes — the Expo API routes and
+ * the WS server — because both import this module's pool.
+ *
+ * The bound is issued before the callback runs, so it is in force for the whole
+ * transaction, including any statement the callback awaits.
+ */
+function withIdleBound<T extends { transaction: (...args: never[]) => unknown }>(
+  instance: T,
+): T {
+  const original = instance.transaction as unknown as (
+    fn: (tx: IdleBoundTx) => Promise<unknown>,
+    config?: unknown,
+  ) => unknown;
+  (instance as unknown as { transaction: unknown }).transaction = (
+    fn: (tx: IdleBoundTx) => Promise<unknown>,
+    config?: unknown,
+  ) =>
+    original.call(
+      instance,
+      async (tx: IdleBoundTx) => {
+        await tx.execute(
+          sql.raw(`SET LOCAL idle_in_transaction_session_timeout = ${APP_TXN_IDLE_BOUND_MS}`),
+        );
+        return fn(tx);
+      },
+      config,
+    );
+  return instance;
+}
+
 function createPool() {
   /**
    * Supabase pooler is in ap-northeast-1 (Tokyo). A cold connect from BD can
@@ -91,7 +174,7 @@ function createPool() {
       statement_timeout: 30000,
     },
   });
-  return { client, db: drizzle(client, { schema }) };
+  return { client, db: withIdleBound(drizzle(client, { schema })) };
 }
 
 type DrizzleDb = ReturnType<typeof createPool>["db"];
