@@ -19,7 +19,7 @@ import * as ImagePicker from "expo-image-picker";
 import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-import { uploadImage } from "@/lib/imageToURL";
+import { uploadImageToR2 } from "@/lib/imageToURL";
 import { colors, radii, spacing } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import DocumentUploadCard from "@/components/DocumentUploadCard";
@@ -626,11 +626,11 @@ export default function OnboardingWizard() {
   );
 
   // Steps 3–5 — documents
-  const [vehicleDocs, setVehicleDocs] = useState<Record<string, string>>({});
+  const [vehicleDocs, setVehicleDocs] = useState<Record<string, { url: string; fileSizeBytes: number }>>({});
   const [savedVehicleDocsKey, setSavedVehicleDocsKey] = useState<string | null>(null);
-  const [driverDocs, setDriverDocs] = useState<Record<string, string>>({});
+  const [driverDocs, setDriverDocs] = useState<Record<string, { url: string; fileSizeBytes: number }>>({});
   const [legacyAnswer, setLegacyAnswer] = useState<"yes" | "no" | null>(null);
-  const [legacyDocs, setLegacyDocs] = useState<Record<string, string>>({});
+  const [legacyDocs, setLegacyDocs] = useState<Record<string, { url: string; fileSizeBytes: number }>>({});
 
   // Step 6 — payout
   const [bkash, setBkash] = useState("");
@@ -776,10 +776,13 @@ export default function OnboardingWizard() {
     try {
       let urlToSend = photoUrl;
       if (photoLocalUri) {
-        urlToSend = await uploadImage(
-          photoLocalUri,
-          `driver_photo/${Date.now()}.jpg`,
-        );
+        urlToSend = (
+          await uploadImageToR2({
+            localUri: photoLocalUri,
+            folder: "profile",
+            fileName: `driver_photo/${Date.now()}.jpg`,
+          })
+        ).publicUrl;
         setPhotoUrl(urlToSend);
       }
       const body: Record<string, string> = { name: name.trim() };
@@ -897,7 +900,11 @@ export default function OnboardingWizard() {
     }
     setStepSubmitting(true);
     try {
-      const body: Record<string, unknown> = { documents: vehicleDocs };
+      const body: Record<string, unknown> = {
+        documents: Object.fromEntries(
+          Object.entries(vehicleDocs).map(([k, v]) => [k, v]),
+        ),
+      };
       const vid = vehicleId ?? me?.vehicle_id ?? null;
       if (vid) body.vehicle_id = vid;
       await apiFetch("/api/driver/documents", {
@@ -936,7 +943,7 @@ export default function OnboardingWizard() {
   const finishOnboarding = async () => {
     setFinishing(true);
     try {
-      const finalDocs: Record<string, string> = { ...driverDocs };
+      const finalDocs: Record<string, { url: string; fileSizeBytes: number }> = { ...driverDocs };
       if (legacyAnswer === "yes") {
         Object.assign(finalDocs, legacyDocs);
       }
@@ -1304,7 +1311,7 @@ export default function OnboardingWizard() {
           <View>
             <Text style={secondaryLabelStyle}>Upload your vehicle documents. All are required.</Text>
             {VEHICLE_DOC_FIELDS.map((f) => (
-              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(_path, url) => setVehicleDocs((prev) => ({ ...prev, [f.key]: url }))} />
+              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} folder="vehicle" onUploadComplete={(_path, url, fileSizeBytes) => setVehicleDocs((prev) => ({ ...prev, [f.key]: { url, fileSizeBytes } }))} />
             ))}
           </View>
         )}
@@ -1314,7 +1321,7 @@ export default function OnboardingWizard() {
           <View>
             <Text style={secondaryLabelStyle}>Upload your personal documents. All are required.</Text>
             {DRIVER_DOC_FIELDS.map((f) => (
-              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(_path, url) => setDriverDocs((prev) => ({ ...prev, [f.key]: url }))} />
+              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(_path, url, fileSizeBytes) => setDriverDocs((prev) => ({ ...prev, [f.key]: { url, fileSizeBytes } }))} />
             ))}
           </View>
         )}
@@ -1337,7 +1344,7 @@ export default function OnboardingWizard() {
               <View style={{ marginTop: spacing.lg }}>
                 <Text style={secondaryLabelStyle}>Optional \u2014 helps us verify your experience. None of these are required.</Text>
                 {LEGACY_DOC_FIELDS.map((f) => (
-                  <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(_path, url) => setLegacyDocs((prev) => ({ ...prev, [f.key]: url }))} />
+                  <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(_path, url, fileSizeBytes) => setLegacyDocs((prev) => ({ ...prev, [f.key]: { url, fileSizeBytes } }))} />
                 ))}
               </View>
             )}

@@ -404,7 +404,7 @@ Two `.env` files:
 - `.env.local` — Expo app (API routes)
 - `utils-server/.env` — WebSocket server
 
-Required Expo app server vars: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PORTPOS_APP_KEY`, `PORTPOS_SECRET_KEY`, `PORTPOS_BASE_URL`, `PORTPOS_CALLBACK_URL`, `BARIKOI_API_KEY`, `UTILS_SERVER_PORT` (default `3001`), `WEBSOCKET_INTERNAL_SECRET` (min 32 chars).
+Required Expo app server vars: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PORTPOS_APP_KEY`, `PORTPOS_SECRET_KEY`, `PORTPOS_BASE_URL`, `PORTPOS_CALLBACK_URL`, `BARIKOI_API_KEY`, `UTILS_SERVER_PORT` (default `3001`), `WEBSOCKET_INTERNAL_SECRET` (min 32 chars), `CLOUDFLARE_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` (REQUIRED — no default; missing/empty R2 vars fail fast with `500 server_misconfigured`). R2 secrets are server-only; `EXPO_PUBLIC_R2_DOMAIN` is the only client-safe R2 var.
 
 Required utils-server vars: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `WEBSOCKET_INTERNAL_SECRET`, `INSTANCE_COUNT` (must be `"1"`), `BARIKOI_API_KEY` (required for firm-quote routing in `barikoiRoute.ts`).
 

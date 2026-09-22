@@ -327,4 +327,25 @@ describe("PATCH /api/driver/me — guarded fields", () => {
     expect(userUpdates[0].set).toMatchObject({ name: "Renamed", city: "Dhaka" });
     expect(driverUpdates[0].set).toMatchObject({ auto_accept_enabled: true });
   });
+
+  test("profile_image_url validation now uses the options-object signature (R2 migration)", async () => {
+    mockSelectQueue([[{ id: USER_ID }], [{ id: DRIVER_ID }], [{ id: DRIVER_ID }]]);
+    (isAllowedStorageUrl as jest.Mock).mockReturnValue(true);
+
+    const res = await mePATCH(jsonRequest({
+      profile_image_url: "https://assets.ride.com.bd/profile/uid/x.jpg",
+    }));
+    expect(res.status).toBe(200);
+    expect(isAllowedStorageUrl).toHaveBeenCalledWith(
+      "https://assets.ride.com.bd/profile/uid/x.jpg",
+      {
+        bucket: "driver-documents",
+        r2Prefix: "profile",
+        ownerId: SUPABASE_UID,
+      },
+    );
+    expect(userUpdates[0].set.profile_image_url).toBe(
+      "https://assets.ride.com.bd/profile/uid/x.jpg",
+    );
+  });
 });

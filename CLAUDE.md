@@ -200,7 +200,7 @@ If you cannot confirm the six Section 20 gates are complete, **do not generate f
 - **Map**: `@maplibre/maplibre-react-native` + Barikoi API (`barikoiapis`) via `utils/mapUtils.ts`
 - **Database**: Supabase PostgreSQL + Drizzle ORM (`src/db/schema.ts`) — ~97 tables, ~32 enums
 - **Auth**: Supabase Auth phone OTP (`lib/auth.ts`, `lib/supabase.ts`, `lib/supabaseServer.ts`)
-- **Storage**: Supabase Storage (`driver-documents` bucket via `lib/imageToURL.ts`)
+- **Storage**: Cloudflare R2 via pre-signed PUT URLs (`lib/imageToURL.ts` → `app/api/storage/upload-url+api.ts`, public CDN `EXPO_PUBLIC_R2_DOMAIN`); legacy Supabase Storage (`driver-documents` bucket) rows still display and validate. Supabase remains DB + auth only.
 - **Payments**: PortPos via WebView (`lib/portpos.ts`, `components/PaymentWebView.tsx`). Old `lib/bkash.ts` and `lib/nagad.ts` kept as inert fallback.
 - **WebSocket**: `ws` library in `utils-server/` (dispatch.ts, dispatchChain.ts, leadBilling.ts, h3Index.ts, scheduler.ts, compensationWorker.ts, coldDrop.ts, trace.ts, firmQuote.ts, barikoiRoute.ts, polyline.ts, offPlatform.ts)
 - **Geo**: H3 hex grid (`lib/h3.ts`) at resolution 9. Import only via `lib/h3.ts` and `utils-server/h3Index.ts`.

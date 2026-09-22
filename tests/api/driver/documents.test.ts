@@ -152,7 +152,7 @@ describe("POST /api/driver/documents — validation gates", () => {
   test("400 vehicle_not_found when vehicle_id belongs to another driver (M-1)", async () => {
     mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP], []]);
     const res = await POST(jsonRequest({
-      documents: { license_front: URL_OK },
+      documents: { license_front: { url: URL_OK, file_size_bytes: 123 } },
       vehicle_id: VEHICLE_ID,
     }));
     expect(res.status).toBe(400);
@@ -161,7 +161,7 @@ describe("POST /api/driver/documents — validation gates", () => {
 
   test("400 invalid_doc_type for keys outside the enum", async () => {
     mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
-    const res = await POST(jsonRequest({ documents: { passport_scan: URL_OK } }));
+    const res = await POST(jsonRequest({ documents: { passport_scan: { url: URL_OK, file_size_bytes: 123 } } }));
     expect(res.status).toBe(400);
     expect((await getJson(res)).error).toBe("invalid_doc_type");
   });
@@ -169,9 +169,67 @@ describe("POST /api/driver/documents — validation gates", () => {
   test("400 invalid_storage_url for non-Ride storage hosts (C3a)", async () => {
     mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
     (isAllowedStorageUrl as jest.Mock).mockReturnValue(false);
-    const res = await POST(jsonRequest({ documents: { license_front: "https://evil.example/x.jpg" } }));
+    const res = await POST(jsonRequest({ documents: { license_front: { url: "https://evil.example/x.jpg", file_size_bytes: 123 } } }));
     expect(res.status).toBe(400);
     expect((await getJson(res)).error).toBe("invalid_storage_url");
+  });
+});
+
+describe("POST /api/driver/documents — payload shape (R2 migration)", () => {
+  test("201: {url, file_size_bytes} objects are accepted and mapped to columns", async () => {
+    mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
+
+    const res = await POST(jsonRequest({
+      documents: {
+        license_front: {
+          url: "https://assets.ride.com.bd/documents/uid/license.jpg",
+          file_size_bytes: 450_000,
+        },
+      },
+    }));
+    expect(res.status).toBe(201);
+    const insert = txInserts.find((i) => i.table === documents);
+    const rows = insert!.values as Record<string, unknown>[];
+    expect(rows[0]).toMatchObject({
+      storage_url: "https://assets.ride.com.bd/documents/uid/license.jpg",
+      file_size_bytes: 450_000,
+    });
+  });
+
+  test("legacy-row semantics: file_size_bytes = 0 is accepted (unknown size)", async () => {
+    mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
+
+    const res = await POST(jsonRequest({
+      documents: {
+        license_front: { url: URL_OK, file_size_bytes: 0 },
+      },
+    }));
+    expect(res.status).toBe(201);
+  });
+
+  test("400: negative or oversized file_size_bytes rejected", async () => {
+    mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
+    const res = await POST(jsonRequest({
+      documents: {
+        license_front: { url: URL_OK, file_size_bytes: -5 },
+      },
+    }));
+    expect(res.status).toBe(400);
+
+    mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
+    const res2 = await POST(jsonRequest({
+      documents: {
+        license_front: { url: URL_OK, file_size_bytes: 21 * 1024 * 1024 },
+      },
+    }));
+    expect(res2.status).toBe(400);
+  });
+
+  test("400: bare-string document values no longer accepted", async () => {
+    mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
+
+    const res = await POST(jsonRequest({ documents: { license_front: URL_OK } }));
+    expect(res.status).toBe(400);
   });
 });
 
@@ -180,7 +238,7 @@ describe("POST /api/driver/documents — submission", () => {
     mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
 
     const res = await POST(jsonRequest({
-      documents: { license_front: URL_OK, license_back: URL_OK },
+      documents: { license_front: { url: URL_OK, file_size_bytes: 1 }, license_back: { url: URL_OK, file_size_bytes: 1 } },
     }));
     expect(res.status).toBe(201);
     const body = await getJson(res);
@@ -202,14 +260,14 @@ describe("POST /api/driver/documents — submission", () => {
   test("legacy platform screenshot flags is_legacy_operator", async () => {
     mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
 
-    await POST(jsonRequest({ documents: { legacy_screenshot: URL_OK } }));
+    await POST(jsonRequest({ documents: { legacy_screenshot: { url: URL_OK, file_size_bytes: 123 } } }));
     expect(driverUpdates.some((u) => u.set.is_legacy_operator === true)).toBe(true);
   });
 
   test("temporary driver drops to pending status after submission", async () => {
     mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
 
-    await POST(jsonRequest({ documents: { license_front: URL_OK } }));
+    await POST(jsonRequest({ documents: { license_front: { url: URL_OK, file_size_bytes: 123 } } }));
     expect(driverUpdates.some((u) => u.set.status === "pending")).toBe(true);
   });
 

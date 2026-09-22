@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { supabase } from "@/lib/supabase";
+import { uploadImageToR2 } from "@/lib/imageToURL";
 import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
@@ -10,10 +10,11 @@ import { useIsDark } from "@/lib/useAppearance";
 interface DocumentUploadCardProps {
   docType: string;
   label: string;
-  onUploadComplete: (path: string, url: string) => void;
+  folder?: "documents" | "vehicle";
+  onUploadComplete: (path: string, url: string, fileSizeBytes: number) => void;
 }
 
-export default function DocumentUploadCard({ docType, label, onUploadComplete }: DocumentUploadCardProps) {
+export default function DocumentUploadCard({ docType, label, folder, onUploadComplete }: DocumentUploadCardProps) {
   const [uploading, setUploading] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   // H3: surface upload failures instead of silently logging them.
@@ -39,31 +40,16 @@ export default function DocumentUploadCard({ docType, label, onUploadComplete }:
       setUploading(true);
       setUploadError(null);
 
-      // H2: scope the storage path with the authenticated user id so one
-      // driver's documents can never collide with another's, and drop
-      // upsert:true so a (timestamped) collision errors loudly instead of
-      // silently overwriting an existing document.
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData.session?.user?.id ?? "anonymous";
-      const safeName = (file.fileName ?? "document.jpg").replace(/[^\w.\-]/g, "_");
-      const fileName = `${userId}/${docType}/${Date.now()}_${safeName}`;
-
-      const response = await fetch(file.uri);
-      const blob = await response.blob();
-
-      const { data, error } = await supabase.storage
-        .from("driver-documents")
-        .upload(fileName, blob);
-
-      if (error) throw error;
-
-      const { data: publicUrlData } = supabase.storage
-        .from("driver-documents")
-        .getPublicUrl(data.path);
+      const result2 = await uploadImageToR2({
+        localUri: file.uri,
+        folder: folder ?? "documents",
+        fileName: file.fileName ?? `document_${Date.now()}.jpg`,
+        mimeType: file.mimeType,
+      });
 
       setPreviewUri(file.uri);
-      onUploadComplete(data.path, publicUrlData.publicUrl);
-      logger.info("[DocumentUploadCard] upload complete", { docType, path: data.path });
+      onUploadComplete(result2.key, result2.publicUrl, result2.fileSizeBytes);
+      logger.info("[DocumentUploadCard] upload complete", { docType, key: result2.key });
     } catch (e) {
       logger.error("[DocumentUploadCard] upload failed", { docType, error: e instanceof Error ? e.message : String(e) });
       setUploadError("Upload failed — tap to try again");

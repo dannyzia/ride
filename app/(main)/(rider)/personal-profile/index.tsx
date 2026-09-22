@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { supabase } from "@/lib/supabase";
-import { uploadImage } from "@/lib/imageToURL";
+import { uploadImageToR2 } from "@/lib/imageToURL";
 import { logger } from "@/lib/logger";
 import { colors, fonts, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
@@ -59,7 +59,13 @@ export default function DriverPersonalProfile() {
     if (photo && !photo.startsWith("http")) {
       setUploading(true);
       try {
-        profileImageUrl = await uploadImage(photo, `profiles/${Date.now()}_${name.trim().replace(/\s+/g, "_")}.jpg`);
+        profileImageUrl = (
+          await uploadImageToR2({
+            localUri: photo,
+            folder: "profile",
+            fileName: `profiles/${Date.now()}_${name.trim().replace(/\s+/g, "_")}.jpg`,
+          })
+        ).publicUrl;
     } catch {
         setError("Failed to upload photo. Please try again.");
         setUploading(false);

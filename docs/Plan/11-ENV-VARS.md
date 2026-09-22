@@ -37,6 +37,11 @@ Read: 03-TECH-STACK.md to understand which service each variable belongs to.
 | `SEED_ADMIN_PHONE` | no | — | Phone number to seed as admin user (local dev only) | Set any +880 number for local testing |
 | `RIDER_RATE_LIMIT_PER_HOUR` | no | `5` | Max successful ride requests per rider per rolling 60 minutes. ⚠️ Currently hardcoded to `5` in `app/api/ride/request+api.ts` — env var not yet wired. | — |
 | `MAX_ACTIVE_RIDES_PER_RIDER` | no | `1` | Max concurrent rides in non-terminal status per rider. ⚠️ Currently hardcoded to `1` in `app/api/ride/request+api.ts` — env var not yet wired. | — |
+| `CLOUDFLARE_ACCOUNT_ID` | yes | — | Cloudflare account ID for R2 (S3 endpoint construction: `https://{id}.r2.cloudflarestorage.com`). Server-side only. | Cloudflare Dashboard → R2 → Overview → Account details |
+| `R2_ACCESS_KEY_ID` | yes | — | R2 API token access key (Object Read & Write scoped to the driver-documents bucket). Server-side only. | Cloudflare Dashboard → R2 → Manage API tokens |
+| `R2_SECRET_ACCESS_KEY` | yes | — | R2 API token secret key. Server-side only. | Cloudflare Dashboard → R2 → Manage API tokens |
+| `R2_BUCKET_NAME` | yes | — | R2 bucket name (REQUIRED — no default; the upload route fails fast with `500 server_misconfigured` when any R2 var is missing/empty). | Cloudflare Dashboard → R2 → bucket name |
+| `EXPO_PUBLIC_R2_DOMAIN` | yes | — | Public R2 CDN base URL (e.g. `https://assets.ride.com.bd`) used as the only client-safe R2 var. | Cloudflare Dashboard → R2 → bucket → Settings → Custom Domains |
 
 ### Removed / inert variables
 

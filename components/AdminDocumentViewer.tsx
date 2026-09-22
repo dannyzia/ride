@@ -19,6 +19,13 @@ export default function AdminDocumentViewer({ documentId }: AdminDocumentViewerP
     async function load() {
       try {
         setLoading(true);
+        // Full https:// URLs (R2 public CDN or legacy Supabase public URLs)
+        // render directly; only legacy `bucket/path`-form storage values go
+        // through Supabase signed-URL generation.
+        if (documentId.startsWith('https://')) {
+          setUrl(documentId);
+          return;
+        }
         const parts = documentId.split('/');
         const bucket = parts[0];
         const path = parts.slice(1).join('/');

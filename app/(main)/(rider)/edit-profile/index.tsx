@@ -16,7 +16,7 @@ import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
-import { uploadImage } from "@/lib/imageToURL";
+import { uploadImageToR2 } from "@/lib/imageToURL";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
@@ -112,10 +112,13 @@ export default function EditProfile() {
     if (photo && !photo.startsWith("http")) {
       setUploading(true);
       try {
-        profileImageUrl = await uploadImage(
-          photo,
-          `profiles/${Date.now()}_${fullName.trim().replace(/\s+/g, "_")}.jpg`,
-        );
+        profileImageUrl = (
+          await uploadImageToR2({
+            localUri: photo,
+            folder: "profile",
+            fileName: `profiles/${Date.now()}_${fullName.trim().replace(/\s+/g, "_")}.jpg`,
+          })
+        ).publicUrl;
       } catch {
         setError("Failed to upload photo. Please try again.");
         setUploading(false);
