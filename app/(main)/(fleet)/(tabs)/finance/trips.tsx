@@ -16,6 +16,7 @@ import { useFleetStore } from "@/store/useFleetStore";
 import FleetScreen from "@/components/fleet/FleetScreen";
 import { getAuthHeaders } from "@/lib/fleetAuth";
 import { logger } from "@/lib/logger";
+import { formatBDT } from "@/lib/format";
 
 interface Trip {
   id: string;
@@ -34,7 +35,7 @@ interface Trip {
 
 function formatPaisa(paisa: number | null): string {
   if (paisa == null) return "N/A";
-  return `৳${(paisa / 100).toLocaleString("en-BD")}`;
+  return formatBDT(paisa);
 }
 
 function statusColor(status: string): string {

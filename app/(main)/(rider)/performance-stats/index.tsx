@@ -11,6 +11,7 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import ChartBar from "@/components/ChartBar";
 import ChartLine from "@/components/ChartLine";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 type Period = "week" | "month";
@@ -135,7 +136,7 @@ export default function PerformanceStats() {
             </Text>
             <ChartBar
               data={earningsData}
-              formatValue={(v) => `৳${Math.round(v / 100)}`}
+              formatValue={(v) => formatBDT(Math.round(v))}
             />
           </View>
 

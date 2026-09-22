@@ -19,6 +19,7 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import MinRateSlider from "@/components/MinRateSlider";
 import { validateMinPerKm } from "@/lib/validateMinPerKm";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface SliderConfig {
   vehicle_type: string;
@@ -266,7 +267,7 @@ export default function MinRateScreen() {
           >
             Set your minimum acceptable per-km rate. You will only receive ride
             offers that meet or exceed this rate. The system rate is ৳
-            {(config.system_per_km_bdt / 100).toFixed(2)}/km for your vehicle
+            {(formatBDT(config.system_per_km_bdt, { decimals: true }))}/km for your vehicle
             type ({config.vehicle_type.replace(/_/g, " ")}).
           </Text>
         </View>
@@ -295,7 +296,7 @@ export default function MinRateScreen() {
               CURRENT SETTING
             </Text>
             <Text className="text-sm" style={{ color: textPrimary }}>
-              ৳{(currentMinPerKm / 100).toFixed(2)}/km (
+              {formatBDT(currentMinPerKm, { decimals: true })}/km (
               {Math.round((currentMinPerKm / config.system_per_km_bdt) * 100)}%
               of system rate)
             </Text>

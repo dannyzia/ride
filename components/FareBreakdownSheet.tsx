@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors, spacing, radii } from '@/theme/goRide';
 import { useIsDark } from '@/lib/useAppearance';
+import { formatBDT } from "@/lib/format";
 
 interface FareRow {
   label: string;
@@ -100,7 +101,7 @@ export default function FareBreakdownSheet({ fareBreakdown }: FareBreakdownSheet
               fontFamily: 'Jakarta-Bold',
               color: colors.primary,
             }}>
-              ৳{(totalRow.amount_bdt / 100).toFixed(0)}
+              {formatBDT(totalRow.amount_bdt)}
             </Text>
           )}
           {detailRows.length > 0 && (
@@ -155,7 +156,7 @@ export default function FareBreakdownSheet({ fareBreakdown }: FareBreakdownSheet
                   fontFamily: 'Jakarta-Regular',
                   color: textPrimary,
                 }}>
-                  ৳{(row.amount_bdt / 100).toFixed(0)}
+                  {formatBDT(row.amount_bdt)}
                 </Text>
               </View>
             ))}

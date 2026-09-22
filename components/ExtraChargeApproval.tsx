@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { formatBDT } from "@/lib/format";
 
 interface Props {
   rideId: string | null;
@@ -82,7 +83,7 @@ export default function ExtraChargeApproval({ rideId }: Props) {
               </View>
               {c.description ? <Text className="text-xs font-Jakarta mt-0.5" style={{ color: textSecondary }}>{c.description}</Text> : null}
             </View>
-            <Text className="text-base font-JakartaBold text-goDanger">৳{(c.amount_bdt / 100).toFixed(0)}</Text>
+            <Text className="text-base font-JakartaBold text-goDanger">{formatBDT(c.amount_bdt)}</Text>
           </View>
           <View className="flex-row gap-3">
             <TouchableOpacity onPress={() => handleAction(c.id, "approve")}

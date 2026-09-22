@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance"
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
 
@@ -374,12 +375,12 @@ const ConfirmRidePage = () => {
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <Text style={{ color: textPrimary, fontSize: 18, fontFamily: fonts.heading }}>
-                ৳{(displayEstimate.total_bdt / 100).toFixed(0)}
+                {formatBDT(displayEstimate.total_bdt)}
               </Text>
               {/* Non-binding fare range (Phase F §6) */}
               {displayEstimate.fare_range_low_bdt != null && displayEstimate.fare_range_high_bdt != null && (
                 <Text style={{ color: textSecondary, fontSize: 11 }}>
-                  ৳{(displayEstimate.fare_range_low_bdt / 100).toFixed(0)} – ৳{(displayEstimate.fare_range_high_bdt / 100).toFixed(0)} {t('confirm_ride.est')}
+                  {formatBDT(displayEstimate.fare_range_low_bdt)} – {formatBDT(displayEstimate.fare_range_high_bdt)} {t('confirm_ride.est')}
                 </Text>
               )}
               <Text style={{ color: textSecondary, fontSize: 12 }}>
@@ -474,7 +475,7 @@ const ConfirmRidePage = () => {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>{discount.description}</Text>
-                    <Text style={{ color: textSecondary, fontSize: 12 }}>{discount.percent ? t('confirm_ride.percent_off', { percent: discount.percent }) : t('confirm_ride.amount_off', { amount: (discount.amount_bdt / 100).toFixed(0) })}</Text>
+                    <Text style={{ color: textSecondary, fontSize: 12 }}>{discount.percent ? t('confirm_ride.percent_off', { percent: discount.percent }) : t('confirm_ride.amount_off', { amount: formatBDT(discount.amount_bdt) })}</Text>
                   </View>
                   <Text
                     style={{
@@ -483,7 +484,7 @@ const ConfirmRidePage = () => {
                       color: isSelected ? colors.primary : colors.textSecondaryLight,
                     }}
                   >
-                    −৳{(discount.amount_bdt / 100).toFixed(0)}
+                    −{formatBDT(discount.amount_bdt)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -493,14 +494,14 @@ const ConfirmRidePage = () => {
           <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
             <Text style={{ color: textSecondary }}>{t('confirm_ride.base_fare')}</Text>
             <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
-              ৳{displayEstimate ? (displayEstimate.total_bdt / 100).toFixed(0) : "—"}
+              {displayEstimate ? formatBDT(displayEstimate.total_bdt) : "—"}
             </Text>
            </View>
            {pendingFeeDeduction && (
              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}>
                <Text style={{ color: textSecondary }}>{t('confirm_ride.pending_cancellation_fee')}</Text>
                <Text style={{ color: colors.danger, fontFamily: fonts.headingSemi }}>
-                 ৳{(pendingFeeDeduction.remaining / 100).toFixed(0)} {t('confirm_ride.from_cashback')}
+                 {formatBDT(pendingFeeDeduction.remaining)} {t('confirm_ride.from_cashback')}
                </Text>
              </View>
            )}
@@ -518,7 +519,7 @@ const ConfirmRidePage = () => {
                  )}
                </Text>
                <Text style={{ color: colors.primary, fontFamily: fonts.headingSemi }}>
-                 −৳{(selectedDiscount.amount_bdt / 100).toFixed(0)}
+                 −{formatBDT(selectedDiscount.amount_bdt)}
                </Text>
              </View>
            )}
@@ -541,14 +542,14 @@ const ConfirmRidePage = () => {
                 )}
               </View>
               <Text style={{ color: textPrimary, fontFamily: fonts.headingSemi }}>
-                ৳{(displayEstimate.pickup_fee_low_bdt / 100).toFixed(0)}–{(displayEstimate.pickup_fee_high_bdt / 100).toFixed(0)}
+                {formatBDT(displayEstimate.pickup_fee_low_bdt)}–{formatBDT(displayEstimate.pickup_fee_high_bdt)}
               </Text>
             </View>
           )}
           <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8 }}>
             <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>{t('confirm_ride.total')}</Text>
             <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>
-               ৳{displayEstimate ? (Math.round(displayEstimate.total_bdt - (selectedDiscount?.amount_bdt ?? 0) + upfrontTip * 100) / 100).toFixed(0) : "—"}
+               {displayEstimate ? formatBDT(Math.round(displayEstimate.total_bdt - (selectedDiscount?.amount_bdt ?? 0) + upfrontTip * 100)) : "—"}
             </Text>
           </View>
         </View>

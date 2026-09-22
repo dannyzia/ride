@@ -12,10 +12,11 @@ import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import FleetScreen from "@/components/fleet/FleetScreen";
 import { getAuthHeaders } from "@/lib/fleetAuth";
+import { formatBDT } from "@/lib/format";
 
 function formatPaisa(paisa: number | null | undefined): string {
   if (paisa == null) return "N/A";
-  return `৳${(paisa / 100).toLocaleString("en-BD")}`;
+  return formatBDT(paisa);
 }
 
 function formatDateTime(iso: string | null | undefined): string {

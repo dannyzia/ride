@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface RideDetail {
   id: string;
@@ -114,7 +115,7 @@ useEffect(() => {
                 {t('history_detail.driver', { name: ride.driver_name ?? "—" })} <Ionicons name="star" size={12} color={textSecondary} /> {ride.driver_rating ?? "—"}
               </Text>
               <Text className="text-[16px] font-JakartaBold" style={{ color: colors.primary }}>
-                ৳{(ride.total_bdt / 100).toFixed(0)}
+                {formatBDT(ride.total_bdt)}
               </Text>
             </View>
           </View>

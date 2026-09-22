@@ -41,6 +41,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import SosBanner from "@/components/SosBanner";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 // ── Vehicle icons per type ───────────────────────────────────────
 const VEHICLE_ICONS: Record<VehicleTypeEnum, VehicleIconName> = {
@@ -1190,7 +1191,7 @@ useEffect(() => {
                       { color: isSelected ? colors.primary : textPrimary },
                     ]}
                   >
-                    ৳{(est.total_bdt / 100).toFixed(0)}
+                    {formatBDT(est.total_bdt)}
                   </Text>
                   {isSelected && (
                     <Ionicons
@@ -1256,7 +1257,7 @@ useEffect(() => {
                       <Text style={{ color: textSecondary, fontSize: 12 }}>
                         {d.percent
                           ? t('rider_home.percent_off', { percent: d.percent })
-                          : t('rider_home.amount_off', { amount: (d.amount_bdt / 100).toFixed(0) })}
+                          : t('rider_home.amount_off', { amount: formatBDT(d.amount_bdt) })}
                       </Text>
                     </View>
                     <Ionicons
@@ -1292,7 +1293,7 @@ useEffect(() => {
             {t('rider_home.call_for_ride', {
               type: vehicleDef?.display_en || "Ride",
               amount: selectedEstimate
-                ? (selectedEstimate.total_bdt / 100).toFixed(0)
+                ? formatBDT(selectedEstimate.total_bdt)
                 : "—",
             })}
           </Text>

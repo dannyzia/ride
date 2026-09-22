@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { formatBDT } from "@/lib/format";
 
 interface VehicleCategoryCardProps {
   icon: string;
@@ -45,7 +46,7 @@ export default function VehicleCategoryCard({ icon, label, estimatedFare, eta, o
           className="text-[14px] font-Jakarta"
           style={{ color: textSecondary }}
         >
-          ৳{(estimatedFare / 100).toFixed(0)} · {eta} min
+          {formatBDT(estimatedFare)} · {eta} min
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color={textSecondary} />

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Platform } from 'react-native';
 import { logger } from '@/lib/logger';
 import { colors } from '@/theme/goRide';
+import { formatBDT } from "@/lib/format";
 
 // Graceful import for @react-native-community/slider — falls back to a no-op
 // if the native module is not installed.
@@ -45,8 +46,8 @@ export default function MinRateSlider({ systemPerKmBdt, minPerKmBdt, onChange }:
   const percentage = Math.round((clamped / systemPerKmBdt) * 100);
 
   // Convert paisa → BDT for the user-visible label
-  const systemBdt = (systemPerKmBdt / 100).toFixed(2);
-  const currentBdt = (clamped / 100).toFixed(2);
+  const systemBdt = formatBDT(systemPerKmBdt, { decimals: true });
+  const currentBdt = formatBDT(clamped, { decimals: true });
 
   return (
     <View className="bg-cardBgColor rounded-2xl p-4 mb-4">
@@ -74,10 +75,10 @@ export default function MinRateSlider({ systemPerKmBdt, minPerKmBdt, onChange }:
       {/* Range labels */}
       <View className="flex-row justify-between mt-1">
         <Text className="text-secondaryTextColor text-xs">
-          ৳{(lowerBound / 100).toFixed(2)} (70%)
+          {formatBDT(lowerBound, { decimals: true })} (70%)
         </Text>
         <Text className="text-secondaryTextColor text-xs">
-          ৳{(upperBound / 100).toFixed(2)} (150%)
+          {formatBDT(upperBound, { decimals: true })} (150%)
         </Text>
       </View>
     </View>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StatusBar } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StatusBar, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -31,6 +31,8 @@ export default function DriverSettingsLanguage() {
 
   const { i18n } = useTranslation();
   const [selected, setSelected] = useState(i18n.language || "en");
+  const bengaliNumerals = useAppearance((s) => s.bengaliNumerals);
+  const setBengaliNumerals = useAppearance((s) => s.setBengaliNumerals);
 
   const selectLang = (code: string) => {
     setSelected(code);
@@ -67,6 +69,24 @@ export default function DriverSettingsLanguage() {
             </View>
           </TouchableOpacity>
         ))}
+        {/* Bengali-numerals preference (Bengali Numerals plan P2.3, driver
+            parity). 'auto' renders as off in Phases 2–3 (Copy Truth Rule). */}
+        <View
+          className="flex-row items-center p-[14px] mb-3 rounded-[12px] border"
+          style={{ borderColor, backgroundColor: surfaceBg }}
+        >
+          <Text className="flex-1 text-[15px] font-Jakarta" style={{ color: textPrimary }}>
+            টাকার পরিমাণে বাংলা সংখ্যা (০–৯) দেখান
+          </Text>
+          <Switch
+            value={bengaliNumerals === "on"}
+            onValueChange={(v) => setBengaliNumerals(v ? "on" : "off")}
+            trackColor={{ false: borderColor, true: colors.primary }}
+            thumbColor={colors.white}
+            accessibilityRole="switch"
+            accessibilityLabel="Bengali numerals"
+          />
+        </View>
       </ScrollView>
       <TouchableOpacity
         onPress={() => setTheme(isDark ? "light" : "dark")}

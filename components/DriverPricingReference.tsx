@@ -19,6 +19,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
+import { formatBDT } from "@/lib/format";
 
 interface PricingData {
   vehicle_type: string;
@@ -41,7 +42,7 @@ interface PricingReferenceResponse {
 
 /** Paisa to ৳ display (integer paisa → decimal taka). */
 function paisaToTaka(paisa: number): string {
-  return `৳${(paisa / 100).toFixed(2)}`;
+  return formatBDT(paisa, { decimals: true });
 }
 
 /** Human label for vehicle type. */

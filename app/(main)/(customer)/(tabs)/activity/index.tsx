@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 export default function ActivityOngoing() {
   const { t } = useTranslation();
@@ -84,7 +85,7 @@ export default function ActivityOngoing() {
                 {t('rider_activity.destination_label', { address: activeRide.destination_address ?? "—" })}
               </Text>
               <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
-                {t('rider_activity.fare_label', { amount: ((Number(activeRide.fare_breakdown?.total_bdt ?? 0)) / 100).toFixed(0) })}
+                {t('rider_activity.fare_label', { amount: formatBDT(Number(activeRide.fare_breakdown?.total_bdt ?? 0)) })}
               </Text>
             </View>
             <View className="gap-3">

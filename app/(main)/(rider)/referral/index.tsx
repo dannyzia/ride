@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 export default function DriverReferral() {
   const { t } = useTranslation();  const [code, setCode] = useState("");
@@ -103,7 +104,7 @@ export default function DriverReferral() {
             </Text>
             <View className="flex-row items-center mb-3">
               <Text className="text-[13px] font-Jakarta mr-1" style={{ color: textSecondary }}>Total earned:</Text>
-              <Text className="text-[14px] font-JakartaBold" style={{ color: colors.primary }}>৳{(earnedBdt / 100).toFixed(0)}</Text>
+              <Text className="text-[14px] font-JakartaBold" style={{ color: colors.primary }}>{formatBDT(earnedBdt)}</Text>
             </View>
             <View className="flex-row items-center mb-3">
               <Text className="text-[13px] font-Jakarta mr-1" style={{ color: textSecondary }}>Successful referrals:</Text>

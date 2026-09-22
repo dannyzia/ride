@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface RideDetail {
   id: string;
@@ -120,7 +121,7 @@ export default function RideDetailsScheduled() {
                 {t('ride_details_scheduled.destination_label', { address: ride.destination_address ?? "—" })}
               </Text>
               <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
-                {t('ride_details_scheduled.fare_label', { amount: ((ride.fare_breakdown?.total_bdt ?? 0) / 100).toFixed(0) })}
+                {t('ride_details_scheduled.fare_label', { amount: formatBDT(ride.fare_breakdown?.total_bdt ?? 0) })}
               </Text>
             </View>
           </View>

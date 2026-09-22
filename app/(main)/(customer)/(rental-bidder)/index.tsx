@@ -22,6 +22,7 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { formatBDT } from "@/lib/format";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
@@ -274,7 +275,7 @@ export default function BidderRequestsScreen() {
                 </View>
                 {req.already_bid && req.own_bid_price != null && (
                   <Text style={{ fontSize: 12, fontFamily: "JakartaSemiBold", color: colors.primary, marginBottom: 4 }}>
-                    Your bid: ৳{(req.own_bid_price / 100).toFixed(0)}
+                    Your bid: {formatBDT(req.own_bid_price)}
                   </Text>
                 )}
 

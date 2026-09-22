@@ -22,6 +22,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import CargoSummary from "./_components/CargoSummary";
 import { describeVehicleType } from "./_truckCatalog";
+import { formatBDT } from "@/lib/format";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
@@ -326,7 +327,7 @@ export default function RequestDetailScreen() {
                   flexDirection: "row",
                   alignItems: "center",
                 }}
-                accessibilityLabel={`Bid from fleet: ${bid.quoted_price_bdt / 100} taka`}
+                accessibilityLabel={`Bid from fleet: ${formatBDT(bid.quoted_price_bdt)} taka`}
               >
                 {/* Rank badge */}
                 {bid.rank_badge && (
@@ -339,7 +340,7 @@ export default function RequestDetailScreen() {
 
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 20, fontFamily: "JakartaBold", color: colors.primary }}>
-                    ৳{(bid.quoted_price_bdt / 100).toFixed(0)}
+                    {formatBDT(bid.quoted_price_bdt)}
                   </Text>
                   <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginTop: 2 }}>
                     {describeVehicleType(bid.vehicle_type)}
@@ -354,7 +355,7 @@ export default function RequestDetailScreen() {
                   )}
                   {bid.overtime_rate_bdt != null && (
                     <Text style={{ fontSize: 11, fontFamily: "Jakarta", color: textSecondary, marginTop: 2 }}>
-                      +৳{(bid.overtime_rate_bdt / 100).toFixed(0)}/hr overtime
+                      +{formatBDT(bid.overtime_rate_bdt)}/hr overtime
                     </Text>
                   )}
                 </View>

@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { spacing, radii, colors } from "@/theme/goRide";
 import { logger } from "@/lib/logger";
+import { formatBDT } from "@/lib/format";
 
 export interface Preference {
   id: string;
@@ -132,7 +133,7 @@ export default function PreferenceChips({
                     marginLeft: 4,
                   }}
                 >
-                  +৳{(pref.charge_bdt / 100).toFixed(0)}
+                  +{formatBDT(pref.charge_bdt)}
                 </Text>
               )}
               {pref.affects_matching && (

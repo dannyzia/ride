@@ -18,6 +18,7 @@ import { useFleetStore } from "@/store/useFleetStore";
 import FleetScreen from "@/components/fleet/FleetScreen";
 import { getAuthHeaders } from "@/lib/fleetAuth";
 import { logger } from "@/lib/logger";
+import { formatBDT } from "@/lib/format";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ interface LimitsData {
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function formatPaisa(p: number): string {
-  return `৳${(p / 100).toLocaleString("en-BD")}`;
+  return formatBDT(p);
 }
 function periodLabel(p: string): string {
   return p === "WEEKLY" ? "/week" : p === "MONTHLY" ? "/month" : p === "YEARLY" ? "/year" : "";

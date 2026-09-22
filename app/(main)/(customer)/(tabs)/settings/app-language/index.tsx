@@ -2,6 +2,7 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -11,8 +12,8 @@ import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
-import { useTranslation } from "react-i18next";
 import { applyLanguage } from "@/i18n/i18n";
+import { useTranslation } from "react-i18next";
 
 type LanguageCode = "en" | "bn";
 
@@ -24,6 +25,8 @@ const LANGUAGES: { code: LanguageCode; flag: string; label: string }[] = [
 export default function SettingsAppLanguage() {
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
+  const bengaliNumerals = useAppearance((s) => s.bengaliNumerals);
+  const setBengaliNumerals = useAppearance((s) => s.setBengaliNumerals);
   const { i18n, t } = useTranslation();
   const activeLanguage: LanguageCode = i18n.language === "bn" ? "bn" : "en";
 
@@ -106,6 +109,28 @@ export default function SettingsAppLanguage() {
               ) : null}
             </View>
           ))}
+        </View>
+        {/* Bengali-numerals preference (Bengali Numerals plan P2.3).
+            Bound to the EFFECTIVE boolean: 'auto' renders as off in
+            Phases 2–3 (copy says only what is live — Copy Truth Rule). */}
+        <View style={[styles.card, { backgroundColor: surface }]}
+        >
+          <View style={styles.row}>
+            <Text style={[styles.label, { flex: 1, color: textPrimary }]}>
+              {t('app_language.bengali_numerals')}
+            </Text>
+            <Switch
+              value={bengaliNumerals === "on"}
+              onValueChange={(v) => setBengaliNumerals(v ? "on" : "off")}
+              trackColor={{
+                false: borderColor,
+                true: colors.primary,
+              }}
+              thumbColor={colors.white}
+              accessibilityRole="switch"
+              accessibilityLabel={t('app_language.bengali_numerals')}
+            />
+          </View>
         </View>
         <Text style={[styles.hint, { color: textSecondary }]}>
           {t('app_language.hint')}

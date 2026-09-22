@@ -17,6 +17,7 @@ import { useIsDark } from '@/lib/useAppearance';
 import { colors } from '@/theme/goRide';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
+import { formatBDT } from "@/lib/format";
 
 interface DeliveryRequest {
   id: string;
@@ -103,7 +104,7 @@ export default function DeliveryListScreen() {
       </View>
       {item.quoted_fee_bdt != null && (
         <Text className="text-sm font-JakartaMedium" style={{ color: colors.primary }}>
-          ৳{(item.quoted_fee_bdt / 100).toFixed(0)}
+          {formatBDT(item.quoted_fee_bdt)}
         </Text>
       )}
     </TouchableOpacity>

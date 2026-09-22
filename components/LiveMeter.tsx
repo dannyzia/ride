@@ -13,6 +13,7 @@ import { View, Text, StyleSheet, Animated } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { formatBDT } from "@/lib/format";
 
 interface LiveMeterProps {
   /** Estimated fare in paisa from the request-time estimate. */
@@ -42,7 +43,7 @@ function formatDuration(totalSeconds: number): string {
  * Format paisa to BDT display string.
  */
 function formatPaisa(paisa: number): string {
-  return `৳${(paisa / 100).toFixed(0)}`;
+  return formatBDT(paisa);
 }
 
 export default function LiveMeter({

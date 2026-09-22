@@ -22,6 +22,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface DriverPromo {
   id: string;
@@ -166,7 +167,7 @@ export default function DriverPromos() {
                     <Text className="text-[13px] font-Jakarta mt-2" style={{ color: colors.success }}>
                       {promo.discount_type === "percent"
                         ? `${promo.discount_value}% discount`
-                        : `৳${(promo.discount_value / 100).toFixed(0)} reward`}
+                        : formatBDT(promo.discount_value) + ' reward'}
                       {" · "}Valid for {promo.validity_days ?? 7} days
                     </Text>
                   </View>
@@ -208,7 +209,7 @@ export default function DriverPromos() {
                     <Text className="text-[12px] font-Jakarta mt-2" style={{ color: textSecondary }}>
                       {promo.discount_type === "percent"
                         ? `${promo.discount_value}% discount`
-                        : `৳${(promo.discount_value / 100).toFixed(0)} reward`}
+                        : formatBDT(promo.discount_value) + ' reward'}
                       {" · "}Expires {new Date(promo.expires_at).toLocaleDateString()}
                     </Text>
                   </View>

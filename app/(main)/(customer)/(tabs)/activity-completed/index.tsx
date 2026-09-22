@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { colors, fonts } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 export default function ActivityCompleted() {
   const { t } = useTranslation();
@@ -86,7 +87,7 @@ export default function ActivityCompleted() {
                   {t('activity_completed.destination', { address: ride.destination_address ?? "—" })}
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: fonts.body, color: textSecondary }}>
-                  {t('activity_completed.fare', { amount: ((ride.fare_bdt ?? 0) / 100).toFixed(0) })}
+                  {t('activity_completed.fare', { amount: formatBDT(ride.fare_bdt ?? 0) })}
                 </Text>
               </View>
               <View style={{ flexDirection: "row", gap: 8 }}>

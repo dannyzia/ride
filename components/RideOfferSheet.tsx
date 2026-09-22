@@ -201,7 +201,7 @@ export default function RideOfferSheet() {
     activeOffer.driver_fare_bdt != null
       ? activeOffer.driver_fare_bdt
       : activeOffer.fare_breakdown?.total_bdt;
-  const fareTk = fareTotalBdt != null ? (fareTotalBdt / 100).toFixed(2) : "—";
+  const fareTk = fareTotalBdt != null ? formatBDT(fareTotalBdt, { decimals: true }) : "—";
   const pickupDist = activeOffer.pickup_distance_km;
   const pickupEta = activeOffer.pickup_eta_minutes;
   const riderRating = activeOffer.rider_rating;
@@ -419,7 +419,7 @@ export default function RideOfferSheet() {
               color: colors.primary,
             }}
           >
-            +৳{((activeOffer.upfront_tip_bdt / 100).toFixed(2))} tip
+            +{formatBDT(activeOffer.upfront_tip_bdt, { decimals: true })} tip
           </Text>
         </View>
       ) : null}

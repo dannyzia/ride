@@ -17,6 +17,7 @@ import { useIsDark } from '@/lib/useAppearance';
 import { colors } from '@/theme/goRide';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
+import { formatBDT } from "@/lib/format";
 
 interface DeliveryBid {
   id: string;
@@ -114,7 +115,7 @@ export default function RequestDetailScreen() {
     >
       <View className="flex-row justify-between items-center mb-2">
         <Text className="text-lg font-JakartaBold" style={{ color: colors.primary }}>
-          ৳{(item.quoted_fee_bdt / 100).toFixed(0)}
+          {formatBDT(item.quoted_fee_bdt)}
         </Text>
         {item.quoted_eta_minutes != null && (
           <Text className="text-sm font-Jakarta" style={{ color: textSecondary }}>
@@ -225,7 +226,7 @@ export default function RequestDetailScreen() {
                   Agreed Price
                 </Text>
                 <Text className="text-2xl font-JakartaBold mt-1" style={{ color: colors.primary }}>
-                  ৳{(detail.quoted_fee_bdt / 100).toFixed(0)}
+                  {formatBDT(detail.quoted_fee_bdt)}
                 </Text>
               </View>
             )}

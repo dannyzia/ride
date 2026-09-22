@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 export default function ActivityScheduled() {
   const { t } = useTranslation();
@@ -85,7 +86,7 @@ export default function ActivityScheduled() {
                   {t('activity_scheduled.destination', { address: ride.destination_address ?? "—" })}
                 </Text>
                 <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>
-                  {t('activity_scheduled.fare', { amount: ((ride.fare_bdt ?? 0) / 100).toFixed(0) })}
+                  {t('activity_scheduled.fare', { amount: formatBDT(ride.fare_bdt ?? 0) })}
                 </Text>
               </View>
               <View className="flex-row gap-2">

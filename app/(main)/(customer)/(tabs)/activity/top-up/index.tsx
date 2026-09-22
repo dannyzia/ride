@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 const TX_LABEL_KEYS: Record<string, string> = {
   promo_receivable: "wallet.transaction_types.promo_receivable",
@@ -83,7 +84,7 @@ useEffect(() => {
           <>
             <View className="mt-4 mb-4">
               <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('top_up.wallet_balance')}</Text>
-              <Text className="text-[24px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>৳{(walletBalance / 100).toFixed(0)}</Text>
+              <Text className="text-[24px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>{formatBDT(walletBalance)}</Text>
             </View>
             <View className="mb-4">
               <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('wallet.recent_transactions')}</Text>
@@ -98,7 +99,7 @@ useEffect(() => {
                       className="text-[12px] font-JakartaBold"
                       style={{ color: (tx.amount_bdt ?? 0) >= 0 ? colors.primary : colors.danger }}
                     >
-                      ৳{((tx.amount_bdt ?? 0) / 100).toFixed(0)}
+                      {formatBDT(tx.amount_bdt ?? 0)}
                     </Text>
                   </View>
                 ))

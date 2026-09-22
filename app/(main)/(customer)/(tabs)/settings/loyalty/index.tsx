@@ -10,6 +10,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface Offer { id: string; title: string; points_required: number; reward_type: string; reward_value_bdt: number | null; }
 
@@ -59,7 +60,7 @@ export default function RiderLoyalty() {
             body: JSON.stringify({ offer_id: offer.id }),
           });
           const data = await res.json();
-          if (res.ok) { Alert.alert(t('loyalty.redeemed'), t('loyalty.reward_amount', { amount: ((data.reward_bdt ?? 0) / 100).toFixed(0) })); fetchData(); }
+          if (res.ok) { Alert.alert(t('loyalty.redeemed'), t('loyalty.reward_amount', { amount: formatBDT(data.reward_bdt ?? 0) })); fetchData(); }
           else { Alert.alert(t('common.error'), data.error ?? t('loyalty.failed')); }
         } catch (_e) { Alert.alert(t('common.error'), t('wallet.network_error')); }
         setRedeeming(null);
@@ -95,7 +96,7 @@ export default function RiderLoyalty() {
           <View className="border rounded-xl shadow-go-sm p-4 mb-3 flex-row items-center justify-between" style={{ backgroundColor: surfaceBg, borderColor }}>
             <View className="flex-1">
               <Text className="text-base font-JakartaBold" style={{ color: textPrimary }}>{item.title}</Text>
-              <Text className="text-sm font-Jakarta mt-0.5" style={{ color: textSecondary }}>{t('loyalty.points', { points: item.points_required })}{item.reward_value_bdt ? t('loyalty.credit_suffix', { amount: (item.reward_value_bdt / 100).toFixed(0) }) : ""}</Text>
+              <Text className="text-sm font-Jakarta mt-0.5" style={{ color: textSecondary }}>{t('loyalty.points', { points: item.points_required })}{item.reward_value_bdt ? t('loyalty.credit_suffix', { amount: formatBDT(item.reward_value_bdt) }) : ""}</Text>
             </View>
             <TouchableOpacity onPress={() => redeem(item)} disabled={redeeming === item.id || balance < item.points_required}
               className="py-2 px-4 rounded-full"

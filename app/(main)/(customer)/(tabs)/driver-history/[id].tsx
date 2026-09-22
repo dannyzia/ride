@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 const STATUS_LABEL_KEYS: Record<string, string> = {
   pending: "driver_history.status_pending",
@@ -116,7 +117,7 @@ useEffect(() => {
                 {new Date(trip.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
               </Text>
               <Text className="text-[16px] font-JakartaBold" style={{ color: colors.primary }}>
-                ৳{((trip.fare_breakdown?.total_bdt ?? 0) / 100).toFixed(0)}
+                {formatBDT(trip.fare_breakdown?.total_bdt ?? 0)}
               </Text>
             </View>
           </View>

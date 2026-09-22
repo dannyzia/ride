@@ -26,6 +26,7 @@ import RideLayout from "@/components/RideLayout";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface CompletionSummary {
   total_bdt: number;
@@ -477,7 +478,7 @@ const FinishRide = () => {
               fontVariant: ["tabular-nums"],
             }}
           >
-            {t('finish_ride.collect_cash', { amount: (cashPaisa / 100).toFixed(2) })}
+            {t('finish_ride.collect_cash', { amount: formatBDT(cashPaisa, { decimals: true }) })}
           </Text>
 
           {/* N3: forfeited upfront tip — never let a promised tip vanish silently */}
@@ -502,7 +503,7 @@ const FinishRide = () => {
                   color: colors.amber,
                 }}
               >
-                {t('finish_ride.upfront_tip_not_collected', { amount: ((completion?.upfront_tip_forfeited_bdt ?? 0) / 100).toFixed(2) })}
+                {t('finish_ride.upfront_tip_not_collected', { amount: formatBDT(completion?.upfront_tip_forfeited_bdt ?? 0, { decimals: true }) })}
               </Text>
             </View>
           )}
@@ -527,7 +528,7 @@ const FinishRide = () => {
               <Text
                 style={[valueStyle, { color: colors.primary, fontSize: 16 }]}
               >
-                ৳{(totalPaisa / 100).toFixed(2)}
+                {formatBDT(totalPaisa, { decimals: true })}
               </Text>
             </View>
             <View
@@ -560,7 +561,7 @@ const FinishRide = () => {
                 }}
               >
                 <Text style={labelStyle}>{t('finish_ride.zone_fee')}</Text>
-                <Text style={valueStyle}>৳{((completion?.zone_fee_bdt ?? 0) / 100).toFixed(2)}</Text>
+                <Text style={valueStyle}>{formatBDT(completion?.zone_fee_bdt ?? 0, { decimals: true })}</Text>
               </View>
             )}
             {/* v6 Phase F: waiting charge */}
@@ -573,7 +574,7 @@ const FinishRide = () => {
                 }}
               >
                 <Text style={labelStyle}>{t('finish_ride.waiting_charge')}</Text>
-                <Text style={valueStyle}>৳{((completion?.waiting_charge_bdt ?? 0) / 100).toFixed(2)}</Text>
+                <Text style={valueStyle}>{formatBDT(completion?.waiting_charge_bdt ?? 0, { decimals: true })}</Text>
               </View>
             )}
             {/* v6 Phase F: night mult indicator */}

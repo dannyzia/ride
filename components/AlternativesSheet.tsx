@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import { VEHICLE_TYPES } from '@/lib/vehicleTypes';
+import { formatBDT } from "@/lib/format";
 
 interface Alternative {
   vehicle_type: string;
@@ -48,7 +49,7 @@ export default function AlternativesSheet({ visible, alternatives, onSelect, onC
               </View>
               <View className="items-end">
                 <Text className="text-base font-JakartaBold text-goPrimary">
-                  ৳{(item.fare_breakdown.total_bdt / 100).toFixed(0)}
+                  {formatBDT(item.fare_breakdown.total_bdt)}
                 </Text>
                 <Text className="text-xs font-Jakarta text-general-400 font-semibold mt-1">
                   Select

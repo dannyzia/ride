@@ -9,6 +9,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 const STATUS_COLORS: Record<string, string> = {
   reported: "#F59E0B", driver_confirmed: "#0CC25F", photo_provided: "#0CC25F",
@@ -130,7 +131,7 @@ export default function RiderLostItems() {
                 </View>
               )}
               {item.return_method && <Text className="text-xs font-Jakarta mt-0.5" style={{ color: textSecondary }}>{t('lost_items.return_method', { method: item.return_method.replace(/_/g, " ") })}</Text>}
-              {(item.return_fee_bdt ?? 0) > 0 && <Text className="text-xs font-JakartaBold mt-0.5" style={{ color: colors.accent }}>{t('lost_items.fee_amount', { amount: (item.return_fee_bdt! / 100).toFixed(0) })}</Text>}
+              {(item.return_fee_bdt ?? 0) > 0 && <Text className="text-xs font-JakartaBold mt-0.5" style={{ color: colors.accent }}>{t('lost_items.fee_amount', { amount: formatBDT(item.return_fee_bdt!) })}</Text>}
             </View>
           )}
         />

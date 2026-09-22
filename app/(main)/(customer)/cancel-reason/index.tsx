@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { countdownRemaining } from "@/lib/time";
+import { formatBDT } from "@/lib/format";
 
 const REASONS = [
   { key: "Waiting too long", labelKey: "ride.waiting_too_long" },
@@ -96,7 +97,7 @@ export default function CancelReason() {
     if (cd) {
       return t('ride.free_cancellation', { minutes: cd.minutes, seconds: cd.seconds });
     }
-    return t('ride.cancellation_fee', { fee: ((feeBdt ?? 0) / 100).toFixed(0) });
+    return t('ride.cancellation_fee', { fee: formatBDT(feeBdt ?? 0) });
   };
 
   const getGraceNote = () => {

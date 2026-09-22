@@ -558,7 +558,8 @@
   "app_language": {
     "title": "App Language",
     "toggle_theme": "Toggle theme",
-    "hint": "You can change the app language anytime from Settings."
+    "hint": "You can change the app language anytime from Settings.",
+    "bengali_numerals": "Show Bengali numerals (০–৯) for taka amounts"
   },
   "safety": {
     "title": "Safety",

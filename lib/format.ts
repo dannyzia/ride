@@ -6,9 +6,22 @@ function parseDate(iso: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/**
+ * Digit system for `formatBDT`.
+ *  - `latn` (default): Western digits — every pre-existing caller output is
+ *    byte-identical (behavior-identical contract, Bengali Numerals plan P1.1).
+ *  - `beng`: Bengali digits with LAKH grouping via Intl's native `beng`
+ *    numbering system (e.g. ৳১,২৩,৪৫৬). No fallback map: Node/Jest CI and
+ *    Hermes Android both ship ICU data with `beng` digits AND lakh grouping
+ *    (device-verified via the P1.2 gate); if a platform ever lacks it, the
+ *    correct fix is an ICU/locale update, not a digits-only polyfill that
+ *    would silently produce Western grouping under Bengali digits.
+ */
+export type BdtNumbering = "latn" | "beng";
+
 export function formatBDT(
   paisa: number | null | undefined,
-  opts?: { decimals?: boolean },
+  opts?: { decimals?: boolean; numbering?: BdtNumbering },
 ): string {
   if (paisa === null || paisa === undefined || !Number.isFinite(paisa)) return FALLBACK;
   const taka = Math.abs(paisa) / 100;
@@ -16,7 +29,7 @@ export function formatBDT(
   const grouped = new Intl.NumberFormat("bn-BD", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
-    numberingSystem: "latn",
+    numberingSystem: opts?.numbering ?? "latn",
   }).format(taka);
   return `${paisa < 0 ? "-" : ""}৳${grouped}`;
 }

@@ -28,6 +28,7 @@ import PinInput from "@/components/PinInput";
 import LiveMeter from "@/components/LiveMeter";
 import { isPinMismatch, PIN_REVERT_DELAY_MS } from "@/lib/pin";
 import { relativeTime } from "@/lib/time";
+import { formatBDT } from "@/lib/format";
 
 const MapViewLib = MapLibreGL?.MapView ?? null;
 const PointAnnotation = MapLibreGL?.PointAnnotation ?? null;
@@ -649,7 +650,7 @@ export default function RideTrackingScreen() {
 
             <View style={[styles.fareCard, { borderColor: borderColor }]}>
               <Text style={[styles.fareAmount, { color: colors.primary }]}>
-                ৳{(ride.fare_bdt / 100).toFixed(0)}
+                {formatBDT(ride.fare_bdt)}
               </Text>
               <Text style={[styles.fareLabel, { color: textSecondary }]}>
                 {t('ride_tracking.pay_driver_cash')}

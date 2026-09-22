@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface Trip {
   ride_id: string;
@@ -108,7 +109,7 @@ useEffect(() => {
                 </Text>
               </View>
               <Text className="text-[15px] font-JakartaBold" style={{ color: colors.primary }}>
-                ৳{((trip.fare_breakdown?.total_bdt ?? 0) / 100).toFixed(0)}
+                {formatBDT(trip.fare_breakdown?.total_bdt ?? 0)}
               </Text>
             </TouchableOpacity>
           ))}

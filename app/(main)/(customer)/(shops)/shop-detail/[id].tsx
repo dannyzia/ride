@@ -17,6 +17,7 @@ import { colors } from "@/theme/goRide";
 import { useShopStore } from "@/store/useShopStore";
 
 import { logger } from "@/lib/logger";
+import { formatBDT } from "@/lib/format";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
@@ -120,7 +121,7 @@ useEffect(() => {
                     </Text>
                   ) : null}
                   <Text style={{ fontSize: 15, fontFamily: "JakartaBold", color: colors.primary, marginTop: 4 }}>
-                    ৳{(product.price_bdt / 100).toFixed(0)}
+                    {formatBDT(product.price_bdt)}
                   </Text>
                 </View>
                 {inCart ? (
@@ -174,7 +175,7 @@ useEffect(() => {
         >
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 14, fontFamily: "JakartaMedium", color: textPrimary }}>
-              {cartCount} item{cartCount > 1 ? "s" : ""} — ৳{(cartTotal / 100).toFixed(0)}
+              {cartCount} item{cartCount > 1 ? "s" : ""} — {formatBDT(cartTotal)}
             </Text>
           </View>
           <TouchableOpacity

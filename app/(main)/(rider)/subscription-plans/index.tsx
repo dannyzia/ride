@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface Package {
   id: string;
@@ -102,7 +103,7 @@ export default function SubscriptionPlans() {
                     {p.call_count} calls · {p.duration_days}-day validity
                   </Text>
                 </View>
-                <Text className="text-[16px] font-JakartaBold text-goPrimary">৳{(p.price_bdt / 100).toFixed(0)}</Text>
+                <Text className="text-[16px] font-JakartaBold text-goPrimary">{formatBDT(p.price_bdt)}</Text>
               </View>
             </TouchableOpacity>
           ))

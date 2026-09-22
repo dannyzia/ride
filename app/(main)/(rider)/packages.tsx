@@ -19,6 +19,7 @@ import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import PaymentWebView from "@/components/PaymentWebView";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface CallPackage {
   id: string;
@@ -269,7 +270,7 @@ export default function PackagesScreen() {
           className="text-xl font-JakartaBold"
           style={{ color: textPrimary }}
         >
-          ৳{(item.price_bdt / 100).toFixed(0)}
+          {formatBDT(item.price_bdt)}
         </Text>
         <TouchableOpacity
           onPress={() => handleBuy(item)}

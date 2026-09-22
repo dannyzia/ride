@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface Package {
   id: string;
@@ -93,7 +94,7 @@ export default function SubscriptionDetails() {
             <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{plan.name}</Text>
             <Text className="text-[14px] font-Jakarta mt-1" style={{ color: textSecondary }}>{plan.call_count} calls included</Text>
             <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>{plan.duration_days}-day validity from activation</Text>
-            <Text className="text-[22px] font-JakartaBold tracking-tight text-goPrimary mt-2">৳{(plan.price_bdt / 100).toFixed(0)}</Text>
+            <Text className="text-[22px] font-JakartaBold tracking-tight text-goPrimary mt-2">{formatBDT(plan.price_bdt)}</Text>
           </View>
           <View className="p-[16px] rounded-[12px] mb-4" style={{ backgroundColor: accentLight }}>
             <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>Commission rate varies by plan. Pro plan has lower per-ride commission than Starter.</Text>

@@ -19,6 +19,7 @@ import { colors } from "@/theme/goRide";
 import { useShopStore } from "@/store/useShopStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { formatBDT } from "@/lib/format";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
@@ -182,7 +183,7 @@ const {
               {item.name} × {item.quantity}
             </Text>
             <Text style={{ fontSize: 14, fontFamily: "JakartaBold", color: colors.primary }}>
-              ৳{((item.price_bdt * item.quantity) / 100).toFixed(0)}
+              {formatBDT(item.price_bdt * item.quantity)}
             </Text>
           </View>
         ))}
@@ -237,7 +238,7 @@ const {
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 14, fontFamily: "JakartaMedium", color: textSecondary }}>Total</Text>
             <Text style={{ fontSize: 20, fontFamily: "JakartaBold", color: colors.primary }}>
-              ৳{(subtotal / 100).toFixed(0)}
+              {formatBDT(subtotal)}
             </Text>
           </View>
           <TouchableOpacity

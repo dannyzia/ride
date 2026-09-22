@@ -22,7 +22,8 @@ interface PeriodData {
 }
 interface FinanceData { today: PeriodData; this_week: PeriodData; this_month: PeriodData; all_time: PeriodData; }
 
-function formatPaisa(p: number): string { return `৳${(p / 100).toLocaleString("en-BD")}`; }
+import { formatBDT } from "@/lib/format";
+const formatPaisa = (p: number): string => formatBDT(p);
 function formatKm(km: number): string { return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)} km`; }
 
 function PeriodCard({ period, data, isDark }: { period: string; data: PeriodData; isDark: boolean }) {

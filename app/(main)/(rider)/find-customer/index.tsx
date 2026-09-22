@@ -19,6 +19,7 @@ import TollParkingModal from "@/components/TollParkingModal";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 // Route-line refetch policy for the pickup map (master plan §7.2): the
 // location watch ticks every 10s, so the Barikoi route fetch is throttled to
@@ -107,7 +108,7 @@ const ReachCustomer = () => {
         const res = await fetch(`${API_URL}/api/ride/${activeRideId}/wait-end`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         setWaiting(false);
-        Alert.alert(t('find_customer.waiting_time'), `${data.total_wait_minutes ?? 0} ${t('find_customer.min_total')}\n${t('find_customer.free')}: ${data.free_minutes ?? 3} min\n${t('find_customer.fee')}: ৳${((data.wait_fee_bdt ?? 0) / 100).toFixed(2)}`);
+        Alert.alert(t('find_customer.waiting_time'), `${data.total_wait_minutes ?? 0} ${t('find_customer.min_total')}\n${t('find_customer.free')}: ${data.free_minutes ?? 3} min\n${t('find_customer.fee')}: ${formatBDT(data.wait_fee_bdt ?? 0, { decimals: true })}`);
       }
     } catch { Alert.alert(t('find_customer.error'), t('find_customer.failed_to_update_wait')); }
     setWaitLoading(false);

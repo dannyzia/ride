@@ -10,6 +10,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import PaymentWebView from "@/components/PaymentWebView";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface Package {
   id: string;
@@ -133,7 +134,7 @@ export default function SubscriptionCheckout() {
             <View className="p-[16px] border rounded-[12px] mb-4" style={{ backgroundColor: surfaceBg, borderColor }}>
               <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{plan.name}</Text>
               <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>{plan.call_count} calls · {plan.duration_days} days</Text>
-              <Text className="text-[20px] font-JakartaBold tracking-tight text-goPrimary mt-2">৳{(plan.price_bdt / 100).toFixed(0)}</Text>
+              <Text className="text-[20px] font-JakartaBold tracking-tight text-goPrimary mt-2">{formatBDT(plan.price_bdt)}</Text>
             </View>
             {error ? (
               <Text className="text-[14px] font-Jakarta text-goDanger mb-3">{error}</Text>

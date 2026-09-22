@@ -6,6 +6,7 @@ import { useRiderStore } from "@/store/useRiderStore";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 export default function ActivityShareReceipt() {
   const { t } = useTranslation();
@@ -46,7 +47,7 @@ export default function ActivityShareReceipt() {
               </View>
               <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{t('share_receipt.from', { address: receipt.pickup_address })}</Text>
               <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{t('share_receipt.to', { address: receipt.destination_address })}</Text>
-              <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{t('share_receipt.fare', { amount: (receipt.fare_bdt ?? 0) / 100 })}</Text>
+              <Text className="text-[12px] font-Jakarta" style={{ color: textSecondary }}>{t('share_receipt.fare', { amount: formatBDT(receipt.fare_bdt ?? 0) })}</Text>
               <View className="flex-row gap-3 mt-3">
                 <TouchableOpacity className="flex-1 border rounded-[8px] px-[12px] py-[6px] items-center" style={{ backgroundColor: surfaceBg, borderColor }}>
                   <Text className="text-[14px] font-JakartaBold" style={{ color: textPrimary }}>{t('share_receipt.share')}</Text>

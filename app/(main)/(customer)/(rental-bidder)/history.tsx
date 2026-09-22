@@ -20,6 +20,7 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { formatBDT } from "@/lib/format";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
@@ -134,7 +135,7 @@ export default function BidHistoryScreen() {
               >
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
                   <Text style={{ fontSize: 16, fontFamily: "JakartaBold", color: colors.primary }}>
-                    ৳{(bid.quoted_price_bdt / 100).toFixed(0)}
+                    {formatBDT(bid.quoted_price_bdt)}
                   </Text>
                   <View style={{ backgroundColor: statusColor + "18", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
                     <Text style={{ fontSize: 11, fontFamily: "JakartaSemiBold", color: statusColor }}>

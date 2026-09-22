@@ -21,6 +21,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { describeVehicleType } from "./_truckCatalog";
 import CargoSummary from "./_components/CargoSummary";
+import { formatBDT } from "@/lib/format";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
@@ -228,7 +229,7 @@ const fetchBids = useCallback(async () => {
 
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 20, fontFamily: "JakartaBold", color: colors.primary }}>
-                    ৳{(bid.quoted_price_bdt / 100).toFixed(0)}
+                    {formatBDT(bid.quoted_price_bdt)}
                   </Text>
                   <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginTop: 2 }}>
                     {bid.vehicle_type.replace(/_/g, " ")}

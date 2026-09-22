@@ -32,6 +32,7 @@ import * as Location from "expo-location";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 type Stop = { lat: number; lng: number; address: string };
 const MAX_STOPS = 2;
@@ -326,7 +327,7 @@ const PlanRidePage = () => {
           </Text>
         </View>
         <Text style={[styles.estimatePrice, { color: textPrimary }]}>
-          ৳{(item.total_bdt / 100).toFixed(0)}
+          {formatBDT(item.total_bdt)}
         </Text>
       </TouchableOpacity>
     );
@@ -489,7 +490,7 @@ const PlanRidePage = () => {
                           {t(meta.labelKey)}
                         </Text>
                         <Text style={[styles.categoryPrice, { color: textPrimary }]}>
-                          ৳{(cheapest / 100).toFixed(0)}
+                          {formatBDT(cheapest)}
                         </Text>
                         <Text style={[styles.categoryEta, { color: textSecondary }]}>{t('find_ride.eta_min', { minutes: fastest })}</Text>
                       </TouchableOpacity>

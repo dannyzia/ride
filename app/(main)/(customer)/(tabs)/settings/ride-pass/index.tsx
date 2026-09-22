@@ -11,6 +11,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { formatBDT } from "@/lib/format";
 
 interface RidePass {
   id: string; name: string; description: string | null; price_bdt: number;
@@ -156,7 +157,7 @@ export default function RidePassPurchase() {
               {p.description ? <Text className="text-sm font-Jakarta mt-1" style={{ color: textSecondary }}>{p.description}</Text> : null}
               <View className="flex-row items-center justify-between mt-3">
                 <View>
-                  <Text className="text-lg font-JakartaBold" style={{ color: colors.primary }}>৳{(p.price_bdt / 100).toFixed(0)}</Text>
+                  <Text className="text-lg font-JakartaBold" style={{ color: colors.primary }}>{formatBDT(p.price_bdt)}</Text>
                   <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>{t('ride_pass.discount_days', { percent: p.discount_percent, days: p.validity_days })}{p.max_rides ? t('ride_pass.rides_suffix', { count: p.max_rides }) : ""}</Text>
                 </View>
                 <TouchableOpacity onPress={() => buyPass(p.id)} disabled={purchasing === p.id}
