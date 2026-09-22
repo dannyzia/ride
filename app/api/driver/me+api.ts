@@ -168,8 +168,15 @@ export async function PATCH(request: Request) {
     if (parsed.data.name !== undefined) userUpdates.name = parsed.data.name;
     if (parsed.data.profile_image_url !== undefined) {
       // C3a: the profile photo is verification-adjacent display data — keep it
-      // inside the project's own storage.
-      if (!isAllowedStorageUrl(parsed.data.profile_image_url, 'driver-documents')) {
+      // inside the project's own storage (legacy Supabase bucket or R2 scoped
+      // to profile/<uid>/).
+      if (
+        !isAllowedStorageUrl(parsed.data.profile_image_url, {
+          bucket: 'driver-documents',
+          r2Prefix: 'profile',
+          ownerId: supabaseUser.id,
+        })
+      ) {
         return Response.json({ error: 'invalid_storage_url', message: 'Profile image must be uploaded to Ride storage' }, { status: 400 });
       }
       userUpdates.profile_image_url = parsed.data.profile_image_url;

@@ -39,7 +39,15 @@ const docSchema = z.object({
   // M-2: an empty map used to reach tx.insert(values([])) and 500. Require at
   // least one document UNLESS this call only persists consent (the wizard's
   // re-submit path may legitimately send consent with no docs — M-9).
-  documents: z.record(z.string(), z.string().url()),
+  documents: z.record(
+    z.string(),
+    z.object({
+      url: z.string().url(),
+      // 0 = legacy row, size unknown; >0 = actual bytes enforced by
+      // client-side compression (R2 migration)
+      file_size_bytes: z.number().int().nonnegative().max(20 * 1024 * 1024),
+    }),
+  ),
   vehicle_id: z.string().uuid().optional(),
   consent_accepted: z.boolean().optional(),
   consent_version: z.string().optional(),
@@ -86,10 +94,16 @@ export async function POST(request: Request) {
     }
 
     // C3a: reject any storage_url that is not served by this project's own
-    // Supabase storage. The admin trusts these URLs as verification evidence;
-    // a bare z.string().url() accepts arbitrary external hosts.
+    // storage (legacy Supabase bucket or R2 scoped to documents/<uid>/).
+    // The admin trusts these URLs as verification evidence; a bare
+    // z.string().url() accepts arbitrary external hosts.
     const spoofed = Object.entries(docMap).filter(
-      ([, storageUrl]) => !isAllowedStorageUrl(storageUrl, 'driver-documents'),
+      ([, doc]) =>
+        !isAllowedStorageUrl(doc.url, {
+          bucket: 'driver-documents',
+          r2Prefix: 'documents',
+          ownerId: supabaseUser.id,
+        }),
     );
     if (spoofed.length > 0) {
       return Response.json(
@@ -98,15 +112,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const insertValues = Object.entries(docMap).map(([docType, storageUrl]) => ({
+    const insertValues = Object.entries(docMap).map(([docType, doc]) => ({
       driver_id: driver.id,
       doc_type: docType as any,
-      storage_url: storageUrl,
+      storage_url: doc.url,
       vehicle_id: vehicle_id ?? null,
       status: 'pending' as const,
       expiry_date: expiry_date ? new Date(expiry_date) : null,
-      // TODO: accept optional per-doc file_size_bytes instead of hardcoding 0
-      file_size_bytes: 0,
+      file_size_bytes: doc.file_size_bytes,
     }));
 
     // The documents table has a partial unique index
