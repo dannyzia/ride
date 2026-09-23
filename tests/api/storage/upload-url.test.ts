@@ -2,8 +2,8 @@
  * R2 migration Task 9 — POST /api/storage/upload-url.
  * Mocked: auth, rate limiter, S3 presigner, expo-crypto.
  * Invariants: 401, Zod failures, rate-limit 429 past R2_UPLOAD_MAX, key shape
- * (user scoping + random suffix), ContentType + CacheControl binding,
- * 300s expiry, server_misconfigured fail-fast.
+ * (user scoping + random suffix), command headers, signature binding of
+ * Content-Type + Cache-Control, 300s expiry, server_misconfigured fail-fast.
  */
 /* eslint-disable import/first */
 jest.mock("@/lib/auth", () => ({
@@ -130,7 +130,7 @@ describe("POST /api/storage/upload-url", () => {
     expect((body.uploadUrl as string).length).toBeGreaterThan(0);
   });
 
-  test("PutObjectCommand binds Bucket, ContentType and immutable CacheControl", async () => {
+  test("PutObjectCommand carries Bucket, ContentType and immutable CacheControl", async () => {
     await POST(
       jsonRequest({ filename: "a.jpg", contentType: "image/png" }),
     );
@@ -142,13 +142,17 @@ describe("POST /api/storage/upload-url", () => {
     });
   });
 
-  test("presign expiry is 300s", async () => {
+  test("presign expires in 300s and binds Content-Type + Cache-Control", async () => {
     await POST(jsonRequest({ filename: "a.jpg" }));
-    expect(getSignedUrl).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      { expiresIn: 300 },
-    );
+
+    const options = (getSignedUrl as jest.Mock).mock.calls[0][2] as {
+      expiresIn: number;
+      signableHeaders: Set<string>;
+    };
+    expect(options.expiresIn).toBe(300);
+    // Without signableHeaders the presigner signs only `host`, which leaves the
+    // stored ContentType/CacheControl decided by whatever the client PUT sends.
+    expect([...options.signableHeaders].sort()).toEqual(["cache-control", "content-type"]);
   });
 
   test("defaults: folder=documents, contentType=image/jpeg", async () => {

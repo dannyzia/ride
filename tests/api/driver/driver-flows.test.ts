@@ -24,7 +24,9 @@ jest.mock("@/lib/validateMinPerKm", () => ({
   validateMinPerKm: jest.fn(),
 }));
 jest.mock("@/lib/storageUrl", () => ({
-  isAllowedStorageUrl: jest.fn(),
+  // The endpoint validates through the folder-policy composition (which lives
+  // with the validator, not in the dependency-free contract module).
+  isAllowedFolderStorageUrl: jest.fn(),
 }));
 jest.mock("@/lib/fareFrameworkConfig", () => ({
   getFareFrameworkConfig: jest.fn(),
@@ -33,7 +35,8 @@ jest.mock("@/lib/fareFrameworkConfig", () => ({
 import { db } from "@/src/db";
 import { verifySupabaseToken } from "@/lib/auth";
 import { validateMinPerKm } from "@/lib/validateMinPerKm";
-import { isAllowedStorageUrl } from "@/lib/storageUrl";
+import { isAllowedFolderStorageUrl } from "@/lib/storageUrl";
+import { PROFILE_FOLDERS } from "@/lib/storageFolders";
 import { getFareFrameworkConfig } from "@/lib/fareFrameworkConfig";
 import { users, drivers } from "@/src/db/schema";
 import { GET as insuranceGET } from "@/app/api/driver/insurance+api";
@@ -84,7 +87,7 @@ beforeEach(() => {
   driverUpdates.length = 0;
   userUpdates.length = 0;
   (verifySupabaseToken as jest.Mock).mockResolvedValue({ id: SUPABASE_UID });
-  (isAllowedStorageUrl as jest.Mock).mockReturnValue(true);
+  (isAllowedFolderStorageUrl as jest.Mock).mockReturnValue(true);
   (db.update as jest.Mock).mockImplementation((table: unknown) => ({
     set: jest.fn((setObj: Row) => ({
       where: jest.fn(async () => {
@@ -280,7 +283,7 @@ describe("PATCH /api/driver/me — guarded fields", () => {
 
   test("400 invalid_storage_url for a non-Ride profile image (C3a)", async () => {
     mockSelectQueue([[{ id: USER_ID }], [{ id: DRIVER_ID }]]);
-    (isAllowedStorageUrl as jest.Mock).mockReturnValue(false);
+    (isAllowedFolderStorageUrl as jest.Mock).mockReturnValue(false);
     const res = await mePATCH(jsonRequest({ profile_image_url: "https://evil.example/a.jpg" }));
     expect(res.status).toBe(400);
     expect((await getJson(res)).error).toBe("invalid_storage_url");
@@ -328,21 +331,18 @@ describe("PATCH /api/driver/me — guarded fields", () => {
     expect(driverUpdates[0].set).toMatchObject({ auto_accept_enabled: true });
   });
 
-  test("profile_image_url validation now uses the options-object signature (R2 migration)", async () => {
+  test("profile_image_url is validated against the profile folder policy", async () => {
     mockSelectQueue([[{ id: USER_ID }], [{ id: DRIVER_ID }], [{ id: DRIVER_ID }]]);
-    (isAllowedStorageUrl as jest.Mock).mockReturnValue(true);
+    (isAllowedFolderStorageUrl as jest.Mock).mockReturnValue(true);
 
     const res = await mePATCH(jsonRequest({
       profile_image_url: "https://assets.ride.com.bd/profile/uid/x.jpg",
     }));
     expect(res.status).toBe(200);
-    expect(isAllowedStorageUrl).toHaveBeenCalledWith(
+    expect(isAllowedFolderStorageUrl).toHaveBeenCalledWith(
       "https://assets.ride.com.bd/profile/uid/x.jpg",
-      {
-        bucket: "driver-documents",
-        r2Prefix: "profile",
-        ownerId: SUPABASE_UID,
-      },
+      PROFILE_FOLDERS,
+      SUPABASE_UID,
     );
     expect(userUpdates[0].set.profile_image_url).toBe(
       "https://assets.ride.com.bd/profile/uid/x.jpg",

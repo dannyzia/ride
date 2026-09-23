@@ -5,7 +5,8 @@ import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
-import { isAllowedStorageUrl } from '@/lib/storageUrl';
+import { DOCUMENT_FOLDERS } from '@/lib/storageFolders';
+import { isAllowedFolderStorageUrl } from '@/lib/storageUrl';
 import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
@@ -94,16 +95,15 @@ export async function POST(request: Request) {
     }
 
     // C3a: reject any storage_url that is not served by this project's own
-    // storage (legacy Supabase bucket or R2 scoped to documents/<uid>/).
+    // storage (legacy Supabase bucket or R2 scoped to a document folder of
+    // THIS driver: <folder>/<uid>/...). The accepted folder set lives in
+    // lib/storageFolders.ts; vehicle documents upload under the vehicle
+    // folder, so hardcoding a single prefix here rejected them.
     // The admin trusts these URLs as verification evidence; a bare
     // z.string().url() accepts arbitrary external hosts.
     const spoofed = Object.entries(docMap).filter(
       ([, doc]) =>
-        !isAllowedStorageUrl(doc.url, {
-          bucket: 'driver-documents',
-          r2Prefix: 'documents',
-          ownerId: supabaseUser.id,
-        }),
+        !isAllowedFolderStorageUrl(doc.url, DOCUMENT_FOLDERS, supabaseUser.id),
     );
     if (spoofed.length > 0) {
       return Response.json(

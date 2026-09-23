@@ -4,9 +4,19 @@
 //   R2     — exact EXPO_PUBLIC_R2_DOMAIN host + folder-prefix + owner scoping
 // Legacy rows exist under an `anonymous/` uid fallback, so the legacy branch
 // deliberately does NOT enforce ownerId.
+//
+// Also exports the folder-policy composition the driver endpoints use. It lives
+// here rather than in lib/storageFolders.ts so that module can stay
+// dependency-free (the device bundle imports its values).
+import {
+  LEGACY_STORAGE_BUCKET,
+  folderPrefix,
+  type StorageFolder,
+} from './storageFolders';
+
 const STORAGE_PATH_PREFIX = "/storage/v1/object/public/";
 
-export interface StorageUrlOptions {
+interface StorageUrlOptions {
   /** legacy Supabase bucket path check (e.g. 'driver-documents') */
   bucket?: string;
   /** required path prefix on the R2 branch (e.g. 'documents') */
@@ -19,15 +29,13 @@ export interface StorageUrlOptions {
  * True when `url` is served from our own storage. Pass `opts.bucket` to
  * require a specific legacy Supabase bucket; pass `opts.r2Prefix` (+
  * `opts.ownerId`) to scope R2 URLs. When both are passed the legacy branch is
- * evaluated first (status-quo behavior for callers migrating gradually).
+ * evaluated first.
  */
 export function isAllowedStorageUrl(
   url: string,
-  opts?: StorageUrlOptions | string,
+  opts?: StorageUrlOptions,
 ): boolean {
-  // Back-compat: old callers passed the bucket as a bare string.
-  const options: StorageUrlOptions =
-    typeof opts === 'string' ? { bucket: opts } : (opts ?? {});
+  const options: StorageUrlOptions = opts ?? {};
 
   let parsed: URL;
   try {
@@ -86,4 +94,27 @@ export function isAllowedStorageUrl(
   }
 
   return true;
+}
+
+/**
+ * True when `url` is a Ride-owned storage URL for one of `folders` — or for the
+ * legacy Supabase bucket, which carries the bucket in its path rather than a
+ * folder prefix, so it matches on any folder iteration and is deliberately not
+ * owner-scoped (legacy rows exist under an `anonymous/` fallback uid).
+ *
+ * Composes `isAllowedStorageUrl` once per allowed folder so that validator stays
+ * single-prefix and keeps its proven host/owner hardening.
+ */
+export function isAllowedFolderStorageUrl(
+  url: string,
+  folders: readonly StorageFolder[],
+  ownerId: string,
+): boolean {
+  return folders.some((folder) =>
+    isAllowedStorageUrl(url, {
+      bucket: LEGACY_STORAGE_BUCKET,
+      r2Prefix: folderPrefix(folder),
+      ownerId,
+    }),
+  );
 }

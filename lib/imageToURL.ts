@@ -1,20 +1,26 @@
 // R2 upload pipeline (plan: MIgrate File Uploads.md Task 3).
 // compress → presign (our API) → PUT to R2 with retry. The two 429 sources are
 // structurally separate: a 429 from OUR presign route surfaces to the user and
-// is never retried; only the R2 PUT (network/5xx/R2-429) is retried here.
+// never reaches the PUT loop; a 429 the PUT itself receives is retried
+// alongside network errors and 5xx.
 import { supabase } from './supabase';
 import * as FileSystem from 'expo-file-system';
 import { logger } from './logger';
-import { compressIfNeeded, sanitizeFilenameBase } from './imageCompress';
+import { compressIfNeeded } from './imageCompress';
+import {
+  CACHE_CONTROL,
+  DEFAULT_STORAGE_FOLDER,
+  sanitizeFilenameBase,
+  type StorageFolder,
+} from './storageFolders';
 
-export type UploadFolder = 'profile' | 'documents' | 'vehicle';
+type UploadFolder = StorageFolder;
 
-const CACHE_CONTROL = 'public, max-age=31536000, immutable';
 const PUT_RETRY_ATTEMPTS = 3;
 
 export async function uploadImageToR2({
   localUri,
-  folder = 'documents',
+  folder = DEFAULT_STORAGE_FOLDER,
   fileName,
   mimeType,
 }: {
@@ -72,32 +78,39 @@ export async function uploadImageToR2({
     publicUrl: string;
   };
 
-  // PUT to R2 with bounded retry (network errors, 5xx, R2-sourced 429 only).
+  // PUT to R2 with bounded retry (network errors, 5xx, and 429 — including
+  // R2's own throttling).
   let lastError: unknown;
   for (let attempt = 0; attempt < PUT_RETRY_ATTEMPTS; attempt++) {
     try {
       const put = await FileSystem.uploadAsync(uploadUrl, compressed.uri, {
         httpMethod: 'PUT',
         uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        // Both headers are signature-bound by the presign route: sending a
+        // different value is rejected by R2 (403 SignatureDoesNotMatch), so they
+        // must match what it signed — contentType as requested, and the same
+        // immutable CACHE_CONTROL value the route uses.
         headers: {
           'Content-Type': compressed.contentType,
           'Cache-Control': CACHE_CONTROL,
         },
       });
       if (put.status < 200 || put.status >= 300) {
-        const status = put.status;
-        const r2Host = (process.env.EXPO_PUBLIC_R2_DOMAIN ?? '').replace(/^https?:\/\//, '');
-        const isR2Host = uploadUrl.includes(r2Host);
-        const retryable = status >= 500 || (status === 429 && isR2Host);
-        if (!retryable || attempt === PUT_RETRY_ATTEMPTS - 1) {
-          throw Object.assign(new Error(`Upload failed (${status})`), { status });
-        }
-        lastError = Object.assign(new Error(`Upload failed (${status})`), { status });
+        // Normalize into a typed error; retryability is decided ONCE below,
+        // from the status. The PUT target is always the presigned R2 URL, so a
+        // URL-host predicate here would only ever compare the destination with
+        // itself — the decision is status-driven, not host-driven.
+        throw Object.assign(new Error(`Upload failed (${put.status})`), {
+          status: put.status,
+        });
       } else {
         logger.info('[storage] uploaded to R2', { key, sizeBytes: compressed.sizeBytes });
         return { publicUrl, key, fileSizeBytes: compressed.sizeBytes };
       }
     } catch (err) {
+      // The single owner of the retry decision: retry by status (network error
+      // or 5xx/429), stop on anything else — notably a 403, which means the
+      // PUT's signature-bound headers differ from what the presign route signed.
       lastError = err;
       const status = (err as { status?: number }).status;
       const retryable = err == null || status === undefined || status >= 500 || status === 429;

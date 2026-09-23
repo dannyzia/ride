@@ -3,7 +3,8 @@ import { drivers, users, subscriptions, pricing, platformConfig, driverOnlineSes
 import { eq, and, inArray, isNull, desc } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
-import { isAllowedStorageUrl } from '@/lib/storageUrl';
+import { PROFILE_FOLDERS } from '@/lib/storageFolders';
+import { isAllowedFolderStorageUrl } from '@/lib/storageUrl';
 import { parseJsonBody } from '@/lib/parseBody';
 import { validateMinPerKm } from '@/lib/validateMinPerKm';
 import { z } from 'zod';
@@ -171,11 +172,7 @@ export async function PATCH(request: Request) {
       // inside the project's own storage (legacy Supabase bucket or R2 scoped
       // to profile/<uid>/).
       if (
-        !isAllowedStorageUrl(parsed.data.profile_image_url, {
-          bucket: 'driver-documents',
-          r2Prefix: 'profile',
-          ownerId: supabaseUser.id,
-        })
+        !isAllowedFolderStorageUrl(parsed.data.profile_image_url, PROFILE_FOLDERS, supabaseUser.id)
       ) {
         return Response.json({ error: 'invalid_storage_url', message: 'Profile image must be uploaded to Ride storage' }, { status: 400 });
       }

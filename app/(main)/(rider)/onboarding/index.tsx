@@ -1311,7 +1311,7 @@ export default function OnboardingWizard() {
           <View>
             <Text style={secondaryLabelStyle}>Upload your vehicle documents. All are required.</Text>
             {VEHICLE_DOC_FIELDS.map((f) => (
-              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} folder="vehicle" onUploadComplete={(_path, url, fileSizeBytes) => setVehicleDocs((prev) => ({ ...prev, [f.key]: { url, fileSizeBytes } }))} />
+              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} folder="vehicle" onUploadComplete={(url, fileSizeBytes) => setVehicleDocs((prev) => ({ ...prev, [f.key]: { url, fileSizeBytes } }))} />
             ))}
           </View>
         )}
@@ -1321,7 +1321,7 @@ export default function OnboardingWizard() {
           <View>
             <Text style={secondaryLabelStyle}>Upload your personal documents. All are required.</Text>
             {DRIVER_DOC_FIELDS.map((f) => (
-              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(_path, url, fileSizeBytes) => setDriverDocs((prev) => ({ ...prev, [f.key]: { url, fileSizeBytes } }))} />
+              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(url, fileSizeBytes) => setDriverDocs((prev) => ({ ...prev, [f.key]: { url, fileSizeBytes } }))} />
             ))}
           </View>
         )}
@@ -1344,7 +1344,7 @@ export default function OnboardingWizard() {
               <View style={{ marginTop: spacing.lg }}>
                 <Text style={secondaryLabelStyle}>Optional \u2014 helps us verify your experience. None of these are required.</Text>
                 {LEGACY_DOC_FIELDS.map((f) => (
-                  <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(_path, url, fileSizeBytes) => setLegacyDocs((prev) => ({ ...prev, [f.key]: { url, fileSizeBytes } }))} />
+                  <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(url, fileSizeBytes) => setLegacyDocs((prev) => ({ ...prev, [f.key]: { url, fileSizeBytes } }))} />
                 ))}
               </View>
             )}

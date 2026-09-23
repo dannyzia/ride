@@ -1,3 +1,4 @@
+/* eslint-disable import/first -- mocks must be declared before the imports */
 // Unit tests for lib/imageCompress.ts (R2 migration Task 9).
 // expo-file-system / expo-image-manipulator are mocked; assertions cover the
 // format-normalization matrix, both compression passes, and surfaced failures.
@@ -17,26 +18,14 @@ jest.mock('@/lib/logger', () => ({
 
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
-import {
-  compressIfNeeded,
-  sanitizeFilenameBase,
-  MAX_UPLOAD_BYTES,
-  ImageCompressError,
-} from '../imageCompress';
+import { compressIfNeeded, MAX_UPLOAD_BYTES, ImageCompressError } from '../imageCompress';
+import { ALLOWED_MEDIA_TYPES } from '../storageFolders';
 
 const getInfoAsync = FileSystem.getInfoAsync as jest.Mock;
 const manipulateAsync = ImageManipulator.manipulateAsync as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
-});
-
-describe('sanitizeFilenameBase', () => {
-  it('drops directory components, sanitizes unsafe chars, caps length', () => {
-    expect(sanitizeFilenameBase('../../etc/passwd')).toBe('passwd');
-    expect(sanitizeFilenameBase('my photo (1).jpg')).toBe('my_photo__1_.jpg');
-    expect(sanitizeFilenameBase('x'.repeat(300)).length).toBeLessThanOrEqual(100);
-  });
 });
 
 describe('compressIfNeeded — passthrough', () => {
@@ -191,5 +180,48 @@ describe('compressIfNeeded — failure handling (H3)', () => {
 describe('constants', () => {
   it('threshold is 2MB', () => {
     expect(MAX_UPLOAD_BYTES).toBe(2 * 1024 * 1024);
+  });
+});
+
+// The compression engine's passthrough allowlist is derived from
+// ALLOWED_MEDIA_TYPES in lib/storageFolders.ts — the SAME list the presign route
+// uses as its Zod enum. So adding a member there is not a local change: the client
+// starts passing that type through UNCHANGED instead of normalizing it to JPEG.
+// These pin the set in both directions, so a newly accepted type is a deliberate
+// decision (three visible edits) rather than a silent behavior change.
+describe('compressIfNeeded — the passthrough set is ALLOWED_MEDIA_TYPES, exactly', () => {
+  it('pins the accepted set: changing it must be a deliberate three-place edit', () => {
+    // Tripwire, same convention as the FOLDER_PREFIX / CACHE_CONTROL pins: the
+    // route enum, this allowlist and the header prose all read this one list.
+    expect([...ALLOWED_MEDIA_TYPES]).toEqual(['image/jpeg', 'image/png', 'image/webp']);
+  });
+
+  it('passes every accepted type through untouched', async () => {
+    getInfoAsync.mockResolvedValue({ exists: true, size: 500_000 });
+    for (const mime of ALLOWED_MEDIA_TYPES) {
+      const out = await compressIfNeeded(`file:///tmp/photo.${mime.split('/')[1]}`, mime);
+      expect({ mime, contentType: out.contentType }).toEqual({ mime, contentType: mime });
+      expect(manipulateAsync).not.toHaveBeenCalled();
+    }
+  });
+
+  it('normalizes every type OUTSIDE the set to JPEG — so adding one cannot go unnoticed', async () => {
+    const outsideTheSet = ['image/heic', 'image/gif', 'image/tiff', 'image/bmp', 'image/jpg'];
+    for (const mime of outsideTheSet) {
+      // Guard the guard: each of these must really be outside the shared list,
+      // otherwise this case would silently stop testing the normalization path.
+      expect(ALLOWED_MEDIA_TYPES as readonly string[]).not.toContain(mime);
+
+      getInfoAsync.mockResolvedValue({ exists: true, size: 500_000 });
+      manipulateAsync.mockClear();
+      manipulateAsync.mockResolvedValue({ uri: 'file:///tmp/normalized.jpeg' });
+
+      const out = await compressIfNeeded('file:///tmp/photo.bin', mime);
+      expect({ mime, contentType: out.contentType }).toEqual({
+        mime,
+        contentType: 'image/jpeg',
+      });
+      expect(manipulateAsync).toHaveBeenCalledTimes(1);
+    }
   });
 });

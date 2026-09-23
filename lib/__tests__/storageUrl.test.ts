@@ -1,6 +1,6 @@
 // Unit tests for lib/storageUrl.ts (R2 migration Task 9) — the C3a validator.
 // Covers both branches (legacy Supabase + R2), host hardening, port
-// normalization, prefix/owner scoping, and back-compat with the old string arg.
+// normalization, and prefix/owner scoping.
 import { isAllowedStorageUrl } from '../storageUrl';
 
 const SUPA = 'https://zzz.supabase.co';
@@ -50,22 +50,6 @@ describe('isAllowedStorageUrl — legacy Supabase branch', () => {
         isAllowedStorageUrl(
           `${SUPA}/storage/v1/object/public/driver-documents/anonymous/x.jpg`,
           { bucket: 'driver-documents', ownerId: 'someone-else' },
-        ),
-      ).toBe(true);
-    });
-  });
-
-  it('back-compat: bare string arg means bucket (old signature)', () => {
-    withEnv(() => {
-      expect(
-        isAllowedStorageUrl(
-          `${SUPA}/storage/v1/object/public/driver-documents/uid/a.jpg`,
-          'driver-documents',
-        ),
-      ).toBe(true);
-      expect(
-        isAllowedStorageUrl(
-          `${SUPA}/storage/v1/object/public/driver-documents/uid/a.jpg`,
         ),
       ).toBe(true);
     });

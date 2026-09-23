@@ -1,12 +1,18 @@
 // Client-side compression engine for R2 uploads (plan: MIgrate File Uploads.md
 // Task 1). Guarantees no image > 2 MB is ever handed to the upload pipeline.
-// Format normalization: any source mime outside {jpeg,png,webp} (HEIC, GIF,
-// BMP, TIFF…) is converted to JPEG — the server contentType allowlist would
-// reject it otherwise. A large WebP is recompressed to JPEG (not WebP) because
-// the final contentType must reflect the actual bytes.
+// Format normalization: any source mime outside ALLOWED_MEDIA_TYPES (HEIC, GIF,
+// BMP, TIFF…) is converted to JPEG. That is deliberately the SAME list the presign
+// route accepts, so the client cannot produce a type the route rejects — which
+// makes adding a member a two-sided change: the client would start passing that
+// type through UNCHANGED instead of normalizing it. That switch is pinned as a
+// deliberate decision by the passthrough-set tests in
+// lib/__tests__/imageCompress.test.ts, so a new member fails there first, not on a
+// device. A large WebP is recompressed to JPEG (not WebP) because the final
+// contentType must reflect the actual bytes.
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { logger } from './logger';
+import { ALLOWED_MEDIA_TYPES } from './storageFolders';
 
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 
@@ -14,11 +20,11 @@ export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 export const COMPRESS_PASS_1 = { width: 1200, compress: 0.75 };
 export const COMPRESS_PASS_2 = { width: 800, compress: 0.65 };
 
-const ALLOWED_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+// Widened to Set<string> so the `.has(mime)` check type-checks against the
+// shared literal list.
+const ALLOWED_MIMES: ReadonlySet<string> = new Set<string>(ALLOWED_MEDIA_TYPES);
 
-export class ImageCompressError extends Error {
-  status = 400;
-}
+export class ImageCompressError extends Error {}
 
 const EXT_MIME: Record<string, string> = {
   jpg: 'image/jpeg',
@@ -28,12 +34,6 @@ const EXT_MIME: Record<string, string> = {
   heic: 'image/heic',
   heif: 'image/heif',
 };
-
-/** Strip path separators + unsafe chars; cap length (server re-sanitizes). */
-export function sanitizeFilenameBase(name: string): string {
-  const base = name.split('/').pop() ?? name;
-  return base.replace(/[^\w.\-]/g, '_').slice(0, 100);
-}
 
 function sniffMime(uri: string, mimeType?: string): string | undefined {
   if (mimeType) return mimeType;

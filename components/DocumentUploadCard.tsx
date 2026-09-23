@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Image } from "react-na
 import * as ImagePicker from "expo-image-picker";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { uploadImageToR2 } from "@/lib/imageToURL";
+import { DEFAULT_STORAGE_FOLDER, type DocumentFolder } from "@/lib/storageFolders";
 import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
@@ -10,8 +11,9 @@ import { useIsDark } from "@/lib/useAppearance";
 interface DocumentUploadCardProps {
   docType: string;
   label: string;
-  folder?: "documents" | "vehicle";
-  onUploadComplete: (path: string, url: string, fileSizeBytes: number) => void;
+  /** Accepted folders come from the documents-endpoint policy, not a local list. */
+  folder?: DocumentFolder;
+  onUploadComplete: (url: string, fileSizeBytes: number) => void;
 }
 
 export default function DocumentUploadCard({ docType, label, folder, onUploadComplete }: DocumentUploadCardProps) {
@@ -42,13 +44,13 @@ export default function DocumentUploadCard({ docType, label, folder, onUploadCom
 
       const result2 = await uploadImageToR2({
         localUri: file.uri,
-        folder: folder ?? "documents",
+        folder: folder ?? DEFAULT_STORAGE_FOLDER,
         fileName: file.fileName ?? `document_${Date.now()}.jpg`,
         mimeType: file.mimeType,
       });
 
       setPreviewUri(file.uri);
-      onUploadComplete(result2.key, result2.publicUrl, result2.fileSizeBytes);
+      onUploadComplete(result2.publicUrl, result2.fileSizeBytes);
       logger.info("[DocumentUploadCard] upload complete", { docType, key: result2.key });
     } catch (e) {
       logger.error("[DocumentUploadCard] upload failed", { docType, error: e instanceof Error ? e.message : String(e) });

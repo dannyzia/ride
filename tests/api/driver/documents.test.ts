@@ -22,12 +22,14 @@ jest.mock("@/lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
 jest.mock("@/lib/storageUrl", () => ({
-  isAllowedStorageUrl: jest.fn(),
+  // The endpoint validates through the folder-policy composition (which lives
+  // with the validator, not in the dependency-free contract module).
+  isAllowedFolderStorageUrl: jest.fn(),
 }));
 
 import { db } from "@/src/db";
 import { verifySupabaseToken } from "@/lib/auth";
-import { isAllowedStorageUrl } from "@/lib/storageUrl";
+import { isAllowedFolderStorageUrl } from "@/lib/storageUrl";
 import { documents, drivers } from "@/src/db/schema";
 import { GET, POST } from "@/app/api/driver/documents+api";
 
@@ -119,7 +121,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   resetWriteMocks();
   (verifySupabaseToken as jest.Mock).mockResolvedValue({ id: SUPABASE_UID });
-  (isAllowedStorageUrl as jest.Mock).mockReturnValue(true);
+  (isAllowedFolderStorageUrl as jest.Mock).mockReturnValue(true);
 });
 
 const DRIVER_TEMP: Row = { id: DRIVER_ID, status: "temporary" };
@@ -168,7 +170,7 @@ describe("POST /api/driver/documents — validation gates", () => {
 
   test("400 invalid_storage_url for non-Ride storage hosts (C3a)", async () => {
     mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
-    (isAllowedStorageUrl as jest.Mock).mockReturnValue(false);
+    (isAllowedFolderStorageUrl as jest.Mock).mockReturnValue(false);
     const res = await POST(jsonRequest({ documents: { license_front: { url: "https://evil.example/x.jpg", file_size_bytes: 123 } } }));
     expect(res.status).toBe(400);
     expect((await getJson(res)).error).toBe("invalid_storage_url");
@@ -283,5 +285,69 @@ describe("POST /api/driver/documents — submission", () => {
     // no document rows were inserted (consent-only)
     expect(txInserts).toHaveLength(0);
     expect(driverUpdates.some((u) => u.set.consent_accepted === true && u.set.consent_version === "v2")).toBe(true);
+  });
+});
+
+describe("POST /api/driver/documents — folder contract (regression)", () => {
+  // Runs the REAL validator (not the module stub) so a divergence between the
+  // prefix the uploader writes and the folder the endpoint accepts fails here.
+  // Vehicle documents upload under /vehicle/<uid>/ and were rejected while the
+  // endpoint validated one hardcoded `documents` prefix (onboarding step 3).
+  const R2 = "https://assets.ride.com.bd";
+  const OTHER_UID = "99999999-9999-4999-8999-999999999999";
+  const realStorageUrl = jest.requireActual("@/lib/storageUrl") as typeof import("@/lib/storageUrl");
+
+  beforeEach(() => {
+    process.env.SUPABASE_URL = "https://zzz.supabase.co";
+    process.env.EXPO_PUBLIC_R2_DOMAIN = R2;
+    (isAllowedFolderStorageUrl as jest.Mock).mockImplementation(
+      realStorageUrl.isAllowedFolderStorageUrl,
+    );
+  });
+
+  test("201: a vehicle document under /vehicle/<uid>/ is accepted (was 400)", async () => {
+    mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
+    const url = `${R2}/vehicle/${SUPABASE_UID}/1790-abcd1234-reg-front.jpg`;
+
+    const res = await POST(jsonRequest({
+      documents: { reg_scan_front: { url, file_size_bytes: 1234 } },
+    }));
+
+    expect(res.status).toBe(201);
+    const insert = txInserts.find((i) => i.table === documents);
+    const rows = insert!.values as Record<string, unknown>[];
+    expect(rows[0]).toMatchObject({ storage_url: url, file_size_bytes: 1234 });
+  });
+
+  test("201: driver + legacy documents still accepted under /documents/<uid>/", async () => {
+    mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
+
+    const res = await POST(jsonRequest({
+      documents: { nid_front: { url: `${R2}/documents/${SUPABASE_UID}/1790-abcd1234-nid.jpg`, file_size_bytes: 2048 } },
+    }));
+
+    expect(res.status).toBe(201);
+  });
+
+  test("400 invalid_storage_url: a profile-folder URL is not verification evidence", async () => {
+    mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
+
+    const res = await POST(jsonRequest({
+      documents: { nid_front: { url: `${R2}/profile/${SUPABASE_UID}/1790-abcd1234-selfie.jpg`, file_size_bytes: 2048 } },
+    }));
+
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("invalid_storage_url");
+  });
+
+  test("400 invalid_storage_url: another driver's folder is rejected", async () => {
+    mockSelectQueue([[{ id: USER_ID }], [DRIVER_TEMP]]);
+
+    const res = await POST(jsonRequest({
+      documents: { nid_front: { url: `${R2}/documents/${OTHER_UID}/1790-abcd1234-nid.jpg`, file_size_bytes: 2048 } },
+    }));
+
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("invalid_storage_url");
   });
 });
