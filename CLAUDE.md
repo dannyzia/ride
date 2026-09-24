@@ -349,6 +349,16 @@ See `docs/Plan/18-KNOWN-ISSUES.md` before fixing bugs. Key issues:
 - **Before ANY device/emulator session: read `TEST-SETUP.md` (repo root) and run `node scripts/dev-env-sync.js`** — the laptop LAN IP differs between broadband WiFi and hotspot; a stale `EXPO_PUBLIC_DEV_LAN_IP` breaks all device API calls (env is inlined at bundle time; there is no runtime fallback in `lib/config.ts`).
 - `npx jest --testPathPattern="name"` — single test
 - At phase gates run: `npx jest --watchAll=false` (full suite)
+
+### AI Execution & Testing Protocol (speed rules)
+
+Testing must be fast. Follow this loop:
+
+1. **While iterating, run ONLY impacted test files.** Map each file you changed to its test file(s) and run them targeted: `npx jest --testPathPattern="<impacted>" --bail --silent`. NEVER run the full suite per-task — the ~2000-test full run is a phase-gate activity only.
+2. **`--bail` in the inner loop.** Stop at first failure, fix, re-run targeted. Do not re-run large suites just to enumerate every failure before fixing.
+3. **A task is complete only when impacted tests pass.** Paste the jest summary line (e.g. `Tests: 42 passed, 42 total`) as evidence in the response. No evidence = not complete.
+4. **`--bail`/targeted runs never substitute for the full gate.** At phase gates the order is unchanged: `npm run lint` → `npx tsc --noEmit` → `npm run check:vacuous` → `npx jest --watchAll=false` (full-suite floor).
+
 - **Dispatch invariants (Phase D — sequential dispatch, debit-on-offer)** that must always pass: (1) exactly one outstanding offer per ride at any time, (2) single deduction per `(ride_id, driver_id)`, (3) `calls_remaining = 0` drivers never in candidate pool, (4) daily cap exceeded drivers never in candidate pool, (5) no driver receives the same offer twice, (6) every offered driver has a `call_ledger` deduction row regardless of outcome, (7) declined/expired offer → next candidate offered, (8) rider cancel mid-chain → chain aborts, no further offers, no refunds, (9) re-dispatch → previously billed drivers not re-billed, (10) billing atomicity — `dispatch_offers` row + deduction commit in ONE transaction.
 - **Payment invariants**: (1) same idempotency key → exactly one `payment_events` row, (2) duplicate callback activates subscription exactly once, (3) failed activation → `compensation_queue` entry within 30 seconds.
 - Test templates: `docs/Plan/22-TEST-TEMPLATES.md`.
