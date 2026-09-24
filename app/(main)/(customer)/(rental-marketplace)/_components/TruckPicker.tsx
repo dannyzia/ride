@@ -9,7 +9,7 @@ import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
-import { TRUCK_TABS, type TruckVariant } from "../_truckCatalog";
+import { TRUCK_TABS, type TruckVariant } from "@/constants/truckCatalog";
 
 interface TruckPickerProps {
   selectedKey: string | null;

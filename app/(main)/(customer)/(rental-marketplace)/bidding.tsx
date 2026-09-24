@@ -19,7 +19,7 @@ import { colors } from "@/theme/goRide";
 import { useRentalStore } from "@/store/useRentalStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-import { describeVehicleType } from "./_truckCatalog";
+import { describeVehicleType } from "@/constants/truckCatalog";
 import CargoSummary from "./_components/CargoSummary";
 import { formatBDT } from "@/lib/format";
 

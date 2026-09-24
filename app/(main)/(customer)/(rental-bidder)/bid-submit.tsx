@@ -26,7 +26,7 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-import { describeVehicleType } from "../(rental-marketplace)/_truckCatalog";
+import { describeVehicleType } from "@/constants/truckCatalog";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 

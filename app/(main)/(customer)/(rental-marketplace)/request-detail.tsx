@@ -21,7 +21,7 @@ import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import CargoSummary from "./_components/CargoSummary";
-import { describeVehicleType } from "./_truckCatalog";
+import { describeVehicleType } from "@/constants/truckCatalog";
 import { formatBDT } from "@/lib/format";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";

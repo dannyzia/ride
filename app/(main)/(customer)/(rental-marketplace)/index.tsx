@@ -37,7 +37,7 @@ import {
   RENTAL_OPTION_CHIPS,
   findTruckVariant,
   type TruckVariant,
-} from "./_truckCatalog";
+} from "@/constants/truckCatalog";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
