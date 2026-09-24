@@ -1,6 +1,6 @@
 /**
  * R2 migration Task 9 — POST /api/storage/upload-url.
- * Mocked: auth, rate limiter, S3 presigner, expo-crypto.
+ * Mocked: auth, rate limiter, S3 presigner, the global crypto.randomUUID.
  * Invariants: 401, Zod failures, rate-limit 429 past R2_UPLOAD_MAX, key shape
  * (user scoping + random suffix), command headers, signature binding of
  * Content-Type + Cache-Control, 300s expiry, server_misconfigured fail-fast.
@@ -22,16 +22,17 @@ jest.mock("@aws-sdk/client-s3", () => ({
 jest.mock("@aws-sdk/s3-request-presigner", () => ({
   getSignedUrl: jest.fn(),
 }));
-jest.mock("expo-crypto", () => ({
-  randomUUID: jest.fn(),
-}));
 
 import { verifySupabaseToken } from "@/lib/auth";
 import { rateLimitCount } from "@/lib/otpRateLimit";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { randomUUID } from "expo-crypto";
 import { POST, R2_UPLOAD_MAX } from "@/app/api/storage/upload-url+api";
+
+// The route mints its key suffix from the server's global crypto (expo-crypto's
+// web build reads `window.crypto`, which does not exist on the server), so the
+// deterministic suffix is pinned here instead.
+const uuidSpy = jest.spyOn(globalThis.crypto, "randomUUID");
 
 const SUPABASE_UID = "11111111-1111-4111-a111-111111111111";
 
@@ -58,12 +59,11 @@ beforeEach(() => {
   (getSignedUrl as jest.Mock).mockResolvedValue(
     "https://acct123.r2.cloudflarestorage.com/signed?X-Amz-Signature=abc",
   );
-  (randomUUID as jest.Mock).mockReturnValue(
-    "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  );
+  uuidSpy.mockReturnValue("a1b2c3d4-e5f6-7890-abcd-ef1234567890" as ReturnType<typeof crypto.randomUUID>);
 });
 
 afterAll(() => {
+  uuidSpy.mockRestore();
   delete process.env.CLOUDFLARE_ACCOUNT_ID;
   delete process.env.R2_ACCESS_KEY_ID;
   delete process.env.R2_SECRET_ACCESS_KEY;

@@ -21,9 +21,7 @@ import {
 } from '@/lib/storageFolders';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { randomUUID } from 'expo-crypto';
 import { z } from 'zod';
-
 export const R2_UPLOAD_MAX = 30; // uploads per user per 5-min window
 
 const uploadUrlSchema = z.object({
@@ -93,7 +91,11 @@ export async function POST(request: Request) {
   // is kept so the route's key contract is unchanged.
   const sanitizedFilename = sanitizeFilenameBase(filename) ?? 'file';
 
-  const randomSuffix = randomUUID().substring(0, 8);
+  // Node's global crypto, not expo-crypto's randomUUID(): this route is served
+  // from the web-platform bundle, where expo-crypto resolves to `window.crypto`
+  // and `window` does not exist on the server (it threw on every request).
+  // Same source the other API routes use to mint references.
+  const randomSuffix = crypto.randomUUID().substring(0, 8);
   const key = `${folderPrefix(folder)}/${supabaseUser.id}/${Date.now()}-${randomSuffix}-${sanitizedFilename}`;
 
   const s3 = new S3Client({
