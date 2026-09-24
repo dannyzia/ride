@@ -45,9 +45,20 @@ const BN_LOCALE = path.resolve(__dirname, '../../i18n/locales/bn/common.json');
  *     `delete_account.item_*` keys on the delete-account screen.
  *   - a module-level `*_KEY` constant — `t(ONE_VEHICLE_NOTICE_KEY)`.
  * collectKeyArrayKeys() / collectKeyConstKeys() close those. Same enforcement:
- * no baseline, no exceptions. The remaining dynamic call sites were checked by
- * hand and are all covered — each is either a scanned table lookup, a `*Key`
- * property read, or server-supplied content rendered without t().
+ * no baseline, no exceptions.
+ *
+ * Sweep tier (2026-09-24, later): a carrier-independent audit
+ * (scripts/audit-i18n-dynamic-keys.js) — every key-shaped string literal must
+ * resolve in both locales, regardless of carrier — proved the hand-checked
+ * claim above wrong: 20 more missing keys hid in shapes no collector scanned
+ * (a nested ternary inside t() on confirm-ride, questionKey/answerKey
+ * properties in the FAQ fallback table, a `common.all` fallback literal, and
+ * openExternal label keys on contact-support). All repaid same-day. The sweep
+ * now also runs here as the tier below: it is strictly stronger than the
+ * carrier collectors (any literal that resolves here makes carrier coverage
+ * moot) and it is the backstop for carrier shapes nobody has named yet.
+ * app/api/ is excluded — server code; its key-shaped literals are RBAC scopes
+ * (admin.read, verification.write), never user-facing text.
  */
 const HARD_NAMESPACE = 'rider_home';
 
@@ -501,3 +512,113 @@ function findTsxFiles(dir: string): string[] {
   }
   return results;
 }
+
+describe('i18n key-shaped literal sweep — carrier-independent tier', () => {
+  const APP_DIR = path.resolve(__dirname, '../../app');
+  const COMPONENTS_DIR = path.resolve(__dirname, '../../components');
+  const SHAPE = /^[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+$/;
+
+  const locales = [
+    ['en', JSON.parse(fs.readFileSync(EN_LOCALE, 'utf-8'))],
+    ['bn', JSON.parse(fs.readFileSync(BN_LOCALE, 'utf-8'))],
+  ];
+
+  function resolveIn(localeJson: Record<string, unknown>, key: string): boolean {
+    let node: unknown = localeJson;
+    for (const part of key.split('.')) {
+      if (node === null || typeof node !== 'object' || !(part in (node as Record<string, unknown>))) {
+        return false;
+      }
+      node = (node as Record<string, unknown>)[part];
+    }
+    return typeof node === 'string';
+  }
+
+  /** Comment-aware, quote-aware scanner: every '' / "" literal value in a source string. */
+  function literalsIn(src: string): string[] {
+    const out: string[] = [];
+    let i = 0;
+    while (i < src.length) {
+      const c = src[i];
+      if (c === '/' && src[i + 1] === '/') {
+        const nl = src.indexOf('\n', i);
+        i = nl === -1 ? src.length : nl + 1;
+        continue;
+      }
+      if (c === '/' && src[i + 1] === '*') {
+        const end = src.indexOf('*/', i + 2);
+        i = end === -1 ? src.length : end + 2;
+        continue;
+      }
+      if (c === "'" || c === '"') {
+        const q = c;
+        i++;
+        let v = '';
+        while (i < src.length && src[i] !== q) {
+          if (src[i] === '\\') {
+            v += src[i + 1] ?? '';
+            i += 2;
+            continue;
+          }
+          v += src[i];
+          i++;
+        }
+        i++;
+        out.push(v);
+        continue;
+      }
+      i++;
+    }
+    return out;
+  }
+
+  function walkSources(dir: string, out: string[] = []): string[] {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name === '__tests__' || entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        // app/api/** is server code: its key-shaped literals are RBAC scopes
+        // (admin.read, verification.write) — never passed to t().
+        if (full === APP_DIR + path.sep + 'api') continue;
+        walkSources(full, out);
+      } else if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
+        out.push(full);
+      }
+    }
+    return out;
+  }
+
+  const unresolvedByFile = new Map<string, Set<string>>();
+  let shapedCount = 0;
+  outer: for (const dir of [APP_DIR, COMPONENTS_DIR]) {
+    for (const file of walkSources(dir)) {
+      const content = fs.readFileSync(file, 'utf-8');
+      for (const value of literalsIn(content)) {
+        if (!SHAPE.test(value)) continue;
+        shapedCount++;
+        const missing = locales.filter(([, json]) => !resolveIn(json, value)).map(([lang]) => lang);
+        if (missing.length === 0) continue;
+        const rel = path.relative(path.join(__dirname, '../..'), file);
+        if (!unresolvedByFile.has(rel)) unresolvedByFile.set(rel, new Set());
+        unresolvedByFile.get(rel)!.add(`${value} [missing: ${missing.join(', ')}]`);
+        if (unresolvedByFile.size >= 200) break outer;
+      }
+    }
+  }
+  const unresolvedTotal = [...unresolvedByFile.values()].reduce((a, s) => a + s.size, 0);
+
+  it('every key-shaped string literal resolves in every locale (carrier-independent)', () => {
+    if (unresolvedByFile.size > 0) {
+      // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
+      console.log(
+        `\n❌ ${unresolvedTotal} key-shaped literal(s) missing from locales ` +
+          `(of ${shapedCount} scanned across ${unresolvedByFile.size} files):\n` +
+          [...unresolvedByFile.entries()]
+            .sort()
+            .map(([f, keys]) => `  ${f}:\n    ${[...keys].sort().join('\n    ')}`)
+            .join('\n'),
+      );
+    }
+    expect(unresolvedByFile.size).toBe(0);
+  });
+});

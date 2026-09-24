@@ -30,7 +30,8 @@
     "hotspot_list": "List",
     "hotspot_map": "Map",
     "edit": "Edit",
-    "network_error": "Network error. Please try again."
+    "network_error": "Network error. Please try again.",
+    "all": "All"
   },
   "auth": {
     "phone_entry": "Enter your phone number",
@@ -743,7 +744,11 @@
     "vehicle_car_economy": "Car Economy",
     "vehicle_car_comfort": "Car Comfort",
     "vehicle_car_premium": "Car Premium",
-    "vehicle_car_xl": "Car XL"
+    "vehicle_car_xl": "Car XL",
+    "intro_bonus": "Intro Bonus",
+    "promo_discount": "Promo Discount",
+    "pass_discount": "Ride Pass Discount",
+    "wallet_credit": "Wallet Credit"
   },
   "rides_list": {
     "rebook_title": "Rebook this ride?",
@@ -1179,7 +1184,10 @@
     "email_prefix": "Email us at",
     "phone_prefix": "Call us at",
     "emergency": "In an emergency, always call 999 first.",
-    "call_emergency_a11y": "Call the national emergency number 999"
+    "call_emergency_a11y": "Call the national emergency number 999",
+    "label_email": "Email",
+    "label_phone_call": "Phone Call",
+    "label_emergency_call": "Emergency Call"
   },
   "lost_items": {
     "load_failed": "Couldn't load your reports",
@@ -1515,7 +1523,19 @@
   "faq": {
     "toggle_theme": "Toggle light or dark theme",
     "showing_common": "Showing common questions",
-    "retry_loading_a11y": "Retry loading the FAQ"
+    "retry_loading_a11y": "Retry loading the FAQ",
+    "fallback_1_question": "How do I book a ride?",
+    "fallback_1_answer": "Set your pickup and destination on the home screen, choose a vehicle, and confirm your fare.",
+    "fallback_2_question": "How is my fare calculated?",
+    "fallback_2_answer": "Fares combine a base fare with distance and time charges, shown before you confirm the ride.",
+    "fallback_3_question": "Can I cancel a ride?",
+    "fallback_3_answer": "Yes. You can cancel from the ride screen; cancellation fees may apply after the driver departs.",
+    "fallback_4_question": "How do I add a payment method?",
+    "fallback_4_answer": "Open Wallet from Settings and top up, or add a payout method from your profile.",
+    "fallback_5_question": "How do I report a lost item?",
+    "fallback_5_answer": "Go to Settings → Lost Items and report it against the ride; the driver is notified immediately.",
+    "fallback_6_question": "Is my personal information safe?",
+    "fallback_6_answer": "Yes. Your data is encrypted and shared with drivers only as needed for your ride."
   },
   "linked_accounts": {
     "connected_services": "Connected Services",
