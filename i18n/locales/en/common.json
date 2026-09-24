@@ -289,7 +289,11 @@
     "request_data": "Request Your Data",
     "delete_data": "Delete My Data",
     "delete_account": "Delete Account",
-    "emergency_contacts": "Emergency Contacts"
+    "emergency_contacts": "Emergency Contacts",
+    "top_up_wallet": "Top Up Wallet",
+    "ride_pass": "Ride Pass",
+    "loyalty": "Loyalty",
+    "logout": "Log Out"
   },
   "earnings": {
     "daily_goal": "Daily Goal",
@@ -730,7 +734,16 @@
     "schedule_ride": "Schedule ride",
     "missing_location_or_vehicle": "Pickup, destination, or vehicle is missing",
     "network_error": "Network error. Please try again.",
-    "not_authenticated": "Please log in to book a ride"
+    "not_authenticated": "Please log in to book a ride",
+    "vehicle_bike_basic": "Bike Basic",
+    "vehicle_bike_standard": "Bike Standard",
+    "vehicle_bike_plus": "Bike Plus",
+    "vehicle_cng": "CNG",
+    "vehicle_car_compact": "Car Compact",
+    "vehicle_car_economy": "Car Economy",
+    "vehicle_car_comfort": "Car Comfort",
+    "vehicle_car_premium": "Car Premium",
+    "vehicle_car_xl": "Car XL"
   },
   "rides_list": {
     "rebook_title": "Rebook this ride?",
@@ -814,7 +827,12 @@
     "edit": "Edit",
     "delete_address": "Delete address",
     "not_found": "This address no longer exists",
-    "delete_failed": "Couldn't delete this address"
+    "delete_failed": "Couldn't delete this address",
+    "label_home": "Home",
+    "label_work": "Work",
+    "label_gym": "Gym",
+    "label_friend": "Friend",
+    "label_other": "Other"
   },
   "ride_tracking": {
     "cancel_ride_confirm": "Cancel this ride?",
@@ -879,7 +897,12 @@
     "a11y_retry": "Retry loading emergency contacts",
     "empty_title": "No emergency contacts",
     "empty_subtitle": "Add someone we can alert during your ride",
-    "delete_failed": "Couldn't delete the contact"
+    "delete_failed": "Couldn't delete the contact",
+    "relationship_family": "Family",
+    "relationship_friend": "Friend",
+    "relationship_partner": "Partner",
+    "relationship_colleague": "Colleague",
+    "relationship_other": "Other"
   },
   "ride_detail": {
     "could_not_load": "Couldn't load this ride",
@@ -990,7 +1013,19 @@
     "eta_min": "{{minutes}} min away",
     "no_vehicles_route": "No vehicles available for this route",
     "set_route_to_see_fares": "Set your route to see fares",
-    "confirm_ride": "Confirm ride"
+    "confirm_ride": "Confirm ride",
+    "category_bike": "Bike",
+    "category_cng": "CNG",
+    "category_car": "Car",
+    "vehicle_bike_basic": "Bike Basic",
+    "vehicle_bike_standard": "Bike Standard",
+    "vehicle_bike_plus": "Bike Plus",
+    "vehicle_cng": "CNG",
+    "vehicle_car_compact": "Car Compact",
+    "vehicle_car_economy": "Car Economy",
+    "vehicle_car_comfort": "Car Comfort",
+    "vehicle_car_premium": "Car Premium",
+    "vehicle_car_xl": "Car XL"
   },
   "referral": {
     "share_reward": "Your friend gets {{amount}} on their first ride — and so do you!",
@@ -1059,7 +1094,16 @@
     "select_vehicle": "Select {{name}} as your vehicle",
     "date_time": "Date & Time",
     "a11y_schedule": "Schedule this ride",
-    "schedule_ride": "Schedule Ride"
+    "schedule_ride": "Schedule Ride",
+    "vehicle_bike_basic": "Bike Basic",
+    "vehicle_bike_standard": "Bike Standard",
+    "vehicle_bike_plus": "Bike Plus",
+    "vehicle_cng": "CNG",
+    "vehicle_car_compact": "Car Compact",
+    "vehicle_car_economy": "Car Economy",
+    "vehicle_car_comfort": "Car Comfort",
+    "vehicle_car_premium": "Car Premium",
+    "vehicle_car_xl": "Car XL"
   },
   "request_data": {
     "not_authenticated": "You are not signed in.",
@@ -1153,7 +1197,11 @@
     "describe_item": "Describe the item",
     "placeholder": "e.g. Black umbrella in the back seat",
     "submitting": "Submitting...",
-    "submit": "Submit Report"
+    "submit": "Submit Report",
+    "status_driver_confirmed": "Driver confirmed",
+    "status_arranged_return": "Return arranged",
+    "status_resolved": "Resolved",
+    "status_unresolved": "Unresolved"
   },
   "rider_wallet": {
     "active_passes": "Active Passes",
@@ -1170,7 +1218,15 @@
     "toggle_theme": "Toggle light or dark theme",
     "top_up_wallet": "Top Up Wallet",
     "transactions": "Transactions",
-    "valid_until": "Valid until {{date}}"
+    "valid_until": "Valid until {{date}}",
+    "txn_referral_reward": "Referral Reward",
+    "txn_ride_discount": "Ride Discount",
+    "txn_upfront_tip": "Upfront Tip",
+    "txn_cashback_earned": "Cashback Earned",
+    "txn_cashback_redeemed": "Cashback Redeemed",
+    "txn_cashback_expired": "Cashback Expired",
+    "txn_wallet_credit": "Wallet Credit",
+    "txn_wallet_adjustment": "Wallet Adjustment"
   },
   "delete_account": {
     "not_authenticated": "You are not signed in.",
@@ -1185,7 +1241,11 @@
     "type_to_confirm": "Type DELETE MY ACCOUNT to confirm",
     "retry_a11y": "Retry account deletion",
     "toggle_theme": "Toggle light or dark theme",
-    "cta": "Delete My Account"
+    "cta": "Delete My Account",
+    "item_name": "Name",
+    "item_photo": "Profile photo",
+    "item_addresses": "Saved addresses",
+    "item_ride_details": "Ride details"
   },
   "personal_info": {
     "add_name": "Add your name",
@@ -1329,7 +1389,18 @@
     "trip_details": "Trip Details",
     "from": "From",
     "to": "To",
-    "destination": "Destination"
+    "destination": "Destination",
+    "status_pending": "Pending",
+    "status_dispatching": "Finding a driver",
+    "status_matched": "Driver matched",
+    "status_driver_arriving": "Driver on the way",
+    "status_driver_arrived": "Driver arrived",
+    "status_in_progress": "In progress",
+    "status_completed": "Completed",
+    "status_cancelled": "Cancelled",
+    "status_expired": "Expired",
+    "status_no_drivers": "No drivers found",
+    "status_scheduled": "Scheduled"
   },
   "driver_info": {
     "title": "Driver",
@@ -1362,7 +1433,15 @@
     "load_failed": "Couldn't load notifications",
     "pull_to_retry": "Pull down to retry",
     "using_sample_data": "Showing sample data",
-    "toggle_theme": "Toggle light or dark theme"
+    "toggle_theme": "Toggle light or dark theme",
+    "sample_promo_title": "Weekend discount inside",
+    "sample_promo_body": "Enjoy 20% off your next three rides, this weekend only.",
+    "sample_trip_title": "Trip reminder",
+    "sample_trip_body": "You have a scheduled ride coming up tomorrow morning.",
+    "sample_payment_title": "Payment received",
+    "sample_payment_body": "Your wallet top-up of BDT 200 was successful.",
+    "sample_system_title": "Keep your app updated",
+    "sample_system_body": "Update to the latest version for the best experience."
   },
   "notifications_screen": {
     "alert_types": "Alert Types",
@@ -1371,7 +1450,12 @@
     "save": "Save",
     "save_failed": "Couldn't save preferences",
     "saved": "Preferences saved",
-    "toggle_theme": "Toggle light or dark theme"
+    "toggle_theme": "Toggle light or dark theme",
+    "ride_updates": "Ride updates",
+    "promo_offers": "Promo offers",
+    "service_alerts": "Service alerts",
+    "email_notifications": "Email notifications",
+    "sms_notifications": "SMS notifications"
   },
   "ride_details_scheduled": {
     "title": "Scheduled Ride",
@@ -1408,7 +1492,10 @@
     "title": "Appearance",
     "toggle_theme": "Toggle light or dark theme",
     "theme": "Theme",
-    "hint": "Choose light, dark, or follow your system setting."
+    "hint": "Choose light, dark, or follow your system setting.",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   },
   "autocomplete": {
     "title": "Search Address",

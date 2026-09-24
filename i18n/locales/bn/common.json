@@ -289,7 +289,11 @@
     "request_data": "আপনার তথ্যের অনুরোধ করুন",
     "delete_data": "আমার তথ্য মুছুন",
     "delete_account": "অ্যাকাউন্ট মুছুন",
-    "emergency_contacts": "জরুরি পরিচিতজন"
+    "emergency_contacts": "জরুরি পরিচিতজন",
+    "top_up_wallet": "ওয়ালেট টপ-আপ",
+    "ride_pass": "রাইড পাস",
+    "loyalty": "লয়্যালটি",
+    "logout": "লগ আউট"
   },
   "earnings": {
     "daily_goal": "দৈনিক লক্ষ্য",
@@ -730,7 +734,16 @@
     "schedule_ride": "রাইড শিডিউল করুন",
     "missing_location_or_vehicle": "পিকআপ, গন্তব্য বা যানবাহন নির্বাচিত হয়নি",
     "network_error": "নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।",
-    "not_authenticated": "রাইড বুক করতে লগ ইন করুন"
+    "not_authenticated": "রাইড বুক করতে লগ ইন করুন",
+    "vehicle_bike_basic": "বাইক বেসিক",
+    "vehicle_bike_standard": "বাইক স্ট্যান্ডার্ড",
+    "vehicle_bike_plus": "বাইক প্লাস",
+    "vehicle_cng": "সিএনজি",
+    "vehicle_car_compact": "কার কম্প্যাক্ট",
+    "vehicle_car_economy": "কার ইকোনমি",
+    "vehicle_car_comfort": "কার কমফোর্ট",
+    "vehicle_car_premium": "কার প্রিমিয়াম",
+    "vehicle_car_xl": "কার এক্সএল"
   },
   "rides_list": {
     "rebook_title": "এই রাইডটি আবার বুক করবেন?",
@@ -814,7 +827,12 @@
     "edit": "সম্পাদনা",
     "delete_address": "ঠিকানা মুছে ফেলুন",
     "not_found": "এই ঠিকানাটি আর নেই",
-    "delete_failed": "এই ঠিকানা মুছে ফেলা যায়নি"
+    "delete_failed": "এই ঠিকানা মুছে ফেলা যায়নি",
+    "label_home": "বাসা",
+    "label_work": "কাজ",
+    "label_gym": "জিম",
+    "label_friend": "বন্ধু",
+    "label_other": "অন্যান্য"
   },
   "ride_tracking": {
     "cancel_ride_confirm": "এই রাইডটি বাতিল করবেন?",
@@ -879,7 +897,12 @@
     "a11y_retry": "ইমার্জেন্সি যোগাযোগ আবার লোড করুন",
     "empty_title": "কোনো ইমার্জেন্সি যোগাযোগ নেই",
     "empty_subtitle": "রাইডের সময় জানানোর জন্য একজনকে যোগ করুন",
-    "delete_failed": "পরিচিতজন মুছে ফেলা যায়নি"
+    "delete_failed": "পরিচিতজন মুছে ফেলা যায়নি",
+    "relationship_family": "পরিবার",
+    "relationship_friend": "বন্ধু",
+    "relationship_partner": "সঙ্গী",
+    "relationship_colleague": "সহকর্মী",
+    "relationship_other": "অন্যান্য"
   },
   "ride_detail": {
     "could_not_load": "এই রাইড লোড করা যায়নি",
@@ -990,7 +1013,19 @@
     "eta_min": "{{minutes}} মিনিট দূরে",
     "no_vehicles_route": "এই রুটে কোনো যানবাহন পাওয়া যায়নি",
     "set_route_to_see_fares": "ভাড়া দেখতে রুট নির্ধারণ করুন",
-    "confirm_ride": "রাইড নিশ্চিত করুন"
+    "confirm_ride": "রাইড নিশ্চিত করুন",
+    "category_bike": "বাইক",
+    "category_cng": "সিএনজি",
+    "category_car": "গাড়ি",
+    "vehicle_bike_basic": "বাইক বেসিক",
+    "vehicle_bike_standard": "বাইক স্ট্যান্ডার্ড",
+    "vehicle_bike_plus": "বাইক প্লাস",
+    "vehicle_cng": "সিএনজি",
+    "vehicle_car_compact": "কার কম্প্যাক্ট",
+    "vehicle_car_economy": "কার ইকোনমি",
+    "vehicle_car_comfort": "কার কমফোর্ট",
+    "vehicle_car_premium": "কার প্রিমিয়াম",
+    "vehicle_car_xl": "কার এক্সএল"
   },
   "referral": {
     "share_reward": "আপনার বন্ধু প্রথম রাইডে {{amount}} পাবেন — আপনিও পাবেন!",
@@ -1059,7 +1094,16 @@
     "select_vehicle": "{{name}} গাড়ি হিসেবে নির্বাচন করুন",
     "date_time": "তারিখ ও সময়",
     "a11y_schedule": "এই রাইডটি নির্ধারণ করুন",
-    "schedule_ride": "রাইড নির্ধারণ করুন"
+    "schedule_ride": "রাইড নির্ধারণ করুন",
+    "vehicle_bike_basic": "বাইক বেসিক",
+    "vehicle_bike_standard": "বাইক স্ট্যান্ডার্ড",
+    "vehicle_bike_plus": "বাইক প্লাস",
+    "vehicle_cng": "সিএনজি",
+    "vehicle_car_compact": "কার কম্প্যাক্ট",
+    "vehicle_car_economy": "কার ইকোনমি",
+    "vehicle_car_comfort": "কার কমফোর্ট",
+    "vehicle_car_premium": "কার প্রিমিয়াম",
+    "vehicle_car_xl": "কার এক্সএল"
   },
   "request_data": {
     "not_authenticated": "আপনি সাইন-ইন করেননি।",
@@ -1153,7 +1197,11 @@
     "describe_item": "জিনিসটির বিবরণ দিন",
     "placeholder": "যেমন: পেছনের সিটে কালো ছাতা",
     "submitting": "জমা দেওয়া হচ্ছে...",
-    "submit": "রিপোর্ট জমা দিন"
+    "submit": "রিপোর্ট জমা দিন",
+    "status_driver_confirmed": "ড্রাইভার নিশ্চিত করেছেন",
+    "status_arranged_return": "ফেরতের ব্যবস্থা হয়েছে",
+    "status_resolved": "সমাধান হয়েছে",
+    "status_unresolved": "সমাধান হয়নি"
   },
   "rider_wallet": {
     "active_passes": "সক্রিয় পাস",
@@ -1170,7 +1218,15 @@
     "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন",
     "top_up_wallet": "ওয়ালেটে টাকা যোগ করুন",
     "transactions": "লেনদেন",
-    "valid_until": "{{date}} পর্যন্ত বৈধ"
+    "valid_until": "{{date}} পর্যন্ত বৈধ",
+    "txn_referral_reward": "রেফারেল পুরস্কার",
+    "txn_ride_discount": "রাইড ছাড়",
+    "txn_upfront_tip": "অগ্রিম টিপ",
+    "txn_cashback_earned": "ক্যাশব্যাক অর্জিত",
+    "txn_cashback_redeemed": "ক্যাশব্যাক ব্যবহার",
+    "txn_cashback_expired": "ক্যাশব্যাকের মেয়াদ শেষ",
+    "txn_wallet_credit": "ওয়ালেট ক্রেডিট",
+    "txn_wallet_adjustment": "ওয়ালেট সমন্বয়"
   },
   "delete_account": {
     "not_authenticated": "আপনি সাইন-ইন করেননি।",
@@ -1185,7 +1241,11 @@
     "type_to_confirm": "নিশ্চিত করতে DELETE MY ACCOUNT লিখুন",
     "retry_a11y": "অ্যাকাউন্ট মুছে ফেলা আবার চেষ্টা করুন",
     "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন",
-    "cta": "আমার অ্যাকাউন্ট মুছুন"
+    "cta": "আমার অ্যাকাউন্ট মুছুন",
+    "item_name": "নাম",
+    "item_photo": "প্রোফাইল ছবি",
+    "item_addresses": "সংরক্ষিত ঠিকানা",
+    "item_ride_details": "রাইডের বিস্তারিত"
   },
   "personal_info": {
     "add_name": "আপনার নাম যোগ করুন",
@@ -1329,7 +1389,18 @@
     "trip_details": "ট্রিপের বিস্তারিত",
     "from": "থেকে",
     "to": "পর্যন্ত",
-    "destination": "গন্তব্য"
+    "destination": "গন্তব্য",
+    "status_pending": "অপেক্ষমাণ",
+    "status_dispatching": "ড্রাইভার খোঁজা হচ্ছে",
+    "status_matched": "ড্রাইভার পাওয়া গেছে",
+    "status_driver_arriving": "ড্রাইভার পথে আছেন",
+    "status_driver_arrived": "ড্রাইভার পৌঁছেছেন",
+    "status_in_progress": "চলমান",
+    "status_completed": "সম্পন্ন",
+    "status_cancelled": "বাতিল",
+    "status_expired": "মেয়াদোত্তীর্ণ",
+    "status_no_drivers": "কোনো ড্রাইভার পাওয়া যায়নি",
+    "status_scheduled": "নির্ধারিত"
   },
   "driver_info": {
     "title": "ড্রাইভার",
@@ -1362,7 +1433,15 @@
     "load_failed": "নোটিফিকেশন লোড করা যায়নি",
     "pull_to_retry": "আবার চেষ্টা করতে নিচে টানুন",
     "using_sample_data": "নমুনা ডেটা দেখানো হচ্ছে",
-    "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন"
+    "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন",
+    "sample_promo_title": "এই সপ্তাহান্তে ছাড়",
+    "sample_promo_body": "শুধু এই সপ্তাহান্তে আপনার পরের তিনটি রাইডে ২০% ছাড় উপভোগ করুন।",
+    "sample_trip_title": "ট্রিপের রিমাইন্ডার",
+    "sample_trip_body": "আগামীকাল সকালে আপনার একটি নির্ধারিত রাইড রয়েছে।",
+    "sample_payment_title": "পেমেন্ট গৃহীত হয়েছে",
+    "sample_payment_body": "আপনার ২০০ টাকার ওয়ালেট টপ-আপ সফল হয়েছে।",
+    "sample_system_title": "অ্যাপ হালনাগাদ রাখুন",
+    "sample_system_body": "সেরা অভিজ্ঞতার জন্য সর্বশেষ সংস্করণে আপডেট করুন।"
   },
   "notifications_screen": {
     "alert_types": "সতর্কতার ধরন",
@@ -1371,7 +1450,12 @@
     "save": "সংরক্ষণ",
     "save_failed": "পছন্দগুলো সংরক্ষণ করা যায়নি",
     "saved": "পছন্দগুলো সংরক্ষিত হয়েছে",
-    "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন"
+    "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন",
+    "ride_updates": "রাইডের আপডেট",
+    "promo_offers": "প্রোমো অফার",
+    "service_alerts": "সার্ভিস সতর্কতা",
+    "email_notifications": "ইমেইল বিজ্ঞপ্তি",
+    "sms_notifications": "এসএমএস বিজ্ঞপ্তি"
   },
   "ride_details_scheduled": {
     "title": "নির্ধারিত রাইড",
@@ -1408,7 +1492,10 @@
     "title": "চেহারা",
     "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন",
     "theme": "থিম",
-    "hint": "লাইট, ডার্ক বা সিস্টেমের সেটিং অনুসরণ করুন।"
+    "hint": "লাইট, ডার্ক বা সিস্টেমের সেটিং অনুসরণ করুন।",
+    "light": "লাইট",
+    "dark": "ডার্ক",
+    "system": "সিস্টেম"
   },
   "autocomplete": {
     "title": "ঠিকানা খুঁজুন",
