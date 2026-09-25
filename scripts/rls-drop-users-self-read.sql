@@ -18,17 +18,23 @@
 -- After this drop, the posture is: RLS enabled + forced on all 125 public tables,
 -- zero policies = full default-deny for anon/authenticated keypaths.
 --
--- EXECUTE (transactional; the SELECT is a post-condition check):
+-- EXECUTE (transactional): drops the whitelist policy AND its paired kept grant
+-- (authenticated SELECT on public.users — installed by ISSUE-80 Phase B) so the
+-- end state is zero policies AND zero anon/authenticated grants:
 BEGIN;
 DROP POLICY IF EXISTS users_self_read ON public.users;
--- Post-condition: must return 0 rows
-SELECT policyname FROM pg_policies WHERE schemaname = 'public';
+REVOKE SELECT ON public.users FROM authenticated;
 COMMIT;
 
+-- Post-condition: must return 0 rows
+SELECT policyname FROM pg_policies WHERE schemaname = 'public';
+
 -- VERIFY POSTURE (read-only, after commit):
---   SELECT count(*) FROM pg_tables
---     WHERE schemaname='public' AND rowsecurity AND relforcerowsecurity;   -- expect 125
---   SELECT count(*) FROM pg_policies WHERE schemaname='public';            -- expect 0
+--   SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+--     WHERE n.nspname='public' AND c.relrowsecurity AND c.relforcerowsecurity;  -- expect 125
+--   SELECT count(*) FROM pg_policies WHERE schemaname='public';                 -- expect 0
+--   SELECT count(*) FROM information_schema.role_table_grants
+--     WHERE table_schema='public' AND grantee IN ('anon','authenticated');      -- expect 0
 
 -- ROLLBACK (restore the whitelist policy exactly as installed by rls-enable-force.sql;
 -- auth_uid is varchar(128) hence the ::text cast — do not "simplify" it away):
