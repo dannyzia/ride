@@ -673,6 +673,22 @@ const ConfirmRidePage = () => {
                 setScheduledAt(null);
               }}
               initialDate={scheduledAt ? new Date(scheduledAt) : null}
+              estimateContext={
+                userLatitude != null &&
+                userLongitude != null &&
+                destinationLatitude != null &&
+                destinationLongitude != null
+                  ? {
+                      pickup_lat: userLatitude,
+                      pickup_lng: userLongitude,
+                      dropoff_lat: destinationLatitude,
+                      dropoff_lng: destinationLongitude,
+                      ...(selectedVehicleType
+                        ? { vehicle_type: selectedVehicleType }
+                        : {}),
+                    }
+                  : undefined
+              }
             />
           </View>
         )}

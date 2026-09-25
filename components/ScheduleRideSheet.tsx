@@ -12,6 +12,7 @@ import { useIsDark } from "@/lib/useAppearance";
 import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { toUtcIso } from "@/lib/time";
+import { extractQuoteTaka } from "@/lib/estimateQuote";
 import DatePicker from "@/components/DatePicker";
 import TimePicker from "@/components/TimePicker";
 
@@ -43,6 +44,18 @@ interface ScheduleRideSheetProps {
   onClose: () => void;
   /** Optional pre-selected date (e.g. from a previous selection). */
   initialDate?: Date | null;
+  /**
+   * Plan-05 W1: when provided, the sheet fetches the fare quote from the
+   * EXISTING /api/ride/estimate endpoint for the selected time's preview —
+   * no client-side fare math. Omit and the sheet behaves exactly as before.
+   */
+  estimateContext?: {
+    pickup_lat: number;
+    pickup_lng: number;
+    dropoff_lat: number;
+    dropoff_lng: number;
+    vehicle_type?: string;
+  };
 }
 
 /** Asia/Dhaka display helper — always Dhaka, never device tz. */
@@ -71,6 +84,7 @@ export default function ScheduleRideSheet({
   onConfirm,
   onClose,
   initialDate = null,
+  estimateContext,
 }: ScheduleRideSheetProps) {
   const isDark = useIsDark();
 
@@ -87,6 +101,10 @@ export default function ScheduleRideSheet({
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
   const [overlapError, setOverlapError] = useState<string | null>(null);
   const [checkingOverlap, setCheckingOverlap] = useState(false);
+  // Plan-05 W1: advisory pre-booking quote (taka) from the estimate endpoint.
+  const [quoteTaka, setQuoteTaka] = useState<number | null>(null);
+  const [fetchingQuote, setFetchingQuote] = useState(false);
+  const quoteSeqRef = React.useRef(0);
 
   // Combined date+time
   const combined: Date | null = useMemo(() => {
@@ -165,6 +183,60 @@ export default function ScheduleRideSheet({
     }
   }, [combined, isValid, checkOverlap]);
 
+  // Plan-05 W1: advisory pre-booking quote. Reuses the estimate endpoint's
+  // flat response (estimates[].total_bdt is integer paisa → /100 for taka
+  // display). Best-effort: fetch errors leave the quote hidden, never block
+  // confirmation. Sequence ref guards against stale responses.
+  const fetchQuote = useCallback(async (seq: number) => {
+    if (!estimateContext) return;
+    setFetchingQuote(true);
+    setQuoteTaka(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      const res = await fetch(`${API_URL}/api/ride/estimate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          pickup_lat: estimateContext.pickup_lat,
+          pickup_lng: estimateContext.pickup_lng,
+          dropoff_lat: estimateContext.dropoff_lat,
+          dropoff_lng: estimateContext.dropoff_lng,
+          ...(estimateContext.vehicle_type
+            ? { vehicle_type: estimateContext.vehicle_type }
+            : {}),
+        }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (seq !== quoteSeqRef.current) return; // stale response
+      setQuoteTaka(extractQuoteTaka(data, estimateContext.vehicle_type));
+    } catch {
+      // Network error — advisory only; leave quote hidden
+    } finally {
+      if (seq === quoteSeqRef.current) setFetchingQuote(false);
+    }
+  }, [estimateContext]);
+
+  React.useEffect(() => {
+    if (!estimateContext || !combined || !isValid) {
+      setQuoteTaka(null);
+      return;
+    }
+    const seq = ++quoteSeqRef.current;
+    const debounce = setTimeout(() => {
+      void fetchQuote(seq);
+    }, 500);
+    return () => clearTimeout(debounce);
+  }, [estimateContext, combined, isValid, fetchQuote]);
+
   const handleConfirm = () => {
     if (!combined || !isValid || overlapError) return;
     onConfirm(toUtcIso(combined));
@@ -229,12 +301,29 @@ export default function ScheduleRideSheet({
       {combined && isValid && (
         <View style={[styles.preview, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}30` }]}>
           <Ionicons name="time-outline" size={16} color={colors.primary} />
-          <Text style={[styles.previewText, { color: textPrimary }]}>
-            Pickup at{" "}
-            <Text style={{ fontFamily: "Jakarta-SemiBold" }}>
-              {formatDhaka(combined)}
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.previewText, { color: textPrimary }]}>
+              Pickup at{" "}
+              <Text style={{ fontFamily: "Jakarta-SemiBold" }}>
+                {formatDhaka(combined)}
+              </Text>
             </Text>
-          </Text>
+            {/* Plan-05 W1: advisory pre-booking fare quote — hidden when the
+                estimate fetch fails or no context was provided. */}
+            {fetchingQuote && (
+              <Text style={[styles.quoteText, { color: textSecondary }]}>
+                Checking fare…
+              </Text>
+            )}
+            {!fetchingQuote && quoteTaka != null && (
+              <Text style={[styles.quoteText, { color: textPrimary }]}>
+                Estimated Fare{" "}
+                <Text style={{ fontFamily: "Jakarta-SemiBold", color: colors.primary }}>
+                  ৳{quoteTaka.toLocaleString("en-IN")}
+                </Text>
+              </Text>
+            )}
+          </View>
         </View>
       )}
 
@@ -355,6 +444,11 @@ const styles = StyleSheet.create({
     fontFamily: "Jakarta-Regular",
     fontSize: 13,
     flex: 1,
+  },
+  quoteText: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 12,
+    marginTop: 4,
   },
   errorBox: {
     flexDirection: "row",

@@ -259,6 +259,17 @@ export default function ScheduleRide() {
           onConfirm={handleSelectTime}
           onClose={() => router.back()}
           initialDate={scheduledAt}
+          estimateContext={
+            hasPickup && hasDropoff
+              ? {
+                  pickup_lat: userLatitude!,
+                  pickup_lng: userLongitude!,
+                  dropoff_lat: destinationLatitude!,
+                  dropoff_lng: destinationLongitude!,
+                  vehicle_type: vehicleType,
+                }
+              : undefined
+          }
         />
 
         {error && (
