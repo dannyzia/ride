@@ -433,7 +433,7 @@
     "drivers_nearby_eta": " · ~{{minutes}} মিনিট দূরে",
     "no_vehicles": "কোনো যানবাহন পাওয়া যায়নি",
     "no_driver_found": "এই মুহূর্তে কোনো ড্রাইভার পাওয়া যাচ্ছে না। অল্প কিছুক্ষণ পর আবার চেষ্টা করুন।",
-    "min_pickup": "সর্বনিম্ন পিকআপ",
+    "min_pickup": "{{minutes}} মিনিট পিকআপ",
     "min_trip": "{{minutes}} মিনিট ট্রিপ",
     "km": "{{distance}} কিমি",
     "seats": "{{seats}} আসন",
@@ -684,7 +684,7 @@
   "chat": {
     "title": "{{name}} ১২ সাথে চ্যাট",
     "failed_to_load": "চ্যাট লোড করতে ব্যর্থ",
-    "chat_with": "চ্যাট করুন"
+    "chat_with": "{{name}}-এর সাথে চ্যাট করুন"
   },
   "canceled": {
     "ride_canceled": "রাইড বাতিল হয়েছে",
@@ -1220,7 +1220,7 @@
     "pull_to_retry": "আবার চেষ্টা করতে নিচে টানুন",
     "ride_pass": "রাইড পাস",
     "rides_used": "{{count}}টি রাইড ব্যবহৃত",
-    "rides_used_of": "{{total}}টির মধ্যে {{used}}টি রাইড ব্যবহৃত",
+    "rides_used_of": "{{max}}টির মধ্যে {{used}}টি রাইড ব্যবহৃত",
     "show_all_count": "সব দেখুন ({{count}})",
     "show_all_transactions": "সব লেনদেন দেখুন",
     "toggle_theme": "লাইট বা ডার্ক থিম পরিবর্তন করুন",
@@ -1274,8 +1274,8 @@
     "done": "সম্পন্ন",
     "done_a11y": "নিশ্চিতকরণ বন্ধ করুন",
     "failed_to_submit": "আপনার রিপোর্ট জমা দেওয়া যায়নি",
-    "issue_type_a11y": "সমস্যার ধরন নির্বাচন করুন",
-    "more_chars_needed": "আরও কিছু বিবরণ দিন (কমপক্ষে ১০ অক্ষর)",
+    "issue_type_a11y": "সমস্যার ধরন নির্বাচন করুন, বর্তমানে {{type}}",
+    "more_chars_needed": "আরও কিছু বিবরণ দিন (কমপক্ষে {{count}} অক্ষর)",
     "network_error": "নেটওয়ার্ক সমস্যা — অনুগ্রহ করে আবার চেষ্টা করুন।",
     "not_authenticated": "আপনি সাইন-ইন করেননি।",
     "regarding_recent_ride": "আপনার সাম্প্রতিক রাইড সম্পর্কে",
@@ -1322,7 +1322,7 @@
     "reward_amount": "৳{{amount}} আপনার ওয়ালেটে যোগ হয়েছে।",
     "failed": "রিওয়ার্ড রিডিম করা যায়নি",
     "redeem_confirm_title": "এই রিওয়ার্ড রিডিম করবেন?",
-    "redeem_confirm_message": "আপনার পয়েন্ট ওয়ালেট ক্রেডিটে রূপান্তর হবে।"
+    "redeem_confirm_message": "{{title}} রিডিম করতে {{points}} পয়েন্ট খরচ হবে। আপনার পয়েন্ট ওয়ালেট ক্রেডিটে রূপান্তর হবে।"
   },
   "activity_canceled": {
     "title": "বাতিল রাইড",
@@ -1333,9 +1333,9 @@
   },
   "activity_completed": {
     "ride": "রাইড",
-    "pickup": "পিকআপ",
-    "destination": "গন্তব্য",
-    "fare": "ভাড়া",
+    "pickup": "পিকআপ: {{address}}",
+    "destination": "গন্তব্য: {{address}}",
+    "fare": "ভাড়া: {{amount}}",
     "no_rides": "কোনো সম্পন্ন রাইড নেই",
     "empty_desc": "আপনার সম্পন্ন রাইডগুলো এখানে দেখা যাবে।",
     "view_receipt": "রিসিট দেখুন"
@@ -1343,9 +1343,9 @@
   "activity_scheduled": {
     "title": "নির্ধারিত রাইড",
     "ride": "রাইড",
-    "pickup": "পিকআপ",
-    "destination": "গন্তব্য",
-    "fare": "ভাড়া",
+    "pickup": "পিকআপ: {{address}}",
+    "destination": "গন্তব্য: {{address}}",
+    "fare": "ভাড়া: {{amount}}",
     "no_rides": "কোনো নির্ধারিত রাইড নেই",
     "empty_desc": "আপনি নির্ধারণ করা রাইডগুলো এখানে দেখা যাবে।",
     "view_details": "বিস্তারিত দেখুন"
@@ -1353,12 +1353,12 @@
   "rider_activity": {
     "ride": "রাইড",
     "ongoing": "চলমান",
-    "pickup_label": "পিকআপ",
-    "destination_label": "গন্তব্য",
-    "fare_label": "ভাড়া",
+    "pickup_label": "পিকআপ: {{address}}",
+    "destination_label": "গন্তব্য: {{address}}",
+    "fare_label": "ভাড়া: {{amount}}",
     "chat": "চ্যাট",
     "driver_info": "ড্রাইভারের তথ্য",
-    "min_away": "{{count}} মিনিট দূরে",
+    "min_away": "{{minutes}} মিনিট দূরে",
     "no_active_rides": "কোনো চলমান রাইড নেই",
     "no_active_rides_sub": "রাইড বুক করলে সেটি এখানে দেখা যাবে।",
     "driver": "ড্রাইভার"
@@ -1367,7 +1367,7 @@
     "title": "রাইড পাস",
     "active_pass": "সক্রিয় পাস",
     "rides_of": "{{total}}টির মধ্যে {{used}}টি রাইড ব্যবহৃত",
-    "rides_unlimited": "আনলিমিটেড রাইড",
+    "rides_unlimited": "আনলিমিটেড রাইড · {{used}}টি ব্যবহৃত",
     "expires": "মেয়াদ শেষ {{date}}",
     "discount_days": "{{percent}}% ছাড় · {{days}} দিন বৈধ",
     "rides_suffix": " · সর্বোচ্চ {{count}}টি রাইড",
@@ -1380,9 +1380,9 @@
   "share_receipt": {
     "title": "রিসিট",
     "ride": "রাইড",
-    "from": "থেকে",
-    "to": "পর্যন্ত",
-    "fare": "ভাড়া",
+    "from": "থেকে: {{address}}",
+    "to": "পর্যন্ত: {{address}}",
+    "fare": "ভাড়া: {{amount}}",
     "no_receipts": "এখনো কোনো রিসিট নেই",
     "empty_desc": "সম্পন্ন রাইডের রিসিটগুলো এখানে দেখা যাবে।",
     "download": "ডাউনলোড",
@@ -1395,8 +1395,8 @@
     "trip_not_found": "ট্রিপ পাওয়া যায়নি",
     "failed_to_load_trip": "ট্রিপটি লোড করা যায়নি",
     "trip_details": "ট্রিপের বিস্তারিত",
-    "from": "থেকে",
-    "to": "পর্যন্ত",
+    "from": "থেকে: {{address}}",
+    "to": "পর্যন্ত: {{address}}",
     "destination": "গন্তব্য",
     "status_pending": "অপেক্ষমাণ",
     "status_dispatching": "ড্রাইভার খোঁজা হচ্ছে",
@@ -1426,10 +1426,10 @@
     "call_support": "সহায়তায় কল করুন"
   },
   "history_detail": {
-    "driver": "ড্রাইভার",
-    "from": "থেকে",
-    "to": "পর্যন্ত",
-    "distance_duration": "দূরত্ব ও সময়",
+    "driver": "ড্রাইভার: {{name}}",
+    "from": "থেকে: {{address}}",
+    "to": "পর্যন্ত: {{address}}",
+    "distance_duration": "দূরত্ব ও সময়: {{km}} কিমি · {{minutes}} মিনিট",
     "view_receipt": "রিসিট দেখুন",
     "not_found": "রাইড পাওয়া যায়নি",
     "failed_to_load": "রাইডটি লোড করা যায়নি"
@@ -1468,9 +1468,9 @@
   "ride_details_scheduled": {
     "title": "নির্ধারিত রাইড",
     "ride": "রাইড",
-    "pickup_label": "পিকআপ",
-    "destination_label": "গন্তব্য",
-    "fare_label": "ভাড়া",
+    "pickup_label": "পিকআপ: {{address}}",
+    "destination_label": "গন্তব্য: {{address}}",
+    "fare_label": "ভাড়া: {{amount}}",
     "ride_not_found": "রাইড পাওয়া যায়নি",
     "failed_to_load": "রাইডটি লোড করা যায়নি"
   },
@@ -1478,7 +1478,7 @@
     "title": "রাইড নির্ধারিত হয়েছে!",
     "subtitle": "নির্ধারিত সময়ে আপনার ড্রাইভার পৌঁছে যাবেন।",
     "pickup_at": "পিকআপ {{time}}-এ",
-    "reference": "রেফারেন্স: {{ref}}",
+    "reference": "রেফারেন্স: {{reference}}",
     "view_schedule": "সময়সূচি দেখুন",
     "a11y_view_schedule": "আপনার নির্ধারিত রাইড দেখুন",
     "a11y_back_to_home": "হোমে ফিরে যান",
@@ -1576,7 +1576,7 @@
     "payment": "পেমেন্ট",
     "amount": "পরিমাণ",
     "redirect_notice": "নিরাপদে পেমেন্ট সম্পন্ন করতে আপনাকে রিডাইরেক্ট করা হবে।",
-    "pay": "পরিশোধ করুন"
+    "pay": "পরিশোধ করুন {{amount}}"
   },
   "top_up_settings": {
     "enter_amount": "পরিমাণ লিখুন",
@@ -1591,7 +1591,7 @@
   "user_arrived": {
     "title": "আপনার ড্রাইভার পৌঁছে গেছেন",
     "your_driver": "আপনার ড্রাইভার",
-    "subtitle": "অনুগ্রহ করে এখনই পিকআপ পয়েন্টে চলে আসুন।",
+    "subtitle": "{{name}} পৌঁছে গেছেন। অনুগ্রহ করে এখনই পিকআপ পয়েন্টে চলে আসুন।",
     "rate_your_driver": "আপনার ড্রাইভারকে রেট করুন",
     "skip": "এড়িয়ে যান"
   }

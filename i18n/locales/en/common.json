@@ -433,7 +433,7 @@
     "drivers_nearby_eta": " · ~{{minutes}} min away",
     "no_vehicles": "No vehicles available",
     "no_driver_found": "No drivers are available right now. Please try again shortly.",
-    "min_pickup": "min pickup",
+    "min_pickup": "{{minutes}} min pickup",
     "min_trip": "{{minutes}} min trip",
     "km": "{{distance}} km",
     "seats": "{{seats}} seats",
@@ -684,7 +684,7 @@
   "chat": {
     "title": "Chat with {{name}}",
     "failed_to_load": "Failed to load chat",
-    "chat_with": "Chat with"
+    "chat_with": "Chat with {{name}}"
   },
   "canceled": {
     "ride_canceled": "Ride canceled",
@@ -1220,7 +1220,7 @@
     "pull_to_retry": "Pull down to retry",
     "ride_pass": "Ride Pass",
     "rides_used": "{{count}} rides used",
-    "rides_used_of": "{{used}} of {{total}} rides used",
+    "rides_used_of": "{{used}} of {{max}} rides used",
     "show_all_count": "Show all ({{count}})",
     "show_all_transactions": "Show All Transactions",
     "toggle_theme": "Toggle light or dark theme",
@@ -1274,8 +1274,8 @@
     "done": "Done",
     "done_a11y": "Close the confirmation",
     "failed_to_submit": "Couldn't submit your report",
-    "issue_type_a11y": "Select the issue type",
-    "more_chars_needed": "Please add a few more details (at least 10 characters)",
+    "issue_type_a11y": "Select the issue type, currently {{type}}",
+    "more_chars_needed": "Please add a few more details (at least {{count}} characters)",
     "network_error": "Network error — please try again.",
     "not_authenticated": "You are not signed in.",
     "regarding_recent_ride": "Regarding your recent ride",
@@ -1322,7 +1322,7 @@
     "reward_amount": "৳{{amount}} has been added to your wallet.",
     "failed": "Couldn't redeem the reward",
     "redeem_confirm_title": "Redeem this reward?",
-    "redeem_confirm_message": "Your points will be exchanged for wallet credit."
+    "redeem_confirm_message": "Redeem {{title}} for {{points}} points? Your points will be exchanged for wallet credit."
   },
   "activity_canceled": {
     "title": "Canceled Rides",
@@ -1333,9 +1333,9 @@
   },
   "activity_completed": {
     "ride": "Ride",
-    "pickup": "Pickup",
-    "destination": "Destination",
-    "fare": "Fare",
+    "pickup": "Pickup: {{address}}",
+    "destination": "Destination: {{address}}",
+    "fare": "Fare: {{amount}}",
     "no_rides": "No completed rides",
     "empty_desc": "Your completed rides will show up here.",
     "view_receipt": "View Receipt"
@@ -1343,9 +1343,9 @@
   "activity_scheduled": {
     "title": "Scheduled Rides",
     "ride": "Ride",
-    "pickup": "Pickup",
-    "destination": "Destination",
-    "fare": "Fare",
+    "pickup": "Pickup: {{address}}",
+    "destination": "Destination: {{address}}",
+    "fare": "Fare: {{amount}}",
     "no_rides": "No scheduled rides",
     "empty_desc": "Rides you schedule will show up here.",
     "view_details": "View Details"
@@ -1353,12 +1353,12 @@
   "rider_activity": {
     "ride": "Ride",
     "ongoing": "Ongoing",
-    "pickup_label": "Pickup",
-    "destination_label": "Destination",
-    "fare_label": "Fare",
+    "pickup_label": "Pickup: {{address}}",
+    "destination_label": "Destination: {{address}}",
+    "fare_label": "Fare: {{amount}}",
     "chat": "Chat",
     "driver_info": "Driver Info",
-    "min_away": "{{count}} min away",
+    "min_away": "{{minutes}} min away",
     "no_active_rides": "No active rides",
     "no_active_rides_sub": "When you book a ride, it will show up here.",
     "driver": "Driver"
@@ -1367,7 +1367,7 @@
     "title": "Ride Passes",
     "active_pass": "Active Pass",
     "rides_of": "{{used}} of {{total}} rides used",
-    "rides_unlimited": "Unlimited rides",
+    "rides_unlimited": "Unlimited rides · {{used}} used",
     "expires": "Expires {{date}}",
     "discount_days": "{{percent}}% off · valid {{days}} days",
     "rides_suffix": " · up to {{count}} rides",
@@ -1380,9 +1380,9 @@
   "share_receipt": {
     "title": "Receipts",
     "ride": "Ride",
-    "from": "From",
-    "to": "To",
-    "fare": "Fare",
+    "from": "From: {{address}}",
+    "to": "To: {{address}}",
+    "fare": "Fare: {{amount}}",
     "no_receipts": "No receipts yet",
     "empty_desc": "Receipts from your completed rides appear here.",
     "download": "Download",
@@ -1395,8 +1395,8 @@
     "trip_not_found": "Trip not found",
     "failed_to_load_trip": "Couldn't load the trip",
     "trip_details": "Trip Details",
-    "from": "From",
-    "to": "To",
+    "from": "From: {{address}}",
+    "to": "To: {{address}}",
     "destination": "Destination",
     "status_pending": "Pending",
     "status_dispatching": "Finding a driver",
@@ -1426,10 +1426,10 @@
     "call_support": "Call Support"
   },
   "history_detail": {
-    "driver": "Driver",
-    "from": "From",
-    "to": "To",
-    "distance_duration": "Distance & Duration",
+    "driver": "Driver: {{name}}",
+    "from": "From: {{address}}",
+    "to": "To: {{address}}",
+    "distance_duration": "Distance & Duration: {{km}} km · {{minutes}} min",
     "view_receipt": "View Receipt",
     "not_found": "Ride not found",
     "failed_to_load": "Couldn't load the ride"
@@ -1468,9 +1468,9 @@
   "ride_details_scheduled": {
     "title": "Scheduled Ride",
     "ride": "Ride",
-    "pickup_label": "Pickup",
-    "destination_label": "Destination",
-    "fare_label": "Fare",
+    "pickup_label": "Pickup: {{address}}",
+    "destination_label": "Destination: {{address}}",
+    "fare_label": "Fare: {{amount}}",
     "ride_not_found": "Ride not found",
     "failed_to_load": "Couldn't load the ride"
   },
@@ -1478,7 +1478,7 @@
     "title": "Ride Scheduled!",
     "subtitle": "Your driver will arrive at the scheduled time.",
     "pickup_at": "Pickup at {{time}}",
-    "reference": "Reference: {{ref}}",
+    "reference": "Reference: {{reference}}",
     "view_schedule": "View Schedule",
     "a11y_view_schedule": "View your scheduled ride",
     "a11y_back_to_home": "Back to home",
@@ -1576,7 +1576,7 @@
     "payment": "Payment",
     "amount": "Amount",
     "redirect_notice": "You'll be redirected to complete the payment securely.",
-    "pay": "Pay"
+    "pay": "Pay {{amount}}"
   },
   "top_up_settings": {
     "enter_amount": "Enter Amount",
@@ -1591,7 +1591,7 @@
   "user_arrived": {
     "title": "Your driver has arrived",
     "your_driver": "Your Driver",
-    "subtitle": "Please head to the pickup point now.",
+    "subtitle": "{{name}} has arrived. Please head to the pickup point now.",
     "rate_your_driver": "Rate your driver",
     "skip": "Skip"
   }

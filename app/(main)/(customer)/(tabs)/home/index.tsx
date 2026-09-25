@@ -1290,12 +1290,7 @@ useEffect(() => {
           <ActivityIndicator size="small" color={colors.white} />
         ) : (
           <Text style={styles.callBtnText}>
-            {t('rider_home.call_for_ride', {
-              type: vehicleDef?.display_en || "Ride",
-              amount: selectedEstimate
-                ? formatBDT(selectedEstimate.total_bdt)
-                : "—",
-            })}
+            {t('rider_home.call_for_ride')}
           </Text>
         )}
       </TouchableOpacity>
