@@ -5,8 +5,10 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCustomer } from "@/store";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 export default function HomeRasterCar() {
+  const { t } = useTranslation();
   const { userLatitude, userLongitude } = useCustomer();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
@@ -30,7 +32,7 @@ export default function HomeRasterCar() {
       <View className="flex-1 items-center justify-center">
         <Ionicons name="map" size={40} color={textSecondary} />
         <Text className="text-[18px] font-JakartaBold mt-2" style={{ color: textPrimary }}>
-          Your location
+          {t("home_raster.your_location")}
         </Text>
         <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>
           {userLatitude?.toFixed(4) ?? "—"}, {userLongitude?.toFixed(4) ?? "—"}
@@ -42,7 +44,8 @@ export default function HomeRasterCar() {
           style={{ backgroundColor: colors.primary }}
           onPress={() => router.push("/(main)/(customer)/autocomplete")}
         >
-          <Text className="text-[18px] font-JakartaBold text-goWhite">Where to?</Text>
+          <Text className="text-[18px] font-JakartaBold text-goWhite">          {t("home_raster.where_to")}
+        </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

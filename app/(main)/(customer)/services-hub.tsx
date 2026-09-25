@@ -5,23 +5,26 @@ import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 import { useCustomer } from "@/store";
 import { ensureRiderSocket } from "@/lib/riderSocket";
 import { VEHICLE_CATEGORIES } from "@/lib/vehicleTypes";
 
-function getGreeting(): string {
+// Greeting bucket by hour; the string itself is resolved through i18n.
+function getGreetingKey(): string {
   const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return "Good Morning";
-  if (hour >= 12 && hour < 17) return "Good Afternoon";
-  if (hour >= 17 && hour < 21) return "Good Evening";
-  return "Good Night";
+  if (hour >= 5 && hour < 12) return "services_hub.good_morning";
+  if (hour >= 12 && hour < 17) return "services_hub.good_afternoon";
+  if (hour >= 17 && hour < 21) return "services_hub.good_evening";
+  return "services_hub.good_night";
 }
 
 export default function ServicesHub() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const { language, setTheme } = useAppearance();
   const { userAddress } = useCustomer();
-  const [greeting, setGreeting] = useState("Good Morning");
+  const [greetingKey, setGreetingKey] = useState("services_hub.good_morning");
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
@@ -29,7 +32,7 @@ export default function ServicesHub() {
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   useEffect(() => {
-    setGreeting(getGreeting());
+    setGreetingKey(getGreetingKey());
     // L8: open the rider session's WS singleton here (the driver side opens
     // its singleton on driver home). Ride screens subscribe per ride.
     ensureRiderSocket();
@@ -55,7 +58,7 @@ export default function ServicesHub() {
             className="text-[28px] font-JakartaBold"
             style={{ color: textPrimary }}
           >
-            {greeting}
+            {t(greetingKey)}
           </Text>
           <View className="flex-row items-center mt-1">
             <Ionicons name="location" size={16} color={colors.primary} />
@@ -63,7 +66,7 @@ export default function ServicesHub() {
               className="text-sm font-Jakarta ml-1"
               style={{ color: textSecondary }}
             >
-              {userAddress || "Current Location"}
+              {userAddress || t("services_hub.current_location")}
             </Text>
           </View>
         </View>
@@ -86,7 +89,7 @@ export default function ServicesHub() {
           className="text-lg font-JakartaSemiBold mb-4"
           style={{ color: textPrimary }}
         >
-          What service do you need?
+          {t("services_hub.what_service")}
         </Text>
 
         <View className="flex-row flex-wrap gap-3">
@@ -145,7 +148,7 @@ export default function ServicesHub() {
           className="text-lg font-JakartaSemiBold mt-6 mb-4"
           style={{ color: textPrimary }}
         >
-          Marketplace
+          {t("services_hub.marketplace")}
         </Text>
         <View className="flex-row flex-wrap gap-3">
           <TouchableOpacity
@@ -169,13 +172,13 @@ export default function ServicesHub() {
               className="text-base font-JakartaBold"
               style={{ color: textPrimary }}
             >
-              Shops
+              {t("services_hub.shops")}
             </Text>
             <Text
               className="text-xs font-Jakarta mt-1 text-center"
               style={{ color: textSecondary }}
             >
-              Browse & order
+              {t("services_hub.shops_subtitle")}
             </Text>
           </TouchableOpacity>
 
@@ -200,13 +203,13 @@ export default function ServicesHub() {
               className="text-base font-JakartaBold"
               style={{ color: textPrimary }}
             >
-              Rental
+              {t("services_hub.rental")}
             </Text>
             <Text
               className="text-xs font-Jakarta mt-1 text-center"
               style={{ color: textSecondary }}
             >
-              Live bidding
+              {t("services_hub.rental_subtitle")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -234,13 +237,13 @@ export default function ServicesHub() {
               className="text-base font-JakartaBold"
               style={{ color: textPrimary }}
             >
-              Delivery
+              {t("services_hub.delivery")}
             </Text>
             <Text
               className="text-xs font-Jakarta mt-1 text-center"
               style={{ color: textSecondary }}
             >
-              Send a package
+              {t("services_hub.delivery_subtitle")}
             </Text>
           </TouchableOpacity>
 
@@ -256,7 +259,7 @@ export default function ServicesHub() {
             onPress={() => router.push("/(main)/(customer)/(ambulance)/emergency")}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel="Emergency ambulance"
+            accessibilityLabel={t("services_hub.a11y_emergency_ambulance")}
           >
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-3"
@@ -268,13 +271,13 @@ export default function ServicesHub() {
               className="text-base font-JakartaBold"
               style={{ color: textPrimary }}
             >
-              Ambulance
+              {t("services_hub.ambulance")}
             </Text>
             <Text
               className="text-xs font-Jakarta mt-1 text-center"
               style={{ color: textSecondary }}
             >
-              Emergency & scheduled
+              {t("services_hub.ambulance_subtitle")}
             </Text>
           </TouchableOpacity>
         </View>
