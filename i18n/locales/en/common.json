@@ -4,6 +4,7 @@
   },
   "common": {
     "back": "Back",
+    "done": "Done",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "save": "Save",

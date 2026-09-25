@@ -26,14 +26,14 @@ export default function ChangePassword() {
   const [success, setSuccess] = useState(false);
 
   const handleChange = async () => {
-    if (newPassword.length < 6) { setError("New password must be at least 6 characters"); return; }
-    if (newPassword !== confirmPassword) { setError("Passwords do not match"); return; }
+    if (newPassword.length < 6) { setError(t("change_password.err_min_length")); return; }
+    if (newPassword !== confirmPassword) { setError(t("change_password.err_mismatch")); return; }
     setLoading(true); setError("");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user?.phone) {
-        setError("Cannot change password: no phone on account. Please use OTP login.");
+        setError(t("change_password.err_no_phone"));
         setLoading(false);
         return;
       }
@@ -42,7 +42,7 @@ export default function ChangePassword() {
         password: currentPassword,
       });
       if (signInError) {
-        setError("Current password is incorrect");
+        setError(t("change_password.err_wrong_current"));
         setLoading(false);
         return;
       }
@@ -50,7 +50,7 @@ export default function ChangePassword() {
       if (updateError) { setError(updateError.message); return; }
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
+      setError(err instanceof Error ? err.message : t("change_password.err_network"));
       logger.error("Password change failed", err);
     } finally {
       setLoading(false);
@@ -61,12 +61,12 @@ export default function ChangePassword() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center px-[24px]" style={{ backgroundColor: bg }}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
-        <Text className="text-[22px] font-JakartaBold tracking-tight text-goPrimary mb-4">Password Updated</Text>
+        <Text className="text-[22px] font-JakartaBold tracking-tight text-goPrimary mb-4">{t("change_password.password_updated_title")}</Text>
         <Text className="text-[15px] font-Jakarta text-center mb-8" style={{ color: textSecondary }}>
-          Your password has been changed successfully.
+          {t("change_password.password_updated_body")}
         </Text>
         <TouchableOpacity className="bg-goPrimary rounded-full px-[24px] py-[12px]" onPress={() => router.back()}>
-          <Text className="text-[16px] font-JakartaBold text-goWhite">Done</Text>
+          <Text className="text-[16px] font-JakartaBold text-goWhite">{t("common.done")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setTheme(isDark ? "light" : "dark")}
@@ -85,42 +85,42 @@ export default function ChangePassword() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
+          <Text className="text-[16px] font-Jakarta text-goPrimary">{t("common.back")}</Text>
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Change Password</Text>
+        <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t("change_password.title")}</Text>
         <View className="w-[50px]" />
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 24 }}>
         <View className="border rounded-[12px] p-[16px] mb-6" style={{ backgroundColor: surfaceBg, borderColor }}>
           <Text className="text-[14px] font-Jakarta leading-5" style={{ color: textSecondary }}>
-            You set a password during registration. You can change it here. If you use phone OTP login exclusively, you don&apos;t need a password.
+            {t("change_password.info_banner")}
           </Text>
         </View>
-        <Text className="text-[15px] font-JakartaBold mb-4" style={{ color: textPrimary }}>Current Password</Text>
+        <Text className="text-[15px] font-JakartaBold mb-4" style={{ color: textPrimary }}>{t("change_password.current_password")}</Text>
         <TextInput
           className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mb-4"
           style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
-          placeholder="Enter current password"
+          placeholder={t("change_password.current_placeholder")}
           placeholderTextColor={textSecondary}
           secureTextEntry
           value={currentPassword}
           onChangeText={setCurrentPassword}
         />
-        <Text className="text-[15px] font-JakartaBold mb-4" style={{ color: textPrimary }}>New Password</Text>
+        <Text className="text-[15px] font-JakartaBold mb-4" style={{ color: textPrimary }}>{t("change_password.new_password")}</Text>
         <TextInput
           className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mb-4"
           style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
-          placeholder="Min 6 characters"
+          placeholder={t("change_password.new_placeholder")}
           placeholderTextColor={textSecondary}
           secureTextEntry
           value={newPassword}
           onChangeText={setNewPassword}
         />
-        <Text className="text-[15px] font-JakartaBold mb-4" style={{ color: textPrimary }}>Confirm New Password</Text>
+        <Text className="text-[15px] font-JakartaBold mb-4" style={{ color: textPrimary }}>{t("change_password.confirm_password")}</Text>
         <TextInput
           className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mb-4"
           style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
-          placeholder="Re-enter new password"
+          placeholder={t("change_password.confirm_placeholder")}
           placeholderTextColor={textSecondary}
           secureTextEntry
           value={confirmPassword}
@@ -137,7 +137,7 @@ export default function ChangePassword() {
           {loading ? (
             <ActivityIndicator size={20} color="#FFFFFF" />
           ) : (
-            <Text className="text-[18px] font-JakartaBold text-goWhite">Update Password</Text>
+            <Text className="text-[18px] font-JakartaBold text-goWhite">{t("change_password.update")}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
