@@ -1136,6 +1136,8 @@
     "call_999_send": "Call 999 + Send"
   },
   "schedule_ride": {
+    "checking_fare": "Checking fare…",
+    "estimated_fare": "Estimated Fare",
     "set_pickup": "Please set a pickup point",
     "enter_destination": "Please enter a destination",
     "min_lead": "Scheduled rides must be at least 30 minutes ahead",

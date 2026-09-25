@@ -13,6 +13,7 @@ import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { toUtcIso } from "@/lib/time";
 import { extractQuoteTaka } from "@/lib/estimateQuote";
+import { useTranslation } from "react-i18next";
 import DatePicker from "@/components/DatePicker";
 import TimePicker from "@/components/TimePicker";
 
@@ -87,6 +88,9 @@ export default function ScheduleRideSheet({
   estimateContext,
 }: ScheduleRideSheetProps) {
   const isDark = useIsDark();
+  // Plan-05 W1: the NEW quote strings resolve through i18n (both locales);
+  // the sheet's pre-existing hardcoded labels are a separate sweep (ISSUE-77 family).
+  const { t } = useTranslation();
 
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark
@@ -312,12 +316,12 @@ export default function ScheduleRideSheet({
                 estimate fetch fails or no context was provided. */}
             {fetchingQuote && (
               <Text style={[styles.quoteText, { color: textSecondary }]}>
-                Checking fare…
+                {t("schedule_ride.checking_fare")}
               </Text>
             )}
             {!fetchingQuote && quoteTaka != null && (
               <Text style={[styles.quoteText, { color: textPrimary }]}>
-                Estimated Fare{" "}
+                {t("schedule_ride.estimated_fare")}{" "}
                 <Text style={{ fontFamily: "Jakarta-SemiBold", color: colors.primary }}>
                   ৳{quoteTaka.toLocaleString("en-IN")}
                 </Text>

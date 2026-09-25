@@ -55,6 +55,24 @@ describe("ScheduleRideSheet pre-booking quote — source contract (Plan-05 W1)",
     expect(sheetSource).toContain("quoteSeqRef");
   });
 
+  it("resolves the new quote strings through i18n (both locales)", () => {
+    expect(sheetSource).toContain('t("schedule_ride.checking_fare")');
+    expect(sheetSource).toContain('t("schedule_ride.estimated_fare")');
+    // the raw literals must be gone from the component
+    expect(sheetSource).not.toContain("Checking fare");
+    expect(sheetSource).not.toContain("Estimated Fare\n");
+    for (const locale of ["en", "bn"]) {
+      const json = JSON.parse(
+        fs.readFileSync(
+          path.resolve(__dirname, `../../i18n/locales/${locale}/common.json`),
+          "utf8",
+        ),
+      );
+      expect(typeof json.schedule_ride.checking_fare).toBe("string");
+      expect(typeof json.schedule_ride.estimated_fare).toBe("string");
+    }
+  });
+
   it("converts paisa to taka only at display (projection lives in lib/estimateQuote)", () => {
     const libSource = fs.readFileSync(
       path.resolve(__dirname, "../../lib/estimateQuote.ts"),
