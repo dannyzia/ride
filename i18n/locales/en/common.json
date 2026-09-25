@@ -152,7 +152,8 @@
       "invalid_phone_hint": "Please enter a valid 11-digit phone number starting with 01",
       "invalid_bank_hint": "Please enter a valid account number (8-20 digits)",
       "save_failed": "Failed to save payout method",
-      "delete_failed": "Failed to delete payout method"
+      "delete_failed": "Failed to delete payout method",
+      "promo_rewards": "Promo Rewards"
     },
     "recent_transactions": "Recent Transactions",
     "sign_out_confirm": "Are you sure you want to sign out?",

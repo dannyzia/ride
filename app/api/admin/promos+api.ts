@@ -22,7 +22,13 @@ const createSchema = z.object({
   expires_at: z.string().datetime(),
   // R3.5: driver promo auto-credit fields (schema columns exist at promoCodes:482-485)
   target_role: z.enum(["rider", "driver"]).optional().default("rider"),
-  metric: z.string().max(30).optional().nullable(),
+  // MUST mirror metricConfig keys in utils-server/scheduler.ts job 23 (and the
+  // driver promos API METRIC_CONFIG) — unknown metrics are silently skipped by
+  // the auto-credit job, so a free string here would create dead promos.
+  metric: z
+    .enum(["rides_completed", "earnings_bdt", "trips_duration"])
+    .optional()
+    .nullable(),
   target_value: z.number().int().positive().optional().nullable(),
   validity_days: z.number().int().positive().optional().default(7),
 });

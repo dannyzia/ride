@@ -93,7 +93,7 @@ describe("POST /api/admin/promos", () => {
     const res = await POST(jsonRequest({
       ...VALID,
       target_role: "driver",
-      metric: "completed_rides",
+      metric: "rides_completed",
       target_value: 25,
       validity_days: 14,
     }));
@@ -103,7 +103,7 @@ describe("POST /api/admin/promos", () => {
       code: "WELCOME10",
       created_by: ADMIN_ID,
       target_role: "driver",
-      metric: "completed_rides",
+      metric: "rides_completed",
       target_value: 25,
       validity_days: 14,
     });
@@ -155,7 +155,7 @@ describe("PATCH /api/admin/promos", () => {
 
     const res = await PATCH(jsonRequest({
       target_role: "driver",
-      metric: "acceptance_rate",
+      metric: "trips_duration",
       target_value: 90,
       validity_days: 30,
       is_active: false,
@@ -163,7 +163,7 @@ describe("PATCH /api/admin/promos", () => {
     expect(res.status).toBe(200);
     expect(updates[0]).toMatchObject({
       target_role: "driver",
-      metric: "acceptance_rate",
+      metric: "trips_duration",
       target_value: 90,
       validity_days: 30,
       is_active: false,

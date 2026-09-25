@@ -8,7 +8,10 @@ import { useIsDark } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
 
 interface SettingsItem {
-  label: string;
+  /** Fallback label; required unless labelKey is set. */
+  label?: string;
+  /** i18n key resolved at render time (lookup-table carrier). */
+  labelKey?: string;
   route: string;
   icon: keyof typeof Ionicons.glyphMap;
   section: string;
@@ -18,6 +21,7 @@ const SETTINGS: SettingsItem[] = [
   { label: "Packages", route: "/(main)/(rider)/packages", icon: "cube-outline", section: "Subscription" },
   { label: "Minimum Rate", route: "/(main)/(rider)/min-rate", icon: "speedometer-outline", section: "Subscription" },
   { label: "Payout Method", route: "/(main)/(rider)/payout-method", icon: "card-outline", section: "Subscription" },
+  { label: "Promo Rewards", labelKey: "driver.payout_method.promo_rewards", route: "/(main)/(rider)/promos", icon: "gift-outline", section: "Subscription" },
   { label: "Notifications", route: "/(main)/(rider)/settings/notifications", icon: "notifications-outline", section: "Preferences" },
   { label: "Auto-Accept", route: "/(main)/(rider)/settings/auto-accept", icon: "checkmark-circle-outline", section: "Preferences" },
   { label: "App Appearance", route: "/(main)/(rider)/settings/appearance", icon: "color-palette-outline", section: "Preferences" },
@@ -107,7 +111,7 @@ export default function DriverSettings() {
                       className="text-[15px] font-Jakarta flex-1"
                       style={{ color: textPrimary }}
                     >
-                      {item.label}
+                      {item.labelKey ? t(item.labelKey) : item.label}
                     </Text>
                     <Ionicons name="chevron-forward" size={16} color={textSecondary} />
                   </TouchableOpacity>
