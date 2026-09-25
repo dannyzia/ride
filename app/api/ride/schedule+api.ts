@@ -15,8 +15,24 @@ import { VEHICLE_TYPE_ZOD_ENUM } from '@/lib/vehicleTypes';
 import { sendSms } from '@/lib/dprelay';
 import { getPlan05Int } from '@/lib/platformConfig';
 import { computeEstimatedDurationMinutes, checkRideOverlap } from '@/lib/scheduleUtils';
+import { toUtcIso } from '@/lib/time';
 import * as errors from '@/lib/errors';
 import { normalizeBdPhone, isSamePhone, isConsentFresh } from '@/lib/bookForOther';
+
+/**
+ * Plan-05 W1: the schedule response carries the fare quote in the same flat
+ * shape the estimate response uses, so scheduled rides can display what the
+ * rider will pay without re-deriving it client-side.
+ */
+const rideScheduledQuoteSchema = z.object({
+  total_bdt: z.number().int().nonnegative(),
+  driver_fare_bdt: z.number().int().nonnegative(),
+  rider_payable_bdt: z.number().int().nonnegative(),
+  distance_km: z.number().nonnegative(),
+  preference_surcharge_bdt: z.number().int().nonnegative(),
+  upfront_tip_bdt: z.number().int().nonnegative(),
+  quote_valid_until: z.string().datetime(),
+});
 
 const scheduleSchema = z.object({
   pickup_lat: z.number().min(-90).max(90),
@@ -332,7 +348,22 @@ export async function POST(request: Request) {
       }
     }
 
-    return Response.json({ ride_id: rideId, fare_breakdown: fareBreakdown, status: 'scheduled' });
+    // Plan-05 W1: additive quote fields — flat shape mirrors the estimate
+    // response; fare comes from the SAME calculateFare/calculateV6Fare call
+    // sites used above (no second calculator). ride_scheduled_quote is
+    // Zod-validated so a future regression fails loudly, not silently.
+    const quoteValidUntil = new Date(Date.now() + 5 * 60 * 1000);
+    const ride_scheduled_quote = rideScheduledQuoteSchema.parse({
+      total_bdt: fareBreakdown.total_bdt,
+      driver_fare_bdt: driverFareBdt,
+      rider_payable_bdt: riderPayableBdt,
+      distance_km: fareBreakdown.distance_km,
+      preference_surcharge_bdt: preferenceSurchargeBdt,
+      upfront_tip_bdt: upfront_tip_bdt ?? 0,
+      quote_valid_until: toUtcIso(quoteValidUntil),
+    });
+
+    return Response.json({ ride_id: rideId, fare_breakdown: fareBreakdown, status: 'scheduled', ride_scheduled_quote });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error('[ride/schedule] error', err);

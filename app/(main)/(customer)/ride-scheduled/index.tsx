@@ -4,13 +4,14 @@ import { router, useLocalSearchParams } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
-import { formatDateTime } from "@/lib/format";
+import { formatBDT, formatDateTime } from "@/lib/format";
 import { useTranslation } from "react-i18next";
 
 export default function RideScheduled() {
-  const { ride_id, scheduled_at } = useLocalSearchParams<{
+  const { ride_id, scheduled_at, quote_total_taka } = useLocalSearchParams<{
     ride_id?: string;
     scheduled_at?: string;
+    quote_total_taka?: string;
   }>();
   const { t } = useTranslation();
   const isDark = useIsDark();
@@ -25,6 +26,10 @@ export default function RideScheduled() {
   const scheduledLabel =
     typeof scheduled_at === "string" && scheduled_at
       ? formatDateTime(scheduled_at)
+      : null;
+  const quoteTotalTaka =
+    typeof quote_total_taka === "string" && quote_total_taka !== ""
+      ? Number(quote_total_taka)
       : null;
   const reference =
     typeof ride_id === "string" && ride_id
@@ -69,6 +74,22 @@ export default function RideScheduled() {
               </Text>
               <Text style={[styles.detailValue, { color: textPrimary }]}>
                 {scheduledLabel}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Plan-05 W1: fare quote — passed through from the schedule response
+            (ride_scheduled_quote). Additive: renders only when present. */}
+        {quoteTotalTaka && (
+          <View style={[styles.detailCard, { backgroundColor: surfaceBg, borderColor }]}>
+            <Ionicons name="wallet-outline" size={18} color={colors.primary} />
+            <View style={styles.detailTextCol}>
+              <Text style={[styles.detailLabel, { color: textSecondary }]}>
+                {t('ride_scheduled.fare_quote')}
+              </Text>
+              <Text style={[styles.detailValue, { color: textPrimary }]}>
+                {formatBDT(quoteTotalTaka)}
               </Text>
             </View>
           </View>

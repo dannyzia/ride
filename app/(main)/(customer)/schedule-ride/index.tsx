@@ -138,6 +138,10 @@ export default function ScheduleRide() {
           params: {
             ride_id: data.ride_id,
             scheduled_at: scheduledAt.toISOString(),
+            // Plan-05 W1: pass the quote through for the confirmation screen
+            ...(data.ride_scheduled_quote
+              ? { quote_total_taka: String(data.ride_scheduled_quote.total_bdt / 100) }
+              : {}),
           },
         });
         return;

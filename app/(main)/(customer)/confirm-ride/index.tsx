@@ -336,7 +336,19 @@ const ConfirmRidePage = () => {
         });
         setSearchingRideId(data.ride_id);
         setRideStatus("finding");
-        router.replace(scheduledAt ? "/(main)/(customer)/ride-scheduled" : "/(main)/(customer)/finding-driver");
+        router.replace(
+          scheduledAt
+            ? {
+                pathname: "/(main)/(customer)/ride-scheduled",
+                params: {
+                  // Plan-05 W1: pass the quote through for the confirmation screen
+                  ...(data.ride_scheduled_quote
+                    ? { quote_total_taka: String(data.ride_scheduled_quote.total_bdt / 100) }
+                    : {}),
+                },
+              }
+            : "/(main)/(customer)/finding-driver",
+        );
       } else {
         Alert.alert(
           t('confirm_ride.request_failed'),

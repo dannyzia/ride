@@ -63,6 +63,7 @@ import { calculateFare, calculateV6Fare } from "@/lib/fareCalc";
 import { checkRideOverlap } from "@/lib/scheduleUtils";
 import { isSamePhone, isConsentFresh } from "@/lib/bookForOther";
 import { sendSms } from "@/lib/dprelay";
+import { toUtcIso } from "@/lib/time";
 import { rides, rideStops } from "@/src/db/schema";
 import { POST } from "@/app/api/ride/schedule+api";
 
@@ -386,5 +387,50 @@ describe("POST /api/ride/schedule — creation path", () => {
       expect.stringContaining("/track/new-ride-1"),
     );
     expect(rideInserts[0].is_booked_for_someone_else).toBe(true);
+  });
+});
+
+describe("POST /api/ride/schedule — response quote (Plan-05 W1)", () => {
+  test("success response carries ride_scheduled_quote in the estimate's flat shape", async () => {
+    const res = await POST(jsonRequest(VALID_BODY));
+    expect(res.status).toBe(200);
+    const body = await getJson(res);
+
+    const quote = body.ride_scheduled_quote as Record<string, unknown>;
+    // Fare comes from the SAME calculateFare call site used for the ride row
+    // (the suite mocks calculateFare → total_bdt 20_000); no second calculator.
+    expect(quote.total_bdt).toBe(20_000);
+    expect(quote.driver_fare_bdt).toBe(20_000);
+    expect(quote.rider_payable_bdt).toBe(20_000);
+    expect(quote.distance_km).toBe(9.1);
+    expect(quote.preference_surcharge_bdt).toBe(0);
+    expect(quote.upfront_tip_bdt).toBe(0);
+    // §1.4 parity: 5-minute quote validity, ISO-serialized UTC
+    expect(quote.quote_valid_until).toBe(toUtcIso(new Date("2026-09-05T10:05:00Z")));
+  });
+
+  test("quote includes preference surcharge and upfront tip", async () => {
+    const res = await POST(jsonRequest({
+      ...VALID_BODY,
+      upfront_tip_bdt: 2_000,
+    }));
+    expect(res.status).toBe(200);
+    const body = await getJson(res);
+    const quote = body.ride_scheduled_quote as Record<string, unknown>;
+    expect(quote.upfront_tip_bdt).toBe(2_000);
+    expect(quote.driver_fare_bdt).toBe(22_000);
+    expect(quote.rider_payable_bdt).toBe(22_000);
+    expect(quote.total_bdt).toBe(20_000); // base fare unchanged by the tip
+  });
+
+  test("failure paths do NOT carry a quote (additive on success only)", async () => {
+    (checkRideOverlap as jest.Mock).mockResolvedValue({
+      overlap: true,
+      conflict_ride_id: "conflict-1",
+    });
+    const res = await POST(jsonRequest(VALID_BODY));
+    expect(res.status).toBe(409);
+    const body = await getJson(res);
+    expect(body.ride_scheduled_quote).toBeUndefined();
   });
 });

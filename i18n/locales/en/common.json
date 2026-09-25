@@ -1534,6 +1534,7 @@
     "subtitle": "Your driver will arrive at the scheduled time.",
     "pickup_at": "Pickup at {{time}}",
     "reference": "Reference: {{reference}}",
+    "fare_quote": "Estimated Fare",
     "view_schedule": "View Schedule",
     "a11y_view_schedule": "View your scheduled ride",
     "a11y_back_to_home": "Back to home",

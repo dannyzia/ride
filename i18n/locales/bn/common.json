@@ -1534,6 +1534,7 @@
     "subtitle": "নির্ধারিত সময়ে আপনার ড্রাইভার পৌঁছে যাবেন।",
     "pickup_at": "পিকআপ {{time}}-এ",
     "reference": "রেফারেন্স: {{reference}}",
+    "fare_quote": "আনুমানিক ভাড়া",
     "view_schedule": "সময়সূচি দেখুন",
     "a11y_view_schedule": "আপনার নির্ধারিত রাইড দেখুন",
     "a11y_back_to_home": "হোমে ফিরে যান",
