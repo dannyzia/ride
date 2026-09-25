@@ -82,10 +82,6 @@
     "ambulance_subtitle": "Emergency & scheduled",
     "a11y_emergency_ambulance": "Emergency ambulance"
   },
-  "home_raster": {
-    "your_location": "Your location",
-    "where_to": "Where to?"
-  },
   "auth": {
     "phone_entry": "Enter your phone number",
     "send_otp": "Send OTP",

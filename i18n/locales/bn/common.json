@@ -82,10 +82,6 @@
     "ambulance_subtitle": "ইমার্জেন্সি ও নির্ধারিত",
     "a11y_emergency_ambulance": "ইমার্জেন্সি অ্যাম্বুলেন্স"
   },
-  "home_raster": {
-    "your_location": "আপনার অবস্থান",
-    "where_to": "কোথায় যাবেন?"
-  },
   "auth": {
     "phone_entry": "আপনার ফোন নম্বর লিখুন",
     "send_otp": "OTP পাঠান",
