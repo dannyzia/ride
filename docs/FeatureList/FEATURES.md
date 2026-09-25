@@ -16,14 +16,14 @@
 > - **Marketplace flags: FLIPPED ON (owner-executed 2026-09-06)** — all four `marketplace_*_enabled` + `auto_redispatch_enabled` = true in runtime platform_config (fresh-read); A8 hosted load test is a post-flip watch item; device smoke pending; one-time stranded-assignment data repair pending before load test — see §3c
 > - SOS: frequency-as-intensity model LIVE (R3.1) — server cooldown REMOVED (every trigger creates a new alert; clustering via `recent_alert_count` / `is_high_intensity` ≥3 in 60s); client hold-to-confirm dialog; active endpoint + 10s polling (`useSosActive.ts`); banner wired into driver + rider home screens; admin clustering API + intensity sort — see §9
 > - Apply-promos: screen ALREADY sends vehicle_type + coords (stale claim corrected); only pass-first precedence enforcement missing — see §1 #19
-> - Book-for-other: FULLY hardened (R1.3, v19 correction) — SMS rate limit (5/hour), consent boolean + timestamp freshness (`isConsentFresh`), BD phone regex (`normalizeBdPhone`), self-phone rejection (`isSamePhone`) via `lib/bookForOther.ts`; only schedule-response quote still pending — see §1 #23
+> - Book-for-other: FULLY hardened (R1.3, v19 correction) — SMS rate limit (5/hour), consent boolean + timestamp freshness (`isConsentFresh`), BD phone regex (`normalizeBdPhone`), self-phone rejection (`isSamePhone`) via `lib/bookForOther.ts`; schedule-response quote DONE (`7519078`) — see §1 #23
 > - rate-driver: driver_id fallback uses ride UUID if driver_id undefined (dormant)
 > - driver lost-items: return_method uses z.string() instead of z.enum (admin route uses the proper enum)
 > - Payment callback: purpose='rider_pass' + null pass_id edge case (both fields always set together)
 > - Schedule overlap semantics implemented: `lib/scheduleUtils.ts` checkRideOverlap + `app/api/ride/schedule/overlap+api.ts` client-side check
 > - Zone sentinel nil-UUID writes removed; callers map `zones_not_configured` → 503, `outside_zone` → 422
 > - All 6 Plan-05 `platform_config` keys admin-settable via `PATCH /api/admin/config` with range validation; `zone_multi_active_enabled` seeded as false
-> - Unwired components (v20 verification): ProgressBar, Badge, Avatar, MinRateSlider, LiveMeter now WIRED; only CheckboxGroup + HeatmapOverlay unwired (plan v2 says delete)
+> - Unwired components: none — CheckboxGroup + HeatmapOverlay DELETED (`3ee5b0c`, re-verified zero importers 2026-09-25); ProgressBar, Badge, Avatar, MinRateSlider, LiveMeter all WIRED (v20 verification)
 > - MinRateSlider: settings screen LIVE at `(rider)/min-rate` (R-rounds) — stale "zero importers" claim corrected v20 — see §2 #62
 > - Driver earnings-goal UI RESTORED (C-3, regression closed): goal UI back in earning tab + `driver_user_id` FK contract + regression tests — stale "missing" claims corrected v20 — see §2 #15
 > - Pickup fee Stage 1 (charge) gated by `pickup_fee_enabled` config — code complete, disabled until activated
@@ -201,7 +201,7 @@
 | 62b | Insurance (M-24) | YES (`GET /api/driver/insurance`) | YES | YES — platform_config `driver_insurance` (admin-editable, never cached, Zod-validated, default fallback); covered status, policy number, coverage cards, support call |
 | **Future / Partial** | | | | |
 | 63 | Auto-accept (high-rated drivers) | YES | YES | YES — dispatch reads `auto_accept_enabled` + `auto_accept_radius_meters` (gated rating ≥ 4.8, default 500m); settings screen loads GET me + PATCHes both fields (Zod 100–5000m) — IMPLEMENTED (was schema-only at v13) |
-| 64 | Driver promo codes | YES | Partial | API fields exist (target_role, metric, target_value, validity_days); driver promos dashboard built (R3.5); admin form needs B2 to expose the fields |
+| 64 | Driver promo codes | YES | YES | YES — admin form already exposes target_role/metric/target_value/validity_days (stale "needs B2" claim corrected 2026-09-25); metric is a Zod enum of scheduler-consumable values (`1f3b40e`); driver dashboard reachable via driver settings hub Promo Rewards entry (`1f3b40e`) |
 
 ---
 
@@ -493,7 +493,7 @@
 | Plan 05 Wave 0 | DONE | ErrorBanner/OfflineIndicator (a11y + tokens + retry/cleanup), ScheduleRideSheet (400 lines), amberLight/infoLight/successLight tokens, NetInfo dep, `lib/time.ts` toUtcIso/dhakaTodayKey/msUntil |
 | Plan 05 cancellation (W1) | DONE | full preview contract + atomic cancel + payment-event ownership in tx |
 | Plan 05 SOS (W2) | DONE | active/resolve + auto-resolve + SMS/push + SOS-scoped breaker; server cooldown REMOVED (R3.1 frequency-as-intensity); offline retry via `sosQueue.ts`; polling via `useSosActive.ts` (10s); admin clustering API + intensity sort |
-| Plan 05 scheduling (W1) | PARTIAL | bounds + estimate quote_valid_until done; overlap windows, book-for-other hardening, schedule-response quote pending |
+| Plan 05 scheduling (W1) | DONE | bounds + quote_valid_until + overlap windows + book-for-other hardening + schedule-response quote (`ride_scheduled_quote`, `7519078`) all done |
 | Plan 05 discount engine (R5) | PARTIAL | engine + server staging done; pass-first precedence not enforced (rider-selectable); apply-promos screen contract bug (sends `{code}`, API needs vehicle_type+coords) |
 | Zone foundation | DONE | Z-1/2/3/4/5/6/7/8 all done; flag admin-settable + seeded; sentinel writes removed; 3-beat hysteresis |
 | EAS | DONE | production android buildType apk→appBundle (Play Store AAB) |
@@ -626,15 +626,15 @@ Implemented by coding model, verified through 3 audit rounds. All code from `doc
 | Apply-promos ↔ redeem API contract fix (screen sends `{code}`; API requires vehicle_type + pickup coords) | High | **DONE (v19)** — screen already sends all fields; only pass-first precedence enforcement remains |
 | SOS offline retry | Medium | **DONE** — `lib/sosQueue.ts` AsyncStorage queue + reconnect replay (backoff, dedupe) + 5s client debounce |
 | SOS frequency-as-intensity (replaces cooldown) + active-alert polling | Low | **LIVE (R3.1)** — server cooldown REMOVED (each trigger = new alert; clustering via `recent_alert_count`/`is_high_intensity` ≥3 in 60s); client hold-to-confirm dialog; polling DONE (`useSosActive.ts`, 10s); active endpoint DONE (`/api/sos/active`); banner wired into both home screens; admin clustering API + intensity sort — see ride-hailing completion plan v2 R3.1 |
-| Schedule overlap-window semantics + overlap API | Medium | DONE — overlap check via lib/scheduleUtils.ts + /api/ride/schedule/overlap; book-for-other hardening FULLY DONE via lib/bookForOther.ts (v20 correction); only schedule-response quote still pending |
+| Schedule overlap-window semantics + overlap API | Medium | DONE — overlap check via lib/scheduleUtils.ts + /api/ride/schedule/overlap; book-for-other hardening FULLY DONE via lib/bookForOther.ts (v20 correction); schedule-response quote DONE (`ride_scheduled_quote` estimate-parity, `7519078`) |
 | Auto-redispatch on driver cancellation | Medium | **BUILT, FLAG ON (v22 correction)** — R3.3 re-landed `7d5d3eb` per design v1 (D1=A) after an earlier revert; `auto_redispatch_enabled` flipped true by owner 2026-09-06; fresh chain + cumulative billed-driver exclusion + 15s delay + attempt cap 3; `lib/platformConfig.ts` seeds the keys, cancel API + `utils-server/index.ts` read them — flip back to `false` to disable |
 | Driver earnings goal — restore or formally drop | Medium | **DONE (v20 correction)** — goal UI restored in earning tab (C-3); `driver_user_id` FK contract + regression tests (`856b68e`); regression closed |
-| Payout methods (D10) | Medium | **API CRUD DONE (v19)** — GET returns ALL methods masked (`maskAccount`), POST/PATCH/DELETE live, bkash/nagad/bank, DELETE auto-promotes next active; **remaining: driver-facing management screen** — `payout-method/index.tsx` is still the onboarding capture form (0 list/edit/delete UI) |
+| Payout methods (D10) | Medium | DONE — API CRUD + management screen live (`1177522`: masked list, add bkash/nagad/bank, PATCH/DELETE via `?id=`); delete-confirm surfaces auto-promotion of the next method (`e276d50`); PATCH has no set-default (API has no such field — intentional) |
 | Min-rate settings screen (D9, reuse MinRateSlider + slider-config) | Medium | **DONE (v20 correction)** — screen live at `(rider)/min-rate`; slider + config API wired |
 | Pass-first discount precedence | Low | **DONE (R1.2)** - pass_precedence at app/api/promo/redeem+api.ts:62; server rejects if active pass exists for vehicle_type |
 | Commit the fleet work (portal + APIs + libs + admin screens + auth guard + tests relocation) | **High** | **DONE** — committed `54c8466` (2026-08-31); schema push `d99c089` prior |
 | Fare Framework v6 Stage 1 promotion | High (gated) | Blocked on fare-gate-metrics thresholds going green; zone fee + night mult + pickup charge stay inert until then |
-| Orphan route deletion: scheduling-user-ride, schedule-ride-after-promo | Low | True orphans (schedule-ride + no-drivers-available are referenced — KEEP) |
+| Orphan route deletion: scheduling-user-ride, schedule-ride-after-promo | Low | DONE — deleted `403b65e` (2026-09-04); CheckboxGroup + HeatmapOverlay deleted `3ee5b0c`; zero references re-verified 2026-09-25 (T5); schedule-ride + no-drivers-available LIVE — KEEP |
 | Unwire-or-wire: CheckboxGroup, HeatmapOverlay | Low | **Wire-half DONE (v20 verification):** ProgressBar (active-subscription), Badge (activity tab), Avatar (profile), MinRateSlider (min-rate), LiveMeter (ride-tracking) all have importers now; **remaining: delete CheckboxGroup (no consumer) + HeatmapOverlay (superseded by Map CircleLayer)** — zero importers confirmed |
 | i18n sweep (EN/BN) | Low | **LANDED (R2.4/R2.4b — v20 correction of the stale "GREENFIELD" row):** `i18n/i18n.ts` (react-i18next + AsyncStorage) + real `i18n/locales/{en,bn}/common.json`; 126 screens import `useTranslation`; rider selector `settings/app-language` + driver selector `settings/language` persist via `useAppearance.language`; no "coming soon" placeholder remains. Remaining: bn coverage audit on non-swept screens |
 | Deep linking with expo-linking (promo→apply-promos, push→ride-tracking; dep present, imported nowhere) | Low | Only `ride://` manual use in PaymentResultScreen |
