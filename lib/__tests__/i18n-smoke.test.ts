@@ -335,21 +335,22 @@ describe('i18n locale completeness — every t() key resolves', () => {
 
   it(`every ${HARD_NAMESPACE}.* key used in app/ and components/ exists in en + bn locales`, () => {
     const offenders = Object.entries(hardMissing);
+    // Failure detail is thrown (Jest renders the message on failure) so the
+    // happy path emits no console output anywhere in this guard.
     if (offenders.length > 0) {
-      const detail = offenders
-        .map(([f, keys]) => `  ${f}:\n    ${keys.join('\n    ')}`)
-        .join('\n');
-      // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-      console.log(`\n❌ ${HARD_NAMESPACE}.* keys missing from locale files:\n${detail}`);
+      throw new Error(
+        `${HARD_NAMESPACE}.* keys missing from locale files:\n${offenders
+          .map(([f, keys]) => `  ${f}:\n    ${keys.join('\n    ')}`)
+          .join('\n')}`,
+      );
     }
     expect(hardMissing).toEqual({});
   });
 
   it('every missing t() key is a hard failure (no baseline — the guard is total)', () => {
     if (softMissingCount > 0) {
-      // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-      console.log(
-        `\n❌ ${softMissingCount} referenced key(s) missing from locale files:\n` +
+      throw new Error(
+        `${softMissingCount} referenced key(s) missing from locale files:\n` +
           missingByFile
             .map(([f, keys]) => `  ${f}:\n    ${keys.join('\n    ')}`)
             .join('\n'),
@@ -371,8 +372,9 @@ describe('i18n locale completeness — every t() key resolves', () => {
     const enOnly = [...enKeys].filter((k) => !bnKeys.has(k));
     const bnOnly = [...bnKeys].filter((k) => !enKeys.has(k));
     if (enOnly.length || bnOnly.length) {
-      // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-      console.log(`\n❌ key drift — en only: ${enOnly.slice(0, 10).join(', ')} | bn only: ${bnOnly.slice(0, 10).join(', ')}`);
+      throw new Error(
+        `key drift — en only: ${enOnly.slice(0, 10).join(', ')} | bn only: ${bnOnly.slice(0, 10).join(', ')}`,
+      );
     }
     expect(enOnly).toEqual([]);
     expect(bnOnly).toEqual([]);
@@ -395,9 +397,8 @@ describe('i18n locale completeness — every t() key resolves', () => {
       const bp = (bnNode.match(paramRe) || []).sort().join(',');
       if (ep !== bp) drift.push(`${key}: en(${ep}) vs bn(${bp})`);
     }
-    if (drift.length) {
-      // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-      console.log(`\n❌ interpolation drift:\n  ${drift.slice(0, 10).join('\n  ')}`);
+    if (drift.length > 0) {
+      throw new Error(`interpolation drift:\n  ${drift.slice(0, 10).join('\n  ')}`);
     }
     expect(drift).toEqual([]);
   });
@@ -447,29 +448,17 @@ describe('i18n smoke — all rider screens use useTranslation', () => {
   });
 
   it('unwired screens have no hardcoded user-facing strings', () => {
+    // Allow up to 5 screens with hardcoded strings (layout/loading edge cases).
+    // Offender list is thrown (Jest renders it) so the happy path prints nothing.
     if (screensWithHardcoded.length > 0) {
-      // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-      console.log(
-        '\n⚠️  Screens with hardcoded strings but no useTranslation:',
-        '\n' + screensWithHardcoded.join('\n'),
+      throw new Error(
+        'Screens with hardcoded strings but no useTranslation:\n' +
+          screensWithHardcoded.join('\n'),
       );
     }
-    // Allow up to 5 screens with hardcoded strings (layout/loading edge cases)
     expect(screensWithHardcoded.length).toBeLessThanOrEqual(5);
   });
 
-  it('logs wiring status summary', () => {
-    // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-    console.log(`\n📊 i18n wiring status:`);
-    // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-    console.log(`   Wired: ${wiredScreens.length}/${screenFiles.length}`);
-    // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-    console.log(`   Unwired: ${unwiredScreens.length}`);
-    if (unwiredScreens.length > 0) {
-      // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-      console.log(`   Unwired files: ${unwiredScreens.join(', ')}`);
-    }
-  });
 });
 
 /**
@@ -623,9 +612,8 @@ describe('i18n key-shaped literal sweep — carrier-independent tier', () => {
 
   it('every key-shaped string literal resolves in every locale (carrier-independent)', () => {
     if (unresolvedByFile.size > 0) {
-      // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-      console.log(
-        `\n❌ ${unresolvedTotal} key-shaped literal(s) missing from locales ` +
+      throw new Error(
+        `${unresolvedTotal} key-shaped literal(s) missing from locales ` +
           `(of ${shapedCount} scanned across ${unresolvedByFile.size} files):\n` +
           [...unresolvedByFile.entries()]
             .sort()
@@ -799,14 +787,13 @@ describe('i18n call-site interpolation — t(key, { params }) matches locale dec
   }
 
   it('every t(key, { params }) call site supplies exactly the params both locale values declare', () => {
-    // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-    console.log(
-      `   checked ${siteCount} literal t(key, {…}) call sites` +
-        (skippedSites > 0 ? ` (skipped ${skippedSites} unparseable)` : ''),
-    );
     if (problems.length > 0) {
-      // eslint-disable-next-line no-console -- test diagnostic (house pattern in this file)
-      console.log(`\n❌ interpolation drift at ${problems.length} call site(s):\n  ${problems.join('\n  ')}`);
+      throw new Error(
+        `interpolation drift at ${problems.length} call site(s)` +
+          ` (checked ${siteCount} literal t(key, {…}) sites` +
+          (skippedSites > 0 ? `, skipped ${skippedSites} unparseable` : '') +
+          `):\n  ${problems.join('\n  ')}`,
+      );
     }
     expect(problems).toEqual([]);
   });

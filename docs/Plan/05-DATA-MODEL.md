@@ -19,7 +19,7 @@ The old enum values are REMOVED. Existing data must be migrated (see migration n
 
 > **Database:** Supabase PostgreSQL (ap-southeast-1 / Singapore), accessed via Drizzle ORM with a direct connection string from Supabase dashboard (Settings → Database → Connection string → URI). Supabase provides the PostgreSQL instance; Drizzle remains the ORM. All migrations work identically.
 >
-> **RLS Note:** Supabase Row Level Security (RLS) is available but not required for MVP. The existing middleware-based auth (`lib/auth.ts`) handles authorization at the API layer. RLS may be added post-MVP for defense-in-depth.
+> **RLS Note (updated 2026-09-25, T6):** Row Level Security is ENABLED + FORCED on all public tables (see `scripts/rls-enable-force.sql`), default-deny with a single whitelist policy (`users_self_read` on `users`). The app's data path is unaffected — Drizzle connects as the `postgres` role (BYPASSRLS); middleware auth (`lib/auth.ts`) still handles API-layer authorization. End-state goal: zero policies — convert the 3 admin-panel client reads to `/api/auth/verify-token` and drop the policy (Rhizome ISSUE-81, blocking grant-revocation ISSUE-80). History: RLS was first enabled during the 2026-08-14 Security Advisor campaign (`docs/errors/2026-08-14-supabase-security-advisor-fixes.md`).
 
 # Data Model: Ride
 > Delta from GlideX schema. File to modify: `src/db/schema.ts`
