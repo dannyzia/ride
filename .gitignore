@@ -154,3 +154,5 @@ storybook-static
 /my-app/
 .audit/
 .audit/
+/generate-all-divisions.js
+/mcp-local-tunnel.config.json
