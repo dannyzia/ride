@@ -48,11 +48,15 @@ END $$;
 -- Covers the 4 audited client call sites (components/admin/AdminShell.tsx:362,
 -- app/admin/_layout.tsx:58, app/admin/fare-config.tsx:444 — all read
 -- users.role WHERE auth_uid = own session uid).
+-- users.auth_uid is varchar(128) while auth.uid() returns uuid → cast the
+-- uuid to text for the comparison (varchar = text resolves via implicit
+-- coercion; uuid = varchar does not, which failed the first execution and
+-- rolled back — caught by the Phase 2 transaction, zero partial state).
 CREATE POLICY users_self_read
   ON public.users
   FOR SELECT
   TO authenticated
-  USING (auth_uid = (select auth.uid()));
+  USING (auth_uid = (select auth.uid())::text);
 
 -- NOTE (audit): every OTHER anon-key client data path must be verified dead
 -- before Phase 2. If new client reads are added later they will silently
