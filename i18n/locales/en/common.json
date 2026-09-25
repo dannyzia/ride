@@ -94,6 +94,7 @@
       "edit_method": "Edit Method",
       "delete_confirm_title": "Delete payout method?",
       "delete_confirm_body": "Remove {{type}} {{number}}?",
+      "delete_confirm_body_promotes": "Remove {{type}} {{number}}? This is your default method — your newest remaining method will become the default.",
       "invalid_number": "Invalid Number",
       "invalid_phone_hint": "Please enter a valid 11-digit phone number starting with 01",
       "invalid_bank_hint": "Please enter a valid account number (8-20 digits)",

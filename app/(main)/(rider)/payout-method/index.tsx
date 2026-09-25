@@ -154,7 +154,7 @@ export default function PayoutMethodScreen() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        Alert.alert("Error", t("driver.payout_method.not_authenticated"));
+        Alert.alert(t("common.error"), t("driver.payout_method.not_authenticated"));
         return;
       }
 
@@ -179,7 +179,7 @@ export default function PayoutMethodScreen() {
 
       if (!res.ok) {
         const data = await res.json();
-        Alert.alert("Error", data.message ?? t("driver.payout_method.save_failed"));
+        Alert.alert(t("common.error"), data.message ?? t("driver.payout_method.save_failed"));
         return;
       }
 
@@ -187,7 +187,7 @@ export default function PayoutMethodScreen() {
       await fetchMethods();
     } catch (e) {
       logger.error("[payout-method] add error", e);
-      Alert.alert("Error", t("driver.payout_method.network_error"));
+      Alert.alert(t("common.error"), t("driver.payout_method.network_error"));
     } finally {
       setSaving(false);
     }
@@ -232,7 +232,7 @@ export default function PayoutMethodScreen() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        Alert.alert("Error", t("driver.payout_method.not_authenticated"));
+        Alert.alert(t("common.error"), t("driver.payout_method.not_authenticated"));
         return;
       }
 
@@ -263,7 +263,7 @@ export default function PayoutMethodScreen() {
 
       if (!res.ok) {
         const data = await res.json();
-        Alert.alert("Error", data.message ?? t("driver.payout_method.save_failed"));
+        Alert.alert(t("common.error"), data.message ?? t("driver.payout_method.save_failed"));
         return;
       }
 
@@ -271,7 +271,7 @@ export default function PayoutMethodScreen() {
       await fetchMethods();
     } catch (e) {
       logger.error("[payout-method] edit error", e);
-      Alert.alert("Error", t("driver.payout_method.network_error"));
+      Alert.alert(t("common.error"), t("driver.payout_method.network_error"));
     } finally {
       setEditing(false);
     }
@@ -279,9 +279,14 @@ export default function PayoutMethodScreen() {
 
   // --- Delete ---
   const confirmDelete = (m: PayoutMethod) => {
+    // Deleting the default promotes the newest remaining method (server-side);
+    // the confirm copy must surface that consequence when it applies.
+    const bodyKey = m.is_default
+      ? "driver.payout_method.delete_confirm_body_promotes"
+      : "driver.payout_method.delete_confirm_body";
     Alert.alert(
       t("driver.payout_method.delete_confirm_title"),
-      t("driver.payout_method.delete_confirm_body", {
+      t(bodyKey, {
         type: t(`driver.payout_method.type_${m.method_type}`),
         number: m.account_number_masked,
       }),
@@ -312,14 +317,14 @@ export default function PayoutMethodScreen() {
 
       if (!res.ok) {
         const data = await res.json();
-        Alert.alert("Error", data.message ?? t("driver.payout_method.delete_failed"));
+        Alert.alert(t("common.error"), data.message ?? t("driver.payout_method.delete_failed"));
         return;
       }
 
       await fetchMethods();
     } catch (e) {
       logger.error("[payout-method] delete error", e);
-      Alert.alert("Error", t("driver.payout_method.network_error"));
+      Alert.alert(t("common.error"), t("driver.payout_method.network_error"));
     } finally {
       setDeleting(false);
     }
