@@ -190,6 +190,10 @@ export default function RootLayout() {
   const { theme } = useAppearance();
 
   useEffect(() => {
+    // ISSUE-82: react-native-web does not implement Appearance.setColorScheme
+    // (crashed every web route). Web theming flows through NativeWind dark:
+    // variants driven by the same `theme` state; native keeps the OS hint.
+    if (Platform.OS === "web") return;
     if (theme === "system") {
       Appearance.setColorScheme(null);
     } else {

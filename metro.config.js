@@ -70,6 +70,14 @@ config.resolver.alias = {
     "react-native/Libraries/Utilities/codegenNativeCommands": path.resolve(__dirname, "mocks/empty.js"),
 };
 
+// ISSUE-82: zustand's exports map sends web ("import" condition) to
+// esm/middleware.mjs, which ships a raw `import.meta.env` (devtools
+// connector) that Metro does not transform outside an ES module — a
+// SyntaxError that killed the ENTIRE web bundle at evaluation. Redirect the
+// subpath to the CJS build (the same module native already resolves via the
+// react-native condition). Done in resolveRequest because Metro's resolver
+// has no `resolver.alias` support (the block above is inert).
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ws exception: blocked everywhere EXCEPT the one documented
 // server-only origin (kept in sync with SERVER_ONLY in
@@ -103,6 +111,12 @@ const isAdminPath = (p) => {
 };
 const previousResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+    if (moduleName === "zustand/middleware") {
+        return {
+            type: "sourceFile",
+            filePath: path.resolve(__dirname, "node_modules/zustand/middleware.js"),
+        };
+    }
     if (moduleName === "ws" && !WS_ALLOWED_ORIGINS.includes(context.originModulePath)) {
         throw new Error(
             `Blocked: 'ws' is Node-only and must not be imported from ${context.originModulePath}. ` +
