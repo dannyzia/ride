@@ -1,0 +1,95 @@
+-- Purpose:     Revoke over-broad anon/authenticated table grants on schema public (ISSUE-80). NOT EXECUTED — Phase A and Phase B each require Zia's explicit GO.
+-- Owner:       Coding model (this session)
+-- Status:      PENDING — two-phase protocol (same as T6 / scripts/rls-enable-force.sql)
+-- Related:
+--   - scripts/rls-enable-force.sql — RLS posture (ENABLE + FORCE + users_self_read, executed 2026-09-25)
+--   - scripts/rls-drop-users-self-read.sql — ISSUE-81 Phase 2 (pending; coordinates with Phase B here)
+--   - .tmp/grants-before-state.json — pre-execution snapshot (1750 rows: 7 privs x 125 tables x 2 roles)
+--
+-- EVIDENCE (information_schema, 2026-09-25): anon AND authenticated hold
+-- SELECT/INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER on ALL 125 public tables —
+-- the default Supabase grant set, far beyond anything the app uses. With RLS forced +
+-- default-deny the grants are currently inert, but any future permissive policy,
+-- SECURITY DEFINER function, or role misconfiguration would instantly expose
+-- write/TRUNCATE surface to the anon key.
+--
+-- TD-31 ALIGNMENT: after Oct 30 2026, new tables need explicit GRANT statements for
+-- supabase-js/PostgREST access. This script moves the posture to deny-by-default,
+-- which is consistent: anything needing anon/authenticated access must be granted
+-- deliberately, table by table.
+--
+-- OUT OF SCOPE (do NOT touch): non-public schemas (auth, storage, extensions —
+-- Supabase-managed); schema-level USAGE grants (PostgREST/health checks need them);
+-- server-side roles (service_role, postgres, supabase_*).
+--
+-- WHY THE APP IS UNAFFECTED: all data access is Drizzle over direct Postgres as the
+-- `postgres` role (BYPASSRLS, verified in T6). Client anon-key table reads: 0 (T6 audit);
+-- client authenticated-key table reads: 0 after ISSUE-81 (d2dff6c converted the last 3).
+
+-- ============================================================================
+-- PHASE A — safe now, independent of any other issue.
+-- Effect: converts the latent write/TRUNCATE hazard into hard ACL denial.
+-- Behavior is unchanged for every current code path (RLS default-deny already
+-- blocks these; this removes the ACL underneath so a future policy/misconfig
+-- cannot silently re-expose them).
+-- ============================================================================
+-- BEGIN;
+-- REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+--   ON ALL TABLES IN SCHEMA public FROM anon;
+-- REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+--   ON ALL TABLES IN SCHEMA public FROM authenticated;
+-- COMMIT;
+
+-- ============================================================================
+-- PHASE B — safe now that ISSUE-81 is done (d2dff6c: admin reads via verify-token).
+-- anon loses SELECT everywhere. authenticated keeps SELECT on public.users ONLY
+-- while the users_self_read policy exists (rows gated to the caller's own row).
+-- Once scripts/rls-drop-users-self-read.sql runs, that script ALSO revokes the
+-- kept users SELECT — leaving authenticated with zero table grants (full
+-- zero-grant + zero-policy end state).
+-- ============================================================================
+-- BEGIN;
+-- REVOKE SELECT ON ALL TABLES IN SCHEMA public FROM anon;
+-- REVOKE SELECT ON ALL TABLES IN SCHEMA public FROM authenticated;
+-- GRANT SELECT ON public.users TO authenticated;
+-- COMMIT;
+
+-- ============================================================================
+-- POST-CONDITIONS (read-only, run after each phase)
+-- ============================================================================
+-- Definitive per-role/per-privilege table counts (expect after Phase A:
+-- SELECT 125/125 both roles, everything else 0; after Phase B: anon 0 across
+-- the board, authenticated SELECT=1 (public.users) only if the policy still exists):
+-- SELECT
+--   count(*) FILTER (WHERE has_table_privilege('anon', format('%I.%I', schemaname, tablename), 'SELECT'))         AS anon_select,
+--   count(*) FILTER (WHERE has_table_privilege('anon', format('%I.%I', schemaname, tablename), 'INSERT'))         AS anon_insert,
+--   count(*) FILTER (WHERE has_table_privilege('anon', format('%I.%I', schemaname, tablename), 'TRUNCATE'))       AS anon_truncate,
+--   count(*) FILTER (WHERE has_table_privilege('authenticated', format('%I.%I', schemaname, tablename), 'SELECT'))       AS auth_select,
+--   count(*) FILTER (WHERE has_table_privilege('authenticated', format('%I.%I', schemaname, tablename), 'INSERT'))       AS auth_insert,
+--   count(*) FILTER (WHERE has_table_privilege('authenticated', format('%I.%I', schemaname, tablename), 'TRUNCATE'))     AS auth_truncate
+-- FROM pg_tables WHERE schemaname = 'public';
+--
+-- Schema USAGE must remain true for both roles (PostgREST/health checks):
+-- SELECT has_schema_privilege('anon', 'public', 'USAGE')          AS anon_usage,
+--        has_schema_privilege('authenticated', 'public', 'USAGE') AS auth_usage;
+
+-- ============================================================================
+-- PROBE (acceptance criterion: anon writes PERMISSION-DENIED, not RLS-empty)
+-- Run with the anon key (EXPO_PUBLIC_SUPABASE_URL + EXPO_PUBLIC_SUPABASE_ANON_KEY):
+--   supabase.from('platform_config').insert({}) — inspect the returned error code:
+--   Before Phase A: silently RLS-empty (no ACL error).
+--   After Phase A:  '42501' permission denied.
+-- ============================================================================
+
+-- ============================================================================
+-- SMOKE (must stay green after execution; Drizzle path is role-based, unaffected)
+--   GET /api/user/me → 200 ; GET /api/driver/promos → 200 (fresh driver token)
+-- ============================================================================
+
+-- ============================================================================
+-- ROLLBACK (restore the pre-issue default grant set — owner direction only)
+-- GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+--   ON ALL TABLES IN SCHEMA public TO anon;
+-- GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+--   ON ALL TABLES IN SCHEMA public TO authenticated;
+-- ============================================================================
