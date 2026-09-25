@@ -16,6 +16,7 @@ import { router, usePathname } from "expo-router";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { supabase } from "@/lib/supabase";
+import { fetchAdminRole } from "@/lib/adminRoleClient";
 import { teardownAdminSocket } from "@/lib/adminSocket";
 import { authCleanup } from "@/lib/authCleanup";
 import { colors } from "@/theme/goRide";
@@ -353,17 +354,13 @@ export function AdminShell({
     return () => sub.remove();
   }, []);
 
-  // Fetch admin role on mount for sidebar badge.
+  // Fetch admin role on mount for sidebar badge — via the server
+  // (verify-token), not an anon-key table read (RLS default-deny killed those;
+  // T6 audit). Keeps the client free of direct table access.
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase!.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase!
-        .from("users")
-        .select("role")
-        .eq("auth_uid", user.id)
-        .maybeSingle();
-      if (data?.role) setAdminRole(data.role);
+      const role = await fetchAdminRole();
+      if (role) setAdminRole(role);
     })();
   }, []);
 

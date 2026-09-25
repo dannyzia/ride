@@ -19,7 +19,7 @@ import {
 } from "@/lib/tierRateDerivation";
 import { type VehicleTypeEnum, VEHICLE_TYPES, PICKUP_CATEGORY } from "@/lib/vehicleTypes";
 import type { AdminRole } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { fetchAdminRole } from "@/lib/adminRoleClient";
 
 interface ConfigItem {
   key: string;
@@ -436,17 +436,9 @@ export default function FareConfigScreen() {
     setGateLoading(true);
     const [configRes, roleRes, gateRes] = await Promise.all([
       adminFetch<ConfigResponse>("/api/admin/config", { method: "GET" }),
-      // Fetch current user role from supabase (client-side, same pattern as layout).
-      (async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return null;
-        const { data } = await supabase
-          .from("users")
-          .select("role")
-          .eq("auth_uid", user.id)
-          .maybeSingle();
-        return data?.role as AdminRole | null;
-      })(),
+      // Role via the server (verify-token) — anon-key table reads are dead
+      // under RLS default-deny (T6 audit; ISSUE-81 conversion).
+      fetchAdminRole(),
       // R4.0: Stage 0 gate metrics — 30-day traffic-light evaluation.
       adminFetch<GateMetricsResponse>("/api/admin/fare-gate-metrics", {
         method: "GET",

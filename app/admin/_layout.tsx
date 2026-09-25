@@ -50,35 +50,12 @@ export default function AdminLayout() {
 
       setHasSession(true);
       setAuthError("");
-      const uid = session.user.id;
       const email = session.user.email ?? "unknown";
 
-      // ── Method 1: Client-side query (uses anon key baked into bundle) ──
-      const { data: profile, error: profileError } = await supabase
-        .from("users")
-        .select("role")
-        .eq("auth_uid", uid)
-        .maybeSingle();
-
-      if (profile && ADMIN_ROLES.includes(profile.role as AdminRole)) {
-        setIsAdmin(true);
-        setChecking(false);
-        return;
-      }
-
-      if (profile && !ADMIN_ROLES.includes(profile.role as AdminRole)) {
-        // User exists but role is not an admin-family role
-        setIsAdmin(false);
-        setAuthError(
-          `Signed in as ${email}, but your database role is "${profile.role}".\n\n` +
-            `Contact the owner to be granted panel access.`,
-        );
-        setChecking(false);
-        return;
-      }
-
-      // No profile returned — either RLS blocked it or user doesn't exist.
-      // ── Method 2: Server-side API fallback ──
+      // Role resolution is server-only (POST /api/auth/verify-token): the
+      // former anon-key table lookup was killed by RLS default-deny (T6 audit)
+      // and is removed — ISSUE-81 zero-policy conversion. The
+      // registration-race retry lives server-side in the route.
       try {
         const res = await fetch("/api/auth/verify-token", {
           method: "POST",
@@ -110,23 +87,15 @@ export default function AdminLayout() {
           return;
         }
       } catch {
-        // Server API also failed — fall through to error
+        // Server API unreachable — fall through to error
       }
 
-      // ── Both methods failed ──
+      // ── Server API failed ──
       setIsAdmin(false);
-      if (profileError) {
-        setAuthError(
-          `Signed in as ${email} (auth UID: ${uid}).\n\n` +
-            `The database query was blocked (likely RLS policy) and the server ` +
-            `API is not reachable. Contact the owner to be granted panel access.`,
-        );
-      } else {
-        setAuthError(
-          `Signed in as ${email}, but no admin account was found.\n\n` +
-            `Contact the owner to be granted panel access.`,
-        );
-      }
+      setAuthError(
+        `Signed in as ${email}.\n\n` +
+          `The server API is not reachable. Contact the owner to be granted panel access.`,
+      );
       setChecking(false);
     });
 
