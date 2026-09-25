@@ -83,16 +83,20 @@ describe('Layout gate — error string safety', () => {
     // Count occurrences of the guidance text — one per error path.
     const ownerGuidance = 'Contact the owner to be granted panel access';
     const count = layoutSource.split(ownerGuidance).length - 1;
-    // At least 5 error paths (Method 1 role mismatch, Method 2 role mismatch,
-    // Method 2 not-in-DB, fallback RLS-blocked, fallback not-found).
-    expect(count).toBeGreaterThanOrEqual(5);
+    // ISSUE-81 conversion collapsed the two-method gate into a single
+    // server-resolved path — 3 error paths remain (role mismatch,
+    // not-in-DB, API unreachable).
+    expect(count).toBeGreaterThanOrEqual(3);
   });
 
   test('layout uses ADMIN_ROLES.includes() for gate check', () => {
-    // Verify the layout actually uses ADMIN_ROLES.includes() — not a hardcoded
-    // "admin" string check.
-    expect(layoutSource).toContain('ADMIN_ROLES.includes(profile.role as AdminRole)');
+    // The single server-resolved gate must use ADMIN_ROLES — not a hardcoded
+    // "admin" string check. The former client-side profile.role check was an
+    // anon-key table read, removed by the ISSUE-81 zero-policy conversion.
     expect(layoutSource).toContain('ADMIN_ROLES.includes(data.role)');
+    // And no client-side table read may return (guards the same regression
+    // surface as tests/components/admin-no-client-table-reads.test.ts).
+    expect(layoutSource).not.toMatch(/\.from\s*\(/);
   });
 
   test('layout does not contain hardcoded role === "admin" gate', () => {
@@ -119,11 +123,9 @@ describe('Layout gate — Method 2 server fallback', () => {
 
   test('Method 2 uses ADMIN_ROLES.includes() not hardcoded check', () => {
     // The server fallback path must also use ADMIN_ROLES.
-    // Find the verify-token block and check it uses ADMIN_ROLES.
-    const verifyTokenBlock = layoutSource.slice(
-      layoutSource.indexOf('/api/auth/verify-token'),
-      layoutSource.indexOf('/api/auth/verify-token') + 500,
-    );
+    // Find the verify-token fetch block and check it uses ADMIN_ROLES.
+    const anchor = layoutSource.indexOf('fetch("/api/auth/verify-token"');
+    const verifyTokenBlock = layoutSource.slice(anchor, anchor + 700);
     expect(verifyTokenBlock).toContain('ADMIN_ROLES.includes(data.role)');
   });
 
