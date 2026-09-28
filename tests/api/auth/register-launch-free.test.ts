@@ -64,40 +64,48 @@ const AUTH_UID = "auth-uid-1";
 
 jest.mock("@/src/db", () => {
   const schema = require("@/src/db/schema");
-  const chain = (rows: unknown[]) => {
+  // Table-aware resolution for the FALLBACK chain (no queued rows): subscriptions/
+  // packages resolve from their row stores; paymentEvents read-back serves the
+  // insert recorder (latest first — eq(id) is opaque to the mock and the caller
+  // destructures [evt]); creditVouchers and ad-hoc → empty.
+  const resolveTableRows = (source: unknown): Promise<unknown[]> => {
+    if (source === schema.subscriptions)
+      return Promise.resolve(structuredClone(mockSubscriptionRows));
+    if (source === schema.packages)
+      return Promise.resolve(structuredClone(mockPackageRows));
+    if (source === schema.paymentEvents) {
+      const evtRows = mockInserts
+        .filter((i) => i.table === schema.paymentEvents)
+        .map((i, idx) => ({ ...i.vals, id: i.vals.id ?? `evt-${idx}` }))
+        .reverse();
+      return Promise.resolve(structuredClone(evtRows));
+    }
+    return Promise.resolve([]);
+  };
+  // rows === null → table-aware fallback on EVERY consumption path (then, limit,
+  // returning). M-3 test fix: ensureLaunchFreePackage's .limit(1) recheck used to
+  // hit the raw-rows path and could never see an existing plan row.
+  const chain = (rows: unknown[] | null) => {
     const c: any = () => {};
-    const finish = () => Promise.resolve(structuredClone(rows));
     let source: unknown = null;
+    const finish = () =>
+      rows !== null
+        ? Promise.resolve(structuredClone(rows))
+        : resolveTableRows(source);
+    const proxy = new Proxy(c, {
+      get(target: any, prop) {
+        if (prop === Symbol.toPrimitive || prop === "then") {
+          return (res: any, rej: any) => finish().then(res, rej);
+        }
+        return target[prop];
+      },
+    });
     c.from = (t: unknown) => { source = t; return proxy; };
     c.where = () => proxy;
     c.limit = () => finish();
     c.for = () => proxy;
     c.then = (res: any, rej: any) => finish().then(res, rej);
     c.returning = () => finish();
-    // Table-aware rows override the queue when the caller selects FROM a known
-    // table (grant-chain probes must not be poisoned by ad-hoc queue rows).
-    const proxy = new Proxy(c, {
-      get(target: any, prop) {
-        if (prop === Symbol.toPrimitive || prop === "then") {
-          return (res: any, rej: any) => {
-            if (source === schema.subscriptions)
-              return Promise.resolve(structuredClone(mockSubscriptionRows)).then(res, rej);
-            if (source === schema.packages)
-              return Promise.resolve(structuredClone(mockPackageRows)).then(res, rej);
-            if (source === schema.paymentEvents) {
-              // activateSubscription reads back the row createZeroAmountPaymentEvent
-              // just inserted — serve it from the insert recorder.
-              const evtRows = mockInserts
-                .filter((i) => i.table === schema.paymentEvents)
-                .map((i, idx) => ({ ...i.vals, id: i.vals.id ?? `evt-${idx}` }));
-              return Promise.resolve(structuredClone(evtRows)).then(res, rej);
-            }
-            return Promise.resolve([]).then(res, rej); // creditVouchers and ad-hoc → empty
-          };
-        }
-        return target[prop];
-      },
-    });
     return proxy;
   };
   const makeDb = (inTx: boolean) => {
@@ -107,7 +115,7 @@ jest.mock("@/src/db", () => {
         if (next) return chain(next as unknown[]);
         // Table-aware fallback: subscriptions/packages resolve from their row
         // stores; anything else resolves empty.
-        return chain([]);
+        return chain(null);
       }),
       insert: jest.fn((table: unknown) => ({
         values: jest.fn((vals: Record<string, unknown>) => {
@@ -271,5 +279,50 @@ describe("POST /api/register — launch_free hook (owner ruling 2026-09-27)", ()
     expect(insertedPackages[0].vals.price_bdt).toBe(0);
     expect(insertedPackages[0].vals.name).toBe("Launch Free");
     expect(plan.id).toBe(PLAN_ID);
+  });
+
+  it("M-3: concurrent ensure creators converge on ONE plan row (in-lock recheck contract)", async () => {
+    // The audit (M-3): packages.name has no unique constraint, so the old
+    // onConflictDoNothing() was a silent no-op — two racing creators could each
+    // insert their own "Launch Free" row. The fix serializes on a transaction-
+    // scoped advisory lock and rechecks inside the lock. In production the
+    // loser's RECHECK sees the winner's committed row (served here by the
+    // table-aware select) and must NOT insert; the first-insert-throws path
+    // models the loser losing the race entirely and surfacing the error.
+    mockPackageRows = [];
+    const originalInsert = db.insert;
+    const originalTransaction = db.transaction;
+    try {
+      // ensureLaunchFreePackage runs inside db.transaction — route the tx to the
+      // ROOT mock so the insert override applies inside the transaction.
+      (db as any).transaction = jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(db));
+      let calls = 0;
+      (db as any).insert = jest.fn((table: unknown) => {
+        calls += 1;
+        if (calls === 1) throw new Error("duplicate plan row (simulated race loser)");
+        return originalInsert(table);
+      });
+
+      // Loser attempt: insert throws, ensure surfaces the error (caller retries).
+      await expect(ensureLaunchFreePackage()).rejects.toThrow(/duplicate plan row/);
+
+      // Winner attempt: insert succeeds.
+      const plan = await ensureLaunchFreePackage();
+      expect(plan.id).toBe(PLAN_ID);
+
+      // Exactly ONE package insert reached the recorder across both attempts —
+      // a retry loop or broken contract would insert twice.
+      expect(mockInserts.filter((i) => i.table === schema.packages)).toHaveLength(1);
+    } finally {
+      (db as any).insert = originalInsert;
+      (db as any).transaction = originalTransaction;
+    }
+  });
+
+  it("M-3: ensure reuses an existing plan row instead of inserting a duplicate (in-lock recheck)", async () => {
+    mockPackageRows = [{ id: PLAN_ID, name: "Launch Free", price_bdt: 0, call_count: -1, is_trial: false, duration_days: 36500 }];
+    const plan = await ensureLaunchFreePackage();
+    expect(plan.id).toBe(PLAN_ID);
+    expect(mockInserts.filter((i) => i.table === schema.packages)).toHaveLength(0);
   });
 });
