@@ -125,7 +125,7 @@ export default function SOSAlertsScreen() {
     { key: "message", header: "Message", render: (r) => r.message ?? "—", width: 150 },
     { key: "id", header: "", render: (r) => (
       r.status !== "acknowledged" ? (
-        <Pressable onPress={() => ackAlert(r.id)} style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.danger, borderRadius: 6 }}>
+        <Pressable onPress={() => ackAlert(r.id)} style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.danger, borderRadius: 6 }} testID="admin.sos-alerts.ack-alert">
           <Text style={{ color: "#FFF", fontFamily: "Jakarta-Bold", fontSize: 11 }}>Acknowledge</Text>
         </Pressable>
       ) : null
@@ -157,7 +157,7 @@ export default function SOSAlertsScreen() {
                 paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6,
                 backgroundColor: active ? colors.adminAccent : "#2A2D35",
               }}
-            >
+             testID="admin.sos-alerts.set-status-filter">
               <Text style={{ color: active ? colors.white : colors.textSecondaryDark, fontFamily: "Jakarta-SemiBold", fontSize: 12 }}>
                 {label}
               </Text>
@@ -182,7 +182,7 @@ export default function SOSAlertsScreen() {
                 paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6,
                 backgroundColor: active ? colors.adminAccent : "#2A2D35",
               }}
-            >
+             testID="admin.sos-alerts.set-sort-by">
               <Text style={{ color: active ? colors.white : colors.textSecondaryDark, fontFamily: "Jakarta-SemiBold", fontSize: 12 }}>
                 {label}
               </Text>

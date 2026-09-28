@@ -172,7 +172,7 @@ export default function HotspotScreen() {
           accessibilityRole="button"
           accessibilityLabel={t("common.back")}
           hitSlop={8}
-        >
+         testID="rider.d.hotspot.el-1">
           <Ionicons name="chevron-back" size={24} color={colors.primary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>
@@ -183,7 +183,7 @@ export default function HotspotScreen() {
           accessibilityRole="button"
           accessibilityLabel={t("common.retry")}
           hitSlop={8}
-        >
+         testID="rider.d.hotspot.load-el">
           {refreshing ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
@@ -200,7 +200,7 @@ export default function HotspotScreen() {
             style={[styles.segmentBtn, view === v && styles.segmentBtnActive]}
             onPress={() => setView(v)}
             accessibilityRole="button"
-          >
+           testID="rider.d.hotspot.set-view">
             <Text
               style={[
                 styles.segmentText,
@@ -224,7 +224,7 @@ export default function HotspotScreen() {
           <TouchableOpacity
             onPress={() => load()}
             style={[styles.retryBtn, { backgroundColor: surfaceBg, borderColor }]}
-          >
+           testID="rider.d.hotspot.load-el-2">
             <Text style={[styles.retryText, { color: colors.primary }]}>
               {t("common.retry")}
             </Text>
@@ -252,7 +252,7 @@ export default function HotspotScreen() {
                 onPress={() => setSelected(null)}
                 hitSlop={8}
                 accessibilityRole="button"
-              >
+               testID="rider.d.hotspot.set-selected">
                 <Ionicons name="close" size={18} color={textSecondary} />
               </TouchableOpacity>
             </View>
@@ -285,7 +285,7 @@ export default function HotspotScreen() {
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={`${item.zone_name} ${tier}`}
-              >
+               testID="rider.d.hotspot.set-selected-2">
                 <View
                   style={[styles.dot, { backgroundColor: tierColor(tier) }]}
                 />

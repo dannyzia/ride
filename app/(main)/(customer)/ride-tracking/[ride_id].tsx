@@ -387,7 +387,7 @@ export default function RideTrackingScreen() {
         <TouchableOpacity
           style={[styles.backHomeBtn, { backgroundColor: colors.primary }]}
           onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
-        >
+         testID="customer.ride-tracking.ride_id.replace-main">
           <Text style={styles.backHomeText}>{t('ride.back_to_home')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -468,7 +468,7 @@ export default function RideTrackingScreen() {
         <TouchableOpacity
           style={[styles.iconBtn, { backgroundColor: surfaceBg, borderColor: borderColor }]}
           onPress={() => router.back()}
-        >
+         testID="customer.ride-tracking.ride_id.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <View style={[styles.statusBadge, {
@@ -489,13 +489,13 @@ export default function RideTrackingScreen() {
         <TouchableOpacity
           style={[styles.iconBtn, { backgroundColor: surfaceBg, borderColor: borderColor }]}
           onPress={() => setTheme(isDark ? "light" : "dark")}
-        >
+         testID="customer.ride-tracking.ride_id.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={22} color={textPrimary} />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.iconBtn, { backgroundColor: surfaceBg, borderColor: borderColor }]}
           onPress={handleShare}
-        >
+         testID="customer.ride-tracking.ride_id.handle-share">
           <Ionicons name="share-outline" size={22} color={textPrimary} />
         </TouchableOpacity>
       </View>
@@ -554,15 +554,15 @@ export default function RideTrackingScreen() {
             </View>
 
             <View style={styles.actionRow}>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => { if (driver?.phone) Linking.openURL(`tel:${driver.phone}`); }}>
+              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => { if (driver?.phone) Linking.openURL(`tel:${driver.phone}`); }} testID="customer.ride-tracking.ride_id.el-2">
                 <Ionicons name="call" size={20} color={colors.primary} />
                 <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.call')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => router.push(`/(main)/(customer)/chat/${ride_id}`)}>
+              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => router.push(`/(main)/(customer)/chat/${ride_id}`)} testID="customer.ride-tracking.ride_id.push-main">
                 <Ionicons name="chatbubble" size={20} color={colors.primary} />
                 <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.chat')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={handleCancel}>
+              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={handleCancel} testID="customer.ride-tracking.ride_id.handle-cancel">
                 <Ionicons name="close-circle" size={20} color={colors.danger} />
                 <Text style={[styles.actionBtnText, { color: colors.danger }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
@@ -597,7 +597,7 @@ export default function RideTrackingScreen() {
               onPress={handleCopyPin}
               accessibilityRole="button"
               accessibilityLabel={t('ride_tracking.copy_pin')}
-            >
+             testID="customer.ride-tracking.ride_id.handle-copy-pin">
               <Ionicons
                 name={pinCopied ? "checkmark" : "copy-outline"}
                 size={16}
@@ -627,15 +627,15 @@ export default function RideTrackingScreen() {
             </View>
 
             <View style={styles.actionRow}>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => { if (driver?.phone) Linking.openURL(`tel:${driver.phone}`); }}>
+              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => { if (driver?.phone) Linking.openURL(`tel:${driver.phone}`); }} testID="customer.ride-tracking.ride_id.el-3">
                 <Ionicons name="call" size={20} color={colors.primary} />
                 <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.call')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => router.push(`/(main)/(customer)/chat/${ride_id}`)}>
+              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => router.push(`/(main)/(customer)/chat/${ride_id}`)} testID="customer.ride-tracking.ride_id.push-main-2">
                 <Ionicons name="chatbubble" size={20} color={colors.primary} />
                 <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.chat')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={handleShare}>
+              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={handleShare} testID="customer.ride-tracking.ride_id.handle-share-2">
                 <Ionicons name="share" size={20} color={colors.primary} />
                 <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.share')}</Text>
               </TouchableOpacity>
@@ -660,7 +660,7 @@ export default function RideTrackingScreen() {
             <TouchableOpacity
               style={[styles.rateDriverBtn, { backgroundColor: colors.primary }]}
               onPress={() => router.push(`/(main)/(customer)/rate-driver?rideId=${ride_id}`)}
-            >
+             testID="customer.ride-tracking.ride_id.push-main-3">
               <Text style={styles.rateDriverBtnText}>{t('ride_tracking.rate_your_driver')}</Text>
             </TouchableOpacity>
           </View>

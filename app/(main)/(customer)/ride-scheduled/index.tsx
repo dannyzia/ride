@@ -49,7 +49,7 @@ export default function RideScheduled() {
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={t('ride_scheduled.toggle_theme')}
-        >
+         testID="customer.ride-scheduled.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={22}
@@ -109,7 +109,7 @@ export default function RideScheduled() {
             }
             accessibilityRole="button"
             accessibilityLabel={t('ride_scheduled.a11y_view_schedule')}
-          >
+           testID="customer.ride-scheduled.replace-main">
             <Text style={styles.primaryBtnText}>{t('ride_scheduled.view_schedule')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -117,7 +117,7 @@ export default function RideScheduled() {
             onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
             accessibilityRole="button"
             accessibilityLabel={t('ride_scheduled.a11y_back_to_home')}
-          >
+           testID="customer.ride-scheduled.replace-main-2">
             <Text style={[styles.secondaryBtnText, { color: textPrimary }]}>
               {t('ride.back_to_home')}
             </Text>

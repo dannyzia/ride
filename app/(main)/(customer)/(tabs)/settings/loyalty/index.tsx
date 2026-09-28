@@ -79,7 +79,7 @@ export default function RiderLoyalty() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-6 py-4 border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>{t('common.back')}</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.settings.loyalty.el-1"><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>{t('common.back')}</Text></TouchableOpacity>
         <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>{t('loyalty.title')}</Text>
         <View className="w-12" />
       </View>
@@ -100,7 +100,7 @@ export default function RiderLoyalty() {
             </View>
             <TouchableOpacity onPress={() => redeem(item)} disabled={redeeming === item.id || balance < item.points_required}
               className="py-2 px-4 rounded-full"
-              style={{ backgroundColor: balance >= item.points_required ? colors.primary : disabledBg }}>
+              style={{ backgroundColor: balance >= item.points_required ? colors.primary : disabledBg }} testID="customer.settings.loyalty.redeem-el">
               <Text className="text-goWhite font-JakartaBold text-sm">{redeeming === item.id ? "..." : t('loyalty.redeem')}</Text>
             </TouchableOpacity>
           </View>
@@ -111,7 +111,7 @@ export default function RiderLoyalty() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.settings.loyalty.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

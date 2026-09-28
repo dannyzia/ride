@@ -105,7 +105,7 @@ export default function DriverSafety() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.safety.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('safety.title')}</Text>
@@ -120,7 +120,7 @@ export default function DriverSafety() {
             className="flex-row items-center p-[14px] border rounded-[12px] mb-2"
             style={{ backgroundColor: `${colors.danger}1A`, borderColor: `${colors.danger}4D` }}
             onPress={() => Linking.openURL(`tel:${h.phone}`)}
-          >
+           testID="rider.safety.el-2">
             <View className="mr-[12px]">
               <Ionicons name={HOTLINE_ICONS[h.icon] ?? "call"} size={24} color={colors.danger} />
             </View>
@@ -137,7 +137,7 @@ export default function DriverSafety() {
           className="p-[14px] border rounded-[12px] mt-2 mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/emergency-contacts")}
-        >
+         testID="rider.safety.push-main">
           <View className="flex-row justify-between items-center">
             <View>
               <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{t('safety.emergency_contacts')}</Text>
@@ -205,7 +205,7 @@ export default function DriverSafety() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.safety.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

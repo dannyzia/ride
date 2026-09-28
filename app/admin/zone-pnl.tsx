@@ -81,7 +81,7 @@ export default function ZonePnL() {
                   selectedZone === z.id && styles.pickerOptionSelected,
                 ]}
                 onPress={() => setSelectedZone(z.id)}
-              >
+               testID="admin.zone-pnl.set-selected-zone">
                 <Text
                   style={[
                     styles.pickerOptionText,
@@ -103,7 +103,7 @@ export default function ZonePnL() {
                   period === p && styles.periodBtnActive,
                 ]}
                 onPress={() => setPeriod(p)}
-              >
+               testID="admin.zone-pnl.set-period">
                 <Text
                   style={[
                     styles.periodBtnText,

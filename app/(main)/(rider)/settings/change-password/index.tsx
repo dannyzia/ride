@@ -65,7 +65,7 @@ export default function ChangePassword() {
         <Text className="text-[15px] font-Jakarta text-center mb-8" style={{ color: textSecondary }}>
           {t("change_password.password_updated_body")}
         </Text>
-        <TouchableOpacity className="bg-goPrimary rounded-full px-[24px] py-[12px]" onPress={() => router.back()}>
+        <TouchableOpacity className="bg-goPrimary rounded-full px-[24px] py-[12px]" onPress={() => router.back()} testID="rider.settings.change-password.el-1">
           <Text className="text-[16px] font-JakartaBold text-goWhite">{t("common.done")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -73,7 +73,7 @@ export default function ChangePassword() {
           className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
           style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+         testID="rider.settings.change-password.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
         </TouchableOpacity>
       </SafeAreaView>
@@ -84,7 +84,7 @@ export default function ChangePassword() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.settings.change-password.el-2">
           <Text className="text-[16px] font-Jakarta text-goPrimary">{t("common.back")}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t("change_password.title")}</Text>
@@ -105,7 +105,7 @@ export default function ChangePassword() {
           secureTextEntry
           value={currentPassword}
           onChangeText={setCurrentPassword}
-        />
+         testID="rider.settings.change-password.set-current-password"/>
         <Text className="text-[15px] font-JakartaBold mb-4" style={{ color: textPrimary }}>{t("change_password.new_password")}</Text>
         <TextInput
           className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mb-4"
@@ -115,7 +115,7 @@ export default function ChangePassword() {
           secureTextEntry
           value={newPassword}
           onChangeText={setNewPassword}
-        />
+         testID="rider.settings.change-password.set-new-password"/>
         <Text className="text-[15px] font-JakartaBold mb-4" style={{ color: textPrimary }}>{t("change_password.confirm_password")}</Text>
         <TextInput
           className="border rounded-[10px] px-[16px] py-[14px] text-[15px] font-Jakarta mb-4"
@@ -125,7 +125,7 @@ export default function ChangePassword() {
           secureTextEntry
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-        />
+         testID="rider.settings.change-password.set-confirm-password"/>
         {error ? (
           <Text className="text-[14px] font-Jakarta text-goDanger mb-3">{error}</Text>
         ) : null}
@@ -133,7 +133,7 @@ export default function ChangePassword() {
           className={`rounded-full py-[16px] items-center ${loading ? "bg-goBorderDark" : "bg-goPrimary"}`}
           onPress={handleChange}
           disabled={loading}
-        >
+         testID="rider.settings.change-password.handle-change">
           {loading ? (
             <ActivityIndicator size={20} color="#FFFFFF" />
           ) : (
@@ -146,7 +146,7 @@ export default function ChangePassword() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.settings.change-password.set-theme-2">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

@@ -86,7 +86,7 @@ export default function Ratings() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]">
+        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]" testID="rider.ratings.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Ratings & Reviews</Text>
@@ -134,7 +134,7 @@ export default function Ratings() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.ratings.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

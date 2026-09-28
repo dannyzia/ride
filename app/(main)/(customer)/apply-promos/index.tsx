@@ -128,7 +128,7 @@ export default function ApplyPromos() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.apply-promos.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('apply_promos.title')}</Text>
@@ -146,7 +146,7 @@ export default function ApplyPromos() {
             placeholderTextColor={textSecondary}
             value={promoCode}
             onChangeText={setPromoCode}
-          />
+           testID="customer.apply-promos.set-promo-code"/>
         </View>
         {message ? (
           <View
@@ -166,7 +166,7 @@ export default function ApplyPromos() {
           style={{ backgroundColor: loading || !promoCode.trim() ? disabledBg : colors.primary }}
           onPress={handleApply}
           disabled={loading || !promoCode.trim()}
-        >
+         testID="customer.apply-promos.handle-apply">
           {loading ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
@@ -190,7 +190,7 @@ export default function ApplyPromos() {
                 className="flex-row items-center p-[12px] border rounded-[8px] mb-2"
                 style={{ backgroundColor: surfaceBg, borderColor }}
                 onPress={() => { setPromoCode(promo.code); }}
-              >
+               testID="customer.apply-promos.set-promo-code-2">
                 <View
                   className="w-5 h-5 rounded-full mr-3"
                   style={{ backgroundColor: promo.is_eligible ? colors.primary : disabledBg }}
@@ -212,7 +212,7 @@ export default function ApplyPromos() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.apply-promos.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

@@ -144,7 +144,7 @@ export default function HotspotMapScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
           hitSlop={8}
-        >
+         testID="rider.hotspot-map.el-1">
           <Ionicons name="chevron-back" size={24} color={colors.primary} />
         </TouchableOpacity>
         <Text
@@ -160,7 +160,7 @@ export default function HotspotMapScreen() {
           accessibilityRole="button"
           accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
           hitSlop={8}
-        >
+         testID="rider.hotspot-map.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={22}
@@ -195,7 +195,7 @@ export default function HotspotMapScreen() {
                 styles.refreshBtn,
                 { backgroundColor: surfaceBg, borderColor },
               ]}
-            >
+             testID="rider.hotspot-map.load">
               <Ionicons name="refresh" size={16} color={colors.primary} />
               <Text style={[styles.refreshText, { color: colors.primary }]}>
                 Retry
@@ -230,7 +230,7 @@ export default function HotspotMapScreen() {
                 styles.refreshBtn,
                 { backgroundColor: surfaceBg, borderColor },
               ]}
-            >
+             testID="rider.hotspot-map.load-2">
               <Ionicons name="refresh" size={16} color={colors.primary} />
               <Text style={[styles.refreshText, { color: colors.primary }]}>
                 Refresh
@@ -308,7 +308,7 @@ export default function HotspotMapScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Refresh hotspots"
                   style={[styles.refreshBtnSmall, { borderColor }]}
-                >
+                 testID="rider.hotspot-map.load-3">
                   {refreshing ? (
                     <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
@@ -401,7 +401,7 @@ export default function HotspotMapScreen() {
                               : zone,
                           )
                         }
-                      >
+                       testID="rider.hotspot-map.set-selected-zone">
                         <View style={styles.zoneChipHeader}>
                           <View
                             style={[
@@ -466,7 +466,7 @@ export default function HotspotMapScreen() {
                   <TouchableOpacity
                     onPress={() => setSelectedZone(null)}
                     hitSlop={8}
-                  >
+                   testID="rider.hotspot-map.set-selected-zone-2">
                     <Ionicons name="close" size={18} color={textSecondary} />
                   </TouchableOpacity>
                 </View>

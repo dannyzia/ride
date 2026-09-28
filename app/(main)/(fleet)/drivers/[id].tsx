@@ -144,7 +144,7 @@ export default function DriverDetail() {
               paddingHorizontal: 24,
               paddingVertical: 10,
             }}
-          >
+           testID="fleet.drivers.id.fetch-driver">
             <Text
               style={{
                 fontFamily: "Jakarta-SemiBold",
@@ -432,7 +432,7 @@ export default function DriverDetail() {
                 alignItems: "center",
                 paddingVertical: 10,
               }}
-            >
+             testID="fleet.drivers.id.push-main">
               <Text
                 style={{
                   fontFamily: "Jakarta-SemiBold",
@@ -482,7 +482,7 @@ export default function DriverDetail() {
                 paddingHorizontal: 16,
                 paddingVertical: 8,
               }}
-            >
+             testID="fleet.drivers.id.push-main-2">
               <Text
                 style={{
                   fontFamily: "Jakarta-SemiBold",

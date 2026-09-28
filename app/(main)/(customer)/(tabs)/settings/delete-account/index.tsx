@@ -102,7 +102,7 @@ export default function SettingsDeleteAccount() {
           accessibilityLabel={t('common.back')}
           onPress={() => router.back()}
           hitSlop={8}
-        >
+         testID="customer.settings.delete-account.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -117,7 +117,7 @@ export default function SettingsDeleteAccount() {
           accessibilityLabel={t('delete_account.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
-        >
+         testID="customer.settings.delete-account.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
         </TouchableOpacity>
       </View>
@@ -157,7 +157,7 @@ export default function SettingsDeleteAccount() {
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={handleDeletePress}
               disabled={isDeleting || !confirmed}
-            >
+             testID="customer.settings.delete-account.handle-delete-press">
               <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
@@ -177,7 +177,7 @@ export default function SettingsDeleteAccount() {
           onChangeText={setConfirmText}
           autoCapitalize="characters"
           autoCorrect={false}
-        />
+         testID="customer.settings.delete-account.set-confirm-text"/>
 
         <TouchableOpacity
           accessibilityRole="button"
@@ -190,7 +190,7 @@ export default function SettingsDeleteAccount() {
           onPress={handleDeletePress}
           disabled={!confirmed || isDeleting}
           activeOpacity={0.8}
-        >
+         testID="customer.settings.delete-account.handle-delete-press-2">
           {isDeleting ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (

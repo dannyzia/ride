@@ -60,12 +60,12 @@ export default function DriverEnableLocation() {
         <CustomButton
           title="Allow"
           onPress={allow}
-        />
+         testID="driver-enable-location.allow"/>
         <CustomButton
           title="Not Now"
           bgVariant="secondary"
           onPress={skip}
-        />
+         testID="driver-enable-location.skip"/>
       </View>
     </SafeAreaView>
   );

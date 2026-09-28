@@ -90,7 +90,7 @@ useEffect(() => {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} testID="customer.shops.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -123,7 +123,7 @@ useEffect(() => {
             onChangeText={setSearch}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
-          />
+           testID="customer.shops.set-search"/>
         </View>
       </View>
 
@@ -152,7 +152,7 @@ useEffect(() => {
               padding: 16,
               marginBottom: 12,
             }}
-          >
+           testID="customer.shops.push-main">
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View
                 style={{

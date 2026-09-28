@@ -174,7 +174,7 @@ export default function BidderRequestsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} testID="customer.rental-bidder.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
@@ -250,7 +250,7 @@ export default function BidderRequestsScreen() {
                   marginBottom: 12,
                 }}
                 accessibilityLabel={`${CATEGORY_LABELS[req.category] ?? req.category} request to ${req.dropoff_address}${req.already_bid ? ' — already bid' : ''}`}
-              >
+               testID="customer.rental-bidder.push-main">
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <Ionicons
@@ -341,7 +341,7 @@ export default function BidderRequestsScreen() {
                     }}
                     accessibilityRole="button"
                     accessibilityLabel="Submit a bid"
-                  >
+                   testID="customer.rental-bidder.el-2">
                     <Text style={{ color: "#FFFFFF", fontSize: 14, fontFamily: "JakartaSemiBold" }}>
                       Bid Now
                     </Text>
@@ -364,7 +364,7 @@ export default function BidderRequestsScreen() {
                     }}
                     accessibilityRole="button"
                     accessibilityLabel="Update your bid"
-                  >
+                   testID="customer.rental-bidder.el-3">
                     <Text style={{ color: colors.primary, fontSize: 14, fontFamily: "JakartaSemiBold" }}>
                       Update Bid
                     </Text>
@@ -378,7 +378,7 @@ export default function BidderRequestsScreen() {
           <TouchableOpacity
             onPress={loadMore}
             style={{ padding: 14, alignItems: "center" }}
-          >
+           testID="customer.rental-bidder.load-more">
             <Text style={{ fontSize: 14, fontFamily: "JakartaSemiBold", color: colors.primary }}>
               Load More
             </Text>
@@ -420,7 +420,7 @@ function FilterPill({
       accessibilityRole="button"
       accessibilityLabel={`Filter by ${label}`}
       accessibilityState={{ selected }}
-    >
+     testID="customer.rental-bidder.on-press">
       <Text style={{
         fontSize: 13,
         fontFamily: selected ? "JakartaSemiBold" : "JakartaMedium",

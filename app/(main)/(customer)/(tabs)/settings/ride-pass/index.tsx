@@ -107,7 +107,7 @@ export default function RidePassPurchase() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-6 py-4 border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>{t('common.back')}</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.settings.ride-pass.el-1"><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>{t('common.back')}</Text></TouchableOpacity>
         <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>{t('ride_pass.title')}</Text>
         <View className="w-12" />
       </View>
@@ -162,7 +162,7 @@ export default function RidePassPurchase() {
                 </View>
                 <TouchableOpacity onPress={() => buyPass(p.id)} disabled={purchasing === p.id}
                   className="py-2 px-4 rounded-full"
-                  style={{ backgroundColor: purchasing === p.id ? disabledBg : colors.primary }}>
+                  style={{ backgroundColor: purchasing === p.id ? disabledBg : colors.primary }} testID="customer.settings.ride-pass.buy-pass">
                   <Text className="text-goWhite font-JakartaBold text-sm">{purchasing === p.id ? "..." : t('ride_pass.buy')}</Text>
                 </TouchableOpacity>
               </View>
@@ -176,7 +176,7 @@ export default function RidePassPurchase() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.settings.ride-pass.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

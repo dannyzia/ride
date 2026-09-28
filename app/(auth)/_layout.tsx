@@ -29,7 +29,7 @@ function ThemeToggle() {
         borderColor,
         zIndex: 100,
       }}
-    >
+     testID="_layout.set-theme">
       <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
     </TouchableOpacity>
   );

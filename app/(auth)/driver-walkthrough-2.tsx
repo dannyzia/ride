@@ -68,7 +68,7 @@ export default function DriverWalkthrough2() {
         <CustomButton
           title="Next"
           onPress={() => router.push("/(auth)/driver-walkthrough-3")}
-        />
+         testID="driver-walkthrough-2.push-auth"/>
 
         <Text
           className="text-[16px] font-Jakarta"

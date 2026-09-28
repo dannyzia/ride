@@ -55,7 +55,7 @@ export default function SettingsLogoutConfirmation() {
           onPress={handleLogout}
           accessibilityRole="button"
           accessibilityLabel={t('logout_confirmation.log_out_a11y')}
-        >
+         testID="customer.settings.logout-confirmation.handle-logout">
           <Text className="text-[18px] font-JakartaBold text-goWhite">{t('logout_confirmation.title')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -64,7 +64,7 @@ export default function SettingsLogoutConfirmation() {
           onPress={() => router.back()}
           accessibilityRole="button"
           accessibilityLabel={t('common.cancel')}
-        >
+         testID="customer.settings.logout-confirmation.el-1">
           <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>
             {t('common.cancel')}
           </Text>
@@ -75,7 +75,7 @@ export default function SettingsLogoutConfirmation() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.settings.logout-confirmation.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

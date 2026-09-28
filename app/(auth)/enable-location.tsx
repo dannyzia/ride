@@ -68,7 +68,7 @@ export default function EnableLocation() {
         accessibilityLabel="Toggle theme"
         onPress={() => setTheme(isDark ? "light" : "dark")}
         style={{ position: "absolute", top: 50, right: 24, width: 48, height: 48, alignItems: "center", justifyContent: "center", zIndex: 10 }}
-      >
+       testID="enable-location.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
       </TouchableOpacity>
 
@@ -109,12 +109,12 @@ export default function EnableLocation() {
         <CustomButton
           title="Allow"
           onPress={allow}
-        />
+         testID="enable-location.allow"/>
         <CustomButton
           title="Not Now"
           bgVariant="secondary"
           onPress={skip}
-        />
+         testID="enable-location.skip"/>
       </View>
     </SafeAreaView>
   );

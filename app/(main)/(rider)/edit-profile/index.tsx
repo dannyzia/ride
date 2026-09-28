@@ -200,7 +200,7 @@ export default function EditProfile() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="mr-[12px] p-[4px]"
-        >
+         testID="rider.edit-profile.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -222,7 +222,7 @@ export default function EditProfile() {
           className="items-center mb-2"
           onPress={pickImage}
           disabled={isBusy}
-        >
+         testID="rider.edit-profile.pick-image">
           {photo ? (
             <Image
               source={{ uri: photo }}
@@ -276,7 +276,7 @@ export default function EditProfile() {
             placeholderTextColor={textSecondary}
             value={fullName}
             onChangeText={setFullName}
-          />
+           testID="rider.edit-profile.set-full-name"/>
         </View>
 
         {/* Phone (read-only) */}
@@ -324,7 +324,7 @@ export default function EditProfile() {
             autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
-          />
+           testID="rider.edit-profile.set-email"/>
         </View>
 
         {/* City */}
@@ -347,7 +347,7 @@ export default function EditProfile() {
             placeholderTextColor={textSecondary}
             value={city}
             onChangeText={setCity}
-          />
+           testID="rider.edit-profile.set-city"/>
         </View>
 
         {error ? (
@@ -366,7 +366,7 @@ export default function EditProfile() {
           }}
           onPress={handleSave}
           disabled={isBusy}
-        >
+         testID="rider.edit-profile.handle-save">
           {isBusy ? (
             <ActivityIndicator size={20} color="#FFFFFF" />
           ) : (

@@ -316,7 +316,7 @@ export default function RidesScreen() {
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel={t('rides_list.a11y_ride_to', { destination: item.destination_address })}
-      >
+       testID="customer.rides.set-selected-ride">
         <View style={styles.cardHeader}>
           <Text style={[styles.cardDate, { color: textSecondary }]}>
             {formatDateTime(item.created_at)}
@@ -372,7 +372,7 @@ export default function RidesScreen() {
               onPress={() => handleRebook(item)}
               accessibilityRole="button"
               accessibilityLabel={t('rides_list.a11y_rebook')}
-            >
+             testID="customer.rides.handle-rebook">
               <Ionicons name="refresh" size={16} color={colors.primary} />
               <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('rides_list.rebook')}</Text>
             </TouchableOpacity>
@@ -382,7 +382,7 @@ export default function RidesScreen() {
                 onPress={() => handleDispute(item)}
                 accessibilityRole="button"
                 accessibilityLabel={t('rides_list.a11y_dispute_fare')}
-              >
+               testID="customer.rides.handle-dispute">
                 <Ionicons name="flag" size={16} color={colors.danger} />
                 <Text style={[styles.actionBtnText, { color: colors.danger }]}>{t('rides_list.dispute')}</Text>
               </TouchableOpacity>
@@ -411,7 +411,7 @@ export default function RidesScreen() {
                 onPress={() => setDetailModalVisible(false)}
                 accessibilityRole="button"
                 accessibilityLabel={t('rides_list.a11y_close_receipt')}
-              >
+               testID="customer.rides.set-detail-modal-visible">
                 <Ionicons name="close" size={24} color={textSecondary} />
               </TouchableOpacity>
             </View>
@@ -525,7 +525,7 @@ export default function RidesScreen() {
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={t('rides_list.a11y_view_details')}
-                >
+                 testID="customer.rides.push-main">
                   <Text style={[styles.modalActionTextSecondary, { color: textPrimary }]}>
                     {t('rides_list.view_details')}
                   </Text>
@@ -538,7 +538,7 @@ export default function RidesScreen() {
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={t('rides_list.a11y_rebook_route')}
-                >
+                 testID="customer.rides.set-detail-modal-visible-2">
                   <Text style={styles.modalActionText}>{t('rides_list.rebook_this_route')}</Text>
                 </TouchableOpacity>
                 {selectedRide.status === "completed" && canDisputeRide(selectedRide.completed_at) && (
@@ -547,7 +547,7 @@ export default function RidesScreen() {
                     onPress={() => handleDispute(selectedRide)}
                     accessibilityRole="button"
                     accessibilityLabel={t('rides_list.a11y_file_dispute')}
-                  >
+                   testID="customer.rides.handle-dispute-2">
                     <Text style={[styles.modalActionTextSecondary, { color: textPrimary }]}>
                       {t('rides_list.file_dispute')}
                     </Text>
@@ -579,7 +579,7 @@ export default function RidesScreen() {
         onPress={() => router.push("/(main)/(customer)/(tabs)/home")}
         accessibilityRole="button"
         accessibilityLabel={t('rides_list.book_a_ride')}
-      >
+       testID="customer.rides.push-main-2">
         <Text style={styles.bookBtnText}>{t('rides_list.book_a_ride')}</Text>
       </TouchableOpacity>
     </View>
@@ -610,7 +610,7 @@ export default function RidesScreen() {
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={t('rides_list.toggle_theme')}
-        >
+         testID="customer.rides.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={24}
@@ -627,13 +627,13 @@ export default function RidesScreen() {
           placeholderTextColor={textDisabled}
           value={searchQuery}
           onChangeText={setSearchQuery}
-        />
+         testID="customer.rides.set-search-query"/>
         {searchQuery.length > 0 && (
           <TouchableOpacity
             onPress={() => setSearchQuery("")}
             accessibilityRole="button"
             accessibilityLabel={t('rides_list.clear_search')}
-          >
+           testID="customer.rides.set-search-query-2">
             <Ionicons name="close-circle" size={18} color={textDisabled} />
           </TouchableOpacity>
         )}
@@ -657,7 +657,7 @@ export default function RidesScreen() {
             onPress={() => setActiveFilter(tab)}
             accessibilityRole="button"
             accessibilityLabel={t('rides_list.a11y_filter', { label: t(FILTER_LABELS[tab]) })}
-          >
+           testID="customer.rides.set-active-filter">
             <Text
               style={{
                 fontFamily: "Jakarta-SemiBold",
@@ -674,7 +674,7 @@ export default function RidesScreen() {
           onPress={() => router.push("/(main)/(customer)/(tabs)/inbox")}
           accessibilityRole="button"
           accessibilityLabel={t('rides_list.a11y_inbox')}
-        >
+         testID="customer.rides.push-main-3">
           <Text style={[styles.navChipText, { color: textSecondary }]}>{t('rides_list.inbox')}</Text>
           <Ionicons name="arrow-forward" size={14} color={textSecondary} />
         </TouchableOpacity>
@@ -683,7 +683,7 @@ export default function RidesScreen() {
           onPress={() => router.push("/(main)/(customer)/(tabs)/referral")}
           accessibilityRole="button"
           accessibilityLabel={t('rides_list.a11y_referral')}
-        >
+         testID="customer.rides.push-main-4">
           <Text style={[styles.navChipText, { color: textSecondary }]}>{t('rides_list.referral')}</Text>
           <Ionicons name="arrow-forward" size={14} color={textSecondary} />
         </TouchableOpacity>

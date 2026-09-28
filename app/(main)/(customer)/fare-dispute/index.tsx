@@ -166,7 +166,7 @@ export default function FareDispute() {
             accessibilityLabel={t('common.back')}
             onPress={() => router.back()}
             hitSlop={8}
-          >
+           testID="customer.fare-dispute.el-1">
             <Ionicons name="arrow-back" size={24} color={textPrimary} />
           </TouchableOpacity>
           <Text
@@ -181,7 +181,7 @@ export default function FareDispute() {
             accessibilityLabel={t('fare_dispute.toggle_theme')}
             onPress={() => setTheme(isDark ? "light" : "dark")}
             hitSlop={8}
-          >
+           testID="customer.fare-dispute.set-theme">
             <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
           </TouchableOpacity>
         </View>
@@ -207,7 +207,7 @@ export default function FareDispute() {
           accessibilityLabel={t('common.back')}
           onPress={() => router.back()}
           hitSlop={8}
-        >
+         testID="customer.fare-dispute.el-2">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -222,7 +222,7 @@ export default function FareDispute() {
           accessibilityLabel={t('fare_dispute.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
-        >
+         testID="customer.fare-dispute.set-theme-2">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
         </TouchableOpacity>
       </View>
@@ -248,7 +248,7 @@ export default function FareDispute() {
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={fetchRide}
               disabled={rideLoading}
-            >
+             testID="customer.fare-dispute.fetch-ride">
               <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
@@ -289,7 +289,7 @@ export default function FareDispute() {
             onChangeText={(text) => setExpectedFare(text.replace(/[^0-9]/g, ""))}
             keyboardType="number-pad"
             accessibilityLabel={t('fare_dispute.expected_fare_a11y')}
-          />
+           testID="customer.fare-dispute.set-expected-fare"/>
         </View>
         <Text style={[styles.helperText, { color: textSecondary }]}>
           {t('fare_dispute.what_should_you_pay')}
@@ -314,7 +314,7 @@ export default function FareDispute() {
                 ]}
                 onPress={() => setReason(r.value)}
                 activeOpacity={0.8}
-              >
+               testID="customer.fare-dispute.set-reason">
                 <Text
                   style={[
                     styles.chipText,
@@ -340,7 +340,7 @@ export default function FareDispute() {
           onChangeText={setDetails}
           multiline
           maxLength={MAX_DETAILS}
-        />
+         testID="customer.fare-dispute.set-details"/>
         <View style={styles.counterRow}>
           {details.length > 0 && !detailsValid ? (
             <Text style={[styles.helperText, { color: textSecondary }]}>
@@ -363,7 +363,7 @@ export default function FareDispute() {
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={handleSubmit}
               disabled={submitting || !formValid}
-            >
+             testID="customer.fare-dispute.handle-submit">
               <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
@@ -380,7 +380,7 @@ export default function FareDispute() {
           onPress={handleSubmit}
           disabled={!formValid || submitting}
           activeOpacity={0.8}
-        >
+         testID="customer.fare-dispute.handle-submit-2">
           {submitting ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (

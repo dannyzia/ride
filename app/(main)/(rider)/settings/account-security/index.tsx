@@ -62,7 +62,7 @@ export default function DriverSettingsAccount() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.settings.account-security.el-1">
           <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Account & Security</Text>
@@ -73,7 +73,7 @@ export default function DriverSettingsAccount() {
           className="p-[14px] border rounded-[12px] mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/settings/change-password")}
-        >
+         testID="rider.settings.account-security.push-main">
           <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Security & Login Info</Text>
           <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Phone number & login method</Text>
         </TouchableOpacity>
@@ -85,7 +85,7 @@ export default function DriverSettingsAccount() {
           className="p-[14px] border rounded-[12px] mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => setShowSignOutConfirm(true)}
-        >
+         testID="rider.settings.account-security.set-show-sign-out-confirm">
           <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Sign out</Text>
           <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Disconnect and return to the login screen</Text>
         </TouchableOpacity>
@@ -93,7 +93,7 @@ export default function DriverSettingsAccount() {
           className="p-[14px] border rounded-[12px] mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => setShowDeleteConfirm(true)}
-        >
+         testID="rider.settings.account-security.set-show-delete-confirm">
           <Text className="text-[15px] font-JakartaBold text-goDanger">Delete account</Text>
           <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Permanently remove your account and all data</Text>
         </TouchableOpacity>
@@ -107,7 +107,7 @@ export default function DriverSettingsAccount() {
               className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3"
               onPress={handleSignOut}
               disabled={signingOut}
-            >
+             testID="rider.settings.account-security.handle-sign-out">
               {signingOut ? (
                 <ActivityIndicator size={20} color="#FFFFFF" />
               ) : (
@@ -119,7 +119,7 @@ export default function DriverSettingsAccount() {
               style={{ borderColor }}
               onPress={() => { setShowSignOutConfirm(false); }}
               disabled={signingOut}
-            >
+             testID="rider.settings.account-security.set-show-sign-out-confirm-2">
               <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -135,7 +135,7 @@ export default function DriverSettingsAccount() {
               className="bg-goDanger rounded-full w-full py-[16px] items-center mb-3"
               onPress={handleDelete}
               disabled={deleting}
-            >
+             testID="rider.settings.account-security.handle-delete">
               {deleting ? (
                 <ActivityIndicator size={20} color="#FFFFFF" />
               ) : (
@@ -147,7 +147,7 @@ export default function DriverSettingsAccount() {
               style={{ borderColor }}
               onPress={() => { setShowDeleteConfirm(false); setError(""); }}
               disabled={deleting}
-            >
+             testID="rider.settings.account-security.set-show-delete-confirm-2">
               <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -158,7 +158,7 @@ export default function DriverSettingsAccount() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.settings.account-security.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

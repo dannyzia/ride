@@ -24,7 +24,7 @@ export default function RideCanceled() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.canceled.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
       <Ionicons name="close-circle" size={48} color={colors.danger} style={{ marginBottom: 16 }} />
@@ -36,7 +36,7 @@ export default function RideCanceled() {
         className="rounded-full w-full py-[16px] items-center"
         style={{ backgroundColor: colors.primary }}
         onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
-      >
+       testID="customer.canceled.replace-main">
         <Text className="text-[18px] font-JakartaBold text-goWhite">{t('ride.back_to_home')}</Text>
       </TouchableOpacity>
     </SafeAreaView>

@@ -38,14 +38,14 @@ export default function NotFoundScreen() {
           style={[styles.button, styles.primaryButton]}
           onPress={handleGoHome}
           activeOpacity={0.8}
-        >
+         testID="not-found.handle-go-home">
           <Text style={styles.primaryButtonText}>Go Home</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.button, styles.secondaryButton, { backgroundColor: surfaceBg, borderColor }]}
           onPress={handleGoAdmin}
           activeOpacity={0.8}
-        >
+         testID="not-found.handle-go-admin">
           <Text style={[styles.secondaryButtonText, { color: textPrimary }]}>Admin</Text>
         </TouchableOpacity>
       </View>
@@ -54,7 +54,7 @@ export default function NotFoundScreen() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="not-found.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </View>

@@ -1,0 +1,4880 @@
+{
+  "generatedAt": "2026-09-27T15:52:23.105Z",
+  "total": 1108,
+  "screens": {
+    "(auth)/_layout.tsx": [
+      {
+        "id": "_layout.set-theme",
+        "line": 32
+      }
+    ],
+    "(auth)/driver-enable-location.tsx": [
+      {
+        "id": "driver-enable-location.allow",
+        "line": 63
+      },
+      {
+        "id": "driver-enable-location.skip",
+        "line": 68
+      }
+    ],
+    "(auth)/driver-notifications-permission.tsx": [
+      {
+        "id": "driver-notifications-permission.allow",
+        "line": 119
+      },
+      {
+        "id": "driver-notifications-permission.skip",
+        "line": 124
+      }
+    ],
+    "(auth)/driver-walkthrough-1.tsx": [
+      {
+        "id": "driver-walkthrough-1.push-auth",
+        "line": 71
+      }
+    ],
+    "(auth)/driver-walkthrough-2.tsx": [
+      {
+        "id": "driver-walkthrough-2.push-auth",
+        "line": 71
+      }
+    ],
+    "(auth)/driver-walkthrough-3.tsx": [
+      {
+        "id": "driver-walkthrough-3.replace-auth",
+        "line": 71
+      }
+    ],
+    "(auth)/driver-welcome.tsx": [
+      {
+        "id": "driver-welcome.replace-auth",
+        "line": 36
+      },
+      {
+        "id": "driver-welcome.replace-auth-2",
+        "line": 41
+      }
+    ],
+    "(auth)/enable-location.tsx": [
+      {
+        "id": "enable-location.set-theme",
+        "line": 71
+      },
+      {
+        "id": "enable-location.allow",
+        "line": 112
+      },
+      {
+        "id": "enable-location.skip",
+        "line": 117
+      }
+    ],
+    "(auth)/forgot-password.tsx": [
+      {
+        "id": "forgot-password.set-phone-input",
+        "line": 195
+      },
+      {
+        "id": "forgot-password.handle-send-otp",
+        "line": 205
+      },
+      {
+        "id": "forgot-password.set-otp",
+        "line": 230
+      },
+      {
+        "id": "forgot-password.handle-verify-otp",
+        "line": 240
+      },
+      {
+        "id": "forgot-password.set-step",
+        "line": 248
+      },
+      {
+        "id": "forgot-password.set-new-password",
+        "line": 270
+      },
+      {
+        "id": "forgot-password.set-confirm-password",
+        "line": 285
+      },
+      {
+        "id": "forgot-password.handle-reset-password",
+        "line": 295
+      }
+    ],
+    "(auth)/login.tsx": [
+      {
+        "id": "login.set-phone",
+        "line": 107
+      },
+      {
+        "id": "login.set-password",
+        "line": 125
+      },
+      {
+        "id": "login.handle-login",
+        "line": 141
+      },
+      {
+        "id": "login.push-auth",
+        "line": 146
+      }
+    ],
+    "(auth)/notifications-permission.tsx": [
+      {
+        "id": "notifications-permission.set-theme",
+        "line": 89
+      },
+      {
+        "id": "notifications-permission.allow",
+        "line": 131
+      },
+      {
+        "id": "notifications-permission.skip",
+        "line": 136
+      }
+    ],
+    "(auth)/otp-verify.tsx": [
+      {
+        "id": "otp-verify.set-otp",
+        "line": 137
+      },
+      {
+        "id": "otp-verify.handle-verify-otp",
+        "line": 153
+      },
+      {
+        "id": "otp-verify.send-otp",
+        "line": 159
+      }
+    ],
+    "(auth)/phone-entry.tsx": [
+      {
+        "id": "phone-entry.set-phone",
+        "line": 167
+      },
+      {
+        "id": "phone-entry.set-role",
+        "line": 181
+      },
+      {
+        "id": "phone-entry.set-role-2",
+        "line": 195
+      },
+      {
+        "id": "phone-entry.handle-login",
+        "line": 216
+      },
+      {
+        "id": "phone-entry.handle-register",
+        "line": 222
+      }
+    ],
+    "(auth)/register.tsx": [
+      {
+        "id": "register.set-name",
+        "line": 120
+      },
+      {
+        "id": "register.set-password",
+        "line": 136
+      },
+      {
+        "id": "register.set-confirm-password",
+        "line": 152
+      },
+      {
+        "id": "register.handle-register",
+        "line": 168
+      }
+    ],
+    "(auth)/walkthrough-1.tsx": [
+      {
+        "id": "walkthrough-1.push-auth",
+        "line": 71
+      }
+    ],
+    "(auth)/walkthrough-2.tsx": [
+      {
+        "id": "walkthrough-2.push-auth",
+        "line": 71
+      }
+    ],
+    "(auth)/walkthrough-3.tsx": [
+      {
+        "id": "walkthrough-3.replace-auth",
+        "line": 71
+      }
+    ],
+    "(auth)/welcome.tsx": [
+      {
+        "id": "welcome.replace-auth",
+        "line": 67
+      },
+      {
+        "id": "welcome.replace-auth-2",
+        "line": 72
+      }
+    ],
+    "(main)/(ambulance-cert)/index.tsx": [
+      {
+        "id": "ambulance-cert.start-renew",
+        "line": 215
+      },
+      {
+        "id": "ambulance-cert.set-vehicle-id",
+        "line": 245
+      },
+      {
+        "id": "ambulance-cert.set-service-level",
+        "line": 262
+      },
+      {
+        "id": "ambulance-cert.set-cert-number",
+        "line": 278
+      },
+      {
+        "id": "ambulance-cert.set-issuing-body",
+        "line": 288
+      },
+      {
+        "id": "ambulance-cert.set-expires-at",
+        "line": 299
+      },
+      {
+        "id": "ambulance-cert.set-document-urls",
+        "line": 311
+      },
+      {
+        "id": "ambulance-cert.handle-submit",
+        "line": 319
+      }
+    ],
+    "(main)/(ambulance-driver)/index.tsx": [
+      {
+        "id": "ambulance-driver.el-1",
+        "line": 146
+      },
+      {
+        "id": "ambulance-driver.handle-status",
+        "line": 213
+      },
+      {
+        "id": "ambulance-driver.handle-accept",
+        "line": 281
+      }
+    ],
+    "(main)/(customer)/(ambulance)/emergency.tsx": [
+      {
+        "id": "customer.ambulance.emergency.el-1",
+        "line": 173
+      },
+      {
+        "id": "customer.ambulance.emergency.handle-cancel",
+        "line": 229
+      },
+      {
+        "id": "customer.ambulance.emergency.set-service-level",
+        "line": 264
+      },
+      {
+        "id": "customer.ambulance.emergency.set-requires-paramedic",
+        "line": 291
+      },
+      {
+        "id": "customer.ambulance.emergency.set-patient-condition",
+        "line": 325
+      },
+      {
+        "id": "customer.ambulance.emergency.set-pickup-address",
+        "line": 338
+      },
+      {
+        "id": "customer.ambulance.emergency.set-dropoff-address",
+        "line": 351
+      },
+      {
+        "id": "customer.ambulance.emergency.handle-create",
+        "line": 367
+      }
+    ],
+    "(main)/(customer)/(delivery)/index.tsx": [
+      {
+        "id": "customer.delivery.push-main",
+        "line": 88
+      },
+      {
+        "id": "customer.delivery.el-1",
+        "line": 117
+      },
+      {
+        "id": "customer.delivery.push-main-2",
+        "line": 123
+      },
+      {
+        "id": "customer.delivery.push-main-3",
+        "line": 145
+      }
+    ],
+    "(main)/(customer)/(delivery)/request-create.tsx": [
+      {
+        "id": "customer.delivery.request-create.el-1",
+        "line": 99
+      },
+      {
+        "id": "customer.delivery.request-create.set-pickup-address",
+        "line": 124
+      },
+      {
+        "id": "customer.delivery.request-create.set-dropoff-address",
+        "line": 142
+      },
+      {
+        "id": "customer.delivery.request-create.set-package-desc",
+        "line": 160
+      },
+      {
+        "id": "customer.delivery.request-create.set-weight",
+        "line": 179
+      },
+      {
+        "id": "customer.delivery.request-create.set-vehicle-type",
+        "line": 196
+      },
+      {
+        "id": "customer.delivery.request-create.handle-submit",
+        "line": 216
+      }
+    ],
+    "(main)/(customer)/(delivery)/request-detail.tsx": [
+      {
+        "id": "customer.delivery.request-detail.handle-accept-bid",
+        "line": 132
+      },
+      {
+        "id": "customer.delivery.request-detail.el-1",
+        "line": 177
+      }
+    ],
+    "(main)/(customer)/(rental-bidder)/[id].tsx": [
+      {
+        "id": "customer.rental-bidder.id.el-1",
+        "line": 228
+      },
+      {
+        "id": "customer.rental-bidder.id.set-selected-driver",
+        "line": 315
+      },
+      {
+        "id": "customer.rental-bidder.id.set-selected-vehicle",
+        "line": 363
+      },
+      {
+        "id": "customer.rental-bidder.id.handle-pick",
+        "line": 399
+      },
+      {
+        "id": "customer.rental-bidder.id.handle-withdraw",
+        "line": 422
+      }
+    ],
+    "(main)/(customer)/(rental-bidder)/bid-submit.tsx": [
+      {
+        "id": "customer.rental-bidder.bid-submit.el-1",
+        "line": 206
+      },
+      {
+        "id": "customer.rental-bidder.bid-submit.set-selected-vehicle-type",
+        "line": 303
+      },
+      {
+        "id": "customer.rental-bidder.bid-submit.set-price-input",
+        "line": 340
+      },
+      {
+        "id": "customer.rental-bidder.bid-submit.set-overtime-input",
+        "line": 371
+      },
+      {
+        "id": "customer.rental-bidder.bid-submit.set-notes",
+        "line": 397
+      },
+      {
+        "id": "customer.rental-bidder.bid-submit.handle-submit",
+        "line": 413
+      }
+    ],
+    "(main)/(customer)/(rental-bidder)/history.tsx": [
+      {
+        "id": "customer.rental-bidder.history.el-1",
+        "line": 102
+      }
+    ],
+    "(main)/(customer)/(rental-bidder)/index.tsx": [
+      {
+        "id": "customer.rental-bidder.el-1",
+        "line": 177
+      },
+      {
+        "id": "customer.rental-bidder.push-main",
+        "line": 253
+      },
+      {
+        "id": "customer.rental-bidder.el-2",
+        "line": 344
+      },
+      {
+        "id": "customer.rental-bidder.el-3",
+        "line": 367
+      },
+      {
+        "id": "customer.rental-bidder.load-more",
+        "line": 381
+      },
+      {
+        "id": "customer.rental-bidder.on-press",
+        "line": 423
+      }
+    ],
+    "(main)/(customer)/(rental-marketplace)/_components/TruckPicker.tsx": [
+      {
+        "id": "customer.rental-marketplace._components.TruckPicker.set-active-tab-id",
+        "line": 57
+      },
+      {
+        "id": "customer.rental-marketplace._components.TruckPicker.on-select",
+        "line": 93
+      }
+    ],
+    "(main)/(customer)/(rental-marketplace)/bidding.tsx": [
+      {
+        "id": "customer.rental-marketplace.bidding.el-1",
+        "line": 134
+      },
+      {
+        "id": "customer.rental-marketplace.bidding.set-selected-bid-id",
+        "line": 212
+      },
+      {
+        "id": "customer.rental-marketplace.bidding.handle-accept",
+        "line": 282
+      }
+    ],
+    "(main)/(customer)/(rental-marketplace)/confirmed.tsx": [
+      {
+        "id": "customer.rental-marketplace.confirmed.replace-main",
+        "line": 129
+      },
+      {
+        "id": "customer.rental-marketplace.confirmed.el-1",
+        "line": 146
+      }
+    ],
+    "(main)/(customer)/(rental-marketplace)/index.tsx": [
+      {
+        "id": "customer.rental-marketplace.on-press",
+        "line": 77
+      },
+      {
+        "id": "customer.rental-marketplace.set-cargo-weight",
+        "line": 360
+      },
+      {
+        "id": "customer.rental-marketplace.set-cargo-volume",
+        "line": 382
+      },
+      {
+        "id": "customer.rental-marketplace.set-cargo-description",
+        "line": 408
+      },
+      {
+        "id": "customer.rental-marketplace.set-service-level",
+        "line": 440
+      },
+      {
+        "id": "customer.rental-marketplace.set-requires-paramedic",
+        "line": 464
+      },
+      {
+        "id": "customer.rental-marketplace.set-patient-condition",
+        "line": 497
+      },
+      {
+        "id": "customer.rental-marketplace.set-start-mode",
+        "line": 526
+      },
+      {
+        "id": "customer.rental-marketplace.el-1",
+        "line": 593
+      },
+      {
+        "id": "customer.rental-marketplace.enter-truck-mode",
+        "line": 666
+      },
+      {
+        "id": "customer.rental-marketplace.set-category",
+        "line": 710
+      },
+      {
+        "id": "customer.rental-marketplace.set-selected-car-class",
+        "line": 765
+      },
+      {
+        "id": "customer.rental-marketplace.set-pickup-address",
+        "line": 822
+      },
+      {
+        "id": "customer.rental-marketplace.set-dropoff-address",
+        "line": 843
+      },
+      {
+        "id": "customer.rental-marketplace.set-tracking-required",
+        "line": 858
+      },
+      {
+        "id": "customer.rental-marketplace.handle-submit",
+        "line": 887
+      }
+    ],
+    "(main)/(customer)/(rental-marketplace)/request-detail.tsx": [
+      {
+        "id": "customer.rental-marketplace.request-detail.el-1",
+        "line": 186
+      },
+      {
+        "id": "customer.rental-marketplace.request-detail.set-selected-bid-id",
+        "line": 331
+      },
+      {
+        "id": "customer.rental-marketplace.request-detail.handle-accept",
+        "line": 379
+      }
+    ],
+    "(main)/(customer)/(rental-marketplace)/request-history.tsx": [
+      {
+        "id": "customer.rental-marketplace.request-history.el-1",
+        "line": 107
+      },
+      {
+        "id": "customer.rental-marketplace.request-history.push-main",
+        "line": 141
+      }
+    ],
+    "(main)/(customer)/(shops)/index.tsx": [
+      {
+        "id": "customer.shops.el-1",
+        "line": 93
+      },
+      {
+        "id": "customer.shops.set-search",
+        "line": 126
+      },
+      {
+        "id": "customer.shops.push-main",
+        "line": 155
+      }
+    ],
+    "(main)/(customer)/(shops)/order-create/[id].tsx": [
+      {
+        "id": "customer.shops.order-create.id.el-1",
+        "line": 96
+      },
+      {
+        "id": "customer.shops.order-create.id.set-cart-fulfillment",
+        "line": 124
+      },
+      {
+        "id": "customer.shops.order-create.id.set-delivery-address",
+        "line": 160
+      },
+      {
+        "id": "customer.shops.order-create.id.set-notes",
+        "line": 207
+      },
+      {
+        "id": "customer.shops.order-create.id.handle-submit",
+        "line": 254
+      }
+    ],
+    "(main)/(customer)/(shops)/shop-detail/[id].tsx": [
+      {
+        "id": "customer.shops.shop-detail.id.el-1",
+        "line": 77
+      },
+      {
+        "id": "customer.shops.shop-detail.id.remove-from-cart",
+        "line": 132
+      },
+      {
+        "id": "customer.shops.shop-detail.id.add-to-cart",
+        "line": 141
+      },
+      {
+        "id": "customer.shops.shop-detail.id.add-to-cart-2",
+        "line": 149
+      },
+      {
+        "id": "customer.shops.shop-detail.id.push-main",
+        "line": 189
+      }
+    ],
+    "(main)/(customer)/(tabs)/_layout.tsx": [
+      {
+        "id": "customer._layout.on-press",
+        "line": 55
+      }
+    ],
+    "(main)/(customer)/(tabs)/activity-canceled/index.tsx": [
+      {
+        "id": "customer.activity-canceled.el-1",
+        "line": 78
+      },
+      {
+        "id": "customer.activity-canceled.replace-main",
+        "line": 123
+      },
+      {
+        "id": "customer.activity-canceled.set-theme",
+        "line": 133
+      }
+    ],
+    "(main)/(customer)/(tabs)/activity-completed/index.tsx": [
+      {
+        "id": "customer.activity-completed.replace-main",
+        "line": 59
+      },
+      {
+        "id": "customer.activity-completed.push-main",
+        "line": 97
+      },
+      {
+        "id": "customer.activity-completed.push-main-2",
+        "line": 103
+      },
+      {
+        "id": "customer.activity-completed.set-theme",
+        "line": 125
+      }
+    ],
+    "(main)/(customer)/(tabs)/activity-scheduled/index.tsx": [
+      {
+        "id": "customer.activity-scheduled.replace-main",
+        "line": 58
+      },
+      {
+        "id": "customer.activity-scheduled.push-main",
+        "line": 97
+      },
+      {
+        "id": "customer.activity-scheduled.replace-main-2",
+        "line": 104
+      },
+      {
+        "id": "customer.activity-scheduled.set-theme",
+        "line": 126
+      }
+    ],
+    "(main)/(customer)/(tabs)/activity/index.tsx": [
+      {
+        "id": "customer.activity.replace-main",
+        "line": 58
+      },
+      {
+        "id": "customer.activity.push-main",
+        "line": 96
+      },
+      {
+        "id": "customer.activity.push-main-2",
+        "line": 103
+      },
+      {
+        "id": "customer.activity.set-theme",
+        "line": 124
+      }
+    ],
+    "(main)/(customer)/(tabs)/activity/share-receipt/index.tsx": [
+      {
+        "id": "customer.activity.share-receipt.replace-main",
+        "line": 27
+      },
+      {
+        "id": "customer.activity.share-receipt.el-1",
+        "line": 52
+      },
+      {
+        "id": "customer.activity.share-receipt.el-2",
+        "line": 55
+      },
+      {
+        "id": "customer.activity.share-receipt.set-theme",
+        "line": 73
+      }
+    ],
+    "(main)/(customer)/(tabs)/activity/top-up-details/index.tsx": [
+      {
+        "id": "customer.activity.top-up-details.replace-main",
+        "line": 23
+      },
+      {
+        "id": "customer.activity.top-up-details.el-1",
+        "line": 42
+      },
+      {
+        "id": "customer.activity.top-up-details.set-theme",
+        "line": 51
+      }
+    ],
+    "(main)/(customer)/(tabs)/activity/top-up/index.tsx": [
+      {
+        "id": "customer.activity.top-up.replace-main",
+        "line": 72
+      },
+      {
+        "id": "customer.activity.top-up.push-main",
+        "line": 116
+      },
+      {
+        "id": "customer.activity.top-up.set-theme",
+        "line": 125
+      }
+    ],
+    "(main)/(customer)/(tabs)/chat/index.tsx": [
+      {
+        "id": "customer.chat.set-theme",
+        "line": 47
+      }
+    ],
+    "(main)/(customer)/(tabs)/driver-history/[id].tsx": [
+      {
+        "id": "customer.driver-history.id.el-1",
+        "line": 84
+      },
+      {
+        "id": "customer.driver-history.id.set-theme",
+        "line": 135
+      }
+    ],
+    "(main)/(customer)/(tabs)/driver-history/index.tsx": [
+      {
+        "id": "customer.driver-history.el-1",
+        "line": 76
+      },
+      {
+        "id": "customer.driver-history.push-main",
+        "line": 102
+      },
+      {
+        "id": "customer.driver-history.set-theme",
+        "line": 123
+      }
+    ],
+    "(main)/(customer)/(tabs)/history-detail/index.tsx": [
+      {
+        "id": "customer.history-detail.el-1",
+        "line": 82
+      },
+      {
+        "id": "customer.history-detail.push-main",
+        "line": 126
+      },
+      {
+        "id": "customer.history-detail.push-main-2",
+        "line": 133
+      },
+      {
+        "id": "customer.history-detail.set-theme",
+        "line": 147
+      }
+    ],
+    "(main)/(customer)/(tabs)/home/index.tsx": [
+      {
+        "id": "customer.home.el-1",
+        "line": 805
+      },
+      {
+        "id": "customer.home.string-el",
+        "line": 838
+      },
+      {
+        "id": "customer.home.set-stops",
+        "line": 856
+      },
+      {
+        "id": "customer.home.set-stops-2",
+        "line": 868
+      },
+      {
+        "id": "customer.home.el-2",
+        "line": 882
+      },
+      {
+        "id": "customer.home.set-show-save-place",
+        "line": 897
+      },
+      {
+        "id": "customer.home.handle-location-select",
+        "line": 934
+      },
+      {
+        "id": "customer.home.handle-location-select-2",
+        "line": 977
+      },
+      {
+        "id": "customer.home.location-el",
+        "line": 1006
+      },
+      {
+        "id": "customer.home.handle-next",
+        "line": 1022
+      },
+      {
+        "id": "customer.home.set-booking-step",
+        "line": 1041
+      },
+      {
+        "id": "customer.home.set-selected-category",
+        "line": 1073
+      },
+      {
+        "id": "customer.home.fetch-estimates",
+        "line": 1106
+      },
+      {
+        "id": "customer.home.set-selected-vehicle-type",
+        "line": 1157
+      },
+      {
+        "id": "customer.home.set-selected-promo",
+        "line": 1247
+      },
+      {
+        "id": "customer.home.handle-call-for-ride",
+        "line": 1288
+      },
+      {
+        "id": "customer.home.handle-map-pin-confirm",
+        "line": 1335
+      },
+      {
+        "id": "customer.home.handle-map-pin-confirm-2",
+        "line": 1342
+      },
+      {
+        "id": "customer.home.set-map-pin-coords",
+        "line": 1350
+      },
+      {
+        "id": "customer.home.set-theme",
+        "line": 1364
+      },
+      {
+        "id": "customer.home.set-save-place-label",
+        "line": 1442
+      },
+      {
+        "id": "customer.home.set-save-place-label-2",
+        "line": 1480
+      },
+      {
+        "id": "customer.home.set-show-save-place-2",
+        "line": 1497
+      },
+      {
+        "id": "customer.home.handle-save-place",
+        "line": 1504
+      }
+    ],
+    "(main)/(customer)/(tabs)/inbox/index.tsx": [
+      {
+        "id": "customer.inbox.set-theme",
+        "line": 263
+      }
+    ],
+    "(main)/(customer)/(tabs)/profile/index.tsx": [
+      {
+        "id": "customer.profile.set-theme",
+        "line": 198
+      },
+      {
+        "id": "customer.profile.el-1",
+        "line": 219
+      },
+      {
+        "id": "customer.profile.confirm-sign-out",
+        "line": 321
+      },
+      {
+        "id": "customer.profile.el-2",
+        "line": 329
+      }
+    ],
+    "(main)/(customer)/(tabs)/referral/index.tsx": [
+      {
+        "id": "customer.referral.set-theme",
+        "line": 179
+      },
+      {
+        "id": "customer.referral.handle-share",
+        "line": 246
+      },
+      {
+        "id": "customer.referral.handle-copy",
+        "line": 261
+      }
+    ],
+    "(main)/(customer)/(tabs)/rides/index.tsx": [
+      {
+        "id": "customer.rides.set-selected-ride",
+        "line": 319
+      },
+      {
+        "id": "customer.rides.handle-rebook",
+        "line": 375
+      },
+      {
+        "id": "customer.rides.handle-dispute",
+        "line": 385
+      },
+      {
+        "id": "customer.rides.set-detail-modal-visible",
+        "line": 414
+      },
+      {
+        "id": "customer.rides.push-main",
+        "line": 528
+      },
+      {
+        "id": "customer.rides.set-detail-modal-visible-2",
+        "line": 541
+      },
+      {
+        "id": "customer.rides.handle-dispute-2",
+        "line": 550
+      },
+      {
+        "id": "customer.rides.push-main-2",
+        "line": 582
+      },
+      {
+        "id": "customer.rides.set-theme",
+        "line": 613
+      },
+      {
+        "id": "customer.rides.set-search-query",
+        "line": 630
+      },
+      {
+        "id": "customer.rides.set-search-query-2",
+        "line": 636
+      },
+      {
+        "id": "customer.rides.set-active-filter",
+        "line": 660
+      },
+      {
+        "id": "customer.rides.push-main-3",
+        "line": 677
+      },
+      {
+        "id": "customer.rides.push-main-4",
+        "line": 686
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/add-payment/index.tsx": [
+      {
+        "id": "customer.settings.add-payment.el-1",
+        "line": 23
+      },
+      {
+        "id": "customer.settings.add-payment.set-theme",
+        "line": 46
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/app-appearance/index.tsx": [
+      {
+        "id": "customer.settings.app-appearance.el-1",
+        "line": 66
+      },
+      {
+        "id": "customer.settings.app-appearance.set-theme",
+        "line": 77
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/app-language/index.tsx": [
+      {
+        "id": "customer.settings.app-language.el-1",
+        "line": 65
+      },
+      {
+        "id": "customer.settings.app-language.set-theme",
+        "line": 76
+      },
+      {
+        "id": "customer.settings.app-language.apply-language",
+        "line": 98
+      },
+      {
+        "id": "customer.settings.app-language.set-bengali-numerals",
+        "line": 132
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/contact-support/index.tsx": [
+      {
+        "id": "customer.settings.contact-support.el-1",
+        "line": 87
+      },
+      {
+        "id": "customer.settings.contact-support.set-theme",
+        "line": 98
+      },
+      {
+        "id": "customer.settings.contact-support.call-emergency",
+        "line": 155
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/data-analytics/index.tsx": [
+      {
+        "id": "customer.settings.data-analytics.replace-main",
+        "line": 87
+      },
+      {
+        "id": "customer.settings.data-analytics.update-control",
+        "line": 98
+      },
+      {
+        "id": "customer.settings.data-analytics.update-control-2",
+        "line": 102
+      },
+      {
+        "id": "customer.settings.data-analytics.push-main",
+        "line": 106
+      },
+      {
+        "id": "customer.settings.data-analytics.push-main-2",
+        "line": 109
+      },
+      {
+        "id": "customer.settings.data-analytics.set-theme",
+        "line": 119
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/delete-account/index.tsx": [
+      {
+        "id": "customer.settings.delete-account.el-1",
+        "line": 105
+      },
+      {
+        "id": "customer.settings.delete-account.set-theme",
+        "line": 120
+      },
+      {
+        "id": "customer.settings.delete-account.handle-delete-press",
+        "line": 160
+      },
+      {
+        "id": "customer.settings.delete-account.set-confirm-text",
+        "line": 180
+      },
+      {
+        "id": "customer.settings.delete-account.handle-delete-press-2",
+        "line": 193
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/delete-data/index.tsx": [
+      {
+        "id": "customer.settings.delete-data.el-1",
+        "line": 57
+      },
+      {
+        "id": "customer.settings.delete-data.set-confirm-text",
+        "line": 95
+      },
+      {
+        "id": "customer.settings.delete-data.handle-delete",
+        "line": 102
+      },
+      {
+        "id": "customer.settings.delete-data.set-theme",
+        "line": 111
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/emergency-contacts/add.tsx": [
+      {
+        "id": "customer.settings.emergency-contacts.add.el-1",
+        "line": 111
+      },
+      {
+        "id": "customer.settings.emergency-contacts.add.set-theme",
+        "line": 126
+      },
+      {
+        "id": "customer.settings.emergency-contacts.add.set-name",
+        "line": 148
+      },
+      {
+        "id": "customer.settings.emergency-contacts.add.set-phone",
+        "line": 171
+      },
+      {
+        "id": "customer.settings.emergency-contacts.add.set-relationship",
+        "line": 198
+      },
+      {
+        "id": "customer.settings.emergency-contacts.add.handle-save",
+        "line": 221
+      },
+      {
+        "id": "customer.settings.emergency-contacts.add.handle-save-2",
+        "line": 238
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/emergency-contacts/index.tsx": [
+      {
+        "id": "customer.settings.emergency-contacts.call-contact",
+        "line": 189
+      },
+      {
+        "id": "customer.settings.emergency-contacts.delete-contact",
+        "line": 198
+      },
+      {
+        "id": "customer.settings.emergency-contacts.el-1",
+        "line": 213
+      },
+      {
+        "id": "customer.settings.emergency-contacts.el-2",
+        "line": 228
+      },
+      {
+        "id": "customer.settings.emergency-contacts.set-theme",
+        "line": 236
+      },
+      {
+        "id": "customer.settings.emergency-contacts.set-loading",
+        "line": 255
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/faq/index.tsx": [
+      {
+        "id": "customer.settings.faq.el-1",
+        "line": 145
+      },
+      {
+        "id": "customer.settings.faq.set-theme",
+        "line": 154
+      },
+      {
+        "id": "customer.settings.faq.load-el",
+        "line": 185
+      },
+      {
+        "id": "customer.settings.faq.set-open-id",
+        "line": 201
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/help-support/index.tsx": [
+      {
+        "id": "customer.settings.help-support.replace-main",
+        "line": 25
+      },
+      {
+        "id": "customer.settings.help-support.push-main",
+        "line": 34
+      },
+      {
+        "id": "customer.settings.help-support.push-main-2",
+        "line": 39
+      },
+      {
+        "id": "customer.settings.help-support.el-1",
+        "line": 44
+      },
+      {
+        "id": "customer.settings.help-support.push-main-3",
+        "line": 52
+      },
+      {
+        "id": "customer.settings.help-support.push-main-4",
+        "line": 60
+      },
+      {
+        "id": "customer.settings.help-support.push-main-5",
+        "line": 65
+      },
+      {
+        "id": "customer.settings.help-support.set-theme",
+        "line": 77
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/index.tsx": [
+      {
+        "id": "customer.settings.el-1",
+        "line": 65
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/linked-accounts/index.tsx": [
+      {
+        "id": "customer.settings.linked-accounts.replace-main",
+        "line": 60
+      },
+      {
+        "id": "customer.settings.linked-accounts.el-1",
+        "line": 92
+      },
+      {
+        "id": "customer.settings.linked-accounts.set-theme",
+        "line": 104
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/logout-confirmation/index.tsx": [
+      {
+        "id": "customer.settings.logout-confirmation.handle-logout",
+        "line": 58
+      },
+      {
+        "id": "customer.settings.logout-confirmation.el-1",
+        "line": 67
+      },
+      {
+        "id": "customer.settings.logout-confirmation.set-theme",
+        "line": 78
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/lost-items/index.tsx": [
+      {
+        "id": "customer.settings.lost-items.el-1",
+        "line": 111
+      },
+      {
+        "id": "customer.settings.lost-items.open-report",
+        "line": 139
+      },
+      {
+        "id": "customer.settings.lost-items.set-modal-visible",
+        "line": 147
+      },
+      {
+        "id": "customer.settings.lost-items.set-selected-ride-id",
+        "line": 156
+      },
+      {
+        "id": "customer.settings.lost-items.set-description",
+        "line": 164
+      },
+      {
+        "id": "customer.settings.lost-items.submit-report",
+        "line": 167
+      },
+      {
+        "id": "customer.settings.lost-items.set-theme",
+        "line": 178
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/loyalty/index.tsx": [
+      {
+        "id": "customer.settings.loyalty.el-1",
+        "line": 82
+      },
+      {
+        "id": "customer.settings.loyalty.redeem-el",
+        "line": 103
+      },
+      {
+        "id": "customer.settings.loyalty.set-theme",
+        "line": 114
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/notifications/index.tsx": [
+      {
+        "id": "customer.settings.notifications.on-retry",
+        "line": 96
+      },
+      {
+        "id": "customer.settings.notifications.toggle-el",
+        "line": 224
+      },
+      {
+        "id": "customer.settings.notifications.el-1",
+        "line": 242
+      },
+      {
+        "id": "customer.settings.notifications.set-theme",
+        "line": 253
+      },
+      {
+        "id": "customer.settings.notifications.save-el",
+        "line": 327
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/personal-info/index.tsx": [
+      {
+        "id": "customer.settings.personal-info.el-1",
+        "line": 77
+      },
+      {
+        "id": "customer.settings.personal-info.pick-image",
+        "line": 85
+      },
+      {
+        "id": "customer.settings.personal-info.set-local-name",
+        "line": 114
+      },
+      {
+        "id": "customer.settings.personal-info.personal-info-not-set",
+        "line": 124
+      },
+      {
+        "id": "customer.settings.personal-info.personal-info-not-set-2",
+        "line": 134
+      },
+      {
+        "id": "customer.settings.personal-info.save-changes",
+        "line": 147
+      },
+      {
+        "id": "customer.settings.personal-info.set-theme",
+        "line": 160
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/request-data/index.tsx": [
+      {
+        "id": "customer.settings.request-data.el-1",
+        "line": 55
+      },
+      {
+        "id": "customer.settings.request-data.handle-request",
+        "line": 93
+      },
+      {
+        "id": "customer.settings.request-data.set-theme",
+        "line": 102
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/ride-pass/index.tsx": [
+      {
+        "id": "customer.settings.ride-pass.el-1",
+        "line": 110
+      },
+      {
+        "id": "customer.settings.ride-pass.buy-pass",
+        "line": 165
+      },
+      {
+        "id": "customer.settings.ride-pass.set-theme",
+        "line": 179
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/saved-addresses/[id].tsx": [
+      {
+        "id": "customer.settings.saved-addresses.id.el-1",
+        "line": 98
+      },
+      {
+        "id": "customer.settings.saved-addresses.id.set-show-more",
+        "line": 102
+      },
+      {
+        "id": "customer.settings.saved-addresses.id.set-show-more-2",
+        "line": 108
+      },
+      {
+        "id": "customer.settings.saved-addresses.id.set-show-more-3",
+        "line": 111
+      },
+      {
+        "id": "customer.settings.saved-addresses.id.set-show-more-4",
+        "line": 114
+      },
+      {
+        "id": "customer.settings.saved-addresses.id.handle-delete",
+        "line": 117
+      },
+      {
+        "id": "customer.settings.saved-addresses.id.handle-delete-2",
+        "line": 142
+      },
+      {
+        "id": "customer.settings.saved-addresses.id.set-theme",
+        "line": 158
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/saved-addresses/add-address/index.tsx": [
+      {
+        "id": "customer.settings.saved-addresses.add-address.replace-main",
+        "line": 87
+      },
+      {
+        "id": "customer.settings.saved-addresses.add-address.set-theme",
+        "line": 95
+      },
+      {
+        "id": "customer.settings.saved-addresses.add-address.el-1",
+        "line": 106
+      },
+      {
+        "id": "customer.settings.saved-addresses.add-address.set-label",
+        "line": 125
+      },
+      {
+        "id": "customer.settings.saved-addresses.add-address.set-custom-label",
+        "line": 147
+      },
+      {
+        "id": "customer.settings.saved-addresses.add-address.set-address-line",
+        "line": 161
+      },
+      {
+        "id": "customer.settings.saved-addresses.add-address.handle-save",
+        "line": 169
+      },
+      {
+        "id": "customer.settings.saved-addresses.add-address.set-theme-2",
+        "line": 178
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/saved-addresses/index.tsx": [
+      {
+        "id": "customer.settings.saved-addresses.push-main",
+        "line": 160
+      },
+      {
+        "id": "customer.settings.saved-addresses.delete-address",
+        "line": 189
+      },
+      {
+        "id": "customer.settings.saved-addresses.el-1",
+        "line": 204
+      },
+      {
+        "id": "customer.settings.saved-addresses.set-theme",
+        "line": 219
+      },
+      {
+        "id": "customer.settings.saved-addresses.set-loading",
+        "line": 238
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/top-up-method/index.tsx": [
+      {
+        "id": "customer.settings.top-up-method.el-1",
+        "line": 73
+      },
+      {
+        "id": "customer.settings.top-up-method.handle-pay",
+        "line": 97
+      },
+      {
+        "id": "customer.settings.top-up-method.set-theme",
+        "line": 110
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/top-up-success/index.tsx": [
+      {
+        "id": "customer.settings.top-up-success.replace-main",
+        "line": 43
+      },
+      {
+        "id": "customer.settings.top-up-success.replace-main-2",
+        "line": 50
+      },
+      {
+        "id": "customer.settings.top-up-success.set-theme",
+        "line": 58
+      }
+    ],
+    "(main)/(customer)/(tabs)/settings/top-up/index.tsx": [
+      {
+        "id": "customer.settings.top-up.el-1",
+        "line": 38
+      },
+      {
+        "id": "customer.settings.top-up.set-amount",
+        "line": 58
+      },
+      {
+        "id": "customer.settings.top-up.set-amount-2",
+        "line": 69
+      },
+      {
+        "id": "customer.settings.top-up.handle-continue",
+        "line": 83
+      },
+      {
+        "id": "customer.settings.top-up.set-theme",
+        "line": 92
+      }
+    ],
+    "(main)/(customer)/(tabs)/wallet/index.tsx": [
+      {
+        "id": "customer.wallet.set-theme",
+        "line": 215
+      },
+      {
+        "id": "customer.wallet.push-main",
+        "line": 246
+      },
+      {
+        "id": "customer.wallet.open-transactions",
+        "line": 255
+      },
+      {
+        "id": "customer.wallet.set-show-all-txns",
+        "line": 328
+      }
+    ],
+    "(main)/(customer)/add-tip/index.tsx": [
+      {
+        "id": "customer.add-tip.el-1",
+        "line": 69
+      },
+      {
+        "id": "customer.add-tip.set-tip-amount",
+        "line": 108
+      },
+      {
+        "id": "customer.add-tip.set-custom-tip",
+        "line": 126
+      },
+      {
+        "id": "customer.add-tip.handle-add-tip",
+        "line": 135
+      },
+      {
+        "id": "customer.add-tip.set-theme",
+        "line": 148
+      }
+    ],
+    "(main)/(customer)/apply-promos/index.tsx": [
+      {
+        "id": "customer.apply-promos.el-1",
+        "line": 131
+      },
+      {
+        "id": "customer.apply-promos.set-promo-code",
+        "line": 149
+      },
+      {
+        "id": "customer.apply-promos.handle-apply",
+        "line": 169
+      },
+      {
+        "id": "customer.apply-promos.set-promo-code-2",
+        "line": 193
+      },
+      {
+        "id": "customer.apply-promos.set-theme",
+        "line": 215
+      }
+    ],
+    "(main)/(customer)/autocomplete/index.tsx": [
+      {
+        "id": "customer.autocomplete.set-theme",
+        "line": 172
+      },
+      {
+        "id": "customer.autocomplete.el-1",
+        "line": 179
+      },
+      {
+        "id": "customer.autocomplete.set-query",
+        "line": 207
+      },
+      {
+        "id": "customer.autocomplete.set-query-2",
+        "line": 209
+      },
+      {
+        "id": "customer.autocomplete.handle-place-select",
+        "line": 239
+      }
+    ],
+    "(main)/(customer)/cancel-reason/index.tsx": [
+      {
+        "id": "customer.cancel-reason.set-note",
+        "line": 142
+      },
+      {
+        "id": "customer.cancel-reason.confirm-cancel",
+        "line": 149
+      },
+      {
+        "id": "customer.cancel-reason.set-theme",
+        "line": 162
+      }
+    ],
+    "(main)/(customer)/canceled/index.tsx": [
+      {
+        "id": "customer.canceled.set-theme",
+        "line": 27
+      },
+      {
+        "id": "customer.canceled.replace-main",
+        "line": 39
+      }
+    ],
+    "(main)/(customer)/change-password/index.tsx": [
+      {
+        "id": "customer.change-password.on-toggle",
+        "line": 111
+      },
+      {
+        "id": "customer.change-password.el-1",
+        "line": 125
+      },
+      {
+        "id": "customer.change-password.set-theme",
+        "line": 136
+      },
+      {
+        "id": "customer.change-password.set-current-password",
+        "line": 169
+      },
+      {
+        "id": "customer.change-password.set-new-password",
+        "line": 196
+      },
+      {
+        "id": "customer.change-password.set-confirm-password",
+        "line": 221
+      },
+      {
+        "id": "customer.change-password.handle-change",
+        "line": 245
+      }
+    ],
+    "(main)/(customer)/chat/[rideId].tsx": [
+      {
+        "id": "customer.chat.rideId.set-theme",
+        "line": 100
+      }
+    ],
+    "(main)/(customer)/confirm-ride/index.tsx": [
+      {
+        "id": "customer.confirm-ride.set-selected-discount",
+        "line": 472
+      },
+      {
+        "id": "customer.confirm-ride.set-book-for-other",
+        "line": 603
+      },
+      {
+        "id": "customer.confirm-ride.set-other-name",
+        "line": 612
+      },
+      {
+        "id": "customer.confirm-ride.set-other-phone",
+        "line": 614
+      },
+      {
+        "id": "customer.confirm-ride.set-other-consent",
+        "line": 621
+      },
+      {
+        "id": "customer.confirm-ride.set-prefer-female",
+        "line": 635
+      },
+      {
+        "id": "customer.confirm-ride.set-schedule-later",
+        "line": 656
+      },
+      {
+        "id": "customer.confirm-ride.set-show-stop-modal",
+        "line": 697
+      },
+      {
+        "id": "customer.confirm-ride.set-stops",
+        "line": 705
+      },
+      {
+        "id": "customer.confirm-ride.handle-request-ride",
+        "line": 714
+      },
+      {
+        "id": "customer.confirm-ride.set-show-stop-modal-2",
+        "line": 720
+      },
+      {
+        "id": "customer.confirm-ride.set-theme",
+        "line": 742
+      }
+    ],
+    "(main)/(customer)/driver-info/index.tsx": [
+      {
+        "id": "customer.driver-info.handle-call",
+        "line": 59
+      },
+      {
+        "id": "customer.driver-info.handle-chat",
+        "line": 66
+      },
+      {
+        "id": "customer.driver-info.set-theme",
+        "line": 76
+      }
+    ],
+    "(main)/(customer)/emergency-sos/index.tsx": [
+      {
+        "id": "customer.emergency-sos.handle-resolve",
+        "line": 233
+      },
+      {
+        "id": "customer.emergency-sos.handle-share-location",
+        "line": 247
+      },
+      {
+        "id": "customer.emergency-sos.handle-report-issue",
+        "line": 259
+      },
+      {
+        "id": "customer.emergency-sos.set-theme",
+        "line": 272
+      },
+      {
+        "id": "customer.emergency-sos.set-confirm-visible",
+        "line": 321
+      },
+      {
+        "id": "customer.emergency-sos.handle-share-location-2",
+        "line": 349
+      },
+      {
+        "id": "customer.emergency-sos.handle-report-issue-2",
+        "line": 361
+      },
+      {
+        "id": "customer.emergency-sos.handle-confirm",
+        "line": 400
+      },
+      {
+        "id": "customer.emergency-sos.set-confirm-visible-2",
+        "line": 415
+      },
+      {
+        "id": "customer.emergency-sos.set-theme-2",
+        "line": 429
+      }
+    ],
+    "(main)/(customer)/fare-dispute/index.tsx": [
+      {
+        "id": "customer.fare-dispute.el-1",
+        "line": 169
+      },
+      {
+        "id": "customer.fare-dispute.set-theme",
+        "line": 184
+      },
+      {
+        "id": "customer.fare-dispute.el-2",
+        "line": 210
+      },
+      {
+        "id": "customer.fare-dispute.set-theme-2",
+        "line": 225
+      },
+      {
+        "id": "customer.fare-dispute.fetch-ride",
+        "line": 251
+      },
+      {
+        "id": "customer.fare-dispute.set-expected-fare",
+        "line": 292
+      },
+      {
+        "id": "customer.fare-dispute.set-reason",
+        "line": 317
+      },
+      {
+        "id": "customer.fare-dispute.set-details",
+        "line": 343
+      },
+      {
+        "id": "customer.fare-dispute.handle-submit",
+        "line": 366
+      },
+      {
+        "id": "customer.fare-dispute.handle-submit-2",
+        "line": 383
+      }
+    ],
+    "(main)/(customer)/find-ride/index.tsx": [
+      {
+        "id": "customer.find-ride.set-selected-vehicle-type",
+        "line": 311
+      },
+      {
+        "id": "customer.find-ride.use-current-location",
+        "line": 356
+      },
+      {
+        "id": "customer.find-ride.remove-stop",
+        "line": 385
+      },
+      {
+        "id": "customer.find-ride.add-stop",
+        "line": 399
+      },
+      {
+        "id": "customer.find-ride.fetch-estimates",
+        "line": 436
+      },
+      {
+        "id": "customer.find-ride.set-selected-category",
+        "line": 474
+      },
+      {
+        "id": "customer.find-ride.handle-confirm",
+        "line": 532
+      },
+      {
+        "id": "customer.find-ride.set-theme",
+        "line": 541
+      }
+    ],
+    "(main)/(customer)/finding-driver/index.tsx": [
+      {
+        "id": "customer.finding-driver.set-theme",
+        "line": 332
+      },
+      {
+        "id": "customer.finding-driver.set-finding-state",
+        "line": 430
+      },
+      {
+        "id": "customer.finding-driver.set-finding-state-2",
+        "line": 458
+      },
+      {
+        "id": "customer.finding-driver.handle-cancel",
+        "line": 471
+      }
+    ],
+    "(main)/(customer)/no-drivers-available/index.tsx": [
+      {
+        "id": "customer.no-drivers-available.set-theme",
+        "line": 27
+      },
+      {
+        "id": "customer.no-drivers-available.replace-main",
+        "line": 47
+      },
+      {
+        "id": "customer.no-drivers-available.push-main",
+        "line": 54
+      }
+    ],
+    "(main)/(customer)/profile/edit.tsx": [
+      {
+        "id": "customer.profile.edit.el-1",
+        "line": 172
+      },
+      {
+        "id": "customer.profile.edit.set-theme",
+        "line": 183
+      },
+      {
+        "id": "customer.profile.edit.pick-image",
+        "line": 199
+      },
+      {
+        "id": "customer.profile.edit.set-name",
+        "line": 229
+      },
+      {
+        "id": "customer.profile.edit.set-email",
+        "line": 246
+      },
+      {
+        "id": "customer.profile.edit.handle-save",
+        "line": 266
+      }
+    ],
+    "(main)/(customer)/rate-driver/index.tsx": [
+      {
+        "id": "customer.rate-driver.el-1",
+        "line": 240
+      },
+      {
+        "id": "customer.rate-driver.set-theme",
+        "line": 250
+      },
+      {
+        "id": "customer.rate-driver.fetch-driver",
+        "line": 266
+      },
+      {
+        "id": "customer.rate-driver.set-rating",
+        "line": 303
+      },
+      {
+        "id": "customer.rate-driver.set-tip",
+        "line": 330
+      },
+      {
+        "id": "customer.rate-driver.set-tip-2",
+        "line": 343
+      },
+      {
+        "id": "customer.rate-driver.parse-int",
+        "line": 363
+      },
+      {
+        "id": "customer.rate-driver.toggle-block",
+        "line": 371
+      },
+      {
+        "id": "customer.rate-driver.handle-submit",
+        "line": 393
+      }
+    ],
+    "(main)/(customer)/report-issue/index.tsx": [
+      {
+        "id": "customer.report-issue.el-1",
+        "line": 113
+      },
+      {
+        "id": "customer.report-issue.set-theme",
+        "line": 128
+      },
+      {
+        "id": "customer.report-issue.set-category",
+        "line": 166
+      },
+      {
+        "id": "customer.report-issue.set-description",
+        "line": 192
+      },
+      {
+        "id": "customer.report-issue.handle-submit",
+        "line": 215
+      },
+      {
+        "id": "customer.report-issue.handle-submit-2",
+        "line": 232
+      },
+      {
+        "id": "customer.report-issue.close-success",
+        "line": 259
+      }
+    ],
+    "(main)/(customer)/ride-detail/[ride_id].tsx": [
+      {
+        "id": "customer.ride-detail.ride_id.fetch-ride",
+        "line": 211
+      },
+      {
+        "id": "customer.ride-detail.ride_id.el-1",
+        "line": 280
+      },
+      {
+        "id": "customer.ride-detail.ride_id.set-theme",
+        "line": 289
+      },
+      {
+        "id": "customer.ride-detail.ride_id.el-2",
+        "line": 440
+      },
+      {
+        "id": "customer.ride-detail.ride_id.push-main",
+        "line": 452
+      },
+      {
+        "id": "customer.ride-detail.ride_id.push-main-2",
+        "line": 466
+      }
+    ],
+    "(main)/(customer)/ride-details-scheduled/[id]/index.tsx": [
+      {
+        "id": "customer.ride-details-scheduled.id.el-1",
+        "line": 72
+      },
+      {
+        "id": "customer.ride-details-scheduled.id.set-loading",
+        "line": 89
+      },
+      {
+        "id": "customer.ride-details-scheduled.id.push-main",
+        "line": 133
+      },
+      {
+        "id": "customer.ride-details-scheduled.id.replace-main",
+        "line": 140
+      },
+      {
+        "id": "customer.ride-details-scheduled.id.set-theme",
+        "line": 151
+      }
+    ],
+    "(main)/(customer)/ride-scheduled/index.tsx": [
+      {
+        "id": "customer.ride-scheduled.set-theme",
+        "line": 52
+      },
+      {
+        "id": "customer.ride-scheduled.replace-main",
+        "line": 112
+      },
+      {
+        "id": "customer.ride-scheduled.replace-main-2",
+        "line": 120
+      }
+    ],
+    "(main)/(customer)/ride-tracking/[ride_id].tsx": [
+      {
+        "id": "customer.ride-tracking.ride_id.replace-main",
+        "line": 390
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.el-1",
+        "line": 471
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.set-theme",
+        "line": 492
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.handle-share",
+        "line": 498
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.el-2",
+        "line": 557
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.push-main",
+        "line": 561
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.handle-cancel",
+        "line": 565
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.handle-copy-pin",
+        "line": 600
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.el-3",
+        "line": 630
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.push-main-2",
+        "line": 634
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.handle-share-2",
+        "line": 638
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.push-main-3",
+        "line": 663
+      }
+    ],
+    "(main)/(customer)/schedule-ride/index.tsx": [
+      {
+        "id": "customer.schedule-ride.el-1",
+        "line": 172
+      },
+      {
+        "id": "customer.schedule-ride.set-theme",
+        "line": 183
+      },
+      {
+        "id": "customer.schedule-ride.set-vehicle-type",
+        "line": 239
+      },
+      {
+        "id": "customer.schedule-ride.handle-schedule",
+        "line": 295
+      }
+    ],
+    "(main)/(customer)/services-hub.tsx": [
+      {
+        "id": "customer.services-hub.set-theme",
+        "line": 77
+      },
+      {
+        "id": "customer.services-hub.handle-select",
+        "line": 118
+      },
+      {
+        "id": "customer.services-hub.push-main",
+        "line": 164
+      },
+      {
+        "id": "customer.services-hub.push-main-2",
+        "line": 195
+      },
+      {
+        "id": "customer.services-hub.push-main-3",
+        "line": 229
+      },
+      {
+        "id": "customer.services-hub.push-main-4",
+        "line": 263
+      }
+    ],
+    "(main)/(customer)/user-arrived/index.tsx": [
+      {
+        "id": "customer.user-arrived.set-theme",
+        "line": 30
+      },
+      {
+        "id": "customer.user-arrived.replace-main",
+        "line": 49
+      },
+      {
+        "id": "customer.user-arrived.replace-main-2",
+        "line": 56
+      }
+    ],
+    "(main)/(fleet)/(tabs)/dashboard/index.tsx": [
+      {
+        "id": "fleet.dashboard.on-press",
+        "line": 75
+      },
+      {
+        "id": "fleet.dashboard.fetch-data",
+        "line": 142
+      },
+      {
+        "id": "fleet.dashboard.push-main",
+        "line": 160
+      },
+      {
+        "id": "fleet.dashboard.push-main-2",
+        "line": 174
+      }
+    ],
+    "(main)/(fleet)/(tabs)/finance/index.tsx": [
+      {
+        "id": "fleet.finance.push-main",
+        "line": 119
+      }
+    ],
+    "(main)/(fleet)/(tabs)/finance/trips.tsx": [
+      {
+        "id": "fleet.finance.trips.on-press",
+        "line": 73
+      },
+      {
+        "id": "fleet.finance.trips.set-status-filter",
+        "line": 154
+      }
+    ],
+    "(main)/(fleet)/(tabs)/more/index.tsx": [
+      {
+        "id": "fleet.more.on-press",
+        "line": 25
+      }
+    ],
+    "(main)/(fleet)/(tabs)/operations/index.tsx": [
+      {
+        "id": "fleet.operations.set-tab",
+        "line": 265
+      },
+      {
+        "id": "fleet.operations.push-main",
+        "line": 293
+      },
+      {
+        "id": "fleet.operations.on-press",
+        "line": 443
+      },
+      {
+        "id": "fleet.operations.on-press-2",
+        "line": 634
+      }
+    ],
+    "(main)/(fleet)/assign.tsx": [
+      {
+        "id": "fleet.assign.on-press",
+        "line": 75
+      },
+      {
+        "id": "fleet.assign.handle-assign",
+        "line": 124
+      },
+      {
+        "id": "fleet.assign.set-step",
+        "line": 132
+      }
+    ],
+    "(main)/(fleet)/drivers/[id].tsx": [
+      {
+        "id": "fleet.drivers.id.fetch-driver",
+        "line": 147
+      },
+      {
+        "id": "fleet.drivers.id.push-main",
+        "line": 435
+      },
+      {
+        "id": "fleet.drivers.id.push-main-2",
+        "line": 485
+      }
+    ],
+    "(main)/(fleet)/subscription.tsx": [
+      {
+        "id": "fleet.subscription.set-show-plans",
+        "line": 414
+      },
+      {
+        "id": "fleet.subscription.format-paisa",
+        "line": 476
+      },
+      {
+        "id": "fleet.subscription.set-show-plans-2",
+        "line": 610
+      }
+    ],
+    "(main)/(fleet)/vehicles/[id].tsx": [
+      {
+        "id": "fleet.vehicles.id.fetch-vehicle",
+        "line": 149
+      },
+      {
+        "id": "fleet.vehicles.id.push-main",
+        "line": 398
+      },
+      {
+        "id": "fleet.vehicles.id.push-main-2",
+        "line": 459
+      }
+    ],
+    "(main)/(rider)/active-subscription/index.tsx": [
+      {
+        "id": "rider.active-subscription.el-1",
+        "line": 56
+      },
+      {
+        "id": "rider.active-subscription.push-main",
+        "line": 75
+      },
+      {
+        "id": "rider.active-subscription.push-main-2",
+        "line": 108
+      },
+      {
+        "id": "rider.active-subscription.push-main-3",
+        "line": 115
+      },
+      {
+        "id": "rider.active-subscription.set-theme",
+        "line": 125
+      }
+    ],
+    "(main)/(rider)/add-vehicle/index.tsx": [
+      {
+        "id": "rider.add-vehicle.on-close",
+        "line": 109
+      },
+      {
+        "id": "rider.add-vehicle.on-close-2",
+        "line": 113
+      },
+      {
+        "id": "rider.add-vehicle.on-select",
+        "line": 128
+      },
+      {
+        "id": "rider.add-vehicle.on-close-3",
+        "line": 156
+      },
+      {
+        "id": "rider.add-vehicle.on-close-4",
+        "line": 160
+      },
+      {
+        "id": "rider.add-vehicle.on-select-2",
+        "line": 176
+      },
+      {
+        "id": "rider.add-vehicle.on-navigate",
+        "line": 233
+      },
+      {
+        "id": "rider.add-vehicle.on-dismiss",
+        "line": 266
+      },
+      {
+        "id": "rider.add-vehicle.on-back",
+        "line": 296
+      },
+      {
+        "id": "rider.add-vehicle.on-retry",
+        "line": 300
+      },
+      {
+        "id": "rider.add-vehicle.el-1",
+        "line": 461
+      },
+      {
+        "id": "rider.add-vehicle.set-body-type-modal-visible",
+        "line": 473
+      },
+      {
+        "id": "rider.add-vehicle.set-brand-text",
+        "line": 486
+      },
+      {
+        "id": "rider.add-vehicle.set-brand",
+        "line": 487
+      },
+      {
+        "id": "rider.add-vehicle.set-picker-modal",
+        "line": 492
+      },
+      {
+        "id": "rider.add-vehicle.set-model-text",
+        "line": 501
+      },
+      {
+        "id": "rider.add-vehicle.set-model",
+        "line": 503
+      },
+      {
+        "id": "rider.add-vehicle.set-picker-modal-2",
+        "line": 509
+      },
+      {
+        "id": "rider.add-vehicle.set-picker-modal-3",
+        "line": 521
+      },
+      {
+        "id": "rider.add-vehicle.set-engine-cc",
+        "line": 538
+      },
+      {
+        "id": "rider.add-vehicle.set-seats",
+        "line": 552
+      },
+      {
+        "id": "rider.add-vehicle.set-plate",
+        "line": 567
+      },
+      {
+        "id": "rider.add-vehicle.handle-save",
+        "line": 588
+      },
+      {
+        "id": "rider.add-vehicle.set-theme",
+        "line": 643
+      }
+    ],
+    "(main)/(rider)/break-mode/index.tsx": [
+      {
+        "id": "rider.break-mode.set-theme",
+        "line": 45
+      },
+      {
+        "id": "rider.break-mode.el-1",
+        "line": 255
+      },
+      {
+        "id": "rider.break-mode.handle-end-break",
+        "line": 367
+      }
+    ],
+    "(main)/(rider)/call-ledger.tsx": [
+      {
+        "id": "rider.call-ledger.set-show-filter-sheet",
+        "line": 442
+      },
+      {
+        "id": "rider.call-ledger.set-outcome-filter",
+        "line": 501
+      },
+      {
+        "id": "rider.call-ledger.set-vehicle-type-filter",
+        "line": 535
+      },
+      {
+        "id": "rider.call-ledger.set-outcome-filter-2",
+        "line": 641
+      },
+      {
+        "id": "rider.call-ledger.set-vehicle-type-filter-2",
+        "line": 695
+      },
+      {
+        "id": "rider.call-ledger.set-date-range-filter",
+        "line": 748
+      },
+      {
+        "id": "rider.call-ledger.set-show-filter-sheet-2",
+        "line": 775
+      },
+      {
+        "id": "rider.call-ledger.el-1",
+        "line": 1072
+      },
+      {
+        "id": "rider.call-ledger.set-active-tab",
+        "line": 1109
+      },
+      {
+        "id": "rider.call-ledger.set-active-tab-2",
+        "line": 1134
+      },
+      {
+        "id": "rider.call-ledger.set-theme",
+        "line": 1313
+      }
+    ],
+    "(main)/(rider)/cancellation-reasons/index.tsx": [
+      {
+        "id": "rider.cancellation-reasons.set-theme",
+        "line": 57
+      },
+      {
+        "id": "rider.cancellation-reasons.el-1",
+        "line": 162
+      },
+      {
+        "id": "rider.cancellation-reasons.set-selected",
+        "line": 217
+      },
+      {
+        "id": "rider.cancellation-reasons.set-other-text",
+        "line": 264
+      },
+      {
+        "id": "rider.cancellation-reasons.handle-confirm",
+        "line": 293
+      }
+    ],
+    "(main)/(rider)/chat/[rideId].tsx": [
+      {
+        "id": "rider.chat.rideId.set-theme",
+        "line": 61
+      },
+      {
+        "id": "rider.chat.rideId.set-theme-2",
+        "line": 85
+      },
+      {
+        "id": "rider.chat.rideId.set-theme-3",
+        "line": 116
+      }
+    ],
+    "(main)/(rider)/commission-statement/index.tsx": [
+      {
+        "id": "rider.commission-statement.el-1",
+        "line": 111
+      },
+      {
+        "id": "rider.commission-statement.set-week-offset",
+        "line": 132
+      },
+      {
+        "id": "rider.commission-statement.set-week-offset-2",
+        "line": 151
+      },
+      {
+        "id": "rider.commission-statement.fetch-data",
+        "line": 178
+      }
+    ],
+    "(main)/(rider)/contact-support/index.tsx": [
+      {
+        "id": "rider.contact-support.el-1",
+        "line": 154
+      },
+      {
+        "id": "rider.contact-support.el-2",
+        "line": 204
+      },
+      {
+        "id": "rider.contact-support.set-show-category-picker",
+        "line": 227
+      },
+      {
+        "id": "rider.contact-support.set-category",
+        "line": 288
+      },
+      {
+        "id": "rider.contact-support.set-subject",
+        "line": 323
+      },
+      {
+        "id": "rider.contact-support.set-msg",
+        "line": 345
+      },
+      {
+        "id": "rider.contact-support.set-attachment",
+        "line": 387
+      },
+      {
+        "id": "rider.contact-support.pick-image",
+        "line": 398
+      },
+      {
+        "id": "rider.contact-support.pick-image-2",
+        "line": 417
+      },
+      {
+        "id": "rider.contact-support.handle-send",
+        "line": 467
+      }
+    ],
+    "(main)/(rider)/customer-navigation/[rideId].tsx": [
+      {
+        "id": "rider.customer-navigation.rideId.set-theme",
+        "line": 66
+      }
+    ],
+    "(main)/(rider)/d/(tabs)/activity/index.tsx": [
+      {
+        "id": "rider.d.activity.el-1",
+        "line": 200
+      },
+      {
+        "id": "rider.d.activity.set-filter",
+        "line": 233
+      },
+      {
+        "id": "rider.d.activity.handle-refresh",
+        "line": 257
+      },
+      {
+        "id": "rider.d.activity.load-more",
+        "line": 394
+      }
+    ],
+    "(main)/(rider)/d/(tabs)/earning/index.tsx": [
+      {
+        "id": "rider.d.earning.set-goal-input-taka",
+        "line": 226
+      },
+      {
+        "id": "rider.d.earning.load-el",
+        "line": 257
+      },
+      {
+        "id": "rider.d.earning.set-goal-input-taka-2",
+        "line": 301
+      },
+      {
+        "id": "rider.d.earning.set-goal-input-taka-3",
+        "line": 361
+      },
+      {
+        "id": "rider.d.earning.push-main",
+        "line": 400
+      },
+      {
+        "id": "rider.d.earning.el-1",
+        "line": 450
+      },
+      {
+        "id": "rider.d.earning.set-goal-period",
+        "line": 505
+      },
+      {
+        "id": "rider.d.earning.set-goal-input-taka-4",
+        "line": 532
+      },
+      {
+        "id": "rider.d.earning.set-goal-input-visible",
+        "line": 538
+      },
+      {
+        "id": "rider.d.earning.parse-int",
+        "line": 556
+      },
+      {
+        "id": "rider.d.earning.set-goal",
+        "line": 584
+      }
+    ],
+    "(main)/(rider)/d/(tabs)/hotspot/index.tsx": [
+      {
+        "id": "rider.d.hotspot.el-1",
+        "line": 175
+      },
+      {
+        "id": "rider.d.hotspot.load-el",
+        "line": 186
+      },
+      {
+        "id": "rider.d.hotspot.set-view",
+        "line": 203
+      },
+      {
+        "id": "rider.d.hotspot.load-el-2",
+        "line": 227
+      },
+      {
+        "id": "rider.d.hotspot.set-selected",
+        "line": 255
+      },
+      {
+        "id": "rider.d.hotspot.set-selected-2",
+        "line": 288
+      }
+    ],
+    "(main)/(rider)/d/(tabs)/index.tsx": [
+      {
+        "id": "rider.d.toggle-online",
+        "line": 1001
+      },
+      {
+        "id": "rider.d.set-theme",
+        "line": 1132
+      },
+      {
+        "id": "rider.d.push-main",
+        "line": 1151
+      },
+      {
+        "id": "rider.d.toggle-online-2",
+        "line": 1163
+      },
+      {
+        "id": "rider.d.push-main-2",
+        "line": 1177
+      },
+      {
+        "id": "rider.d.get-driver-fix",
+        "line": 1250
+      },
+      {
+        "id": "rider.d.push-main-3",
+        "line": 1311
+      },
+      {
+        "id": "rider.d.push-main-4",
+        "line": 1334
+      },
+      {
+        "id": "rider.d.push-main-5",
+        "line": 1417
+      },
+      {
+        "id": "rider.d.set-show-recovery-dialog",
+        "line": 1486
+      },
+      {
+        "id": "rider.d.handle-force-end-session",
+        "line": 1492
+      },
+      {
+        "id": "rider.d.recover-session",
+        "line": 1528
+      }
+    ],
+    "(main)/(rider)/d/(tabs)/profile/index.tsx": [
+      {
+        "id": "rider.d.profile.el-1",
+        "line": 227
+      },
+      {
+        "id": "rider.d.profile.handle-sign-out",
+        "line": 259
+      }
+    ],
+    "(main)/(rider)/d/(tabs)/wallet/index.tsx": [
+      {
+        "id": "rider.d.wallet.handle-top-up",
+        "line": 353
+      },
+      {
+        "id": "rider.d.wallet.push-main",
+        "line": 365
+      }
+    ],
+    "(main)/(rider)/documents/index.tsx": [
+      {
+        "id": "rider.documents.go-to-onboarding",
+        "line": 212
+      },
+      {
+        "id": "rider.documents.el-1",
+        "line": 315
+      },
+      {
+        "id": "rider.documents.fetch-documents",
+        "line": 365
+      },
+      {
+        "id": "rider.documents.go-to-onboarding-2",
+        "line": 420
+      }
+    ],
+    "(main)/(rider)/due-amounts/index.tsx": [
+      {
+        "id": "rider.due-amounts.el-1",
+        "line": 97
+      },
+      {
+        "id": "rider.due-amounts.fetch-data",
+        "line": 128
+      },
+      {
+        "id": "rider.due-amounts.push-main",
+        "line": 202
+      },
+      {
+        "id": "rider.due-amounts.push-main-2",
+        "line": 223
+      }
+    ],
+    "(main)/(rider)/earnings-breakdown/index.tsx": [
+      {
+        "id": "rider.earnings-breakdown.el-1",
+        "line": 110
+      },
+      {
+        "id": "rider.earnings-breakdown.set-date-range",
+        "line": 139
+      },
+      {
+        "id": "rider.earnings-breakdown.fetch-data",
+        "line": 169
+      }
+    ],
+    "(main)/(rider)/earnings-detail/[date].tsx": [
+      {
+        "id": "rider.earnings-detail.date.el-1",
+        "line": 135
+      },
+      {
+        "id": "rider.earnings-detail.date.set-theme",
+        "line": 146
+      },
+      {
+        "id": "rider.earnings-detail.date.load",
+        "line": 177
+      }
+    ],
+    "(main)/(rider)/earnings/index.tsx": [
+      {
+        "id": "rider.earnings.el-1",
+        "line": 94
+      },
+      {
+        "id": "rider.earnings.fetch-stats",
+        "line": 136
+      },
+      {
+        "id": "rider.earnings.push-main",
+        "line": 223
+      },
+      {
+        "id": "rider.earnings.push-main-2",
+        "line": 253
+      },
+      {
+        "id": "rider.earnings.push-main-3",
+        "line": 281
+      }
+    ],
+    "(main)/(rider)/edit-profile/index.tsx": [
+      {
+        "id": "rider.edit-profile.el-1",
+        "line": 203
+      },
+      {
+        "id": "rider.edit-profile.pick-image",
+        "line": 225
+      },
+      {
+        "id": "rider.edit-profile.set-full-name",
+        "line": 279
+      },
+      {
+        "id": "rider.edit-profile.set-email",
+        "line": 327
+      },
+      {
+        "id": "rider.edit-profile.set-city",
+        "line": 350
+      },
+      {
+        "id": "rider.edit-profile.handle-save",
+        "line": 369
+      }
+    ],
+    "(main)/(rider)/emergency-contacts/index.tsx": [
+      {
+        "id": "rider.emergency-contacts.el-1",
+        "line": 202
+      },
+      {
+        "id": "rider.emergency-contacts.el-2",
+        "line": 268
+      },
+      {
+        "id": "rider.emergency-contacts.confirm-remove",
+        "line": 306
+      },
+      {
+        "id": "rider.emergency-contacts.set-new-name",
+        "line": 341
+      },
+      {
+        "id": "rider.emergency-contacts.set-new-phone",
+        "line": 354
+      },
+      {
+        "id": "rider.emergency-contacts.set-new-relationship",
+        "line": 366
+      },
+      {
+        "id": "rider.emergency-contacts.add-contact",
+        "line": 391
+      },
+      {
+        "id": "rider.emergency-contacts.set-show-add",
+        "line": 413
+      },
+      {
+        "id": "rider.emergency-contacts.set-show-add-2",
+        "line": 431
+      },
+      {
+        "id": "rider.emergency-contacts.set-delete-modal-visible",
+        "line": 491
+      },
+      {
+        "id": "rider.emergency-contacts.remove-contact",
+        "line": 503
+      }
+    ],
+    "(main)/(rider)/enter-otp/index.tsx": [
+      {
+        "id": "rider.enter-otp.set-theme",
+        "line": 128
+      },
+      {
+        "id": "rider.enter-otp.handle-verify",
+        "line": 206
+      }
+    ],
+    "(main)/(rider)/faq/index.tsx": [
+      {
+        "id": "rider.faq.el-1",
+        "line": 111
+      },
+      {
+        "id": "rider.faq.fetch-faqs",
+        "line": 142
+      },
+      {
+        "id": "rider.faq.set-search",
+        "line": 171
+      },
+      {
+        "id": "rider.faq.set-search-2",
+        "line": 173
+      },
+      {
+        "id": "rider.faq.set-selected-category",
+        "line": 202
+      },
+      {
+        "id": "rider.faq.set-selected-category-2",
+        "line": 224
+      },
+      {
+        "id": "rider.faq.toggle-el",
+        "line": 272
+      }
+    ],
+    "(main)/(rider)/find-customer/index.tsx": [
+      {
+        "id": "rider.find-customer.el-1",
+        "line": 474
+      },
+      {
+        "id": "rider.find-customer.toggle-wait",
+        "line": 553
+      },
+      {
+        "id": "rider.find-customer.push-main",
+        "line": 579
+      },
+      {
+        "id": "rider.find-customer.set-show-toll-modal",
+        "line": 597
+      },
+      {
+        "id": "rider.find-customer.set-theme",
+        "line": 657
+      }
+    ],
+    "(main)/(rider)/finish-ride/index.tsx": [
+      {
+        "id": "rider.finish-ride.set-show-toll-modal",
+        "line": 421
+      },
+      {
+        "id": "rider.finish-ride.push-main",
+        "line": 604
+      },
+      {
+        "id": "rider.finish-ride.handle-go-home",
+        "line": 609
+      },
+      {
+        "id": "rider.finish-ride.set-theme",
+        "line": 635
+      }
+    ],
+    "(main)/(rider)/hotspot-map/index.tsx": [
+      {
+        "id": "rider.hotspot-map.el-1",
+        "line": 147
+      },
+      {
+        "id": "rider.hotspot-map.set-theme",
+        "line": 163
+      },
+      {
+        "id": "rider.hotspot-map.load",
+        "line": 198
+      },
+      {
+        "id": "rider.hotspot-map.load-2",
+        "line": 233
+      },
+      {
+        "id": "rider.hotspot-map.load-3",
+        "line": 311
+      },
+      {
+        "id": "rider.hotspot-map.set-selected-zone",
+        "line": 404
+      },
+      {
+        "id": "rider.hotspot-map.set-selected-zone-2",
+        "line": 469
+      }
+    ],
+    "(main)/(rider)/incentives.tsx": [
+      {
+        "id": "rider.incentives.el-1",
+        "line": 364
+      },
+      {
+        "id": "rider.incentives.set-theme",
+        "line": 535
+      }
+    ],
+    "(main)/(rider)/insurance/index.tsx": [
+      {
+        "id": "rider.insurance.load-el",
+        "line": 89
+      },
+      {
+        "id": "rider.insurance.el-1",
+        "line": 131
+      },
+      {
+        "id": "rider.insurance.set-theme",
+        "line": 147
+      }
+    ],
+    "(main)/(rider)/min-rate/index.tsx": [
+      {
+        "id": "rider.min-rate.fetch-config",
+        "line": 193
+      },
+      {
+        "id": "rider.min-rate.el-1",
+        "line": 216
+      },
+      {
+        "id": "rider.min-rate.set-theme",
+        "line": 229
+      },
+      {
+        "id": "rider.min-rate.handle-save",
+        "line": 317
+      }
+    ],
+    "(main)/(rider)/onboarding/index.tsx": [
+      {
+        "id": "rider.onboarding.on-close",
+        "line": 201
+      },
+      {
+        "id": "rider.onboarding.on-close-2",
+        "line": 233
+      },
+      {
+        "id": "rider.onboarding.on-select",
+        "line": 259
+      },
+      {
+        "id": "rider.onboarding.on-close-3",
+        "line": 308
+      },
+      {
+        "id": "rider.onboarding.on-close-4",
+        "line": 323
+      },
+      {
+        "id": "rider.onboarding.on-select-2",
+        "line": 352
+      },
+      {
+        "id": "rider.onboarding.on-dismiss",
+        "line": 486
+      },
+      {
+        "id": "rider.onboarding.on-dismiss-2",
+        "line": 527
+      },
+      {
+        "id": "rider.onboarding.on-back",
+        "line": 563
+      },
+      {
+        "id": "rider.onboarding.on-retry",
+        "line": 567
+      },
+      {
+        "id": "rider.onboarding.go-back",
+        "line": 1061
+      },
+      {
+        "id": "rider.onboarding.set-theme",
+        "line": 1080
+      },
+      {
+        "id": "rider.onboarding.set-name",
+        "line": 1113
+      },
+      {
+        "id": "rider.onboarding.pick-profile-photo",
+        "line": 1121
+      },
+      {
+        "id": "rider.onboarding.pick-profile-photo-2",
+        "line": 1128
+      },
+      {
+        "id": "rider.onboarding.set-body-type-modal-visible",
+        "line": 1145
+      },
+      {
+        "id": "rider.onboarding.set-brand-text",
+        "line": 1158
+      },
+      {
+        "id": "rider.onboarding.set-brand",
+        "line": 1159
+      },
+      {
+        "id": "rider.onboarding.set-picker-modal",
+        "line": 1164
+      },
+      {
+        "id": "rider.onboarding.set-model-text",
+        "line": 1174
+      },
+      {
+        "id": "rider.onboarding.set-model",
+        "line": 1176
+      },
+      {
+        "id": "rider.onboarding.set-picker-modal-2",
+        "line": 1182
+      },
+      {
+        "id": "rider.onboarding.set-picker-modal-3",
+        "line": 1196
+      },
+      {
+        "id": "rider.onboarding.set-engine-cc",
+        "line": 1221
+      },
+      {
+        "id": "rider.onboarding.set-seats",
+        "line": 1241
+      },
+      {
+        "id": "rider.onboarding.set-plate",
+        "line": 1262
+      },
+      {
+        "id": "rider.onboarding.skip-vehicle-step",
+        "line": 1295
+      },
+      {
+        "id": "rider.onboarding.set-legacy-answer",
+        "line": 1337
+      },
+      {
+        "id": "rider.onboarding.set-bkash",
+        "line": 1367
+      },
+      {
+        "id": "rider.onboarding.set-consent",
+        "line": 1400
+      },
+      {
+        "id": "rider.onboarding.go-back-2",
+        "line": 1415
+      },
+      {
+        "id": "rider.onboarding.go-next",
+        "line": 1425
+      }
+    ],
+    "(main)/(rider)/packages.tsx": [
+      {
+        "id": "rider.packages.handle-buy",
+        "line": 280
+      },
+      {
+        "id": "rider.packages.el-1",
+        "line": 295
+      },
+      {
+        "id": "rider.packages.el-2",
+        "line": 379
+      },
+      {
+        "id": "rider.packages.set-theme",
+        "line": 394
+      }
+    ],
+    "(main)/(rider)/payout-method/index.tsx": [
+      {
+        "id": "rider.payout-method.fetch-methods",
+        "line": 385
+      },
+      {
+        "id": "rider.payout-method.el-1",
+        "line": 412
+      },
+      {
+        "id": "rider.payout-method.set-theme",
+        "line": 425
+      },
+      {
+        "id": "rider.payout-method.open-edit",
+        "line": 512
+      },
+      {
+        "id": "rider.payout-method.confirm-delete",
+        "line": 527
+      },
+      {
+        "id": "rider.payout-method.set-show-add",
+        "line": 547
+      },
+      {
+        "id": "rider.payout-method.reset-add",
+        "line": 572
+      },
+      {
+        "id": "rider.payout-method.set-add-type",
+        "line": 612
+      },
+      {
+        "id": "rider.payout-method.set-add-account-number",
+        "line": 674
+      },
+      {
+        "id": "rider.payout-method.set-add-account-name",
+        "line": 697
+      },
+      {
+        "id": "rider.payout-method.set-add-bank-name",
+        "line": 721
+      },
+      {
+        "id": "rider.payout-method.set-add-branch-name",
+        "line": 742
+      },
+      {
+        "id": "rider.payout-method.handle-add",
+        "line": 756
+      },
+      {
+        "id": "rider.payout-method.reset-edit",
+        "line": 783
+      },
+      {
+        "id": "rider.payout-method.set-edit-account-number",
+        "line": 883
+      },
+      {
+        "id": "rider.payout-method.set-edit-account-name",
+        "line": 906
+      },
+      {
+        "id": "rider.payout-method.set-edit-bank-name",
+        "line": 930
+      },
+      {
+        "id": "rider.payout-method.set-edit-branch-name",
+        "line": 951
+      },
+      {
+        "id": "rider.payout-method.handle-edit",
+        "line": 965
+      }
+    ],
+    "(main)/(rider)/performance-stats/index.tsx": [
+      {
+        "id": "rider.performance-stats.el-1",
+        "line": 94
+      },
+      {
+        "id": "rider.performance-stats.fetch-stats",
+        "line": 107
+      },
+      {
+        "id": "rider.performance-stats.set-period",
+        "line": 123
+      },
+      {
+        "id": "rider.performance-stats.set-theme",
+        "line": 167
+      }
+    ],
+    "(main)/(rider)/personal-profile/index.tsx": [
+      {
+        "id": "rider.personal-profile.el-1",
+        "line": 108
+      },
+      {
+        "id": "rider.personal-profile.pick-image",
+        "line": 115
+      },
+      {
+        "id": "rider.personal-profile.set-name",
+        "line": 133
+      },
+      {
+        "id": "rider.personal-profile.set-city",
+        "line": 141
+      },
+      {
+        "id": "rider.personal-profile.handle-save",
+        "line": 149
+      },
+      {
+        "id": "rider.personal-profile.set-theme",
+        "line": 162
+      }
+    ],
+    "(main)/(rider)/promos/index.tsx": [
+      {
+        "id": "rider.promos.el-1",
+        "line": 120
+      },
+      {
+        "id": "rider.promos.set-theme",
+        "line": 227
+      }
+    ],
+    "(main)/(rider)/rate-rider/index.tsx": [
+      {
+        "id": "rider.rate-rider.set-theme",
+        "line": 43
+      },
+      {
+        "id": "rider.rate-rider.el-1",
+        "line": 162
+      },
+      {
+        "id": "rider.rate-rider.set-rating",
+        "line": 219
+      },
+      {
+        "id": "rider.rate-rider.handle-submit",
+        "line": 254
+      }
+    ],
+    "(main)/(rider)/ratings/index.tsx": [
+      {
+        "id": "rider.ratings.el-1",
+        "line": 89
+      },
+      {
+        "id": "rider.ratings.set-theme",
+        "line": 137
+      }
+    ],
+    "(main)/(rider)/referral/index.tsx": [
+      {
+        "id": "rider.referral.el-1",
+        "line": 76
+      },
+      {
+        "id": "rider.referral.fetch-referral-data",
+        "line": 92
+      },
+      {
+        "id": "rider.referral.handle-share",
+        "line": 121
+      },
+      {
+        "id": "rider.referral.handle-copy",
+        "line": 130
+      },
+      {
+        "id": "rider.referral.set-theme",
+        "line": 146
+      }
+    ],
+    "(main)/(rider)/report-issue/index.tsx": [
+      {
+        "id": "rider.report-issue.el-1",
+        "line": 74
+      },
+      {
+        "id": "rider.report-issue.set-selected",
+        "line": 91
+      },
+      {
+        "id": "rider.report-issue.set-description",
+        "line": 110
+      },
+      {
+        "id": "rider.report-issue.handle-submit",
+        "line": 117
+      },
+      {
+        "id": "rider.report-issue.set-theme",
+        "line": 130
+      }
+    ],
+    "(main)/(rider)/rider-no-show/index.tsx": [
+      {
+        "id": "rider.rider-no-show.el-1",
+        "line": 104
+      },
+      {
+        "id": "rider.rider-no-show.handle-no-show",
+        "line": 134
+      },
+      {
+        "id": "rider.rider-no-show.el-2",
+        "line": 145
+      },
+      {
+        "id": "rider.rider-no-show.push-main",
+        "line": 153
+      },
+      {
+        "id": "rider.rider-no-show.set-theme",
+        "line": 162
+      }
+    ],
+    "(main)/(rider)/safety/index.tsx": [
+      {
+        "id": "rider.safety.el-1",
+        "line": 108
+      },
+      {
+        "id": "rider.safety.el-2",
+        "line": 123
+      },
+      {
+        "id": "rider.safety.push-main",
+        "line": 140
+      },
+      {
+        "id": "rider.safety.set-theme",
+        "line": 208
+      }
+    ],
+    "(main)/(rider)/schedule/index.tsx": [
+      {
+        "id": "rider.schedule.el-1",
+        "line": 245
+      },
+      {
+        "id": "rider.schedule.toggle-day",
+        "line": 296
+      },
+      {
+        "id": "rider.schedule.open-time-picker",
+        "line": 310
+      },
+      {
+        "id": "rider.schedule.open-time-picker-2",
+        "line": 339
+      },
+      {
+        "id": "rider.schedule.handle-save",
+        "line": 375
+      },
+      {
+        "id": "rider.schedule.set-time-picker-visible",
+        "line": 403
+      },
+      {
+        "id": "rider.schedule.select-time",
+        "line": 445
+      }
+    ],
+    "(main)/(rider)/select-active-vehicle.tsx": [
+      {
+        "id": "rider.select-active-vehicle.el-1",
+        "line": 103
+      },
+      {
+        "id": "rider.select-active-vehicle.fetch-vehicles",
+        "line": 134
+      },
+      {
+        "id": "rider.select-active-vehicle.replace-main",
+        "line": 248
+      },
+      {
+        "id": "rider.select-active-vehicle.push-main",
+        "line": 263
+      }
+    ],
+    "(main)/(rider)/settings/account-security/index.tsx": [
+      {
+        "id": "rider.settings.account-security.el-1",
+        "line": 65
+      },
+      {
+        "id": "rider.settings.account-security.push-main",
+        "line": 76
+      },
+      {
+        "id": "rider.settings.account-security.set-show-sign-out-confirm",
+        "line": 88
+      },
+      {
+        "id": "rider.settings.account-security.set-show-delete-confirm",
+        "line": 96
+      },
+      {
+        "id": "rider.settings.account-security.handle-sign-out",
+        "line": 110
+      },
+      {
+        "id": "rider.settings.account-security.set-show-sign-out-confirm-2",
+        "line": 122
+      },
+      {
+        "id": "rider.settings.account-security.handle-delete",
+        "line": 138
+      },
+      {
+        "id": "rider.settings.account-security.set-show-delete-confirm-2",
+        "line": 150
+      },
+      {
+        "id": "rider.settings.account-security.set-theme",
+        "line": 161
+      }
+    ],
+    "(main)/(rider)/settings/appearance/index.tsx": [
+      {
+        "id": "rider.settings.appearance.el-1",
+        "line": 26
+      },
+      {
+        "id": "rider.settings.appearance.set-theme",
+        "line": 41
+      },
+      {
+        "id": "rider.settings.appearance.push-main",
+        "line": 53
+      },
+      {
+        "id": "rider.settings.appearance.set-theme-2",
+        "line": 65
+      }
+    ],
+    "(main)/(rider)/settings/auto-accept/index.tsx": [
+      {
+        "id": "rider.settings.auto-accept.el-1",
+        "line": 64
+      },
+      {
+        "id": "rider.settings.auto-accept.set-enabled",
+        "line": 72
+      },
+      {
+        "id": "rider.settings.auto-accept.set-radius",
+        "line": 77
+      },
+      {
+        "id": "rider.settings.auto-accept.save",
+        "line": 79
+      },
+      {
+        "id": "rider.settings.auto-accept.set-theme",
+        "line": 89
+      }
+    ],
+    "(main)/(rider)/settings/change-password/index.tsx": [
+      {
+        "id": "rider.settings.change-password.el-1",
+        "line": 68
+      },
+      {
+        "id": "rider.settings.change-password.set-theme",
+        "line": 76
+      },
+      {
+        "id": "rider.settings.change-password.el-2",
+        "line": 87
+      },
+      {
+        "id": "rider.settings.change-password.set-current-password",
+        "line": 108
+      },
+      {
+        "id": "rider.settings.change-password.set-new-password",
+        "line": 118
+      },
+      {
+        "id": "rider.settings.change-password.set-confirm-password",
+        "line": 128
+      },
+      {
+        "id": "rider.settings.change-password.handle-change",
+        "line": 136
+      },
+      {
+        "id": "rider.settings.change-password.set-theme-2",
+        "line": 149
+      }
+    ],
+    "(main)/(rider)/settings/index.tsx": [
+      {
+        "id": "rider.settings.el-1",
+        "line": 68
+      },
+      {
+        "id": "rider.settings.el-2",
+        "line": 108
+      }
+    ],
+    "(main)/(rider)/settings/language/index.tsx": [
+      {
+        "id": "rider.settings.language.el-1",
+        "line": 46
+      },
+      {
+        "id": "rider.settings.language.select-lang",
+        "line": 61
+      },
+      {
+        "id": "rider.settings.language.set-bengali-numerals",
+        "line": 88
+      },
+      {
+        "id": "rider.settings.language.set-theme",
+        "line": 96
+      }
+    ],
+    "(main)/(rider)/settings/lost-items/index.tsx": [
+      {
+        "id": "rider.settings.lost-items.respond",
+        "line": 187
+      },
+      {
+        "id": "rider.settings.lost-items.respond-2",
+        "line": 212
+      },
+      {
+        "id": "rider.settings.lost-items.respond-3",
+        "line": 234
+      },
+      {
+        "id": "rider.settings.lost-items.el-1",
+        "line": 262
+      },
+      {
+        "id": "rider.settings.lost-items.fetch-items",
+        "line": 293
+      }
+    ],
+    "(main)/(rider)/settings/notifications/index.tsx": [
+      {
+        "id": "rider.settings.notifications.set-theme",
+        "line": 92
+      },
+      {
+        "id": "rider.settings.notifications.el-1",
+        "line": 111
+      },
+      {
+        "id": "rider.settings.notifications.update-pref",
+        "line": 126
+      },
+      {
+        "id": "rider.settings.notifications.set-theme-2",
+        "line": 135
+      }
+    ],
+    "(main)/(rider)/subscription-checkout/index.tsx": [
+      {
+        "id": "rider.subscription-checkout.el-1",
+        "line": 110
+      },
+      {
+        "id": "rider.subscription-checkout.set-plan-loading",
+        "line": 124
+      },
+      {
+        "id": "rider.subscription-checkout.handle-pay",
+        "line": 146
+      },
+      {
+        "id": "rider.subscription-checkout.set-theme",
+        "line": 161
+      }
+    ],
+    "(main)/(rider)/subscription-confirmation/index.tsx": [
+      {
+        "id": "rider.subscription-confirmation.replace-main",
+        "line": 30
+      },
+      {
+        "id": "rider.subscription-confirmation.set-theme",
+        "line": 38
+      }
+    ],
+    "(main)/(rider)/subscription-details/index.tsx": [
+      {
+        "id": "rider.subscription-details.el-1",
+        "line": 67
+      },
+      {
+        "id": "rider.subscription-details.set-loading",
+        "line": 83
+      },
+      {
+        "id": "rider.subscription-details.push-main",
+        "line": 105
+      },
+      {
+        "id": "rider.subscription-details.set-theme",
+        "line": 115
+      }
+    ],
+    "(main)/(rider)/subscription-plans/index.tsx": [
+      {
+        "id": "rider.subscription-plans.el-1",
+        "line": 64
+      },
+      {
+        "id": "rider.subscription-plans.set-loading",
+        "line": 81
+      },
+      {
+        "id": "rider.subscription-plans.push-main",
+        "line": 98
+      },
+      {
+        "id": "rider.subscription-plans.set-theme",
+        "line": 117
+      }
+    ],
+    "(main)/(rider)/subscription-renewal/index.tsx": [
+      {
+        "id": "rider.subscription-renewal.set-theme",
+        "line": 57
+      },
+      {
+        "id": "rider.subscription-renewal.push-main",
+        "line": 78
+      },
+      {
+        "id": "rider.subscription-renewal.el-1",
+        "line": 85
+      },
+      {
+        "id": "rider.subscription-renewal.set-theme-2",
+        "line": 93
+      }
+    ],
+    "(main)/(rider)/support/index.tsx": [
+      {
+        "id": "rider.support.el-1",
+        "line": 22
+      },
+      {
+        "id": "rider.support.push-main",
+        "line": 33
+      },
+      {
+        "id": "rider.support.push-main-2",
+        "line": 46
+      },
+      {
+        "id": "rider.support.push-main-3",
+        "line": 59
+      },
+      {
+        "id": "rider.support.set-theme",
+        "line": 74
+      }
+    ],
+    "(main)/(rider)/trip-issue/index.tsx": [
+      {
+        "id": "rider.trip-issue.el-1",
+        "line": 71
+      },
+      {
+        "id": "rider.trip-issue.set-selected",
+        "line": 87
+      },
+      {
+        "id": "rider.trip-issue.set-description",
+        "line": 106
+      },
+      {
+        "id": "rider.trip-issue.handle-submit",
+        "line": 115
+      },
+      {
+        "id": "rider.trip-issue.set-theme",
+        "line": 128
+      }
+    ],
+    "(main)/(rider)/vehicle-management/index.tsx": [
+      {
+        "id": "rider.vehicle-management.el-1",
+        "line": 134
+      },
+      {
+        "id": "rider.vehicle-management.fetch-vehicles",
+        "line": 165
+      },
+      {
+        "id": "rider.vehicle-management.push-main",
+        "line": 361
+      }
+    ],
+    "(main)/(rider)/verification/index.tsx": [
+      {
+        "id": "rider.verification.handle-refresh",
+        "line": 220
+      },
+      {
+        "id": "rider.verification.handle-go-home",
+        "line": 528
+      },
+      {
+        "id": "rider.verification.handle-reupload",
+        "line": 546
+      },
+      {
+        "id": "rider.verification.handle-refresh-2",
+        "line": 566
+      },
+      {
+        "id": "rider.verification.handle-contact-support",
+        "line": 589
+      },
+      {
+        "id": "rider.verification.handle-contact-support-2",
+        "line": 608
+      }
+    ],
+    "+not-found.tsx": [
+      {
+        "id": "not-found.handle-go-home",
+        "line": 41
+      },
+      {
+        "id": "not-found.handle-go-admin",
+        "line": 48
+      },
+      {
+        "id": "not-found.set-theme",
+        "line": 57
+      }
+    ],
+    "admin/broadcast.tsx": [
+      {
+        "id": "admin.broadcast.set-target",
+        "line": 32
+      },
+      {
+        "id": "admin.broadcast.set-title",
+        "line": 41
+      },
+      {
+        "id": "admin.broadcast.set-message",
+        "line": 46
+      },
+      {
+        "id": "admin.broadcast.handle-send",
+        "line": 49
+      }
+    ],
+    "admin/cancellation-policies.tsx": [
+      {
+        "id": "admin.cancellation-policies.set-form",
+        "line": 53
+      },
+      {
+        "id": "admin.cancellation-policies.save",
+        "line": 69
+      }
+    ],
+    "admin/city-boundaries.tsx": [
+      {
+        "id": "admin.city-boundaries.open-edit",
+        "line": 306
+      },
+      {
+        "id": "admin.city-boundaries.set-confirm-delete",
+        "line": 312
+      },
+      {
+        "id": "admin.city-boundaries.fetch-list",
+        "line": 326
+      },
+      {
+        "id": "admin.city-boundaries.open-create",
+        "line": 329
+      },
+      {
+        "id": "admin.city-boundaries.close-modal",
+        "line": 355
+      },
+      {
+        "id": "admin.city-boundaries.handle-save",
+        "line": 362
+      },
+      {
+        "id": "admin.city-boundaries.set-confirm-delete-2",
+        "line": 388
+      },
+      {
+        "id": "admin.city-boundaries.confirm-delete-action",
+        "line": 395
+      }
+    ],
+    "admin/documents.tsx": [
+      {
+        "id": "admin.documents.view-doc",
+        "line": 76
+      },
+      {
+        "id": "admin.documents.approve-doc",
+        "line": 96
+      },
+      {
+        "id": "admin.documents.reject-doc",
+        "line": 100
+      }
+    ],
+    "admin/events.tsx": [
+      {
+        "id": "admin.events.open-edit",
+        "line": 301
+      },
+      {
+        "id": "admin.events.open-deactivate",
+        "line": 308
+      },
+      {
+        "id": "admin.events.set-search",
+        "line": 329
+      },
+      {
+        "id": "admin.events.fetch-list",
+        "line": 331
+      },
+      {
+        "id": "admin.events.open-create",
+        "line": 334
+      },
+      {
+        "id": "admin.events.close-modal",
+        "line": 358
+      },
+      {
+        "id": "admin.events.handle-save",
+        "line": 361
+      },
+      {
+        "id": "admin.events.set-confirm-deactivate",
+        "line": 381
+      },
+      {
+        "id": "admin.events.confirm-deactivate-action",
+        "line": 384
+      }
+    ],
+    "admin/fare-config.tsx": [
+      {
+        "id": "admin.fare-config.el-1",
+        "line": 758
+      },
+      {
+        "id": "admin.fare-config.0",
+        "line": 790
+      },
+      {
+        "id": "admin.fare-config.fetch-config",
+        "line": 825
+      },
+      {
+        "id": "admin.fare-config.handle-save",
+        "line": 835
+      },
+      {
+        "id": "admin.fare-config.handle-export-csv",
+        "line": 867
+      },
+      {
+        "id": "admin.fare-config.handle-save-fuel",
+        "line": 874
+      },
+      {
+        "id": "admin.fare-config.set-fuel-edits",
+        "line": 916
+      },
+      {
+        "id": "admin.fare-config.set-fuel-edits-2",
+        "line": 956
+      },
+      {
+        "id": "admin.fare-config.set-fuel-edits-3",
+        "line": 977
+      },
+      {
+        "id": "admin.fare-config.set-fuel-edits-4",
+        "line": 1002
+      },
+      {
+        "id": "admin.fare-config.set-fuel-edits-5",
+        "line": 1015
+      },
+      {
+        "id": "admin.fare-config.set-fuel-edits-6",
+        "line": 1041
+      },
+      {
+        "id": "admin.fare-config.set-fuel-edits-7",
+        "line": 1061
+      },
+      {
+        "id": "admin.fare-config.set-fuel-edits-8",
+        "line": 1080
+      },
+      {
+        "id": "admin.fare-config.refresh-gate-metrics",
+        "line": 1162
+      }
+    ],
+    "admin/fare-disputes.tsx": [
+      {
+        "id": "admin.fare-disputes.set-filter",
+        "line": 57
+      },
+      {
+        "id": "admin.fare-disputes.set-selected",
+        "line": 66
+      },
+      {
+        "id": "admin.fare-disputes.resolve",
+        "line": 92
+      },
+      {
+        "id": "admin.fare-disputes.resolve-2",
+        "line": 95
+      }
+    ],
+    "admin/fare-gate-metrics.tsx": [
+      {
+        "id": "admin.fare-gate-metrics.fetch-data",
+        "line": 258
+      }
+    ],
+    "admin/fleet-plans.tsx": [
+      {
+        "id": "admin.fleet-plans.set-billing-period",
+        "line": 243
+      },
+      {
+        "id": "admin.fleet-plans.on-close",
+        "line": 323
+      },
+      {
+        "id": "admin.fleet-plans.handle-save",
+        "line": 344
+      },
+      {
+        "id": "admin.fleet-plans.toggle-active",
+        "line": 497
+      },
+      {
+        "id": "admin.fleet-plans.set-editing-plan",
+        "line": 545
+      },
+      {
+        "id": "admin.fleet-plans.set-editing-plan-2",
+        "line": 577
+      }
+    ],
+    "admin/fleets.tsx": [
+      {
+        "id": "admin.fleets.change-status",
+        "line": 150
+      },
+      {
+        "id": "admin.fleets.set-status-filter",
+        "line": 373
+      }
+    ],
+    "admin/heat-monitor.tsx": [
+      {
+        "id": "admin.heat-monitor.fetch-data",
+        "line": 126
+      }
+    ],
+    "admin/incentives.tsx": [
+      {
+        "id": "admin.incentives.open-edit",
+        "line": 437
+      },
+      {
+        "id": "admin.incentives.open-deactivate",
+        "line": 450
+      },
+      {
+        "id": "admin.incentives.fetch-list",
+        "line": 473
+      },
+      {
+        "id": "admin.incentives.open-create",
+        "line": 476
+      },
+      {
+        "id": "admin.incentives.set-filter-chip",
+        "line": 488
+      },
+      {
+        "id": "admin.incentives.close-modal",
+        "line": 519
+      },
+      {
+        "id": "admin.incentives.handle-save",
+        "line": 526
+      },
+      {
+        "id": "admin.incentives.set-confirm-deactivate",
+        "line": 552
+      },
+      {
+        "id": "admin.incentives.confirm-deactivate-action",
+        "line": 559
+      }
+    ],
+    "admin/login.tsx": [
+      {
+        "id": "admin.login.set-email",
+        "line": 96
+      },
+      {
+        "id": "admin.login.set-password",
+        "line": 112
+      },
+      {
+        "id": "admin.login.handle-sign-in",
+        "line": 126
+      }
+    ],
+    "admin/lost-items.tsx": [
+      {
+        "id": "admin.lost-items.set-selected",
+        "line": 51
+      },
+      {
+        "id": "admin.lost-items.mediate",
+        "line": 69
+      }
+    ],
+    "admin/marketplace/certifications.tsx": [
+      {
+        "id": "admin.marketplace.certifications.handle-review",
+        "line": 98
+      },
+      {
+        "id": "admin.marketplace.certifications.handle-review-2",
+        "line": 101
+      }
+    ],
+    "admin/marketplace/couriers.tsx": [
+      {
+        "id": "admin.marketplace.couriers.handle-status-toggle",
+        "line": 99
+      },
+      {
+        "id": "admin.marketplace.couriers.set-type-filter",
+        "line": 115
+      }
+    ],
+    "admin/marketplace/delivery.tsx": [
+      {
+        "id": "admin.marketplace.delivery.set-active-tab",
+        "line": 113
+      }
+    ],
+    "admin/marketplace/rental.tsx": [
+      {
+        "id": "admin.marketplace.rental.set-selected-request",
+        "line": 130
+      }
+    ],
+    "admin/marketplace/service-zones.tsx": [
+      {
+        "id": "admin.marketplace.service-zones.handle-delete",
+        "line": 114
+      },
+      {
+        "id": "admin.marketplace.service-zones.handle-bulk-add",
+        "line": 158
+      }
+    ],
+    "admin/marketplace/shops.tsx": [
+      {
+        "id": "admin.marketplace.shops.toggle-status",
+        "line": 69
+      },
+      {
+        "id": "admin.marketplace.shops.toggle-status-2",
+        "line": 77
+      },
+      {
+        "id": "admin.marketplace.shops.set-status-filter",
+        "line": 154
+      }
+    ],
+    "admin/monitoring.tsx": [
+      {
+        "id": "admin.monitoring.fetch-econ",
+        "line": 455
+      },
+      {
+        "id": "admin.monitoring.set-tab",
+        "line": 469
+      },
+      {
+        "id": "admin.monitoring.set-ride-id-input",
+        "line": 491
+      },
+      {
+        "id": "admin.monitoring.fetch-dispatch-log",
+        "line": 496
+      },
+      {
+        "id": "admin.monitoring.set-chat-ride-id",
+        "line": 565
+      },
+      {
+        "id": "admin.monitoring.fetch-chat",
+        "line": 570
+      }
+    ],
+    "admin/packages.tsx": [
+      {
+        "id": "admin.packages.open-edit",
+        "line": 347
+      },
+      {
+        "id": "admin.packages.open-deactivate",
+        "line": 360
+      },
+      {
+        "id": "admin.packages.fetch-list",
+        "line": 374
+      },
+      {
+        "id": "admin.packages.open-create",
+        "line": 377
+      },
+      {
+        "id": "admin.packages.close-modal",
+        "line": 402
+      },
+      {
+        "id": "admin.packages.handle-save",
+        "line": 409
+      },
+      {
+        "id": "admin.packages.set-confirm-deactivate",
+        "line": 435
+      },
+      {
+        "id": "admin.packages.confirm-deactivate-action",
+        "line": 442
+      }
+    ],
+    "admin/pickup-analytics.tsx": [
+      {
+        "id": "admin.pickup-analytics.set-days-back",
+        "line": 94
+      },
+      {
+        "id": "admin.pickup-analytics.fetch-data",
+        "line": 100
+      }
+    ],
+    "admin/platform-config.tsx": [
+      {
+        "id": "admin.platform-config.fetch-all",
+        "line": 821
+      },
+      {
+        "id": "admin.platform-config.set-confirm-pause",
+        "line": 856
+      },
+      {
+        "id": "admin.platform-config.handle-save-policy",
+        "line": 883
+      },
+      {
+        "id": "admin.platform-config.set-policy-edits",
+        "line": 920
+      },
+      {
+        "id": "admin.platform-config.set-policy-edits-2",
+        "line": 962
+      },
+      {
+        "id": "admin.platform-config.set-zone-multi-active",
+        "line": 991
+      },
+      {
+        "id": "admin.platform-config.handle-save-zone",
+        "line": 1016
+      },
+      {
+        "id": "admin.platform-config.handle-save-op",
+        "line": 1044
+      },
+      {
+        "id": "admin.platform-config.set-op-edits",
+        "line": 1080
+      },
+      {
+        "id": "admin.platform-config.set-hotspot-freshness-edit",
+        "line": 1115
+      },
+      {
+        "id": "admin.platform-config.handle-save-hotspot-freshness",
+        "line": 1128
+      },
+      {
+        "id": "admin.platform-config.set-hotspot-zone-id",
+        "line": 1143
+      },
+      {
+        "id": "admin.platform-config.set-hotspot-tier",
+        "line": 1154
+      },
+      {
+        "id": "admin.platform-config.set-hotspot-valid-from",
+        "line": 1183
+      },
+      {
+        "id": "admin.platform-config.set-hotspot-valid-to",
+        "line": 1192
+      },
+      {
+        "id": "admin.platform-config.handle-add-hotspot",
+        "line": 1201
+      },
+      {
+        "id": "admin.platform-config.handle-delete-hotspot",
+        "line": 1245
+      },
+      {
+        "id": "admin.platform-config.set-confirm-pause-2",
+        "line": 1267
+      },
+      {
+        "id": "admin.platform-config.handle-confirm-toggle",
+        "line": 1279
+      }
+    ],
+    "admin/point-offers.tsx": [
+      {
+        "id": "admin.point-offers.open-edit",
+        "line": 374
+      },
+      {
+        "id": "admin.point-offers.open-deactivate",
+        "line": 387
+      },
+      {
+        "id": "admin.point-offers.fetch-list",
+        "line": 401
+      },
+      {
+        "id": "admin.point-offers.open-create",
+        "line": 404
+      },
+      {
+        "id": "admin.point-offers.close-modal",
+        "line": 429
+      },
+      {
+        "id": "admin.point-offers.handle-save",
+        "line": 436
+      },
+      {
+        "id": "admin.point-offers.set-confirm-deactivate",
+        "line": 462
+      },
+      {
+        "id": "admin.point-offers.confirm-deactivate-action",
+        "line": 469
+      }
+    ],
+    "admin/preferences.tsx": [
+      {
+        "id": "admin.preferences.open-edit",
+        "line": 365
+      },
+      {
+        "id": "admin.preferences.open-delete",
+        "line": 371
+      },
+      {
+        "id": "admin.preferences.fetch-list",
+        "line": 385
+      },
+      {
+        "id": "admin.preferences.open-create",
+        "line": 388
+      },
+      {
+        "id": "admin.preferences.close-modal",
+        "line": 413
+      },
+      {
+        "id": "admin.preferences.handle-save",
+        "line": 420
+      },
+      {
+        "id": "admin.preferences.set-confirm-delete",
+        "line": 446
+      },
+      {
+        "id": "admin.preferences.confirm-delete-action",
+        "line": 453
+      }
+    ],
+    "admin/premium-allowlist.tsx": [
+      {
+        "id": "admin.premium-allowlist.handle-deactivate",
+        "line": 162
+      },
+      {
+        "id": "admin.premium-allowlist.handle-reactivate",
+        "line": 166
+      },
+      {
+        "id": "admin.premium-allowlist.el-1",
+        "line": 186
+      },
+      {
+        "id": "admin.premium-allowlist.set-brand",
+        "line": 216
+      },
+      {
+        "id": "admin.premium-allowlist.set-model",
+        "line": 233
+      },
+      {
+        "id": "admin.premium-allowlist.handle-add",
+        "line": 243
+      },
+      {
+        "id": "admin.premium-allowlist.set-filter",
+        "line": 266
+      }
+    ],
+    "admin/pricing.tsx": [
+      {
+        "id": "admin.pricing.open-edit",
+        "line": 370
+      },
+      {
+        "id": "admin.pricing.fetch-list",
+        "line": 382
+      },
+      {
+        "id": "admin.pricing.close-modal",
+        "line": 413
+      },
+      {
+        "id": "admin.pricing.handle-save",
+        "line": 420
+      }
+    ],
+    "admin/promos.tsx": [
+      {
+        "id": "admin.promos.open-edit",
+        "line": 649
+      },
+      {
+        "id": "admin.promos.open-deactivate",
+        "line": 662
+      },
+      {
+        "id": "admin.promos.set-search",
+        "line": 683
+      },
+      {
+        "id": "admin.promos.fetch-list",
+        "line": 685
+      },
+      {
+        "id": "admin.promos.open-create",
+        "line": 688
+      },
+      {
+        "id": "admin.promos.close-modal",
+        "line": 718
+      },
+      {
+        "id": "admin.promos.handle-save",
+        "line": 725
+      },
+      {
+        "id": "admin.promos.set-confirm-deactivate",
+        "line": 755
+      },
+      {
+        "id": "admin.promos.confirm-deactivate-action",
+        "line": 762
+      }
+    ],
+    "admin/queue.tsx": [
+      {
+        "id": "admin.queue.open-action",
+        "line": 478
+      },
+      {
+        "id": "admin.queue.open-action-2",
+        "line": 487
+      },
+      {
+        "id": "admin.queue.open-action-3",
+        "line": 496
+      },
+      {
+        "id": "admin.queue.open-action-4",
+        "line": 506
+      },
+      {
+        "id": "admin.queue.open-extra-action",
+        "line": 517
+      },
+      {
+        "id": "admin.queue.open-extra-action-2",
+        "line": 526
+      },
+      {
+        "id": "admin.queue.open-extra-action-3",
+        "line": 535
+      },
+      {
+        "id": "admin.queue.fetch-queue",
+        "line": 560
+      },
+      {
+        "id": "admin.queue.set-status-filter",
+        "line": 573
+      },
+      {
+        "id": "admin.queue.close-action",
+        "line": 630
+      },
+      {
+        "id": "admin.queue.submit-action",
+        "line": 642
+      },
+      {
+        "id": "admin.queue.set-new-status",
+        "line": 705
+      },
+      {
+        "id": "admin.queue.set-new-status-2",
+        "line": 722
+      },
+      {
+        "id": "admin.queue.set-vehicle-type-adjusted",
+        "line": 758
+      },
+      {
+        "id": "admin.queue.set-extra-vehicle-type",
+        "line": 930
+      },
+      {
+        "id": "admin.queue.set-extra-action-driver",
+        "line": 949
+      },
+      {
+        "id": "admin.queue.submit-extra-action",
+        "line": 952
+      }
+    ],
+    "admin/recovery.tsx": [
+      {
+        "id": "admin.recovery.fetch-dispatch-state",
+        "line": 169
+      },
+      {
+        "id": "admin.recovery.set-confirm-toggle",
+        "line": 233
+      },
+      {
+        "id": "admin.recovery.set-payment-event-id",
+        "line": 269
+      },
+      {
+        "id": "admin.recovery.run-recover",
+        "line": 274
+      },
+      {
+        "id": "admin.recovery.set-confirm-toggle-2",
+        "line": 350
+      },
+      {
+        "id": "admin.recovery.perform-toggle",
+        "line": 362
+      }
+    ],
+    "admin/referral-campaigns.tsx": [
+      {
+        "id": "admin.referral-campaigns.open-edit",
+        "line": 405
+      },
+      {
+        "id": "admin.referral-campaigns.open-deactivate",
+        "line": 418
+      },
+      {
+        "id": "admin.referral-campaigns.fetch-list",
+        "line": 432
+      },
+      {
+        "id": "admin.referral-campaigns.open-create",
+        "line": 435
+      },
+      {
+        "id": "admin.referral-campaigns.close-modal",
+        "line": 460
+      },
+      {
+        "id": "admin.referral-campaigns.handle-save",
+        "line": 467
+      },
+      {
+        "id": "admin.referral-campaigns.set-confirm-deactivate",
+        "line": 493
+      },
+      {
+        "id": "admin.referral-campaigns.confirm-deactivate-action",
+        "line": 500
+      }
+    ],
+    "admin/ride-passes.tsx": [
+      {
+        "id": "admin.ride-passes.open-edit",
+        "line": 79
+      },
+      {
+        "id": "admin.ride-passes.remove-pass",
+        "line": 80
+      },
+      {
+        "id": "admin.ride-passes.open-add",
+        "line": 87
+      },
+      {
+        "id": "admin.ride-passes.set-form",
+        "line": 97
+      },
+      {
+        "id": "admin.ride-passes.save",
+        "line": 100
+      }
+    ],
+    "admin/rider-intro-configs.tsx": [
+      {
+        "id": "admin.rider-intro-configs.open-edit",
+        "line": 169
+      },
+      {
+        "id": "admin.rider-intro-configs.remove-config",
+        "line": 170
+      },
+      {
+        "id": "admin.rider-intro-configs.open-add",
+        "line": 179
+      },
+      {
+        "id": "admin.rider-intro-configs.set-form",
+        "line": 193
+      },
+      {
+        "id": "admin.rider-intro-configs.set-form-2",
+        "line": 202
+      },
+      {
+        "id": "admin.rider-intro-configs.set-form-3",
+        "line": 207
+      },
+      {
+        "id": "admin.rider-intro-configs.set-form-4",
+        "line": 212
+      },
+      {
+        "id": "admin.rider-intro-configs.set-form-5",
+        "line": 217
+      },
+      {
+        "id": "admin.rider-intro-configs.set-form-6",
+        "line": 222
+      },
+      {
+        "id": "admin.rider-intro-configs.set-form-7",
+        "line": 227
+      },
+      {
+        "id": "admin.rider-intro-configs.set-form-8",
+        "line": 229
+      },
+      {
+        "id": "admin.rider-intro-configs.save",
+        "line": 241
+      }
+    ],
+    "admin/sample-media.tsx": [
+      {
+        "id": "admin.sample-media.fetch-config",
+        "line": 160
+      },
+      {
+        "id": "admin.sample-media.handle-save-all",
+        "line": 170
+      },
+      {
+        "id": "admin.sample-media.set-edits",
+        "line": 229
+      },
+      {
+        "id": "admin.sample-media.open-url",
+        "line": 236
+      }
+    ],
+    "admin/sos-alerts.tsx": [
+      {
+        "id": "admin.sos-alerts.ack-alert",
+        "line": 128
+      },
+      {
+        "id": "admin.sos-alerts.set-status-filter",
+        "line": 160
+      },
+      {
+        "id": "admin.sos-alerts.set-sort-by",
+        "line": 185
+      }
+    ],
+    "admin/sos-contacts.tsx": [
+      {
+        "id": "admin.sos-contacts.start-edit",
+        "line": 86
+      },
+      {
+        "id": "admin.sos-contacts.delete-contact",
+        "line": 89
+      },
+      {
+        "id": "admin.sos-contacts.add-new",
+        "line": 95
+      },
+      {
+        "id": "admin.sos-contacts.save-edit",
+        "line": 119
+      }
+    ],
+    "admin/support.tsx": [
+      {
+        "id": "admin.support.set-status-filter",
+        "line": 106
+      },
+      {
+        "id": "admin.support.set-assign-input",
+        "line": 135
+      },
+      {
+        "id": "admin.support.el-1",
+        "line": 148
+      },
+      {
+        "id": "admin.support.set-reply-text",
+        "line": 163
+      },
+      {
+        "id": "admin.support.set-is-internal",
+        "line": 166
+      },
+      {
+        "id": "admin.support.send-reply",
+        "line": 170
+      }
+    ],
+    "admin/tax-dashboard.tsx": [
+      {
+        "id": "admin.tax-dashboard.set-date",
+        "line": 48
+      },
+      {
+        "id": "admin.tax-dashboard.fetch-data",
+        "line": 49
+      },
+      {
+        "id": "admin.tax-dashboard.export-csv",
+        "line": 50
+      },
+      {
+        "id": "admin.tax-dashboard.update-rate",
+        "line": 80
+      },
+      {
+        "id": "admin.tax-dashboard.toggle-rate",
+        "line": 83
+      }
+    ],
+    "admin/trust-safety.tsx": [
+      {
+        "id": "admin.trust-safety.fetch-data",
+        "line": 182
+      },
+      {
+        "id": "admin.trust-safety.set-type-filter",
+        "line": 213
+      },
+      {
+        "id": "admin.trust-safety.set-status-filter",
+        "line": 240
+      },
+      {
+        "id": "admin.trust-safety.set-confirm-resolve",
+        "line": 314
+      },
+      {
+        "id": "admin.trust-safety.set-confirm-resolve-2",
+        "line": 476
+      },
+      {
+        "id": "admin.trust-safety.handle-resolve",
+        "line": 483
+      }
+    ],
+    "admin/vehicle-models.tsx": [
+      {
+        "id": "admin.vehicle-models.open-edit",
+        "line": 484
+      },
+      {
+        "id": "admin.vehicle-models.fetch-list",
+        "line": 506
+      },
+      {
+        "id": "admin.vehicle-models.open-create",
+        "line": 509
+      },
+      {
+        "id": "admin.vehicle-models.set-search",
+        "line": 523
+      },
+      {
+        "id": "admin.vehicle-models.set-type-filter",
+        "line": 536
+      },
+      {
+        "id": "admin.vehicle-models.close-modal",
+        "line": 575
+      },
+      {
+        "id": "admin.vehicle-models.handle-save",
+        "line": 582
+      }
+    ],
+    "admin/zone-pnl.tsx": [
+      {
+        "id": "admin.zone-pnl.set-selected-zone",
+        "line": 84
+      },
+      {
+        "id": "admin.zone-pnl.set-period",
+        "line": 106
+      }
+    ],
+    "admin/zones.tsx": [
+      {
+        "id": "admin.zones.open-edit",
+        "line": 314
+      },
+      {
+        "id": "admin.zones.set-confirm-delete",
+        "line": 320
+      },
+      {
+        "id": "admin.zones.fetch-list",
+        "line": 334
+      },
+      {
+        "id": "admin.zones.open-create",
+        "line": 337
+      },
+      {
+        "id": "admin.zones.close-modal",
+        "line": 363
+      },
+      {
+        "id": "admin.zones.handle-save",
+        "line": 370
+      },
+      {
+        "id": "admin.zones.set-confirm-delete-2",
+        "line": 396
+      },
+      {
+        "id": "admin.zones.confirm-delete-action",
+        "line": 403
+      }
+    ],
+    "index.tsx": [
+      {
+        "id": ".run-auth-check",
+        "line": 182
+      }
+    ],
+    "track/[rideId].tsx": [
+      {
+        "id": "track.rideId.set-theme",
+        "line": 83
+      },
+      {
+        "id": "track.rideId.set-theme-2",
+        "line": 101
+      },
+      {
+        "id": "track.rideId.set-theme-3",
+        "line": 160
+      }
+    ]
+  }
+}

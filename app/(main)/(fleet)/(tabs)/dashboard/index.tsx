@@ -72,7 +72,7 @@ function QuickAction({
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={{
       flexDirection: "row", alignItems: "center", backgroundColor: surfaceBg,
       borderRadius: 12, padding: 14, borderWidth: 1, borderColor,
-    }}>
+    }} testID="fleet.dashboard.on-press">
       <Ionicons name={icon} size={20} color={colors.primary} />
       <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: textPrimary, marginLeft: 10, flex: 1 }}>{label}</Text>
       <Ionicons name="chevron-forward" size={16} color={isDark ? colors.textDisabledDark : colors.textDisabledLight} />
@@ -139,7 +139,7 @@ export default function FleetDashboard() {
         <View style={{ alignItems: "center", paddingTop: 60 }}>
           <Ionicons name="cloud-offline" size={48} color={colors.danger} />
           <Text style={{ fontFamily: "Jakarta-Medium", fontSize: 16, color: textPrimary, marginTop: 12 }}>{error}</Text>
-          <TouchableOpacity onPress={fetchData} style={{ marginTop: 16, backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}>
+          <TouchableOpacity onPress={fetchData} style={{ marginTop: 16, backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }} testID="fleet.dashboard.fetch-data">
             <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: colors.white }}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -157,7 +157,7 @@ export default function FleetDashboard() {
               flexDirection: "row", alignItems: "center",
               backgroundColor: isDark ? "#3A2A1A" : colors.amberLight,
               borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.amber,
-            }}>
+            }} testID="fleet.dashboard.push-main">
               <Ionicons name="warning" size={20} color={colors.amber} />
               <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: textPrimary, marginLeft: 10, flex: 1 }}>
                 {data.unread_alerts} outstanding alert{data.unread_alerts > 1 ? "s" : ""}
@@ -171,7 +171,7 @@ export default function FleetDashboard() {
               flexDirection: "row", alignItems: "center",
               backgroundColor: isDark ? "#3A1A1A" : "#FEF2F2",
               borderRadius: 12, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: colors.danger,
-            }}>
+            }} testID="fleet.dashboard.push-main-2">
               <Ionicons name="cloud-offline" size={20} color={colors.danger} />
               <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: textPrimary, marginLeft: 10, flex: 1 }}>
                 {integrationIssues.length} integration{integrationIssues.length > 1 ? "s" : ""} need{integrationIssues.length === 1 ? "s" : ""} attention

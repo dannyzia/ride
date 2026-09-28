@@ -203,7 +203,7 @@ export default function BidSubmitScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} testID="customer.rental-bidder.bid-submit.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
@@ -300,7 +300,7 @@ export default function BidSubmitScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={describeVehicleType(vt)}
                   accessibilityState={{ selected: isSelected }}
-                >
+                 testID="customer.rental-bidder.bid-submit.set-selected-vehicle-type">
                   <Text
                     style={{
                       fontSize: 13,
@@ -337,7 +337,7 @@ export default function BidSubmitScreen() {
             onChangeText={setPriceInput}
             keyboardType="number-pad"
             accessibilityLabel="Bid price in Taka"
-          />
+           testID="customer.rental-bidder.bid-submit.set-price-input"/>
           {pricePaisa > 0 && (
             <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginBottom: 16 }}>
               {pricePaisa.toLocaleString()} BDT (integer paisa)
@@ -368,7 +368,7 @@ export default function BidSubmitScreen() {
             onChangeText={setOvertimeInput}
             keyboardType="number-pad"
             accessibilityLabel="Overtime rate in Taka per hour"
-          />
+           testID="customer.rental-bidder.bid-submit.set-overtime-input"/>
 
           {/* Notes */}
           <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
@@ -394,7 +394,7 @@ export default function BidSubmitScreen() {
             multiline
             maxLength={500}
             accessibilityLabel="Bid notes"
-          />
+           testID="customer.rental-bidder.bid-submit.set-notes"/>
 
           {/* Submit button */}
           <TouchableOpacity
@@ -410,7 +410,7 @@ export default function BidSubmitScreen() {
             }}
             accessibilityRole="button"
             accessibilityLabel="Submit bid"
-          >
+           testID="customer.rental-bidder.bid-submit.handle-submit">
             {submitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (

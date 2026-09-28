@@ -62,7 +62,7 @@ export default function RiderSettingsHub() {
             className="flex-row items-center p-[14px] border rounded-[12px] mb-3"
             style={{ backgroundColor: surfaceBg, borderColor }}
             onPress={() => router.push(it.route)}
-          >
+           testID="customer.settings.el-1">
             <Ionicons name={it.icon} size={20} color={colors.primary} style={{ marginRight: 12 }} />
             <Text className="flex-1 text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{t(it.labelKey)}</Text>
             <Ionicons name="chevron-forward" size={18} color={textSecondary} />

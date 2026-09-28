@@ -157,7 +157,7 @@ export default function SavedAddresses() {
           router.push(`/(main)/(customer)/(tabs)/settings/saved-addresses/${item.id}`)
         }
         activeOpacity={0.8}
-      >
+       testID="customer.settings.saved-addresses.push-main">
         <View style={[styles.iconBox, { backgroundColor: colors.primaryLight }]}>
           <Ionicons name={addressIcon(item.label)} size={24} color={colors.primary} />
         </View>
@@ -186,7 +186,7 @@ export default function SavedAddresses() {
         onPress={() => deleteAddress(item)}
         style={styles.deleteButton}
         hitSlop={4}
-      >
+       testID="customer.settings.saved-addresses.delete-address">
         <Ionicons name="trash-outline" size={20} color={colors.danger} />
       </TouchableOpacity>
     </View>
@@ -201,7 +201,7 @@ export default function SavedAddresses() {
           accessibilityLabel={t('saved_addresses.a11y_go_back')}
           onPress={() => router.back()}
           hitSlop={8}
-        >
+         testID="customer.settings.saved-addresses.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -216,7 +216,7 @@ export default function SavedAddresses() {
           accessibilityLabel={t('saved_addresses.a11y_toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
-        >
+         testID="customer.settings.saved-addresses.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
         </TouchableOpacity>
       </View>
@@ -235,7 +235,7 @@ export default function SavedAddresses() {
                 setLoading(true);
                 fetchAddresses();
               }}
-            >
+             testID="customer.settings.saved-addresses.set-loading">
               <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>

@@ -84,7 +84,7 @@ export default function AddAddress() {
           className="rounded-full w-full py-[16px] items-center mb-3"
           style={{ backgroundColor: colors.primary }}
           onPress={() => router.replace("/(main)/(customer)/(tabs)/settings/saved-addresses")}
-        >
+         testID="customer.settings.saved-addresses.add-address.replace-main">
           <Text className="text-[18px] font-JakartaBold text-goWhite">{t('saved_addresses.done')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -92,7 +92,7 @@ export default function AddAddress() {
           className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
           style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+         testID="customer.settings.saved-addresses.add-address.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
         </TouchableOpacity>
       </SafeAreaView>
@@ -103,7 +103,7 @@ export default function AddAddress() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.settings.saved-addresses.add-address.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('saved_addresses.add')}</Text>
@@ -122,7 +122,7 @@ export default function AddAddress() {
                 ? { backgroundColor: colors.primary, borderColor: colors.primary }
                 : { backgroundColor: surfaceBg, borderColor }}
               onPress={() => { setLabel(l); setCustomLabel(""); }}
-            >
+             testID="customer.settings.saved-addresses.add-address.set-label">
               <Text
                 className="text-[14px] font-JakartaBold"
                 style={{ color: label === l ? colors.white : textPrimary }}
@@ -144,7 +144,7 @@ export default function AddAddress() {
               placeholderTextColor={textSecondary}
               value={customLabel}
               onChangeText={setCustomLabel}
-            />
+             testID="customer.settings.saved-addresses.add-address.set-custom-label"/>
           </View>
         )}
         <View className="mb-6">
@@ -158,7 +158,7 @@ export default function AddAddress() {
             placeholderTextColor={textSecondary}
             value={addressLine}
             onChangeText={setAddressLine}
-          />
+           testID="customer.settings.saved-addresses.add-address.set-address-line"/>
         </View>
         {error ? <Text className="text-[14px] font-Jakarta mb-3" style={{ color: colors.danger }}>{error}</Text> : null}
         <TouchableOpacity
@@ -166,7 +166,7 @@ export default function AddAddress() {
           style={{ backgroundColor: loading ? disabledBg : colors.primary }}
           onPress={handleSave}
           disabled={loading}
-        >
+         testID="customer.settings.saved-addresses.add-address.handle-save">
           {loading ? <ActivityIndicator size={20} color="#FFFFFF" /> : <Text className="text-[18px] font-JakartaBold text-goWhite">{t('saved_addresses.save')}</Text>}
         </TouchableOpacity>
       </ScrollView>
@@ -175,7 +175,7 @@ export default function AddAddress() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.settings.saved-addresses.add-address.set-theme-2">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

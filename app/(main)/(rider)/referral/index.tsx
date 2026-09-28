@@ -73,7 +73,7 @@ export default function DriverReferral() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]">
+        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]" testID="rider.referral.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Referral</Text>
@@ -89,7 +89,7 @@ export default function DriverReferral() {
               className="rounded-full px-[24px] py-[12px]"
               style={{ backgroundColor: colors.primary }}
               onPress={fetchReferralData}
-            >
+             testID="rider.referral.fetch-referral-data">
               <Text className="text-[16px] font-JakartaBold" style={{ color: colors.white }}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -118,7 +118,7 @@ export default function DriverReferral() {
               className="rounded-full w-full py-[16px] items-center mb-3"
               style={{ backgroundColor: colors.primary }}
               onPress={handleShare}
-            >
+             testID="rider.referral.handle-share">
               <Text className="text-[18px] font-JakartaBold" style={{ color: colors.white }}>Share via SMS</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -127,7 +127,7 @@ export default function DriverReferral() {
                 ? { borderColor: colors.primary, backgroundColor: isDark ? colors.primaryLightDark : colors.primaryLight }
                 : { borderColor }}
               onPress={handleCopy}
-            >
+             testID="rider.referral.handle-copy">
               <Text
                 className="text-[18px] font-JakartaBold"
                 style={{ color: copied ? colors.primary : textPrimary }}
@@ -143,7 +143,7 @@ export default function DriverReferral() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.referral.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

@@ -183,7 +183,7 @@ export default function RequestDetailScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} testID="customer.rental-marketplace.request-detail.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 18, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
@@ -328,7 +328,7 @@ export default function RequestDetailScreen() {
                   alignItems: "center",
                 }}
                 accessibilityLabel={`Bid from fleet: ${formatBDT(bid.quoted_price_bdt)} taka`}
-              >
+               testID="customer.rental-marketplace.request-detail.set-selected-bid-id">
                 {/* Rank badge */}
                 {bid.rank_badge && (
                   <View style={{ backgroundColor: RANK_COLORS[bid.rank_badge] ?? "#6B7280", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 12 }}>
@@ -376,7 +376,7 @@ export default function RequestDetailScreen() {
             onPress={handleAccept}
             disabled={accepting}
             style={{ backgroundColor: colors.primary, borderRadius: 12, height: 52, alignItems: "center", justifyContent: "center" }}
-          >
+           testID="customer.rental-marketplace.request-detail.handle-accept">
             {accepting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (

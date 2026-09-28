@@ -311,13 +311,13 @@ export default function ZonesScreen() {
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
             onPress={() => openEdit(z)}
-          >
+           testID="admin.zones.open-edit">
             <Text style={styles.miniBtnText}>Edit</Text>
           </Pressable>
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.danger }]}
             onPress={() => setConfirmDelete(z)}
-          >
+           testID="admin.zones.set-confirm-delete">
             <Text style={styles.miniBtnText}>Delete</Text>
           </Pressable>
         </View>
@@ -331,10 +331,10 @@ export default function ZonesScreen() {
       subtitle="Service areas where dispatch operates"
       actions={
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable style={styles.ghostBtn} onPress={fetchList}>
+          <Pressable style={styles.ghostBtn} onPress={fetchList} testID="admin.zones.fetch-list">
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={openCreate}>
+          <Pressable style={styles.primaryBtn} onPress={openCreate} testID="admin.zones.open-create">
             <Text style={styles.primaryBtnText}>+ New Zone</Text>
           </Pressable>
         </View>
@@ -360,14 +360,14 @@ export default function ZonesScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={closeModal}
               disabled={submitting}
-            >
+             testID="admin.zones.close-modal">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, styles.modalBtnPrimary]}
               onPress={handleSave}
               disabled={submitting}
-            >
+             testID="admin.zones.handle-save">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -393,14 +393,14 @@ export default function ZonesScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={() => setConfirmDelete(null)}
               disabled={submitting}
-            >
+             testID="admin.zones.set-confirm-delete-2">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, { backgroundColor: colors.danger }]}
               onPress={confirmDeleteAction}
               disabled={submitting}
-            >
+             testID="admin.zones.confirm-delete-action">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

@@ -166,8 +166,8 @@ const IntroConfigAdmin = () => {
       header: "Actions",
       render: (r) => (
         <View className="flex-row gap-2">
-          <Pressable onPress={() => openEdit(r)} style={styles.editBtn}><Text style={styles.editText}>Edit</Text></Pressable>
-          <Pressable onPress={() => removeConfig(r)} style={styles.delBtn}><Text style={styles.delText}>Del</Text></Pressable>
+          <Pressable onPress={() => openEdit(r)} style={styles.editBtn} testID="admin.rider-intro-configs.open-edit"><Text style={styles.editText}>Edit</Text></Pressable>
+          <Pressable onPress={() => removeConfig(r)} style={styles.delBtn} testID="admin.rider-intro-configs.remove-config"><Text style={styles.delText}>Del</Text></Pressable>
         </View>
       ),
       width: 100,
@@ -176,7 +176,7 @@ const IntroConfigAdmin = () => {
 
   return (
     <AdminShell title="Intro Configs" subtitle="Configure intro incentive discounts per zone">
-      <Pressable onPress={openAdd} style={styles.addBtn}>
+      <Pressable onPress={openAdd} style={styles.addBtn} testID="admin.rider-intro-configs.open-add">
         <Text style={styles.addText}>+ Add Config</Text>
       </Pressable>
       {loading ? <ActivityIndicator size="large" className="mt-10" /> : <AdminTable columns={columns} rows={configs} rowKey={(r) => r.id} />}
@@ -190,7 +190,7 @@ const IntroConfigAdmin = () => {
                   key={z.id}
                   onPress={() => setForm({ ...form, zone_id: z.id })}
                   className={`py-2 ${form.zone_id === z.id ? 'bg-goAdminAccent' : ''}`}
-                >
+                 testID="admin.rider-intro-configs.set-form">
                   <Text className={`font-Jakarta text-[14px] ${form.zone_id === z.id ? 'text-goBgDark' : 'text-goTextPrimaryDark'}`}>{z.name}</Text>
                 </Pressable>
               ))}
@@ -199,34 +199,34 @@ const IntroConfigAdmin = () => {
           <View>
             <Text className="text-goTextSecondaryDark font-Jakarta text-[12px] mb-1">Ride Number (1 = first ride)</Text>
             <TextInput className="bg-goDarkSecondary rounded-[8px] px-[10px] py-[8px] text-goTextPrimaryDark font-Jakarta text-[14px]"
-              value={form.ride_number} onChangeText={(v) => setForm({ ...form, ride_number: v })} keyboardType="numeric" />
+              value={form.ride_number} onChangeText={(v) => setForm({ ...form, ride_number: v })} keyboardType="numeric"  testID="admin.rider-intro-configs.set-form-2"/>
           </View>
           <View>
             <Text className="text-goTextSecondaryDark font-Jakarta text-[12px] mb-1">Discount %</Text>
             <TextInput className="bg-goDarkSecondary rounded-[8px] px-[10px] py-[8px] text-goTextPrimaryDark font-Jakarta text-[14px]"
-              value={form.discount_percent} onChangeText={(v) => setForm({ ...form, discount_percent: v })} keyboardType="numeric" />
+              value={form.discount_percent} onChangeText={(v) => setForm({ ...form, discount_percent: v })} keyboardType="numeric"  testID="admin.rider-intro-configs.set-form-3"/>
           </View>
           <View>
             <Text className="text-goTextSecondaryDark font-Jakarta text-[12px] mb-1">Max Discount (৳)</Text>
             <TextInput className="bg-goDarkSecondary rounded-[8px] px-[10px] py-[8px] text-goTextPrimaryDark font-Jakarta text-[14px]"
-              value={form.max_discount_bdt} onChangeText={(v) => setForm({ ...form, max_discount_bdt: v })} placeholder="Leave blank for unlimited" placeholderTextColor="#6B7280" keyboardType="numeric" />
+              value={form.max_discount_bdt} onChangeText={(v) => setForm({ ...form, max_discount_bdt: v })} placeholder="Leave blank for unlimited" placeholderTextColor="#6B7280" keyboardType="numeric"  testID="admin.rider-intro-configs.set-form-4"/>
           </View>
           <View>
             <Text className="text-goTextSecondaryDark font-Jakarta text-[12px] mb-1">Daily Cap (৳)</Text>
             <TextInput className="bg-goDarkSecondary rounded-[8px] px-[10px] py-[8px] text-goTextPrimaryDark font-Jakarta text-[14px]"
-              value={form.daily_cap_bdt} onChangeText={(v) => setForm({ ...form, daily_cap_bdt: v })} keyboardType="numeric" />
+              value={form.daily_cap_bdt} onChangeText={(v) => setForm({ ...form, daily_cap_bdt: v })} keyboardType="numeric"  testID="admin.rider-intro-configs.set-form-5"/>
           </View>
           <View>
             <Text className="text-goTextSecondaryDark font-Jakarta text-[12px] mb-1">Effective From</Text>
             <TextInput className="bg-goDarkSecondary rounded-[8px] px-[10px] py-[8px] text-goTextPrimaryDark font-Jakarta text-[14px]"
-              value={form.effective_from} onChangeText={(v) => setForm({ ...form, effective_from: v })} placeholder="YYYY-MM-DDTHH:MM (blank = now)" placeholderTextColor="#6B7280" />
+              value={form.effective_from} onChangeText={(v) => setForm({ ...form, effective_from: v })} placeholder="YYYY-MM-DDTHH:MM (blank = now)" placeholderTextColor="#6B7280"  testID="admin.rider-intro-configs.set-form-6"/>
           </View>
           <View>
             <Text className="text-goTextSecondaryDark font-Jakarta text-[12px] mb-1">Effective To (৳)</Text>
             <TextInput className="bg-goDarkSecondary rounded-[8px] px-[10px] py-[8px] text-goTextPrimaryDark font-Jakarta text-[14px]"
-              value={form.effective_to} onChangeText={(v) => setForm({ ...form, effective_to: v })} placeholder="Leave blank for no expiry" placeholderTextColor="#6B7280" />
+              value={form.effective_to} onChangeText={(v) => setForm({ ...form, effective_to: v })} placeholder="Leave blank for no expiry" placeholderTextColor="#6B7280"  testID="admin.rider-intro-configs.set-form-7"/>
           </View>
-          <Pressable onPress={() => setForm({ ...form, is_active: !form.is_active })} className="flex-row items-center py-2">
+          <Pressable onPress={() => setForm({ ...form, is_active: !form.is_active })} className="flex-row items-center py-2" testID="admin.rider-intro-configs.set-form-8">
             <View
               className="w-5 h-5 rounded border-2 items-center justify-center mr-2"
               style={{
@@ -238,7 +238,7 @@ const IntroConfigAdmin = () => {
             </View>
             <Text className="text-goTextPrimaryDark font-Jakarta text-[14px]">Active</Text>
           </Pressable>
-          <Pressable onPress={save} style={styles.saveBtn}>
+          <Pressable onPress={save} style={styles.saveBtn} testID="admin.rider-intro-configs.save">
             <Text style={styles.saveText}>{editId ? "Update Config" : "Create Config"}</Text>
           </Pressable>
         </View>

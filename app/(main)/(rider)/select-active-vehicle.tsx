@@ -100,7 +100,7 @@ export default function SelectActiveVehicle() {
         className="flex-row items-center px-[24px] py-[16px] border-b"
         style={{ borderBottomColor: borderColor }}
       >
-        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]">
+        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]" testID="rider.select-active-vehicle.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -131,7 +131,7 @@ export default function SelectActiveVehicle() {
             >
               {error}
             </Text>
-            <TouchableOpacity onPress={fetchVehicles} className="mt-3">
+            <TouchableOpacity onPress={fetchVehicles} className="mt-3" testID="rider.select-active-vehicle.fetch-vehicles">
               <Text
                 className="text-[14px] font-JakartaBold"
                 style={{ color: colors.primary }}
@@ -245,7 +245,7 @@ export default function SelectActiveVehicle() {
             className="rounded-full w-full py-[16px] items-center"
             style={{ backgroundColor: colors.primary }}
             onPress={() => router.replace("/(main)/(rider)/d")}
-          >
+           testID="rider.select-active-vehicle.replace-main">
             <Text
               className="text-[16px] font-JakartaBold"
               style={{ color: colors.white }}
@@ -260,7 +260,7 @@ export default function SelectActiveVehicle() {
               className="rounded-full w-full py-[16px] items-center"
               style={{ backgroundColor: colors.primary }}
               onPress={() => router.push("/(main)/(rider)/add-vehicle")}
-            >
+             testID="rider.select-active-vehicle.push-main">
               <Text
                 className="text-[16px] font-JakartaBold"
                 style={{ color: colors.white }}

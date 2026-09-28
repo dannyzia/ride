@@ -95,10 +95,10 @@ export default function MarketplaceCertifications() {
       <View style={{ flexDirection: "row", gap: 6 }}>
         {r.certification_status === "pending" && (
           <>
-            <Pressable onPress={() => handleReview(r.id, "verified")} style={{ backgroundColor: "#0CC25F20", borderWidth: 1, borderColor: "#0CC25F40", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
+            <Pressable onPress={() => handleReview(r.id, "verified")} style={{ backgroundColor: "#0CC25F20", borderWidth: 1, borderColor: "#0CC25F40", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }} testID="admin.marketplace.certifications.handle-review">
               <Text style={{ color: "#0CC25F", fontFamily: "Jakarta-SemiBold", fontSize: 11 }}>Verify</Text>
             </Pressable>
-            <Pressable onPress={() => handleReview(r.id, "revoked")} style={{ backgroundColor: "#E31D1C20", borderWidth: 1, borderColor: "#E31D1C40", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
+            <Pressable onPress={() => handleReview(r.id, "revoked")} style={{ backgroundColor: "#E31D1C20", borderWidth: 1, borderColor: "#E31D1C40", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }} testID="admin.marketplace.certifications.handle-review-2">
               <Text style={{ color: "#E31D1C", fontFamily: "Jakarta-SemiBold", fontSize: 11 }}>Revoke</Text>
             </Pressable>
           </>

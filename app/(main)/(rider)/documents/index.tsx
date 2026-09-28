@@ -209,7 +209,7 @@ export default function DocumentsScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Upload ${label}`}
               onPress={goToOnboarding}
-            >
+             testID="rider.documents.go-to-onboarding">
               <Text
                 style={{
                   fontFamily: "Jakarta-SemiBold",
@@ -312,7 +312,7 @@ export default function DocumentsScreen() {
           accessibilityLabel="Go back"
           onPress={() => router.back()}
           style={{ padding: spacing.xs }}
-        >
+         testID="rider.documents.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -362,7 +362,7 @@ export default function DocumentsScreen() {
               borderRadius: radii.pill,
               backgroundColor: colors.primary,
             }}
-          >
+           testID="rider.documents.fetch-documents">
             <Text
               style={{
                 fontFamily: "Jakarta-Bold",
@@ -417,7 +417,7 @@ export default function DocumentsScreen() {
                 borderRadius: radii.pill,
                 backgroundColor: colors.primary,
               }}
-            >
+             testID="rider.documents.go-to-onboarding-2">
               <Text
                 style={{
                   fontFamily: "Jakarta-Bold",

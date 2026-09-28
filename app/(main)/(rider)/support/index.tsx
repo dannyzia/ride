@@ -19,7 +19,7 @@ export default function DriverSupport() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.support.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Support</Text>
@@ -30,7 +30,7 @@ export default function DriverSupport() {
           className="p-[14px] border rounded-[12px] mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/faq")}
-        >
+         testID="rider.support.push-main">
           <View className="flex-row justify-between items-center">
             <View>
               <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>FAQ</Text>
@@ -43,7 +43,7 @@ export default function DriverSupport() {
           className="p-[14px] border rounded-[12px] mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/contact-support")}
-        >
+         testID="rider.support.push-main-2">
           <View className="flex-row justify-between items-center">
             <View>
               <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Contact support</Text>
@@ -56,7 +56,7 @@ export default function DriverSupport() {
           className="p-[14px] border rounded-[12px] mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/report-issue")}
-        >
+         testID="rider.support.push-main-3">
           <View className="flex-row justify-between items-center">
             <View>
               <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Report an issue</Text>
@@ -71,7 +71,7 @@ export default function DriverSupport() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.support.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

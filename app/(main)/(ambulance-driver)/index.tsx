@@ -143,7 +143,7 @@ export default function AmbulanceDriverScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Back">
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Back" testID="ambulance-driver.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
@@ -210,7 +210,7 @@ export default function AmbulanceDriverScreen() {
                         marginRight: 8,
                         marginBottom: 8,
                       }}
-                    >
+                     testID="ambulance-driver.handle-status">
                       <Text style={{ fontSize: 12, fontFamily: "JakartaSemiBold", color: status === step.key ? "#FFFFFF" : textPrimary }}>
                         {step.label}
                       </Text>
@@ -278,7 +278,7 @@ export default function AmbulanceDriverScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Accept ${req.service_level ?? ""} emergency call`}
                   style={{ backgroundColor: colors.danger, borderRadius: 12, height: 44, alignItems: "center", justifyContent: "center", marginTop: 12 }}
-                >
+                 testID="ambulance-driver.handle-accept">
                   <Text style={{ color: "#FFFFFF", fontSize: 15, fontFamily: "JakartaSemiBold" }}>
                     ACCEPT CALL
                   </Text>

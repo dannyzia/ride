@@ -29,7 +29,7 @@ export default function Broadcast() {
         <View className="flex-row gap-2">
           {(["all", "rider", "driver"] as const).map((t) => (
             <Pressable key={t} onPress={() => setTarget(t)}
-              className={`px-[14px] py-[6px] rounded-[16px] ${target === t ? "bg-goAdminAccent" : "bg-goDarkSecondary"}`}>
+              className={`px-[14px] py-[6px] rounded-[16px] ${target === t ? "bg-goAdminAccent" : "bg-goDarkSecondary"}`} testID="admin.broadcast.set-target">
               <Text className={`font-JakartaSemiBold text-[12px] ${target === t ? "text-goBgDark" : "text-goTextPrimaryDark"}`}>{t}</Text>
             </Pressable>
           ))}
@@ -38,15 +38,15 @@ export default function Broadcast() {
       <View className="mb-4">
         <Text className="text-goTextSecondaryDark font-Jakarta text-[12px] mb-1.5">Title</Text>
         <TextInput className="bg-goDarkSecondary rounded-[8px] px-[12px] py-[10px] text-goTextPrimaryDark font-Jakarta text-[14px]"
-          value={title} onChangeText={setTitle} maxLength={200} placeholder="Enter title" placeholderTextColor="#64748B" />
+          value={title} onChangeText={setTitle} maxLength={200} placeholder="Enter title" placeholderTextColor="#64748B"  testID="admin.broadcast.set-title"/>
       </View>
       <View className="mb-4">
         <Text className="text-goTextSecondaryDark font-Jakarta text-[12px] mb-1.5">Message</Text>
         <TextInput className="bg-goDarkSecondary rounded-[8px] px-[12px] py-[10px] text-goTextPrimaryDark font-Jakarta text-[14px] min-h-[80px]"
-          value={message} onChangeText={setMessage} maxLength={1000} multiline numberOfLines={4} placeholder="Enter message" placeholderTextColor="#64748B" />
+          value={message} onChangeText={setMessage} maxLength={1000} multiline numberOfLines={4} placeholder="Enter message" placeholderTextColor="#64748B"  testID="admin.broadcast.set-message"/>
       </View>
       <Pressable onPress={handleSend} disabled={sending}
-        className={`py-[12px] rounded-[8px] items-center ${sending ? "bg-goDarkSecondary" : "bg-goAdminAccent"}`}>
+        className={`py-[12px] rounded-[8px] items-center ${sending ? "bg-goDarkSecondary" : "bg-goAdminAccent"}`} testID="admin.broadcast.handle-send">
         {sending ? <ActivityIndicator size={20} color="#FFF" /> : <Text className="text-goBgDark font-JakartaBold text-[14px]">Send Broadcast</Text>}
       </Pressable>
     </AdminShell>

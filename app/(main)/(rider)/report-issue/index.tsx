@@ -71,7 +71,7 @@ export default function ReportIssue() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.report-issue.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Report Issue</Text>
@@ -88,7 +88,7 @@ export default function ReportIssue() {
                 ? { borderColor: colors.primary, backgroundColor: isDark ? colors.primaryLightDark : colors.primaryLight }
                 : { borderColor, backgroundColor: surfaceBg }}
               onPress={() => setSelected(r)}
-            >
+             testID="rider.report-issue.set-selected">
               <View className="flex-row items-center">
                 <Ionicons name={r.icon} size={18} color={textSecondary} />
                 <Text className="text-[14px] font-JakartaBold ml-[6px]" style={{ color: textPrimary }}>{r.label}</Text>
@@ -107,14 +107,14 @@ export default function ReportIssue() {
           textAlignVertical="top"
           value={description}
           onChangeText={setDescription}
-        />
+         testID="rider.report-issue.set-description"/>
         {error ? <Text className="text-[14px] font-Jakarta mb-3" style={{ color: colors.danger }}>{error}</Text> : null}
         <TouchableOpacity
           className="rounded-full w-full py-[16px] items-center"
           style={{ backgroundColor: submitting || !selected ? colors.borderDark : colors.primary }}
           onPress={handleSubmit}
           disabled={submitting || !selected}
-        >
+         testID="rider.report-issue.handle-submit">
           {submitting ? (
             <ActivityIndicator size={20} color="#FFFFFF" />
           ) : (
@@ -127,7 +127,7 @@ export default function ReportIssue() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.report-issue.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

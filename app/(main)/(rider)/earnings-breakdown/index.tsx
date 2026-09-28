@@ -107,7 +107,7 @@ export default function EarningsBreakdown() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="mr-[12px] p-[4px]"
-        >
+         testID="rider.earnings-breakdown.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -136,7 +136,7 @@ export default function EarningsBreakdown() {
                 borderWidth: 1,
                 borderColor: active ? colors.primary : borderColor,
               }}
-            >
+             testID="rider.earnings-breakdown.set-date-range">
               <Text
                 className="text-[13px] font-JakartaSemiBold"
                 style={{ color: active ? colors.white : textPrimary }}
@@ -166,7 +166,7 @@ export default function EarningsBreakdown() {
             className="rounded-full px-[24px] py-[12px]"
             style={{ backgroundColor: colors.primary }}
             onPress={() => fetchData()}
-          >
+           testID="rider.earnings-breakdown.fetch-data">
             <Text className="text-[16px] font-JakartaBold text-white">
               Retry
             </Text>

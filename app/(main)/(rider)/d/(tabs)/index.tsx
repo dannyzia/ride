@@ -998,7 +998,7 @@ export default function DriverHome() {
               accessibilityLabel={t('driver_home.go_online_label')}
               accessibilityHint={t('driver_home.start_receiving')}
               style={{ alignItems: "center", justifyContent: "center" }}
-            >
+             testID="rider.d.toggle-online">
               {!reduceMotion && (
                 <Animated.View
                   pointerEvents="none"
@@ -1129,7 +1129,7 @@ export default function DriverHome() {
                 alignItems: "center",
                 justifyContent: "center",
               }}
-            >
+             testID="rider.d.set-theme">
               <Ionicons
                 name={isDark ? "sunny-outline" : "moon-outline"}
                 size={18}
@@ -1148,7 +1148,7 @@ export default function DriverHome() {
                     backgroundColor: colors.amber,
                     alignItems: "center", justifyContent: "center",
                   }}
-                >
+                 testID="rider.d.push-main">
                   <Ionicons name="cafe-outline" size={18} color={colors.white} />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -1160,7 +1160,7 @@ export default function DriverHome() {
                     backgroundColor: colors.danger,
                     alignItems: "center", justifyContent: "center",
                   }}
-                >
+                 testID="rider.d.toggle-online-2">
                   <Ionicons name="power" size={18} color={colors.white} />
                 </TouchableOpacity>
               </View>
@@ -1174,7 +1174,7 @@ export default function DriverHome() {
                   backgroundColor: colors.amber,
                   alignItems: "center", justifyContent: "center",
                 }}
-              >
+               testID="rider.d.push-main-2">
                 <Ionicons name="cafe-outline" size={18} color={colors.white} />
               </TouchableOpacity>
             )}
@@ -1247,7 +1247,7 @@ export default function DriverHome() {
               shadowRadius: 4,
               elevation: 4,
             }}
-          >
+           testID="rider.d.get-driver-fix">
             <Ionicons name="locate" size={20} color={colors.primary} />
           </TouchableOpacity>
         )}
@@ -1308,7 +1308,7 @@ export default function DriverHome() {
                 paddingVertical: spacing.sm,
                 alignItems: "center",
               }}
-            >
+             testID="rider.d.push-main-3">
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: colors.primary }}>
                 {t('driver_home.buy_package')}
               </Text>
@@ -1331,7 +1331,7 @@ export default function DriverHome() {
                 alignItems: "center",
                 justifyContent: "space-between",
               }}
-            >
+             testID="rider.d.push-main-4">
               <View
                 style={{
                   flexDirection: "row",
@@ -1414,7 +1414,7 @@ export default function DriverHome() {
               }}
               accessibilityLabel="Marketplace bidding — view and bid on rental requests"
               accessibilityRole="button"
-            >
+             testID="rider.d.push-main-5">
               <View
                 style={{
                   width: 44, height: 44, borderRadius: 12,
@@ -1483,13 +1483,13 @@ export default function DriverHome() {
                 // WS reconnect happens via existing effect
               }}
               style={{ backgroundColor: colors.primary, borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}
-            >
+             testID="rider.d.set-show-recovery-dialog">
               <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 16, color: colors.white }}>{t('driver_home.resume_working')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleForceEndSession}
               style={{ backgroundColor: surfaceBg, borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.danger }}
-            >
+             testID="rider.d.handle-force-end-session">
               <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 16, color: colors.danger }}>{t('driver_home.end_session')}</Text>
             </TouchableOpacity>
           </View>
@@ -1525,7 +1525,7 @@ export default function DriverHome() {
           <Text style={{ fontFamily: 'Jakarta-Medium', fontSize: 14, color: textPrimary, flex: 1 }}>
             {sessionError}
           </Text>
-          <TouchableOpacity onPress={() => recoverSession(true)}>
+          <TouchableOpacity onPress={() => recoverSession(true)} testID="rider.d.recover-session">
             <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 14, color: colors.primary }}>{t('driver_home.retry')}</Text>
           </TouchableOpacity>
         </View>

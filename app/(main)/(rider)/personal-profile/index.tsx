@@ -105,14 +105,14 @@ export default function DriverPersonalProfile() {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.personal-profile.el-1">
           <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>Back</Text>
         </TouchableOpacity>
         <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>Complete Driver Profile</Text>
         <View style={{ width: 50 }} />
       </View>
       <ScrollView style={{ flex: 1, paddingHorizontal: 24 }} contentContainerStyle={{ paddingBottom: 40 }}>
-        <TouchableOpacity onPress={pickImage} style={{ alignItems: "center", marginBottom: 24, marginTop: 16 }} disabled={isBusy}>
+        <TouchableOpacity onPress={pickImage} style={{ alignItems: "center", marginBottom: 24, marginTop: 16 }} disabled={isBusy} testID="rider.personal-profile.pick-image">
           {photo ? (
             <Image source={{ uri: photo }} style={{ width: 96, height: 96, borderRadius: 48 }} />
           ) : (
@@ -130,7 +130,7 @@ export default function DriverPersonalProfile() {
           placeholderTextColor={textSecondary}
           value={name}
           onChangeText={setName}
-        />
+         testID="rider.personal-profile.set-name"/>
         <Text style={{ fontSize: 14, fontFamily: fonts.body, color: textSecondary, marginBottom: 8 }}>City</Text>
         <TextInput
           style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontFamily: fonts.body, color: textPrimary, marginBottom: 16 }}
@@ -138,7 +138,7 @@ export default function DriverPersonalProfile() {
           placeholderTextColor={textSecondary}
           value={city}
           onChangeText={setCity}
-        />
+         testID="rider.personal-profile.set-city"/>
         {error ? (
           <Text style={{ fontSize: 14, fontFamily: fonts.body, color: colors.danger, marginBottom: 12 }}>{error}</Text>
         ) : null}
@@ -146,7 +146,7 @@ export default function DriverPersonalProfile() {
           style={{ borderRadius: radii.pill, paddingVertical: 16, alignItems: "center", backgroundColor: isBusy ? colors.borderDark : colors.primary }}
           onPress={handleSave}
           disabled={isBusy}
-        >
+         testID="rider.personal-profile.handle-save">
           {isBusy ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
@@ -159,7 +159,7 @@ export default function DriverPersonalProfile() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surface, borderWidth: 1, borderColor: border }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.personal-profile.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

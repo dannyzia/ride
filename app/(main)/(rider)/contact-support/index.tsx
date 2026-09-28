@@ -151,7 +151,7 @@ export default function ContactSupport() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="mr-[12px] p-[4px]"
-        >
+         testID="rider.contact-support.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -201,7 +201,7 @@ export default function ContactSupport() {
               className="rounded-full px-[24px] py-[12px]"
               style={{ backgroundColor: colors.primary }}
               onPress={() => router.back()}
-            >
+             testID="rider.contact-support.el-2">
               <Text className="text-[15px] font-JakartaBold text-white">
                 Done
               </Text>
@@ -224,7 +224,7 @@ export default function ContactSupport() {
                 borderColor: category ? colors.primary : borderColor,
               }}
               onPress={() => setShowCategoryPicker(!showCategoryPicker)}
-            >
+             testID="rider.contact-support.set-show-category-picker">
               <View className="flex-row items-center gap-2">
                 {selectedCategory ? (
                   <>
@@ -285,7 +285,7 @@ export default function ContactSupport() {
                         setCategory(cat.key);
                         setShowCategoryPicker(false);
                       }}
-                    >
+                     testID="rider.contact-support.set-category">
                       <Ionicons
                         name={cat.icon}
                         size={14}
@@ -320,7 +320,7 @@ export default function ContactSupport() {
               onChangeText={setSubject}
               maxLength={200}
               className="mb-4"
-            />
+             testID="rider.contact-support.set-subject"/>
 
             {/* Message */}
             <Text
@@ -342,7 +342,7 @@ export default function ContactSupport() {
               onChangeText={setMsg}
               multiline
               numberOfLines={5}
-            />
+             testID="rider.contact-support.set-msg"/>
             <Text
               className="text-[11px] font-Jakarta mt-1 mb-4"
               style={{ color: textSecondary }}
@@ -384,7 +384,7 @@ export default function ContactSupport() {
                       Tap to change
                     </Text>
                   </View>
-                  <TouchableOpacity onPress={() => setAttachment(null)}>
+                  <TouchableOpacity onPress={() => setAttachment(null)} testID="rider.contact-support.set-attachment">
                     <Ionicons
                       name="close-circle"
                       size={22}
@@ -395,7 +395,7 @@ export default function ContactSupport() {
                 <TouchableOpacity
                   className="mt-2"
                   onPress={pickImage}
-                >
+                 testID="rider.contact-support.pick-image">
                   <Text
                     className="text-[13px] font-Jakarta"
                     style={{ color: colors.primary }}
@@ -414,7 +414,7 @@ export default function ContactSupport() {
                   borderStyle: "dashed",
                 }}
                 onPress={pickImage}
-              >
+               testID="rider.contact-support.pick-image-2">
                 <Ionicons
                   name="image-outline"
                   size={28}
@@ -464,7 +464,7 @@ export default function ContactSupport() {
               }}
               onPress={handleSend}
               disabled={loading || !category}
-            >
+             testID="rider.contact-support.handle-send">
               {loading ? (
                 <ActivityIndicator size={20} color="#FFFFFF" />
               ) : (

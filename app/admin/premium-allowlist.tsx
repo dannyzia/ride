@@ -159,11 +159,11 @@ export default function PremiumAllowlistScreen() {
         </Text>
       </View>
       {item.is_active ? (
-        <TouchableOpacity onPress={() => void handleDeactivate(item.id, item.brand, item.model)}>
+        <TouchableOpacity onPress={() => void handleDeactivate(item.id, item.brand, item.model)} testID="admin.premium-allowlist.handle-deactivate">
           <Ionicons name="close-circle" size={22} color={colors.danger} />
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity onPress={() => void handleReactivate(item.id)}>
+        <TouchableOpacity onPress={() => void handleReactivate(item.id)} testID="admin.premium-allowlist.handle-reactivate">
           <Ionicons name="refresh-circle" size={22} color={colors.success} />
         </TouchableOpacity>
       )}
@@ -183,7 +183,7 @@ export default function PremiumAllowlistScreen() {
           backgroundColor: colors.darkSurface,
         }}
       >
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="admin.premium-allowlist.el-1">
           <Ionicons name="arrow-back" size={24} color={colors.white} />
         </TouchableOpacity>
         <Text style={{ flex: 1, textAlign: "center", fontFamily: "Jakarta-Bold", fontSize: 17, color: colors.white }}>
@@ -213,7 +213,7 @@ export default function PremiumAllowlistScreen() {
             color: colors.textPrimaryLight,
             marginBottom: spacing.sm,
           }}
-        />
+         testID="admin.premium-allowlist.set-brand"/>
         <TextInput
           placeholder="Model (optional — empty = all models)"
           placeholderTextColor={colors.textSecondaryLight}
@@ -230,7 +230,7 @@ export default function PremiumAllowlistScreen() {
             color: colors.textPrimaryLight,
             marginBottom: spacing.sm,
           }}
-        />
+         testID="admin.premium-allowlist.set-model"/>
         <TouchableOpacity
           onPress={() => void handleAdd()}
           disabled={adding || !brand.trim()}
@@ -240,7 +240,7 @@ export default function PremiumAllowlistScreen() {
             paddingVertical: spacing.sm,
             alignItems: "center",
           }}
-        >
+         testID="admin.premium-allowlist.handle-add">
           {adding ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
@@ -263,7 +263,7 @@ export default function PremiumAllowlistScreen() {
               borderRadius: radii.pill,
               backgroundColor: filter === f ? colors.primary : colors.gray100,
             }}
-          >
+           testID="admin.premium-allowlist.set-filter">
             <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 12, color: filter === f ? colors.white : colors.textSecondaryLight }}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </Text>

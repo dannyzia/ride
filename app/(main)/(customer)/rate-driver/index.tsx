@@ -237,7 +237,7 @@ export default function RateDriver() {
       />
       <View className="flex-1 px-6 pt-4">
         <View className="flex-row items-center justify-between mb-6">
-          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={8} testID="customer.rate-driver.el-1">
             <Ionicons name="arrow-back" size={24} color={textPrimary} />
           </TouchableOpacity>
           <Text className="text-[28px] font-JakartaBold text-center flex-1" style={{ color: textPrimary }}>
@@ -247,7 +247,7 @@ export default function RateDriver() {
             onPress={() => setTheme(isDark ? "light" : "dark")}
             hitSlop={8}
             className="ml-4"
-          >
+           testID="customer.rate-driver.set-theme">
             <Ionicons
               name={isDark ? "sunny-outline" : "moon-outline"}
               size={24}
@@ -263,7 +263,7 @@ export default function RateDriver() {
           ) : driverError ? (
             <View className="items-center gap-3">
               <Text style={{ color: colors.danger }}>{t('rate_driver.could_not_load_driver')}</Text>
-              <TouchableOpacity onPress={fetchDriver} className="px-4 py-2 rounded-full border" style={{ borderColor: colors.primary }}>
+              <TouchableOpacity onPress={fetchDriver} className="px-4 py-2 rounded-full border" style={{ borderColor: colors.primary }} testID="customer.rate-driver.fetch-driver">
                 <Text style={{ color: colors.primary, fontFamily: "Jakarta-SemiBold" }}>{t('common.retry')}</Text>
               </TouchableOpacity>
             </View>
@@ -300,7 +300,7 @@ export default function RateDriver() {
               key={star}
               onPress={() => setRating(star)}
               style={{ padding: 4 }}
-            >
+             testID="customer.rate-driver.set-rating">
               <Ionicons
                 name={star <= rating ? "star" : "star-outline"}
                 size={40}
@@ -327,7 +327,7 @@ export default function RateDriver() {
                 { backgroundColor: tip === t ? colors.primary : surfaceBg },
               ]}
               onPress={() => { setTip(t); setCustomTip(""); }}
-            >
+             testID="customer.rate-driver.set-tip">
               <Text style={{ color: tip === t ? colors.white : textPrimary, fontFamily: "Jakarta-SemiBold" }}>
                 ৳{t}
               </Text>
@@ -340,7 +340,7 @@ export default function RateDriver() {
               { backgroundColor: customTip ? colors.primary : surfaceBg },
             ]}
             onPress={() => { setTip(0); }}
-          >
+           testID="customer.rate-driver.set-tip-2">
             <Text style={{ color: customTip ? colors.white : textPrimary, fontFamily: "Jakarta-SemiBold" }}>
               {t('rate_driver.custom')}
             </Text>
@@ -360,7 +360,7 @@ export default function RateDriver() {
                 setCustomTip(text);
               }
             }}
-          />
+           testID="customer.rate-driver.parse-int"/>
         )}
 
         {/* Block driver */}
@@ -368,7 +368,7 @@ export default function RateDriver() {
           className="flex-row items-center mb-6"
           onPress={toggleBlock}
           disabled={blocking || !(driver?.id || activeRide?.driver_id)}
-        >
+         testID="customer.rate-driver.toggle-block">
           <View
             className="w-5 h-5 rounded border items-center justify-center mr-3"
             style={{ borderColor: isBlocked ? colors.primary : borderColor, backgroundColor: isBlocked ? colors.primary : "transparent" }}
@@ -390,7 +390,7 @@ export default function RateDriver() {
           style={{ backgroundColor: rating > 0 ? colors.primary : textDisabled }}
           onPress={handleSubmit}
           disabled={loading || rating === 0}
-        >
+         testID="customer.rate-driver.handle-submit">
           {loading ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (

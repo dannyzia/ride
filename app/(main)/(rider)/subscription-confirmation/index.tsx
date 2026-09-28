@@ -27,7 +27,7 @@ export default function SubscriptionConfirmation() {
       <TouchableOpacity
         className="bg-goPrimary rounded-full w-full py-[16px] items-center"
         onPress={() => router.replace("/(main)/(rider)/")}
-      >
+       testID="rider.subscription-confirmation.replace-main">
         <Text className="text-[18px] font-JakartaBold text-goWhite">Go online</Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -35,7 +35,7 @@ export default function SubscriptionConfirmation() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.subscription-confirmation.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

@@ -126,7 +126,7 @@ export default function RentalConfirmedScreen() {
               alignItems: "center",
               justifyContent: "center",
             }}
-          >
+           testID="customer.rental-marketplace.confirmed.replace-main">
             <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
               Back to Home
             </Text>
@@ -143,7 +143,7 @@ export default function RentalConfirmedScreen() {
               alignItems: "center",
               justifyContent: "center",
             }}
-          >
+           testID="customer.rental-marketplace.confirmed.el-1">
             <Text style={{ color: textPrimary, fontSize: 16, fontFamily: "JakartaSemiBold" }}>
               Go Back
             </Text>

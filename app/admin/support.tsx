@@ -103,7 +103,7 @@ export default function AdminSupport() {
       <View style={{ flexDirection: "row", marginBottom: 12, gap: 8 }}>
         {["", "open", "in_progress", "resolved", "closed"].map((s) => (
           <Pressable key={s} onPress={() => setStatusFilter(s)}
-            style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: statusFilter === s ? colors.adminAccent : colors.darkSecondary }}>
+            style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: statusFilter === s ? colors.adminAccent : colors.darkSecondary }} testID="admin.support.set-status-filter">
             <Text style={{ color: colors.textPrimaryDark, fontFamily: "Jakarta-SemiBold", fontSize: 12 }}>{s || "All"}</Text>
           </Pressable>
         ))}
@@ -132,7 +132,7 @@ export default function AdminSupport() {
                 placeholderTextColor={colors.textSecondaryDark}
                 value={assignInput}
                 onChangeText={setAssignInput}
-              />
+               testID="admin.support.set-assign-input"/>
               <Pressable
                 onPress={async () => {
                   const trimmed = assignInput.trim();
@@ -145,7 +145,7 @@ export default function AdminSupport() {
                   else { toast.show(res.error ?? "Failed to assign", "error"); }
                 }}
                 style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.adminAccent, borderRadius: 6 }}
-              >
+               testID="admin.support.el-1">
                 <Text style={{ color: "#000", fontFamily: "Jakarta-Bold", fontSize: 11 }}>Assign</Text>
               </Pressable>
             </View>
@@ -160,14 +160,14 @@ export default function AdminSupport() {
           ))}
           <View style={{ marginTop: 12 }}>
             <TextInput style={{ backgroundColor: colors.darkSecondary, color: colors.textPrimaryDark, borderRadius: 8, padding: 10, minHeight: 80, fontFamily: "Jakarta-Regular", fontSize: 13, textAlignVertical: "top" }}
-              value={replyText} onChangeText={setReplyText} placeholder="Type a reply..." placeholderTextColor={colors.textSecondaryDark} multiline />
+              value={replyText} onChangeText={setReplyText} placeholder="Type a reply..." placeholderTextColor={colors.textSecondaryDark} multiline  testID="admin.support.set-reply-text"/>
             <View style={{ flexDirection: "row", marginTop: 8, alignItems: "center", gap: 12 }}>
               <Pressable onPress={() => setIsInternal(!isInternal)}
-                style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: isInternal ? colors.amber : colors.darkSecondary }}>
+                style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: isInternal ? colors.amber : colors.darkSecondary }} testID="admin.support.set-is-internal">
                 <Text style={{ color: colors.textPrimaryDark, fontFamily: "Jakarta-SemiBold", fontSize: 11 }}>{isInternal ? "Internal" : "External"}</Text>
               </Pressable>
               <Pressable onPress={sendReply} disabled={sending || !replyText.trim()}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.adminAccent, opacity: sending ? 0.6 : 1 }}>
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.adminAccent, opacity: sending ? 0.6 : 1 }} testID="admin.support.send-reply">
                 <Text style={{ color: "#000", fontFamily: "Jakarta-Bold", fontSize: 13 }}>{sending ? "Sending..." : "Send"}</Text>
               </Pressable>
             </View>

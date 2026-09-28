@@ -242,7 +242,7 @@ export default function Schedule() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="mr-[12px] p-[4px]"
-        >
+         testID="rider.schedule.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -293,7 +293,7 @@ export default function Schedule() {
                   onValueChange={() => toggleDay(d.key)}
                   trackColor={{ false: "#D1D5DB", true: colors.primary }}
                   thumbColor="#FFFFFF"
-                />
+                 testID="rider.schedule.toggle-day"/>
               </View>
               {isActive && (
                 <View className="flex-row items-center gap-2 mt-2">
@@ -307,7 +307,7 @@ export default function Schedule() {
                       borderColor,
                     }}
                     onPress={() => openTimePicker(d.key, "start")}
-                  >
+                   testID="rider.schedule.open-time-picker">
                     <Text
                       className="text-[11px] font-Jakarta"
                       style={{ color: textSecondary }}
@@ -336,7 +336,7 @@ export default function Schedule() {
                       borderColor,
                     }}
                     onPress={() => openTimePicker(d.key, "end")}
-                  >
+                   testID="rider.schedule.open-time-picker-2">
                     <Text
                       className="text-[11px] font-Jakarta"
                       style={{ color: textSecondary }}
@@ -372,7 +372,7 @@ export default function Schedule() {
           }}
           onPress={handleSave}
           disabled={saving}
-        >
+         testID="rider.schedule.handle-save">
           {saving ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
@@ -400,7 +400,7 @@ export default function Schedule() {
           <TouchableOpacity
             style={{ flex: 1 }}
             onPress={() => setTimePickerVisible(false)}
-          />
+           testID="rider.schedule.set-time-picker-visible"/>
           <View
             style={{
               maxHeight: "50%",
@@ -442,7 +442,7 @@ export default function Schedule() {
                         : "transparent",
                   }}
                   onPress={() => selectTime(time)}
-                >
+                 testID="rider.schedule.select-time">
                   <Text
                     className="text-[15px] font-Jakarta"
                     style={{

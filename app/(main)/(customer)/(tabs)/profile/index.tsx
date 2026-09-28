@@ -195,7 +195,7 @@ const Profile = () => {
             accessibilityLabel={t('profile.toggle_theme')}
             onPress={() => setTheme(isDark ? "light" : "dark")}
             style={styles.themeToggle}
-          >
+           testID="customer.profile.set-theme">
             <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
           </TouchableOpacity>
         </View>
@@ -216,7 +216,7 @@ const Profile = () => {
               accessibilityLabel={t('profile.edit_profile')}
               onPress={() => router.push(EDIT_ROUTE)}
               style={[styles.editBadge, { backgroundColor: surfaceBg, borderColor }]}
-            >
+             testID="customer.profile.el-1">
               <Ionicons name="pencil" size={16} color={textSecondary} />
             </TouchableOpacity>
           </View>
@@ -318,7 +318,7 @@ const Profile = () => {
           accessibilityLabel={t('profile.sign_out')}
           onPress={confirmSignOut}
           style={styles.signOutButton}
-        >
+         testID="customer.profile.confirm-sign-out">
           <Text style={[styles.signOutText, { color: colors.danger }]}>{t('profile.sign_out')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -326,7 +326,7 @@ const Profile = () => {
           accessibilityLabel={t('profile.delete_account')}
           onPress={() => router.push(DELETE_ACCOUNT_ROUTE)}
           style={styles.deleteAccountButton}
-        >
+         testID="customer.profile.el-2">
           <Text style={[styles.deleteAccountText, { color: textDisabled }]}>{t('profile.delete_account')}</Text>
         </TouchableOpacity>
       </ScrollView>

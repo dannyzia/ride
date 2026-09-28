@@ -110,7 +110,7 @@ export default function MarketplaceDelivery() {
             key={tab}
             onPress={() => { setActiveTab(tab); setPage(1); }}
             style={{ backgroundColor: activeTab === tab ? colors.adminAccent : colors.darkSecondary, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 }}
-          >
+           testID="admin.marketplace.delivery.set-active-tab">
             <Text style={{ color: activeTab === tab ? colors.darkSurface : colors.textSecondaryDark, fontFamily: "Jakarta-SemiBold", fontSize: 12 }}>
               {tab === "requests" ? "Requests" : "Legs"}
             </Text>

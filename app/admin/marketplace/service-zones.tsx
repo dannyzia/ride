@@ -111,7 +111,7 @@ export default function MarketplaceServiceZones() {
       <Text style={{ color: colors.textSecondaryDark, fontFamily: "Jakarta-Regular", fontSize: 12 }}>{new Date(r.created_at).toLocaleDateString()}</Text>
     )},
     { key: "actions", header: "", width: 80, render: (r) => (
-      <Pressable onPress={() => handleDelete(r)}>
+      <Pressable onPress={() => handleDelete(r)} testID="admin.marketplace.service-zones.handle-delete">
         <Text style={{ color: colors.danger, fontFamily: "Jakarta-SemiBold", fontSize: 11 }}>Remove</Text>
       </Pressable>
     )},
@@ -155,7 +155,7 @@ export default function MarketplaceServiceZones() {
           onPress={handleBulkAdd}
           disabled={inserting || !selectedFleetId || !bulkInput.trim()}
           style={{ backgroundColor: colors.adminAccent, borderRadius: 8, paddingVertical: 10, alignItems: "center", marginTop: 8, opacity: inserting || !selectedFleetId || !bulkInput.trim() ? 0.5 : 1 }}
-        >
+         testID="admin.marketplace.service-zones.handle-bulk-add">
           <Text style={{ color: colors.darkSurface, fontFamily: "Jakarta-SemiBold", fontSize: 13 }}>
             {inserting ? "Adding..." : "Add Cells"}
           </Text>

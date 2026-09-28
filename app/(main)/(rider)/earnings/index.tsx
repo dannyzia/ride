@@ -91,7 +91,7 @@ export default function EarningsDashboard() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="mr-[12px] p-[4px]"
-        >
+         testID="rider.earnings.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -133,7 +133,7 @@ export default function EarningsDashboard() {
             >
               {error}
             </Text>
-            <TouchableOpacity onPress={() => fetchStats()} className="mt-3">
+            <TouchableOpacity onPress={() => fetchStats()} className="mt-3" testID="rider.earnings.fetch-stats">
               <Text
                 className="text-[14px] font-JakartaBold"
                 style={{ color: colors.primary }}
@@ -220,7 +220,7 @@ export default function EarningsDashboard() {
               onPress={() =>
                 router.push("/(main)/(rider)/earnings-breakdown")
               }
-            >
+             testID="rider.earnings.push-main">
               <View className="flex-row justify-between items-center">
                 <View>
                   <Text
@@ -250,7 +250,7 @@ export default function EarningsDashboard() {
               onPress={() =>
                 router.push("/(main)/(rider)/commission-statement")
               }
-            >
+             testID="rider.earnings.push-main-2">
               <View className="flex-row justify-between items-center">
                 <View>
                   <Text
@@ -278,7 +278,7 @@ export default function EarningsDashboard() {
               className="p-[14px] border rounded-[12px]"
               style={{ backgroundColor: surfaceBg, borderColor }}
               onPress={() => router.push("/(main)/(rider)/due-amounts")}
-            >
+             testID="rider.earnings.push-main-3">
               <View className="flex-row justify-between items-center">
                 <View>
                   <Text

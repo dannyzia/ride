@@ -127,7 +127,7 @@ export default function MarketplaceRental() {
         <View style={{ position: "fixed" as unknown as "absolute", top: 0, right: 0, bottom: 0, width: 450, backgroundColor: "#181A20", borderLeftWidth: 1, borderLeftColor: "#2A2D35", zIndex: 200, padding: 20 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <Text style={{ color: colors.textPrimaryDark, fontFamily: "Jakarta-Bold", fontSize: 16 }}>Request Detail</Text>
-            <Pressable onPress={() => setSelectedRequest(null)}>
+            <Pressable onPress={() => setSelectedRequest(null)} testID="admin.marketplace.rental.set-selected-request">
               <Text style={{ color: colors.adminAccent, fontFamily: "Jakarta-SemiBold", fontSize: 13 }}>Close</Text>
             </Pressable>
           </View>

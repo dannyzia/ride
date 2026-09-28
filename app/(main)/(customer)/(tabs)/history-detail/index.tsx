@@ -79,7 +79,7 @@ useEffect(() => {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.history-detail.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('find_customer.ride_details')}</Text>
@@ -123,14 +123,14 @@ useEffect(() => {
             className="border rounded-[12px] py-[14px] items-center mb-3"
             style={{ backgroundColor: surfaceBg, borderColor }}
             onPress={() => router.push(`/(main)/(customer)/(tabs)/activity/share-receipt?rideId=${ride.id}`)}
-          >
+           testID="customer.history-detail.push-main">
             <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{t('history_detail.view_receipt')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="rounded-[12px] py-[14px] items-center"
             style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor: colors.danger }}
             onPress={() => router.push(`/(main)/(customer)/report-issue?rideId=${ride.id}`)}
-          >
+           testID="customer.history-detail.push-main-2">
             <Text className="text-[15px] font-JakartaBold" style={{ color: colors.danger }}>{t('ride.report_an_issue')}</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -144,7 +144,7 @@ useEffect(() => {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.history-detail.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

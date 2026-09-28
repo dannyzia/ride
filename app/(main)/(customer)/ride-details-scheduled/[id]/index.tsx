@@ -69,7 +69,7 @@ export default function RideDetailsScheduled() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.ride-details-scheduled.id.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('ride_details_scheduled.title')}</Text>
@@ -86,7 +86,7 @@ export default function RideDetailsScheduled() {
             className="rounded-full px-[24px] py-[12px]"
             style={{ backgroundColor: colors.primary }}
             onPress={() => { setLoading(true); setError(""); }}
-          >
+           testID="customer.ride-details-scheduled.id.set-loading">
             <Text className="text-[16px] font-JakartaBold text-goWhite">{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
@@ -130,14 +130,14 @@ export default function RideDetailsScheduled() {
               className="flex-1 rounded-full py-[14px] items-center"
               style={{ backgroundColor: colors.primary }}
               onPress={() => router.push("/(main)/(customer)/rate-driver")}
-            >
+             testID="customer.ride-details-scheduled.id.push-main">
               <Text className="text-[16px] font-JakartaBold text-goWhite">{t('ride.rate_driver')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               className="flex-1 border rounded-full py-[14px] items-center"
               style={{ borderColor }}
               onPress={() => router.replace("/(main)/(customer)/cancel-reason")}
-            >
+             testID="customer.ride-details-scheduled.id.replace-main">
               <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
@@ -148,7 +148,7 @@ export default function RideDetailsScheduled() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.ride-details-scheduled.id.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

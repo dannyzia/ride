@@ -86,7 +86,7 @@ export default function NotificationsPermission() {
         accessibilityLabel="Toggle theme"
         onPress={() => setTheme(isDark ? "light" : "dark")}
         style={{ position: "absolute", top: 50, right: 24, width: 48, height: 48, alignItems: "center", justifyContent: "center", zIndex: 10 }}
-      >
+       testID="notifications-permission.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
       </TouchableOpacity>
 
@@ -128,12 +128,12 @@ export default function NotificationsPermission() {
           title={busy ? "Enabling..." : "Allow"}
           onPress={allow}
           disabled={busy}
-        />
+         testID="notifications-permission.allow"/>
         <CustomButton
           title="Not Now"
           bgVariant="secondary"
           onPress={skip}
-        />
+         testID="notifications-permission.skip"/>
       </View>
     </SafeAreaView>
   );

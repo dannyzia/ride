@@ -66,7 +66,7 @@ export default function AddTip() {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.add-tip.el-1">
           <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>{t('ride.add_tip')}</Text>
@@ -105,7 +105,7 @@ export default function AddTip() {
                     setTipAmount(amount);
                     setCustomTip("");
                   }}
-                >
+                 testID="customer.add-tip.set-tip-amount">
                   <Text style={{ fontSize: 14, fontFamily: fonts.body, color: selected ? colors.primary : textPrimary }}>
                     {amount === 0 ? t('add_tip.no_tip') : `৳${amount}`}
                   </Text>
@@ -123,7 +123,7 @@ export default function AddTip() {
               if (text) setTipAmount(0);
             }}
             keyboardType="numeric"
-          />
+           testID="customer.add-tip.set-custom-tip"/>
         </View>
       </ScrollView>
       <View style={{ paddingHorizontal: 24, paddingBottom: 24 }}>
@@ -132,7 +132,7 @@ export default function AddTip() {
           style={{ backgroundColor: colors.primary, borderRadius: radii.pill, width: "100%", paddingVertical: 16, alignItems: "center" }}
           onPress={handleAddTip}
           disabled={submitting}
-        >
+         testID="customer.add-tip.handle-add-tip">
           {submitting ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
@@ -145,7 +145,7 @@ export default function AddTip() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surface, borderWidth: 1, borderColor: border }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.add-tip.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

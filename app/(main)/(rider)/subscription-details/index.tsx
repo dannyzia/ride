@@ -64,7 +64,7 @@ export default function SubscriptionDetails() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.subscription-details.el-1">
           <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Plan Details</Text>
@@ -80,7 +80,7 @@ export default function SubscriptionDetails() {
           <TouchableOpacity
             className="bg-goPrimary rounded-full px-[24px] py-[12px]"
             onPress={() => { setLoading(true); setError(""); }}
-          >
+           testID="rider.subscription-details.set-loading">
             <Text className="text-[16px] font-JakartaBold text-goWhite">Retry</Text>
           </TouchableOpacity>
         </View>
@@ -102,7 +102,7 @@ export default function SubscriptionDetails() {
           <TouchableOpacity
             className="bg-goPrimary rounded-full w-full py-[16px] items-center"
             onPress={() => router.push(`/(main)/(rider)/subscription-checkout?planId=${plan.id}`)}
-          >
+           testID="rider.subscription-details.push-main">
             <Text className="text-[18px] font-JakartaBold text-goWhite">Proceed to checkout</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -112,7 +112,7 @@ export default function SubscriptionDetails() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.subscription-details.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

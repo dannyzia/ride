@@ -56,7 +56,7 @@ export default function ActivityCompleted() {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
-        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}>
+        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/home")} testID="customer.activity-completed.replace-main">
           <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>{t('activity.completed')}</Text>
@@ -94,13 +94,13 @@ export default function ActivityCompleted() {
                 <TouchableOpacity
                   style={{ flex: 1, backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: "center" }}
                   onPress={() => router.push(`/(main)/(customer)/ride-detail/${ride.id}`)}
-                >
+                 testID="customer.activity-completed.push-main">
                   <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: textPrimary }}>{t('activity_completed.view_receipt')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: "center" }}
                   onPress={() => router.push("/(main)/(customer)/rate-driver")}
-                >
+                 testID="customer.activity-completed.push-main-2">
                   <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: colors.white }}>{t('ride.rate_driver')}</Text>
                 </TouchableOpacity>
               </View>
@@ -122,7 +122,7 @@ export default function ActivityCompleted() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surface, borderWidth: 1, borderColor: border }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.activity-completed.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

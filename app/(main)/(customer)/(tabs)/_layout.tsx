@@ -52,7 +52,7 @@ const TabBarButton = ({
   onPress?: (event: GestureResponderEvent) => void;
 }) => {
   return (
-    <TouchableWithoutFeedback onPress={onPress}>
+    <TouchableWithoutFeedback onPress={onPress} testID="customer._layout.on-press">
       <View className="flex-1 items-center justify-center">{children}</View>
     </TouchableWithoutFeedback>
   );

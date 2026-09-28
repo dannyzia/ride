@@ -104,7 +104,7 @@ export default function RequestHistoryScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} testID="customer.rental-marketplace.request-history.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
@@ -138,7 +138,7 @@ export default function RequestHistoryScreen() {
                   padding: 14,
                   marginBottom: 10,
                 }}
-              >
+               testID="customer.rental-marketplace.request-history.push-main">
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <Ionicons

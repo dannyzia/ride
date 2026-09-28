@@ -96,7 +96,7 @@ export default function MarketplaceCouriers() {
       <Text style={{ color: colors.textSecondaryDark, fontFamily: "Jakarta-Regular", fontSize: 12 }}>{new Date(r.created_at).toLocaleDateString()}</Text>
     )},
     { key: "actions", header: "Actions", width: 100, render: (r) => (
-      <Pressable onPress={() => handleStatusToggle(r)}>
+      <Pressable onPress={() => handleStatusToggle(r)} testID="admin.marketplace.couriers.handle-status-toggle">
         <Text style={{ color: r.status === "active" ? colors.danger : colors.primary, fontFamily: "Jakarta-SemiBold", fontSize: 11 }}>
           {r.status === "active" ? "Suspend" : "Restore"}
         </Text>
@@ -112,7 +112,7 @@ export default function MarketplaceCouriers() {
             key={t}
             onPress={() => { setTypeFilter(t); setPage(1); }}
             style={{ backgroundColor: typeFilter === t ? colors.adminAccent : colors.darkSecondary, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: typeFilter === t ? colors.adminAccent : "#2A2D35" }}
-          >
+           testID="admin.marketplace.couriers.set-type-filter">
             <Text style={{ color: typeFilter === t ? colors.darkSurface : colors.textSecondaryDark, fontFamily: "Jakarta-SemiBold", fontSize: 12 }}>
               {t || "All"}
             </Text>

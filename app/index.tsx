@@ -179,7 +179,7 @@ export default function Splash() {
             justifyContent: "center",
             alignItems: "center",
           }}
-        >
+         testID=".run-auth-check">
           <View className="flex-row items-center gap-2">
             <Ionicons name="refresh-outline" size={18} color={textPrimary} />
             <Text

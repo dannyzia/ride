@@ -62,7 +62,7 @@ export default function SettingsAppLanguage() {
           accessibilityLabel={t('common.back')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => router.back()}
-        >
+         testID="customer.settings.app-language.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>
@@ -73,7 +73,7 @@ export default function SettingsAppLanguage() {
           accessibilityLabel={t('app_language.toggle_theme')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => setTheme(isDark ? "light" : "dark")}
-        >
+         testID="customer.settings.app-language.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={24}
@@ -95,7 +95,7 @@ export default function SettingsAppLanguage() {
                 activeOpacity={0.7}
                 onPress={() => applyLanguage(lang.code)}
                 style={styles.row}
-              >
+               testID="customer.settings.app-language.apply-language">
                 <Text style={styles.flag}>{lang.flag}</Text>
                 <Text style={[styles.label, { color: textPrimary }]}>
                   {lang.label}
@@ -129,7 +129,7 @@ export default function SettingsAppLanguage() {
               thumbColor={colors.white}
               accessibilityRole="switch"
               accessibilityLabel={t('app_language.bengali_numerals')}
-            />
+             testID="customer.settings.app-language.set-bengali-numerals"/>
           </View>
         </View>
         <Text style={[styles.hint, { color: textSecondary }]}>

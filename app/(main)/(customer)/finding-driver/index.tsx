@@ -329,7 +329,7 @@ export default function FindingDriver() {
       <TouchableOpacity
         style={[styles.themeToggle, { backgroundColor: surfaceBg, borderColor }]}
         onPress={() => setTheme(isDark ? "light" : "dark")}
-      >
+       testID="customer.finding-driver.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
 
@@ -427,7 +427,7 @@ export default function FindingDriver() {
                 setFindingState('searching');
                 driverFound.current = false;
               }}
-            >
+             testID="customer.finding-driver.set-finding-state">
               <Text className="text-base font-JakartaBold" style={{ color: colors.white }}>
                 {t('common.retry')}
               </Text>
@@ -455,7 +455,7 @@ export default function FindingDriver() {
                 setFindingState('searching');
                 driverFound.current = false;
               }}
-            >
+             testID="customer.finding-driver.set-finding-state-2">
               <Text className="text-base font-JakartaBold" style={{ color: colors.white }}>
                 {t('finding_driver.try_again')}
               </Text>
@@ -468,7 +468,7 @@ export default function FindingDriver() {
           className="rounded-full py-4 items-center border"
           style={{ borderColor: colors.danger }}
           onPress={handleCancel}
-        >
+         testID="customer.finding-driver.handle-cancel">
           <Text className="text-base font-JakartaBold" style={{ color: colors.danger }}>
             {t('finding_driver.cancel_booking')}
           </Text>

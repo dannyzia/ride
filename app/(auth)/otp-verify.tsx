@@ -134,7 +134,7 @@ export default function OtpVerifyScreen() {
             if (error) setError("");
           }}
           maxLength={6}
-        />
+         testID="otp-verify.set-otp"/>
       </View>
 
       {error ? (
@@ -150,13 +150,13 @@ export default function OtpVerifyScreen() {
         title={loading ? "Verifying..." : "Verify OTP"}
         onPress={handleVerifyOtp}
         disabled={isLoading || !sessionId}
-      />
+       testID="otp-verify.handle-verify-otp"/>
 
       <TouchableOpacity
         onPress={sendOtp}
         disabled={isLoading}
         className="items-center mt-4"
-      >
+       testID="otp-verify.send-otp">
         <Text
           className="text-[14px] font-JakartaBold"
           style={{ color: colors.primary }}

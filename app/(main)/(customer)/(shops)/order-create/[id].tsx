@@ -93,7 +93,7 @@ const {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} testID="customer.shops.order-create.id.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
@@ -121,7 +121,7 @@ const {
                 borderRadius: 12,
                 marginRight: f === "delivery" ? 8 : 0,
               }}
-            >
+             testID="customer.shops.order-create.id.set-cart-fulfillment">
               <Text
                 style={{
                   fontSize: 14,
@@ -157,7 +157,7 @@ const {
               value={deliveryAddress ?? ""}
               onChangeText={(t) => setDeliveryAddress(t || null)}
               multiline
-            />
+             testID="customer.shops.order-create.id.set-delivery-address"/>
           </View>
         )}
 
@@ -204,7 +204,7 @@ const {
           placeholderTextColor={textSecondary}
           value={notes}
           onChangeText={setNotes}
-        />
+         testID="customer.shops.order-create.id.set-notes"/>
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -251,7 +251,7 @@ const {
               paddingVertical: 14,
               opacity: submitting || cart.length === 0 ? 0.5 : 1,
             }}
-          >
+           testID="customer.shops.order-create.id.handle-submit">
             {submitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (

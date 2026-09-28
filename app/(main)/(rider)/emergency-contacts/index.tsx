@@ -199,7 +199,7 @@ export default function EmergencyContacts() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="mr-[12px] p-[4px]"
-        >
+         testID="rider.emergency-contacts.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -265,7 +265,7 @@ export default function EmergencyContacts() {
                 className="flex-1 flex-row items-center"
                 onPress={() => Linking.openURL(`tel:${c.phone}`)}
                 disabled={removingId === c.id}
-              >
+               testID="rider.emergency-contacts.el-2">
                 <View
                   className="w-10 h-10 rounded-full items-center justify-center mr-[12px]"
                   style={{
@@ -303,7 +303,7 @@ export default function EmergencyContacts() {
                 <TouchableOpacity
                   onPress={() => confirmRemove(c)}
                   className="p-[8px]"
-                >
+                 testID="rider.emergency-contacts.confirm-remove">
                   <Ionicons
                     name="trash-outline"
                     size={18}
@@ -338,7 +338,7 @@ export default function EmergencyContacts() {
               placeholderTextColor={textSecondary}
               value={newName}
               onChangeText={setNewName}
-            />
+             testID="rider.emergency-contacts.set-new-name"/>
             <TextInput
               className="border rounded-[8px] px-[12px] py-[10px] text-[14px] font-Jakarta mb-2"
               style={{
@@ -351,7 +351,7 @@ export default function EmergencyContacts() {
               keyboardType="phone-pad"
               value={newPhone}
               onChangeText={setNewPhone}
-            />
+             testID="rider.emergency-contacts.set-new-phone"/>
             <TextInput
               className="border rounded-[8px] px-[12px] py-[10px] text-[14px] font-Jakarta mb-1"
               style={{
@@ -363,7 +363,7 @@ export default function EmergencyContacts() {
               placeholderTextColor={textSecondary}
               value={newRelationship}
               onChangeText={setNewRelationship}
-            />
+             testID="rider.emergency-contacts.set-new-relationship"/>
             <Text
               className="text-[11px] font-Jakarta mb-3"
               style={{ color: textSecondary }}
@@ -388,7 +388,7 @@ export default function EmergencyContacts() {
                 }}
                 onPress={addContact}
                 disabled={adding}
-              >
+               testID="rider.emergency-contacts.add-contact">
                 {adding ? (
                   <ActivityIndicator size="small" color={colors.white} />
                 ) : (
@@ -410,7 +410,7 @@ export default function EmergencyContacts() {
                   setNewPhone("");
                   setNewRelationship("");
                 }}
-              >
+               testID="rider.emergency-contacts.set-show-add">
                 <Text
                   className="text-[15px] font-JakartaBold"
                   style={{ color: textPrimary }}
@@ -428,7 +428,7 @@ export default function EmergencyContacts() {
             }}
             onPress={() => setShowAdd(true)}
             disabled={atLimit}
-          >
+           testID="rider.emergency-contacts.set-show-add-2">
             <Ionicons
               name="add-circle-outline"
               size={20}
@@ -488,7 +488,7 @@ export default function EmergencyContacts() {
                   setDeleteModalVisible(false);
                   setPendingDelete(null);
                 }}
-              >
+               testID="rider.emergency-contacts.set-delete-modal-visible">
                 <Text
                   className="text-[15px] font-JakartaSemiBold"
                   style={{ color: textPrimary }}
@@ -500,7 +500,7 @@ export default function EmergencyContacts() {
                 className="flex-1 py-[12px] rounded-[10px] items-center"
                 style={{ backgroundColor: colors.danger }}
                 onPress={removeContact}
-              >
+               testID="rider.emergency-contacts.remove-contact">
                 <Text className="text-[15px] font-JakartaSemiBold text-white">
                   Remove
                 </Text>

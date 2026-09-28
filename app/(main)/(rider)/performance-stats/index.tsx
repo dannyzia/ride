@@ -91,7 +91,7 @@ export default function PerformanceStats() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]">
+        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]" testID="rider.performance-stats.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Performance</Text>
@@ -104,7 +104,7 @@ export default function PerformanceStats() {
       ) : error ? (
         <View className="flex-1 items-center justify-center px-[24px]">
           <Text className="text-[14px] font-Jakarta text-center mb-4" style={{ color: colors.danger }}>{error}</Text>
-          <TouchableOpacity className="rounded-full px-[24px] py-[12px]" style={{ backgroundColor: colors.primary }} onPress={() => fetchStats(period)}>
+          <TouchableOpacity className="rounded-full px-[24px] py-[12px]" style={{ backgroundColor: colors.primary }} onPress={() => fetchStats(period)} testID="rider.performance-stats.fetch-stats">
             <Text className="text-[16px] font-JakartaBold" style={{ color: colors.white }}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -120,7 +120,7 @@ export default function PerformanceStats() {
                   className="flex-1 items-center justify-center rounded-[10px]"
                   style={{ minHeight: 56, backgroundColor: active ? colors.primary : "transparent" }}
                   onPress={() => setPeriod(p)}
-                >
+                 testID="rider.performance-stats.set-period">
                   <Text className="text-[16px] font-JakartaSemiBold" style={{ color: active ? colors.white : textSecondary }}>
                     {p === "week" ? "Weekly" : "Monthly"}
                   </Text>
@@ -164,7 +164,7 @@ export default function PerformanceStats() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.performance-stats.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

@@ -54,7 +54,7 @@ export default function SubscriptionRenewal() {
           className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
           style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+         testID="rider.subscription-renewal.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
         </TouchableOpacity>
       </SafeAreaView>
@@ -75,14 +75,14 @@ export default function SubscriptionRenewal() {
       <TouchableOpacity
         className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3"
         onPress={() => router.push("/(main)/(rider)/subscription-plans")}
-      >
+       testID="rider.subscription-renewal.push-main">
         <Text className="text-[18px] font-JakartaBold text-goWhite">Renew now</Text>
       </TouchableOpacity>
       <TouchableOpacity
         className="border rounded-full w-full py-[16px] items-center"
         style={{ borderColor }}
         onPress={() => router.back()}
-      >
+       testID="rider.subscription-renewal.el-1">
         <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Remind later</Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -90,7 +90,7 @@ export default function SubscriptionRenewal() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.subscription-renewal.set-theme-2">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

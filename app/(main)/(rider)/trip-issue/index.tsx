@@ -68,7 +68,7 @@ export default function TripIssue() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.trip-issue.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>Back</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Report Issue</Text>
@@ -84,7 +84,7 @@ export default function TripIssue() {
               ? { borderColor: colors.primary, backgroundColor: isDark ? colors.primaryLightDark : colors.primaryLight }
               : { borderColor, backgroundColor: surfaceBg }}
             onPress={() => setSelected(cat)}
-          >
+           testID="rider.trip-issue.set-selected">
             <View
               className="w-5 h-5 rounded-full border-2 mr-[12px]"
               style={selected === cat ? { borderColor: colors.primary, backgroundColor: colors.primary } : { borderColor }}
@@ -103,7 +103,7 @@ export default function TripIssue() {
           textAlignVertical="top"
           value={description}
           onChangeText={setDescription}
-        />
+         testID="rider.trip-issue.set-description"/>
         {error ? (
           <Text className="text-[14px] font-Jakarta mb-3" style={{ color: colors.danger }}>{error}</Text>
         ) : null}
@@ -112,7 +112,7 @@ export default function TripIssue() {
           style={{ backgroundColor: loading ? colors.borderDark : colors.primary }}
           onPress={handleSubmit}
           disabled={loading}
-        >
+         testID="rider.trip-issue.handle-submit">
           {loading ? (
             <ActivityIndicator size={20} color="#FFFFFF" />
           ) : (
@@ -125,7 +125,7 @@ export default function TripIssue() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.trip-issue.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

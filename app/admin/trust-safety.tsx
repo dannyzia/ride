@@ -179,7 +179,7 @@ export default function TrustSafetyScreen() {
           style={[styles.ghostBtn, loading && styles.ghostBtnDisabled]}
           onPress={fetchData}
           disabled={loading}
-        >
+         testID="admin.trust-safety.fetch-data">
           <Text style={styles.ghostBtnText}>Refresh</Text>
         </Pressable>
       }
@@ -210,7 +210,7 @@ export default function TrustSafetyScreen() {
                         typeFilter === t && styles.filterChipActive,
                       ]}
                       onPress={() => setTypeFilter(t)}
-                    >
+                     testID="admin.trust-safety.set-type-filter">
                       <Text
                         style={[
                           styles.filterChipText,
@@ -237,7 +237,7 @@ export default function TrustSafetyScreen() {
                         statusFilter === s && styles.filterChipActive,
                       ]}
                       onPress={() => setStatusFilter(s)}
-                    >
+                     testID="admin.trust-safety.set-status-filter">
                       <Text
                         style={[
                           styles.filterChipText,
@@ -311,7 +311,7 @@ export default function TrustSafetyScreen() {
                           <Pressable
                             style={styles.resolveBtn}
                             onPress={() => setConfirmResolve(f)}
-                          >
+                           testID="admin.trust-safety.set-confirm-resolve">
                             <Text style={styles.resolveBtnText}>Resolve</Text>
                           </Pressable>
                         </View>
@@ -473,14 +473,14 @@ export default function TrustSafetyScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={() => setConfirmResolve(null)}
               disabled={resolving}
-            >
+             testID="admin.trust-safety.set-confirm-resolve-2">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, { backgroundColor: colors.primary }]}
               onPress={handleResolve}
               disabled={resolving}
-            >
+             testID="admin.trust-safety.handle-resolve">
               {resolving ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

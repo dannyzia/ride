@@ -64,12 +64,12 @@ export default function WelcomeScreen() {
         <CustomButton
           title="Sign In"
           onPress={() => router.replace("/(auth)/phone-entry")}
-        />
+         testID="welcome.replace-auth"/>
         <CustomButton
           title="Create Account"
           bgVariant="secondary"
           onPress={() => router.replace("/(auth)/phone-entry")}
-        />
+         testID="welcome.replace-auth-2"/>
       </View>
     </SafeAreaView>
   );

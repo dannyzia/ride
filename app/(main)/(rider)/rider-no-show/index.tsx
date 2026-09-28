@@ -101,7 +101,7 @@ export default function RiderNoShow() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]">
+        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]" testID="rider.rider-no-show.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Rider No-Show</Text>
@@ -131,7 +131,7 @@ export default function RiderNoShow() {
           style={{ backgroundColor: loading ? colors.borderDark : colors.danger }}
           onPress={handleNoShow}
           disabled={loading}
-        >
+         testID="rider.rider-no-show.handle-no-show">
           {loading ? (
             <ActivityIndicator size={20} color="#FFFFFF" />
           ) : (
@@ -142,7 +142,7 @@ export default function RiderNoShow() {
           className="border rounded-full w-full py-[16px] items-center"
           style={{ borderColor }}
           onPress={() => router.back()}
-        >
+         testID="rider.rider-no-show.el-2">
           <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Wait more</Text>
         </TouchableOpacity>
         {/* §7.20: plain cancellation (with reason) as the alternative path */}
@@ -150,7 +150,7 @@ export default function RiderNoShow() {
           className="mt-4 py-[12px]"
           onPress={() => router.push(`/(main)/(rider)/cancellation-reasons?rideId=${rideId}`)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+         testID="rider.rider-no-show.push-main">
           <Text className="text-[15px] font-Jakarta" style={{ color: colors.primary }}>Cancel ride instead</Text>
         </TouchableOpacity>
       </View>
@@ -159,7 +159,7 @@ export default function RiderNoShow() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.rider-no-show.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

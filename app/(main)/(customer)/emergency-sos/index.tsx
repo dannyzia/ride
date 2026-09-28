@@ -230,7 +230,7 @@ export default function EmergencySOS() {
             disabled={resolving}
             accessibilityRole="button"
             accessibilityLabel={t('emergency_sos.resolve_a11y')}
-          >
+           testID="customer.emergency-sos.handle-resolve">
             {resolving ? (
               <ActivityIndicator size={20} color={colors.white} />
             ) : (
@@ -244,7 +244,7 @@ export default function EmergencySOS() {
             onPress={handleShareLocation}
             accessibilityRole="button"
             accessibilityLabel={t('emergency_sos.share_location_a11y')}
-          >
+           testID="customer.emergency-sos.handle-share-location">
             <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
               {t('emergency_sos.share_live_location')}
             </Text>
@@ -256,7 +256,7 @@ export default function EmergencySOS() {
             onPress={handleReportIssue}
             accessibilityRole="button"
             accessibilityLabel={t('emergency_sos.report_safety_a11y')}
-          >
+           testID="customer.emergency-sos.handle-report-issue">
             <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
               {t('emergency_sos.report_safety_issue')}
             </Text>
@@ -269,7 +269,7 @@ export default function EmergencySOS() {
           className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
           style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+         testID="customer.emergency-sos.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
         </TouchableOpacity>
       </SafeAreaView>
@@ -318,7 +318,7 @@ export default function EmergencySOS() {
           disabled={sending}
           accessibilityRole="button"
           accessibilityLabel={t('emergency_sos.send_sos_a11y')}
-        >
+         testID="customer.emergency-sos.set-confirm-visible">
           {sending ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
@@ -346,7 +346,7 @@ export default function EmergencySOS() {
           onPress={handleShareLocation}
           accessibilityRole="button"
           accessibilityLabel={t('emergency_sos.share_location_a11y')}
-        >
+         testID="customer.emergency-sos.handle-share-location-2">
           <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
             {t('emergency_sos.share_live_location')}
           </Text>
@@ -358,7 +358,7 @@ export default function EmergencySOS() {
           onPress={handleReportIssue}
           accessibilityRole="button"
           accessibilityLabel={t('emergency_sos.report_safety_a11y')}
-        >
+         testID="customer.emergency-sos.handle-report-issue-2">
           <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
             {t('emergency_sos.report_safety_issue')}
           </Text>
@@ -397,7 +397,7 @@ export default function EmergencySOS() {
             disabled={sending}
             accessibilityRole="button"
             accessibilityLabel={t('emergency_sos.call_999_send_a11y')}
-          >
+           testID="customer.emergency-sos.handle-confirm">
             {sending ? (
               <ActivityIndicator size={20} color={colors.white} />
             ) : (
@@ -412,7 +412,7 @@ export default function EmergencySOS() {
             disabled={sending}
             accessibilityRole="button"
             accessibilityLabel={t('common.cancel')}
-          >
+           testID="customer.emergency-sos.set-confirm-visible-2">
             <Text className="text-base font-JakartaSemiBold" style={{ color: textSecondary }}>
               {t('common.cancel')}
             </Text>
@@ -426,7 +426,7 @@ export default function EmergencySOS() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.emergency-sos.set-theme-2">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

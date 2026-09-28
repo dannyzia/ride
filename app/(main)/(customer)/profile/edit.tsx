@@ -169,7 +169,7 @@ export default function EditProfile() {
           accessibilityLabel={t('common.back')}
           onPress={() => router.back()}
           style={styles.backButton}
-        >
+         testID="customer.profile.edit.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.screenTitle, { color: textPrimary }]} numberOfLines={1}>
@@ -180,7 +180,7 @@ export default function EditProfile() {
           accessibilityLabel={t('profile_edit.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           style={styles.themeToggle}
-        >
+         testID="customer.profile.edit.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
         </TouchableOpacity>
       </View>
@@ -196,7 +196,7 @@ export default function EditProfile() {
             accessibilityLabel={t('profile_edit.change_photo_a11y')}
             onPress={() => void pickImage()}
             activeOpacity={0.8}
-          >
+           testID="customer.profile.edit.pick-image">
             <View
               style={[styles.avatarCircle, { backgroundColor: colors.primaryLight }]}
             >
@@ -226,7 +226,7 @@ export default function EditProfile() {
           onChangeText={setName}
           autoCapitalize="words"
           returnKeyType="done"
-        />
+         testID="customer.profile.edit.set-name"/>
 
         <Text style={[styles.fieldLabel, { color: textSecondary }]}>{t('profile_edit.email')}</Text>
         <View
@@ -243,7 +243,7 @@ export default function EditProfile() {
             value={email}
             onChangeText={setEmail}
             editable={false}
-          />
+           testID="customer.profile.edit.set-email"/>
           <Ionicons name="lock-closed-outline" size={16} color={textDisabled} />
         </View>
         <Text style={[styles.fieldHint, { color: textDisabled }]}>
@@ -263,7 +263,7 @@ export default function EditProfile() {
           disabled={saveDisabled}
           activeOpacity={0.8}
           style={[styles.saveButton, { backgroundColor: saveButtonBg }]}
-        >
+         testID="customer.profile.edit.handle-save">
           {saving ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (

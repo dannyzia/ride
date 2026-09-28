@@ -223,7 +223,7 @@ export default function EarningScreen() {
           }}
           accessibilityRole="button"
           accessibilityLabel="Set earnings goal"
-        >
+         testID="rider.d.earning.set-goal-input-taka">
           <Ionicons name="flag-outline" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
@@ -254,7 +254,7 @@ export default function EarningScreen() {
               onPress={load}
               accessibilityRole="button"
               accessibilityLabel="Retry"
-            >
+             testID="rider.d.earning.load-el">
               <Text style={[styles.retryText, { color: colors.primary }]}>
                 Retry
               </Text>
@@ -298,7 +298,7 @@ export default function EarningScreen() {
                       setGoalPeriod(goal.period);
                       setGoalInputVisible(true);
                     }}
-                  >
+                   testID="rider.d.earning.set-goal-input-taka-2">
                     <Text
                       className="text-[12px] font-Jakarta"
                       style={{ color: colors.primary }}
@@ -358,7 +358,7 @@ export default function EarningScreen() {
                   setGoalPeriod("daily");
                   setGoalInputVisible(true);
                 }}
-              >
+               testID="rider.d.earning.set-goal-input-taka-3">
                 <View className="flex-row items-center gap-2">
                   <Ionicons name="flag-outline" size={18} color={colors.primary} />
                   <Text
@@ -397,7 +397,7 @@ export default function EarningScreen() {
                     }
                     accessibilityRole="button"
                     accessibilityLabel={`Earnings for ${dayLabel(day.date)}`}
-                  >
+                   testID="rider.d.earning.push-main">
                     <View style={styles.dayLeft}>
                       <Text style={[styles.dayLabel, { color: textPrimary }]}>
                         {dayLabel(day.date)}
@@ -447,7 +447,7 @@ export default function EarningScreen() {
                   { backgroundColor: surfaceBg, borderColor },
                 ]}
                 onPress={() => router.push(item.route)}
-              >
+               testID="rider.d.earning.el-1">
                 <Text style={[styles.menuLabel, { color: textPrimary }]}>
                   {item.label}
                 </Text>
@@ -502,7 +502,7 @@ export default function EarningScreen() {
                     borderColor: goalPeriod === p ? colors.primary : borderColor,
                   }}
                   onPress={() => setGoalPeriod(p)}
-                >
+                 testID="rider.d.earning.set-goal-period">
                   <Text
                     className="text-[13px] font-JakartaSemiBold"
                     style={{
@@ -529,13 +529,13 @@ export default function EarningScreen() {
               value={goalInputTaka}
               onChangeText={setGoalInputTaka}
               autoFocus
-            />
+             testID="rider.d.earning.set-goal-input-taka-4"/>
             <View className="flex-row gap-3">
               <TouchableOpacity
                 className="flex-1 py-[12px] rounded-[10px] items-center"
                 style={{ borderWidth: 1, borderColor }}
                 onPress={() => setGoalInputVisible(false)}
-              >
+               testID="rider.d.earning.set-goal-input-visible">
                 <Text
                   className="text-[15px] font-JakartaSemiBold"
                   style={{ color: textPrimary }}
@@ -553,7 +553,7 @@ export default function EarningScreen() {
                   const val = parseInt(goalInputTaka.replace(/[^\d]/g, ""), 10);
                   if (val) saveGoal(val, goalPeriod);
                 }}
-              >
+               testID="rider.d.earning.parse-int">
                 {goalSaving ? (
                   <ActivityIndicator size={16} color="#fff" />
                 ) : (
@@ -581,7 +581,7 @@ export default function EarningScreen() {
                     }
                   } catch {}
                 }}
-              >
+               testID="rider.d.earning.set-goal">
                 <Text
                   className="text-[13px] font-Jakarta"
                   style={{ color: colors.danger }}

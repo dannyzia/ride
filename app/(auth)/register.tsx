@@ -117,7 +117,7 @@ export default function RegisterScreen() {
           placeholderTextColor={placeholderColor}
           value={name}
           onChangeText={setName}
-        />
+         testID="register.set-name"/>
       </View>
 
       {/* Password Input */}
@@ -133,7 +133,7 @@ export default function RegisterScreen() {
           secureTextEntry
           value={password}
           onChangeText={setPassword}
-        />
+         testID="register.set-password"/>
       </View>
 
       {/* Confirm Password Input */}
@@ -149,7 +149,7 @@ export default function RegisterScreen() {
           secureTextEntry
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-        />
+         testID="register.set-confirm-password"/>
       </View>
 
       {error ? (
@@ -165,7 +165,7 @@ export default function RegisterScreen() {
         title={loading ? "Registering..." : "Register"}
         onPress={handleRegister}
         disabled={loading}
-      />
+       testID="register.handle-register"/>
     </SafeAreaView>
   );
 }

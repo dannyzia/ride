@@ -129,7 +129,7 @@ export default function RequestDetailScreen() {
           style={{ backgroundColor: colors.primary }}
           onPress={() => handleAcceptBid(item.id)}
           disabled={acceptingBidId === item.id}
-        >
+         testID="customer.delivery.request-detail.handle-accept-bid">
           {acceptingBidId === item.id ? (
             <ActivityIndicator color="white" size="small" />
           ) : (
@@ -174,7 +174,7 @@ export default function RequestDetailScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? colors.bgDark : colors.bgLight }}>
       {/* Header */}
       <View className="flex-row items-center px-4 py-3">
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.delivery.request-detail.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="text-lg font-JakartaBold ml-3" style={{ color: textPrimary }}>

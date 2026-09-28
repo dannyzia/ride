@@ -344,7 +344,7 @@ export default function PackagesScreen() {
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
             onPress={() => openEdit(p)}
-          >
+           testID="admin.packages.open-edit">
             <Text style={styles.miniBtnText}>Edit</Text>
           </Pressable>
           <Pressable
@@ -357,7 +357,7 @@ export default function PackagesScreen() {
             ]}
             onPress={() => openDeactivate(p)}
             disabled={!p.is_active}
-          >
+           testID="admin.packages.open-deactivate">
             <Text style={styles.miniBtnText}>Deactivate</Text>
           </Pressable>
         </View>
@@ -371,10 +371,10 @@ export default function PackagesScreen() {
       subtitle="Subscription tiers drivers can buy"
       actions={
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable style={styles.ghostBtn} onPress={fetchList}>
+          <Pressable style={styles.ghostBtn} onPress={fetchList} testID="admin.packages.fetch-list">
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={openCreate}>
+          <Pressable style={styles.primaryBtn} onPress={openCreate} testID="admin.packages.open-create">
             <Text style={styles.primaryBtnText}>+ New Package</Text>
           </Pressable>
         </View>
@@ -399,14 +399,14 @@ export default function PackagesScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={closeModal}
               disabled={submitting}
-            >
+             testID="admin.packages.close-modal">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, styles.modalBtnPrimary]}
               onPress={handleSave}
               disabled={submitting}
-            >
+             testID="admin.packages.handle-save">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -432,14 +432,14 @@ export default function PackagesScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={() => setConfirmDeactivate(null)}
               disabled={submitting}
-            >
+             testID="admin.packages.set-confirm-deactivate">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, { backgroundColor: colors.danger }]}
               onPress={confirmDeactivateAction}
               disabled={submitting}
-            >
+             testID="admin.packages.confirm-deactivate-action">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

@@ -110,7 +110,7 @@ export default function ReportIssue() {
           accessibilityLabel={t('common.back')}
           onPress={() => router.back()}
           hitSlop={8}
-        >
+         testID="customer.report-issue.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -125,7 +125,7 @@ export default function ReportIssue() {
           accessibilityLabel={t('report_issue.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
-        >
+         testID="customer.report-issue.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
         </TouchableOpacity>
       </View>
@@ -163,7 +163,7 @@ export default function ReportIssue() {
                 ]}
                 onPress={() => setCategory(c)}
                 activeOpacity={0.8}
-              >
+               testID="customer.report-issue.set-category">
                 <Text
                   style={[
                     styles.chipText,
@@ -189,7 +189,7 @@ export default function ReportIssue() {
           onChangeText={setDescription}
           multiline
           maxLength={MAX_DESCRIPTION}
-        />
+         testID="customer.report-issue.set-description"/>
         <View style={styles.counterRow}>
           {description.length > 0 && !descriptionValid ? (
             <Text style={[styles.helperText, { color: textSecondary }]}>
@@ -212,7 +212,7 @@ export default function ReportIssue() {
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={handleSubmit}
               disabled={loading || !formValid}
-            >
+             testID="customer.report-issue.handle-submit">
               <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
@@ -229,7 +229,7 @@ export default function ReportIssue() {
           onPress={handleSubmit}
           disabled={!formValid || loading}
           activeOpacity={0.8}
-        >
+         testID="customer.report-issue.handle-submit-2">
           {loading ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
@@ -256,7 +256,7 @@ export default function ReportIssue() {
               accessibilityLabel={t('report_issue.done_a11y')}
               style={[styles.modalButton, { backgroundColor: colors.primary }]}
               onPress={closeSuccess}
-            >
+             testID="customer.report-issue.close-success">
               <Text style={styles.modalButtonText}>{t('report_issue.done')}</Text>
             </TouchableOpacity>
           </View>

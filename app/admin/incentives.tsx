@@ -434,7 +434,7 @@ export default function IncentivesScreen() {
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
             onPress={() => openEdit(i)}
-          >
+           testID="admin.incentives.open-edit">
             <Text style={styles.miniBtnText}>Edit</Text>
           </Pressable>
           <Pressable
@@ -447,7 +447,7 @@ export default function IncentivesScreen() {
             ]}
             onPress={() => openDeactivate(i)}
             disabled={!i.is_active}
-          >
+           testID="admin.incentives.open-deactivate">
             <Text style={styles.miniBtnText}>Deactivate</Text>
           </Pressable>
         </View>
@@ -470,10 +470,10 @@ export default function IncentivesScreen() {
       subtitle="Performance-based reward programs"
       actions={
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable style={styles.ghostBtn} onPress={fetchList}>
+          <Pressable style={styles.ghostBtn} onPress={fetchList} testID="admin.incentives.fetch-list">
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={openCreate}>
+          <Pressable style={styles.primaryBtn} onPress={openCreate} testID="admin.incentives.open-create">
             <Text style={styles.primaryBtnText}>+ New Incentive</Text>
           </Pressable>
         </View>
@@ -485,7 +485,7 @@ export default function IncentivesScreen() {
             key={chip}
             onPress={() => setFilterChip(chip)}
             style={chipStyle(chip)}
-          >
+           testID="admin.incentives.set-filter-chip">
             <Text style={chipTextStyle(chip)}>
               {chip === "all"
                 ? "All"
@@ -516,14 +516,14 @@ export default function IncentivesScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={closeModal}
               disabled={submitting}
-            >
+             testID="admin.incentives.close-modal">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, styles.modalBtnPrimary]}
               onPress={handleSave}
               disabled={submitting}
-            >
+             testID="admin.incentives.handle-save">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -549,14 +549,14 @@ export default function IncentivesScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={() => setConfirmDeactivate(null)}
               disabled={submitting}
-            >
+             testID="admin.incentives.set-confirm-deactivate">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, { backgroundColor: colors.danger }]}
               onPress={confirmDeactivateAction}
               disabled={submitting}
-            >
+             testID="admin.incentives.confirm-deactivate-action">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

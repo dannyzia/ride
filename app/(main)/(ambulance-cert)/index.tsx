@@ -212,7 +212,7 @@ export default function AmbulanceCertScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Renew ${cert.service_level} certification`}
                   style={{ marginTop: 10, alignSelf: "flex-start", borderWidth: 1, borderColor: colors.primary, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}
-                >
+                 testID="ambulance-cert.start-renew">
                   <Text style={{ fontSize: 12, fontFamily: "JakartaSemiBold", color: colors.primary }}>
                     Renew (re-review required)
                   </Text>
@@ -242,7 +242,7 @@ export default function AmbulanceCertScreen() {
               editable={!renewingId}
               autoCapitalize="none"
               accessibilityLabel="Vehicle ID"
-            />
+             testID="ambulance-cert.set-vehicle-id"/>
 
             <Text style={{ fontSize: 13, fontFamily: "JakartaMedium", color: textSecondary, marginBottom: 6 }}>Service level</Text>
             <View style={{ flexDirection: "row", marginBottom: 12 }}>
@@ -259,7 +259,7 @@ export default function AmbulanceCertScreen() {
                     borderWidth: 2, borderColor: serviceLevel === lvl ? colors.danger : borderColor,
                     borderRadius: 12, marginRight: lvl === "BLS" ? 8 : 0,
                   }}
-                >
+                 testID="ambulance-cert.set-service-level">
                   <Text style={{ fontSize: 14, fontFamily: "JakartaSemiBold", color: serviceLevel === lvl ? colors.danger : textSecondary }}>
                     {lvl}
                   </Text>
@@ -275,7 +275,7 @@ export default function AmbulanceCertScreen() {
               value={certNumber}
               onChangeText={setCertNumber}
               accessibilityLabel="Certificate number"
-            />
+             testID="ambulance-cert.set-cert-number"/>
 
             <Text style={{ fontSize: 13, fontFamily: "JakartaMedium", color: textSecondary, marginBottom: 6 }}>Issuing body</Text>
             <TextInput
@@ -285,7 +285,7 @@ export default function AmbulanceCertScreen() {
               value={issuingBody}
               onChangeText={setIssuingBody}
               accessibilityLabel="Issuing body"
-            />
+             testID="ambulance-cert.set-issuing-body"/>
 
             <Text style={{ fontSize: 13, fontFamily: "JakartaMedium", color: textSecondary, marginBottom: 6 }}>Expires (YYYY-MM-DD)</Text>
             <TextInput
@@ -296,7 +296,7 @@ export default function AmbulanceCertScreen() {
               onChangeText={setExpiresAt}
               autoCapitalize="none"
               accessibilityLabel="Certification expiry date"
-            />
+             testID="ambulance-cert.set-expires-at"/>
 
             <Text style={{ fontSize: 13, fontFamily: "JakartaMedium", color: textSecondary, marginBottom: 6 }}>Document URLs (comma-separated)</Text>
             <TextInput
@@ -308,7 +308,7 @@ export default function AmbulanceCertScreen() {
               multiline
               autoCapitalize="none"
               accessibilityLabel="Document URLs"
-            />
+             testID="ambulance-cert.set-document-urls"/>
 
             <TouchableOpacity
               onPress={handleSubmit}
@@ -316,7 +316,7 @@ export default function AmbulanceCertScreen() {
               style={{ backgroundColor: colors.danger, borderRadius: 12, height: 52, alignItems: "center", justifyContent: "center", opacity: submitting ? 0.5 : 1, marginBottom: 40 }}
               accessibilityRole="button"
               accessibilityLabel={renewingId ? "Submit renewal" : "Submit certification"}
-            >
+             testID="ambulance-cert.handle-submit">
               {submitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (

@@ -35,7 +35,7 @@ export default function TopUp() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.settings.top-up.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('wallet.top_up')}</Text>
@@ -55,7 +55,7 @@ export default function TopUp() {
             onChangeText={setAmount}
             placeholder="500"
             placeholderTextColor={textSecondary}
-          />
+           testID="customer.settings.top-up.set-amount"/>
         </View>
         <View className="flex-row flex-wrap gap-2 mb-6">
           {PRESET_AMOUNTS.map((preset) => (
@@ -66,7 +66,7 @@ export default function TopUp() {
                 ? { backgroundColor: colors.primary, borderColor: colors.primary }
                 : { backgroundColor: surfaceBg, borderColor }}
               onPress={() => setAmount(preset)}
-            >
+             testID="customer.settings.top-up.set-amount-2">
               <Text
                 className="text-[14px] font-JakartaBold"
                 style={{ color: amount === preset ? colors.white : textPrimary }}
@@ -80,7 +80,7 @@ export default function TopUp() {
           className="rounded-full w-full py-[16px] items-center"
           style={{ backgroundColor: colors.primary }}
           onPress={handleContinue}
-        >
+         testID="customer.settings.top-up.handle-continue">
           <Text className="text-[18px] font-JakartaBold text-goWhite">{t('top_up_settings.continue')}</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -89,7 +89,7 @@ export default function TopUp() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.settings.top-up.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

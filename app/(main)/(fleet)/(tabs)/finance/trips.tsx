@@ -70,7 +70,7 @@ function TripCard({ trip, isDark, onPress }: { trip: Trip; isDark: boolean; onPr
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={{
       backgroundColor: surfaceBg, borderRadius: 12, padding: 14, marginBottom: 10,
       borderWidth: 1, borderColor,
-    }}>
+    }} testID="fleet.finance.trips.on-press">
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: sc, marginRight: 6 }} />
@@ -151,7 +151,7 @@ export default function FleetTrips() {
             paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
             backgroundColor: statusFilter === f.value ? colors.primary : isDark ? colors.surfaceElevatedDark : colors.surfaceLight,
             borderWidth: 1, borderColor: statusFilter === f.value ? colors.primary : isDark ? colors.borderDark : colors.borderLight,
-          }}>
+          }} testID="fleet.finance.trips.set-status-filter">
             <Text style={{
               fontFamily: statusFilter === f.value ? "Jakarta-Bold" : "Jakarta-Medium", fontSize: 12,
               color: statusFilter === f.value ? colors.white : textSecondary,

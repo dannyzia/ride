@@ -142,7 +142,7 @@ const skeletonBlock = isDark ? colors.darkSecondary : colors.gray100;
           accessibilityLabel={t('common.back')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => router.back()}
-        >
+         testID="customer.settings.faq.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>{t('settings.faq')}</Text>
@@ -151,7 +151,7 @@ const skeletonBlock = isDark ? colors.darkSecondary : colors.gray100;
           accessibilityLabel={t('faq.toggle_theme')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => setTheme(isDark ? "light" : "dark")}
-        >
+         testID="customer.settings.faq.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={24}
@@ -182,7 +182,7 @@ const skeletonBlock = isDark ? colors.darkSecondary : colors.gray100;
                   accessibilityLabel={t('faq.retry_loading_a11y')}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   onPress={load}
-                >
+                 testID="customer.settings.faq.load-el">
                   <Text style={styles.fallbackRetry}>{t('common.retry')}</Text>
                 </TouchableOpacity>
               </View>
@@ -198,7 +198,7 @@ const skeletonBlock = isDark ? colors.darkSecondary : colors.gray100;
                   activeOpacity={0.8}
                   onPress={() => setOpenId(isOpen ? null : faq.id)}
                   style={[styles.faqCard, { backgroundColor: surface }]}
-                >
+                 testID="customer.settings.faq.set-open-id">
                   <View style={styles.faqHeaderRow}>
                     <Text style={[styles.faqQuestion, { color: textPrimary }]}>
                       {faq.question}

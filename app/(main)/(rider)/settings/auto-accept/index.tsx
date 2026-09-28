@@ -61,7 +61,7 @@ export default function AutoAcceptSettings() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-6 py-4 border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}><Text className="text-base font-Jakarta text-goPrimary">Back</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.settings.auto-accept.el-1"><Text className="text-base font-Jakarta text-goPrimary">Back</Text></TouchableOpacity>
         <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>Auto-Accept Rides</Text>
         <View className="w-12" />
       </View>
@@ -69,14 +69,14 @@ export default function AutoAcceptSettings() {
         <View className="flex-1 px-6 pt-8">
           <View className="flex-row items-center justify-between mb-6">
             <Text className="text-base font-Jakarta flex-1" style={{ color: textPrimary }}>Auto-accept nearby rides</Text>
-            <Switch value={enabled} onValueChange={setEnabled} trackColor={{ false: "#2E3038", true: colors.primary }} thumbColor="#FFF" />
+            <Switch value={enabled} onValueChange={setEnabled} trackColor={{ false: "#2E3038", true: colors.primary }} thumbColor="#FFF"  testID="rider.settings.auto-accept.set-enabled"/>
           </View>
           <Text className="text-sm font-Jakarta mb-2" style={{ color: textSecondary }}>Max distance (meters)</Text>
           <TextInput className="border rounded-lg px-4 py-3 font-Jakarta text-base mb-2"
             style={{ backgroundColor: surfaceBg, borderColor, color: textPrimary }}
-            keyboardType="numeric" value={radius} onChangeText={setRadius} placeholder="100-5000" placeholderTextColor={textSecondary} />
+            keyboardType="numeric" value={radius} onChangeText={setRadius} placeholder="100-5000" placeholderTextColor={textSecondary}  testID="rider.settings.auto-accept.set-radius"/>
           <Text className="text-xs font-Jakarta mb-6" style={{ color: textSecondary }}>Minimum 100m, maximum 5000m. Auto-accept only works with 4.8+ rating.</Text>
-          <TouchableOpacity onPress={save} disabled={saving} className={`py-4 rounded-full items-center ${saving ? "bg-goBorderDark" : "bg-goPrimary"}`}>
+          <TouchableOpacity onPress={save} disabled={saving} className={`py-4 rounded-full items-center ${saving ? "bg-goBorderDark" : "bg-goPrimary"}`} testID="rider.settings.auto-accept.save">
             <Text className="text-goWhite font-JakartaBold text-base">{saving ? "Saving..." : "Save Settings"}</Text>
           </TouchableOpacity>
         </View>
@@ -86,7 +86,7 @@ export default function AutoAcceptSettings() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.settings.auto-accept.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

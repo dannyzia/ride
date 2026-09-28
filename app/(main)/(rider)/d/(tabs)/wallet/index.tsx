@@ -350,7 +350,7 @@ export default function WalletScreen() {
           onPress={handleTopUp}
           accessibilityRole="button"
           accessibilityLabel={t('wallet.top_up')}
-        >
+         testID="rider.d.wallet.handle-top-up">
           <Ionicons name="add-circle-outline" size={20} color={colors.white} />
           <Text className="text-[16px] font-JakartaBold text-white">
             {t('wallet.top_up')}
@@ -362,7 +362,7 @@ export default function WalletScreen() {
           className="rounded-[12px] p-[14px] flex-row items-center justify-between"
           style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
           onPress={() => router.push("/(main)/(rider)/payout-method")}
-        >
+         testID="rider.d.wallet.push-main">
           <View className="flex-row items-center gap-2">
             <Ionicons
               name="card-outline"

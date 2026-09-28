@@ -367,7 +367,7 @@ export default function PricingScreen() {
         <Pressable
           style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
           onPress={() => openEdit(r)}
-        >
+         testID="admin.pricing.open-edit">
           <Text style={styles.miniBtnText}>Edit</Text>
         </Pressable>
       ),
@@ -379,7 +379,7 @@ export default function PricingScreen() {
       title="Pricing Tiers"
       subtitle="Per-vehicle base fare, distance rate, and waiting rate"
       actions={
-        <Pressable style={styles.ghostBtn} onPress={fetchList}>
+        <Pressable style={styles.ghostBtn} onPress={fetchList} testID="admin.pricing.fetch-list">
           <Text style={styles.ghostBtnText}>Refresh</Text>
         </Pressable>
       }
@@ -410,14 +410,14 @@ export default function PricingScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={closeModal}
               disabled={submitting}
-            >
+             testID="admin.pricing.close-modal">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, styles.modalBtnPrimary]}
               onPress={handleSave}
               disabled={submitting}
-            >
+             testID="admin.pricing.handle-save">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

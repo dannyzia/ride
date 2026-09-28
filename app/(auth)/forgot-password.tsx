@@ -192,7 +192,7 @@ export default function ForgotPasswordScreen() {
                 value={phoneInput}
                 onChangeText={(text) => setPhoneInput(text.replace(/\D/g, '').replace(/^0+/, '').slice(0, 10))}
                 maxLength={10}
-              />
+               testID="forgot-password.set-phone-input"/>
             </View>
 
             <TouchableOpacity
@@ -202,7 +202,7 @@ export default function ForgotPasswordScreen() {
               disabled={loading}
               accessibilityRole="button"
               accessibilityLabel="Send OTP"
-            >
+             testID="forgot-password.handle-send-otp">
               {loading ? (
                 <ActivityIndicator size={20} color={colors.white} />
               ) : (
@@ -227,7 +227,7 @@ export default function ForgotPasswordScreen() {
                 value={otp}
                 onChangeText={setOtp}
                 maxLength={6}
-              />
+               testID="forgot-password.set-otp"/>
             </View>
 
             <TouchableOpacity
@@ -237,7 +237,7 @@ export default function ForgotPasswordScreen() {
               disabled={loading}
               accessibilityRole="button"
               accessibilityLabel="Verify OTP"
-            >
+             testID="forgot-password.handle-verify-otp">
               {loading ? (
                 <ActivityIndicator size={20} color={colors.white} />
               ) : (
@@ -245,7 +245,7 @@ export default function ForgotPasswordScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => setStep('phone')} className="items-center" accessibilityRole="button">
+            <TouchableOpacity onPress={() => setStep('phone')} className="items-center" accessibilityRole="button" testID="forgot-password.set-step">
               <Text className="text-[14px] font-JakartaBold" style={{ color: colors.primary }}>
                 Change Phone Number
               </Text>
@@ -267,7 +267,7 @@ export default function ForgotPasswordScreen() {
                 secureTextEntry
                 value={newPassword}
                 onChangeText={setNewPassword}
-              />
+               testID="forgot-password.set-new-password"/>
             </View>
 
             <View
@@ -282,7 +282,7 @@ export default function ForgotPasswordScreen() {
                 secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-              />
+               testID="forgot-password.set-confirm-password"/>
             </View>
 
             <TouchableOpacity
@@ -292,7 +292,7 @@ export default function ForgotPasswordScreen() {
               disabled={loading}
               accessibilityRole="button"
               accessibilityLabel="Reset password"
-            >
+             testID="forgot-password.handle-reset-password">
               {loading ? (
                 <ActivityIndicator size={20} color={colors.white} />
               ) : (

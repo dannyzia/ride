@@ -166,7 +166,7 @@ export default function RecoveryScreen() {
       title="Recovery & Override"
       subtitle="Emergency payment recovery and dispatch control"
       actions={
-        <Pressable style={styles.refreshBtn} onPress={fetchDispatchState}>
+        <Pressable style={styles.refreshBtn} onPress={fetchDispatchState} testID="admin.recovery.fetch-dispatch-state">
           <Text style={styles.refreshBtnText}>Refresh</Text>
         </Pressable>
       }
@@ -230,7 +230,7 @@ export default function RecoveryScreen() {
                 setConfirmToggle(dispatchRunning ? "pause" : "resume")
               }
               disabled={dispatchPaused === null || toggling}
-            >
+             testID="admin.recovery.set-confirm-toggle">
               <Text style={styles.dispatchActionBtnText}>
                 {dispatchRunning ? "Pause dispatch" : "Resume dispatch"}
               </Text>
@@ -266,12 +266,12 @@ export default function RecoveryScreen() {
               style={styles.recoverInput}
               autoCapitalize="none"
               autoCorrect={false}
-            />
+             testID="admin.recovery.set-payment-event-id"/>
             <Pressable
               style={[styles.recoverBtn, recovering && styles.btnDisabled]}
               onPress={runRecover}
               disabled={recovering}
-            >
+             testID="admin.recovery.run-recover">
               {recovering ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -347,7 +347,7 @@ export default function RecoveryScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={() => setConfirmToggle(null)}
               disabled={toggling}
-            >
+             testID="admin.recovery.set-confirm-toggle-2">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
@@ -359,7 +359,7 @@ export default function RecoveryScreen() {
               ]}
               onPress={() => performToggle(confirmToggle === "pause")}
               disabled={toggling}
-            >
+             testID="admin.recovery.perform-toggle">
               {toggling ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

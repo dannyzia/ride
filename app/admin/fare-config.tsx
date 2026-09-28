@@ -755,7 +755,7 @@ export default function FareConfigScreen() {
             disabled={field.locked}
             accessibilityRole="switch"
             accessibilityState={{ checked: isOn }}
-          >
+           testID="admin.fare-config.el-1">
             <View
               style={[styles.toggleThumb, isOn && styles.toggleThumbActive]}
             />
@@ -787,7 +787,7 @@ export default function FareConfigScreen() {
           placeholder="0"
           placeholderTextColor={colors.textDisabledDark}
           keyboardType={field.type === "csv" ? "default" : "decimal-pad"}
-        />
+         testID="admin.fare-config.0"/>
         <Text style={styles.helpText}>
           {field.helpText}
           {field.locked ? " (locked)" : ""}
@@ -822,7 +822,7 @@ export default function FareConfigScreen() {
             style={[styles.ghostBtn, loading && styles.ghostBtnDisabled]}
             onPress={fetchConfig}
             disabled={loading}
-          >
+           testID="admin.fare-config.fetch-config">
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
           <Pressable
@@ -832,7 +832,7 @@ export default function FareConfigScreen() {
             ]}
             onPress={handleSave}
             disabled={!hasChanges || saving}
-          >
+           testID="admin.fare-config.handle-save">
             {saving ? (
               <ActivityIndicator color={colors.white} size="small" />
             ) : (
@@ -864,14 +864,14 @@ export default function FareConfigScreen() {
                   <Pressable
                     style={styles.ghostBtn}
                     onPress={handleExportCsv}
-                  >
+                   testID="admin.fare-config.handle-export-csv">
                     <Text style={styles.ghostBtnText}>Export CSV</Text>
                   </Pressable>
                   <Pressable
                     style={[styles.saveBtn, (!hasFuelChanges || savingFuel) && styles.btnDisabled]}
                     onPress={handleSaveFuel}
                     disabled={!hasFuelChanges || savingFuel}
-                  >
+                   testID="admin.fare-config.handle-save-fuel">
                     {savingFuel ? (
                       <ActivityIndicator color={colors.white} size="small" />
                     ) : (
@@ -913,7 +913,7 @@ export default function FareConfigScreen() {
                         placeholder="0"
                         placeholderTextColor={colors.textDisabledDark}
                         keyboardType="decimal-pad"
-                      />
+                       testID="admin.fare-config.set-fuel-edits"/>
                     ) : (
                       <Text style={styles.fuelValue}>
                         {fuelEdits[f.key] ?? "—"} BDT/L
@@ -953,7 +953,7 @@ export default function FareConfigScreen() {
                           placeholder="0"
                           placeholderTextColor={colors.textDisabledDark}
                           keyboardType="decimal-pad"
-                        />
+                         testID="admin.fare-config.set-fuel-edits-2"/>
                       </View>
                     ))}
                     <View style={{ height: 1, backgroundColor: "#2A2D35", marginVertical: 4 }} />
@@ -974,7 +974,7 @@ export default function FareConfigScreen() {
                           placeholder="0"
                           placeholderTextColor={colors.textDisabledDark}
                           keyboardType="decimal-pad"
-                        />
+                         testID="admin.fare-config.set-fuel-edits-3"/>
                       </View>
                     ))}
                   </View>
@@ -999,7 +999,7 @@ export default function FareConfigScreen() {
                           placeholder="0"
                           placeholderTextColor={colors.textDisabledDark}
                           keyboardType="decimal-pad"
-                        />
+                         testID="admin.fare-config.set-fuel-edits-4"/>
                       </View>
                     ))}
                     <View style={{ height: 1, backgroundColor: "#2A2D35", marginVertical: 4 }} />
@@ -1012,7 +1012,7 @@ export default function FareConfigScreen() {
                         placeholder="0"
                         placeholderTextColor={colors.textDisabledDark}
                         keyboardType="decimal-pad"
-                      />
+                       testID="admin.fare-config.set-fuel-edits-5"/>
                     </View>
                   </View>
 
@@ -1038,7 +1038,7 @@ export default function FareConfigScreen() {
                           placeholder="0"
                           placeholderTextColor={colors.textDisabledDark}
                           keyboardType="decimal-pad"
-                        />
+                         testID="admin.fare-config.set-fuel-edits-6"/>
                       </View>
                     ))}
                     <View style={{ height: 1, backgroundColor: "#2A2D35", marginVertical: 4 }} />
@@ -1058,7 +1058,7 @@ export default function FareConfigScreen() {
                           placeholder="0"
                           placeholderTextColor={colors.textDisabledDark}
                           keyboardType="decimal-pad"
-                        />
+                         testID="admin.fare-config.set-fuel-edits-7"/>
                       </View>
                     ))}
                     <Text style={styles.helpText}>
@@ -1077,7 +1077,7 @@ export default function FareConfigScreen() {
                     placeholder="26"
                     placeholderTextColor={colors.textDisabledDark}
                     keyboardType="decimal-pad"
-                  />
+                   testID="admin.fare-config.set-fuel-edits-8"/>
                   <Text style={styles.helpText}>
                     Used to convert monthly joma to per-km rate. Default 26.
                   </Text>
@@ -1159,7 +1159,7 @@ export default function FareConfigScreen() {
                 style={styles.ghostBtn}
                 onPress={refreshGateMetrics}
                 disabled={gateLoading}
-              >
+               testID="admin.fare-config.refresh-gate-metrics">
                 {gateLoading ? (
                   <ActivityIndicator color={colors.adminAccent} size="small" />
                 ) : (

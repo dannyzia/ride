@@ -439,7 +439,7 @@ export default function CallLedgerScreen() {
                 : colors.primaryLight
               : surfaceBg,
         }}
-      >
+       testID="rider.call-ledger.set-show-filter-sheet">
         <Ionicons
           name="options-outline"
           size={16}
@@ -498,7 +498,7 @@ export default function CallLedgerScreen() {
               ? colors.primaryLightDark
               : colors.primaryLight,
           }}
-        >
+         testID="rider.call-ledger.set-outcome-filter">
           <Text
             style={{
               fontFamily: "Jakarta-SemiBold",
@@ -532,7 +532,7 @@ export default function CallLedgerScreen() {
               ? colors.primaryLightDark
               : colors.primaryLight,
           }}
-        >
+         testID="rider.call-ledger.set-vehicle-type-filter">
           <Text
             style={{
               fontFamily: "Jakarta-SemiBold",
@@ -638,7 +638,7 @@ export default function CallLedgerScreen() {
                 backgroundColor:
                   outcomeFilter === key ? colors.primary : surfaceBg,
               }}
-            >
+             testID="rider.call-ledger.set-outcome-filter-2">
               <Text
                 style={{
                   fontFamily: "Jakarta-Medium",
@@ -692,7 +692,7 @@ export default function CallLedgerScreen() {
                 backgroundColor:
                   vehicleTypeFilter === key ? colors.primary : surfaceBg,
               }}
-            >
+             testID="rider.call-ledger.set-vehicle-type-filter-2">
               <Text
                 style={{
                   fontFamily: "Jakarta-Medium",
@@ -745,7 +745,7 @@ export default function CallLedgerScreen() {
                 backgroundColor:
                   dateRangeFilter === key ? colors.primary : surfaceBg,
               }}
-            >
+             testID="rider.call-ledger.set-date-range-filter">
               <Text
                 style={{
                   fontFamily: "Jakarta-Medium",
@@ -772,7 +772,7 @@ export default function CallLedgerScreen() {
             paddingVertical: spacing.md,
             alignItems: "center",
           }}
-        >
+         testID="rider.call-ledger.set-show-filter-sheet-2">
           <Text
             style={{
               fontFamily: "Jakarta-Regular",
@@ -1069,7 +1069,7 @@ export default function CallLedgerScreen() {
           paddingVertical: spacing.md,
         }}
       >
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.call-ledger.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -1106,7 +1106,7 @@ export default function CallLedgerScreen() {
               activeTab === "missed" ? colors.primary : "transparent",
             alignItems: "center",
           }}
-        >
+         testID="rider.call-ledger.set-active-tab">
           <Text
             style={{
               fontFamily: "Jakarta-Regular",
@@ -1131,7 +1131,7 @@ export default function CallLedgerScreen() {
               activeTab === "ledger" ? colors.primary : "transparent",
             alignItems: "center",
           }}
-        >
+         testID="rider.call-ledger.set-active-tab-2">
           <Text
             style={{
               fontFamily: "Jakarta-Regular",
@@ -1310,7 +1310,7 @@ export default function CallLedgerScreen() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.call-ledger.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

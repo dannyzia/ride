@@ -262,7 +262,7 @@ export default function OperationsHub() {
               backgroundColor: tab === t ? colors.primary : "transparent",
               alignItems: "center",
             }}
-          >
+           testID="fleet.operations.set-tab">
             <Text
               style={{
                 fontFamily: tab === t ? "Jakarta-Bold" : "Jakarta-Medium",
@@ -290,7 +290,7 @@ export default function OperationsHub() {
           padding: 12,
           marginBottom: 16,
         }}
-      >
+       testID="fleet.operations.push-main">
         <Ionicons name="add-circle" size={20} color="#FFFFFF" />
         <Text
           style={{
@@ -440,7 +440,7 @@ function VehicleCard({
         flexDirection: "row",
         alignItems: "center",
       }}
-    >
+     testID="fleet.operations.on-press">
       {/* Vehicle icon */}
       <View
         style={{
@@ -631,7 +631,7 @@ function DriverCard({
         flexDirection: "row",
         alignItems: "center",
       }}
-    >
+     testID="fleet.operations.on-press-2">
       {/* Avatar */}
       <View
         style={{

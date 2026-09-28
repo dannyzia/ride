@@ -298,14 +298,14 @@ export default function EventsScreen() {
       width: 170,
       render: (e) => (
         <View style={styles.actionsRow}>
-          <Pressable style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]} onPress={() => openEdit(e)}>
+          <Pressable style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]} onPress={() => openEdit(e)} testID="admin.events.open-edit">
             <Text style={styles.miniBtnText}>Edit</Text>
           </Pressable>
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.danger, opacity: e.is_active ? 1 : 0.4 }]}
             onPress={() => openDeactivate(e)}
             disabled={!e.is_active}
-          >
+           testID="admin.events.open-deactivate">
             <Text style={styles.miniBtnText}>Deactivate</Text>
           </Pressable>
         </View>
@@ -326,12 +326,12 @@ export default function EventsScreen() {
               placeholder="Search title or venue…"
               placeholderTextColor={colors.textDisabledDark}
               style={styles.searchInput}
-            />
+             testID="admin.events.set-search"/>
           </View>
-          <Pressable style={styles.ghostBtn} onPress={fetchList}>
+          <Pressable style={styles.ghostBtn} onPress={fetchList} testID="admin.events.fetch-list">
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={openCreate}>
+          <Pressable style={styles.primaryBtn} onPress={openCreate} testID="admin.events.open-create">
             <Text style={styles.primaryBtnText}>+ New Event</Text>
           </Pressable>
         </View>
@@ -355,10 +355,10 @@ export default function EventsScreen() {
         width={620}
         footer={
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <Pressable style={[styles.modalBtn, styles.modalBtnGhost]} onPress={closeModal} disabled={submitting}>
+            <Pressable style={[styles.modalBtn, styles.modalBtnGhost]} onPress={closeModal} disabled={submitting} testID="admin.events.close-modal">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
-            <Pressable style={[styles.modalBtn, styles.modalBtnPrimary]} onPress={handleSave} disabled={submitting}>
+            <Pressable style={[styles.modalBtn, styles.modalBtnPrimary]} onPress={handleSave} disabled={submitting} testID="admin.events.handle-save">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -378,10 +378,10 @@ export default function EventsScreen() {
         width={460}
         footer={
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <Pressable style={[styles.modalBtn, styles.modalBtnGhost]} onPress={() => setConfirmDeactivate(null)} disabled={submitting}>
+            <Pressable style={[styles.modalBtn, styles.modalBtnGhost]} onPress={() => setConfirmDeactivate(null)} disabled={submitting} testID="admin.events.set-confirm-deactivate">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
-            <Pressable style={[styles.modalBtn, { backgroundColor: colors.danger }]} onPress={confirmDeactivateAction} disabled={submitting}>
+            <Pressable style={[styles.modalBtn, { backgroundColor: colors.danger }]} onPress={confirmDeactivateAction} disabled={submitting} testID="admin.events.confirm-deactivate-action">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

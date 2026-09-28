@@ -50,7 +50,7 @@ export default function CancellationPolicies() {
   return (
     <AdminShell title="Cancellation Policies" subtitle="Manage cancellation fee rules">
       <Pressable onPress={() => { setForm({ name: "", canceller_role: "rider", ride_status: "matched", time_threshold_seconds: "120", fee_type: "flat", fee_amount_bdt: "0", max_fee_bdt: "0" }); setModalVisible(true); }}
-        style={{ padding: 12, backgroundColor: colors.adminAccent, borderRadius: 8, alignSelf: "flex-start", marginBottom: 12 }}>
+        style={{ padding: 12, backgroundColor: colors.adminAccent, borderRadius: 8, alignSelf: "flex-start", marginBottom: 12 }} testID="admin.cancellation-policies.set-form">
         <Text style={{ color: "#000", fontFamily: "Jakarta-Bold", fontSize: 13 }}>+ Add Policy</Text>
       </Pressable>
       {loading ? <ActivityIndicator size="large" color={colors.adminAccent} style={{ marginTop: 40 }} />
@@ -66,7 +66,7 @@ export default function CancellationPolicies() {
               </View>
             </View>
           ))}
-          <Pressable onPress={save} style={{ paddingVertical: 12, backgroundColor: colors.adminAccent, borderRadius: 8, alignItems: "center" }}>
+          <Pressable onPress={save} style={{ paddingVertical: 12, backgroundColor: colors.adminAccent, borderRadius: 8, alignItems: "center" }} testID="admin.cancellation-policies.save">
             <Text style={{ color: "#000", fontFamily: "Jakarta-Bold", fontSize: 14 }}>Save</Text>
           </Pressable>
         </View>

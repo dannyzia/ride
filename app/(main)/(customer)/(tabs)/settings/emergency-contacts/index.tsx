@@ -186,7 +186,7 @@ export default function SettingsEmergencyContacts() {
         onPress={() => callContact(item)}
         style={styles.callButton}
         hitSlop={4}
-      >
+       testID="customer.settings.emergency-contacts.call-contact">
         <Ionicons name="call-outline" size={22} color={colors.primary} />
       </TouchableOpacity>
       <TouchableOpacity
@@ -195,7 +195,7 @@ export default function SettingsEmergencyContacts() {
         onPress={() => deleteContact(item)}
         style={styles.deleteButton}
         hitSlop={4}
-      >
+       testID="customer.settings.emergency-contacts.delete-contact">
         <Ionicons name="trash-outline" size={20} color={colors.danger} />
       </TouchableOpacity>
     </View>
@@ -210,7 +210,7 @@ export default function SettingsEmergencyContacts() {
           accessibilityLabel={t('emergency_contacts.a11y_go_back')}
           onPress={() => router.back()}
           hitSlop={8}
-        >
+         testID="customer.settings.emergency-contacts.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -225,7 +225,7 @@ export default function SettingsEmergencyContacts() {
           accessibilityLabel={t('emergency_contacts.a11y_add')}
           onPress={() => router.push(ADD_ROUTE)}
           style={styles.addButton}
-        >
+         testID="customer.settings.emergency-contacts.el-2">
           <Ionicons name="add" size={24} color={colors.white} />
         </TouchableOpacity>
         <TouchableOpacity
@@ -233,7 +233,7 @@ export default function SettingsEmergencyContacts() {
           accessibilityLabel={t('emergency_contacts.a11y_toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
-        >
+         testID="customer.settings.emergency-contacts.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
         </TouchableOpacity>
       </View>
@@ -252,7 +252,7 @@ export default function SettingsEmergencyContacts() {
                 setLoading(true);
                 fetchContacts();
               }}
-            >
+             testID="customer.settings.emergency-contacts.set-loading">
               <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>

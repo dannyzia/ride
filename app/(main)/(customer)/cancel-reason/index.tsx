@@ -139,14 +139,14 @@ export default function CancelReason() {
           placeholderTextColor={textSecondary}
           value={note}
           onChangeText={setNote}
-        />
+         testID="customer.cancel-reason.set-note"/>
         {error ? <ErrorBanner message={error} /> : null}
         <TouchableOpacity
           className="rounded-full py-[16px] items-center mt-8"
           style={{ backgroundColor: loading || !selected ? disabledBg : colors.danger }}
           onPress={confirmCancel}
           disabled={loading || !selected}
-        >
+         testID="customer.cancel-reason.confirm-cancel">
           {loading ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (
@@ -159,7 +159,7 @@ export default function CancelReason() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.cancel-reason.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

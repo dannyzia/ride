@@ -75,7 +75,7 @@ useEffect(() => {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.activity-canceled.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('activity_canceled.title')}</Text>
@@ -120,7 +120,7 @@ useEffect(() => {
             className="rounded-full w-full py-[16px] items-center mt-4"
             style={{ backgroundColor: colors.primary }}
             onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
-          >
+           testID="customer.activity-canceled.replace-main">
             <Text className="text-[18px] font-JakartaBold" style={{ color: colors.white }}>{t('activity_canceled.book_new_ride')}</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -130,7 +130,7 @@ useEffect(() => {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.activity-canceled.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

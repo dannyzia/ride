@@ -24,7 +24,7 @@ export default function NoDriversAvailable() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.no-drivers-available.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
       <View className="items-center mb-8">
@@ -44,14 +44,14 @@ export default function NoDriversAvailable() {
           className="rounded-full w-full py-[16px] items-center"
           style={{ backgroundColor: colors.primary }}
           onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
-        >
+         testID="customer.no-drivers-available.replace-main">
           <Text className="text-[18px] font-JakartaBold text-goWhite">{t('no_drivers_available.try_again')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           className="border rounded-full w-full py-[16px] items-center"
           style={{ borderColor }}
           onPress={() => router.push("/(main)/(customer)/schedule-ride")}
-        >
+         testID="customer.no-drivers-available.push-main">
           <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('no_drivers_available.schedule_for_later')}</Text>
         </TouchableOpacity>
       </View>

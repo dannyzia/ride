@@ -68,7 +68,7 @@ export default function DriverWalkthrough3() {
         <CustomButton
           title="Get Started"
           onPress={() => router.replace("/(auth)/driver-welcome")}
-        />
+         testID="driver-walkthrough-3.replace-auth"/>
       </View>
     </SafeAreaView>
   );

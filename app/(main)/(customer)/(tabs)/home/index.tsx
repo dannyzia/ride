@@ -802,7 +802,7 @@ useEffect(() => {
             params: { type: "from" },
           })
         }
-      >
+       testID="customer.home.el-1">
         <Ionicons name="locate-outline" size={20} color={colors.primary} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.inputLabel, { color: textSecondary }]}>
@@ -835,7 +835,7 @@ useEffect(() => {
                 params: { type: "stop", stopIndex: String(i) },
               })
             }
-          >
+           testID="customer.home.string-el">
             <Ionicons name="flag" size={20} color={colors.amber} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('rider_home.stop_number', { number: i + 1 })}</Text>
@@ -853,7 +853,7 @@ useEffect(() => {
                 setStops(next);
               }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
+             testID="customer.home.set-stops">
               <Ionicons name="close-circle" size={18} color={textDisabled} />
             </TouchableOpacity>
           </TouchableOpacity>
@@ -865,7 +865,7 @@ useEffect(() => {
         <TouchableOpacity
           style={styles.addStopBtn}
           onPress={() => setStops([...stops, { lat: 0, lng: 0, address: "" }])}
-        >
+         testID="customer.home.set-stops-2">
           <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
           <Text style={[styles.addStopText, { color: colors.primary }]}>{t('rider_home.add_stop_button')}</Text>
         </TouchableOpacity>
@@ -879,7 +879,7 @@ useEffect(() => {
         onPress={() =>
           router.push({ pathname: "/(main)/(customer)/autocomplete", params: { type: "to" } })
         }
-      >
+       testID="customer.home.el-2">
         <Ionicons name="location" size={20} color={colors.danger} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('home.search_destination')}</Text>
@@ -894,7 +894,7 @@ useEffect(() => {
           <TouchableOpacity
             onPress={() => setShowSavePlace(true)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
+           testID="customer.home.set-show-save-place">
             <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
           </TouchableOpacity>
         )}
@@ -931,7 +931,7 @@ useEffect(() => {
                     "to",
                   )
                 }
-              >
+               testID="customer.home.handle-location-select">
                 <Ionicons
                   name={
                     place.label === "Home"
@@ -974,7 +974,7 @@ useEffect(() => {
                   "to",
                 )
               }
-            >
+             testID="customer.home.handle-location-select-2">
               <Ionicons name="time-outline" size={18} color={textSecondary} />
               <Text
                 style={[styles.recentText, { color: textPrimary }]}
@@ -1003,7 +1003,7 @@ useEffect(() => {
             setMapPinLoading(false);
           })();
         }}
-      >
+       testID="customer.home.location-el">
         <Ionicons name="map-outline" size={20} color={colors.primary} />
         <Text style={[styles.selectOnMapText, { color: colors.primary }]}>{t('rider_home.select_on_map')}</Text>
       </TouchableOpacity>
@@ -1019,7 +1019,7 @@ useEffect(() => {
         ]}
         onPress={handleNext}
         disabled={!hasRoute}
-      >
+       testID="customer.home.handle-next">
         <Text style={styles.nextBtnText}>{t('rider_home.next')}</Text>
       </TouchableOpacity>
     </BottomSheetScrollView>
@@ -1038,7 +1038,7 @@ useEffect(() => {
           setBookingStep("LOCATIONS");
           sheetRef.current?.snapToIndex(0);
         }}
-      >
+       testID="customer.home.set-booking-step">
         <Ionicons name="arrow-back" size={22} color={textPrimary} />
         <Text style={[styles.backBtnText, { color: textPrimary }]}>
           {t('rider_home.edit_route')}
@@ -1070,7 +1070,7 @@ useEffect(() => {
                 setSelectedCategory(cat.key as VehicleCategory);
                 setSelectedVehicleType(null);
               }}
-            >
+             testID="customer.home.set-selected-category">
               <Ionicons
                 name={cat.icon}
                 size={16}
@@ -1103,7 +1103,7 @@ useEffect(() => {
           <Text style={[styles.mutedText, { color: textSecondary }]}>
             {estimateError}
           </Text>
-          <TouchableOpacity onPress={fetchEstimates}>
+          <TouchableOpacity onPress={fetchEstimates} testID="customer.home.fetch-estimates">
             <Text
               style={{
                 color: colors.primary,
@@ -1154,7 +1154,7 @@ useEffect(() => {
                     setSelectedVehicleType(est.vehicle_type as VehicleTypeEnum)
                   }
                   activeOpacity={0.7}
-                >
+                 testID="customer.home.set-selected-vehicle-type">
                   <Ionicons
                     name={icon}
                     size={28}
@@ -1244,7 +1244,7 @@ useEffect(() => {
                     onPress={() =>
                       setSelectedPromo(isSelected ? null : d)
                     }
-                  >
+                   testID="customer.home.set-selected-promo">
                     <Ionicons
                       name="ticket-outline"
                       size={22}
@@ -1285,7 +1285,7 @@ useEffect(() => {
         ]}
         onPress={handleCallForRide}
         disabled={!selectedVehicleType || requesting}
-      >
+       testID="customer.home.handle-call-for-ride">
         {requesting ? (
           <ActivityIndicator size="small" color={colors.white} />
         ) : (
@@ -1332,14 +1332,14 @@ useEffect(() => {
               <TouchableOpacity
                 style={[styles.mapPinBtn, { backgroundColor: colors.primary }]}
                 onPress={() => handleMapPinConfirm("from")}
-              >
+               testID="customer.home.handle-map-pin-confirm">
                 <Ionicons name="locate-outline" size={18} color={colors.white} />
                 <Text style={styles.mapPinBtnText}>{t('rider_home.set_as_pickup')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.mapPinBtn, { backgroundColor: colors.danger }]}
                 onPress={() => handleMapPinConfirm("to")}
-              >
+               testID="customer.home.handle-map-pin-confirm-2">
                 <Ionicons name="location" size={18} color={colors.white} />
                 <Text style={styles.mapPinBtnText}>{t('rider_home.set_as_destination')}</Text>
               </TouchableOpacity>
@@ -1347,7 +1347,7 @@ useEffect(() => {
             <TouchableOpacity
               onPress={() => { setMapPinCoords(null); setMapPinAddress(""); }}
               style={{ marginTop: 8 }}
-            >
+             testID="customer.home.set-map-pin-coords">
               <Text style={{ color: textSecondary, fontFamily: "Jakarta-SemiBold", fontSize: 14 }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
@@ -1361,7 +1361,7 @@ useEffect(() => {
           { backgroundColor: surfaceBg, borderColor },
         ]}
         onPress={() => setTheme(isDark ? "light" : "dark")}
-      >
+       testID="customer.home.set-theme">
         <Ionicons
           name={isDark ? "sunny-outline" : "moon-outline"}
           size={20}
@@ -1439,7 +1439,7 @@ useEffect(() => {
                     },
                   ]}
                   onPress={() => setSavePlaceLabel(label.key)}
-                >
+                 testID="customer.home.set-save-place-label">
                   <Ionicons
                     name={label.key === "Home" ? "home" : "briefcase"}
                     size={16}
@@ -1477,7 +1477,7 @@ useEffect(() => {
                   placeholderTextColor={textDisabled}
                   value={savePlaceLabel}
                   onChangeText={setSavePlaceLabel}
-                />
+                 testID="customer.home.set-save-place-label-2"/>
               </View>
             </View>
             {/* Destination preview */}
@@ -1494,14 +1494,14 @@ useEffect(() => {
                   setShowSavePlace(false);
                   setSavePlaceLabel("");
                 }}
-              >
+               testID="customer.home.set-show-save-place-2">
                 <Text style={[styles.nextBtnText, { color: textSecondary }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.nextBtn, { flex: 1, backgroundColor: savePlaceLabel.trim() ? colors.primary : textDisabled }]}
                 onPress={handleSavePlace}
                 disabled={!savePlaceLabel.trim()}
-              >
+               testID="customer.home.handle-save-place">
                 <Text style={styles.nextBtnText}>{t('common.save')}</Text>
               </TouchableOpacity>
             </View>

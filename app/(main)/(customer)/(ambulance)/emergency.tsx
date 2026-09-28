@@ -170,7 +170,7 @@ export default function EmergencyAmbulanceScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Back">
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Back" testID="customer.ambulance.emergency.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: colors.danger, marginLeft: 12 }}>
@@ -226,7 +226,7 @@ export default function EmergencyAmbulanceScreen() {
                 style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor: colors.danger, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", marginBottom: 40 }}
                 accessibilityRole="button"
                 accessibilityLabel="Cancel emergency request"
-              >
+               testID="customer.ambulance.emergency.handle-cancel">
                 {cancelling ? (
                   <ActivityIndicator size="small" color={colors.danger} />
                 ) : (
@@ -261,7 +261,7 @@ export default function EmergencyAmbulanceScreen() {
                     borderRadius: 12,
                     marginRight: lvl === "BLS" ? 8 : 0,
                   }}
-                >
+                 testID="customer.ambulance.emergency.set-service-level">
                   <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: serviceLevel === lvl ? colors.danger : textSecondary }}>
                     {lvl}
                   </Text>
@@ -288,7 +288,7 @@ export default function EmergencyAmbulanceScreen() {
               accessibilityRole="button"
               accessibilityLabel="Requires paramedic"
               accessibilityState={{ selected: requiresParamedic }}
-            >
+             testID="customer.ambulance.emergency.set-requires-paramedic">
               <Ionicons
                 name={requiresParamedic ? "checkmark-circle" : "ellipse-outline"}
                 size={24}
@@ -322,7 +322,7 @@ export default function EmergencyAmbulanceScreen() {
               onChangeText={setPatientCondition}
               multiline
               accessibilityLabel="Patient condition"
-            />
+             testID="customer.ambulance.emergency.set-patient-condition"/>
 
             {/* Pickup */}
             <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
@@ -335,7 +335,7 @@ export default function EmergencyAmbulanceScreen() {
               value={pickupAddress}
               onChangeText={setPickupAddress}
               accessibilityLabel="Pickup address"
-            />
+             testID="customer.ambulance.emergency.set-pickup-address"/>
 
             {/* Dropoff (optional) */}
             <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
@@ -348,7 +348,7 @@ export default function EmergencyAmbulanceScreen() {
               value={dropoffAddress}
               onChangeText={setDropoffAddress}
               accessibilityLabel="Dropoff address"
-            />
+             testID="customer.ambulance.emergency.set-dropoff-address"/>
 
             <TouchableOpacity
               onPress={handleCreate}
@@ -364,7 +364,7 @@ export default function EmergencyAmbulanceScreen() {
               }}
               accessibilityRole="button"
               accessibilityLabel="Call ambulance now"
-            >
+             testID="customer.ambulance.emergency.handle-create">
               {submitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (

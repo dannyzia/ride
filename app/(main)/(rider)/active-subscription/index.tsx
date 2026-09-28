@@ -53,7 +53,7 @@ export default function ActiveSubscription() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.active-subscription.el-1">
           <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>My Subscription</Text>
@@ -72,7 +72,7 @@ export default function ActiveSubscription() {
           <TouchableOpacity
             className="bg-goPrimary rounded-full px-[24px] py-[14px]"
             onPress={() => router.push("/(main)/(rider)/subscription-plans")}
-          >
+           testID="rider.active-subscription.push-main">
             <Text className="text-[16px] font-JakartaBold text-goWhite">Browse Packages</Text>
           </TouchableOpacity>
         </View>
@@ -105,14 +105,14 @@ export default function ActiveSubscription() {
           <TouchableOpacity
             className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3"
             onPress={() => router.push("/(main)/(rider)/subscription-plans")}
-          >
+           testID="rider.active-subscription.push-main-2">
             <Text className="text-[18px] font-JakartaBold text-goWhite">Renew early</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="border rounded-full w-full py-[16px] items-center"
             style={{ borderColor }}
             onPress={() => router.push("/(main)/(rider)/subscription-plans")}
-          >
+           testID="rider.active-subscription.push-main-3">
             <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Change plan</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -122,7 +122,7 @@ export default function ActiveSubscription() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.active-subscription.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

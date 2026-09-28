@@ -108,7 +108,7 @@ export default function ChangePassword() {
       accessibilityLabel={label}
       onPress={onToggle}
       style={styles.eyeButton}
-    >
+     testID="customer.change-password.on-toggle">
       <Ionicons name={visible ? "eye-off-outline" : "eye-outline"} size={22} color={eyeColor} />
     </TouchableOpacity>
   );
@@ -122,7 +122,7 @@ export default function ChangePassword() {
           accessibilityLabel={t("change_password.a11y_go_back")}
           onPress={() => router.back()}
           style={styles.backButton}
-        >
+         testID="customer.change-password.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.screenTitle, { color: textPrimary }]} numberOfLines={1}>
@@ -133,7 +133,7 @@ export default function ChangePassword() {
           accessibilityLabel={t("change_password.a11y_toggle_theme")}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           style={styles.themeToggle}
-        >
+         testID="customer.change-password.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
         </TouchableOpacity>
       </View>
@@ -166,7 +166,7 @@ export default function ChangePassword() {
             onChangeText={setCurrentPassword}
             autoCapitalize="none"
             autoCorrect={false}
-          />
+           testID="customer.change-password.set-current-password"/>
           {renderEye(
             showCurrent,
             () => setShowCurrent((v) => !v),
@@ -193,7 +193,7 @@ export default function ChangePassword() {
             onChangeText={setNewPassword}
             autoCapitalize="none"
             autoCorrect={false}
-          />
+           testID="customer.change-password.set-new-password"/>
           {renderEye(
             showNew,
             () => setShowNew((v) => !v),
@@ -218,7 +218,7 @@ export default function ChangePassword() {
             onChangeText={setConfirmPassword}
             autoCapitalize="none"
             autoCorrect={false}
-          />
+           testID="customer.change-password.set-confirm-password"/>
           {renderEye(
             showConfirm,
             () => setShowConfirm((v) => !v),
@@ -242,7 +242,7 @@ export default function ChangePassword() {
           disabled={loading || !formValid}
           activeOpacity={0.8}
           style={[styles.saveButton, { backgroundColor: saveButtonBg }]}
-        >
+         testID="customer.change-password.handle-change">
           {loading ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (

@@ -818,7 +818,7 @@ export default function PlatformConfigScreen() {
           style={[styles.ghostBtn, loading && styles.ghostBtnDisabled]}
           onPress={fetchAll}
           disabled={loading}
-        >
+         testID="admin.platform-config.fetch-all">
           <Text style={styles.ghostBtnText}>Refresh</Text>
         </Pressable>
       }
@@ -853,7 +853,7 @@ export default function PlatformConfigScreen() {
               ]}
               onPress={() => setConfirmPause(!dispatchPaused)}
               disabled={togglingDispatch || !dispatchLoaded}
-            >
+             testID="admin.platform-config.set-confirm-pause">
               {togglingDispatch ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -880,7 +880,7 @@ export default function PlatformConfigScreen() {
                 ]}
                 onPress={handleSavePolicy}
                 disabled={!policyHasChanges || savingPolicy}
-              >
+               testID="admin.platform-config.handle-save-policy">
                 {savingPolicy ? (
                   <ActivityIndicator color={colors.white} size="small" />
                 ) : (
@@ -917,7 +917,7 @@ export default function PlatformConfigScreen() {
                         keyboardType={
                           f.type === "ratio" ? "decimal-pad" : "numeric"
                         }
-                      />
+                       testID="admin.platform-config.set-policy-edits"/>
                       <Text style={styles.helpText}>{f.helpText}</Text>
                     </View>
                   );
@@ -959,7 +959,7 @@ export default function PlatformConfigScreen() {
                       placeholder={rangeText}
                       placeholderTextColor={colors.textDisabledDark}
                       keyboardType="numeric"
-                    />
+                     testID="admin.platform-config.set-policy-edits-2"/>
                     <Text style={styles.helpText}>{f.helpText}</Text>
                   </View>
                 );
@@ -988,7 +988,7 @@ export default function PlatformConfigScreen() {
                 accessibilityRole="switch"
                 accessibilityState={{ checked: zoneMultiActive }}
                 accessibilityLabel="Toggle multi-zone mode"
-              >
+               testID="admin.platform-config.set-zone-multi-active">
                 <View
                   style={[
                     styles.toggleThumb,
@@ -1013,7 +1013,7 @@ export default function PlatformConfigScreen() {
                   style={[styles.saveBtn, savingZone && styles.btnDisabled]}
                   onPress={handleSaveZone}
                   disabled={savingZone}
-                >
+                 testID="admin.platform-config.handle-save-zone">
                   {savingZone ? (
                     <ActivityIndicator color={colors.white} size="small" />
                   ) : (
@@ -1041,7 +1041,7 @@ export default function PlatformConfigScreen() {
                 ]}
                 onPress={handleSaveOp}
                 disabled={!opHasChanges || savingOp}
-              >
+               testID="admin.platform-config.handle-save-op">
                 {savingOp ? (
                   <ActivityIndicator color={colors.white} size="small" />
                 ) : (
@@ -1077,7 +1077,7 @@ export default function PlatformConfigScreen() {
                         keyboardType={f.type === "text" ? "default" : "numeric"}
                         autoCapitalize={f.type === "text" ? "none" : undefined}
                         autoCorrect={f.type !== "text"}
-                      />
+                       testID="admin.platform-config.set-op-edits"/>
                       <Text style={styles.helpText}>{f.helpText}</Text>
                     </View>
                   ),
@@ -1112,7 +1112,7 @@ export default function PlatformConfigScreen() {
                   placeholder={HOTSPOT_FRESHNESS_DEFAULT}
                   placeholderTextColor={colors.textDisabledDark}
                   keyboardType="numeric"
-                />
+                 testID="admin.platform-config.set-hotspot-freshness-edit"/>
                 <Text style={styles.helpText}>
                   zone_heat readings older than this are treated as stale and
                   hidden from the hotspot surface. Default: 10.
@@ -1125,7 +1125,7 @@ export default function PlatformConfigScreen() {
                   ]}
                   onPress={handleSaveHotspotFreshness}
                   disabled={!hotspotFreshnessDirty || savingHotspot}
-                >
+                 testID="admin.platform-config.handle-save-hotspot-freshness">
                   <Text style={styles.saveBtnText}>Save Window</Text>
                 </Pressable>
               </View>
@@ -1140,7 +1140,7 @@ export default function PlatformConfigScreen() {
                   placeholderTextColor={colors.textDisabledDark}
                   autoCapitalize="none"
                   autoCorrect={false}
-                />
+                 testID="admin.platform-config.set-hotspot-zone-id"/>
                 <Text style={styles.fieldLabel}>Tier</Text>
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {HOTSPOT_TIER_OPTIONS.map((opt) => (
@@ -1151,7 +1151,7 @@ export default function PlatformConfigScreen() {
                         hotspotTier === opt && styles.hotspotTierChipActive,
                       ]}
                       onPress={() => setHotspotTier(opt)}
-                    >
+                     testID="admin.platform-config.set-hotspot-tier">
                       <View
                         style={[
                           styles.hotspotDot,
@@ -1180,7 +1180,7 @@ export default function PlatformConfigScreen() {
                   placeholderTextColor={colors.textDisabledDark}
                   autoCapitalize="none"
                   autoCorrect={false}
-                />
+                 testID="admin.platform-config.set-hotspot-valid-from"/>
                 <TextInput
                   style={styles.input}
                   value={hotspotValidTo}
@@ -1189,7 +1189,7 @@ export default function PlatformConfigScreen() {
                   placeholderTextColor={colors.textDisabledDark}
                   autoCapitalize="none"
                   autoCorrect={false}
-                />
+                 testID="admin.platform-config.set-hotspot-valid-to"/>
                 <Pressable
                   style={[
                     styles.saveBtn,
@@ -1198,7 +1198,7 @@ export default function PlatformConfigScreen() {
                   ]}
                   onPress={handleAddHotspot}
                   disabled={savingHotspot}
-                >
+                 testID="admin.platform-config.handle-add-hotspot">
                   {savingHotspot ? (
                     <ActivityIndicator color={colors.white} size="small" />
                   ) : (
@@ -1242,7 +1242,7 @@ export default function PlatformConfigScreen() {
                       style={styles.hotspotDeleteBtn}
                       onPress={() => handleDeleteHotspot(h.zone_id)}
                       disabled={savingHotspot}
-                    >
+                     testID="admin.platform-config.handle-delete-hotspot">
                       <Text style={styles.hotspotDeleteText}>Remove</Text>
                     </Pressable>
                   </View>
@@ -1264,7 +1264,7 @@ export default function PlatformConfigScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={() => setConfirmPause(null)}
               disabled={togglingDispatch}
-            >
+             testID="admin.platform-config.set-confirm-pause-2">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
@@ -1276,7 +1276,7 @@ export default function PlatformConfigScreen() {
               ]}
               onPress={handleConfirmToggle}
               disabled={togglingDispatch}
-            >
+             testID="admin.platform-config.handle-confirm-toggle">
               {togglingDispatch ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

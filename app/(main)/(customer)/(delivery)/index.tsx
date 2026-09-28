@@ -85,7 +85,7 @@ export default function DeliveryListScreen() {
       style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
       onPress={() => router.push(`/(main)/(customer)/(delivery)/request-detail?id=${item.id}`)}
       activeOpacity={0.7}
-    >
+     testID="customer.delivery.push-main">
       <View className="flex-row justify-between items-start mb-2">
         <Text className="text-sm font-JakartaBold" style={{ color: textPrimary }} numberOfLines={1}>
           {item.pickup_address} → {item.dropoff_address}
@@ -114,13 +114,13 @@ export default function DeliveryListScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? colors.bgDark : colors.bgLight }}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3">
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.delivery.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
           Delivery
         </Text>
-        <TouchableOpacity onPress={() => router.push('/(main)/(customer)/(delivery)/request-create')}>
+        <TouchableOpacity onPress={() => router.push('/(main)/(customer)/(delivery)/request-create')} testID="customer.delivery.push-main-2">
           <Ionicons name="add-circle" size={28} color={colors.primary} />
         </TouchableOpacity>
       </View>
@@ -142,7 +142,7 @@ export default function DeliveryListScreen() {
             className="mt-6 px-8 py-3 rounded-xl"
             style={{ backgroundColor: colors.primary }}
             onPress={() => router.push('/(main)/(customer)/(delivery)/request-create')}
-          >
+           testID="customer.delivery.push-main-3">
             <Text className="text-white font-JakartaBold">Send a Package</Text>
           </TouchableOpacity>
         </View>

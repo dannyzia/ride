@@ -469,7 +469,7 @@ const ConfirmRidePage = () => {
                     )
                   }
                   style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: dividerBorder }}
-                >
+                 testID="customer.confirm-ride.set-selected-discount">
                   <View
                     style={{
                       width: 20,
@@ -600,7 +600,7 @@ const ConfirmRidePage = () => {
         <TouchableOpacity
           onPress={() => setBookForOther(!bookForOther)}
           style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}
-        >
+         testID="customer.confirm-ride.set-book-for-other">
           <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: bookForOther ? colors.primary : "transparent", borderColor: bookForOther ? colors.primary : border }}>
             {bookForOther && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
           </View>
@@ -609,16 +609,16 @@ const ConfirmRidePage = () => {
         {bookForOther && (
           <View style={{ marginBottom: 16 }}>
             <TextInput style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, fontFamily: fonts.body, color: textPrimary, marginBottom: 12 }}
-              placeholder={t('confirm_ride.passenger_name')} placeholderTextColor={colors.textSecondaryDark} value={otherName} onChangeText={setOtherName} />
+              placeholder={t('confirm_ride.passenger_name')} placeholderTextColor={colors.textSecondaryDark} value={otherName} onChangeText={setOtherName}  testID="customer.confirm-ride.set-other-name"/>
             <TextInput style={{ backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, fontFamily: fonts.body, color: textPrimary }}
-              placeholder="01XXXXXXXXX" placeholderTextColor={colors.textSecondaryDark} keyboardType="numeric" value={otherPhone} onChangeText={setOtherPhone} />
+              placeholder="01XXXXXXXXX" placeholderTextColor={colors.textSecondaryDark} keyboardType="numeric" value={otherPhone} onChangeText={setOtherPhone}  testID="customer.confirm-ride.set-other-phone"/>
             <TouchableOpacity
               onPress={() => setOtherConsent(!otherConsent)}
               style={{ flexDirection: "row", alignItems: "flex-start", marginTop: 8 }}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: otherConsent }}
               accessibilityLabel={t('confirm_ride.a11y_consent_sms')}
-            >
+             testID="customer.confirm-ride.set-other-consent">
               <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, marginTop: 1, backgroundColor: otherConsent ? colors.primary : "transparent", borderColor: otherConsent ? colors.primary : border }}>
                 {otherConsent && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
               </View>
@@ -632,7 +632,7 @@ const ConfirmRidePage = () => {
         <UpfrontTipSlider value={upfrontTip} onChange={setUpfrontTip} />
 
         {/* Female driver preference */}
-        <TouchableOpacity onPress={() => setPreferFemale(!preferFemale)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+        <TouchableOpacity onPress={() => setPreferFemale(!preferFemale)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }} testID="customer.confirm-ride.set-prefer-female">
           <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: preferFemale ? colors.primary : "transparent", borderColor: preferFemale ? colors.primary : border }}>
             {preferFemale && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
           </View>
@@ -653,7 +653,7 @@ const ConfirmRidePage = () => {
           style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}
           accessibilityRole="button"
           accessibilityLabel={scheduleLater ? t('confirm_ride.a11y_disable_schedule_later') : t('confirm_ride.a11y_enable_schedule_later')}
-        >
+         testID="customer.confirm-ride.set-schedule-later">
           <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: scheduleLater ? colors.primary : "transparent", borderColor: scheduleLater ? colors.primary : border }}>
             {scheduleLater && <Ionicons name="checkmark-circle" size={12} color={colors.white} />}
           </View>
@@ -694,7 +694,7 @@ const ConfirmRidePage = () => {
         )}
 
         {stops.length < 2 && (
-          <TouchableOpacity onPress={() => setShowStopModal(true)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, marginBottom: 8 }}>
+          <TouchableOpacity onPress={() => setShowStopModal(true)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, marginBottom: 8 }} testID="customer.confirm-ride.set-show-stop-modal">
             <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
             <Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 15, marginLeft: 6 }}>{t('confirm_ride.add_stop')}</Text>
           </TouchableOpacity>
@@ -702,7 +702,7 @@ const ConfirmRidePage = () => {
         {stops.map((stop, i) => (
           <View key={i} style={{ flexDirection: "row", alignItems: "center", backgroundColor: surface, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 8 }}>
             <Text style={{ flex: 1, fontSize: 14, fontFamily: fonts.body, color: textPrimary }}>{t('confirm_ride.stop_label', { number: i + 1, address: stop.address })}</Text>
-            <TouchableOpacity onPress={() => setStops(stops.filter((_, j) => j !== i))}><Ionicons name="close" size={16} color={colors.danger} /></TouchableOpacity>
+            <TouchableOpacity onPress={() => setStops(stops.filter((_, j) => j !== i))} testID="customer.confirm-ride.set-stops"><Ionicons name="close" size={16} color={colors.danger} /></TouchableOpacity>
           </View>
         ))}
 
@@ -711,13 +711,13 @@ const ConfirmRidePage = () => {
           onPress={handleRequestRide}
           disabled={requesting || !selectedVehicleType}
           className="w-full mt-auto"
-        />
+         testID="customer.confirm-ride.handle-request-ride"/>
       </View>
     </RideLayout>
       <Modal visible={showStopModal} transparent animationType="slide" onRequestClose={() => setShowStopModal(false)}>
       <View style={{ flex: 1, backgroundColor: bg, paddingTop: 80, paddingHorizontal: 24 }}>
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
-          <TouchableOpacity onPress={() => setShowStopModal(false)}><Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 16 }}>{t('common.cancel')}</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowStopModal(false)} testID="customer.confirm-ride.set-show-stop-modal-2"><Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 16 }}>{t('common.cancel')}</Text></TouchableOpacity>
           <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>{t('confirm_ride.add_stop')}</Text>
           <View style={{ width: 48 }} />
         </View>
@@ -739,7 +739,7 @@ const ConfirmRidePage = () => {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surface, borderWidth: 1, borderColor: border }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.confirm-ride.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
       <PickupFeeExplainerSheet

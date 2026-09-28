@@ -411,7 +411,7 @@ export default function FleetSubscription() {
                   ? colors.primary
                   : undefined,
               }}
-            >
+             testID="fleet.subscription.set-show-plans">
               <Ionicons
                 name={
                   current?.has_subscription ? "swap-horizontal" : "add-circle"
@@ -473,7 +473,7 @@ export default function FleetSubscription() {
                       borderColor: isCurrent ? colors.primary : borderColor,
                       opacity: isLoading ? 0.6 : 1,
                     }}
-                  >
+                   testID="fleet.subscription.format-paisa">
                     <View
                       style={{
                         flexDirection: "row",
@@ -607,7 +607,7 @@ export default function FleetSubscription() {
               <TouchableOpacity
                 onPress={() => setShowPlans(false)}
                 style={{ padding: 16, alignItems: "center" }}
-              >
+               testID="fleet.subscription.set-show-plans-2">
                 <Text
                   style={{
                     fontFamily: "Jakarta-Medium",

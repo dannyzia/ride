@@ -57,7 +57,7 @@ export default function SettingsLinkedAccounts() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")}>
+        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")} testID="customer.settings.linked-accounts.replace-main">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.linked_accounts')}</Text>
@@ -89,7 +89,7 @@ export default function SettingsLinkedAccounts() {
                 className="w-full border rounded-[8px] px-[12px] py-[10px]"
                 style={{ backgroundColor: surfaceBg, borderColor }}
                 disabled
-              >
+               testID="customer.settings.linked-accounts.el-1">
                 <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>{t('linked_accounts.add_account')}</Text>
               </TouchableOpacity>
             </View>
@@ -101,7 +101,7 @@ export default function SettingsLinkedAccounts() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.settings.linked-accounts.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

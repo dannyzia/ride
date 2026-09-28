@@ -95,26 +95,26 @@ export default function AddressDetail() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.settings.saved-addresses.id.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('saved_addresses.details_title')}</Text>
-        <TouchableOpacity onPress={() => setShowMore(!showMore)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={() => setShowMore(!showMore)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID="customer.settings.saved-addresses.id.set-show-more">
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
       {showMore && (
         <View className="border-b px-[24px] py-3" style={{ backgroundColor: surfaceBg, borderColor }}>
-          <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }}>
+          <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }} testID="customer.settings.saved-addresses.id.set-show-more-2">
             <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>{t('saved_addresses.set_pickup')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }}>
+          <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }} testID="customer.settings.saved-addresses.id.set-show-more-3">
             <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>{t('saved_addresses.set_destination')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }}>
+          <TouchableOpacity className="py-2" onPress={() => { setShowMore(false); }} testID="customer.settings.saved-addresses.id.set-show-more-4">
             <Text className="text-[15px] font-Jakarta" style={{ color: textPrimary }}>{t('saved_addresses.edit')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity className="py-2" onPress={handleDelete}>
+          <TouchableOpacity className="py-2" onPress={handleDelete} testID="customer.settings.saved-addresses.id.handle-delete">
             <Text className="text-[15px] font-Jakarta" style={{ color: colors.danger }}>{t('saved_addresses.delete_address')}</Text>
           </TouchableOpacity>
         </View>
@@ -139,7 +139,7 @@ export default function AddressDetail() {
                 className="mt-4 py-[12px] border rounded-full items-center"
                 style={{ borderColor: colors.danger }}
                 onPress={handleDelete}
-              >
+               testID="customer.settings.saved-addresses.id.handle-delete-2">
                 <Text className="text-[16px] font-JakartaBold" style={{ color: colors.danger }}>{t('saved_addresses.delete_title')}</Text>
               </TouchableOpacity>
             )}
@@ -155,7 +155,7 @@ export default function AddressDetail() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.settings.saved-addresses.id.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

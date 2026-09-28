@@ -116,12 +116,12 @@ export default function DriverNotificationsPermission() {
           title={busy ? "Enabling..." : "Allow"}
           onPress={allow}
           disabled={busy}
-        />
+         testID="driver-notifications-permission.allow"/>
         <CustomButton
           title="Not Now"
           bgVariant="secondary"
           onPress={skip}
-        />
+         testID="driver-notifications-permission.skip"/>
       </View>
     </SafeAreaView>
   );

@@ -76,15 +76,15 @@ export default function RidePassesAdmin() {
     { key: "is_active", header: "Active", render: (r) => r.is_active ? "Yes" : "No", width: 60 },
     { key: "id", header: "Actions", render: (r) => (
       <View className="flex-row gap-2">
-        <Pressable onPress={() => openEdit(r)} className="px-[8px] py-[4px] bg-goAdminAccent rounded-[4px]"><Text className="text-goBgDark font-JakartaBold text-[11px]">Edit</Text></Pressable>
-        <Pressable onPress={() => removePass(r)} className="px-[8px] py-[4px] bg-goDanger rounded-[4px]"><Text className="text-goWhite font-JakartaBold text-[11px]">Del</Text></Pressable>
+        <Pressable onPress={() => openEdit(r)} className="px-[8px] py-[4px] bg-goAdminAccent rounded-[4px]" testID="admin.ride-passes.open-edit"><Text className="text-goBgDark font-JakartaBold text-[11px]">Edit</Text></Pressable>
+        <Pressable onPress={() => removePass(r)} className="px-[8px] py-[4px] bg-goDanger rounded-[4px]" testID="admin.ride-passes.remove-pass"><Text className="text-goWhite font-JakartaBold text-[11px]">Del</Text></Pressable>
       </View>
     ), width: 100 },
   ];
 
   return (
     <AdminShell title="Ride Passes" subtitle="Create and manage rider pass types">
-      <Pressable onPress={openAdd} className="py-[12px] px-[12px] bg-goAdminAccent rounded-[8px] self-start mb-3">
+      <Pressable onPress={openAdd} className="py-[12px] px-[12px] bg-goAdminAccent rounded-[8px] self-start mb-3" testID="admin.ride-passes.open-add">
         <Text className="text-goBgDark font-JakartaBold text-[13px]">+ Add Pass</Text>
       </Pressable>
       {loading ? <ActivityIndicator size="large" className="mt-10" /> : <AdminTable columns={columns} rows={passes} rowKey={(r) => r.id} />}
@@ -94,10 +94,10 @@ export default function RidePassesAdmin() {
             <View key={f}>
               <Text className="text-goTextSecondaryDark font-Jakarta text-[12px] mb-1">{label}</Text>
               <TextInput className="bg-goDarkSecondary rounded-[8px] px-[10px] py-[8px] text-goTextPrimaryDark font-Jakarta text-[14px]"
-                value={(form as any)[f]} onChangeText={(v) => setForm({ ...form, [f]: v })} keyboardType={f === "name" ? "default" : "numeric"} />
+                value={(form as any)[f]} onChangeText={(v) => setForm({ ...form, [f]: v })} keyboardType={f === "name" ? "default" : "numeric"}  testID="admin.ride-passes.set-form"/>
             </View>
           ))}
-          <Pressable onPress={save} className="py-[12px] bg-goAdminAccent rounded-[8px] items-center">
+          <Pressable onPress={save} className="py-[12px] bg-goAdminAccent rounded-[8px] items-center" testID="admin.ride-passes.save">
             <Text className="text-goBgDark font-JakartaBold text-[14px]">{editId ? "Update Pass" : "Create Pass"}</Text>
           </Pressable>
         </View>

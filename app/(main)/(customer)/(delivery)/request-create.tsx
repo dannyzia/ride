@@ -96,7 +96,7 @@ export default function RequestCreateScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? colors.bgDark : colors.bgLight }}>
       {/* Header */}
       <View className="flex-row items-center px-4 py-3">
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.delivery.request-create.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="text-lg font-JakartaBold ml-3" style={{ color: textPrimary }}>
@@ -121,7 +121,7 @@ export default function RequestCreateScreen() {
           placeholderTextColor={textSecondary}
           value={pickupAddress}
           onChangeText={setPickupAddress}
-        />
+         testID="customer.delivery.request-create.set-pickup-address"/>
 
         {/* Dropoff */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
@@ -139,7 +139,7 @@ export default function RequestCreateScreen() {
           placeholderTextColor={textSecondary}
           value={dropoffAddress}
           onChangeText={setDropoffAddress}
-        />
+         testID="customer.delivery.request-create.set-dropoff-address"/>
 
         {/* Package Description */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
@@ -157,7 +157,7 @@ export default function RequestCreateScreen() {
           placeholderTextColor={textSecondary}
           value={packageDesc}
           onChangeText={setPackageDesc}
-        />
+         testID="customer.delivery.request-create.set-package-desc"/>
 
         {/* Weight */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
@@ -176,7 +176,7 @@ export default function RequestCreateScreen() {
           keyboardType="numeric"
           value={weight}
           onChangeText={setWeight}
-        />
+         testID="customer.delivery.request-create.set-weight"/>
 
         {/* Vehicle Type */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
@@ -193,7 +193,7 @@ export default function RequestCreateScreen() {
                 borderColor: vehicleType === vt.value ? colors.primary : borderColor,
               }}
               onPress={() => setVehicleType(vehicleType === vt.value ? null : vt.value)}
-            >
+             testID="customer.delivery.request-create.set-vehicle-type">
               <Ionicons name={vt.icon} size={18} color={vehicleType === vt.value ? colors.primary : textSecondary} />
               <Text
                 className="text-sm font-JakartaMedium ml-2"
@@ -213,7 +213,7 @@ export default function RequestCreateScreen() {
           }}
           onPress={handleSubmit}
           disabled={submitting || !pickupAddress || !dropoffAddress}
-        >
+         testID="customer.delivery.request-create.handle-submit">
           {submitting ? (
             <ActivityIndicator color="white" />
           ) : (

@@ -40,7 +40,7 @@ function HeaderThemeToggle() {
         borderWidth: 1,
         borderColor,
       }}
-    >
+     testID="rider.rate-rider.set-theme">
       <Ionicons
         name={isDark ? "sunny-outline" : "moon-outline"}
         size={20}
@@ -159,7 +159,7 @@ export default function RateRider() {
           accessibilityRole="button"
           accessibilityLabel={t('rate_rider.go_back')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+         testID="rider.rate-rider.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -216,7 +216,7 @@ export default function RateRider() {
               accessibilityRole="button"
               accessibilityLabel={`Rate ${star} ${star === 1 ? t('rate_rider.star') : t('rate_rider.stars')}`}
               hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-            >
+             testID="rider.rate-rider.set-rating">
               <Ionicons
                 name={star <= rating ? "star" : "star-outline"}
                 size={36}
@@ -251,7 +251,7 @@ export default function RateRider() {
             backgroundColor: colors.primary,
             opacity: rating === 0 ? 0.5 : 1,
           }}
-        >
+         testID="rider.rate-rider.handle-submit">
           {loading ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (

@@ -54,7 +54,7 @@ export default function TruckPicker({ selectedKey, onSelect }: TruckPickerProps)
                 borderBottomWidth: 2,
                 borderBottomColor: active ? colors.primary : "transparent",
               }}
-            >
+             testID="customer.rental-marketplace._components.TruckPicker.set-active-tab-id">
               <Text
                 style={{
                   fontSize: 14,
@@ -90,7 +90,7 @@ export default function TruckPicker({ selectedKey, onSelect }: TruckPickerProps)
               borderColor: selected ? colors.primary : borderColor,
               borderRadius: 14,
             }}
-          >
+           testID="customer.rental-marketplace._components.TruckPicker.on-select">
             {/* Tonnage badge */}
             <View
               style={{

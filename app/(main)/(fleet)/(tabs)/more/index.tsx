@@ -22,7 +22,7 @@ function MenuItem({ icon, label, onPress, isDark, danger }: {
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={{
       flexDirection: "row", alignItems: "center", backgroundColor: surfaceBg,
       borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor,
-    }}>
+    }} testID="fleet.more.on-press">
       <Ionicons name={icon} size={20} color={danger ? colors.danger : colors.primary} />
       <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: danger ? colors.danger : textPrimary, marginLeft: 12, flex: 1 }}>{label}</Text>
       <Ionicons name="chevron-forward" size={16} color={isDark ? colors.textDisabledDark : colors.textDisabledLight} />

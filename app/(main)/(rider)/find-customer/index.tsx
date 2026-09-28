@@ -471,7 +471,7 @@ const ReachCustomer = () => {
                   marginTop: spacing.md,
                   alignSelf: "flex-start",
                 }}
-              >
+               testID="rider.find-customer.el-1">
                 <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
                   <Ionicons name="checkmark" size={16} color={colors.white} />
                   <Text
@@ -550,7 +550,7 @@ const ReachCustomer = () => {
               alignItems: "center",
               backgroundColor: waiting ? colors.amber : (isDark ? colors.surfaceElevatedDark : colors.gray600),
             }}
-          >
+           testID="rider.find-customer.toggle-wait">
             {waitLoading ? (
               <ActivityIndicator size={16} color={colors.white} />
             ) : (
@@ -576,7 +576,7 @@ const ReachCustomer = () => {
             accessibilityRole="button"
             accessibilityLabel={t('find_customer.cancel_ride')}
             style={{ marginTop: spacing.md, alignItems: "center" }}
-          >
+           testID="rider.find-customer.push-main">
             <Text style={{ color: colors.danger, fontSize: 14, fontFamily: "Jakarta-Bold" }}>
               {t('find_customer.cancel_ride')}
             </Text>
@@ -594,7 +594,7 @@ const ReachCustomer = () => {
               alignItems: "center",
               alignSelf: "center",
             }}
-          >
+           testID="rider.find-customer.set-show-toll-modal">
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
               <Ionicons name="receipt-outline" size={16} color={colors.white} />
               <Text style={{ color: colors.white, fontFamily: "Jakarta-Bold", fontSize: 14 }}>
@@ -654,7 +654,7 @@ const ReachCustomer = () => {
           alignItems: "center",
           justifyContent: "center",
         }}
-      >
+       testID="rider.find-customer.set-theme">
         <Ionicons
           name={isDark ? "sunny-outline" : "moon-outline"}
           size={18}

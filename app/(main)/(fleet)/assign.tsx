@@ -72,7 +72,7 @@ export default function AssignScreen() {
     <TouchableOpacity onPress={onPress} style={{
       backgroundColor: surfaceBg, borderRadius: 12, padding: 14, marginBottom: 8,
       borderWidth: 1, borderColor, flexDirection: "row", alignItems: "center",
-    }}>
+    }} testID="fleet.assign.on-press">
       <View style={{ width: 40, height: 40, borderRadius: icon === "person" ? 20 : 10, backgroundColor: `${iconColor}20`, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
         <Ionicons name={icon} size={20} color={iconColor} />
       </View>
@@ -121,7 +121,7 @@ export default function AssignScreen() {
           </View>
           <TouchableOpacity onPress={handleAssign} disabled={submitting} style={{
             backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: "center", flexDirection: "row", justifyContent: "center",
-          }}>
+          }} testID="fleet.assign.handle-assign">
             {submitting ? <ActivityIndicator size="small" color={colors.white} /> : (
               <>
                 <Ionicons name="checkmark-circle" size={20} color={colors.white} />
@@ -129,7 +129,7 @@ export default function AssignScreen() {
               </>
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setStep("select-vehicle")} style={{ padding: 16, alignItems: "center" }}>
+          <TouchableOpacity onPress={() => setStep("select-vehicle")} style={{ padding: 16, alignItems: "center" }} testID="fleet.assign.set-step">
             <Text style={{ fontFamily: "Jakarta-Medium", fontSize: 14, color: textSecondary }}>Back</Text>
           </TouchableOpacity>
         </View>

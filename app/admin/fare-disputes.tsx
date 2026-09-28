@@ -54,7 +54,7 @@ export default function AdminFareDisputes() {
       <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
         {["", "open", "under_review", "resolved"].map((s) => (
           <Pressable key={s} onPress={() => setFilter(s)}
-            style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: filter === s ? colors.adminAccent : colors.darkSecondary }}>
+            style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: filter === s ? colors.adminAccent : colors.darkSecondary }} testID="admin.fare-disputes.set-filter">
             <Text style={{ color: filter === s ? "#000" : colors.textPrimaryDark, fontFamily: "Jakarta-SemiBold", fontSize: 12 }}>{s || "All"}</Text>
           </Pressable>
         ))}
@@ -63,7 +63,7 @@ export default function AdminFareDisputes() {
         <FlatList data={disputes} keyExtractor={(r) => r.id}
           ListEmptyComponent={<Text style={{ color: colors.textSecondaryDark, fontFamily: "Jakarta-Regular", textAlign: "center", marginTop: 40 }}>No disputes found</Text>}
           renderItem={({ item }) => (
-            <Pressable onPress={() => { setSelected(item); setAdjustmentTaka(""); }} style={styles.card}>
+            <Pressable onPress={() => { setSelected(item); setAdjustmentTaka(""); }} style={styles.card} testID="admin.fare-disputes.set-selected">
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Text style={styles.reason} numberOfLines={1}>{item.dispute_reason?.replace(/_/g, " ")}</Text>
                 <Text style={[styles.statusBadge, { color: STATUS_COLORS[item.status] ?? colors.textSecondaryDark }]}>{item.status.replace(/_/g, " ")}</Text>
@@ -89,10 +89,10 @@ export default function AdminFareDisputes() {
                 style={{ background: "transparent", color: colors.textPrimaryDark, border: "none", outline: "none", width: "100%", fontFamily: "Jakarta-Regular", fontSize: 14 }} />
             </View>
             <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-              <Pressable onPress={() => resolve('admin_approved')} style={[styles.actionBtn, { backgroundColor: colors.primary }]}>
+              <Pressable onPress={() => resolve('admin_approved')} style={[styles.actionBtn, { backgroundColor: colors.primary }]} testID="admin.fare-disputes.resolve">
                 <Text style={styles.actionText}>Approve Refund</Text>
               </Pressable>
-              <Pressable onPress={() => resolve('admin_rejected')} style={[styles.actionBtn, { backgroundColor: colors.danger }]}>
+              <Pressable onPress={() => resolve('admin_rejected')} style={[styles.actionBtn, { backgroundColor: colors.danger }]} testID="admin.fare-disputes.resolve-2">
                 <Text style={[styles.actionText, { color: "#FFF" }]}>Reject</Text>
               </Pressable>
             </View>

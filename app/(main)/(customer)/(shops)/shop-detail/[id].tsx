@@ -74,7 +74,7 @@ useEffect(() => {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} testID="customer.shops.shop-detail.id.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
@@ -129,7 +129,7 @@ useEffect(() => {
                     <TouchableOpacity
                       onPress={() => removeFromCart(product.id)}
                       style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.danger + "18", alignItems: "center", justifyContent: "center" }}
-                    >
+                     testID="customer.shops.shop-detail.id.remove-from-cart">
                       <Ionicons name="remove" size={16} color={colors.danger} />
                     </TouchableOpacity>
                     <Text style={{ marginHorizontal: 12, fontSize: 15, fontFamily: "JakartaBold", color: textPrimary }}>
@@ -138,7 +138,7 @@ useEffect(() => {
                     <TouchableOpacity
                       onPress={() => addToCart(product)}
                       style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary + "18", alignItems: "center", justifyContent: "center" }}
-                    >
+                     testID="customer.shops.shop-detail.id.add-to-cart">
                       <Ionicons name="add" size={16} color={colors.primary} />
                     </TouchableOpacity>
                   </View>
@@ -146,7 +146,7 @@ useEffect(() => {
                   <TouchableOpacity
                     onPress={() => addToCart(product)}
                     style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" }}
-                  >
+                   testID="customer.shops.shop-detail.id.add-to-cart-2">
                     <Ionicons name="add" size={20} color="#FFFFFF" />
                   </TouchableOpacity>
                 )}
@@ -186,7 +186,7 @@ useEffect(() => {
               paddingHorizontal: 24,
               paddingVertical: 12,
             }}
-          >
+           testID="customer.shops.shop-detail.id.push-main">
             <Text style={{ color: "#FFFFFF", fontSize: 15, fontFamily: "JakartaSemiBold" }}>
               Checkout
             </Text>

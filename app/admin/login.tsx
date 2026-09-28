@@ -93,7 +93,7 @@ export default function AdminLoginScreen() {
             autoCorrect={false}
             keyboardType="email-address"
             textContentType="emailAddress"
-          />
+           testID="admin.login.set-email"/>
         </View>
 
         {/* Password */}
@@ -109,7 +109,7 @@ export default function AdminLoginScreen() {
             autoCapitalize="none"
             textContentType="password"
             onSubmitEditing={handleSignIn}
-          />
+           testID="admin.login.set-password"/>
         </View>
 
         {error ? (
@@ -123,7 +123,7 @@ export default function AdminLoginScreen() {
           onPress={handleSignIn}
           disabled={loading}
           activeOpacity={0.85}
-        >
+         testID="admin.login.handle-sign-in">
           {loading ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (

@@ -131,7 +131,7 @@ export default function VehicleManagement() {
         className="flex-row items-center px-[24px] py-[16px] border-b"
         style={{ borderBottomColor: borderColor }}
       >
-        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]">
+        <TouchableOpacity onPress={() => router.back()} className="mr-[12px] p-[4px]" testID="rider.vehicle-management.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -162,7 +162,7 @@ export default function VehicleManagement() {
             >
               {error}
             </Text>
-            <TouchableOpacity onPress={fetchVehicles} className="mt-3">
+            <TouchableOpacity onPress={fetchVehicles} className="mt-3" testID="rider.vehicle-management.fetch-vehicles">
               <Text
                 className="text-[14px] font-JakartaBold"
                 style={{ color: colors.primary }}
@@ -358,7 +358,7 @@ export default function VehicleManagement() {
               className="rounded-full w-full py-[16px] items-center mt-2"
               style={{ backgroundColor: colors.primary }}
               onPress={() => router.push("/(main)/(rider)/add-vehicle")}
-            >
+             testID="rider.vehicle-management.push-main">
               <Text
                 className="text-[18px] font-JakartaBold"
                 style={{ color: colors.white }}

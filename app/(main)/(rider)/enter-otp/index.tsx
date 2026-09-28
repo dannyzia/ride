@@ -125,7 +125,7 @@ const EnterOtp = () => {
           alignItems: "center",
           justifyContent: "center",
         }}
-      >
+       testID="rider.enter-otp.set-theme">
         <Ionicons
           name={isDark ? "moon-outline" : "sunny-outline"}
           size={18}
@@ -203,7 +203,7 @@ const EnterOtp = () => {
           bgVariant="primary"
           textVariant="primary"
           className="w-full"
-        />
+         testID="rider.enter-otp.handle-verify"/>
       </View>
     </SafeAreaView>
   );

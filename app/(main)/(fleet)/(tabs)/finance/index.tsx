@@ -116,7 +116,7 @@ export default function FleetFinance() {
         borderRadius: 12, padding: 16, borderWidth: 1,
         borderColor: isDark ? colors.borderDark : colors.borderLight,
         alignItems: "center", marginTop: 8,
-      }}>
+      }} testID="fleet.finance.push-main">
         <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 15, color: colors.primary }}>View All Trips</Text>
       </TouchableOpacity>
 

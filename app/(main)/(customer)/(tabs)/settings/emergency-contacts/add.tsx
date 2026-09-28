@@ -108,7 +108,7 @@ export default function AddEmergencyContact() {
           accessibilityLabel={t('emergency_contacts.a11y_go_back')}
           onPress={() => router.back()}
           hitSlop={8}
-        >
+         testID="customer.settings.emergency-contacts.add.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -123,7 +123,7 @@ export default function AddEmergencyContact() {
           accessibilityLabel={t('emergency_contacts.a11y_toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
-        >
+         testID="customer.settings.emergency-contacts.add.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={24} color={textPrimary} />
         </TouchableOpacity>
       </View>
@@ -145,7 +145,7 @@ export default function AddEmergencyContact() {
           onChangeText={setName}
           autoCapitalize="words"
           autoCorrect={false}
-        />
+         testID="customer.settings.emergency-contacts.add.set-name"/>
 
         <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('emergency_contacts.phone')}</Text>
         <View style={styles.phoneRow}>
@@ -168,7 +168,7 @@ export default function AddEmergencyContact() {
             onChangeText={setPhone}
             keyboardType="phone-pad"
             autoCorrect={false}
-          />
+           testID="customer.settings.emergency-contacts.add.set-phone"/>
         </View>
         {phone.length > 0 && !phoneValid ? (
           <Text style={[styles.helperText, { color: textSecondary }]}>
@@ -195,7 +195,7 @@ export default function AddEmergencyContact() {
                 ]}
                 onPress={() => setRelationship(selected ? "" : rel)}
                 activeOpacity={0.8}
-              >
+               testID="customer.settings.emergency-contacts.add.set-relationship">
                 <Text
                   style={[
                     styles.chipText,
@@ -218,7 +218,7 @@ export default function AddEmergencyContact() {
               style={[styles.retryButton, { borderColor: colors.danger }]}
               onPress={handleSave}
               disabled={saving || !formValid}
-            >
+             testID="customer.settings.emergency-contacts.add.handle-save">
               <Text style={[styles.retryText, { color: colors.danger }]}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
@@ -235,7 +235,7 @@ export default function AddEmergencyContact() {
           onPress={handleSave}
           disabled={!formValid || saving}
           activeOpacity={0.8}
-        >
+         testID="customer.settings.emergency-contacts.add.handle-save-2">
           {saving ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (

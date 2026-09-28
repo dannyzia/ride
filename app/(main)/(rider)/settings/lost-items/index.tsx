@@ -184,7 +184,7 @@ export default function DriverLostItems() {
                 backgroundColor:
                   submittingId === item.id ? colors.borderDark : colors.primary,
               }}
-            >
+             testID="rider.settings.lost-items.respond">
               {submittingId === item.id ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
@@ -209,7 +209,7 @@ export default function DriverLostItems() {
                 borderColor: colors.danger,
                 opacity: submittingId === item.id ? 0.5 : 1,
               }}
-            >
+             testID="rider.settings.lost-items.respond-2">
               <Ionicons name="close-circle" size={16} color={colors.danger} />
               <Text
                 className="text-[13px] font-JakartaBold"
@@ -231,7 +231,7 @@ export default function DriverLostItems() {
               backgroundColor:
                 submittingId === item.id ? colors.borderDark : colors.primary,
             }}
-          >
+           testID="rider.settings.lost-items.respond-3">
             {submittingId === item.id ? (
               <ActivityIndicator size="small" color={colors.white} />
             ) : (
@@ -259,7 +259,7 @@ export default function DriverLostItems() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="mr-[12px] p-[4px]"
-        >
+         testID="rider.settings.lost-items.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -290,7 +290,7 @@ export default function DriverLostItems() {
           >
             {error}
           </Text>
-          <TouchableOpacity onPress={fetchItems} className="mt-3">
+          <TouchableOpacity onPress={fetchItems} className="mt-3" testID="rider.settings.lost-items.fetch-items">
             <Text
               className="text-[14px] font-JakartaBold"
               style={{ color: colors.primary }}

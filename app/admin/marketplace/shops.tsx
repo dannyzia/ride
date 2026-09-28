@@ -66,7 +66,7 @@ function ShopActions({ shop, onStatusChange }: { shop: ShopRow; onStatusChange: 
             { text: "Suspend", style: "destructive", onPress: () => toggleStatus("suspended") },
           ])}
           style={{ backgroundColor: "#F9731620", borderWidth: 1, borderColor: "#F9731640", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}
-        >
+         testID="admin.marketplace.shops.toggle-status">
           <Text style={{ color: "#F97316", fontFamily: "Jakarta-SemiBold", fontSize: 11 }}>Suspend</Text>
         </Pressable>
       )}
@@ -74,7 +74,7 @@ function ShopActions({ shop, onStatusChange }: { shop: ShopRow; onStatusChange: 
         <Pressable
           onPress={() => toggleStatus("active")}
           style={{ backgroundColor: "#0CC25F20", borderWidth: 1, borderColor: "#0CC25F40", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}
-        >
+         testID="admin.marketplace.shops.toggle-status-2">
           <Text style={{ color: "#0CC25F", fontFamily: "Jakarta-SemiBold", fontSize: 11 }}>Restore</Text>
         </Pressable>
       )}
@@ -151,7 +151,7 @@ export default function MarketplaceShops() {
             key={s}
             onPress={() => { setStatusFilter(s); setPage(1); }}
             style={{ backgroundColor: statusFilter === s ? colors.adminAccent : colors.darkSecondary, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: statusFilter === s ? colors.adminAccent : "#2A2D35" }}
-          >
+           testID="admin.marketplace.shops.set-status-filter">
             <Text style={{ color: statusFilter === s ? colors.darkSurface : colors.textSecondaryDark, fontFamily: statusFilter === s ? "Jakarta-SemiBold" : "Jakarta-Regular", fontSize: 11 }}>
               {s || "All"}
             </Text>

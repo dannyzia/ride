@@ -108,7 +108,7 @@ export default function DriverFAQ() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="mr-[12px] p-[4px]"
-        >
+         testID="rider.faq.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -139,7 +139,7 @@ export default function DriverFAQ() {
           >
             {error}
           </Text>
-          <TouchableOpacity onPress={fetchFaqs} className="mt-3">
+          <TouchableOpacity onPress={fetchFaqs} className="mt-3" testID="rider.faq.fetch-faqs">
             <Text
               className="text-[14px] font-JakartaBold"
               style={{ color: colors.primary }}
@@ -168,9 +168,9 @@ export default function DriverFAQ() {
                 placeholderTextColor={textSecondary}
                 value={search}
                 onChangeText={setSearch}
-              />
+               testID="rider.faq.set-search"/>
               {search.length > 0 && (
-                <TouchableOpacity onPress={() => setSearch("")}>
+                <TouchableOpacity onPress={() => setSearch("")} testID="rider.faq.set-search-2">
                   <Ionicons
                     name="close-circle"
                     size={18}
@@ -199,7 +199,7 @@ export default function DriverFAQ() {
                   borderWidth: 1,
                   borderColor: !selectedCategory ? colors.primary : borderColor,
                 }}
-              >
+               testID="rider.faq.set-selected-category">
                 <Text
                   className="text-[12px] font-JakartaSemiBold"
                   style={{
@@ -221,7 +221,7 @@ export default function DriverFAQ() {
                       borderWidth: 1,
                       borderColor: active ? colors.primary : borderColor,
                     }}
-                  >
+                   testID="rider.faq.set-selected-category-2">
                     <Text
                       className="text-[12px] font-JakartaSemiBold"
                       style={{ color: active ? colors.white : textPrimary }}
@@ -269,7 +269,7 @@ export default function DriverFAQ() {
                       : { backgroundColor: surfaceBg, borderColor }
                   }
                   onPress={() => toggle(i)}
-                >
+                 testID="rider.faq.toggle-el">
                   <View className="flex-row justify-between items-center">
                     <Text
                       className="text-[14px] font-JakartaBold flex-1 mr-2"

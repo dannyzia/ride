@@ -198,7 +198,7 @@ function OptionPickerModal({
           accessibilityLabel="Close picker"
           style={{ flex: 1 }}
           onPress={onClose}
-        />
+         testID="rider.onboarding.on-close"/>
         <View
           style={{
             maxHeight: "60%",
@@ -230,7 +230,7 @@ function OptionPickerModal({
               accessibilityRole="button"
               accessibilityLabel="Close picker"
               onPress={onClose}
-            >
+             testID="rider.onboarding.on-close-2">
               <Ionicons name="close" size={22} color={textSecondary} />
             </TouchableOpacity>
           </View>
@@ -256,7 +256,7 @@ function OptionPickerModal({
                     onSelect(item.value);
                     onClose();
                   }}
-                >
+                 testID="rider.onboarding.on-select">
                   <Text
                     style={{
                       fontFamily: selected ? "Jakarta-SemiBold" : "Jakarta-Regular",
@@ -305,7 +305,7 @@ function BodyTypePickerModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
-        <TouchableOpacity style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} />
+        <TouchableOpacity style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel="Close" onPress={onClose}  testID="rider.onboarding.on-close-3"/>
         <View
           style={{
             maxHeight: "70%",
@@ -320,7 +320,7 @@ function BodyTypePickerModal({
             <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 17, color: textPrimary }}>
               Select Body Type
             </Text>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close" onPress={onClose}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} testID="rider.onboarding.on-close-4">
               <Ionicons name="close" size={22} color={textSecondary} />
             </TouchableOpacity>
           </View>
@@ -349,7 +349,7 @@ function BodyTypePickerModal({
                         borderRadius: radii.md,
                         backgroundColor: selected ? colors.primary + "1A" : "transparent",
                       }}
-                    >
+                     testID="rider.onboarding.on-select-2">
                       <Ionicons
                         name={selected ? "checkmark-circle" : "ellipse-outline"}
                         size={22}
@@ -483,7 +483,7 @@ function ClassificationModal({
               alignItems: "center",
               width: "100%",
             }}
-          >
+           testID="rider.onboarding.on-dismiss">
             <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: colors.white }}>Continue</Text>
           </TouchableOpacity>
         </View>
@@ -524,7 +524,7 @@ function ManualReviewRequiredModal({
             accessibilityLabel="OK"
             onPress={onDismiss}
             style={{ marginTop: spacing.xl, paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radii.pill, backgroundColor: colors.primary, minHeight: 56, justifyContent: "center", alignItems: "center", width: "100%" }}
-          >
+           testID="rider.onboarding.on-dismiss-2">
             <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: colors.white }}>{"OK"} / {"ঠিক আছে"}</Text>
           </TouchableOpacity>
         </View>
@@ -560,11 +560,11 @@ function ClassificationErrorModal({
           </Text>
           <View style={{ flexDirection: "row", gap: spacing.md, marginTop: spacing.xl, width: "100%" }}>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="Back to Form" onPress={onBack}
-              style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, borderWidth: 1.5, borderColor: textSecondary, minHeight: 56, justifyContent: "center", alignItems: "center" }}>
+              style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, borderWidth: 1.5, borderColor: textSecondary, minHeight: 56, justifyContent: "center", alignItems: "center" }} testID="rider.onboarding.on-back">
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: textSecondary }}>Back to Form</Text>
             </TouchableOpacity>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="Retry" onPress={onRetry}
-              style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, backgroundColor: colors.primary, minHeight: 56, justifyContent: "center", alignItems: "center" }}>
+              style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, backgroundColor: colors.primary, minHeight: 56, justifyContent: "center", alignItems: "center" }} testID="rider.onboarding.on-retry">
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: colors.white }}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -1058,7 +1058,7 @@ export default function OnboardingWizard() {
           accessibilityLabel="Go back"
           onPress={goBack}
           style={{ padding: spacing.xs }}
-        >
+         testID="rider.onboarding.go-back">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -1077,7 +1077,7 @@ export default function OnboardingWizard() {
           accessibilityLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           style={{ width: 32, height: 32, borderRadius: radii.md, alignItems: "center", justifyContent: "center" }}
-        >
+         testID="rider.onboarding.set-theme">
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
         </TouchableOpacity>
       </View>
@@ -1110,7 +1110,7 @@ export default function OnboardingWizard() {
               placeholderTextColor={textSecondary}
               value={name}
               onChangeText={setName}
-            />
+             testID="rider.onboarding.set-name"/>
             <Text style={{ ...labelStyle, fontSize: 16, marginTop: spacing.xl }}>Profile photo</Text>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <TouchableOpacity
@@ -1118,14 +1118,14 @@ export default function OnboardingWizard() {
                 accessibilityLabel="Pick profile photo from gallery"
                 onPress={pickProfilePhoto}
                 style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: surfaceBg, borderWidth: 1, borderColor, alignItems: "center", justifyContent: "center", overflow: "hidden" }}
-              >
+               testID="rider.onboarding.pick-profile-photo">
                 {photoLocalUri || photoUrl ? (
                   <Image source={{ uri: photoLocalUri ?? photoUrl ?? undefined }} style={{ width: 96, height: 96, borderRadius: 48 }} resizeMode="cover" />
                 ) : (
                   <Ionicons name="person" size={36} color={textSecondary} />
                 )}
               </TouchableOpacity>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Pick profile photo from gallery" onPress={pickProfilePhoto} style={{ marginLeft: spacing.lg }}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Pick profile photo from gallery" onPress={pickProfilePhoto} style={{ marginLeft: spacing.lg }} testID="rider.onboarding.pick-profile-photo-2">
                 <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: colors.primary }}>Choose from gallery</Text>
               </TouchableOpacity>
             </View>
@@ -1142,7 +1142,7 @@ export default function OnboardingWizard() {
               accessibilityLabel="Select body type"
               style={{ ...inputStyle, flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 56 }}
               onPress={() => setBodyTypeModalVisible(true)}
-            >
+             testID="rider.onboarding.set-body-type-modal-visible">
               <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: bodyType ? textPrimary : textSecondary }}>
                 {bodyType ? BODY_TYPE_DISPLAY[bodyType].en : "Select body type"}
               </Text>
@@ -1155,13 +1155,13 @@ export default function OnboardingWizard() {
                 <Text style={labelStyle}>Brand</Text>
                 {brand === OTHERS ? (
                   <View>
-                    <TextInput accessibilityLabel="Vehicle brand" style={inputStyle} placeholder="Enter brand (e.g. Toyota)" placeholderTextColor={textSecondary} value={brandText} onChangeText={setBrandText} autoCapitalize="words" />
-                    <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose brand from list instead" onPress={() => setBrand(null)} style={{ marginTop: spacing.sm }}>
+                    <TextInput accessibilityLabel="Vehicle brand" style={inputStyle} placeholder="Enter brand (e.g. Toyota)" placeholderTextColor={textSecondary} value={brandText} onChangeText={setBrandText} autoCapitalize="words"  testID="rider.onboarding.set-brand-text"/>
+                    <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose brand from list instead" onPress={() => setBrand(null)} style={{ marginTop: spacing.sm }} testID="rider.onboarding.set-brand">
                       <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 13, color: colors.primary }}>Choose from list instead</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select vehicle brand" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("brand")}>
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select vehicle brand" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("brand")} testID="rider.onboarding.set-picker-modal">
                     <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: brand ? textPrimary : textSecondary }}>{brand ?? "Select brand"}</Text>
                   </TouchableOpacity>
                 )}
@@ -1171,15 +1171,15 @@ export default function OnboardingWizard() {
                     <Text style={labelStyle}>Model</Text>
                     {model === OTHERS || brand === OTHERS ? (
                       <View>
-                        <TextInput accessibilityLabel="Vehicle model" style={inputStyle} placeholder="Enter model (e.g. Premio)" placeholderTextColor={textSecondary} value={modelText} onChangeText={setModelText} autoCapitalize="words" />
+                        <TextInput accessibilityLabel="Vehicle model" style={inputStyle} placeholder="Enter model (e.g. Premio)" placeholderTextColor={textSecondary} value={modelText} onChangeText={setModelText} autoCapitalize="words"  testID="rider.onboarding.set-model-text"/>
                         {brand !== OTHERS && (
-                          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose model from list instead" onPress={() => setModel(null)} style={{ marginTop: spacing.sm }}>
+                          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose model from list instead" onPress={() => setModel(null)} style={{ marginTop: spacing.sm }} testID="rider.onboarding.set-model">
                             <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 13, color: colors.primary }}>Choose from list instead</Text>
                           </TouchableOpacity>
                         )}
                       </View>
                     ) : (
-                      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select vehicle model" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("model")}>
+                      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select vehicle model" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("model")} testID="rider.onboarding.set-picker-modal-2">
                         <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: model ? textPrimary : textSecondary }}>{model ?? "Select model"}</Text>
                       </TouchableOpacity>
                     )}
@@ -1193,7 +1193,7 @@ export default function OnboardingWizard() {
                 )}
 
                 <Text style={{ ...labelStyle, marginTop: spacing.lg }}>BRTA Registration Year</Text>
-                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select BRTA registration year" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("year")}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select BRTA registration year" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("year")} testID="rider.onboarding.set-picker-modal-3">
                   <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: regYear != null ? textPrimary : textSecondary }}>
                     {regYear != null ? String(regYear) : "Select year"}
                   </Text>
@@ -1218,7 +1218,7 @@ export default function OnboardingWizard() {
                   maxLength={5}
                   value={engineCc}
                   onChangeText={(t) => setEngineCc(t.replace(/[^0-9]/g, ""))}
-                />
+                 testID="rider.onboarding.set-engine-cc"/>
                 <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: textSecondary, marginTop: spacing.xs }}>
                   From your BRTA registration document
                 </Text>
@@ -1238,7 +1238,7 @@ export default function OnboardingWizard() {
                   maxLength={2}
                   value={seats}
                   onChangeText={(t) => setSeats(t.replace(/[^0-9]/g, ""))}
-                />
+                 testID="rider.onboarding.set-seats"/>
                 {seats.length > 0 && !seatsValid && (
                   <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: colors.danger, marginTop: spacing.xs }}>
                     {parsedSeats <= 0 ? "Must have at least 1 seat" : "Please check seat count"}
@@ -1259,7 +1259,7 @@ export default function OnboardingWizard() {
                   autoCapitalize="characters"
                   value={plate}
                   onChangeText={setPlate}
-                />
+                 testID="rider.onboarding.set-plate"/>
               </View>
             )}
 
@@ -1292,7 +1292,7 @@ export default function OnboardingWizard() {
                 accessibilityLabel="Skip vehicle step, use existing vehicle"
                 onPress={skipVehicleStep}
                 style={{ marginTop: spacing.xl, alignSelf: "center" }}
-              >
+               testID="rider.onboarding.skip-vehicle-step">
                 <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: colors.primary }}>
                   Skip \u2014 I already have a vehicle on file
                 </Text>
@@ -1334,7 +1334,7 @@ export default function OnboardingWizard() {
               {(["yes", "no"] as const).map((ans) => {
                 const selected = legacyAnswer === ans;
                 return (
-                  <TouchableOpacity key={ans} accessibilityRole="button" accessibilityLabel={ans === "yes" ? "Yes" : "No"} onPress={() => setLegacyAnswer(ans)} style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.md, borderWidth: 1.5, borderColor: selected ? colors.primary : borderColor, backgroundColor: selected ? colors.primary + "1A" : "transparent", alignItems: "center" }}>
+                  <TouchableOpacity key={ans} accessibilityRole="button" accessibilityLabel={ans === "yes" ? "Yes" : "No"} onPress={() => setLegacyAnswer(ans)} style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.md, borderWidth: 1.5, borderColor: selected ? colors.primary : borderColor, backgroundColor: selected ? colors.primary + "1A" : "transparent", alignItems: "center" }} testID="rider.onboarding.set-legacy-answer">
                     <Text style={{ fontFamily: selected ? "Jakarta-SemiBold" : "Jakarta-Regular", fontSize: 15, color: selected ? colors.primary : textPrimary }}>{ans === "yes" ? "Yes" : "No"}</Text>
                   </TouchableOpacity>
                 );
@@ -1364,7 +1364,7 @@ export default function OnboardingWizard() {
               maxLength={11}
               value={bkash}
               onChangeText={(t) => { setBkash(t.replace(/[^0-9]/g, "")); setBkashTouched(true); }}
-            />
+             testID="rider.onboarding.set-bkash"/>
             {bkashTouched && !bkashValid && (
               <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 13, color: colors.danger, marginTop: spacing.xs }}>
                 Enter a valid bKash number (11 digits starting with 01)
@@ -1397,7 +1397,7 @@ export default function OnboardingWizard() {
                 accessibilityLabel={item}
                 onPress={() => setConsent((prev) => { const next = [...prev]; next[i] = !next[i]; return next; })}
                 style={{ flexDirection: "row", alignItems: "flex-start", backgroundColor: surfaceBg, borderWidth: 1, borderColor, borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.sm }}
-              >
+               testID="rider.onboarding.set-consent">
                 <Ionicons name={consent[i] ? "checkbox" : "square-outline"} size={20} color={consent[i] ? colors.primary : textSecondary} />
                 <Text style={{ flex: 1, fontFamily: "Jakarta-Regular", fontSize: 13, color: textPrimary, marginLeft: spacing.md, lineHeight: 19 }}>{item}</Text>
               </TouchableOpacity>
@@ -1412,7 +1412,7 @@ export default function OnboardingWizard() {
       {/* Footer navigation */}
       <View style={{ flexDirection: "row", gap: spacing.md, padding: spacing.lg, borderTopWidth: 1, borderTopColor: borderColor, backgroundColor: bg }}>
         {step > 1 && (
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Previous step" onPress={goBack} style={{ paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radii.pill, borderWidth: 1.5, borderColor, alignItems: "center", justifyContent: "center" }}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Previous step" onPress={goBack} style={{ paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radii.pill, borderWidth: 1.5, borderColor, alignItems: "center", justifyContent: "center" }} testID="rider.onboarding.go-back-2">
             <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: textSecondary }}>Back</Text>
           </TouchableOpacity>
         )}
@@ -1422,7 +1422,7 @@ export default function OnboardingWizard() {
           onPress={goNext}
           disabled={!canContinue(step) || stepSubmitting || finishing}
           style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, backgroundColor: canContinue(step) && !stepSubmitting && !finishing ? colors.primary : isDark ? colors.textDisabledDark : colors.textDisabledLight, alignItems: "center", justifyContent: "center", minHeight: 56 }}
-        >
+         testID="rider.onboarding.go-next">
           {stepSubmitting || finishing ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (

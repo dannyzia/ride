@@ -217,7 +217,7 @@ export default function VerificationScreen() {
             }}
             accessibilityRole="button"
             accessibilityLabel="Retry loading verification status"
-          >
+           testID="rider.verification.handle-refresh">
             <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 14, color: colors.white }}>
               Retry
             </Text>
@@ -525,7 +525,7 @@ export default function VerificationScreen() {
               }}
               accessibilityRole="button"
               accessibilityLabel="Go to home screen"
-            >
+             testID="rider.verification.handle-go-home">
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: colors.white }}>
                 Go to Home
               </Text>
@@ -543,7 +543,7 @@ export default function VerificationScreen() {
               }}
               accessibilityRole="button"
               accessibilityLabel="Re-upload documents"
-            >
+             testID="rider.verification.handle-reupload">
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: colors.white }}>
                 {isRejected ? "Re-upload Documents" : "Contact Support"}
               </Text>
@@ -563,7 +563,7 @@ export default function VerificationScreen() {
               disabled={refreshing}
               accessibilityRole="button"
               accessibilityLabel="Refresh verification status"
-            >
+             testID="rider.verification.handle-refresh-2">
               {refreshing ? (
                 <ActivityIndicator size={20} color={colors.white} />
               ) : (
@@ -586,7 +586,7 @@ export default function VerificationScreen() {
               }}
               accessibilityRole="button"
               accessibilityLabel="Contact support"
-            >
+             testID="rider.verification.handle-contact-support">
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: textPrimary }}>
                 Contact Support
               </Text>
@@ -605,7 +605,7 @@ export default function VerificationScreen() {
               }}
               accessibilityRole="button"
               accessibilityLabel="Contact support"
-            >
+             testID="rider.verification.handle-contact-support-2">
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: textPrimary }}>
                 Contact Support
               </Text>

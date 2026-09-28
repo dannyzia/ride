@@ -45,9 +45,9 @@ export default function TaxDashboard() {
     <AdminShell title="Tax Dashboard" subtitle="Daily tax summary & rate configuration">
       <ScrollView>
         <View style={styles.dateRow}>
-          <TextInput style={styles.dateInput} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
-          <Pressable style={styles.loadBtn} onPress={fetchData}><Text style={styles.loadBtnText}>Refresh</Text></Pressable>
-          <Pressable style={styles.csvBtn} onPress={exportCsv}><Text style={styles.csvBtnText}>Export CSV</Text></Pressable>
+          <TextInput style={styles.dateInput} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD"  testID="admin.tax-dashboard.set-date"/>
+          <Pressable style={styles.loadBtn} onPress={fetchData} testID="admin.tax-dashboard.fetch-data"><Text style={styles.loadBtnText}>Refresh</Text></Pressable>
+          <Pressable style={styles.csvBtn} onPress={exportCsv} testID="admin.tax-dashboard.export-csv"><Text style={styles.csvBtnText}>Export CSV</Text></Pressable>
         </View>
         {loading ? <ActivityIndicator size="large" color={colors.adminAccent} style={{ marginTop: 40 }} /> : (
           <>
@@ -77,10 +77,10 @@ export default function TaxDashboard() {
                   <Text style={styles.rateName}>{r.name}</Text>
                   <Text style={styles.rateCode}>{r.code}</Text>
                 </View>
-                <TextInput style={styles.rateInput} value={String(parseFloat(r.rate_percent || "0"))} onChangeText={(v) => updateRate(r.id, v)} keyboardType="decimal-pad" />
+                <TextInput style={styles.rateInput} value={String(parseFloat(r.rate_percent || "0"))} onChangeText={(v) => updateRate(r.id, v)} keyboardType="decimal-pad"  testID="admin.tax-dashboard.update-rate"/>
                 <Text style={styles.ratePercent}>%</Text>
                 <Pressable onPress={() => toggleRate(r.id, r.is_active)}
-                  style={[styles.toggleBtn, { backgroundColor: r.is_active ? colors.primary : colors.darkSecondary }]}>
+                  style={[styles.toggleBtn, { backgroundColor: r.is_active ? colors.primary : colors.darkSecondary }]} testID="admin.tax-dashboard.toggle-rate">
                   <Text style={{ color: "#FFF", fontSize: 11, fontFamily: "Jakarta-Bold" }}>{r.is_active ? "ON" : "OFF"}</Text>
                 </Pressable>
               </View>

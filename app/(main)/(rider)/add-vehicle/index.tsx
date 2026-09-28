@@ -106,11 +106,11 @@ function OptionPickerModal({ visible, title, options, selectedValue, onSelect, o
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close picker" style={{ flex: 1 }} onPress={onClose} />
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close picker" style={{ flex: 1 }} onPress={onClose}  testID="rider.add-vehicle.on-close"/>
         <View style={{ maxHeight: "60%", backgroundColor: surfaceBg, borderTopLeftRadius: radii["2xl"], borderTopRightRadius: radii["2xl"], padding: spacing.lg, paddingBottom: spacing["2xl"] }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>
             <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 17, color: textPrimary }}>{title}</Text>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close picker" onPress={onClose}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close picker" onPress={onClose} testID="rider.add-vehicle.on-close-2">
               <Ionicons name="close" size={22} color={textSecondary} />
             </TouchableOpacity>
           </View>
@@ -125,7 +125,7 @@ function OptionPickerModal({ visible, title, options, selectedValue, onSelect, o
                   accessibilityLabel={item.label}
                   style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: spacing.md, paddingHorizontal: spacing.sm, borderRadius: radii.md, backgroundColor: selected ? colors.primary + "1A" : "transparent" }}
                   onPress={() => { onSelect(item.value); onClose(); }}
-                >
+                 testID="rider.add-vehicle.on-select">
                   <Text style={{ fontFamily: selected ? "Jakarta-SemiBold" : "Jakarta-Regular", fontSize: 15, color: selected ? colors.primary : textPrimary }}>{item.label}</Text>
                   {selected && <Ionicons name="checkmark" size={18} color={colors.primary} />}
                 </TouchableOpacity>
@@ -153,11 +153,11 @@ function BodyTypePickerModal({ visible, selectedValue, onSelect, onClose }: {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
-        <TouchableOpacity style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} />
+        <TouchableOpacity style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel="Close" onPress={onClose}  testID="rider.add-vehicle.on-close-3"/>
         <View style={{ maxHeight: "70%", backgroundColor: surfaceBg, borderTopLeftRadius: radii["2xl"], borderTopRightRadius: radii["2xl"], padding: spacing.lg, paddingBottom: spacing["2xl"] }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>
             <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 17, color: textPrimary }}>Select Body Type</Text>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close" onPress={onClose}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} testID="rider.add-vehicle.on-close-4">
               <Ionicons name="close" size={22} color={textSecondary} />
             </TouchableOpacity>
           </View>
@@ -173,7 +173,7 @@ function BodyTypePickerModal({ visible, selectedValue, onSelect, onClose }: {
                     <TouchableOpacity key={item.value} accessibilityRole="radio" accessibilityState={{ checked: selected }} accessibilityLabel={`${item.en} \u2014 ${item.bn}`}
                       onPress={() => { onSelect(item.value); onClose(); }}
                       style={{ flexDirection: "row", alignItems: "center", paddingVertical: spacing.md, paddingHorizontal: spacing.sm, borderRadius: radii.md, backgroundColor: selected ? colors.primary + "1A" : "transparent" }}
-                    >
+                     testID="rider.add-vehicle.on-select-2">
                       <Ionicons name={selected ? "checkmark-circle" : "ellipse-outline"} size={22} color={selected ? colors.primary : textSecondary} />
                       <View style={{ marginLeft: spacing.md, flex: 1 }}>
                         <Text style={{ fontFamily: selected ? "Jakarta-SemiBold" : "Jakarta-Regular", fontSize: 15, color: selected ? colors.primary : textPrimary }}>{item.en}</Text>
@@ -230,7 +230,7 @@ function ClassificationModal({ result, brand, model, onNavigate }: {
             )}
           </Text>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Continue" onPress={onNavigate}
-            style={{ marginTop: spacing.xl, paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radii.pill, backgroundColor: colors.primary, minHeight: 56, justifyContent: "center", alignItems: "center", width: "100%" }}>
+            style={{ marginTop: spacing.xl, paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radii.pill, backgroundColor: colors.primary, minHeight: 56, justifyContent: "center", alignItems: "center", width: "100%" }} testID="rider.add-vehicle.on-navigate">
             <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: colors.white }}>Continue</Text>
           </TouchableOpacity>
         </View>
@@ -263,7 +263,7 @@ function ManualReviewRequiredModal({ visible, onDismiss }: {
             {"আপনার গাড়ির তথ্য পর্যালোচনার জন্য জমা দেওয়া হয়েছে। নিবন্ধন সম্পন্ন করতে আমাদের টিম আপনার সাথে যোগাযোগ করবে।"}
           </Text>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="OK" onPress={onDismiss}
-            style={{ marginTop: spacing.xl, paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radii.pill, backgroundColor: colors.primary, minHeight: 56, justifyContent: "center", alignItems: "center", width: "100%" }}>
+            style={{ marginTop: spacing.xl, paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderRadius: radii.pill, backgroundColor: colors.primary, minHeight: 56, justifyContent: "center", alignItems: "center", width: "100%" }} testID="rider.add-vehicle.on-dismiss">
             <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: colors.white }}>{"OK"} / {"ঠিক আছে"}</Text>
           </TouchableOpacity>
         </View>
@@ -293,11 +293,11 @@ function ClassificationErrorModal({ visible, onRetry, onBack }: {
           </Text>
           <View style={{ flexDirection: "row", gap: spacing.md, marginTop: spacing.xl, width: "100%" }}>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="Back to Form" onPress={onBack}
-              style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, borderWidth: 1.5, borderColor: textSecondary, minHeight: 56, justifyContent: "center", alignItems: "center" }}>
+              style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, borderWidth: 1.5, borderColor: textSecondary, minHeight: 56, justifyContent: "center", alignItems: "center" }} testID="rider.add-vehicle.on-back">
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: textSecondary }}>Back to Form</Text>
             </TouchableOpacity>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="Retry" onPress={onRetry}
-              style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, backgroundColor: colors.primary, minHeight: 56, justifyContent: "center", alignItems: "center" }}>
+              style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.pill, backgroundColor: colors.primary, minHeight: 56, justifyContent: "center", alignItems: "center" }} testID="rider.add-vehicle.on-retry">
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: colors.white }}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -458,7 +458,7 @@ export default function AddVehicle() {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={{ padding: spacing.xs }}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={{ padding: spacing.xs }} testID="rider.add-vehicle.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, textAlign: "center", fontFamily: "Jakarta-Bold", fontSize: 17, color: textPrimary }}>Add Vehicle</Text>
@@ -470,7 +470,7 @@ export default function AddVehicle() {
         <Text style={{ ...labelStyle, fontSize: 16 }}>Body Type</Text>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select body type"
           style={{ ...inputStyle, flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 56 }}
-          onPress={() => setBodyTypeModalVisible(true)}>
+          onPress={() => setBodyTypeModalVisible(true)} testID="rider.add-vehicle.set-body-type-modal-visible">
           <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: bodyType ? textPrimary : textSecondary }}>
             {bodyType ? BODY_TYPE_DISPLAY[bodyType].en : "Select body type"}
           </Text>
@@ -483,13 +483,13 @@ export default function AddVehicle() {
             <Text style={labelStyle}>Brand</Text>
             {brand === OTHERS ? (
               <View>
-                <TextInput accessibilityLabel="Vehicle brand" style={inputStyle} placeholder="Enter brand (e.g. Toyota)" placeholderTextColor={textSecondary} value={brandText} onChangeText={setBrandText} autoCapitalize="words" />
-                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose brand from list instead" onPress={() => setBrand(null)} style={{ marginTop: spacing.sm }}>
+                <TextInput accessibilityLabel="Vehicle brand" style={inputStyle} placeholder="Enter brand (e.g. Toyota)" placeholderTextColor={textSecondary} value={brandText} onChangeText={setBrandText} autoCapitalize="words"  testID="rider.add-vehicle.set-brand-text"/>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose brand from list instead" onPress={() => setBrand(null)} style={{ marginTop: spacing.sm }} testID="rider.add-vehicle.set-brand">
                   <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 13, color: colors.primary }}>Choose from list instead</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select vehicle brand" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("brand")}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select vehicle brand" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("brand")} testID="rider.add-vehicle.set-picker-modal">
                 <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: brand ? textPrimary : textSecondary }}>{brand ?? "Select brand"}</Text>
               </TouchableOpacity>
             )}
@@ -498,15 +498,15 @@ export default function AddVehicle() {
                 <Text style={labelStyle}>Model</Text>
                 {model === OTHERS || brand === OTHERS ? (
                   <View>
-                    <TextInput accessibilityLabel="Vehicle model" style={inputStyle} placeholder="Enter model (e.g. Premio)" placeholderTextColor={textSecondary} value={modelText} onChangeText={setModelText} autoCapitalize="words" />
+                    <TextInput accessibilityLabel="Vehicle model" style={inputStyle} placeholder="Enter model (e.g. Premio)" placeholderTextColor={textSecondary} value={modelText} onChangeText={setModelText} autoCapitalize="words"  testID="rider.add-vehicle.set-model-text"/>
                     {brand !== OTHERS && (
-                      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose model from list instead" onPress={() => setModel(null)} style={{ marginTop: spacing.sm }}>
+                      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose model from list instead" onPress={() => setModel(null)} style={{ marginTop: spacing.sm }} testID="rider.add-vehicle.set-model">
                         <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 13, color: colors.primary }}>Choose from list instead</Text>
                       </TouchableOpacity>
                     )}
                   </View>
                 ) : (
-                  <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select vehicle model" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("model")}>
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select vehicle model" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("model")} testID="rider.add-vehicle.set-picker-modal-2">
                     <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: model ? textPrimary : textSecondary }}>{model ?? "Select model"}</Text>
                   </TouchableOpacity>
                 )}
@@ -518,7 +518,7 @@ export default function AddVehicle() {
               </Text>
             )}
             <Text style={{ ...labelStyle, marginTop: spacing.lg }}>BRTA Registration Year</Text>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select BRTA registration year" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("year")}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Select BRTA registration year" style={{ ...inputStyle, justifyContent: "center" }} onPress={() => setPickerModal("year")} testID="rider.add-vehicle.set-picker-modal-3">
               <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 15, color: regYear != null ? textPrimary : textSecondary }}>
                 {regYear != null ? String(regYear) : "Select year"}
               </Text>
@@ -535,7 +535,7 @@ export default function AddVehicle() {
             <TextInput accessibilityLabel="Engine CC" style={{ ...inputStyle, minHeight: 56 }}
               placeholder="e.g., 996" placeholderTextColor={textSecondary}
               keyboardType="numeric" maxLength={5}
-              value={engineCc} onChangeText={(t) => setEngineCc(t.replace(/[^0-9]/g, ""))} />
+              value={engineCc} onChangeText={(t) => setEngineCc(t.replace(/[^0-9]/g, ""))}  testID="rider.add-vehicle.set-engine-cc"/>
             <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: textSecondary, marginTop: spacing.xs }}>
               From your BRTA registration document
             </Text>
@@ -549,7 +549,7 @@ export default function AddVehicle() {
             <TextInput accessibilityLabel="Number of seats" style={{ ...inputStyle, minHeight: 56, borderColor: seats.length > 0 && !seatsValid ? colors.danger : borderColor }}
               placeholder="e.g., 4" placeholderTextColor={textSecondary}
               keyboardType="numeric" maxLength={2}
-              value={seats} onChangeText={(t) => setSeats(t.replace(/[^0-9]/g, ""))} />
+              value={seats} onChangeText={(t) => setSeats(t.replace(/[^0-9]/g, ""))}  testID="rider.add-vehicle.set-seats"/>
             {seats.length > 0 && !seatsValid && (
               <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: colors.danger, marginTop: spacing.xs }}>
                 {parsedSeats <= 0 ? "Must have at least 1 seat" : "Please check seat count"}
@@ -564,7 +564,7 @@ export default function AddVehicle() {
             <Text style={labelStyle}>Registration Plate</Text>
             <TextInput accessibilityLabel="Registration plate number" style={inputStyle}
               placeholder="e.g. DHAKA-METRO-KA-1234" placeholderTextColor={textSecondary}
-              autoCapitalize="characters" value={plate} onChangeText={setPlate} />
+              autoCapitalize="characters" value={plate} onChangeText={setPlate}  testID="rider.add-vehicle.set-plate"/>
           </View>
         )}
 
@@ -585,7 +585,7 @@ export default function AddVehicle() {
 
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Save vehicle"
           onPress={() => void handleSave()} disabled={!formValid || saving}
-          style={{ marginTop: spacing.xl, paddingVertical: spacing.md, borderRadius: radii.pill, backgroundColor: formValid && !saving ? colors.primary : isDark ? colors.textDisabledDark : colors.textDisabledLight, alignItems: "center", minHeight: 56, justifyContent: "center" }}>
+          style={{ marginTop: spacing.xl, paddingVertical: spacing.md, borderRadius: radii.pill, backgroundColor: formValid && !saving ? colors.primary : isDark ? colors.textDisabledDark : colors.textDisabledLight, alignItems: "center", minHeight: 56, justifyContent: "center" }} testID="rider.add-vehicle.handle-save">
           {saving ? <ActivityIndicator size="small" color={colors.white} /> : <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 15, color: colors.white }}>Save Vehicle</Text>}
         </TouchableOpacity>
       </ScrollView>
@@ -640,7 +640,7 @@ export default function AddVehicle() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.add-vehicle.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

@@ -94,7 +94,7 @@ export default function DueAmounts() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="mr-[12px] p-[4px]"
-        >
+         testID="rider.due-amounts.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -125,7 +125,7 @@ export default function DueAmounts() {
           >
             {error}
           </Text>
-          <TouchableOpacity onPress={() => fetchData()} className="mt-3">
+          <TouchableOpacity onPress={() => fetchData()} className="mt-3" testID="rider.due-amounts.fetch-data">
             <Text
               className="text-[14px] font-JakartaBold"
               style={{ color: colors.primary }}
@@ -199,7 +199,7 @@ export default function DueAmounts() {
                 className="rounded-full w-full py-[12px] items-center mt-3"
                 style={{ backgroundColor: colors.primary }}
                 onPress={() => router.push("/(main)/(rider)/packages")}
-              >
+               testID="rider.due-amounts.push-main">
                 <Text className="text-[15px] font-JakartaBold text-white">
                   Renew
                 </Text>
@@ -220,7 +220,7 @@ export default function DueAmounts() {
                 className="rounded-full w-full py-[12px] items-center mt-3"
                 style={{ backgroundColor: colors.primary }}
                 onPress={() => router.push("/(main)/(rider)/packages")}
-              >
+               testID="rider.due-amounts.push-main-2">
                 <Text className="text-[15px] font-JakartaBold text-white">
                   Browse Packages
                 </Text>

@@ -107,7 +107,7 @@ export default function SubscriptionCheckout() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.subscription-checkout.el-1">
           <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Checkout</Text>
@@ -121,7 +121,7 @@ export default function SubscriptionCheckout() {
         ) : planError ? (
           <View className="flex-1 items-center justify-center py-20">
             <Text className="text-[14px] font-Jakarta text-goDanger text-center mb-4">{planError}</Text>
-            <TouchableOpacity className="bg-goPrimary rounded-full px-[24px] py-[12px]" onPress={() => { setPlanLoading(true); setPlanError(""); }}>
+            <TouchableOpacity className="bg-goPrimary rounded-full px-[24px] py-[12px]" onPress={() => { setPlanLoading(true); setPlanError(""); }} testID="rider.subscription-checkout.set-plan-loading">
               <Text className="text-[16px] font-JakartaBold text-goWhite">Retry</Text>
             </TouchableOpacity>
           </View>
@@ -143,7 +143,7 @@ export default function SubscriptionCheckout() {
               className={`rounded-full w-full py-[16px] items-center mt-4 ${loading ? "bg-goBorderDark" : "bg-goPrimary"}`}
               onPress={handlePay}
               disabled={loading}
-            >
+             testID="rider.subscription-checkout.handle-pay">
               {loading ? (
                 <ActivityIndicator size={20} color="#FFFFFF" />
               ) : (
@@ -158,7 +158,7 @@ export default function SubscriptionCheckout() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.subscription-checkout.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

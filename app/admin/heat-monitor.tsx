@@ -123,7 +123,7 @@ export default function HeatMonitorScreen() {
           style={[styles.ghostBtn, refreshing && styles.ghostBtnDisabled]}
           onPress={() => fetchData(true)}
           disabled={refreshing}
-        >
+         testID="admin.heat-monitor.fetch-data">
           {refreshing ? (
             <ActivityIndicator color={colors.adminAccent} size="small" />
           ) : (

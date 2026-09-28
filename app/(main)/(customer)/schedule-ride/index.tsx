@@ -169,7 +169,7 @@ export default function ScheduleRide() {
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={t('schedule_ride.go_back')}
-        >
+         testID="customer.schedule-ride.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>
@@ -180,7 +180,7 @@ export default function ScheduleRide() {
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={t('schedule_ride.toggle_theme')}
-        >
+         testID="customer.schedule-ride.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={24}
@@ -236,7 +236,7 @@ export default function ScheduleRide() {
                     backgroundColor: isActive ? colors.primary : surfaceBg,
                   },
                 ]}
-              >
+               testID="customer.schedule-ride.set-vehicle-type">
                 <Text
                   style={[
                     styles.vehicleChipText,
@@ -292,7 +292,7 @@ export default function ScheduleRide() {
           disabled={!canSubmit}
           accessibilityRole="button"
           accessibilityLabel={t('schedule_ride.a11y_schedule')}
-        >
+         testID="customer.schedule-ride.handle-schedule">
           {requesting ? (
             <ActivityIndicator color={colors.white} />
           ) : (

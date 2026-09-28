@@ -481,7 +481,7 @@ export default function VehicleModelsScreen() {
         <Pressable
           style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
           onPress={() => openEdit(m)}
-        >
+         testID="admin.vehicle-models.open-edit">
           <Text style={styles.miniBtnText}>Edit</Text>
         </Pressable>
       ),
@@ -503,10 +503,10 @@ export default function VehicleModelsScreen() {
       subtitle="Reference DB for driver onboarding auto-suggest"
       actions={
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable style={styles.ghostBtn} onPress={fetchList}>
+          <Pressable style={styles.ghostBtn} onPress={fetchList} testID="admin.vehicle-models.fetch-list">
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={openCreate}>
+          <Pressable style={styles.primaryBtn} onPress={openCreate} testID="admin.vehicle-models.open-create">
             <Text style={styles.primaryBtnText}>+ New Model</Text>
           </Pressable>
         </View>
@@ -520,7 +520,7 @@ export default function VehicleModelsScreen() {
             placeholderTextColor={colors.textDisabledDark}
             value={search}
             onChangeText={setSearch}
-          />
+           testID="admin.vehicle-models.set-search"/>
         </View>
         <View style={styles.filterChipRow}>
           {typeFilterOptions.map((opt) => {
@@ -533,7 +533,7 @@ export default function VehicleModelsScreen() {
                   styles.filterChip,
                   selected && styles.filterChipActive,
                 ]}
-              >
+               testID="admin.vehicle-models.set-type-filter">
                 <Text
                   style={[
                     styles.filterChipText,
@@ -572,14 +572,14 @@ export default function VehicleModelsScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={closeModal}
               disabled={submitting}
-            >
+             testID="admin.vehicle-models.close-modal">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, styles.modalBtnPrimary]}
               onPress={handleSave}
               disabled={submitting}
-            >
+             testID="admin.vehicle-models.handle-save">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

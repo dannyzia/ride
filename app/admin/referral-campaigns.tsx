@@ -402,7 +402,7 @@ export default function ReferralCampaignsScreen() {
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
             onPress={() => openEdit(c)}
-          >
+           testID="admin.referral-campaigns.open-edit">
             <Text style={styles.miniBtnText}>Edit</Text>
           </Pressable>
           <Pressable
@@ -415,7 +415,7 @@ export default function ReferralCampaignsScreen() {
             ]}
             onPress={() => openDeactivate(c)}
             disabled={!c.is_active}
-          >
+           testID="admin.referral-campaigns.open-deactivate">
             <Text style={styles.miniBtnText}>Deactivate</Text>
           </Pressable>
         </View>
@@ -429,10 +429,10 @@ export default function ReferralCampaignsScreen() {
       subtitle="Driver referral reward programs"
       actions={
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable style={styles.ghostBtn} onPress={fetchList}>
+          <Pressable style={styles.ghostBtn} onPress={fetchList} testID="admin.referral-campaigns.fetch-list">
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={openCreate}>
+          <Pressable style={styles.primaryBtn} onPress={openCreate} testID="admin.referral-campaigns.open-create">
             <Text style={styles.primaryBtnText}>+ New Campaign</Text>
           </Pressable>
         </View>
@@ -457,14 +457,14 @@ export default function ReferralCampaignsScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={closeModal}
               disabled={submitting}
-            >
+             testID="admin.referral-campaigns.close-modal">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, styles.modalBtnPrimary]}
               onPress={handleSave}
               disabled={submitting}
-            >
+             testID="admin.referral-campaigns.handle-save">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -490,14 +490,14 @@ export default function ReferralCampaignsScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={() => setConfirmDeactivate(null)}
               disabled={submitting}
-            >
+             testID="admin.referral-campaigns.set-confirm-deactivate">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, { backgroundColor: colors.danger }]}
               onPress={confirmDeactivateAction}
               disabled={submitting}
-            >
+             testID="admin.referral-campaigns.confirm-deactivate-action">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

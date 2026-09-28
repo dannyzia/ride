@@ -48,7 +48,7 @@ export default function AdminLostItems() {
         <FlatList data={items} keyExtractor={(r) => r.id}
           ListEmptyComponent={<Text style={{ color: colors.textSecondaryDark, fontFamily: "Jakarta-Regular", textAlign: "center", marginTop: 40 }}>No lost item reports</Text>}
           renderItem={({ item }) => (
-            <Pressable onPress={() => setSelected(item)} style={styles.card}>
+            <Pressable onPress={() => setSelected(item)} style={styles.card} testID="admin.lost-items.set-selected">
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Text style={styles.desc} numberOfLines={1}>{item.item_description}</Text>
                 <Text style={[styles.status, { color: STATUS_COLORS[item.status] ?? colors.textSecondaryDark }]}>{item.status.replace(/_/g, " ")}</Text>
@@ -66,7 +66,7 @@ export default function AdminLostItems() {
         {selected?.driver_response && <Text style={styles.label}>Driver: {selected.driver_response}</Text>}
         {selected && selected.return_fee_bdt !== null && selected.return_fee_bdt > 0 && <Text style={styles.label}>Fee: ৳{((selected.return_fee_bdt) / 100).toFixed(0)}</Text>}
         {selected && !selected.admin_mediation && (
-          <Pressable onPress={() => mediate(selected.id)} style={styles.actionBtn}><Text style={styles.actionText}>Mark Mediated</Text></Pressable>
+          <Pressable onPress={() => mediate(selected.id)} style={styles.actionBtn} testID="admin.lost-items.mediate"><Text style={styles.actionText}>Mark Mediated</Text></Pressable>
         )}
       </AdminModal>
     </AdminShell>

@@ -225,7 +225,7 @@ export default function AssignmentDetailScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} testID="customer.rental-bidder.id.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
@@ -312,7 +312,7 @@ export default function AssignmentDetailScreen() {
                       flexDirection: "row",
                       alignItems: "center",
                     }}
-                  >
+                   testID="customer.rental-bidder.id.set-selected-driver">
                     <View style={{
                       width: 40,
                       height: 40,
@@ -360,7 +360,7 @@ export default function AssignmentDetailScreen() {
                         flexDirection: "row",
                         alignItems: "center",
                       }}
-                    >
+                     testID="customer.rental-bidder.id.set-selected-vehicle">
                       <Ionicons name="car" size={20} color={isSelected ? colors.primary : textSecondary} style={{ marginRight: 12 }} />
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 14, fontFamily: "JakartaSemiBold", color: textPrimary }}>
@@ -396,7 +396,7 @@ export default function AssignmentDetailScreen() {
               justifyContent: "center",
               marginBottom: 8,
             }}
-          >
+           testID="customer.rental-bidder.id.handle-pick">
             {picking ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
@@ -419,7 +419,7 @@ export default function AssignmentDetailScreen() {
               alignItems: "center",
               justifyContent: "center",
             }}
-          >
+           testID="customer.rental-bidder.id.handle-withdraw">
             <Text style={{ color: colors.danger, fontSize: 16, fontFamily: "JakartaSemiBold" }}>
               Cannot Fulfill → Withdraw
             </Text>

@@ -23,7 +23,7 @@ export default function DriverSettingsAppearance() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.settings.appearance.el-1">
           <Text className="text-[16px] font-Jakarta text-goPrimary">Back</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Appearance</Text>
@@ -38,7 +38,7 @@ export default function DriverSettingsAppearance() {
               ? { borderColor: colors.primary, backgroundColor: accentLight }
               : { borderColor, backgroundColor: surfaceBg }}
             onPress={() => setTheme(t)}
-          >
+           testID="rider.settings.appearance.set-theme">
             <View
               className="w-5 h-5 rounded-full border-2 mr-[12px]"
               style={theme === t ? { borderColor: colors.primary, backgroundColor: colors.primary } : { borderColor }}
@@ -50,7 +50,7 @@ export default function DriverSettingsAppearance() {
           className="mt-4 p-[14px] border rounded-[12px]"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/settings/language")}
-        >
+         testID="rider.settings.appearance.push-main">
           <View className="flex-row justify-between items-center">
             <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Language</Text>
             <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>English ›</Text>
@@ -62,7 +62,7 @@ export default function DriverSettingsAppearance() {
         className="absolute top-16 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.settings.appearance.set-theme-2">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

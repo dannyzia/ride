@@ -84,7 +84,7 @@ export default function SettingsContactSupport() {
           accessibilityLabel={t('common.back')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => router.back()}
-        >
+         testID="customer.settings.contact-support.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>
@@ -95,7 +95,7 @@ export default function SettingsContactSupport() {
           accessibilityLabel={t('contact_support.toggle_theme')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => setTheme(isDark ? "light" : "dark")}
-        >
+         testID="customer.settings.contact-support.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={24}
@@ -152,7 +152,7 @@ export default function SettingsContactSupport() {
           activeOpacity={0.8}
           onPress={callEmergency}
           style={[styles.emergencyButton, { backgroundColor: colors.danger }]}
-        >
+         testID="customer.settings.contact-support.call-emergency">
           <Ionicons name="warning" size={20} color={colors.white} />
           <Text style={styles.emergencyButtonText}>{t('contact_support.call_emergency')}</Text>
         </TouchableOpacity>

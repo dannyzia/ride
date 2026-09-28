@@ -382,7 +382,7 @@ export default function PayoutMethodScreen() {
           onPress={fetchMethods}
           accessibilityRole="button"
           accessibilityLabel={t("common.retry")}
-        >
+         testID="rider.payout-method.fetch-methods">
           <Text className="text-white font-JakartaBold text-sm">
             {t("common.retry")}
           </Text>
@@ -409,7 +409,7 @@ export default function PayoutMethodScreen() {
             className="mr-3"
             accessibilityRole="button"
             accessibilityLabel={t("common.back")}
-          >
+           testID="rider.payout-method.el-1">
             <Ionicons name="chevron-back" size={24} color={textPrimary} />
           </TouchableOpacity>
           <Text
@@ -422,7 +422,7 @@ export default function PayoutMethodScreen() {
             onPress={() => setTheme(isDark ? "light" : "dark")}
             accessibilityRole="button"
             accessibilityLabel={t("settings.appearance.toggle_theme")}
-          >
+           testID="rider.payout-method.set-theme">
             <Ionicons
               name={isDark ? "sunny-outline" : "moon-outline"}
               size={20}
@@ -509,7 +509,7 @@ export default function PayoutMethodScreen() {
                     onPress={() => openEdit(m)}
                     accessibilityRole="button"
                     accessibilityLabel={t("common.edit")}
-                  >
+                   testID="rider.payout-method.open-edit">
                     <Text
                       className="text-xs font-JakartaBold"
                       style={{ color: colors.primary }}
@@ -524,7 +524,7 @@ export default function PayoutMethodScreen() {
                     disabled={deleting}
                     accessibilityRole="button"
                     accessibilityLabel={t("common.delete")}
-                  >
+                   testID="rider.payout-method.confirm-delete">
                     <Text
                       className="text-xs font-JakartaBold"
                       style={{ color: colors.danger }}
@@ -544,7 +544,7 @@ export default function PayoutMethodScreen() {
             onPress={() => setShowAdd(true)}
             accessibilityRole="button"
             accessibilityLabel={t("driver.payout_method.add_new")}
-          >
+           testID="rider.payout-method.set-show-add">
             <View className="flex-row items-center">
               <Ionicons name="add-circle-outline" size={20} color={colors.white} />
               <Text className="text-white font-JakartaBold text-[15px] ml-2">
@@ -569,7 +569,7 @@ export default function PayoutMethodScreen() {
           className="flex-row items-center px-5 py-4 border-b"
           style={{ borderColor }}
         >
-          <TouchableOpacity onPress={resetAdd} className="mr-3">
+          <TouchableOpacity onPress={resetAdd} className="mr-3" testID="rider.payout-method.reset-add">
             <Ionicons name="chevron-back" size={24} color={textPrimary} />
           </TouchableOpacity>
           <Text
@@ -609,7 +609,7 @@ export default function PayoutMethodScreen() {
                       addType === opt.value ? colors.primary : borderColor,
                   }}
                   onPress={() => setAddType(opt.value)}
-                >
+                 testID="rider.payout-method.set-add-type">
                   <Ionicons
                     name={METHOD_ICONS[opt.value] as any}
                     size={20}
@@ -671,7 +671,7 @@ export default function PayoutMethodScreen() {
                 keyboardType="number-pad"
                 maxLength={addType === "bank" ? 20 : 11}
                 accessibilityLabel={addType === "bank" ? t("driver.payout_method.bank_account_number") : t("driver.payout_method.phone_number")}
-              />
+               testID="rider.payout-method.set-add-account-number"/>
             </View>
 
             {/* Account name */}
@@ -694,7 +694,7 @@ export default function PayoutMethodScreen() {
               value={addAccountName}
               onChangeText={setAddAccountName}
               accessibilityLabel={t("driver.payout_method.account_name")}
-            />
+             testID="rider.payout-method.set-add-account-name"/>
 
             {/* Bank-specific fields */}
             {addType === "bank" && (
@@ -718,7 +718,7 @@ export default function PayoutMethodScreen() {
                   value={addBankName}
                   onChangeText={setAddBankName}
                   accessibilityLabel={t("driver.payout_method.bank_name")}
-                />
+                 testID="rider.payout-method.set-add-bank-name"/>
 
                 <Text
                   className="text-xs font-JakartaSemiBold mb-2 mt-4 uppercase"
@@ -739,7 +739,7 @@ export default function PayoutMethodScreen() {
                   value={addBranchName}
                   onChangeText={setAddBranchName}
                   accessibilityLabel={t("driver.payout_method.branch_name")}
-                />
+                 testID="rider.payout-method.set-add-branch-name"/>
               </>
             )}
 
@@ -753,7 +753,7 @@ export default function PayoutMethodScreen() {
               disabled={!addValid || saving}
               accessibilityRole="button"
               accessibilityLabel={t("driver.payout_method.add_new")}
-            >
+             testID="rider.payout-method.handle-add">
               {saving ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -780,7 +780,7 @@ export default function PayoutMethodScreen() {
           className="flex-row items-center px-5 py-4 border-b"
           style={{ borderColor }}
         >
-          <TouchableOpacity onPress={resetEdit} className="mr-3">
+          <TouchableOpacity onPress={resetEdit} className="mr-3" testID="rider.payout-method.reset-edit">
             <Ionicons name="chevron-back" size={24} color={textPrimary} />
           </TouchableOpacity>
           <Text
@@ -880,7 +880,7 @@ export default function PayoutMethodScreen() {
                 keyboardType="number-pad"
                 maxLength={editMethod.method_type === "bank" ? 20 : 11}
                 accessibilityLabel={editMethod.method_type === "bank" ? t("driver.payout_method.bank_account_number") : t("driver.payout_method.phone_number")}
-              />
+               testID="rider.payout-method.set-edit-account-number"/>
             </View>
 
             {/* Account name */}
@@ -903,7 +903,7 @@ export default function PayoutMethodScreen() {
               value={editAccountName}
               onChangeText={setEditAccountName}
               accessibilityLabel={t("driver.payout_method.account_name")}
-            />
+             testID="rider.payout-method.set-edit-account-name"/>
 
             {/* Bank-specific fields */}
             {editMethod.method_type === "bank" && (
@@ -927,7 +927,7 @@ export default function PayoutMethodScreen() {
                   value={editBankName}
                   onChangeText={setEditBankName}
                   accessibilityLabel={t("driver.payout_method.bank_name")}
-                />
+                 testID="rider.payout-method.set-edit-bank-name"/>
 
                 <Text
                   className="text-xs font-JakartaSemiBold mb-2 mt-4 uppercase"
@@ -948,7 +948,7 @@ export default function PayoutMethodScreen() {
                   value={editBranchName}
                   onChangeText={setEditBranchName}
                   accessibilityLabel={t("driver.payout_method.branch_name")}
-                />
+                 testID="rider.payout-method.set-edit-branch-name"/>
               </>
             )}
 
@@ -962,7 +962,7 @@ export default function PayoutMethodScreen() {
               disabled={!editValid || editing}
               accessibilityRole="button"
               accessibilityLabel={t("common.save")}
-            >
+             testID="rider.payout-method.handle-edit">
               {editing ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

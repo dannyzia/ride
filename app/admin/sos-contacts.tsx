@@ -83,16 +83,16 @@ export default function SOSContacts() {
                 <Text style={{ color: colors.textPrimaryDark, fontFamily: "Jakarta-Bold", fontSize: 14 }}>{c.label}</Text>
                 <Text style={{ color: colors.textSecondaryDark, fontFamily: "Jakarta-Regular", fontSize: 12 }}>{c.number}</Text>
               </View>
-              <Pressable onPress={() => startEdit(i)} style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.adminAccent, borderRadius: 6, marginRight: 8 }}>
+              <Pressable onPress={() => startEdit(i)} style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.adminAccent, borderRadius: 6, marginRight: 8 }} testID="admin.sos-contacts.start-edit">
                 <Text style={{ color: "#000", fontFamily: "Jakarta-Bold", fontSize: 11 }}>Edit</Text>
               </Pressable>
-              <Pressable onPress={() => deleteContact(i)} style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.danger, borderRadius: 6 }}>
+              <Pressable onPress={() => deleteContact(i)} style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.danger, borderRadius: 6 }} testID="admin.sos-contacts.delete-contact">
                 <Text style={{ color: "#FFF", fontFamily: "Jakarta-Bold", fontSize: 11 }}>Delete</Text>
               </Pressable>
             </View>
           ))}
           <Pressable onPress={addNew}
-            style={{ padding: 12, backgroundColor: colors.adminAccent, borderRadius: 8, alignItems: "center" }}>
+            style={{ padding: 12, backgroundColor: colors.adminAccent, borderRadius: 8, alignItems: "center" }} testID="admin.sos-contacts.add-new">
             <Text style={{ color: "#000", fontFamily: "Jakarta-Bold", fontSize: 13 }}>+ Add Contact</Text>
           </Pressable>
         </View>
@@ -116,7 +116,7 @@ export default function SOSContacts() {
                 placeholder="e.g. 999" />
             </View>
           </View>
-          <Pressable onPress={saveEdit} style={{ paddingVertical: 12, backgroundColor: colors.adminAccent, borderRadius: 8, alignItems: "center" }}>
+          <Pressable onPress={saveEdit} style={{ paddingVertical: 12, backgroundColor: colors.adminAccent, borderRadius: 8, alignItems: "center" }} testID="admin.sos-contacts.save-edit">
             <Text style={{ color: "#000", fontFamily: "Jakarta-Bold", fontSize: 14 }}>Save</Text>
           </Pressable>
         </View>

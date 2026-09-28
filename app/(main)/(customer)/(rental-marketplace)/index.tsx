@@ -74,7 +74,7 @@ function Chip({ label, selected, onPress, textColor, chipBg, borderColor, select
         marginRight: 8,
         marginBottom: 8,
       }}
-    >
+     testID="customer.rental-marketplace.on-press">
       <Text
         style={{
           fontSize: 12,
@@ -357,7 +357,7 @@ export default function RentalIndexScreen() {
             onChangeText={setCargoWeight}
             keyboardType="number-pad"
             accessibilityLabel="Cargo weight in kilograms"
-          />
+           testID="customer.rental-marketplace.set-cargo-weight"/>
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 13, fontFamily: "JakartaMedium", color: textSecondary, marginBottom: 6 }}>
@@ -379,7 +379,7 @@ export default function RentalIndexScreen() {
             onChangeText={setCargoVolume}
             keyboardType="decimal-pad"
             accessibilityLabel="Cargo volume in cubic metres"
-          />
+           testID="customer.rental-marketplace.set-cargo-volume"/>
         </View>
       </View>
 
@@ -405,7 +405,7 @@ export default function RentalIndexScreen() {
         onChangeText={setCargoDescription}
         multiline
         accessibilityLabel="Cargo description"
-      />
+       testID="customer.rental-marketplace.set-cargo-description"/>
     </View>
   );
 
@@ -437,7 +437,7 @@ export default function RentalIndexScreen() {
               borderRadius: 12,
               marginRight: lvl === "BLS" ? 8 : 0,
             }}
-          >
+           testID="customer.rental-marketplace.set-service-level">
             <Text style={{ fontSize: 14, fontFamily: "JakartaSemiBold", color: serviceLevel === lvl ? colors.danger : textSecondary }}>
               {lvl}
             </Text>
@@ -461,7 +461,7 @@ export default function RentalIndexScreen() {
         accessibilityRole="button"
         accessibilityLabel="Requires paramedic"
         accessibilityState={{ selected: requiresParamedic }}
-      >
+       testID="customer.rental-marketplace.set-requires-paramedic">
         <Ionicons
           name={requiresParamedic ? "checkmark-circle" : "ellipse-outline"}
           size={24}
@@ -494,7 +494,7 @@ export default function RentalIndexScreen() {
         onChangeText={setPatientCondition}
         multiline
         accessibilityLabel="Patient condition"
-      />
+       testID="customer.rental-marketplace.set-patient-condition"/>
     </View>
   );
 
@@ -523,7 +523,7 @@ export default function RentalIndexScreen() {
                 borderRadius: 12,
                 marginRight: mode === "now" ? 8 : 0,
               }}
-            >
+             testID="customer.rental-marketplace.set-start-mode">
               <Text
                 style={{
                   fontSize: 14,
@@ -590,7 +590,7 @@ export default function RentalIndexScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} testID="customer.rental-marketplace.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
@@ -663,7 +663,7 @@ export default function RentalIndexScreen() {
                 borderRadius: 14,
                 marginBottom: 20,
               }}
-            >
+             testID="customer.rental-marketplace.enter-truck-mode">
               <View
                 style={{
                   width: 44,
@@ -707,7 +707,7 @@ export default function RentalIndexScreen() {
                     borderRadius: 12,
                     marginRight: cat.key !== "ambulance_scheduled" ? 8 : 0,
                   }}
-                >
+                 testID="customer.rental-marketplace.set-category">
                   <Ionicons
                     name={cat.icon as "car-sport" | "bus" | "medkit"}
                     size={28}
@@ -762,7 +762,7 @@ export default function RentalIndexScreen() {
                         accessibilityRole="button"
                         accessibilityLabel={cls.label}
                         accessibilityState={{ selected: isSelected }}
-                      >
+                       testID="customer.rental-marketplace.set-selected-car-class">
                         <Text style={{ fontSize: 13, fontFamily: isSelected ? "JakartaSemiBold" : "JakartaMedium", color: isSelected ? colors.primary : textSecondary }}>
                           {cls.label}
                         </Text>
@@ -819,7 +819,7 @@ export default function RentalIndexScreen() {
           placeholderTextColor={textSecondary}
           value={pickupAddress}
           onChangeText={setPickupAddress}
-        />
+         testID="customer.rental-marketplace.set-pickup-address"/>
 
         {/* Dropoff */}
         <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
@@ -840,7 +840,7 @@ export default function RentalIndexScreen() {
           placeholderTextColor={textSecondary}
           value={dropoffAddress}
           onChangeText={setDropoffAddress}
-        />
+         testID="customer.rental-marketplace.set-dropoff-address"/>
 
         {/* Tracking toggle */}
         <TouchableOpacity
@@ -855,7 +855,7 @@ export default function RentalIndexScreen() {
             borderRadius: 12,
             marginBottom: 24,
           }}
-        >
+         testID="customer.rental-marketplace.set-tracking-required">
           <Ionicons
             name={trackingRequired ? "checkmark-circle" : "ellipse-outline"}
             size={24}
@@ -884,7 +884,7 @@ export default function RentalIndexScreen() {
             opacity: submitting || !pickupAddress || !dropoffAddress ? 0.5 : 1,
             marginBottom: 40,
           }}
-        >
+         testID="customer.rental-marketplace.handle-submit">
           {submitting ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (

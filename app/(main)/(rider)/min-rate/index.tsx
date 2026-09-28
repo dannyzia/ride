@@ -190,7 +190,7 @@ export default function MinRateScreen() {
           onPress={fetchConfig}
           accessibilityRole="button"
           accessibilityLabel="Retry loading rate configuration"
-        >
+         testID="rider.min-rate.fetch-config">
           <Text className="text-white font-JakartaBold text-sm">Retry</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -213,7 +213,7 @@ export default function MinRateScreen() {
           className="mr-3"
           accessibilityRole="button"
           accessibilityLabel="Go back"
-        >
+         testID="rider.min-rate.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -226,7 +226,7 @@ export default function MinRateScreen() {
           onPress={() => setTheme(isDark ? "light" : "dark")}
           accessibilityRole="button"
           accessibilityLabel="Toggle theme"
-        >
+         testID="rider.min-rate.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={20}
@@ -314,7 +314,7 @@ export default function MinRateScreen() {
           accessibilityRole="button"
           accessibilityLabel="Save minimum rate"
           accessibilityState={{ disabled: !hasChanges || saving }}
-        >
+         testID="rider.min-rate.handle-save">
           {saving ? (
             <ActivityIndicator color={colors.white} size="small" />
           ) : (

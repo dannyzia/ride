@@ -212,7 +212,7 @@ export default function WalletScreen() {
             accessibilityRole="button"
             accessibilityLabel={t('rider_wallet.toggle_theme')}
             hitSlop={8}
-          >
+           testID="customer.wallet.set-theme">
             <Ionicons
               name={isDark ? "sunny-outline" : "moon-outline"}
               size={24}
@@ -243,7 +243,7 @@ export default function WalletScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={t('rider_wallet.top_up_wallet')}
                   activeOpacity={0.85}
-                >
+                 testID="customer.wallet.push-main">
                   <Text style={styles.topUpButtonText}>{t('wallet.top_up')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -252,7 +252,7 @@ export default function WalletScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={t('rider_wallet.show_all_transactions')}
                   activeOpacity={0.85}
-                >
+                 testID="customer.wallet.open-transactions">
                   <Text style={[styles.txnsButtonText, { color: textPrimary }]}>{t('rider_wallet.transactions')}</Text>
                 </TouchableOpacity>
               </View>
@@ -325,7 +325,7 @@ export default function WalletScreen() {
                   accessibilityLabel={t('rider_wallet.show_all_transactions')}
                   style={styles.showMore}
                   hitSlop={8}
-                >
+                 testID="customer.wallet.set-show-all-txns">
                   <Text style={[styles.showMoreText, { color: colors.primary }]}>
                     {t('rider_wallet.show_all_count', { count: transactions.length })}
                   </Text>

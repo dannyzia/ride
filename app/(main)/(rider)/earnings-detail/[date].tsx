@@ -132,7 +132,7 @@ export default function EarningsDetail() {
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Go back"
-        >
+         testID="rider.earnings-detail.date.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]} numberOfLines={1}>
@@ -143,7 +143,7 @@ export default function EarningsDetail() {
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Toggle theme"
-        >
+         testID="rider.earnings-detail.date.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={24}
@@ -174,7 +174,7 @@ export default function EarningsDetail() {
             onPress={load}
             accessibilityRole="button"
             accessibilityLabel="Retry"
-          >
+           testID="rider.earnings-detail.date.load">
             <Text style={styles.retryBtnText}>{t('earnings_detail.retry')}</Text>
           </TouchableOpacity>
         </View>

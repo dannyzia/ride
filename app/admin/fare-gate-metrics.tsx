@@ -255,7 +255,7 @@ export default function FareGateMetricsScreen() {
           style={[styles.ghostBtn, refreshing && styles.ghostBtnDisabled]}
           onPress={() => fetchData(true)}
           disabled={refreshing}
-        >
+         testID="admin.fare-gate-metrics.fetch-data">
           {refreshing ? (
             <ActivityIndicator color={colors.adminAccent} size="small" />
           ) : (

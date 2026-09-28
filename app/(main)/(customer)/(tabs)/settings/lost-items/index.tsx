@@ -108,7 +108,7 @@ export default function RiderLostItems() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-6 py-4 border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>{t('common.back')}</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.settings.lost-items.el-1"><Text className="font-Jakarta text-base" style={{ color: colors.primary }}>{t('common.back')}</Text></TouchableOpacity>
         <Text className="flex-1 text-center text-lg font-JakartaBold" style={{ color: textPrimary }}>{t('settings.lost_items')}</Text>
         <View className="w-12" />
       </View>
@@ -136,7 +136,7 @@ export default function RiderLostItems() {
           )}
         />
       )}
-      <TouchableOpacity onPress={openReport} className="mx-6 mb-6 py-4 rounded-full items-center" style={{ backgroundColor: colors.accent }}>
+      <TouchableOpacity onPress={openReport} className="mx-6 mb-6 py-4 rounded-full items-center" style={{ backgroundColor: colors.accent }} testID="customer.settings.lost-items.open-report">
         <Text className="text-goWhite font-JakartaBold text-base">{t('lost_items.report')}</Text>
       </TouchableOpacity>
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
@@ -144,7 +144,7 @@ export default function RiderLostItems() {
           <View className="rounded-t-3xl p-6 max-h-[80%]" style={{ backgroundColor: surfaceBg }}>
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>{t('lost_items.report')}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}><Text className="font-JakartaBold" style={{ color: colors.danger }}>{t('common.cancel')}</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setModalVisible(false)} testID="customer.settings.lost-items.set-modal-visible"><Text className="font-JakartaBold" style={{ color: colors.danger }}>{t('common.cancel')}</Text></TouchableOpacity>
             </View>
             <Text className="text-sm font-Jakarta mb-2" style={{ color: textSecondary }}>{t('lost_items.select_ride')}</Text>
             <FlatList data={recentRides} keyExtractor={(r) => r.ride_id} style={{ maxHeight: 120 }} className="mb-3"
@@ -153,7 +153,7 @@ export default function RiderLostItems() {
                   className="py-2 px-3 rounded-lg mb-1 border"
                   style={selectedRideId === item.ride_id
                     ? { backgroundColor: colors.accentLight, borderColor: colors.accent }
-                    : { backgroundColor: bg, borderColor }}>
+                    : { backgroundColor: bg, borderColor }} testID="customer.settings.lost-items.set-selected-ride-id">
                   <Text className="text-sm font-Jakarta" style={{ color: textPrimary }}>{item.origin_address ?? item.pickup_address ?? t('lost_items.ride_fallback')}</Text>
                 </TouchableOpacity>
               )}
@@ -161,10 +161,10 @@ export default function RiderLostItems() {
             <Text className="text-sm font-Jakarta mb-2" style={{ color: textSecondary }}>{t('lost_items.describe_item')}</Text>
             <TextInput className="border rounded-lg px-4 py-3 font-Jakarta text-sm mb-4"
               style={{ backgroundColor: bg, borderColor, color: textPrimary }}
-              value={description} onChangeText={setDescription} multiline placeholder={t('lost_items.placeholder')} placeholderTextColor={textSecondary} />
+              value={description} onChangeText={setDescription} multiline placeholder={t('lost_items.placeholder')} placeholderTextColor={textSecondary}  testID="customer.settings.lost-items.set-description"/>
             <TouchableOpacity onPress={submitReport} disabled={submitting}
               className="py-4 rounded-full items-center"
-              style={{ backgroundColor: submitting ? (isDark ? colors.borderDark : colors.borderLight) : colors.accent }}>
+              style={{ backgroundColor: submitting ? (isDark ? colors.borderDark : colors.borderLight) : colors.accent }} testID="customer.settings.lost-items.submit-report">
               <Text className="text-goWhite font-JakartaBold text-base">{submitting ? t('lost_items.submitting') : t('lost_items.submit')}</Text>
             </TouchableOpacity>
           </View>
@@ -175,7 +175,7 @@ export default function RiderLostItems() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.settings.lost-items.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

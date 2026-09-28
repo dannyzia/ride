@@ -176,7 +176,7 @@ export default function Referral() {
           accessibilityLabel={t('referral.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           style={[styles.themeToggle, { backgroundColor: surfaceBg, borderColor }]}
-        >
+         testID="customer.referral.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={24}
@@ -243,7 +243,7 @@ export default function Referral() {
                   accessibilityLabel={t('referral.a11y_share_code')}
                   style={[styles.shareButton, { backgroundColor: colors.primary }]}
                   onPress={handleShare}
-                >
+                 testID="customer.referral.handle-share">
                   <Ionicons name="share-social-outline" size={18} color={colors.white} />
                   <Text style={styles.shareButtonText}>{t('referral.share')}</Text>
                 </TouchableOpacity>
@@ -258,7 +258,7 @@ export default function Referral() {
                     },
                   ]}
                   onPress={handleCopy}
-                >
+                 testID="customer.referral.handle-copy">
                   <Ionicons
                     name={copied ? "checkmark-outline" : "copy-outline"}
                     size={18}

@@ -240,7 +240,7 @@ function PlanForm({
                   borderColor:
                     billingPeriod === p ? colors.adminAccent : "#2A2D35",
                 }}
-              >
+               testID="admin.fleet-plans.set-billing-period">
                 <Text
                   style={{
                     color:
@@ -320,7 +320,7 @@ function PlanForm({
             borderRadius: 8,
             backgroundColor: colors.darkSecondary,
           }}
-        >
+         testID="admin.fleet-plans.on-close">
           <Text
             style={{
               color: colors.textSecondaryDark,
@@ -341,7 +341,7 @@ function PlanForm({
             backgroundColor: colors.adminAccent,
             opacity: saving ? 0.6 : 1,
           }}
-        >
+         testID="admin.fleet-plans.handle-save">
           <Text
             style={{
               color: colors.darkSurface,
@@ -494,7 +494,7 @@ export default function AdminFleetPlans() {
       header: "Status",
       width: 90,
       render: (r) => (
-        <Pressable onPress={() => toggleActive(r)}>
+        <Pressable onPress={() => toggleActive(r)} testID="admin.fleet-plans.toggle-active">
           <View
             style={{
               flexDirection: "row",
@@ -542,7 +542,7 @@ export default function AdminFleetPlans() {
             borderWidth: 1,
             borderColor: "#2A2D35",
           }}
-        >
+         testID="admin.fleet-plans.set-editing-plan">
           <Text
             style={{
               color: colors.adminAccent,
@@ -574,7 +574,7 @@ export default function AdminFleetPlans() {
               paddingHorizontal: 14,
               paddingVertical: 8,
             }}
-          >
+           testID="admin.fleet-plans.set-editing-plan-2">
             <Text
               style={{
                 color: colors.darkSurface,

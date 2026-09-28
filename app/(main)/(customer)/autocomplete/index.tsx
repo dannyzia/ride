@@ -169,14 +169,14 @@ const AutocompletePage = () => {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.autocomplete.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => router.back()}
         className="flex justify-center items-center w-10 h-10 rounded-full"
         style={{ backgroundColor: surfaceBg }}
-      >
+       testID="customer.autocomplete.el-1">
         <Image source={icons.backArrow} className="w-5 h-5" />
       </TouchableOpacity>
 
@@ -204,9 +204,9 @@ const AutocompletePage = () => {
             onChangeText={setQuery}
             className="flex-1 text-base ml-3"
             style={{ color: textPrimary }}
-          />
+           testID="customer.autocomplete.set-query"/>
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery("")}>
+            <TouchableOpacity onPress={() => setQuery("")} testID="customer.autocomplete.set-query-2">
               <Image
                 source={icons.close}
                 className="w-5 h-5 ml-2"
@@ -236,7 +236,7 @@ const AutocompletePage = () => {
               onPress={() => handlePlaceSelect(item)}
               className="p-4 border-b"
               style={{ borderBottomColor: borderColor }}
-            >
+             testID="customer.autocomplete.handle-place-select">
               <Text className="text-xl" style={{ color: textPrimary }}>
                 {item.address ||
                   item.place_name ||

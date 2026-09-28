@@ -157,7 +157,7 @@ export default function SampleMediaScreen() {
             style={styles.ghostBtn}
             onPress={fetchConfig}
             disabled={saving}
-          >
+           testID="admin.sample-media.fetch-config">
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
           <Pressable
@@ -167,7 +167,7 @@ export default function SampleMediaScreen() {
             ]}
             onPress={handleSaveAll}
             disabled={!hasChanges || saving}
-          >
+           testID="admin.sample-media.handle-save-all">
             {saving ? (
               <ActivityIndicator color={colors.white} size="small" />
             ) : (
@@ -226,14 +226,14 @@ export default function SampleMediaScreen() {
                   placeholderTextColor={colors.textDisabledDark}
                   autoCapitalize="none"
                   autoCorrect={false}
-                />
+                 testID="admin.sample-media.set-edits"/>
 
                 <View style={styles.cardActions}>
                   <Pressable
                     style={[styles.miniBtn, !url && styles.miniBtnDisabled]}
                     onPress={() => openUrl(url)}
                     disabled={!url}
-                  >
+                   testID="admin.sample-media.open-url">
                     <Text style={styles.miniBtnText}>Open</Text>
                   </Pressable>
                 </View>

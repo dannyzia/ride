@@ -147,7 +147,7 @@ function FleetActions({
             paddingHorizontal: 8,
             paddingVertical: 4,
           }}
-        >
+         testID="admin.fleets.change-status">
           <Text
             style={{
               color: a.color,
@@ -370,7 +370,7 @@ export default function AdminFleets() {
                 borderColor:
                   statusFilter === s ? colors.adminAccent : "#2A2D35",
               }}
-            >
+             testID="admin.fleets.set-status-filter">
               <Text
                 style={{
                   color:

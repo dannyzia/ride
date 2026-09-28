@@ -65,7 +65,7 @@ export default function DriverSettings() {
           onPress={() => router.back()}
           className="mr-[12px] p-[4px]"
           accessibilityLabel="Go back"
-        >
+         testID="rider.settings.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="text-[20px] font-JakartaBold tracking-tight" style={{ color: textPrimary }}>
@@ -105,7 +105,7 @@ export default function DriverSettings() {
                       borderColor,
                     }}
                     onPress={() => router.push(item.route as never)}
-                  >
+                   testID="rider.settings.el-2">
                     <Ionicons name={item.icon} size={20} color={colors.primary} />
                     <Text
                       className="text-[15px] font-Jakarta flex-1"

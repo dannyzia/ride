@@ -475,7 +475,7 @@ export default function QueueScreen() {
               e.stopPropagation();
               openAction("approve", row);
             }}
-          >
+           testID="admin.queue.open-action">
             <Text style={styles.miniBtnText}>Approve</Text>
           </Pressable>
           <Pressable
@@ -484,7 +484,7 @@ export default function QueueScreen() {
               e.stopPropagation();
               openAction("reject", row);
             }}
-          >
+           testID="admin.queue.open-action-2">
             <Text style={styles.miniBtnText}>Reject</Text>
           </Pressable>
           <Pressable
@@ -493,7 +493,7 @@ export default function QueueScreen() {
               e.stopPropagation();
               openAction("suspend", row);
             }}
-          >
+           testID="admin.queue.open-action-3">
             <Text style={styles.miniBtnText}>Suspend</Text>
           </Pressable>
           {row.status === "temporary" ? (
@@ -503,7 +503,7 @@ export default function QueueScreen() {
                 e.stopPropagation();
                 openAction("activate", row);
               }}
-            >
+             testID="admin.queue.open-action-4">
               <Text style={styles.miniBtnText}>Activate</Text>
             </Pressable>
           ) : null}
@@ -514,7 +514,7 @@ export default function QueueScreen() {
                 e.stopPropagation();
                 openExtraAction("upgrade", row);
               }}
-            >
+             testID="admin.queue.open-extra-action">
               <Text style={styles.miniBtnText}>Upgrade</Text>
             </Pressable>
             <Pressable
@@ -523,7 +523,7 @@ export default function QueueScreen() {
                 e.stopPropagation();
                 openExtraAction("downgrade", row);
               }}
-            >
+             testID="admin.queue.open-extra-action-2">
               <Text style={styles.miniBtnText}>Downgrade</Text>
             </Pressable>
             <Pressable
@@ -532,7 +532,7 @@ export default function QueueScreen() {
                 e.stopPropagation();
                 openExtraAction("close_account", row);
               }}
-            >
+             testID="admin.queue.open-extra-action-3">
               <Text style={styles.miniBtnText}>Close</Text>
             </Pressable>
           </>) : null}
@@ -557,7 +557,7 @@ export default function QueueScreen() {
         <Pressable
           style={styles.refreshBtn}
           onPress={() => fetchQueue(statusFilter)}
-        >
+         testID="admin.queue.fetch-queue">
           <Text style={styles.refreshBtnText}>Refresh</Text>
         </Pressable>
       }
@@ -570,7 +570,7 @@ export default function QueueScreen() {
               key={tab.key}
               onPress={() => setStatusFilter(tab.key)}
               style={[styles.tabChip, active && styles.tabChipActive]}
-            >
+             testID="admin.queue.set-status-filter">
               <Text
                 style={[styles.tabChipText, active && styles.tabChipTextActive]}
               >
@@ -627,7 +627,7 @@ export default function QueueScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={closeAction}
               disabled={submitting}
-            >
+             testID="admin.queue.close-action">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
@@ -639,7 +639,7 @@ export default function QueueScreen() {
               ]}
               onPress={submitAction}
               disabled={submitting}
-            >
+             testID="admin.queue.submit-action">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -702,7 +702,7 @@ export default function QueueScreen() {
                         styles.statusChoice,
                         newStatus === "active" && styles.statusChoiceActive,
                       ]}
-                    >
+                     testID="admin.queue.set-new-status">
                       <Text
                         style={[
                           styles.statusChoiceText,
@@ -719,7 +719,7 @@ export default function QueueScreen() {
                         styles.statusChoice,
                         newStatus === "temporary" && styles.statusChoiceActive,
                       ]}
-                    >
+                     testID="admin.queue.set-new-status-2">
                       <Text
                         style={[
                           styles.statusChoiceText,
@@ -755,7 +755,7 @@ export default function QueueScreen() {
                             styles.vehicleChip,
                             selected && styles.vehicleChipActive,
                           ]}
-                        >
+                         testID="admin.queue.set-vehicle-type-adjusted">
                           <Text
                             style={[
                               styles.vehicleChipText,
@@ -927,7 +927,7 @@ export default function QueueScreen() {
                 <View style={styles.vehicleGrid}>
                   {VEHICLE_OPTIONS.map((o) => (
                     <Pressable key={o.value} style={[styles.vehicleChip, extraVehicleType === o.value && styles.vehicleChipActive]}
-                      onPress={() => setExtraVehicleType(o.value)}>
+                      onPress={() => setExtraVehicleType(o.value)} testID="admin.queue.set-extra-vehicle-type">
                       <Text style={[styles.vehicleChipText, extraVehicleType === o.value && styles.vehicleChipTextActive]}>{o.label}</Text>
                     </Pressable>
                   ))}
@@ -946,10 +946,10 @@ export default function QueueScreen() {
                 style={{ background: "transparent", color: "white", border: "none", outline: "none", width: "100%", fontFamily: "Jakarta-Regular", fontSize: 13 }} />
             </View>
             <View style={{ flexDirection: "row", gap: 8, justifyContent: "flex-end" }}>
-              <Pressable style={[styles.modalBtn, styles.modalBtnGhost]} onPress={() => setExtraActionDriver(null)}>
+              <Pressable style={[styles.modalBtn, styles.modalBtnGhost]} onPress={() => setExtraActionDriver(null)} testID="admin.queue.set-extra-action-driver">
                 <Text style={styles.modalBtnGhostText}>Cancel</Text>
               </Pressable>
-              <Pressable style={[styles.modalBtn, { backgroundColor: extraActionKind === "close_account" ? colors.danger : colors.adminAccent }]} onPress={submitExtraAction}>
+              <Pressable style={[styles.modalBtn, { backgroundColor: extraActionKind === "close_account" ? colors.danger : colors.adminAccent }]} onPress={submitExtraAction} testID="admin.queue.submit-extra-action">
                 <Text style={styles.modalBtnText}>{extraActionKind === "close_account" ? "Close Account" : extraActionKind === "upgrade" ? "Upgrade" : "Downgrade"}</Text>
               </Pressable>
             </View>

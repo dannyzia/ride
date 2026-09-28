@@ -362,13 +362,13 @@ export default function PreferencesScreen() {
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
             onPress={() => openEdit(p)}
-          >
+           testID="admin.preferences.open-edit">
             <Text style={styles.miniBtnText}>Edit</Text>
           </Pressable>
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.danger }]}
             onPress={() => openDelete(p)}
-          >
+           testID="admin.preferences.open-delete">
             <Text style={styles.miniBtnText}>Delete</Text>
           </Pressable>
         </View>
@@ -382,10 +382,10 @@ export default function PreferencesScreen() {
       subtitle="Optional add-ons riders can request"
       actions={
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable style={styles.ghostBtn} onPress={fetchList}>
+          <Pressable style={styles.ghostBtn} onPress={fetchList} testID="admin.preferences.fetch-list">
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={openCreate}>
+          <Pressable style={styles.primaryBtn} onPress={openCreate} testID="admin.preferences.open-create">
             <Text style={styles.primaryBtnText}>+ New Preference</Text>
           </Pressable>
         </View>
@@ -410,14 +410,14 @@ export default function PreferencesScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={closeModal}
               disabled={submitting}
-            >
+             testID="admin.preferences.close-modal">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, styles.modalBtnPrimary]}
               onPress={handleSave}
               disabled={submitting}
-            >
+             testID="admin.preferences.handle-save">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -443,14 +443,14 @@ export default function PreferencesScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={() => setConfirmDelete(null)}
               disabled={submitting}
-            >
+             testID="admin.preferences.set-confirm-delete">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, { backgroundColor: colors.danger }]}
               onPress={confirmDeleteAction}
               disabled={submitting}
-            >
+             testID="admin.preferences.confirm-delete-action">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

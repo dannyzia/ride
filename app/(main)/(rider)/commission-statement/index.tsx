@@ -108,7 +108,7 @@ export default function CommissionStatement() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="mr-[12px] p-[4px]"
-        >
+         testID="rider.commission-statement.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -129,7 +129,7 @@ export default function CommissionStatement() {
           onPress={() => setWeekOffset((o) => o + 1)}
           disabled={weekOffset >= 11}
           className="p-[6px]"
-        >
+         testID="rider.commission-statement.set-week-offset">
           <Ionicons
             name="chevron-back"
             size={20}
@@ -148,7 +148,7 @@ export default function CommissionStatement() {
           onPress={() => setWeekOffset((o) => Math.max(0, o - 1))}
           disabled={weekOffset === 0}
           className="p-[6px]"
-        >
+         testID="rider.commission-statement.set-week-offset-2">
           <Ionicons
             name="chevron-forward"
             size={20}
@@ -175,7 +175,7 @@ export default function CommissionStatement() {
             className="rounded-full px-[24px] py-[12px]"
             style={{ backgroundColor: colors.primary }}
             onPress={() => fetchData()}
-          >
+           testID="rider.commission-statement.fetch-data">
             <Text className="text-[16px] font-JakartaBold text-white">
               Retry
             </Text>

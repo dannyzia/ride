@@ -164,7 +164,7 @@ export default function PhoneEntryScreen() {
             if (error) setError("");
           }}
           maxLength={10}
-        />
+         testID="phone-entry.set-phone"/>
       </View>
 
       {/* Role Selector - Pill Shape */}
@@ -178,7 +178,7 @@ export default function PhoneEntryScreen() {
             backgroundColor: role === "rider" ? colors.primary : "transparent",
           }}
           onPress={() => setRole("rider")}
-        >
+         testID="phone-entry.set-role">
           <Text
             className="text-[14px] font-JakartaBold font-bold"
             style={{ color: role === "rider" ? colors.white : textSecondary }}
@@ -192,7 +192,7 @@ export default function PhoneEntryScreen() {
             backgroundColor: role === "driver" ? colors.primary : "transparent",
           }}
           onPress={() => setRole("driver")}
-        >
+         testID="phone-entry.set-role-2">
           <Text
             className="text-[14px] font-JakartaBold font-bold"
             style={{ color: role === "driver" ? colors.white : textSecondary }}
@@ -213,13 +213,13 @@ export default function PhoneEntryScreen() {
           title={loading ? "Loading..." : "Login"}
           onPress={handleLogin}
           disabled={loading}
-        />
+         testID="phone-entry.handle-login"/>
         <CustomButton
           title={loading ? "" : "Register"}
           bgVariant="secondary"
           onPress={handleRegister}
           disabled={loading}
-        />
+         testID="phone-entry.handle-register"/>
       </View>
     </SafeAreaView>
   );

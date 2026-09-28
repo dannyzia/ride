@@ -224,7 +224,7 @@ export default function ProfileScreen() {
                         borderColor,
                       }}
                       onPress={() => router.push(item.route as never)}
-                    >
+                     testID="rider.d.profile.el-1">
                       <Ionicons
                         name={item.icon}
                         size={20}
@@ -256,7 +256,7 @@ export default function ProfileScreen() {
               borderColor: colors.danger,
             }}
             onPress={handleSignOut}
-          >
+           testID="rider.d.profile.handle-sign-out">
             <Text
               className="text-[15px] font-JakartaBold"
               style={{ color: colors.danger }}

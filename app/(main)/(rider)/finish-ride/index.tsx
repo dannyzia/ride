@@ -418,7 +418,7 @@ const FinishRide = () => {
               alignItems: "center",
               alignSelf: "center",
             }}
-          >
+           testID="rider.finish-ride.set-show-toll-modal">
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
               <Ionicons name="receipt-outline" size={16} color={colors.white} />
               <Text style={{ color: colors.white, fontFamily: "Jakarta-Bold", fontSize: 14 }}>
@@ -601,12 +601,12 @@ const FinishRide = () => {
                 router.push(`/(main)/(rider)/rate-rider?rideId=${completedRideId}`);
               }
             }}
-          />
+           testID="rider.finish-ride.push-main"/>
           <CustomButton
             title={t('finish_ride.back_to_home')}
             className="w-full"
             onPress={handleGoHome}
-          />
+           testID="rider.finish-ride.handle-go-home"/>
         </View>
       </ReactNativeModal>
 
@@ -632,7 +632,7 @@ const FinishRide = () => {
           alignItems: "center",
           justifyContent: "center",
         }}
-      >
+       testID="rider.finish-ride.set-theme">
         <Ionicons
           name={isDark ? "sunny-outline" : "moon-outline"}
           size={18}

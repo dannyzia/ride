@@ -56,14 +56,14 @@ export default function DriverInfo() {
           </View>
         </View>
         <View className="flex-row gap-4">
-          <TouchableOpacity className="flex-1 rounded-full py-[14px] items-center" style={{ backgroundColor: colors.primary }} onPress={handleCall}>
+          <TouchableOpacity className="flex-1 rounded-full py-[14px] items-center" style={{ backgroundColor: colors.primary }} onPress={handleCall} testID="customer.driver-info.handle-call">
             <Text className="text-[16px] font-JakartaBold text-goWhite">{t('driver_info.call')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="flex-1 border rounded-full py-[14px] items-center"
             style={{ borderColor }}
             onPress={handleChat}
-          >
+           testID="customer.driver-info.handle-chat">
             <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>{t('driver_info.chat')}</Text>
           </TouchableOpacity>
         </View>
@@ -73,7 +73,7 @@ export default function DriverInfo() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.driver-info.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

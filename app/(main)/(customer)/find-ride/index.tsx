@@ -308,7 +308,7 @@ const PlanRidePage = () => {
               : surfaceBg,
           },
         ]}
-      >
+       testID="customer.find-ride.set-selected-vehicle-type">
         <Image
           source={VEHICLE_ICONS[item.vehicle_type] || icons.cab}
           style={{
@@ -353,7 +353,7 @@ const PlanRidePage = () => {
                 { backgroundColor: isDark ? colors.primaryLightDark : colors.primaryLight },
               ]}
               disabled={locating}
-            >
+             testID="customer.find-ride.use-current-location">
               {locating ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
@@ -382,7 +382,7 @@ const PlanRidePage = () => {
                   <TouchableOpacity
                     onPress={() => removeStop(i)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
+                   testID="customer.find-ride.remove-stop">
                     <Ionicons name="close" size={16} color={colors.danger} />
                   </TouchableOpacity>
                 </View>
@@ -396,7 +396,7 @@ const PlanRidePage = () => {
             ))}
 
             {stops.length < MAX_STOPS && (
-              <TouchableOpacity onPress={addStop} style={styles.addStopBtn}>
+              <TouchableOpacity onPress={addStop} style={styles.addStopBtn} testID="customer.find-ride.add-stop">
                 <Ionicons name="add" size={18} color={colors.primary} />
                 <Text style={styles.addStopText}>{t('find_ride.add_stop')}</Text>
               </TouchableOpacity>
@@ -433,7 +433,7 @@ const PlanRidePage = () => {
                   title={t('common.retry')}
                   onPress={fetchEstimates}
                   className="w-40"
-                />
+                 testID="customer.find-ride.fetch-estimates"/>
               </View>
             ) : estimates.length > 0 ? (
               <View style={{ marginTop: 4 }}>
@@ -471,7 +471,7 @@ const PlanRidePage = () => {
                               : surfaceBg,
                           },
                         ]}
-                      >
+                       testID="customer.find-ride.set-selected-category">
                         <Ionicons
                           name={meta.icon}
                           size={24}
@@ -529,7 +529,7 @@ const PlanRidePage = () => {
               onPress={handleConfirm}
               disabled={!canConfirm}
               className="w-full"
-            />
+             testID="customer.find-ride.handle-confirm"/>
           </View>
         </View>
       </RideLayout>
@@ -538,7 +538,7 @@ const PlanRidePage = () => {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.find-ride.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </View>

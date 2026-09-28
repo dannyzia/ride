@@ -260,7 +260,7 @@ export default function Inbox() {
           accessibilityLabel={t('inbox.toggle_theme')}
           onPress={() => setTheme(isDark ? "light" : "dark")}
           style={[styles.themeToggle, { backgroundColor: surfaceBg, borderColor }]}
-        >
+         testID="customer.inbox.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={24}

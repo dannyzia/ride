@@ -84,7 +84,7 @@ export default function SettingsDataAnalytics() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")}>
+        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")} testID="customer.settings.data-analytics.replace-main">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.data_analytics')}</Text>
@@ -95,18 +95,18 @@ export default function SettingsDataAnalytics() {
           <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('data_analytics.privacy_settings')}</Text>
           <View className="flex-row items-center justify-between px-[12px] py-[10px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }}>
             <Text className="flex-1 text-[14px] font-Jakarta" style={{ color: textPrimary }}>{t('data_analytics.share_usage')}</Text>
-            <Switch value={controls.share_usage_data} onValueChange={(v) => updateControl("share_usage_data", v)} trackColor={{ false: "#767577", true: "#0CC25F" }} thumbColor={controls.share_usage_data ? "#f5dd4b" : "#f4f3f4"} />
+            <Switch value={controls.share_usage_data} onValueChange={(v) => updateControl("share_usage_data", v)} trackColor={{ false: "#767577", true: "#0CC25F" }} thumbColor={controls.share_usage_data ? "#f5dd4b" : "#f4f3f4"}  testID="customer.settings.data-analytics.update-control"/>
           </View>
           <View className="flex-row items-center justify-between px-[12px] py-[10px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }}>
             <Text className="flex-1 text-[14px] font-Jakarta" style={{ color: textPrimary }}>{t('data_analytics.personalized_ads')}</Text>
-            <Switch value={controls.personalized_ads} onValueChange={(v) => updateControl("personalized_ads", v)} trackColor={{ false: "#767577", true: "#0CC25F" }} thumbColor={controls.personalized_ads ? "#f5dd4b" : "#f4f3f4"} />
+            <Switch value={controls.personalized_ads} onValueChange={(v) => updateControl("personalized_ads", v)} trackColor={{ false: "#767577", true: "#0CC25F" }} thumbColor={controls.personalized_ads ? "#f5dd4b" : "#f4f3f4"}  testID="customer.settings.data-analytics.update-control-2"/>
           </View>
         </View>
         <View className="mt-4">
-          <TouchableOpacity className="w-full border rounded-[8px] px-[12px] py-[10px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }} onPress={() => router.push("/(main)/(customer)/(tabs)/settings/request-data")}>
+          <TouchableOpacity className="w-full border rounded-[8px] px-[12px] py-[10px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }} onPress={() => router.push("/(main)/(customer)/(tabs)/settings/request-data")} testID="customer.settings.data-analytics.push-main">
             <Text className="text-[14px] font-Jakarta" style={{ color: textPrimary }}>{t('settings.request_data')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity className="w-full border rounded-[8px] px-[12px] py-[10px]" style={{ backgroundColor: surfaceBg, borderColor }} onPress={() => router.push("/(main)/(customer)/(tabs)/settings/delete-data")}>
+          <TouchableOpacity className="w-full border rounded-[8px] px-[12px] py-[10px]" style={{ backgroundColor: surfaceBg, borderColor }} onPress={() => router.push("/(main)/(customer)/(tabs)/settings/delete-data")} testID="customer.settings.data-analytics.push-main-2">
             <Text className="text-[14px] font-Jakarta" style={{ color: colors.danger }}>{t('settings.delete_data')}</Text>
           </TouchableOpacity>
         </View>
@@ -116,7 +116,7 @@ export default function SettingsDataAnalytics() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.settings.data-analytics.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

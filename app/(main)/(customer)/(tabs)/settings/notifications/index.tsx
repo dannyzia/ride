@@ -93,7 +93,7 @@ const ErrorBanner = ({
         accessibilityLabel={t('common.retry')}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         onPress={onRetry}
-      >
+       testID="customer.settings.notifications.on-retry">
         <Text style={styles.bannerAction}>{t('common.retry')}</Text>
       </TouchableOpacity>
     </View>
@@ -221,7 +221,7 @@ export default function SettingsNotifications() {
           trackColor={{ false: borderColor, true: colors.primary }}
           thumbColor={colors.white}
           accessibilityLabel={t(row.labelKey)}
-        />
+         testID="customer.settings.notifications.toggle-el"/>
       }
     />
   );
@@ -239,7 +239,7 @@ export default function SettingsNotifications() {
           accessibilityLabel={t('common.back')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => router.back()}
-        >
+         testID="customer.settings.notifications.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>
@@ -250,7 +250,7 @@ export default function SettingsNotifications() {
           accessibilityLabel={t('notifications_screen.toggle_theme')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => setTheme(isDark ? "light" : "dark")}
-        >
+         testID="customer.settings.notifications.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={24}
@@ -324,7 +324,7 @@ export default function SettingsNotifications() {
               disabled={saving}
               onPress={save}
               style={[styles.saveButton, { backgroundColor: colors.primary }]}
-            >
+             testID="customer.settings.notifications.save-el">
               {saving ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (

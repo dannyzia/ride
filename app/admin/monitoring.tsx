@@ -452,7 +452,7 @@ export default function MonitoringScreen() {
       subtitle="Dispatch forensics, ride chat history, driver economics"
       actions={
         tab === "economics" ? (
-          <Pressable style={styles.refreshBtn} onPress={fetchEcon}>
+          <Pressable style={styles.refreshBtn} onPress={fetchEcon} testID="admin.monitoring.fetch-econ">
             <Text style={styles.refreshBtnText}>Refresh</Text>
           </Pressable>
         ) : null
@@ -466,7 +466,7 @@ export default function MonitoringScreen() {
               key={t.key}
               onPress={() => setTab(t.key)}
               style={[styles.tabChip, active && styles.tabChipActive]}
-            >
+             testID="admin.monitoring.set-tab">
               <Text
                 style={[styles.tabChipText, active && styles.tabChipTextActive]}
               >
@@ -488,12 +488,12 @@ export default function MonitoringScreen() {
               style={styles.searchInput}
               autoCapitalize="none"
               autoCorrect={false}
-            />
+             testID="admin.monitoring.set-ride-id-input"/>
             <Pressable
               style={[styles.searchBtn, dispatchLoading && styles.btnDisabled]}
               onPress={() => fetchDispatchLog(rideIdInput)}
               disabled={dispatchLoading}
-            >
+             testID="admin.monitoring.fetch-dispatch-log">
               {dispatchLoading ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -562,12 +562,12 @@ export default function MonitoringScreen() {
               style={styles.searchInput}
               autoCapitalize="none"
               autoCorrect={false}
-            />
+             testID="admin.monitoring.set-chat-ride-id"/>
             <Pressable
               style={[styles.searchBtn, chatLoading && styles.btnDisabled]}
               onPress={() => fetchChat(chatRideId)}
               disabled={chatLoading}
-            >
+             testID="admin.monitoring.fetch-chat">
               {chatLoading ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

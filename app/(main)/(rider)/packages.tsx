@@ -277,7 +277,7 @@ export default function PackagesScreen() {
           disabled={purchasing && pendingPkgId === item.id}
           className="rounded-full px-5 py-2"
           style={{ backgroundColor: colors.primary, opacity: purchasing && pendingPkgId === item.id ? 0.6 : 1 }}
-        >
+         testID="rider.packages.handle-buy">
           {purchasing && pendingPkgId === item.id ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
@@ -292,7 +292,7 @@ export default function PackagesScreen() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center justify-between px-5 py-4">
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="rider.packages.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -376,7 +376,7 @@ export default function PackagesScreen() {
                 }}
                 className="mt-4 px-4 py-2 rounded-full"
                 style={{ backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }}
-              >
+               testID="rider.packages.el-2">
                 <Text className="text-sm font-JakartaSemiBold" style={{ color: textSecondary }}>
                   {t('packages.dismiss')}
                 </Text>
@@ -391,7 +391,7 @@ export default function PackagesScreen() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.packages.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

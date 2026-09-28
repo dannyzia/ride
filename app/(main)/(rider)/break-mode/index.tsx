@@ -42,7 +42,7 @@ function HeaderThemeToggle() {
         borderWidth: 1,
         borderColor,
       }}
-    >
+     testID="rider.break-mode.set-theme">
       <Ionicons
         name={isDark ? "sunny-outline" : "moon-outline"}
         size={20}
@@ -252,7 +252,7 @@ export default function BreakMode() {
           accessibilityRole="button"
           accessibilityLabel={t('break_mode.go_back')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+         testID="rider.break-mode.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -364,7 +364,7 @@ export default function BreakMode() {
             backgroundColor: colors.primary,
             opacity: ending ? 0.5 : 1,
           }}
-        >
+         testID="rider.break-mode.handle-end-break">
           {ending ? (
             <ActivityIndicator size={20} color={colors.white} />
           ) : (

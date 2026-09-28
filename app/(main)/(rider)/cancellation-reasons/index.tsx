@@ -54,7 +54,7 @@ function HeaderThemeToggle() {
         borderWidth: 1,
         borderColor,
       }}
-    >
+     testID="rider.cancellation-reasons.set-theme">
       <Ionicons
         name={isDark ? "sunny-outline" : "moon-outline"}
         size={20}
@@ -159,7 +159,7 @@ export default function CancellationReasons() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
+         testID="rider.cancellation-reasons.el-1">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text
@@ -214,7 +214,7 @@ export default function CancellationReasons() {
                   backgroundColor: surfaceBg,
                   borderColor: isSelected ? colors.danger : borderColor,
                 }}
-              >
+               testID="rider.cancellation-reasons.set-selected">
                 <Ionicons
                   name={
                     isSelected ? "radio-button-on" : "radio-button-off"
@@ -261,7 +261,7 @@ export default function CancellationReasons() {
                 marginTop: spacing.sm,
                 marginBottom: spacing.sm,
               }}
-            />
+             testID="rider.cancellation-reasons.set-other-text"/>
           ) : null}
           {error ? (
             <Text
@@ -290,7 +290,7 @@ export default function CancellationReasons() {
               opacity: !selected || cancelling ? 0.5 : 1,
               marginTop: spacing.md,
             }}
-          >
+           testID="rider.cancellation-reasons.handle-confirm">
             {cancelling ? (
               <ActivityIndicator size={20} color={colors.white} />
             ) : (

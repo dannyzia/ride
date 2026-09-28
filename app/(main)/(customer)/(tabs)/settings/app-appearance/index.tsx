@@ -63,7 +63,7 @@ export default function SettingsAppAppearance() {
           accessibilityLabel={t('common.back')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => router.back()}
-        >
+         testID="customer.settings.app-appearance.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>
@@ -74,7 +74,7 @@ export default function SettingsAppAppearance() {
           accessibilityLabel={t('app_appearance.toggle_theme')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() => setTheme(isDark ? "light" : "dark")}
-        >
+         testID="customer.settings.app-appearance.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={24}

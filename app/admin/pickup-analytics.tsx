@@ -91,13 +91,13 @@ export default function PickupAnalyticsScreen() {
               onChangeText={setDaysBack}
               keyboardType="numeric"
               placeholderTextColor={colors.textDisabledDark}
-            />
+             testID="admin.pickup-analytics.set-days-back"/>
           </View>
           <Pressable
             style={[styles.ghostBtn, loading && styles.ghostBtnDisabled]}
             onPress={fetchData}
             disabled={loading}
-          >
+           testID="admin.pickup-analytics.fetch-data">
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
         </View>

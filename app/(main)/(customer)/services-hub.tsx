@@ -74,7 +74,7 @@ export default function ServicesHub() {
           onPress={() => setTheme(isDark ? "light" : "dark")}
           hitSlop={8}
           className="ml-4"
-        >
+         testID="customer.services-hub.set-theme">
           <Ionicons
             name={isDark ? "sunny-outline" : "moon-outline"}
             size={24}
@@ -115,7 +115,7 @@ export default function ServicesHub() {
                 }}
                 onPress={() => handleSelect(cat.key)}
                 activeOpacity={0.8}
-              >
+               testID="customer.services-hub.handle-select">
                 <View
                   className="w-14 h-14 rounded-full items-center justify-center mb-3"
                   style={{ backgroundColor: color + "18" }}
@@ -161,7 +161,7 @@ export default function ServicesHub() {
             }}
             onPress={() => router.push("/(main)/(customer)/(shops)")}
             activeOpacity={0.8}
-          >
+           testID="customer.services-hub.push-main">
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-3"
               style={{ backgroundColor: colors.primary + "18" }}
@@ -192,7 +192,7 @@ export default function ServicesHub() {
             }}
             onPress={() => router.push("/(main)/(customer)/(rental-marketplace)")}
             activeOpacity={0.8}
-          >
+           testID="customer.services-hub.push-main-2">
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-3"
               style={{ backgroundColor: colors.amber + "18" }}
@@ -226,7 +226,7 @@ export default function ServicesHub() {
             }}
             onPress={() => router.push("/(main)/(customer)/(delivery)")}
             activeOpacity={0.8}
-          >
+           testID="customer.services-hub.push-main-3">
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-3"
               style={{ backgroundColor: colors.primary + "18" }}
@@ -260,7 +260,7 @@ export default function ServicesHub() {
             activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel={t("services_hub.a11y_emergency_ambulance")}
-          >
+           testID="customer.services-hub.push-main-4">
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-3"
               style={{ backgroundColor: colors.danger + "18" }}

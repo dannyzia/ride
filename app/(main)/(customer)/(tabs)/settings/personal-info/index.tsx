@@ -74,7 +74,7 @@ export default function SettingsPersonalInfo() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} testID="customer.settings.personal-info.el-1">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.personal_info')}</Text>
@@ -82,7 +82,7 @@ export default function SettingsPersonalInfo() {
       </View>
       <ScrollView className="flex-1 px-[24px]" contentContainerStyle={{ paddingVertical: 24 }}>
         <View className="items-center mb-6">
-          <TouchableOpacity onPress={pickImage} className="mb-4">
+          <TouchableOpacity onPress={pickImage} className="mb-4" testID="customer.settings.personal-info.pick-image">
             {localPhoto ? (
               <Image
                 source={{ uri: localPhoto }}
@@ -111,7 +111,7 @@ export default function SettingsPersonalInfo() {
             placeholderTextColor={textSecondary}
             value={localName}
             onChangeText={setLocalName}
-          />
+           testID="customer.settings.personal-info.set-local-name"/>
         </View>
         <View className="mb-4">
           <Text className="text-[14px] font-Jakarta mb-2" style={{ color: textSecondary }}>{t('personal_info.email')}</Text>
@@ -121,7 +121,7 @@ export default function SettingsPersonalInfo() {
             placeholder={t('personal_info.not_set')}
             placeholderTextColor={textSecondary}
             editable={false}
-          />
+           testID="customer.settings.personal-info.personal-info-not-set"/>
         </View>
         <View className="mb-6">
           <Text className="text-[14px] font-Jakarta mb-2" style={{ color: textSecondary }}>{t('personal_info.phone')}</Text>
@@ -131,7 +131,7 @@ export default function SettingsPersonalInfo() {
             placeholder={t('personal_info.not_set')}
             placeholderTextColor={textSecondary}
             editable={false}
-          />
+           testID="customer.settings.personal-info.personal-info-not-set-2"/>
         </View>
         {error ? (
           <Text className="text-[14px] font-Jakarta mb-3 text-center" style={{ color: colors.danger }}>{error}</Text>
@@ -144,7 +144,7 @@ export default function SettingsPersonalInfo() {
           style={{ backgroundColor: loading ? disabledBg : colors.primary }}
           onPress={saveChanges}
           disabled={loading}
-        >
+         testID="customer.settings.personal-info.save-changes">
           {loading ? (
             <ActivityIndicator size={20} color="#FFFFFF" />
           ) : (
@@ -157,7 +157,7 @@ export default function SettingsPersonalInfo() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.settings.personal-info.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

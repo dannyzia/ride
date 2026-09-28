@@ -131,7 +131,7 @@ const fetchBids = useCallback(async () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} testID="customer.rental-marketplace.bidding.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
@@ -209,7 +209,7 @@ const fetchBids = useCallback(async () => {
                   flexDirection: "row",
                   alignItems: "center",
                 }}
-              >
+               testID="customer.rental-marketplace.bidding.set-selected-bid-id">
                 {/* Rank badge */}
                 {bid.rank_badge && (
                   <View
@@ -279,7 +279,7 @@ const fetchBids = useCallback(async () => {
               alignItems: "center",
               justifyContent: "center",
             }}
-          >
+           testID="customer.rental-marketplace.bidding.handle-accept">
             {accepting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (

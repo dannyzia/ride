@@ -208,7 +208,7 @@ const RideDetailScreen = () => {
             onPress={fetchRide}
             accessibilityRole="button"
             accessibilityLabel={t('ride_detail.retry_loading')}
-          >
+           testID="customer.ride-detail.ride_id.fetch-ride">
             <Text style={styles.retryBtnText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
@@ -277,7 +277,7 @@ const RideDetailScreen = () => {
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={t('ride_detail.go_back')}
-          >
+           testID="customer.ride-detail.ride_id.el-1">
             <Ionicons name="arrow-back" size={24} color={textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: textPrimary }]}>{t('ride_detail.title')}</Text>
@@ -286,7 +286,7 @@ const RideDetailScreen = () => {
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={t('ride_detail.toggle_theme')}
-          >
+           testID="customer.ride-detail.ride_id.set-theme">
             <Ionicons
               name={isDark ? "sunny-outline" : "moon-outline"}
               size={24}
@@ -437,7 +437,7 @@ const RideDetailScreen = () => {
           }
           accessibilityRole="button"
           accessibilityLabel={t('ride_detail.rebook_a11y')}
-        >
+         testID="customer.ride-detail.ride_id.el-2">
           <Text style={styles.rebookBtnText}>{t('ride_detail.rebook')}</Text>
         </TouchableOpacity>
 
@@ -449,7 +449,7 @@ const RideDetailScreen = () => {
             }
             accessibilityRole="button"
             accessibilityLabel={t('ride_detail.dispute_a11y')}
-          >
+           testID="customer.ride-detail.ride_id.push-main">
             <Text style={[styles.disputeBtnText, { color: colors.amber }]}>
               {t('ride_detail.dispute_fare')}
             </Text>
@@ -463,7 +463,7 @@ const RideDetailScreen = () => {
           }
           accessibilityRole="button"
           accessibilityLabel={t('ride_detail.report_a11y')}
-        >
+         testID="customer.ride-detail.ride_id.push-main-2">
           <Text style={[styles.reportBtnText, { color: textPrimary }]}>{t('ride_detail.report_issue')}</Text>
         </TouchableOpacity>
       </ScrollView>

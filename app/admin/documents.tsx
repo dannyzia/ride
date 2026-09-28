@@ -73,7 +73,7 @@ export default function DocumentApproval() {
     { key: "driver_name", header: "Driver", width: 150 },
     { key: "doc_type", header: "Type", width: 120 },
     { key: "id", header: "Actions", render: (r) => (
-      <Pressable onPress={() => viewDoc(r)} style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.adminAccent, borderRadius: 6 }}>
+      <Pressable onPress={() => viewDoc(r)} style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.adminAccent, borderRadius: 6 }} testID="admin.documents.view-doc">
         <Text style={{ color: "#000", fontFamily: "Jakarta-Bold", fontSize: 11 }}>Review</Text>
       </Pressable>
     ), width: 80 },
@@ -93,11 +93,11 @@ export default function DocumentApproval() {
             <Image source={{ uri: presignedUrl }} style={{ width: "100%", height: 300, borderRadius: 8, marginBottom: 12 }} resizeMode="contain" />
             <View style={{ flexDirection: "row", gap: 12 }}>
               <Pressable onPress={() => approveDoc(selectedDoc!.id)}
-                style={{ flex: 1, paddingVertical: 12, backgroundColor: colors.primary, borderRadius: 8, alignItems: "center" }}>
+                style={{ flex: 1, paddingVertical: 12, backgroundColor: colors.primary, borderRadius: 8, alignItems: "center" }} testID="admin.documents.approve-doc">
                 <Text style={{ color: "#000", fontFamily: "Jakarta-Bold" }}>Approve</Text>
               </Pressable>
               <Pressable onPress={() => rejectDoc(selectedDoc!.id)}
-                style={{ flex: 1, paddingVertical: 12, backgroundColor: colors.danger, borderRadius: 8, alignItems: "center" }}>
+                style={{ flex: 1, paddingVertical: 12, backgroundColor: colors.danger, borderRadius: 8, alignItems: "center" }} testID="admin.documents.reject-doc">
                 <Text style={{ color: "#FFF", fontFamily: "Jakarta-Bold" }}>Reject</Text>
               </Pressable>
             </View>

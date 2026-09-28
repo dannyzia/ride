@@ -27,7 +27,7 @@ export default function UserArrived() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="customer.user-arrived.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
       <View
@@ -46,14 +46,14 @@ export default function UserArrived() {
         className="rounded-full w-full py-[16px] items-center mb-3"
         style={{ backgroundColor: colors.primary }}
         onPress={() => router.replace("/(main)/(customer)/rate-driver")}
-      >
+       testID="customer.user-arrived.replace-main">
         <Text className="text-[18px] font-JakartaBold text-goWhite">{t('user_arrived.rate_your_driver')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         className="border rounded-full w-full py-[16px] items-center"
         style={{ borderColor }}
         onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
-      >
+       testID="customer.user-arrived.replace-main-2">
         <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('user_arrived.skip')}</Text>
       </TouchableOpacity>
     </SafeAreaView>

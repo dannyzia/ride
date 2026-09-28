@@ -303,13 +303,13 @@ export default function CityBoundariesScreen() {
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
             onPress={() => openEdit(c)}
-          >
+           testID="admin.city-boundaries.open-edit">
             <Text style={styles.miniBtnText}>Edit</Text>
           </Pressable>
           <Pressable
             style={[styles.miniBtn, { backgroundColor: colors.danger }]}
             onPress={() => setConfirmDelete(c)}
-          >
+           testID="admin.city-boundaries.set-confirm-delete">
             <Text style={styles.miniBtnText}>Delete</Text>
           </Pressable>
         </View>
@@ -323,10 +323,10 @@ export default function CityBoundariesScreen() {
       subtitle="Intercity geo-fencing polygons"
       actions={
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable style={styles.ghostBtn} onPress={fetchList}>
+          <Pressable style={styles.ghostBtn} onPress={fetchList} testID="admin.city-boundaries.fetch-list">
             <Text style={styles.ghostBtnText}>Refresh</Text>
           </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={openCreate}>
+          <Pressable style={styles.primaryBtn} onPress={openCreate} testID="admin.city-boundaries.open-create">
             <Text style={styles.primaryBtnText}>+ New Boundary</Text>
           </Pressable>
         </View>
@@ -352,14 +352,14 @@ export default function CityBoundariesScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={closeModal}
               disabled={submitting}
-            >
+             testID="admin.city-boundaries.close-modal">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, styles.modalBtnPrimary]}
               onPress={handleSave}
               disabled={submitting}
-            >
+             testID="admin.city-boundaries.handle-save">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
@@ -385,14 +385,14 @@ export default function CityBoundariesScreen() {
               style={[styles.modalBtn, styles.modalBtnGhost]}
               onPress={() => setConfirmDelete(null)}
               disabled={submitting}
-            >
+             testID="admin.city-boundaries.set-confirm-delete-2">
               <Text style={styles.modalBtnGhostText}>Cancel</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, { backgroundColor: colors.danger }]}
               onPress={confirmDeleteAction}
               disabled={submitting}
-            >
+             testID="admin.city-boundaries.confirm-delete-action">
               {submitting ? (
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (

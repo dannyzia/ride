@@ -86,7 +86,7 @@ export default function InsuranceInfo() {
               onPress={load}
               className="rounded-full px-[20px] py-[10px]"
               style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
-            >
+             testID="rider.insurance.load-el">
               <Text className="text-[14px] font-JakartaSemiBold" style={{ color: colors.primary }}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -128,7 +128,7 @@ export default function InsuranceInfo() {
               style={{ backgroundColor: surfaceBg, borderColor }}
               accessibilityRole="button"
               accessibilityLabel="Call insurance support"
-            >
+             testID="rider.insurance.el-1">
               <Ionicons name="call" size={20} color={colors.primary} />
               <View className="flex-1">
                 <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Claims & Support</Text>
@@ -144,7 +144,7 @@ export default function InsuranceInfo() {
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+       testID="rider.insurance.set-theme">
         <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>

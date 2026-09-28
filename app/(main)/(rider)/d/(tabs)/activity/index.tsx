@@ -197,7 +197,7 @@ export default function ActivityScreen() {
                   borderColor,
                 }}
                 onPress={() => router.push(item.route)}
-              >
+               testID="rider.d.activity.el-1">
                 <Ionicons name={item.icon} size={20} color={colors.primary} />
                 <Text
                   className="text-[11px] font-JakartaSemiBold mt-1"
@@ -230,7 +230,7 @@ export default function ActivityScreen() {
                   borderWidth: 1,
                   borderColor: active ? colors.primary : borderColor,
                 }}
-              >
+               testID="rider.d.activity.set-filter">
                 <Text
                   className="text-[13px] font-JakartaSemiBold"
                   style={{ color: active ? colors.white : textPrimary }}
@@ -254,7 +254,7 @@ export default function ActivityScreen() {
             <Text className="text-[14px] font-Jakarta" style={{ color: colors.danger }}>
               {error}
             </Text>
-            <TouchableOpacity onPress={handleRefresh} className="mt-2">
+            <TouchableOpacity onPress={handleRefresh} className="mt-2" testID="rider.d.activity.handle-refresh">
               <Text className="text-[14px] font-JakartaBold" style={{ color: colors.primary }}>
                 {t('activity.retry')}
               </Text>
@@ -391,7 +391,7 @@ export default function ActivityScreen() {
                 }}
                 onPress={loadMore}
                 disabled={loading}
-              >
+               testID="rider.d.activity.load-more">
                 {loading ? (
                   <ActivityIndicator size="small" color={colors.primary} />
                 ) : (

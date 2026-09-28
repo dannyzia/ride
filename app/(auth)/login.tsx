@@ -104,7 +104,7 @@ export default function LoginScreen() {
             if (error) setError("");
           }}
           maxLength={10}
-        />
+         testID="login.set-phone"/>
       </View>
 
       {/* Password Input */}
@@ -122,7 +122,7 @@ export default function LoginScreen() {
           autoCorrect={false}
           value={password}
           onChangeText={setPassword}
-        />
+         testID="login.set-password"/>
       </View>
 
       {error ? (
@@ -138,12 +138,12 @@ export default function LoginScreen() {
         title={loading ? "Logging in..." : "Login"}
         onPress={handleLogin}
         disabled={loading}
-      />
+       testID="login.handle-login"/>
 
       <TouchableOpacity
         onPress={() => router.push("/(auth)/forgot-password")}
         className="items-center mt-4"
-      >
+       testID="login.push-auth">
         <Text
           className="text-[14px] font-JakartaBold"
           style={{ color: colors.primary }}

@@ -68,7 +68,7 @@ export default function Walkthrough3() {
         <CustomButton
           title="Get Started"
           onPress={() => router.replace("/(auth)/phone-entry")}
-        />
+         testID="walkthrough-3.replace-auth"/>
       </View>
     </SafeAreaView>
   );
