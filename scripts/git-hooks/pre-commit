@@ -1,8 +1,20 @@
-#!/bin/sh
+#!/bin/bash
 # Pre-commit hook — lint only staged files (~3-5s)
 # Blocks commit on lint errors. Type check + web export run in pre-push.
 #
 # Install: node scripts/install-hooks.js
+#
+# 2026-09-28 lint-stage rewrite: the old pipeline
+#   `xargs -n 40 timeout 30 npx eslint --quiet`
+# intermittently died on Windows (npx cmd-shim spawn exit 123, or the 30s
+# timeout killing a healthy cold start = exit 124) with ZERO output, and under
+# `set -e` the hook died BEFORE its own `if [ $? -ne 0 ]` handler — silently
+# blocking commits (hit twice on the 221-file testID commit, 2026-09-27, while
+# the same file set lints exit 0 manually). New stage: node runs eslint's JS
+# entrypoint directly (no npx shim, no timeout — lint has no hang mode), file
+# lists are NUL-delimited (paths with spaces are safe), and a report-less
+# nonzero exit is retried once as a transient flake. A real lint report (any
+# "error" line) blocks immediately — retries never mask findings.
 
 set -e
 
@@ -25,34 +37,77 @@ fi
 
 echo "⏳ Pre-commit: lint staged files..."
 
-# Get staged .ts/.tsx/.js/.jsx files (only those still on disk)
-# `|| true`: grep exits 1 when nothing matches (e.g. docs-only or shell-only
-# commits) and set -e would otherwise kill the hook before the skip check.
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx)$' || true)
+# NUL-delimited staged .ts/.tsx/.js/.jsx (only those still on disk, i.e. the
+# ACM filter). NUL is the only separator git guarantees — spaces in paths are
+# preserved, unlike the old xargs word-splitting.
+FILES=()
+while IFS= read -r -d '' f; do
+  FILES+=("$f")
+done < <(git diff --cached --name-only -z --diff-filter=ACM | grep -zE '\.(ts|tsx|js|jsx)$' || true)
 
-if [ -z "$STAGED_FILES" ]; then
+if [ ${#FILES[@]} -eq 0 ]; then
   echo "✅ No staged JS/TS files — skipping lint."
   exit 0
 fi
 
-echo "  → Linting $(echo "$STAGED_FILES" | wc -l | tr -d ' ') file(s)..."
+echo "  → Linting ${#FILES[@]} file(s)..."
 
-# Set ESLINT_USE_FLAT_CONFIG directly (no cross-env dependency — that was the cold-start hang).
-# Add 30s hard timeout so a stuck eslint never blocks a commit silently.
-# xargs -n 40 chunks large staged lists: Windows command-line limit aborts
-# single-invocation eslint runs with "The command line is too long" (fails the
-# commit with exit 128 even when the code is clean). Chunks stay sequential;
-# any chunk failing blocks the commit.
-export ESLINT_USE_FLAT_CONFIG=false
-if command -v timeout >/dev/null 2>&1; then
-  echo "$STAGED_FILES" | xargs -n 40 timeout 30 npx eslint --quiet
-else
-  echo "$STAGED_FILES" | xargs -n 40 npx eslint --quiet
-fi
-if [ $? -ne 0 ]; then
-  echo "❌ Lint failed — commit blocked."
+# Invoke eslint's JS entrypoint with node directly: skips the npx cmd-shim
+# (the source of the transient exit-123 spawns) and the timeout cap (which
+# killed healthy 30s+ cold starts). Fail hard if deps are missing.
+ESLINT_ENTRY="node_modules/eslint/bin/eslint.js"
+if [ ! -f "$ESLINT_ENTRY" ]; then
+  echo "❌ eslint not found at $ESLINT_ENTRY — run: npm ci (repo root)."
   exit 1
 fi
+# bash-only features below (arrays, process substitution, NUL reads) — Git for
+# Windows executes hooks with its bundled /bin/bash, so this shebang is safe.
+export ESLINT_USE_FLAT_CONFIG=false
+
+LINT_LOG=$(mktemp "${TMPDIR:-/tmp}/pre-commit-lint.XXXXXX")
+
+# run_chunk FILES... — lint one chunk.
+#   exit 0 = pass;  exit 1 = real lint report (or still dying after retry).
+# A nonzero exit WITH a report line is a real finding: no retry. A nonzero
+# exit with NO report is the transient Windows spawn flake: retry once.
+run_chunk() {
+  # `cmd && return 0` (NOT `if cmd; then return 0; fi`): an if-compound with no
+  # else exits 0 even when its condition fails, which would clobber $? below.
+  node "$ESLINT_ENTRY" --quiet "$@" >"$LINT_LOG" 2>&1 && return 0
+  local rc=$?
+  if grep -q "error" "$LINT_LOG"; then
+    return 1
+  fi
+  echo "  → eslint chunk exited $rc with no report — retrying once (transient spawn flake)..."
+  sleep 2
+  node "$ESLINT_ENTRY" --quiet "$@" >>"$LINT_LOG" 2>&1 && return 0
+  rc=$?
+  if grep -q "error" "$LINT_LOG"; then
+    return 1
+  fi
+  echo "  → eslint chunk exited $rc with no report twice — treating as lint failure."
+  return 1
+}
+
+CHUNK=40   # keep under the Windows command-line length limit
+LINT_FAILED=0
+i=0
+while [ $i -lt ${#FILES[@]} ]; do
+  if run_chunk "${FILES[@]:$i:$CHUNK}"; then
+    i=$((i + CHUNK))
+  else
+    LINT_FAILED=1
+    break
+  fi
+done
+
+if [ $LINT_FAILED -ne 0 ]; then
+  cat "$LINT_LOG"
+  echo "❌ Lint failed — commit blocked."
+  rm -f "$LINT_LOG"
+  exit 1
+fi
+rm -f "$LINT_LOG"
 
 echo "✅ Pre-commit passed."
 echo "   (tsc + web export run at push time — pre-push hook)"
