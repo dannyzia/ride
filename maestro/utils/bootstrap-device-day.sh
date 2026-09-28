@@ -9,11 +9,21 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
+# Port-in-use check, portable: lsof is absent on Windows Git Bash (silent
+# misbehavior in unattended runs) — netstat works on both. Args: PORT.
+port_listening() {
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
+  else
+    netstat -an 2>/dev/null | grep -q ":$1 .*LISTEN"
+  fi
+}
+
 echo "== 1) env sync =="
 node scripts/dev-env-sync.js || exit 1
 
 echo "== 2) utils-server (ws://0.0.0.0:3001, INSTANCE_COUNT=1) =="
-if lsof -iTCP:3001 -sTCP:LISTEN >/dev/null 2>&1; then
+if port_listening 3001; then
   echo "utils-server already listening on 3001 — reusing"
 else
   (cd utils-server && npm run dev > ../utils-server-test.log 2>&1 &)
@@ -22,13 +32,13 @@ else
 fi
 
 echo "== 3) Metro (port 8081) =="
-if lsof -iTCP:8081 -sTCP:LISTEN >/dev/null 2>&1; then
+if port_listening 8081; then
   echo "Metro already listening on 8081 — reusing"
 else
   (npx expo start --port 8081 > metro-test.log 2>&1 &)
   echo "Waiting for Metro to accept connections…"
   for i in $(seq 1 60); do
-    lsof -iTCP:8081 -sTCP:LISTEN >/dev/null 2>&1 && break
+    port_listening 8081 && break
     sleep 2
   done
 fi
