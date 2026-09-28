@@ -188,12 +188,22 @@ function processFile(absPath, rel, globalSeen) {
           return;
         }
 
-        const semantic =
-          existingVal && !/^[\w.-]+-\d{3}$/.test(existingVal) ? existingVal : deriveFunction(attrs, sf);
+        // B-1 fix (2026-09-28): preserve an existing testID ONLY when it is
+        // already a fully-qualified semantic ID for THIS route (i.e. written by
+        // a previous v3 run). Positional legacy values (`*-NNN`) and route-less
+        // values are re-derived from the element; the route prefix is added
+        // exactly once. The old code stored the old FULL ID into `semantic`
+        // and unconditionally prefixed `${route}.` — so every re-run turned
+        // `_layout.set-theme` into `_layout._layout.set-theme` (double-prefix
+        // corruption of all 1,108 IDs, caught by Prompt B audit).
+        const isPositional = existingVal && /^[\w.-]+-\d{3}$/.test(existingVal);
+        const preserve =
+          existingVal && !isPositional && existingVal.startsWith(`${route}.`);
+        const semantic = preserve ? existingVal : deriveFunction(attrs, sf);
 
         let id;
         if (semantic) {
-          id = `${route}.${semantic}`;
+          id = preserve ? semantic : `${route}.${semantic}`;
           // Grammar guard: any single-word token that slipped through slug()
           // still forms a multi-segment ID here — but a token that is itself
           // key-shaped end-to-end (all-lowercase word segments) would collide
