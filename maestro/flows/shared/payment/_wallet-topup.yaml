@@ -1,0 +1,24 @@
+# _wallet-topup — wallet → top-up → (bypass) → assert balance.
+# §9. MANIFEST: BLOCKED (payments sandbox, PortPos WebView opaque to Maestro — Gap 4).
+# The UI part (navigate → amount → initiate) is authored to blueprint; the credit
+# assertion depends on _portpos-bypass which is BLOCKED-GATE.
+# Class: BLOCKED.
+appId: com.ride.bd
+---
+- tapOn:
+    text: ".*Wallet.*"
+- extendedWaitUntil:
+    visible: ".*Top Up.*|.*top-up.*|.*Add money.*"
+    timeout: 15000
+- tapOn: ".*Top Up.*|.*Add money.*"
+- extendedWaitUntil:
+    visible: ".*Amount.*|.*৳.*"
+    timeout: 15000
+- tapOn:
+    text: ".*৳${AMOUNT}.*|.*${AMOUNT}.*"
+    optional: true
+- tapOn: ".*Proceed.*|.*Pay.*|.*Top Up.*"
+# BLOCKED: real PortPos sandbox WebView opens here; Maestro cannot interact with it.
+- extendedWaitUntil:
+    visible: ".*Payment.*|.*PortPos.*|.*WebView.*"
+    timeout: 20000

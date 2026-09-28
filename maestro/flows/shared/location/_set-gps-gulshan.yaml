@@ -1,0 +1,8 @@
+# _set-gps-gulshan — destination-side GPS = Gulshan-2, Dhaka (90.4152 23.7956).
+# §3.2 + §9. Seeding is host-side (maestro/utils/adb-gps-gulshan.sh before the
+# suite); this subflow is the in-flow no-op marker (Maestro 2.6.1 constraint).
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- waitForAnimationToEnd:
+    timeout: 2000

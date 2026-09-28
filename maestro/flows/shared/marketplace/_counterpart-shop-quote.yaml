@@ -1,0 +1,19 @@
+# _counterpart-shop-quote — COUNTERPART ACTION: shop member answers an RFQ with a
+# quote while the CUSTOMER side runs in the UI (V3 Shops).
+# Counterpart call: POST ${API_BASE}/api/shop/orders/${ORDER_ID}/quote
+#   Auth: real shop-member token (SHOP_PHONE/SHOP_PASSWORD from the seeded roster;
+#   requireShopMember §E.2 enforces shops.status==='active').
+# Contract: §C.1; RFQ state machine §B.6.
+# Class: COUNTERPART-API.
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-login.cjs --phone "${SHOP_PHONE}" --password "${SHOP_PASSWORD}" --out /tmp/counterpart-token.json
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-api.cjs --token /tmp/counterpart-token.json --method POST --path "/api/shop/orders/${ORDER_ID}/quote" --body '{"amount_bdt":${QUOTE_AMOUNT_BDT}}' --out /tmp/quote-response.json

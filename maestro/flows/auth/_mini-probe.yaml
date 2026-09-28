@@ -1,0 +1,6 @@
+---
+appId: com.ride.bd
+---
+- runFlow: ../../shared/util/_open-settings-hub.yaml
+- launchApp:
+    appId: com.ride.bd

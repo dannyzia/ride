@@ -1,0 +1,19 @@
+# rider/completion/01-rate-driver-5-star — post-ride rating sheet → 5 stars → submit.
+# Feature: TRUST rating (§4). Requires a completed ride: seeding BLOCKED-GATE (Gate 2);
+# in device-day runs the paired driver flow produces completion (rider-core precedent).
+# Class: AUTOMATABLE (paired-run) / BLOCKED-GATE (standalone).
+appId: com.ride.bd
+name: "Rider Completion - Rate Driver 5 Star"
+tags: [rider, completion]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- runFlow:
+    env:
+      STARS: "5"
+    commands:
+      - runFlow: ../../../shared/completion/_rate-driver.yaml

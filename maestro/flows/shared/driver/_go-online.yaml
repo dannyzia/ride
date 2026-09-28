@@ -1,0 +1,24 @@
+# _go-online — toggle driver online → assert Go Offline / Connected badge.
+# §9 Driver Operation Subflows. Selectors VERIFIED against maestro/flows/driver-go-online.yaml
+# (device-proven 2026-09 session): "Go Online" button, OS "While using the app" dialog,
+# "Go Offline" + "Connected" badges. Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- extendedWaitUntil:
+    visible: ".*Go Online.*|.*Go Offline.*"
+    timeout: 20000
+- runFlow:
+    when:
+      visible: "Go Online"
+    commands:
+      - tapOn: "Go Online"
+      - runFlow:
+          when:
+            visible: "While using the app"
+          commands:
+            - tapOn: "While using the app"
+      - waitForAnimationToEnd:
+          timeout: 4000
+- extendedWaitUntil:
+    visible: "Go Offline"
+    timeout: 15000

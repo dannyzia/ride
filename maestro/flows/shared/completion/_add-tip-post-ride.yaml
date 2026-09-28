@@ -1,0 +1,13 @@
+# _add-tip-post-ride — tip screen → select AMOUNT → submit.
+# §9. Selector source: app/(main)/(customer)/add-tip/ (i18n add_tip section).
+# AMOUNT is a display value (৳) tapped as a chip; no money math in the flow.
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- extendedWaitUntil:
+    visible: ".*Tip.*|.*tip.*"
+    timeout: 20000
+- tapOn: ".*৳${AMOUNT}.*|.*${AMOUNT}.*"
+- tapOn: ".*Confirm.*|.*Submit.*|.*Add Tip.*"
+- waitForAnimationToEnd:
+    timeout: 3000

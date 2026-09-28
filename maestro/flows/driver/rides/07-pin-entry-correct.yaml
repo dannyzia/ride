@@ -1,0 +1,22 @@
+# driver/rides/07-pin-entry-correct — correct PIN starts the ride (CRITICAL §16:
+# PIN enforced before IN_PROGRESS). PIN is read from the paired rider device
+# (dual-device coordination is manual per §11 architecture decision).
+# Class: AUTOMATABLE (paired-run, PIN passed via env).
+appId: com.ride.bd
+name: "Driver Rides - PIN Entry Correct"
+tags: [driver, in-ride, smoke]
+---
+- runFlow:
+    env:
+      PHONE: "8801700000001"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-driver.yaml
+- runFlow: ../../../shared/driver/_go-online.yaml
+- runFlow: ../../../shared/driver/_accept-ride.yaml
+- runFlow: ../../../shared/driver/_slide-arrive.yaml
+- runFlow:
+    env:
+      PIN: "0000"
+    commands:
+      - runFlow: ../../../shared/driver/_enter-pin.yaml

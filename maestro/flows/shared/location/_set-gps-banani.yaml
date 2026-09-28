@@ -1,0 +1,11 @@
+# _set-gps-banani — pickup origin = Banani, Dhaka (90.4066 23.7937).
+# §3.2 + §9 of plans/maestro-architecture.md. GPS seeding itself is done by
+# maestro/utils/adb-gps-banani.sh (host-side, before the suite) — Maestro 2.6.1's
+# runScript cannot exec host processes from inside a flow on Windows. This
+# subflow therefore only ASSERTS the app reached the location-dependent ground;
+# flows that need a re-fix mid-run call the util script via run_flow at suite
+# level instead. Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- waitForAnimationToEnd:
+    timeout: 2000

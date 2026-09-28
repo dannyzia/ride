@@ -1,0 +1,11 @@
+# _open-settings-hub — Profile tab → Settings.
+# §9. Selector source: rider tabs (rider_tabs / settings.title i18n sections:
+# "Settings"). Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- tapOn:
+    text: ".*Profile.*|.*Account.*"
+- extendedWaitUntil:
+    visible: ".*Settings.*"
+    timeout: 15000
+- tapOn: ".*Settings.*"

@@ -1,0 +1,56 @@
+# marketplace/v3-shops/01-order-rfq-accept — V3 Shops end-to-end:
+# shop screen → create order (delivery|pickup) → RFQ quote (COUNTERPART shop action)
+# → customer accepts → order states advance.
+# Contract: §C.1/§B.3/§B.6. Shop-side screens live in app/admin/marketplace/shops.tsx
+# (web admin = Playwright-only per testing-agent Rule 1) — hence the shop action is
+# COUNTERPART-API by architecture, not by workaround.
+#
+# COUNTERPART-API call: _counterpart-shop-quote → POST /api/shop/orders/{id}/quote
+# (shop-member real auth; requireShopMember §E.2).
+# Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until shop roster fixtures land.
+appId: com.ride.bd
+name: "V3 Shops - Order RFQ Accept"
+tags: [marketplace, v3-shops, counterpart-api]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- tapOn: ".*Shops?.*|.*Shop.*"
+- extendedWaitUntil:
+    visible: ".*Shop.*|.*shop.*"
+    timeout: 20000
+- tapOn:
+    text: ".*"
+    index: 0
+- extendedWaitUntil:
+    visible: ".*product.*|.*Product.*|.*order.*"
+    timeout: 20000
+# Add first product, choose delivery fulfillment, place order.
+- tapOn: ".*Add.*|.*Buy.*"
+- tapOn:
+    text: ".*Delivery.*"
+    optional: true
+- tapOn: ".*Place Order.*|.*Checkout.*|.*Order.*"
+- extendedWaitUntil:
+    visible: ".*quote.*|.*pending.*|.*RFQ.*"
+    timeout: 30000
+# ── Counterpart side (API): shop member answers the RFQ ───────────────────────
+- runFlow:
+    env:
+      SHOP_PHONE: "8801700000201"
+      SHOP_PASSWORD: "test1234"
+      ORDER_ID: "LATEST_SHOP_ORDER"
+      QUOTE_AMOUNT_BDT: "45000"
+    commands:
+      - runFlow: ../../../shared/marketplace/_counterpart-shop-quote.yaml
+# ── Customer side (UI): quote visible → accept → order state advances ─────────
+- extendedWaitUntil:
+    visible: ".*quote.*|.*৳.*"
+    timeout: 60000
+- tapOn: ".*Accept.*"
+- extendedWaitUntil:
+    visible: ".*confirmed.*|.*preparing.*|.*accepted.*"
+    timeout: 30000

@@ -1,0 +1,14 @@
+# _go-offline — toggle driver offline → assert Offline/Go Online badge.
+# §9. Selectors verified against driver-go-online.yaml (inverse path).
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- extendedWaitUntil:
+    visible: "Go Offline"
+    timeout: 15000
+- tapOn: "Go Offline"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Go Online"
+    timeout: 15000

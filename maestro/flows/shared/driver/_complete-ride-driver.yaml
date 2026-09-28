@@ -1,0 +1,19 @@
+# _complete-ride-driver — slide drop-off → assert completed modal with fare.
+# §9. Selectors VERIFIED in driver-core.yaml: "Slide to Confirm Drop-off" →
+# "Ride Completed ✅" modal → "Total Fare" → "Browse Home". Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- extendedWaitUntil:
+    visible: "Slide to Confirm Drop-off"
+    timeout: 120000
+- swipe:
+    start: "10%, 93%"
+    end: "92%, 93%"
+    duration: 2000
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Ride Completed ✅"
+    timeout: 30000
+- assertVisible: "Total Fare"
+- tapOn: "Browse Home"

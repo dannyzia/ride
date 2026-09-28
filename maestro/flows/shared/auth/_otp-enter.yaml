@@ -1,0 +1,12 @@
+# _otp-enter — type OTP digits → tap Verify.
+# §9 Authentication Subflows. Gate 1 REWIRE (semantic IDs, app/(auth)/otp-verify.tsx
+# via maestro/tools/testid-map.json): otp-verify.set-otp / otp-verify.handle-verify-otp.
+# Dev fixture: OTP bypass code 123456 (dpRelay bypass, TEST-SETUP.md).
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- tapOn:
+    id: "otp-verify.set-otp"
+- inputText: ${OTP_CODE}
+- tapOn:
+    id: "otp-verify.handle-verify-otp"

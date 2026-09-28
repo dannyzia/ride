@@ -1,0 +1,37 @@
+# marketplace/v7-ambulance/02-scheduled-ambulance — scheduled ambulance with
+# service_level selection (V7 non-emergency path; no first-accept race — assignment
+# is scheduled broadcast per spec §A.5/§C.6).
+# Class: AUTOMATABLE (customer side) + COUNTERPART-API (provider accept).
+# BLOCKED until roster fixtures land.
+appId: com.ride.bd
+name: "V7 Ambulance - Scheduled"
+tags: [marketplace, v7-ambulance, counterpart-api]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- tapOn: ".*Ambulance.*"
+- tapOn: ".*Schedule.*|.*Scheduled.*"
+- extendedWaitUntil:
+    visible: ".*service.*|.*BLS.*|.*ALS.*|.*level.*"
+    timeout: 20000
+- tapOn:
+    text: ".*BLS.*|.*Basic.*"
+    optional: true
+- tapOn: ".*Submit.*|.*Book.*"
+- extendedWaitUntil:
+    visible: ".*scheduled.*|.*confirmed.*"
+    timeout: 30000
+- runFlow:
+    env:
+      DRIVER_PHONE: "8801700000401"
+      DRIVER_PASSWORD: "test1234"
+      REQUEST_ID: "LATEST_SCHEDULED_AMBULANCE"
+    commands:
+      - runFlow: ../../../shared/marketplace/_counterpart-ambulance-accept.yaml
+- extendedWaitUntil:
+    visible: ".*accepted.*|.*assigned.*"
+    timeout: 60000

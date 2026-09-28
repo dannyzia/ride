@@ -1,0 +1,58 @@
+# marketplace/v7-ambulance/01-emergency-first-accept — V7 Ambulance end-to-end:
+# certification submit/renew (ambulance-cert UI) → emergency request (customer UI)
+# → broadcast → COUNTERPART first-accept-wins (§B.5 conditional UPDATE) →
+# status transitions.
+#
+# COUNTERPART-API call: _counterpart-ambulance-accept →
+#   POST /api/emergency/requests/{id}/accept (requireAmbulanceCertified §E.3:
+#   BLS⊂ALS, unexpired — the certification UI step below produces that state).
+# Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
+appId: com.ride.bd
+name: "V7 Ambulance - Emergency First Accept"
+tags: [marketplace, v7-ambulance, counterpart-api]
+---
+# ── Provider side (UI): driver submits ambulance certification ────────────────
+- runFlow:
+    env:
+      PHONE: "8801700000401"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-driver.yaml
+- tapOn: ".*Ambulance.*|.*Certification.*"
+- extendedWaitUntil:
+    visible: ".*certif.*|.*BLS.*|.*ALS.*"
+    timeout: 20000
+- tapOn: ".*Submit.*|.*Renew.*|.*Upload.*"
+- extendedWaitUntil:
+    visible: ".*submitted.*|.*pending.*|.*verified.*"
+    timeout: 30000
+# ── Customer side (UI): emergency request ─────────────────────────────────────
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- tapOn: ".*Ambulance.*"
+- extendedWaitUntil:
+    visible: ".*emergency.*|.*Emergency.*"
+    timeout: 20000
+- tapOn: ".*Request.*|.*SOS.*|.*Book.*"
+- tapOn:
+    text: ".*Confirm.*"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*broadcast.*|.*searching.*|.*accept.*"
+    timeout: 30000
+# ── Counterpart side (API): ambulance driver first-accept-wins ────────────────
+- runFlow:
+    env:
+      DRIVER_PHONE: "8801700000401"
+      DRIVER_PASSWORD: "test1234"
+      REQUEST_ID: "LATEST_EMERGENCY_REQUEST"
+    commands:
+      - runFlow: ../../../shared/marketplace/_counterpart-ambulance-accept.yaml
+# ── Customer side (UI): status transition reflected ───────────────────────────
+- extendedWaitUntil:
+    visible: ".*accepted.*|.*on the way.*|.*assigned.*"
+    timeout: 60000

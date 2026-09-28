@@ -1,0 +1,18 @@
+# auth/02-rider-login — rider enters phone + password and lands on rider home.
+# Feature: R-AUTH-05 (§4 matrix). Selector source: app/(auth)/login.tsx via
+# i18n auth.login="Log In"; destination placeholder per §find_ride.
+# Fixtures: Rider A +8801613249520 / test1234 (§13 roster).
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+name: "Auth - Rider Login"
+tags: [auth, smoke]
+---
+- runFlow: ../shared/location/_set-gps-banani.yaml
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../shared/auth/_login-rider.yaml
+- runFlow: ../shared/util/_dismiss-dialogs.yaml
+- assertVisible: ".*Search destination.*|.*Where to.*"

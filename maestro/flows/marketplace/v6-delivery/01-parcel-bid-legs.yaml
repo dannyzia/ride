@@ -1,0 +1,39 @@
+# marketplace/v6-delivery/01-parcel-bid-legs — V6 Delivery (parcel) end-to-end:
+# customer creates a parcel request (customer UI) → courier bid/accept
+# (COUNTERPART — in-app courier screens do not exist, manifest G-06) →
+# delivery legs progress (§B.4 delivery_status).
+#
+# COUNTERPART-API call: _counterpart-courier-accept → POST /api/delivery/requests/{id}/accept
+# Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
+appId: com.ride.bd
+name: "V6 Delivery - Parcel Bid Legs"
+tags: [marketplace, v6-delivery, counterpart-api]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- tapOn: ".*Delivery.*|.*Parcel.*"
+- extendedWaitUntil:
+    visible: ".*parcel.*|.*delivery.*|.*request.*"
+    timeout: 20000
+- tapOn: ".*New.*|.*Request.*|.*Create.*"
+- extendedWaitUntil:
+    visible: ".*pickup.*|.*drop.*|.*parcel.*"
+    timeout: 20000
+- tapOn: ".*Submit.*|.*Request.*|.*Broadcast.*"
+- extendedWaitUntil:
+    visible: ".*broadcast.*|.*bids?.*|.*pending.*"
+    timeout: 30000
+- runFlow:
+    env:
+      COURIER_PHONE: "8801700000301"
+      COURIER_PASSWORD: "test1234"
+      REQUEST_ID: "LATEST_PARCEL_REQUEST"
+    commands:
+      - runFlow: ../../../shared/marketplace/_counterpart-courier-accept.yaml
+- extendedWaitUntil:
+    visible: ".*accepted.*|.*on the way.*|.*picked.*"
+    timeout: 60000

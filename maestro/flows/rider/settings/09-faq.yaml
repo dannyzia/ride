@@ -1,0 +1,17 @@
+# rider/settings/09-faq — FAQ screen renders content (READ-ONLY render assertion).
+# Feature: R-SETT support/FAQ (§4, LOW risk). Class: READ-ONLY (render assert).
+appId: com.ride.bd
+name: "Rider Settings - FAQ"
+tags: [rider, settings]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- runFlow: ../../../shared/util/_open-settings-hub.yaml
+- tapOn: ".*FAQ.*|.*Help.*"
+- extendedWaitUntil:
+    visible: ".*FAQ.*|.*question.*|.*Help.*"
+    timeout: 20000

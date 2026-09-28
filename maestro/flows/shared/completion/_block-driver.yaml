@@ -1,0 +1,16 @@
+# _block-driver — block toggle on rate-driver → confirm block.
+# §9. Selector source: app/(main)/(customer)/rate-driver/ (i18n rate_driver section;
+# block control is a toggle+confirm per blueprint). Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- runFlow:
+    when:
+      visible: ".*Block.*"
+    commands:
+      - tapOn: ".*Block.*"
+      - tapOn:
+          text: ".*Confirm.*|.*Yes.*"
+          optional: true
+- extendedWaitUntil:
+    visible: ".*Blocked.*|.*block.*"
+    timeout: 10000

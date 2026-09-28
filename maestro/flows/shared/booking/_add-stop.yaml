@@ -1,0 +1,21 @@
+# _add-stop — multi-stop input: tap "+ Add stop" → autocomplete → select STOP_NAME.
+# §9 Booking Subflows. Selector source: confirm_ride.add_stop="+ Add stop" /
+# find_ride.add_stop (en/common.json), stop rows labeled find_ride.stop_number
+# "Stop {{number}}". Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- tapOn: ".*Add stop.*"
+- extendedWaitUntil:
+    visible: ".*Where to.*|.*Enter or choose a location.*"
+    timeout: 15000
+- tapOn:
+    textField: ".*Where to.*|.*Enter or choose a location.*"
+- inputText: ${STOP_NAME}
+- extendedWaitUntil:
+    visible: ".*${STOP_NAME}.*"
+    timeout: 20000
+- tapOn:
+    text: ".*${STOP_NAME}.*"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000

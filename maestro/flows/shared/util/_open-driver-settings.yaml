@@ -1,0 +1,10 @@
+# _open-driver-settings — Driver Profile tab → Settings.
+# §9. Selector source: driver tabs (tabs/driver_home i18n sections). Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- tapOn:
+    text: ".*Profile.*|.*More.*"
+- extendedWaitUntil:
+    visible: ".*Settings.*"
+    timeout: 15000
+- tapOn: ".*Settings.*"

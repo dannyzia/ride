@@ -1,0 +1,13 @@
+# _complete-stop — tap Complete Stop for STOP_INDEX → assert next stop shown.
+# §9. Selector source: multi-stop list on driver in-ride screens (i18n ride_tracking /
+# find_customer sections; stop rows "Stop {{number}}" per find_ride.stop_number).
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- scrollUntilVisible:
+    element: ".*Stop ${STOP_INDEX}.*|.*Complete Stop.*"
+    timeout: 15000
+- tapOn: ".*Complete Stop.*"
+- extendedWaitUntil:
+    visible: ".*Stop .*|.*Drop-off.*|.*Next.*"
+    timeout: 20000

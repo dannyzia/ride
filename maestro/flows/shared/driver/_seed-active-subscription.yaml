@@ -1,0 +1,10 @@
+# _seed-active-subscription — POST /api/test/seed-subscription for DRIVER_ID+PACKAGE_ID.
+# §9. MANIFEST: BLOCKED-GATE (Gate 2 absent). Consumed by driver packages flows.
+# Class: COUNTERPART-API (once live).
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - curl -s -X POST "${API_BASE}/api/test/seed-subscription" -H "Content-Type: application/json" -H "Authorization: Bearer ${API_TOKEN}" -d '{"driverId":"${DRIVER_ID}","packageId":"${PACKAGE_ID}"}'

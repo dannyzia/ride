@@ -1,0 +1,82 @@
+# marketplace/v2-rental/01-request-to-award — V2 car rental end-to-end:
+# customer request (NOW/SCHEDULED, duration, car class, option chips) → broadcast →
+# COUNTERPART sealed bid → customer accepts in UI → award → 5-min SLA →
+# COUNTERPART fleet-ack → confirm → assignment tracking.
+# Features: V2 vertical (mission scope). Contract: plans/marketplace-bidding-implementation-spec-v2.md
+# §C.2/§B.1/§B.2. Layout note: `maestro/flows/marketplace/` is a §17 discrepancy,
+# recorded as manifest G-09 (Rule 2 compliance: documented, not silently invented).
+#
+# COUNTERPART-API calls (documented per manifest §4 doctrine):
+#   1. _counterpart-fleet-bid  → POST /api/rental/requests/{id}/bids  (fleet staff auth)
+#   2. _counterpart-fleet-ack  → POST /api/rental/assignments/{id}/ack (fleet staff auth)
+# Both via REAL Supabase login (counterpart-login.cjs) — no DB writes.
+#
+# Selectors: app/(main)/(customer)/(rental-marketplace)/{index,request-detail,bidding,confirmed}.tsx
+# (request form, chips, bid list, award/confirm surfaces — element anchors in
+# maestro/tools/route-inventory.json under (rental-marketplace)).
+# Class: AUTOMATABLE + COUNTERPART-API. BLOCKED for device run until marketplace
+# seed accounts exist in the roster (fixture gap F-2 family).
+appId: com.ride.bd
+name: "V2 Rental - Request to Award"
+tags: [marketplace, v2-rental, counterpart-api]
+---
+# ── Customer side (UI): create the rental request ─────────────────────────────
+- runFlow: ../../../shared/location/_set-gps-banani.yaml
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- tapOn: ".*Rentals?.*|.*Rental.*"
+- extendedWaitUntil:
+    visible: ".*rental.*|.*Rent.*"
+    timeout: 20000
+- tapOn: ".*Request.*|.*New.*"
+- extendedWaitUntil:
+    visible: ".*duration.*|.*class.*|.*Now.*|.*Schedule.*"
+    timeout: 20000
+# NOW-mode request with default duration; option chips toggled by visible label.
+- tapOn:
+    text: ".*Now.*"
+    optional: true
+- runFlow:
+    when:
+      visible: ".*AC.*|.*Chauffeur.*|.*option.*"
+    commands:
+      - tapOn:
+          text: ".*AC.*"
+          optional: true
+- tapOn: ".*Submit.*|.*Broadcast.*|.*Request.*"
+- extendedWaitUntil:
+    visible: ".*broadcast.*|.*waiting.*|.*bids?.*"
+    timeout: 30000
+# ── Counterpart side (API): fleet places sealed bid ───────────────────────────
+- runFlow:
+    env:
+      FLEET_PHONE: "8801700000101"
+      FLEET_PASSWORD: "test1234"
+      REQUEST_ID: "LATEST_RENTAL_REQUEST"
+      BID_AMOUNT_BDT: "150000"
+    commands:
+      - runFlow: ../../../shared/marketplace/_counterpart-fleet-bid.yaml
+# ── Customer side (UI): bid appears → accept → award ──────────────────────────
+- extendedWaitUntil:
+    visible: ".*bid.*|.*Bid.*"
+    timeout: 60000
+- tapOn: ".*Accept.*"
+- extendedWaitUntil:
+    visible: ".*awarded.*|.*Award.*|.*confirmed.*"
+    timeout: 30000
+# ── Counterpart side (API): fleet acknowledges within SLA ─────────────────────
+- runFlow:
+    env:
+      FLEET_PHONE: "8801700000101"
+      FLEET_PASSWORD: "test1234"
+      ASSIGNMENT_ID: "LATEST_ASSIGNMENT"
+    commands:
+      - runFlow: ../../../shared/marketplace/_counterpart-fleet-ack.yaml
+# ── Customer side (UI): assignment tracking visible ───────────────────────────
+- extendedWaitUntil:
+    visible: ".*confirmed.*|.*assigned.*|.*tracking.*"
+    timeout: 30000

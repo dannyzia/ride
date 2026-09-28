@@ -1,0 +1,19 @@
+# _counterpart-shop-ready — COUNTERPART ACTION: shop marks a food order ready,
+# which triggers lib/shopDeliveryBridge.ts to create the delivery (V4 Food Bridge).
+# Counterpart call: POST ${API_BASE}/api/shop/orders/${ORDER_ID}/mark-ready
+#   Auth: real shop-member token. The bridge runs server-side as a declared writer
+#   of delivery_requests (source_shop_order_id idempotency, §C.4) — the app UI
+#   reflects the created delivery to the customer.
+# Contract: §C.1/§C.4. Class: COUNTERPART-API.
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-login.cjs --phone "${SHOP_PHONE}" --password "${SHOP_PASSWORD}" --out /tmp/counterpart-token.json
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-api.cjs --token /tmp/counterpart-token.json --method POST --path "/api/shop/orders/${ORDER_ID}/mark-ready" --body '{}' --out /tmp/ready-response.json

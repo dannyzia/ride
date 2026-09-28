@@ -1,0 +1,14 @@
+# _rate-driver — rate-driver screen → tap STARS star → submit.
+# §9. Selector source: app/(main)/(customer)/rate-driver/ (i18n rate_driver section).
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- extendedWaitUntil:
+    visible: ".*Rate.*|.*star.*|.*rating.*"
+    timeout: 30000
+- tapOn:
+    text: "★"
+    index: 4
+- tapOn: ".*Submit.*|.*Done.*|.*Skip.*"
+- waitForAnimationToEnd:
+    timeout: 3000

@@ -1,0 +1,16 @@
+# driver/rides/02-accept-offer — accept the offer sheet → find-customer surface.
+# Feature: D-OFFR accept (§4 P0). Debit-on-offer billing is exercised server-side
+# (call_ledger deduction by utils-server leadBilling — not asserted in UI here).
+# Class: AUTOMATABLE (paired-run).
+appId: com.ride.bd
+name: "Driver Rides - Accept Offer"
+tags: [driver, dispatch, smoke]
+---
+- runFlow:
+    env:
+      PHONE: "8801700000001"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-driver.yaml
+- runFlow: ../../../shared/driver/_go-online.yaml
+- runFlow: ../../../shared/driver/_accept-ride.yaml

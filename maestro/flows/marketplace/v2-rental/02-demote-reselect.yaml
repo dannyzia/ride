@@ -1,0 +1,39 @@
+# marketplace/v2-rental/02-demote-reselect — SLA miss → fleet demoted → customer
+# re-selects a new bid (V2 machinery negative path).
+# Contract: §B.1 demotion on ack-SLA expiry; re-select is a customer-side UI action.
+# COUNTERPART-API call: none for the demotion itself — scheduler job enforces it
+# server-side; the flow waits past the SLA window and asserts the re-select surface.
+# Class: AUTOMATABLE + COUNTERPART-API (bid). BLOCKED until roster fixtures land.
+appId: com.ride.bd
+name: "V2 Rental - Demote and Reselect"
+tags: [marketplace, v2-rental, counterpart-api, negative]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- tapOn: ".*Rentals?.*|.*Rental.*"
+- tapOn: ".*Request.*|.*New.*"
+- tapOn:
+    text: ".*Now.*"
+    optional: true
+- tapOn: ".*Submit.*|.*Broadcast.*|.*Request.*"
+- runFlow:
+    env:
+      FLEET_PHONE: "8801700000101"
+      FLEET_PASSWORD: "test1234"
+      REQUEST_ID: "LATEST_RENTAL_REQUEST"
+      BID_AMOUNT_BDT: "150000"
+    commands:
+      - runFlow: ../../../shared/marketplace/_counterpart-fleet-bid.yaml
+- tapOn: ".*Accept.*"
+# Fleet does NOT ack (no counterpart call) → wait past the 5-min SLA → demotion.
+- extendedWaitUntil:
+    visible: ".*expired.*|.*demoted.*|.*re-?select.*|.*expired award.*"
+    timeout: 360000
+- tapOn: ".*Re-?select.*|.*Choose.*|.*Accept.*"
+- extendedWaitUntil:
+    visible: ".*awarded.*|.*confirmed.*"
+    timeout: 30000

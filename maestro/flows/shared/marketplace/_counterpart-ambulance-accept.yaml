@@ -1,0 +1,21 @@
+# _counterpart-ambulance-accept — COUNTERPART ACTION: certified ambulance driver
+# accepts a broadcasting emergency request (V7 first-accept-wins).
+# Counterpart call: POST ${API_BASE}/api/emergency/requests/${REQUEST_ID}/accept
+#   Auth: real ambulance-driver token (DRIVER_PHONE/DRIVER_PASSWORD; requireAmbulanceCertified
+#   §E.3 enforces BLS⊂ALS + unexpired certification — certification itself is exercised
+#   in-UI by marketplace/v7-ambulance/01-…).
+# Contract: §C.6/§B.5 — first-accept-wins via conditional UPDATE WHERE status='broadcasting'
+# inside the §B.0 atomic transition; broadcasting→failed via scheduler job 53 on expiry.
+# Class: COUNTERPART-API.
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-login.cjs --phone "${DRIVER_PHONE}" --password "${DRIVER_PASSWORD}" --out /tmp/counterpart-token.json
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-api.cjs --token /tmp/counterpart-token.json --method POST --path "/api/emergency/requests/${REQUEST_ID}/accept" --body '{}' --out /tmp/accept-response.json

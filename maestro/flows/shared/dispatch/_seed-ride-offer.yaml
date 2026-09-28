@@ -1,0 +1,12 @@
+# _seed-ride-offer — POST /api/test/inject-offer → WS ride:offer fires to the driver.
+# §9 Dispatch and State Seeding Subflows. MANIFEST: BLOCKED-GATE — the endpoint
+# (Gate 3 / Gap 3) does NOT exist on disk (verified 2026-09-27: app/api/test/ absent).
+# Authored-but-unrun per mission ruling; fix F-3 in COVERAGE-MANIFEST.md §8.
+# Class: COUNTERPART-API (state seeding via real HTTP API once it exists).
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - curl -s -X POST ${API_BASE}/api/test/inject-offer -H "Content-Type: application/json" -d '{"driverId":"${DRIVER_ID}","riderId":"${RIDER_ID}"}'

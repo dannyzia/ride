@@ -1,0 +1,32 @@
+# _login-driver — shared auth subflow: phone → password login → driver home.
+# §9 Authentication Subflows. Selector source: app/(auth)/login.tsx (shared with
+# rider; role chip "Driver" has no testID yet — G-02 remainder). Gate 1 REWIRE
+# (semantic IDs, maestro/tools/testid-map.json): login.set-phone / login.set-password /
+# login.handle-login. Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- runFlow:
+    when:
+      visible: "Log In"
+    commands:
+      - tapOn:
+          id: "login.set-phone"
+      - eraseText
+      - inputText: ${PHONE}
+      - tapOn:
+          text: "Driver"
+          optional: true
+      - tapOn:
+          id: "login.handle-login"
+      - extendedWaitUntil:
+          visible: "Password"
+          timeout: 10000
+      - tapOn:
+          id: "login.set-password"
+      - inputText: ${PASSWORD}
+      - tapOn:
+          id: "login.handle-login"
+# Driver home ground: map + status surfaces (labels per driver_home i18n section).
+- extendedWaitUntil:
+    visible: ".*Connected.*|.*Offline.*|.*Calls Remaining.*"
+    timeout: 30000

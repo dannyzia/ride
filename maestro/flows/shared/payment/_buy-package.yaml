@@ -1,0 +1,18 @@
+# _buy-package — driver packages → select → (bypass) → assert calls balance.
+# §9. MANIFEST: BLOCKED (PortPos sandbox; bypass shim absent — Gap 4).
+# Purchase is idempotency-wired in the app (package/purchase), but the payment
+# step itself is unreachable from Maestro without the shim.
+# Class: BLOCKED.
+appId: com.ride.bd
+---
+- tapOn:
+    text: ".*Packages.*|.*Calls.*"
+- extendedWaitUntil:
+    visible: ".*calls.*|.*৳.*"
+    timeout: 15000
+- tapOn: ".*${PACKAGE_NAME}.*|.*Buy.*"
+- tapOn: ".*Confirm.*|.*Purchase.*|.*Pay.*"
+# BLOCKED: PortPos sandbox WebView.
+- extendedWaitUntil:
+    visible: ".*Payment.*|.*PortPos.*"
+    timeout: 20000

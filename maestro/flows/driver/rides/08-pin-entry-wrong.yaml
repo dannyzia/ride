@@ -1,0 +1,27 @@
+# driver/rides/08-pin-entry-wrong — wrong PIN is rejected with the exact error copy
+# ("Incorrect Ride Pin. Ask your rider and try again." — i18n enter_otp.incorrect_pin,
+# device-proven in driver-core.yaml manual-check block).
+# Feature: D-SAFETY PIN negative (§4 N). Class: AUTOMATABLE (paired-run).
+appId: com.ride.bd
+name: "Driver Rides - PIN Entry Wrong"
+tags: [driver, in-ride, negative]
+---
+- runFlow:
+    env:
+      PHONE: "8801700000001"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-driver.yaml
+- runFlow: ../../../shared/driver/_go-online.yaml
+- runFlow: ../../../shared/driver/_accept-ride.yaml
+- runFlow: ../../../shared/driver/_slide-arrive.yaml
+- extendedWaitUntil:
+    visible: "Ride Pin"
+    timeout: 30000
+- tapOn:
+    textField: ".*Ride Pin.*|.*digit.*"
+- inputText: "0000"
+- tapOn: "Start Ride"
+- extendedWaitUntil:
+    visible: "Incorrect Ride Pin"
+    timeout: 15000

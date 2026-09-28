@@ -1,0 +1,186 @@
+# Maestro Coverage Manifest — Phase 0 Ground Truth
+
+**Purpose:**     Machine-verified inventory of every route screen and interactive element under `app/`; the gate deliverable that must exist before mass flow authoring.
+**Owner:**       Testing model (this session) / Zia — kept current by re-running the two scan tools after any `app/` change.
+**Status:**      ACTIVE — Phase 0 complete; Phases 1–3 (decomposition, authoring, self-run) follow.
+**Source of truth:** `maestro/tools/route-inventory.json` (raw machine scan; this file is the classified roll-up).
+**Related (concrete paths):**
+  - `maestro/tools/route-scan.cjs` — the scanner that produces `route-inventory.json` (filter chain replicated from `lib/__tests__/router-route-defaults.test.ts`)
+  - `maestro/tools/aggregate.cjs` — per-vertical roll-up of the inventory
+  - `plans/maestro-architecture.md` — §4 Feature Coverage Matrix, §9 subflows, §10 journeys, §17 folder layout, §19 gaps, §20 gates
+  - `.claude/rules/testing-agent.md` — the 4 non-negotiable rules enforced in §Compliance below
+  - `TEST-SETUP.md` — device-day bootstrap facts (dev-env-sync, Metro 8081, utils-server 3001, com.ride.bd)
+  - `plans/marketplace-bidding-implementation-spec-v2.md` — V2–V7 state machines and API contracts behind the COUNTERPART-API classifications
+  - `TESTING.md` (repo root) — legacy instructions this manifest supersedes for coverage accounting
+**Last verified:** 2026-09-27, by testing model, via `node maestro/tools/route-scan.cjs && node maestro/tools/aggregate.cjs` (fresh scan, not cached).
+**How to update:** after any `app/` route change, re-run both tools, re-derive counts, and append a dated note to the round-notes table at the bottom.
+
+---
+
+## 1. Baseline reconciliation (ISSUE-70)
+
+| Metric | Count | Method |
+|---|---|---|
+| Route files at ISSUE-70 guard commit `fe46993` (2026-09-25) | **255** | `git ls-tree -r fe46993 --name-only app/` minus `+api`/`+html`/test blocklist |
+| Route files on disk today | **254** | fresh scan (`route-scan.cjs`) |
+| Delta | **-1** | `app/(main)/(customer)/home-raster/index.tsx` deleted post-baseline; zero new route files |
+| Scanner filter chain | identical | `+api`/`+html` exclusion, metro blocklist (`__tests__/`, `.test.`, `.spec.`), ts/tsx only — no js/jsx exist under `app/` |
+| Default-export guard | PASS | jest `lib/__tests__/router-route-defaults.test.ts` → `Tests: 19 passed, 19 total` (run live this session) |
+
+`_components/TruckPicker.tsx` and `_components/CargoSummary.tsx` are default-exported components consumed by `index.tsx` — verified NOT router warnings (the `_truckCatalog.ts` class of bug, fixed in `fd9fd39`).
+
+## 2. Coverage totals (machine-derived)
+
+| Metric | Count |
+|---|---|
+| Route screens inventoried | **254** |
+| Interactive components (Pressable/TouchableOpacity/Touchable*/Button/TextInput/Switch/Checkbox/Chip) | **1,083** |
+| Handler anchors (onPress/onChangeText/onValueChange/onToggle/onFocus/onRefresh/onScroll…, with file:line) | **1,309** |
+| Rows mapped to ≥1 flow step or carrying a justified tag | **1,309 / 1,309 — nothing unmapped** |
+| testID props in app/ (post Gate-1 v3 semantic regen, 2026-09-27) | **1,108 across 221 files, 0 cross-file collisions** — codemod `maestro/tools/add-testids.cjs` (AST-based, idempotent, `--dry-run` re-run = 0 changes). IDs are semantic `<route-path>.<element-function>` (e.g. `settings.change-password.update-button`); positional `index-001` scheme REJECTED by owner and fully regenerated. |
+| Reconciliation: 1,108 codemod-assigned vs 1,083 scanner-counted | **Delta = 25, documented, not an error.** Codemod counts element-level (one per interactive JSX element incl. multi-opener lines and each CustomButton wrapper site); scanner counts line-based (one hit per source line). No silent loss — both counts verified independently. |
+
+Classification roll-up (handler-level; heuristic classifier over `route-inventory.json`):
+
+| Class | Count | Meaning |
+|---|---|---|
+| AUTOMATABLE | 1,273 | UI-drivable in Maestro; asserts real app behavior |
+| COUNTERPART-API | 9 | the **side under test runs in the UI**; the counterpart action (fleet bid, courier accept, shop action) is driven via **real authenticated API calls** using seeded counterpart accounts through live endpoints — never direct DB writes |
+| BLOCKED | 27 | payments sandbox (PortPos WebView), `ride://` deep links on stale build, real SMS OTP delivery |
+| READ-ONLY | 0* | \*heuristic classifier emitted none; read-only screens (FAQ, terms, receipts, statements) are covered as render-assert screens at flow level — see per-vertical notes |
+
+The full per-row detail (every screen × every element × every handler, with `file:line`, guessed flow kind, and class) lives in `maestro/tools/route-inventory.json` — it IS the manifest data; this file is its classified summary. Re-generate, never hand-edit, the JSON.
+
+## 3. Per-vertical coverage
+
+| Vertical | Screens | Elements | Handlers | AUTOMATABLE | COUNTERPART-API | BLOCKED |
+|---|---|---|---|---|---|---|
+| V1 Rider (customer side) | 94 | 424 | 498 | 471 | 7 | 20 |
+| V1 Driver (provider side) | 66 | 351 | 386 | 379 | 1 | 6 |
+| Auth + payment-routes + index | 22 | 23 | 52 | 52 | 0 | 0 |
+| Fleet portal (cross-cutting) | 13 | 24 | 61 | 61 | 0 | 0 |
+| Admin (web-only) | 51 | 244 | 292 | 291 | 0 | 1 |
+| V2/V5 Rental (marketplace + bidder) | 12 | ~30 | ~48 | ~40 | ~6 | ~2 |
+| V3 Shops (customer side) | 4 | ~15 | ~20 | ~16 | ~3 | ~1 |
+| V4/V6 Delivery (customer side) | 4 | ~8 | ~12 | ~9 | ~2 | ~1 |
+| V7 Ambulance (all sides) | 4 | 11 | 14 | 13 | 1 | 0 |
+| Root/layouts/track | 4 | 6 | 6 | 6 | 0 | 0 |
+| **Total** | **254** | **1,083** | **1,309** | **1,273** | **9** | **27** |
+
+(Ampersand-rows marked ~ are dominated by the rental/delivery folders inside the rider count; exact per-row anchors are in the JSON.)
+
+### Vertical journey notes (from `plans/marketplace-bidding-implementation-spec-v2.md`)
+
+- **V2 Car rental**: request (NOW/SCHEDULED, duration, car class, option chips) → broadcast → sealed bid (counterpart: fleet via `POST /api/rental/requests/[id]/bids` with fleet auth) → accept in UI → award → 5-min SLA → fleet-ack (counterpart) → confirm → assignment tracking; demotion + re-select path covered as separate flow (`j-v2-demote-reselect`).
+- **V3 Shops**: shop screen/order (delivery|pickup) → RFQ quote (counterpart: shop member via `POST /api/shop/orders/[id]/quote`) → accept → order states. Shop-side screens are web/admin (`app/admin/marketplace/shops.tsx`) — admin is Playwright-only per Rule 1, so shop actions are COUNTERPART-API.
+- **V4 Food bridge**: food order (customer `(shops)` UI) → mark-ready (counterpart: shop API) → bridge `lib/shopDeliveryBridge.ts` creates delivery → courier flow (counterpart: courier accept via `POST /api/delivery/...`). Customer side fully in-UI.
+- **V5 Truck rental**: catalog = `constants/truckCatalog.ts` (16 variants, 5 bilingual tabs Pickup/Freight/Heavy Goods/Trailer/Van) rendered by `(rental-marketplace)/_components/TruckPicker.tsx` (default-export verified). Shares V2 machinery — flows cover the truck-specific UI fully (tab switching, variant rows, cargo chips) then reuse the V2 bid/award subflows.
+- **V6 Delivery (parcel)**: courier signup is **API-side only** (no in-app courier screens exist — testability gap G-06); parcel request + bid + accept + legs covered with courier counterpart calls.
+- **V7 Ambulance**: certification submit/renew (in `(ambulance-cert)` UI), emergency request (customer `(ambulance)/emergency.tsx`), broadcast → first-accept-wins (counterpart: ambulance-driver API accept), status transitions; scheduled ambulance (`service_level`) covered in `j-v7-scheduled-ambulance`.
+
+## 4. Two-sided flow doctrine (COUNTERPART-API pattern)
+
+Every COUNTERPART-API flow MUST document, in its YAML comments:
+1. the counterpart account used (from the seeded roster),
+2. the exact live endpoint + method,
+3. the auth token source (real Supabase login via `lib/supabaseServer.ts` credentials — **never** direct DB writes),
+4. the in-UI assertion that proves the app reflected the counterpart action.
+
+Direct DB writes are prohibited: they bypass business logic (§B.0 atomic-transition primitive) and make the test fake.
+
+## 5. Section 20 gate status (verified against disk this session)
+
+| Gate | Requirement | Status | Evidence |
+|---|---|---|---|
+| 1 | testID on all interactive elements | **CLOSED (BLOCKER)** | `grep -rl "testID=" app/` → **0 files** |
+| 2 | `POST /api/test/reset-accounts`, `reset-rides` | **CLOSED (BLOCKER)** | `app/api/test/` directory does not exist |
+| 3 | `POST /api/test/inject-ws-event` | **CLOSED (BLOCKER)** | no endpoint found under `app/api/test/` |
+| 4 | `TEST_PAYMENT_BYPASS` shim in PaymentWebView | **CLOSED (BLOCKER)** | zero code references repo-wide |
+| 5 | `TEST_REMINDER_LEAD_MINUTES` scheduler override | **CLOSED** | zero references in `utils-server/` |
+| 6 | `ride://` scheme registered | **OPEN (code) / BLOCKED (device)** | `app.config.js:17` has `scheme: "ride"`, but the installed APK predates the scheme (TEST-SETUP.md §3) — `am start ride://…` fails until dev rebuild |
+
+Per `.claude/rules/testing-agent.md` Rule 3 the agent must refuse to generate runnable flows while gates are closed. This mission's operating ruling (mission order above): **flows are authored now**, gated by explicit tags, and phase-3 self-run executes only what the disk supports. Authored-but-unrun flows are marked `BLOCKED-GATE` in §6. This divergence from Rule 3's refusal behaviour is a **mission-order ruling that wins** (AGENTS.md § Model Chain protocol 2: rulings beat artifacts) and is recorded here, not silently reconciled.
+
+## 6. Flow plan map (decomposition → Section 17 paths)
+
+Shared subflows (Phase 1, before any module flow — Rule 4): 29 files under `maestro/flows/shared/{auth,location,booking,dispatch,driver,completion,payment,util}/` per §9 of the architecture doc, **plus** the COUNTERPART-API subflows required by the mission that §9 predates:
+
+| Added subflow | env inputs | counterpart call (live API, real auth) |
+|---|---|---|
+| `_counterpart-fleet-bid.yaml` | FLEET_PHONE, FLEET_PASSWORD, REQUEST_ID | login → `POST /api/rental/requests/{REQUEST_ID}/bids` |
+| `_counterpart-fleet-ack.yaml` | FLEET_PHONE, FLEET_PASSWORD, ASSIGNMENT_ID | login → fleet-ack endpoint (§C.2) |
+| `_counterpart-shop-quote.yaml` | SHOP_PHONE, SHOP_PASSWORD, ORDER_ID | login → `POST /api/shop/orders/{ORDER_ID}/quote` |
+| `_counterpart-shop-ready.yaml` | SHOP_PHONE, SHOP_PASSWORD, ORDER_ID | login → mark-ready (§C.1) |
+| `_counterpart-courier-accept.yaml` | COURIER_PHONE, COURIER_PASSWORD, REQUEST_ID | login → `POST /api/delivery/requests/{REQUEST_ID}/accept` |
+| `_counterpart-ambulance-accept.yaml` | DRIVER_PHONE, DRIVER_PASSWORD, REQUEST_ID | login → emergency accept (first-accept-wins, §B.5) |
+
+Module/journey flows follow §17 paths exactly; the seven verticals extend the §17 rider/driver modules with `maestro/flows/marketplace/{v2-rental,v3-shops,v4-food,v5-truck,v6-delivery,v7-ambulance}/` journey files (paths not in §17 — recorded as a **layout discrepancy** per Rule 2, not silently invented: §17 is v12-era and predates the seven-vertical mission). Flow count budget and per-flow naming follow the blueprint `NN-<verb-noun>.yaml` ≤5-minute rule.
+
+Planned vertical journeys (each maps manifest rows to flow steps):
+
+| Flow (path per §17 or discrepancy-noted marketplace folder) | Covers |
+|---|---|
+| `e2e/j01…j20` (§10) | V1 full matrix incl. fare assertions ৳441/৳535/৳589 as value assertions on the estimate screen — **must be re-verified against live pricing at authoring time** (pricing rows are DB-driven, see §7 G-01) |
+| `marketplace/v2-rental/01-request-to-award.yaml` | request → broadcast → sealed bid (COUNTERPART) → accept → award → SLA → fleet-ack (COUNTERPART) → confirm → tracking |
+| `marketplace/v2-rental/02-demote-reselect.yaml` | demotion + re-select path |
+| `marketplace/v3-shops/01-order-rfq-accept.yaml` | shop screen/order (delivery|pickup) → RFQ quote (COUNTERPART) → accept → order states |
+| `marketplace/v4-food/01-food-to-bridge-to-courier.yaml` | food order → mark-ready (COUNTERPART) → bridge creates delivery → courier accept (COUNTERPART) → courier flow |
+| `marketplace/v5-truck/01-catalog-picker-request.yaml` | 16-variant catalog, bilingual tabs, cargo chips → request (reuses V2 bid/award subflows) |
+| `marketplace/v6-delivery/01-parcel-bid-legs.yaml` | parcel request → bid (COUNTERPART) → accept (COUNTERPART) → legs |
+| `marketplace/v7-ambulance/01-emergency-first-accept.yaml` | cert submit/renew → emergency request → broadcast → first-accept-wins (COUNTERPART) → status transitions |
+| `marketplace/v7-ambulance/02-scheduled-ambulance.yaml` | scheduled ambulance (`service_level`) |
+| cross-cutting: settings (language/Bangla/numerals/appearance), wallet/topup (BLOCKED-tagged), SOS, referral, notifications, driver onboarding documents, fleet portal (`(fleet)` 13 screens) | existing §17 modules + fleet-portal additions |
+
+## 7. Testability-gap findings (recorded, never silently worked around)
+
+| ID | Finding | Evidence (file:line / scan) | Disposition |
+|---|---|---|---|
+| G-01 | Fare values ৳441/৳535/৳589 are not code constants anywhere; pricing is DB-driven (`pricing` rows) and test-local values vary per environment. Mission's exact-value assertions require a known pricing seed before run. | `lib/__tests__/fareCalc.test.ts` fixtures (paisa-based), zero grep hits in app/components | Flows assert via API probe of `pricing` (or seeded fixture) then assert UI equality — documented in each flow; hardcoding ৳441 in YAML would be a fake pass if seed drifts |
+| G-02 | Gate 1 testID — **code-complete v3 (semantic), 2026-09-27**: 1,108 testIDs on 221 files, all semantic `<route-path>.<element-function>` (kebab-case; fallback `<route>.el-<N>`; hyphen-forced so i18n KEY_SHAPE guard stays green), 0 cross-file collisions (codemod exits 2 on any collision). Positional `index-001` scheme REJECTED by owner (silent reorder hazard) and fully regenerated; `--strip` + regen + idempotence all verified. Flow rewiring done: `_login-rider`, `_login-driver`, `_otp-enter`, `_confirm-and-request`, `_enter-pin` use `id:` selectors verified on disk; module flows still text-based (rewiring is incremental, selectors now stable). | grep + codemod dry-run + flow-testid-map cross-check (all flow `id:` selectors exist on disk) | Pending skeptic audit (Prompt B) |
+| G-03 | Gates 2/3/4 absent (reset-accounts, inject-ws-event, payment bypass) | `ls app/api/test/` → missing; grep → 0 | Authored-but-unrun (BLOCKED-GATE) for affected flows; fix list §8 |
+| G-04 | `ride://` deep links untestable on installed build | `app.config.js:17` vs TEST-SETUP.md §3 | Requires `npx expo run:android` rebuild; BLOCKED tag |
+| G-05 | Real SMS OTP — bypass 123456 documented but no dev-mode flag verified on disk | TEST-SETUP.md; `utils-server` grep | Manual-entry fallback (TEST-SETUP.md) is the documented fixture; BLOCKED if relay unreachable |
+| G-06 | V6 courier signup has no in-app screen (API-side only) | grep `courier` in app/ → only request-create/request-detail/admin | Courier-side covered via COUNTERPART-API; recorded as testability gap |
+| G-07 | Payments (wallet top-up, package purchase, passes) → PortPos sandbox WebView | Gap 4, §19 | BLOCKED flows authored-but-unrun, tagged |
+| G-08 | Admin (51 screens) is out of Maestro scope per Rule 1 | `.claude/rules/testing-agent.md` Rule 1 | Included in manifest for completeness; classified; Playwright scope |
+| G-09 | §17 layout predates seven-vertical mission; marketplace flow paths are a documented discrepancy | this file §6 | Recorded per Rule 2; path convention `maestro/flows/marketplace/<vertical>/` proposed for ratification |
+
+## 8. Batched fix list (scoped fixes proposed for GO — no commit without GO)
+
+| # | Fix | Owner | Unblocks |
+|---|---|---|---|
+| F-1 | ~~Add testID props per §19 Gap 1 convention (batch by module)~~ — **DONE v3 2026-09-27**: AST codemod landed **1,108 semantic testIDs / 221 files** (`maestro/tools/add-testids.cjs`, idempotent, tsc+lint+full-jest+i18n-guard clean). Residual: module-flow rewiring (incremental; all `id:` selectors verified against `maestro/tools/testid-map.json`). | Frontend (this session) | G-02 code-complete; selector stability for rewired flows |
+| F-2 | Implement `app/api/test/reset-accounts|reset-rides|reset-wallet|seed-rides` (TEST_MODE-gated, idempotent) | Backend | G-03; CI reliability |
+| F-3 | Implement `POST /api/test/inject-ws-event` (TEST_MODE-gated) | Backend | G-03; dispatch/offer flows |
+| F-4 | `TEST_PAYMENT_BYPASS` shim in `components/PaymentWebView.tsx` | Frontend | G-07; 15+ payment flows |
+| F-5 | Dev-client rebuild for `ride://` intent-filter | Device ops | G-04; ec-13/ec-14 |
+| F-6 | Ratify `maestro/flows/marketplace/<vertical>/` path convention | Orchestrator | G-09 |
+| F-7 | ~~Payment flows~~ — **OBSOLETE per owner ruling 2026-09-27**: launch_free grants every driver a live subscription; purchase UI is hidden (`payments_enabled=false`). Payment flows re-tagged BLOCKED-PAYMENT-DEFERRED (§9), not Gate-4 blockers for the device day. | Zia (ruled) | Driver onboarding testing no longer hits a purchase dead-end |
+
+## 9. Owner ruling addendum — launch_free driver subscription (2026-09-27)
+
+Every driver gets a FREE SUBSCRIPTION at launch (ruling §1–6, implemented this session):
+
+- **Plan row** "Launch Free" (`launch_free`), unlimited calls (`call_count = -1` — the sentinel `utils-server/dispatch.ts` and `utils-server/leadBilling.ts` already treat as unlimited), ৳0, admin-editable via existing plans CRUD. No purchase path — auto-granted.
+- **Registration hook** (`app/api/register+api.ts` driver path): auto-activates launch_free **through the write-ownership chain only** — `lib/paymentEvents.createZeroAmountPaymentEvent` (payment_events row, amount 0) → `lib/activateSubscription` (subscriptions row + `call_ledger initial_load`). Idempotent: a driver already holding ANY active subscription is skipped (fast-path check + `subs_one_active_per_driver` partial unique index as the race barrier). Grant failure is NON-FATAL to registration (logged; backfill covers stragglers).
+- **Backfill** `scripts/launch-free-subscription.ts`: STAGED — run ONCE at launch (`npx tsx scripts/launch-free-subscription.ts [--dry-run]`), never during ordinary sessions. Grants launch_free to every ACTIVE driver lacking an active subscription; idempotent; `--dry-run` reports counts without writing; JSON report is the launch-day deliverable.
+- **`payments_enabled=false`** (previous ruling) still hides all purchase UI. Free plan + hidden purchase = the complete launch state.
+- **Dispatch/leadBilling: NO changes** — debits fire against the free balance normally.
+
+### Manifest impact
+
+| Change | Detail |
+|---|---|
+| Purchase flows re-tagged | `driver/packages/02-purchase-initiate.yaml`, `rider/wallet/02-wallet-topup-initiate.yaml` → **BLOCKED-PAYMENT-DEFERRED** (payments deferred by design, not by Gate 4 alone; they are authored-but-unrun until payments_enabled flips or the bypass shim lands) |
+| NEW flow step (driver first run) | `driver/home/02-go-online.yaml` and the driver-first-run journey MUST assert the launch subscription is already active on first login — wallet card shows the active plan (no purchase dead-end). Selector: the wallet/subscription card surface on driver home (`Calls Remaining` balance card reflects the unlimited sentinel). Added to `driver/home/02-go-online.yaml` as a post-login assertion step. |
+| Gate 4 re-scoped | TEST_PAYMENT_BYPASS (F-4) is no longer a device-day blocker: the device day is payment-free by design. It remains required before any REAL-money suite runs. |
+| Board unchanged | testID batch overnight → flow completion → skeptic audit → Zia gate → device day (now payment-free by design). |
+
+## Round notes (append-only)
+
+| Date | Note |
+|---|---|
+| 2026-09-27 | Phase 0 complete. 255→254 reconciled (home-raster deleted). 1,309 anchors classified 1,273/9/27/0. Gates 1–5 closed (blockers), Gate 6 partial. Router guard jest pass (19/19). Scanner committed as `maestro/tools/route-scan.cjs` + `aggregate.cjs`; JSON is ground truth. |
+| 2026-09-27 | **Owner ruling addendum implemented (launch_free).** Files: `lib/launchFreeSubscription.ts` (new, sole grant path), `app/api/register+api.ts` (driver-path hook, non-fatal, returns driver_id), `scripts/launch-free-subscription.ts` (new, STAGED — not executed), `tests/api/auth/register-launch-free.test.ts` (new, 5 tests), `tests/api/auth/launch-free-backfill.test.ts` (new, 4 tests). Evidence: `Tests: 45 passed, 45 total` across launch-free + purchase-gate + vehicle-scoping + passes + paymentRepair + portposCallback suites; `npm run lint` 0 errors (305 pre-existing warnings, 1 benign require()-style import warning per new test file, house mock-factory pattern); `npx tsc --noEmit` clean. Dispatch/leadBilling untouched (ruling §5). Purchase flows re-tagged BLOCKED-PAYMENT-DEFERRED (§9); driver-first-run wallet-card assertion added to `driver/home/02-go-online.yaml`. |
+| 2026-09-27 | **Gate 1 (testID) code-complete.** v1 line-heuristic codemod REVERTED (broke JSX arrow fns — caught by tsc, `onPress={() => testID=…}` class). v2 AST codemod (`maestro/tools/add-testids.cjs`, TypeScript compiler API): **1,108 testIDs / 221 files**, idempotent (re-run adds 0). Validation: `npx tsc --noEmit` clean; `npm run lint` 0 errors (302 warnings, pre-existing class); **full jest `npx jest --watchAll=false --silent` → Tests: 2285 passed, 2 skipped, 0 failed**. Fixed en route: register test order-dependence (non-fatal test mutated module-level db mocks without restore — now try/finally). **External-revert incident (damage inventory, owner item 2)**: `app/api/register+api.ts` lost the launch_free hook mid-session — cause CONFIRMED as the v1-session `git checkout -- app/` (uncommitted hook was the only casualty; full uncommitted-under-app/ list checked; hook re-applied and verified on disk). **Git rule institutionalized (owner item 3): NO `git checkout`/`revert`/`clean` without `git status` first; verified work is stashed or committed before any revert. Recorded here and in session notes.** Flow rewiring: `_login-rider`, `_login-driver`, `_otp-enter`, `_confirm-and-request`, `_enter-pin` → `id:` selectors per `maestro/tools/flow-testid-map.json`. **Gate 1 is NOT self-certified — hands to Prompt B skeptic audit.** |
+| 2026-09-27 | **Gate 1 v3 semantic regen (owner rejection relay executed).** Positional `index-001` IDs REJECTED (silent JSX-reorder hazard). `add-testids.cjs` v3 emits `<route-path>.<element-function>`: structural groups `(main|tabs|auth)` dropped from ID, actor `(customer|rider|fleet|ambulance-*)` + vertical `(shops|delivery|rental-*)` groups kept; function derived from onPress handler / bound action / i18n label key, fallback `<route>.el-<N>`; slug camelCase→kebab; final segment hyphen-forced so IDs never match i18n KEY_SHAPE (guard immunity). 1,108 IDs / 221 files / **0 cross-file collisions** (codemod exits 2 on collision; `--dry-run` re-run = 0 changes). Reconciliation: 1,108 element-based vs 1,083 line-based scanner = multi-opener lines + CustomButton wrapper sites (§2 note). Maestro 2.6.1 fixes: `runFlow` paths are flow-file-relative (fixed 41 files; auth/ depth-2 hand-corrected to `../shared/`); subflow `runScript:{when:true}` is invalid on 2.6.1 → GPS subflows are no-op markers, host seeding in `maestro/utils/adb-gps-*.sh`. Full gates re-run post-regen: lint 0 errors, tsc clean, full jest **Tests: 2285 passed, 2 skipped, 0 failed** (includes i18n guard 28/28 + router guard 19/19), vacuous gate clean, launch_free **Tests: 45 passed, 45 total**. **Key flows ×2 device run ENV-BLOCKED**: physical Samsung 24261JEGR10296 pattern-locked (keyevent 82 ineffective, screen = systemui keyguard) AND Maestro driver APK install refused (`INSTALL_FAILED_USER_RESTRICTED`); `adb devices` → none (no emulator). Device day item deferred, not waived — needs owner to unlock device or start emulator. |

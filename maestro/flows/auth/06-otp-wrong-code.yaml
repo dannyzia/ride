@@ -1,0 +1,31 @@
+# auth/06-otp-wrong-code — wrong OTP shows an error and allows retry.
+# Feature: R-AUTH-03 negative (§4 N column). Selector source: app/(auth)/otp-verify.tsx
+# ("Invalid OTP" error string at otp-verify.tsx, placeholder "Enter 6-digit OTP").
+# Fixture: OTP bypass code is 123456 in dev; 000000 must be rejected by the API.
+# Class: AUTOMATABLE (negative — asserts failure path).
+appId: com.ride.bd
+name: "Auth - OTP Wrong Code"
+tags: [auth, negative]
+---
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: ".*Enter your phone number.*"
+    timeout: 20000
+- tapOn:
+    textField: "1XXXXXXXXX"
+- inputText: "8801613249520"
+- tapOn: "Send OTP"
+- extendedWaitUntil:
+    visible: "Enter 6-digit OTP"
+    timeout: 20000
+- runFlow:
+    env:
+      OTP_CODE: "000000"
+    commands:
+      - runFlow: ../shared/auth/_otp-enter.yaml
+- extendedWaitUntil:
+    visible: ".*Invalid OTP.*|.*invalid.*|.*wrong.*"
+    timeout: 20000
+- assertVisible: "Enter 6-digit OTP"

@@ -1,0 +1,26 @@
+# rider/tracking/04-ride-pin-displayed — once matched, the rider screen shows the
+# 4-digit Ride Pin ("Tell your driver your Ride Pin" — device-proven copy from
+# maestro/flows/rider-core.yaml coordination notes).
+# Feature: SAFETY PIN (§4). Requires a matched ride: seeding is BLOCKED-GATE (Gate 2/3),
+# so the match is produced by the paired driver run in the device-day harness
+# (rider-core + driver-core precedent). When run standalone this flow BLOCKS at match
+# wait — tagged accordingly in run evidence.
+# Class: AUTOMATABLE (paired-run) / BLOCKED-GATE (standalone).
+appId: com.ride.bd
+name: "Rider Tracking - Ride Pin Displayed"
+tags: [rider, tracking, safety]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+# Rider re-enters the active ride from home/history (ride in matched state expected
+# from the paired driver run).
+- tapOn:
+    text: ".*Tell your driver.*|.*Ride Pin.*"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*Ride Pin.*|.*\\d{4}.*"
+    timeout: 60000

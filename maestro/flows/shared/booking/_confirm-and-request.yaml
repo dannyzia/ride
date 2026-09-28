@@ -1,0 +1,15 @@
+# _confirm-and-request — tap Confirm ride → assert finding-driver screen.
+# §9 Booking Subflows. Gate 1 REWIRE (semantic IDs, app/(main)/(customer)/confirm-ride/
+# via maestro/tools/testid-map.json): customer.confirm-ride.handle-request-ride is
+# the primary action button ("Confirm ride" → "Request Ride" → "Requesting…" states).
+# Class: AUTOMATABLE (assertion can fail — it demands the finding-driver surface).
+appId: com.ride.bd
+---
+- extendedWaitUntil:
+    visible: ".*Confirm your ride.*"
+    timeout: 15000
+- tapOn:
+    id: "customer.confirm-ride.handle-request-ride"
+- extendedWaitUntil:
+    visible: ".*Requesting….*|.*Finding.*|.*finding.*"
+    timeout: 20000

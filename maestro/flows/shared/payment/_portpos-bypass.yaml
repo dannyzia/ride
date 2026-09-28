@@ -1,0 +1,12 @@
+# _portpos-bypass — POST /api/test/payment-bypass { paymentRef, purpose } → poll activation.
+# §9 Payment Subflows. MANIFEST: BLOCKED-GATE — TEST_PAYMENT_BYPASS shim (Gate 4 / Gap 4)
+# does NOT exist (verified 2026-09-27: zero references repo-wide); the bypass endpoint
+# (Gate 2 family) is also absent. Authored-but-unrun; fix F-4 in COVERAGE-MANIFEST.md §8.
+# Class: BLOCKED (payments sandbox).
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - curl -s -X POST "${API_BASE}/api/test/payment-bypass" -H "Content-Type: application/json" -d '{"paymentRef":"${PAYMENT_REF}","purpose":"${PURPOSE}"}'

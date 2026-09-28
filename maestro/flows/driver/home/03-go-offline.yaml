@@ -1,0 +1,14 @@
+# driver/home/03-go-offline — driver toggles offline; assert Go Online returns.
+# Feature: D-DISPATCH status (§4). Class: AUTOMATABLE.
+appId: com.ride.bd
+name: "Driver Home - Go Offline"
+tags: [driver]
+---
+- runFlow:
+    env:
+      PHONE: "8801700000001"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-driver.yaml
+- runFlow: ../../../shared/driver/_go-online.yaml
+- runFlow: ../../../shared/driver/_go-offline.yaml

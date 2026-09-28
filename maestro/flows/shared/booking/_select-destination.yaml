@@ -1,0 +1,22 @@
+# _select-destination — Barikoi autocomplete → type DEST_NAME → tap first result.
+# §9 Booking Subflows. Selector source: app/(main)/(customer)/autocomplete/index.tsx
+# ("Where to?" via find_ride.enter_destination, "Search destination" placeholder,
+# Home quick labels "Work"/"Destination" — verified in en/common.json §find_ride).
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- tapOn: ".*Search destination.*|.*Where to.*"
+- extendedWaitUntil:
+    visible: ".*Where to.*|.*Enter or choose a location.*"
+    timeout: 15000
+- tapOn:
+    textField: ".*Where to.*|.*Enter or choose a location.*"
+- inputText: ${DEST_NAME}
+- extendedWaitUntil:
+    visible: ".*${DEST_NAME}.*"
+    timeout: 20000
+- tapOn:
+    text: ".*${DEST_NAME}.*"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000

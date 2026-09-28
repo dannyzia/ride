@@ -1,0 +1,21 @@
+# driver/rides/01-offer-sheet-renders — while online near the seeded ride, the
+# "New Ride Offer" sheet renders with Accept/Decline.
+# Feature: D-OFFR (§4, P0). Offer delivery requires utils-server + GPS proximity OR
+# WS injection (Gate 3 BLOCKED). Device-day pairing (rider requests → driver receives)
+# is the running mode — evidence recorded in run report.
+# Class: AUTOMATABLE (paired-run) / BLOCKED-GATE standalone (inject endpoint absent).
+appId: com.ride.bd
+name: "Driver Rides - Offer Sheet Renders"
+tags: [driver, dispatch, smoke]
+---
+- runFlow: ../../../shared/location/_set-gps-banani.yaml
+- runFlow:
+    env:
+      PHONE: "8801700000001"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-driver.yaml
+- runFlow: ../../../shared/driver/_go-online.yaml
+- extendedWaitUntil:
+    visible: "New Ride Offer"
+    timeout: 120000

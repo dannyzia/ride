@@ -1,0 +1,20 @@
+# _counterpart-courier-accept — COUNTERPART ACTION: courier accepts a delivery
+# request (V4 courier flow / V6 parcel legs).
+# Counterpart call: POST ${API_BASE}/api/delivery/requests/${REQUEST_ID}/accept
+#   Auth: real courier token (COURIER_PHONE/COURIER_PASSWORD, seeded `couriers` row;
+#   in-app courier screens do not exist — manifest gap G-06 — so courier actions are
+#   API-only by design, not by workaround).
+# Contract: §C.3; delivery_status transitions §B.4 (cancel rules before picked_up).
+# Class: COUNTERPART-API.
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-login.cjs --phone "${COURIER_PHONE}" --password "${COURIER_PASSWORD}" --out /tmp/counterpart-token.json
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-api.cjs --token /tmp/counterpart-token.json --method POST --path "/api/delivery/requests/${REQUEST_ID}/accept" --body '{}' --out /tmp/accept-response.json

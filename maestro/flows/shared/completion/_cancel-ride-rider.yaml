@@ -1,0 +1,17 @@
+# _cancel-ride-rider — cancel-reason screen → select reason REASON_INDEX → confirm.
+# §9 Completion and Trust Subflows. Selector source: app/(main)/(customer)/cancel-reason/
+# (i18n canceled / ride_tracking sections; fee preview when past free window).
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- tapOn: ".*Cancel.*"
+- extendedWaitUntil:
+    visible: ".*reason.*|.*Reason.*|.*Why.*"
+    timeout: 15000
+- tapOn:
+    text: ".*"
+    index: ${REASON_INDEX}
+- tapOn: ".*Confirm.*|.*Cancel Ride.*"
+- extendedWaitUntil:
+    visible: ".*cancelled.*|.*canceled.*|.*Home.*"
+    timeout: 20000

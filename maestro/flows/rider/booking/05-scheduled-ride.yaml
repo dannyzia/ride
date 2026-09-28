@@ -1,0 +1,38 @@
+# rider/booking/05-scheduled-ride — toggle Schedule for later, set T+15min, submit,
+# entry appears under Scheduled.
+# Feature: R-BOOK scheduled (§4, BC-13). Selector source: confirm_ride.schedule_for_later
+# = "Schedule for later", schedule_ride="Schedule ride" (en/common.json §confirm_ride);
+# app/(main)/(customer)/schedule-ride/. NOTE: reminder timing needs Gate 5 override —
+# not asserted here. Class: AUTOMATABLE.
+appId: com.ride.bd
+name: "Rider Booking - Scheduled Ride"
+tags: [rider, booking, scheduling]
+---
+- runFlow: ../../../shared/location/_set-gps-banani.yaml
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- runFlow:
+    env:
+      DEST_NAME: "Gulshan"
+    commands:
+      - runFlow: ../../../shared/booking/_select-destination.yaml
+- runFlow:
+    env:
+      VEHICLE_TYPE: "Bike Basic"
+    commands:
+      - runFlow: ../../../shared/booking/_select-vehicle.yaml
+- extendedWaitUntil:
+    visible: ".*Confirm your ride.*"
+    timeout: 20000
+- tapOn: ".*Schedule for later.*"
+- extendedWaitUntil:
+    visible: ".*Schedule ride.*|.*date.*|.*time.*"
+    timeout: 15000
+- tapOn: ".*Schedule ride.*"
+- extendedWaitUntil:
+    visible: ".*Scheduled.*|.*schedule.*"
+    timeout: 20000

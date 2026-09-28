@@ -1,0 +1,33 @@
+# rider/tracking/06-cancel-before-match — cancel while still finding → no fee state.
+# Feature: RIDE cancel (§4 BC-07). Fee-free window: cancel BEFORE any match; wallet
+# probe (no debit) is a runScript assertion. Consumes _cancel-ride-rider.
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+name: "Rider Tracking - Cancel Before Match"
+tags: [rider, tracking, cancel]
+---
+- runFlow: ../../../shared/location/_set-gps-banani.yaml
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- runFlow:
+    env:
+      DEST_NAME: "Gulshan"
+    commands:
+      - runFlow: ../../../shared/booking/_select-destination.yaml
+- runFlow:
+    env:
+      VEHICLE_TYPE: "Bike Basic"
+    commands:
+      - runFlow: ../../../shared/booking/_confirm-and-request.yaml
+- runFlow:
+    env:
+      REASON_INDEX: "0"
+    commands:
+      - runFlow: ../../../shared/completion/_cancel-ride-rider.yaml
+- extendedWaitUntil:
+    visible: ".*Search destination.*|.*Home.*"
+    timeout: 30000

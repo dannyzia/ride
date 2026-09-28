@@ -1,0 +1,21 @@
+# _logout — Profile tab → Settings → Sign Out → assert phone-entry/login.
+# §9 Authentication Subflows. Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- tapOn:
+    text: ".*Profile.*|.*More.*"
+- tapOn:
+    text: ".*Settings.*"
+    optional: true
+- scrollUntilVisible:
+    element: ".*Sign Out.*|.*Log out.*"
+    timeout: 15000
+- tapOn:
+    text: ".*Sign Out.*|.*Log out.*"
+# Confirm dialog (logout_confirmation i18n section renders a confirm button)
+- tapOn:
+    text: ".*Yes.*|.*Confirm.*|.*Sign Out.*"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*Log In.*|.*Get Started.*"
+    timeout: 20000

@@ -1,0 +1,23 @@
+# rider/home/03-destination-search — open search, type a Barikoi place, land on fare screen.
+# Feature: R-HOME-04 / R-BOOK-01 (§4). Consumes _select-destination.
+# DEST fixture: "Banani" (§3.2 coverage area; Barikoi live key, rate-limited in QA).
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+name: "Rider Booking - Destination Search"
+tags: [rider, booking]
+---
+- runFlow: ../../../shared/location/_set-gps-banani.yaml
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- runFlow:
+    env:
+      DEST_NAME: "Gulshan"
+    commands:
+      - runFlow: ../../../shared/booking/_select-destination.yaml
+- extendedWaitUntil:
+    visible: ".*Confirm ride.*|.*Choose a ride.*"
+    timeout: 30000

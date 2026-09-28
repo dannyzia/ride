@@ -1,0 +1,60 @@
+# marketplace/v5-truck/01-catalog-picker-request — V5 truck rental:
+# catalog (16 BD variants) with bilingual use-case tabs (Pickup/মালবাহী ফ্রেইট/
+# Heavy Goods/Trailer/Van — constants/truckCatalog.ts TRUCK_TABS labels, verified),
+# TruckPicker variant rows + cargo chips, then request submit which SHARES V2
+# machinery (category='truck_rental' — spec §A.4, zero new endpoints §C.5).
+#
+# COUNTERPART-API call: same fleet-bid subflow as V2 (request id resolves with
+# category=truck_rental on the broadcasts feed).
+# Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
+appId: com.ride.bd
+name: "V5 Truck - Catalog Picker Request"
+tags: [marketplace, v5-truck, counterpart-api]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- tapOn: ".*Truck.*|.*Rentals?.*"
+- extendedWaitUntil:
+    visible: ".*Pickup.*|.*Freight.*|.*Trailer.*|.*Van.*"
+    timeout: 20000
+# Bilingual tabs: EN tab labels then BN tab labels (truckCatalog labelEn/labelBn).
+- assertVisible: ".*Pickup.*"
+- tapOn:
+    text: ".*Freight.*|.*মালবাহী.*"
+- extendedWaitUntil:
+    visible: ".*variant.*|.*ton.*|.*covered.*|.*open.*"
+    timeout: 15000
+# Variant row select (TruckPicker onSelect) + cargo chips.
+- tapOn:
+    text: ".*ton.*"
+    index: 0
+- runFlow:
+    when:
+      visible: ".*cargo.*|.*Cargo.*"
+    commands:
+      - tapOn:
+          text: ".*Furniture.*|.*Goods.*|.*cargo chip.*"
+          optional: true
+- tapOn: ".*Submit.*|.*Request.*|.*Broadcast.*"
+- extendedWaitUntil:
+    visible: ".*broadcast.*|.*bids?.*"
+    timeout: 30000
+- runFlow:
+    env:
+      FLEET_PHONE: "8801700000101"
+      FLEET_PASSWORD: "test1234"
+      REQUEST_ID: "LATEST_TRUCK_REQUEST"
+      BID_AMOUNT_BDT: "280000"
+    commands:
+      - runFlow: ../../../shared/marketplace/_counterpart-fleet-bid.yaml
+- extendedWaitUntil:
+    visible: ".*bid.*|.*Bid.*"
+    timeout: 60000
+- tapOn: ".*Accept.*"
+- extendedWaitUntil:
+    visible: ".*awarded.*|.*confirmed.*"
+    timeout: 30000

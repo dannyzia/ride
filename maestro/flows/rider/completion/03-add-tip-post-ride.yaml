@@ -1,0 +1,19 @@
+# rider/completion/03-add-tip-post-ride — tip screen → ৳50 chip → submit → tip entry
+# appears in ride detail (driver-earnings side probed in J-04).
+# Feature: PAYMENT tip (§4). Tip is cash-to-driver per wallet rules (§8 SM-03).
+# Class: AUTOMATABLE (paired-run) / BLOCKED-GATE (standalone).
+appId: com.ride.bd
+name: "Rider Completion - Add Tip Post Ride"
+tags: [rider, completion, payment]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- runFlow:
+    env:
+      AMOUNT: "50"
+    commands:
+      - runFlow: ../../../shared/completion/_add-tip-post-ride.yaml

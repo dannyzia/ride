@@ -1,0 +1,23 @@
+# driver/home/04-sos-button — SOS button → alert dialog → confirm → dialer intent.
+# Feature: D-SAFETY SOS (§4, J-20). SOS insert is idempotency-exempt by design
+# (R3.1, AGENTS.md § Idempotency). Dialer intent assert follows rider-core precedent.
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+name: "Driver Home - SOS Button"
+tags: [driver, safety]
+---
+- runFlow:
+    env:
+      PHONE: "8801700000001"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-driver.yaml
+- tapOn: ".*SOS.*"
+- runFlow:
+    when:
+      visible: ".*Emergency.*|.*confirm.*|.*Confirm.*"
+    commands:
+      - tapOn: ".*Confirm.*|.*Yes.*"
+- extendedWaitUntil:
+    visible: ".*Call.*|.*Dial.*|.*emergency.*"
+    timeout: 20000

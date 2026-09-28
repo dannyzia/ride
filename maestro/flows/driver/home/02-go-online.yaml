@@ -1,0 +1,30 @@
+# driver/home/02-go-online — driver toggles online and asserts Connected state.
+# Feature: D-DISPATCH go-online (§4, P0 CRITICAL per §16). Smoke suite member.
+# Consumes _login-driver + _go-online. Class: AUTOMATABLE.
+#
+# OWNER RULING 2026-09-27 (launch_free): every driver registers with the launch
+# subscription ALREADY ACTIVE (granted at registration via the write-ownership
+# chain: lib/paymentEvents.createZeroAmountPaymentEvent → lib/activateSubscription;
+# scripts/launch-free-subscription.ts covers pre-ruling drivers — STAGED, run at
+# launch). The first-run assertion below demands the wallet/subscription card
+# shows a live plan on first login — a driver can NEVER hit a purchase dead-end
+# (payments_enabled=false hides all purchase UI). See maestro/COVERAGE-MANIFEST.md §9.
+appId: com.ride.bd
+name: "Driver Home - Go Online"
+tags: [driver, smoke]
+---
+- runFlow: ../../../shared/location/_set-gps-banani.yaml
+- runFlow:
+    env:
+      PHONE: "8801700000001"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-driver.yaml
+# ── FIRST-RUN: launch subscription already active (ruling manifest step) ──────
+- extendedWaitUntil:
+    visible: ".*Calls Remaining.*"
+    timeout: 20000
+- assertVisible:
+    text: ".*Launch Free.*|.*Unlimited.*|.*Calls Remaining.*"
+- runFlow: ../../../shared/driver/_go-online.yaml
+- assertVisible: ".*Calls Remaining.*"

@@ -1,0 +1,19 @@
+# _counterpart-fleet-ack — COUNTERPART ACTION: fleet acknowledges an awarded rental
+# assignment inside the 5-minute SLA (V2/V5 machinery).
+# Counterpart call: POST ${API_BASE}/api/rental/assignments/${ASSIGNMENT_ID}/ack
+#   Auth: real fleet-staff token (same login path as _counterpart-fleet-bid).
+# Contract: §C.2 award/ack lifecycle; SLA enforcement §B.1 (late ack → demotion,
+# covered by marketplace/v2-rental/02-demote-reselect.yaml).
+# Class: COUNTERPART-API.
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-login.cjs --phone "${FLEET_PHONE}" --password "${FLEET_PASSWORD}" --out /tmp/counterpart-token.json
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-api.cjs --token /tmp/counterpart-token.json --method POST --path "/api/rental/assignments/${ASSIGNMENT_ID}/ack" --body '{}' --out /tmp/ack-response.json

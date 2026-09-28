@@ -1,0 +1,20 @@
+# rider/wallet/02-wallet-topup-initiate — navigate wallet → top-up → amount → initiate.
+# Feature: R-WALLET top-up (§4). MANIFEST: BLOCKED — the initiate step lands in the
+# PortPos sandbox WebView (Gap 4; TEST_PAYMENT_BYPASS absent). The UI part up to the
+# WebView is authored to blueprint; the credit assertion is NOT claimed here.
+# Class: BLOCKED (payments sandbox).
+appId: com.ride.bd
+name: "Rider Wallet - Top-Up Initiate"
+tags: [rider, wallet, blocked]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- runFlow:
+    env:
+      AMOUNT: "500"
+    commands:
+      - runFlow: ../../../shared/payment/_wallet-topup.yaml

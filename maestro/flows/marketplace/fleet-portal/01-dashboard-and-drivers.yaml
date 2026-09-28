@@ -1,0 +1,32 @@
+# marketplace/fleet-portal/01-dashboard-and-drivers — fleet portal surfaces
+# (13 screens under app/(main)/(fleet)): dashboard → operations → drivers list →
+# driver detail → vehicles. Fleet roles live in fleet_members (AGENTS.md § Auth);
+# the portal is reachable in the same app via the fleet mode switch (local state,
+# never a users.role mutation).
+# Class: AUTOMATABLE (read-mostly portal; mutations covered by fleet flows later).
+appId: com.ride.bd
+name: "Fleet Portal - Dashboard and Drivers"
+tags: [fleet, cross-cutting]
+---
+- runFlow:
+    env:
+      PHONE: "8801700000101"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-driver.yaml
+# Mode switch → fleet mode (local-state switch per AGENTS.md fleet authorization).
+- tapOn: ".*Fleet.*|.*Current Mode.*"
+- extendedWaitUntil:
+    visible: ".*Dashboard.*|.*Fleet.*"
+    timeout: 20000
+- assertVisible: ".*Dashboard.*|.*Operations.*"
+- tapOn: ".*Drivers.*"
+- extendedWaitUntil:
+    visible: ".*driver.*|.*Driver.*"
+    timeout: 20000
+- tapOn:
+    text: ".*"
+    index: 0
+- extendedWaitUntil:
+    visible: ".*vehicle.*|.*Vehicle.*|.*details.*"
+    timeout: 20000

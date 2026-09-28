@@ -1,0 +1,18 @@
+# rider/wallet/01-wallet-balance — wallet tab renders balance + transaction history.
+# Feature: R-WALLET (§4). READ-ONLY assertion surface (balance value is env-dependent;
+# exact-value assertion belongs to the reset-API era — Gate 2).
+# Class: AUTOMATABLE (render assertions).
+appId: com.ride.bd
+name: "Rider Wallet - Balance"
+tags: [rider, wallet]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- tapOn: ".*Wallet.*"
+- extendedWaitUntil:
+    visible: ".*৳.*|.*Balance.*|.*balance.*"
+    timeout: 20000

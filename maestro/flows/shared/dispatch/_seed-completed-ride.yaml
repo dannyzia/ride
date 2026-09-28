@@ -1,0 +1,10 @@
+# _seed-completed-ride — POST /api/test/seed-ride?status=completed.
+# §9. MANIFEST: BLOCKED-GATE (Gate 2 absent). Consumed by completion/trust flows.
+# Class: COUNTERPART-API (once live).
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - curl -s -X POST "${API_BASE}/api/test/seed-ride?status=completed" -H "Content-Type: application/json" -H "Authorization: Bearer ${API_TOKEN}" -d '{"riderId":"${RIDER_ID}","driverId":"${DRIVER_ID}"}'

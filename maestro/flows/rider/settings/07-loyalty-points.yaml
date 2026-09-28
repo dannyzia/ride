@@ -1,0 +1,18 @@
+# rider/settings/07-loyalty-points — loyalty screen renders points balance (GROWTH BC-15).
+# Redemption mechanics are backend-gated; render assertion is the safe floor.
+# Class: AUTOMATABLE (render).
+appId: com.ride.bd
+name: "Rider Settings - Loyalty Points"
+tags: [rider, settings, growth]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- runFlow: ../../../shared/util/_open-settings-hub.yaml
+- tapOn: ".*Loyalty.*"
+- extendedWaitUntil:
+    visible: ".*point.*|.*Point.*|.*৳.*"
+    timeout: 20000

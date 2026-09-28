@@ -1,0 +1,48 @@
+# marketplace/v4-food/01-food-to-bridge-to-courier — V4 Food Bridge end-to-end:
+# food order placed in customer UI → shop marks ready (COUNTERPART) →
+# lib/shopDeliveryBridge.ts creates the delivery (source_shop_order_id idempotent,
+# §C.4) → courier accepts (COUNTERPART) → courier/leg flow reflected to customer.
+#
+# COUNTERPART-API calls:
+#   1. _counterpart-shop-ready     → POST /api/shop/orders/{id}/mark-ready (triggers bridge)
+#   2. _counterpart-courier-accept → POST /api/delivery/requests/{id}/accept
+# Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
+appId: com.ride.bd
+name: "V4 Food - Bridge to Courier"
+tags: [marketplace, v4-food, counterpart-api]
+---
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-rider.yaml
+- tapOn: ".*Shops?.*|.*Food.*"
+- tapOn:
+    text: ".*"
+    index: 0
+- tapOn: ".*Add.*|.*Buy.*"
+- tapOn: ".*Place Order.*|.*Checkout.*|.*Order.*"
+- extendedWaitUntil:
+    visible: ".*pending.*|.*preparing.*|.*order.*"
+    timeout: 30000
+# ── Counterpart side (API): shop marks ready → bridge creates delivery ────────
+- runFlow:
+    env:
+      SHOP_PHONE: "8801700000201"
+      SHOP_PASSWORD: "test1234"
+      ORDER_ID: "LATEST_FOOD_ORDER"
+    commands:
+      - runFlow: ../../../shared/marketplace/_counterpart-shop-ready.yaml
+# ── Counterpart side (API): courier accepts the bridged delivery ──────────────
+- runFlow:
+    env:
+      COURIER_PHONE: "8801700000301"
+      COURIER_PASSWORD: "test1234"
+      REQUEST_ID: "LATEST_DELIVERY_REQUEST"
+    commands:
+      - runFlow: ../../../shared/marketplace/_counterpart-courier-accept.yaml
+# ── Customer side (UI): order/delivery state reflects the courier ─────────────
+- extendedWaitUntil:
+    visible: ".*on the way.*|.*picked.*|.*courier.*|.*delivering.*"
+    timeout: 60000

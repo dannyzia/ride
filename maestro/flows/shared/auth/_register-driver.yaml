@@ -1,0 +1,42 @@
+# _register-driver — full new-driver registration: phone-entry → OTP → register as Driver.
+# §9 Authentication Subflows. Selector source: app/(auth)/*.tsx; role chip "Driver"
+# (e2e copy, verified in login.tsx selector inventory). Fixtures: Driver C (pending)
+# roster phone; OTP bypass 123456. Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: ".*Enter your phone number.*"
+    timeout: 20000
+- tapOn:
+    textField: "1XXXXXXXXX"
+- inputText: ${PHONE}
+- tapOn:
+    text: "Driver"
+    optional: true
+- tapOn: "Send OTP"
+- extendedWaitUntil:
+    visible: "Enter 6-digit OTP"
+    timeout: 20000
+- tapOn:
+    textField: "Enter 6-digit OTP"
+- inputText: ${OTP_CODE}
+- tapOn: "Verify OTP"
+- extendedWaitUntil:
+    visible: ".*Create Account.*|.*Name.*"
+    timeout: 20000
+- tapOn:
+    textField: ".*Name.*"
+    optional: true
+- inputText: ${NAME}
+- tapOn:
+    textField: ".*Password.*"
+    optional: true
+- inputText: ${PASSWORD}
+- tapOn: "Create Account"
+# DriverStatusGuard routes new drivers to the pending/onboarding surface.
+- extendedWaitUntil:
+    visible: ".*pending.*|.*verification.*|.*onboarding.*|.*Welcome.*"
+    timeout: 30000

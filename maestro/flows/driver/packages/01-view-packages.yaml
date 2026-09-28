@@ -1,0 +1,18 @@
+# driver/packages/01-view-packages — packages list renders with calls/price cards.
+# Feature: D-PKG list (§4). Package scope by vehicle_type (AGENTS.md § Packages)
+# is implicitly exercised: Driver B sees universal + matching packages.
+# Class: AUTOMATABLE (render).
+appId: com.ride.bd
+name: "Driver Packages - View Packages"
+tags: [driver, packages, smoke]
+---
+- runFlow:
+    env:
+      PHONE: "8801700000001"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-driver.yaml
+- tapOn: ".*Packages.*|.*Calls.*"
+- extendedWaitUntil:
+    visible: ".*calls.*|.*৳.*"
+    timeout: 20000

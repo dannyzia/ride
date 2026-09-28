@@ -1,0 +1,9 @@
+# _reset-rider-state — POST /api/test/reset-rider → idle state (module teardown).
+# §9. MANIFEST: BLOCKED-GATE (Gate 2 absent). Class: COUNTERPART-API (once live).
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - curl -s -X POST "${API_BASE}/api/test/reset-rider" -H "Content-Type: application/json" -H "Authorization: Bearer ${API_TOKEN}" -d '{"riderId":"${RIDER_ID}"}'

@@ -1,0 +1,14 @@
+# _seed-surge — PATCH /api/test/surge-config MULTIPLIER.
+# §9. MANIFEST: BLOCKED-GATE **and structurally N/A** — surge is fully removed from
+# this codebase (AGENTS.md § Dispatch Logic: "No surge tables, columns, code, or UI
+# references remain"). Authored only for §9 blueprint conformance; J-09 (Surge Ride
+# With Consent) is NOT a runnable journey on this codebase and is recorded as a
+# blueprint-drift finding in COVERAGE-MANIFEST.md §7.
+# Class: BLOCKED.
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - curl -s -X PATCH "${API_BASE}/api/test/surge-config" -H "Content-Type: application/json" -d '{"multiplier":${MULTIPLIER}}'

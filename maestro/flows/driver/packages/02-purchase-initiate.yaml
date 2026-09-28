@@ -1,0 +1,19 @@
+# driver/packages/02-purchase-initiate — select package → purchase → PortPos.
+# Feature: D-PKG purchase (§4). MANIFEST: BLOCKED — PortPos sandbox WebView (Gap 4,
+# TEST_PAYMENT_BYPASS absent). Initiation UI is authored to blueprint; activation
+# assertion NOT claimed. Class: BLOCKED (payments sandbox).
+appId: com.ride.bd
+name: "Driver Packages - Purchase Initiate"
+tags: [driver, packages, blocked]
+---
+- runFlow:
+    env:
+      PHONE: "8801700000001"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../../../shared/auth/_login-driver.yaml
+- runFlow:
+    env:
+      PACKAGE_NAME: "Standard"
+    commands:
+      - runFlow: ../../../shared/payment/_buy-package.yaml

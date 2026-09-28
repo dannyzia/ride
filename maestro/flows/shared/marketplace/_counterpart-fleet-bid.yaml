@@ -1,0 +1,27 @@
+# _counterpart-fleet-bid — COUNTERPART ACTION: fleet places a sealed bid on a rental
+# request while the CUSTOMER side runs in the UI.
+# TWO-SIDED PATTERN (manifest §4): the counterpart is driven via REAL authenticated
+# API calls — a real Supabase auth login with seeded fleet-staff credentials
+# (FLEET_PHONE/FLEET_PASSWORD), then the live endpoint. NEVER a direct DB write.
+#
+# Counterpart call: POST ${API_BASE}/api/rental/requests/${REQUEST_ID}/bids
+#   Auth: Authorization: Bearer <supabase access_token from real login>
+#   Body: amount_bdt (integer paisa per AGENTS.md § Money), note, fulfillment window
+# Contract: plans/marketplace-bidding-implementation-spec-v2.md §C.2; sealed-bid rules
+# §B.2 (bids hidden from other bidders; award is customer-side).
+# Also seeds marketplace exclusivity (§B.7) naturally via the API's own guards.
+# Class: COUNTERPART-API.
+appId: com.ride.bd
+---
+# 1) Real counterpart login (Supabase OTP-bypass password login via live auth API).
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-login.cjs --phone "${FLEET_PHONE}" --password "${FLEET_PASSWORD}" --out /tmp/counterpart-token.json
+# 2) Place the bid through the live endpoint with the counterpart's real token.
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-api.cjs --token /tmp/counterpart-token.json --method POST --path "/api/rental/requests/${REQUEST_ID}/bids" --body '{"amount_bdt":${BID_AMOUNT_BDT},"note":"automation sealed bid"}' --out /tmp/bid-response.json

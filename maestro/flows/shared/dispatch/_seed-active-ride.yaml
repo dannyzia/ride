@@ -1,0 +1,10 @@
+# _seed-active-ride — POST /api/test/seed-ride?status={STATE} for the given rider+driver.
+# §9. MANIFEST: BLOCKED-GATE (Gate 2 endpoint absent; verified 2026-09-27).
+# STATE ∈ {matched, arrived, in_progress}. Class: COUNTERPART-API (once live).
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - curl -s -X POST "${API_BASE}/api/test/seed-ride?status=${STATE}" -H "Content-Type: application/json" -H "Authorization: Bearer ${API_TOKEN}" -d '{"riderId":"${RIDER_ID}","driverId":"${DRIVER_ID}"}'
