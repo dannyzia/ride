@@ -1,7 +1,10 @@
 # _accept-ride — tap Accept on the offer sheet → assert find-customer surface.
 # §9. Selectors VERIFIED against device-proven maestro/flows/driver-core.yaml:
 # "New Ride Offer" sheet → "Accept" → "Slide to Confirm Arrival" (find-customer).
-# Class: AUTOMATABLE.
+# Gate 1 REWIRE NOTE: the offer-sheet Accept button has NO testID (offer-sheet.tsx
+# is not in the codemod interactive inventory) — text tap retained by design
+# (G-02 remainder). find-customer rider.find-customer.el-1 is the accept-adjacent
+# surface but the sheet button itself is the device-proven contract. Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - extendedWaitUntil:

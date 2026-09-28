@@ -1,7 +1,10 @@
 # driver/rides/02-accept-offer — accept the offer sheet → find-customer surface.
-# Feature: D-OFFR accept (§4 P0). Debit-on-offer billing is exercised server-side
-# (call_ledger deduction by utils-server leadBilling — not asserted in UI here).
-# Class: AUTOMATABLE (paired-run).
+# Feature: D-OFFR accept (§4 P0). Gate 1 REWIRE: login + go-online now run semantic
+# IDs via subflows (_login-driver per flow-testid-map.json auth.login; _go-online →
+# rider.d.toggle-online). The offer-sheet Accept tap stays TEXT — offer sheet has no
+# testID (G-02 remainder, see _accept-ride header). Debit-on-offer billing is
+# exercised server-side (call_ledger deduction by utils-server leadBilling — not
+# asserted in UI here). Class: AUTOMATABLE (paired-run).
 appId: com.ride.bd
 name: "Driver Rides - Accept Offer"
 tags: [driver, dispatch, smoke]

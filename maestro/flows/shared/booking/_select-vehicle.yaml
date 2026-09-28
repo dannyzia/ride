@@ -1,7 +1,8 @@
 # _select-vehicle — tap the vehicle card for VEHICLE_TYPE on the fare screen.
-# §9 Booking Subflows. Selector source: find_ride.vehicle_* labels ("Bike Basic" …
-# "Car XL", en/common.json §find_ride — verified against screen source), rendered
-# on app/(main)/(customer)/find-ride/index.tsx fare cards.
+# §9 Booking Subflows. Gate 1 REWIRE (semantic IDs via testid-map.json): fare-tier
+# card = customer.find-ride.set-selected-vehicle-type (app/(main)/(customer)/
+# find-ride/index.tsx L311, tier TouchableOpacity list) filtered by the
+# ${VEHICLE_TYPE} display label ("Bike Basic" … "Car XL" per i18n §find_ride).
 # Mission fare assertions (৳441/৳535/৳589) are asserted in journey flows, NOT here:
 # pricing is DB-driven (manifest G-01) — flows probe /api/pricing first.
 # Class: AUTOMATABLE.
@@ -11,6 +12,7 @@ appId: com.ride.bd
     visible: ".*Choose a ride.*|.*FARES.*"
     timeout: 20000
 - tapOn:
+    id: "customer.find-ride.set-selected-vehicle-type"
     text: ".*${VEHICLE_TYPE}.*"
 - waitForAnimationToEnd:
     timeout: 2000

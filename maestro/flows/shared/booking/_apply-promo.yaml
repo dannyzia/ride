@@ -1,6 +1,10 @@
 # _apply-promo — Apply-promos sheet → enter PROMO_CODE → apply.
-# §9 Booking Subflows. Selector source: app/(main)/(customer)/apply-promos/index.tsx;
-# i18n apply_promos section (en/common.json). Class: AUTOMATABLE.
+# §9 Booking Subflows. Gate 1 REWIRE (semantic IDs via testid-map.json,
+# app/(main)/(customer)/apply-promos/index.tsx): promo input =
+# customer.apply-promos.set-promo-code (L149); apply button =
+# customer.apply-promos.handle-apply (L169). Sheet entry point is TEXT
+# ("Available discounts" affordance on the fare screen has no testID — G-02
+# remainder). Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - tapOn: ".*Available discounts.*|.*Promo.*|.*promos.*"
@@ -8,10 +12,10 @@ appId: com.ride.bd
     visible: ".*Promo.*|.*promo.*"
     timeout: 15000
 - tapOn:
-    textField: ".*code.*|.*CODE.*"
-    optional: true
+    id: "customer.apply-promos.set-promo-code"
 - inputText: ${PROMO_CODE}
-- tapOn: ".*Apply.*"
+- tapOn:
+    id: "customer.apply-promos.handle-apply"
 - extendedWaitUntil:
     visible: ".*${PROMO_CODE}.*|.*off.*"
     timeout: 15000

@@ -1,7 +1,10 @@
 # driver/packages/01-view-packages — packages list renders with calls/price cards.
-# Feature: D-PKG list (§4). Package scope by vehicle_type (AGENTS.md § Packages)
-# is implicitly exercised: Driver B sees universal + matching packages.
-# Class: AUTOMATABLE (render).
+# Feature: D-PKG list (§4). Gate 1 NOTE: driver home has NO Packages nav testID
+# (d/(tabs) exposes toggle-online/push-main-N only; push-main-3 is the Buy-a-package
+# card shown when calls run low — not the browse surface) and rider.packages has only
+# rider.packages.handle-buy — the list render assert stays TEXT. Package scope by
+# vehicle_type (AGENTS.md § Packages) is implicitly exercised: Driver B sees
+# universal + matching packages. Class: AUTOMATABLE (render).
 appId: com.ride.bd
 name: "Driver Packages - View Packages"
 tags: [driver, packages, smoke]

@@ -1,6 +1,9 @@
 # marketplace/v7-ambulance/02-scheduled-ambulance — scheduled ambulance with
 # service_level selection (V7 non-emergency path; no first-accept race — assignment
 # is scheduled broadcast per spec §A.5/§C.6).
+# Gate 1 REWIRE: BLS chip = customer.ambulance.emergency.set-service-level
+# (id+text filter; scheduled mode renders the same emergency form), submit =
+# customer.ambulance.emergency.handle-create (emergency.tsx L367).
 # Class: AUTOMATABLE (customer side) + COUNTERPART-API (provider accept).
 # BLOCKED until roster fixtures land.
 appId: com.ride.bd
@@ -19,9 +22,11 @@ tags: [marketplace, v7-ambulance, counterpart-api]
     visible: ".*service.*|.*BLS.*|.*ALS.*|.*level.*"
     timeout: 20000
 - tapOn:
+    id: "customer.ambulance.emergency.set-service-level"
     text: ".*BLS.*|.*Basic.*"
     optional: true
-- tapOn: ".*Submit.*|.*Book.*"
+- tapOn:
+    id: "customer.ambulance.emergency.handle-create"
 - extendedWaitUntil:
     visible: ".*scheduled.*|.*confirmed.*"
     timeout: 30000

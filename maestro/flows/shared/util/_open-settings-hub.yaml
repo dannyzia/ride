@@ -1,9 +1,12 @@
 # _open-settings-hub — Profile tab → Settings.
-# §9. Selector source: rider tabs (rider_tabs / settings.title i18n sections:
-# "Settings"). Class: AUTOMATABLE.
+# §9. Gate 1 REWIRE: tab tap = customer._layout.on-press (customer (tabs)/_layout.tsx
+# L55 wrapper TouchableWithoutFeedback) filtered by the tab label. The Settings row
+# itself has no testID (settings/index.tsx exposes only its back button) — text tap
+# retained (G-02 remainder). Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - tapOn:
+    id: "customer._layout.on-press"
     text: ".*Profile.*|.*Account.*"
 - extendedWaitUntil:
     visible: ".*Settings.*"

@@ -1,6 +1,9 @@
 # _cancel-ride-rider — cancel-reason screen → select reason REASON_INDEX → confirm.
-# §9 Completion and Trust Subflows. Selector source: app/(main)/(customer)/cancel-reason/
-# (i18n canceled / ride_tracking sections; fee preview when past free window).
+# §9 Completion and Trust Subflows. Gate 1 REWIRE (semantic IDs via testid-map.json,
+# app/(main)/(customer)/cancel-reason/index.tsx): confirm button =
+# customer.cancel-reason.confirm-cancel (L149); optional note input =
+# customer.cancel-reason.set-note (L142). Reason rows are a mapped list of text
+# rows without per-row testIDs — index tap retained (G-02 remainder).
 # Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
@@ -11,7 +14,8 @@ appId: com.ride.bd
 - tapOn:
     text: ".*"
     index: ${REASON_INDEX}
-- tapOn: ".*Confirm.*|.*Cancel Ride.*"
+- tapOn:
+    id: "customer.cancel-reason.confirm-cancel"
 - extendedWaitUntil:
     visible: ".*cancelled.*|.*canceled.*|.*Home.*"
     timeout: 20000

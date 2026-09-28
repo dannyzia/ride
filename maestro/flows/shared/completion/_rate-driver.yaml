@@ -1,14 +1,19 @@
-# _rate-driver — rate-driver screen → tap STARS star → submit.
-# §9. Selector source: app/(main)/(customer)/rate-driver/ (i18n rate_driver section).
-# Class: AUTOMATABLE.
+# _rate-driver — rate-driver screen → tap STARS-th star → submit.
+# §9 Completion and Trust Subflows. Gate 1 REWIRE (semantic IDs via testid-map.json,
+# app/(main)/(customer)/rate-driver/index.tsx): star row = customer.rate-driver.
+# set-rating (L303, mapped [1..5] — STAR_INDEX selects the star, replacing the
+# "★" text match which is fragile across filled/outline icon fonts); submit =
+# customer.rate-driver.handle-submit (L393). STAR_INDEX = STARS - 1 (caller passes
+# it; default 5-star via the rider/completion/01 caller). Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - extendedWaitUntil:
     visible: ".*Rate.*|.*star.*|.*rating.*"
     timeout: 30000
 - tapOn:
-    text: "★"
-    index: 4
-- tapOn: ".*Submit.*|.*Done.*|.*Skip.*"
+    id: "customer.rate-driver.set-rating"
+    index: ${STAR_INDEX}
+- tapOn:
+    id: "customer.rate-driver.handle-submit"
 - waitForAnimationToEnd:
     timeout: 3000

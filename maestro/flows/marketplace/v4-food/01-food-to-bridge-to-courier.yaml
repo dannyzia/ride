@@ -6,7 +6,9 @@
 # COUNTERPART-API calls:
 #   1. _counterpart-shop-ready     → POST /api/shop/orders/{id}/mark-ready (triggers bridge)
 #   2. _counterpart-courier-accept → POST /api/delivery/requests/{id}/accept
-# Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
+# Gate 1 REWIRE: home chip ("Food"), add-to-cart, checkout, order submit = semantic
+# IDs (same derivation as v3-shops/01; food rides the shops screens). Class:
+# AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
 appId: com.ride.bd
 name: "V4 Food - Bridge to Courier"
 tags: [marketplace, v4-food, counterpart-api]
@@ -17,12 +19,18 @@ tags: [marketplace, v4-food, counterpart-api]
       PASSWORD: "test1234"
     commands:
       - runFlow: ../../../shared/auth/_login-rider.yaml
-- tapOn: ".*Shops?.*|.*Food.*"
+- tapOn:
+    id: "customer.home.set-selected-category"
+    text: ".*Food.*|.*Shop.*"
 - tapOn:
     text: ".*"
     index: 0
-- tapOn: ".*Add.*|.*Buy.*"
-- tapOn: ".*Place Order.*|.*Checkout.*|.*Order.*"
+- tapOn:
+    id: "customer.shops.shop-detail.id.add-to-cart"
+- tapOn:
+    id: "customer.shops.shop-detail.id.push-main"
+- tapOn:
+    id: "customer.shops.order-create.id.handle-submit"
 - extendedWaitUntil:
     visible: ".*pending.*|.*preparing.*|.*order.*"
     timeout: 30000

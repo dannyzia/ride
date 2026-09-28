@@ -4,6 +4,9 @@
 # delivery legs progress (§B.4 delivery_status).
 #
 # COUNTERPART-API call: _counterpart-courier-accept → POST /api/delivery/requests/{id}/accept
+# Gate 1 REWIRE: home chip ("Delivery") and request form = semantic IDs
+# (customer.delivery.request-create.handle-submit, request-create.tsx L216);
+# mid-flow screen sequence unverifiable without device run → text taps retained.
 # Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
 appId: com.ride.bd
 name: "V6 Delivery - Parcel Bid Legs"
@@ -15,7 +18,9 @@ tags: [marketplace, v6-delivery, counterpart-api]
       PASSWORD: "test1234"
     commands:
       - runFlow: ../../../shared/auth/_login-rider.yaml
-- tapOn: ".*Delivery.*|.*Parcel.*"
+- tapOn:
+    id: "customer.home.set-selected-category"
+    text: ".*Delivery.*|.*Parcel.*"
 - extendedWaitUntil:
     visible: ".*parcel.*|.*delivery.*|.*request.*"
     timeout: 20000
@@ -23,7 +28,8 @@ tags: [marketplace, v6-delivery, counterpart-api]
 - extendedWaitUntil:
     visible: ".*pickup.*|.*drop.*|.*parcel.*"
     timeout: 20000
-- tapOn: ".*Submit.*|.*Request.*|.*Broadcast.*"
+- tapOn:
+    id: "customer.delivery.request-create.handle-submit"
 - extendedWaitUntil:
     visible: ".*broadcast.*|.*bids?.*|.*pending.*"
     timeout: 30000

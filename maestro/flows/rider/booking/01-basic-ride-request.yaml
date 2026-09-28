@@ -1,7 +1,11 @@
 # rider/booking/01-basic-ride-request — full booking funnel: search → fare → confirm → finding.
-# Feature: R-BOOK-02/03/04 (§4). Fare VALUES are not asserted here (manifest G-01:
-# pricing is DB-driven; the journey flow probes /api/pricing and asserts equality).
-# Consumes destination/vehicle/confirm subflows. Class: AUTOMATABLE.
+# Feature: R-BOOK-02/03/04 (§4). Gate 1 REWIRE: the whole funnel now runs semantic IDs
+# via subflows — _login-rider (login.set-*), _select-destination (customer.home.el-2 →
+# customer.autocomplete.set-query / handle-place-select), _select-vehicle
+# (customer.find-ride.set-selected-vehicle-type), _confirm-and-request
+# (customer.confirm-ride.handle-request-ride) — per flow-testid-map.json. Fare VALUES
+# are not asserted here (manifest G-01: pricing is DB-driven; the journey flow probes
+# /api/pricing and asserts equality). Class: AUTOMATABLE.
 appId: com.ride.bd
 name: "Rider Booking - Basic Ride Request"
 tags: [rider, booking, smoke]

@@ -15,5 +15,6 @@ tags: [rider, completion]
 - runFlow:
     env:
       STARS: "5"
+      STAR_INDEX: "4"
     commands:
       - runFlow: ../../../shared/completion/_rate-driver.yaml

@@ -6,6 +6,9 @@
 #
 # COUNTERPART-API call: same fleet-bid subflow as V2 (request id resolves with
 # category=truck_rental on the broadcasts feed).
+# Gate 1 REWIRE: home chip ("Truck"), truck-mode entry = customer.rental-marketplace.
+# enter-truck-mode (index L666), submit = handle-submit; use-case tabs and variant
+# rows live in TruckPicker (_components, no testIDs — G-02 remainder) → text taps.
 # Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
 appId: com.ride.bd
 name: "V5 Truck - Catalog Picker Request"
@@ -17,7 +20,9 @@ tags: [marketplace, v5-truck, counterpart-api]
       PASSWORD: "test1234"
     commands:
       - runFlow: ../../../shared/auth/_login-rider.yaml
-- tapOn: ".*Truck.*|.*Rentals?.*"
+- tapOn:
+    id: "customer.home.set-selected-category"
+    text: ".*Truck.*"
 - extendedWaitUntil:
     visible: ".*Pickup.*|.*Freight.*|.*Trailer.*|.*Van.*"
     timeout: 20000
@@ -39,7 +44,8 @@ tags: [marketplace, v5-truck, counterpart-api]
       - tapOn:
           text: ".*Furniture.*|.*Goods.*|.*cargo chip.*"
           optional: true
-- tapOn: ".*Submit.*|.*Request.*|.*Broadcast.*"
+- tapOn:
+    id: "customer.rental-marketplace.handle-submit"
 - extendedWaitUntil:
     visible: ".*broadcast.*|.*bids?.*"
     timeout: 30000

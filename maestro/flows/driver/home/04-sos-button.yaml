@@ -1,7 +1,9 @@
 # driver/home/04-sos-button — SOS button → alert dialog → confirm → dialer intent.
 # Feature: D-SAFETY SOS (§4, J-20). SOS insert is idempotency-exempt by design
 # (R3.1, AGENTS.md § Idempotency). Dialer intent assert follows rider-core precedent.
-# Class: AUTOMATABLE.
+# Gate 1 REWIRE NOTE: the SOS button itself has no testID (rendered outside the
+# codemod's interactive inventory on this screen) — text tap retained (G-02
+# remainder). Class: AUTOMATABLE.
 appId: com.ride.bd
 name: "Driver Home - SOS Button"
 tags: [driver, safety]

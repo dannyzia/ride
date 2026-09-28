@@ -6,6 +6,11 @@
 # COUNTERPART-API call: _counterpart-ambulance-accept →
 #   POST /api/emergency/requests/{id}/accept (requireAmbulanceCertified §E.3:
 #   BLS⊂ALS, unexpired — the certification UI step below produces that state).
+# Gate 1 REWIRE: cert form = semantic IDs (ambulance-cert.set-vehicle-id /
+# set-service-level / set-cert-number / set-issuing-body / set-expires-at /
+# set-document-urls, ambulance-cert/index.tsx; submit = handle-submit L319);
+# emergency request = customer.ambulance.emergency.handle-create (emergency.tsx
+# L367) with its set-* inputs. Vertical entry chip stays text (mapping unverified).
 # Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
 appId: com.ride.bd
 name: "V7 Ambulance - Emergency First Accept"
@@ -22,7 +27,8 @@ tags: [marketplace, v7-ambulance, counterpart-api]
 - extendedWaitUntil:
     visible: ".*certif.*|.*BLS.*|.*ALS.*"
     timeout: 20000
-- tapOn: ".*Submit.*|.*Renew.*|.*Upload.*"
+- tapOn:
+    id: "ambulance-cert.handle-submit"
 - extendedWaitUntil:
     visible: ".*submitted.*|.*pending.*|.*verified.*"
     timeout: 30000
@@ -39,8 +45,7 @@ tags: [marketplace, v7-ambulance, counterpart-api]
     timeout: 20000
 - tapOn: ".*Request.*|.*SOS.*|.*Book.*"
 - tapOn:
-    text: ".*Confirm.*"
-    optional: true
+    id: "customer.ambulance.emergency.handle-create"
 - extendedWaitUntil:
     visible: ".*broadcast.*|.*searching.*|.*accept.*"
     timeout: 30000

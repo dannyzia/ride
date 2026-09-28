@@ -1,6 +1,7 @@
 # auth/07-role-selector — role chip toggles between Rider and Driver at login.
-# Feature: R-AUTH-01 (§4). Selector source: app/(auth)/login.tsx role chips
-# ("Rider"/"Driver" e2e copy strings, verified in selector inventory).
+# Feature: R-AUTH-01 (§4). Chips are display-labeled TouchableOpacity elements
+# WITHOUT testIDs in the codemod output (G-02 remainder: e2e copy strings, not
+# handler-derived) — text taps retained by design, NOT an oversight.
 # Class: AUTOMATABLE.
 appId: com.ride.bd
 name: "Auth - Role Selector"

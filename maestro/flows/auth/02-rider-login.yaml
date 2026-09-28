@@ -1,6 +1,10 @@
 # auth/02-rider-login — rider enters phone + password and lands on rider home.
-# Feature: R-AUTH-05 (§4 matrix). Selector source: app/(auth)/login.tsx via
-# i18n auth.login="Log In"; destination placeholder per §find_ride.
+# Feature: R-AUTH-05 (§4 matrix). Gate 1 REWIRE: entry steps run through
+# ../shared/auth/_login-rider.yaml which taps semantic IDs (login.set-phone /
+# login.set-password / login.handle-login per maestro/tools/flow-testid-map.json).
+# Final assert is TEXT on the rider home search surface — rider home exposes no
+# search testID (G-02 remainder); exact landing is proven by booking flows, which
+# continue from here into _select-destination (id: customer.home.el-2).
 # Fixtures: Rider A +8801613249520 / test1234 (§13 roster).
 # Class: AUTOMATABLE.
 appId: com.ride.bd

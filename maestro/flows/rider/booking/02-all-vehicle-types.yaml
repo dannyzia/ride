@@ -1,6 +1,9 @@
 # rider/booking/02-all-vehicle-types — all 9 vehicle tiers render on the fare screen
 # and each tier card is selectable.
-# Feature: R-BOOK-04 (§4). Tier labels per i18n §find_ride.vehicle_* ("Bike Basic",
+# Feature: R-BOOK-04 (§4). Gate 1 REWIRE: tier asserts use id+text pairs on
+# customer.find-ride.set-selected-vehicle-type (tier card testID + tier label) —
+# exact-card identity, not just any matching text on screen. Tier labels per
+# i18n §find_ride.vehicle_* ("Bike Basic",
 # "Bike Standard", "Bike Plus", "CNG", "Car Compact", "Car Economy", "Car Comfort",
 # "Car Premium", "Car XL" — verified in en/common.json; car_compact sits between
 # cng and car_economy per AGENTS.md § Vehicle Types).
@@ -24,15 +27,33 @@ tags: [rider, booking]
 - extendedWaitUntil:
     visible: ".*Choose a ride.*|.*FARES.*"
     timeout: 30000
-- assertVisible: ".*Bike Basic.*"
-- assertVisible: ".*Bike Standard.*"
-- assertVisible: ".*Bike Plus.*"
-- assertVisible: ".*CNG.*"
-- assertVisible: ".*Car Compact.*"
-- assertVisible: ".*Car Economy.*"
-- assertVisible: ".*Car Comfort.*"
-- assertVisible: ".*Car Premium.*"
-- assertVisible: ".*Car XL.*"
+- assertVisible:
+    id: "customer.find-ride.set-selected-vehicle-type"
+    text: ".*Bike Basic.*"
+- assertVisible:
+    id: "customer.find-ride.set-selected-vehicle-type"
+    text: ".*Bike Standard.*"
+- assertVisible:
+    id: "customer.find-ride.set-selected-vehicle-type"
+    text: ".*Bike Plus.*"
+- assertVisible:
+    id: "customer.find-ride.set-selected-vehicle-type"
+    text: ".*CNG.*"
+- assertVisible:
+    id: "customer.find-ride.set-selected-vehicle-type"
+    text: ".*Car Compact.*"
+- assertVisible:
+    id: "customer.find-ride.set-selected-vehicle-type"
+    text: ".*Car Economy.*"
+- assertVisible:
+    id: "customer.find-ride.set-selected-vehicle-type"
+    text: ".*Car Comfort.*"
+- assertVisible:
+    id: "customer.find-ride.set-selected-vehicle-type"
+    text: ".*Car Premium.*"
+- assertVisible:
+    id: "customer.find-ride.set-selected-vehicle-type"
+    text: ".*Car XL.*"
 - runFlow:
     env:
       VEHICLE_TYPE: "Car Comfort"

@@ -1,21 +1,24 @@
-# _logout — Profile tab → Settings → Sign Out → assert phone-entry/login.
-# §9 Authentication Subflows. Class: AUTOMATABLE.
+# _logout — Profile tab → Sign Out → OS confirm alert → assert auth surface.
+# §9 Authentication Subflows. Gate 1 REWIRE (semantic IDs via testid-map.json):
+# tab = customer._layout.on-press (customer (tabs)/_layout.tsx L55, wrapper
+# TouchableWithoutFeedback) filtered by the "Profile" tab label; sign-out button =
+# customer.profile.confirm-sign-out (profile/index.tsx L321). The confirm is an OS
+# Alert.alert (profile/index.tsx L120) — OS dialogs expose NO testIDs, so the
+# destructive-confirm tap stays TEXT by design (logout-confirmation screen IDs are
+# a different route, settings/logout-confirmation, NOT used here). Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - tapOn:
+    id: "customer._layout.on-press"
     text: ".*Profile.*|.*More.*"
-- tapOn:
-    text: ".*Settings.*"
-    optional: true
-- scrollUntilVisible:
-    element: ".*Sign Out.*|.*Log out.*"
+- extendedWaitUntil:
+    visible: ".*Sign Out.*|.*sign_out.*"
     timeout: 15000
 - tapOn:
-    text: ".*Sign Out.*|.*Log out.*"
-# Confirm dialog (logout_confirmation i18n section renders a confirm button)
+    id: "customer.profile.confirm-sign-out"
+# OS Alert.alert destructive button — text only (no testID space)
 - tapOn:
-    text: ".*Yes.*|.*Confirm.*|.*Sign Out.*"
-    optional: true
+    text: ".*Sign Out.*|.*Log out.*"
 - extendedWaitUntil:
     visible: ".*Log In.*|.*Get Started.*"
     timeout: 20000

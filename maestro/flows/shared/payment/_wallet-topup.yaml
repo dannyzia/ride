@@ -1,23 +1,29 @@
-# _wallet-topup — wallet → top-up → (bypass) → assert balance.
+# _wallet-topup — wallet → top-up → amount → initiate.
 # §9. MANIFEST: BLOCKED (payments sandbox, PortPos WebView opaque to Maestro — Gap 4).
-# The UI part (navigate → amount → initiate) is authored to blueprint; the credit
-# assertion depends on _portpos-bypass which is BLOCKED-GATE.
+# Gate 1 REWIRE (semantic IDs via testid-map.json): top-up button on wallet screen =
+# customer.wallet.push-main (wallet/index.tsx L246, t('wallet.top_up')); manual
+# amount input = customer.settings.top-up.set-amount (top-up/index.tsx L58, numeric);
+# continue = customer.settings.top-up.handle-continue (L83). Deterministic manual
+# amount (eraseText + type ${AMOUNT}) instead of preset chips — works for any AMOUNT.
+# The credit assertion depends on _portpos-bypass which is BLOCKED-GATE.
 # Class: BLOCKED.
 appId: com.ride.bd
 ---
-- tapOn:
-    text: ".*Wallet.*"
+- tapOn: ".*Wallet.*"
 - extendedWaitUntil:
     visible: ".*Top Up.*|.*top-up.*|.*Add money.*"
     timeout: 15000
-- tapOn: ".*Top Up.*|.*Add money.*"
+- tapOn:
+    id: "customer.wallet.push-main"
 - extendedWaitUntil:
     visible: ".*Amount.*|.*৳.*"
     timeout: 15000
 - tapOn:
-    text: ".*৳${AMOUNT}.*|.*${AMOUNT}.*"
-    optional: true
-- tapOn: ".*Proceed.*|.*Pay.*|.*Top Up.*"
+    id: "customer.settings.top-up.set-amount"
+- eraseText
+- inputText: ${AMOUNT}
+- tapOn:
+    id: "customer.settings.top-up.handle-continue"
 # BLOCKED: real PortPos sandbox WebView opens here; Maestro cannot interact with it.
 - extendedWaitUntil:
     visible: ".*Payment.*|.*PortPos.*|.*WebView.*"

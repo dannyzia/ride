@@ -1,13 +1,18 @@
-# _add-tip-post-ride — tip screen → select AMOUNT → submit.
-# §9. Selector source: app/(main)/(customer)/add-tip/ (i18n add_tip section).
-# AMOUNT is a display value (৳) tapped as a chip; no money math in the flow.
-# Class: AUTOMATABLE.
+# _add-tip-post-ride — tip screen → select AMOUNT chip → submit.
+# §9 Completion and Trust Subflows. Gate 1 REWIRE (semantic IDs via testid-map.json,
+# app/(main)/(customer)/add-tip/index.tsx): amount chip = customer.add-tip.
+# set-tip-amount (L108, preset chips incl. ৳ amounts — text filter picks AMOUNT,
+# 0 renders as add_tip.no_tip); submit = customer.add-tip.handle-add-tip (L135,
+# label t('ride.add_tip')). Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - extendedWaitUntil:
     visible: ".*Tip.*|.*tip.*"
     timeout: 20000
-- tapOn: ".*৳${AMOUNT}.*|.*${AMOUNT}.*"
-- tapOn: ".*Confirm.*|.*Submit.*|.*Add Tip.*"
+- tapOn:
+    id: "customer.add-tip.set-tip-amount"
+    text: ".*${AMOUNT}.*"
+- tapOn:
+    id: "customer.add-tip.handle-add-tip"
 - waitForAnimationToEnd:
     timeout: 3000

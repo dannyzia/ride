@@ -1,6 +1,8 @@
 # auth/04-driver-login — driver logs in and lands on driver home with balance surfaces.
-# Feature: D-AUTH login (§4). Fixtures: Driver B +8801700000001 / test1234 (§13 roster).
-# Class: AUTOMATABLE.
+# Feature: D-AUTH login (§4). Gate 1 REWIRE: entry through _login-driver (semantic
+# IDs; see flow-testid-map.json auth.login). Balance assertions are TEXT — driver
+# home balance card has no testID (G-02 remainder). Fixtures: Driver B
+# +8801700000001 / test1234 (§13 roster). Class: AUTOMATABLE.
 appId: com.ride.bd
 name: "Auth - Driver Login"
 tags: [auth, smoke]

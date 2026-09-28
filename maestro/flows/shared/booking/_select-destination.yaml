@@ -1,21 +1,25 @@
-# _select-destination — Barikoi autocomplete → type DEST_NAME → tap first result.
-# §9 Booking Subflows. Selector source: app/(main)/(customer)/autocomplete/index.tsx
-# ("Where to?" via find_ride.enter_destination, "Search destination" placeholder,
-# Home quick labels "Work"/"Destination" — verified in en/common.json §find_ride).
-# Class: AUTOMATABLE.
+# _select-destination — home search pill → autocomplete → type DEST_NAME → select result.
+# §9 Booking Subflows. Gate 1 REWIRE (semantic IDs via maestro/tools/testid-map.json):
+# home "Where to?" pill = customer.home.el-2 (app/(main)/(customer)/(tabs)/home/
+# index.tsx L882 → router.push autocomplete); query input = customer.autocomplete.
+# set-query (autocomplete/index.tsx L207, autoFocus TextInput shared by from/stop/to
+# modes); result row = customer.autocomplete.handle-place-select (L239, FlatList row)
+# filtered by ${DEST_NAME} text + index 0. Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
-- tapOn: ".*Search destination.*|.*Where to.*"
+- tapOn:
+    id: "customer.home.el-2"
 - extendedWaitUntil:
     visible: ".*Where to.*|.*Enter or choose a location.*"
     timeout: 15000
 - tapOn:
-    textField: ".*Where to.*|.*Enter or choose a location.*"
+    id: "customer.autocomplete.set-query"
 - inputText: ${DEST_NAME}
 - extendedWaitUntil:
     visible: ".*${DEST_NAME}.*"
     timeout: 20000
 - tapOn:
+    id: "customer.autocomplete.handle-place-select"
     text: ".*${DEST_NAME}.*"
     index: 0
 - waitForAnimationToEnd:

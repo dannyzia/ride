@@ -1,6 +1,7 @@
 # rider/activity/01-rides-history-all — Activity tab lists ride history (all statuses).
-# Feature: R-HOME-03 / history (§4). READ-ONLY render surface; fixtures ride-01…06
-# require Gate 2 seeding — assertions here are render-level only.
+# Feature: R-HOME-03 / history (§4). Gate 1 REWIRE: tab tap = customer._layout.
+# on-press (wrapper) filtered by the tab label. READ-ONLY render surface; fixtures
+# ride-01…06 require Gate 2 seeding — assertions here are render-level only.
 # Class: AUTOMATABLE (render) with fixture-dependent detail deferred.
 appId: com.ride.bd
 name: "Rider Activity - Rides History"
@@ -12,7 +13,9 @@ tags: [rider, activity]
       PASSWORD: "test1234"
     commands:
       - runFlow: ../../../shared/auth/_login-rider.yaml
-- tapOn: ".*Activity.*|.*Rides.*"
+- tapOn:
+    id: "customer._layout.on-press"
+    text: ".*Activity.*|.*Rides.*"
 - extendedWaitUntil:
     visible: ".*Completed.*|.*Cancelled.*|.*canceled.*|.*No rides.*|.*history.*"
     timeout: 20000

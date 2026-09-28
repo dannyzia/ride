@@ -16,6 +16,12 @@
 # maestro/tools/route-inventory.json under (rental-marketplace)).
 # Class: AUTOMATABLE + COUNTERPART-API. BLOCKED for device run until marketplace
 # seed accounts exist in the roster (fixture gap F-2 family).
+# Gate 1 REWIRE (semantic IDs via testid-map.json): home vertical chip =
+# customer.home.set-selected-category (id+text filter); NOW chip =
+# customer.rental-marketplace.set-start-mode; request submit =
+# customer.rental-marketplace.handle-submit; customer bid accept =
+# customer.rental-marketplace.request-detail.handle-accept (bidding.tsx exposes the
+# fleet-facing variant — customer accepts on request-detail).
 appId: com.ride.bd
 name: "V2 Rental - Request to Award"
 tags: [marketplace, v2-rental, counterpart-api]
@@ -28,7 +34,9 @@ tags: [marketplace, v2-rental, counterpart-api]
       PASSWORD: "test1234"
     commands:
       - runFlow: ../../../shared/auth/_login-rider.yaml
-- tapOn: ".*Rentals?.*|.*Rental.*"
+- tapOn:
+    id: "customer.home.set-selected-category"
+    text: ".*Rental.*"
 - extendedWaitUntil:
     visible: ".*rental.*|.*Rent.*"
     timeout: 20000
@@ -38,6 +46,7 @@ tags: [marketplace, v2-rental, counterpart-api]
     timeout: 20000
 # NOW-mode request with default duration; option chips toggled by visible label.
 - tapOn:
+    id: "customer.rental-marketplace.set-start-mode"
     text: ".*Now.*"
     optional: true
 - runFlow:
@@ -47,7 +56,8 @@ tags: [marketplace, v2-rental, counterpart-api]
       - tapOn:
           text: ".*AC.*"
           optional: true
-- tapOn: ".*Submit.*|.*Broadcast.*|.*Request.*"
+- tapOn:
+    id: "customer.rental-marketplace.handle-submit"
 - extendedWaitUntil:
     visible: ".*broadcast.*|.*waiting.*|.*bids?.*"
     timeout: 30000
@@ -64,7 +74,8 @@ tags: [marketplace, v2-rental, counterpart-api]
 - extendedWaitUntil:
     visible: ".*bid.*|.*Bid.*"
     timeout: 60000
-- tapOn: ".*Accept.*"
+- tapOn:
+    id: "customer.rental-marketplace.request-detail.handle-accept"
 - extendedWaitUntil:
     visible: ".*awarded.*|.*Award.*|.*confirmed.*"
     timeout: 30000

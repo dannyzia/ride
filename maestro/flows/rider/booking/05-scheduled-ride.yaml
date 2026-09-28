@@ -1,9 +1,11 @@
 # rider/booking/05-scheduled-ride — toggle Schedule for later, set T+15min, submit,
 # entry appears under Scheduled.
-# Feature: R-BOOK scheduled (§4, BC-13). Selector source: confirm_ride.schedule_for_later
-# = "Schedule for later", schedule_ride="Schedule ride" (en/common.json §confirm_ride);
-# app/(main)/(customer)/schedule-ride/. NOTE: reminder timing needs Gate 5 override —
-# not asserted here. Class: AUTOMATABLE.
+# Feature: R-BOOK scheduled (§4, BC-13). Gate 1 REWIRE (semantic IDs via
+# testid-map.json): schedule toggle = customer.confirm-ride.set-schedule-later
+# (confirm-ride/index.tsx L656); submit = customer.schedule-ride.handle-schedule
+# (schedule-ride/index.tsx L295). Date/time pickers are OS surfaces — text asserts
+# retained. NOTE: reminder timing needs Gate 5 override — not asserted here.
+# Class: AUTOMATABLE.
 appId: com.ride.bd
 name: "Rider Booking - Scheduled Ride"
 tags: [rider, booking, scheduling]
@@ -28,11 +30,13 @@ tags: [rider, booking, scheduling]
 - extendedWaitUntil:
     visible: ".*Confirm your ride.*"
     timeout: 20000
-- tapOn: ".*Schedule for later.*"
+- tapOn:
+    id: "customer.confirm-ride.set-schedule-later"
 - extendedWaitUntil:
     visible: ".*Schedule ride.*|.*date.*|.*time.*"
     timeout: 15000
-- tapOn: ".*Schedule ride.*"
+- tapOn:
+    id: "customer.schedule-ride.handle-schedule"
 - extendedWaitUntil:
     visible: ".*Scheduled.*|.*schedule.*"
     timeout: 20000
