@@ -8,6 +8,7 @@ import { parseJsonBody } from "@/lib/parseBody";
 import { consumeVerification } from "@/lib/verifiedPhones";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { logger } from "@/lib/logger";
+import { grantLaunchFreeIfEligible } from "@/lib/launchFreeSubscription";
 
 const schema = z
   .object({
@@ -86,16 +87,39 @@ export async function POST(request: Request) {
           status: "active",
         });
 
-        await tx.insert(drivers).values({
-          user_id: user.id,
-          fleet_id: fleet.id,
-          vehicle_type: vehicle_type ?? "bike_basic",
-          status: "pending",
-        });
+        const [driver] = await tx
+          .insert(drivers)
+          .values({
+            user_id: user.id,
+            fleet_id: fleet.id,
+            vehicle_type: vehicle_type ?? "bike_basic",
+            status: "pending",
+          })
+          .returning({ id: drivers.id });
+
+        return { user_id: user.id, driver_id: driver.id, role };
       }
 
       return { user_id: user.id, role };
     });
+
+    // Owner ruling 2026-09-27: every driver gets the launch_free subscription at
+    // registration. Runs AFTER the registration tx commits (driver row must exist
+    // for subscriptions.driver_id FK). Non-fatal: a grant failure must never fail
+    // the registration itself — the backfill script covers any stragglers at launch.
+    if (role === "driver" && created.driver_id) {
+      try {
+        await grantLaunchFreeIfEligible({
+          driver_id: created.driver_id,
+          idempotency_key: `launch_free_${created.driver_id}`,
+        });
+      } catch (grantErr) {
+        logger.error("[register] launch_free grant failed (non-fatal)", {
+          user_id: created.user_id,
+          error: grantErr,
+        });
+      }
+    }
 
     return Response.json(
       {
