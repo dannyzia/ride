@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-03T06:00:55.029Z",
-  "total": 1121,
+  "generatedAt": "2026-10-03T07:11:14.589Z",
+  "total": 1096,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -1594,28 +1594,6 @@
         "line": 148
       }
     ],
-    "(main)/(customer)/apply-promos/index.tsx": [
-      {
-        "id": "customer.apply-promos.el-1",
-        "line": 131
-      },
-      {
-        "id": "customer.apply-promos.set-promo-code",
-        "line": 149
-      },
-      {
-        "id": "customer.apply-promos.handle-apply",
-        "line": 169
-      },
-      {
-        "id": "customer.apply-promos.set-promo-code-2",
-        "line": 193
-      },
-      {
-        "id": "customer.apply-promos.set-theme",
-        "line": 215
-      }
-    ],
     "(main)/(customer)/autocomplete/index.tsx": [
       {
         "id": "customer.autocomplete.set-theme",
@@ -1696,56 +1674,6 @@
       {
         "id": "customer.chat.rideId.set-theme",
         "line": 100
-      }
-    ],
-    "(main)/(customer)/confirm-ride/index.tsx": [
-      {
-        "id": "customer.confirm-ride.set-selected-discount",
-        "line": 472
-      },
-      {
-        "id": "customer.confirm-ride.set-book-for-other",
-        "line": 603
-      },
-      {
-        "id": "customer.confirm-ride.set-other-name",
-        "line": 612
-      },
-      {
-        "id": "customer.confirm-ride.set-other-phone",
-        "line": 614
-      },
-      {
-        "id": "customer.confirm-ride.set-other-consent",
-        "line": 621
-      },
-      {
-        "id": "customer.confirm-ride.set-prefer-female",
-        "line": 635
-      },
-      {
-        "id": "customer.confirm-ride.set-schedule-later",
-        "line": 656
-      },
-      {
-        "id": "customer.confirm-ride.set-show-stop-modal",
-        "line": 697
-      },
-      {
-        "id": "customer.confirm-ride.set-stops",
-        "line": 705
-      },
-      {
-        "id": "customer.confirm-ride.handle-request-ride",
-        "line": 714
-      },
-      {
-        "id": "customer.confirm-ride.set-show-stop-modal-2",
-        "line": 720
-      },
-      {
-        "id": "customer.confirm-ride.set-theme",
-        "line": 742
       }
     ],
     "(main)/(customer)/driver-info/index.tsx": [
@@ -1844,40 +1772,6 @@
       {
         "id": "customer.fare-dispute.handle-submit-2",
         "line": 383
-      }
-    ],
-    "(main)/(customer)/find-ride/index.tsx": [
-      {
-        "id": "customer.find-ride.set-selected-vehicle-type",
-        "line": 311
-      },
-      {
-        "id": "customer.find-ride.use-current-location",
-        "line": 356
-      },
-      {
-        "id": "customer.find-ride.remove-stop",
-        "line": 385
-      },
-      {
-        "id": "customer.find-ride.add-stop",
-        "line": 399
-      },
-      {
-        "id": "customer.find-ride.fetch-estimates",
-        "line": 436
-      },
-      {
-        "id": "customer.find-ride.set-selected-category",
-        "line": 474
-      },
-      {
-        "id": "customer.find-ride.handle-confirm",
-        "line": 532
-      },
-      {
-        "id": "customer.find-ride.set-theme",
-        "line": 541
       }
     ],
     "(main)/(customer)/finding-driver/index.tsx": [

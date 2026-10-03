@@ -23,6 +23,10 @@
 # rebuild. If deleted, delete the flow AND the dead confirm-ride/schedule-ride screens
 # together (AGENTS.md: screen deletion is an owner call, not QA's).
 # Tagged `blocked` per the house convention (cf. rider/wallet/02-wallet-topup-initiate.yaml).
+# 2026-10-03: confirm-ride/ and find-ride/ and apply-promos/ were DELETED (owner call) as
+# unreachable dead screens. The step that toggled the schedule lived in confirm-ride/ and is
+# now commented out above. B-3 is therefore no longer a "which screen?" question — there is
+# no schedule UI at all in the tree, so the feature is either unbuilt or retired.
 # Class: BLOCKED (was AUTOMATABLE — that claim was wrong).
 appId: com.ride.bd
 name: "Rider Booking - Scheduled Ride"
@@ -48,8 +52,12 @@ tags: [rider, booking, scheduling, blocked]
 - extendedWaitUntil:
     visible: ".*Confirm your ride.*"
     timeout: 20000
-- tapOn:
-    id: "customer.confirm-ride.set-schedule-later"
+# DELETED 2026-10-03 along with app/(main)/(customer)/confirm-ride/. The schedule
+# toggle had no live counterpart on the booking sheet — that is B-3, and it is why
+# this flow is tagged `blocked`. Kept as documentation rather than a live step: a
+# selector pointing at a deleted screen now fails the MAP DRIFT check by design.
+# - tapOn:
+#     id: "customer.confirm-ride.set-schedule-later"
 - extendedWaitUntil:
     visible: ".*Schedule ride.*|.*date.*|.*time.*"
     timeout: 15000

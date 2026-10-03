@@ -77,9 +77,12 @@ export default function FindingDriver() {
       // The server only proposes values from VEHICLE_TYPE_VALUES, so the cast
       // is a runtime-safe narrowing of the wire string to the store union.
       setSelectedVehicleType(vehicleType as VehicleType);
-      // Back to confirm-ride, which re-estimates for the new vehicle type
-      // (its effect deps include selectedVehicleType) — the rider confirms and
-      // a new ride request goes out with the alternative type.
+      // router.back() returns to the home booking sheet, which pushed this screen
+      // ((tabs)/home/index.tsx:742) and re-estimates for the new vehicle type
+      // (its effect deps include selectedVehicleType) — the rider confirms and a
+      // new ride request goes out with the alternative type. This comment used to
+      // name confirm-ride/, deleted 2026-10-03 as unreachable; the call itself
+      // never referenced that route.
       router.back();
     },
     [setSelectedVehicleType],
