@@ -14,9 +14,18 @@ interface DocumentUploadCardProps {
   /** Accepted folders come from the documents-endpoint policy, not a local list. */
   folder?: DocumentFolder;
   onUploadComplete: (url: string, fileSizeBytes: number) => void;
+  /**
+   * Optional testID forwarded to the tappable row. The card is rendered once per
+   * document, so without it every card is indistinguishable to Maestro and a flow
+   * can only tap "the first Upload" in reading order. Call sites inside app/ pass
+   * string LITERALS on purpose: maestro/tools/testid-manifest.cjs records only
+   * `testID="..."` JSX attributes whose initializer is a string literal, so a
+   * `.map()`-derived `testID={f.testId}` would be invisible to the flow gate.
+   */
+  testID?: string;
 }
 
-export default function DocumentUploadCard({ docType, label, folder, onUploadComplete }: DocumentUploadCardProps) {
+export default function DocumentUploadCard({ docType, label, folder, onUploadComplete, testID }: DocumentUploadCardProps) {
   const [uploading, setUploading] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   // H3: surface upload failures instead of silently logging them.
@@ -66,6 +75,7 @@ export default function DocumentUploadCard({ docType, label, folder, onUploadCom
       disabled={uploading}
       accessibilityRole="button"
       accessibilityLabel={`Upload ${label}`}
+      testID={testID}
       style={{
         backgroundColor: bg,
         borderWidth: 1,

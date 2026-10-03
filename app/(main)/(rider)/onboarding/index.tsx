@@ -1310,9 +1310,19 @@ export default function OnboardingWizard() {
         {step === 3 && (
           <View>
             <Text style={secondaryLabelStyle}>Upload your vehicle documents. All are required.</Text>
-            {VEHICLE_DOC_FIELDS.map((f) => (
-              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} folder="vehicle" onUploadComplete={(url, fileSizeBytes) => setVehicleDocs((prev) => ({ ...prev, [f.key]: { url, fileSizeBytes } }))} />
-            ))}
+            {/* UNROLLED, not .map-ed, so every card carries a string-literal testID:
+                testid-manifest.cjs records only `testID="..."` JSX attributes whose
+                initializer is a string literal, so `testID={f.testId}` would be invisible
+                to flow-xcheck and the gate could not protect these selectors.
+                SYNC HAZARD: step3Valid below iterates VEHICLE_DOC_FIELDS, so adding a key
+                to that array without adding a card here wedges the wizard on step 3. */}
+            <DocumentUploadCard docType="reg_scan_front" label="Registration (Front)" folder="vehicle" testID="rider.onboarding.upload-reg-scan-front" onUploadComplete={(url, fileSizeBytes) => setVehicleDocs((prev) => ({ ...prev, reg_scan_front: { url, fileSizeBytes } }))} />
+            <DocumentUploadCard docType="reg_scan_back" label="Registration (Back)" folder="vehicle" testID="rider.onboarding.upload-reg-scan-back" onUploadComplete={(url, fileSizeBytes) => setVehicleDocs((prev) => ({ ...prev, reg_scan_back: { url, fileSizeBytes } }))} />
+            <DocumentUploadCard docType="brta_certificate" label="BRTA Enlistment Certificate" folder="vehicle" testID="rider.onboarding.upload-brta-certificate" onUploadComplete={(url, fileSizeBytes) => setVehicleDocs((prev) => ({ ...prev, brta_certificate: { url, fileSizeBytes } }))} />
+            <DocumentUploadCard docType="vehicle_photo_front" label="Vehicle Photo (Front)" folder="vehicle" testID="rider.onboarding.upload-vehicle-photo-front" onUploadComplete={(url, fileSizeBytes) => setVehicleDocs((prev) => ({ ...prev, vehicle_photo_front: { url, fileSizeBytes } }))} />
+            <DocumentUploadCard docType="vehicle_photo_left" label="Vehicle Photo (Left)" folder="vehicle" testID="rider.onboarding.upload-vehicle-photo-left" onUploadComplete={(url, fileSizeBytes) => setVehicleDocs((prev) => ({ ...prev, vehicle_photo_left: { url, fileSizeBytes } }))} />
+            <DocumentUploadCard docType="vehicle_photo_back" label="Vehicle Photo (Back)" folder="vehicle" testID="rider.onboarding.upload-vehicle-photo-back" onUploadComplete={(url, fileSizeBytes) => setVehicleDocs((prev) => ({ ...prev, vehicle_photo_back: { url, fileSizeBytes } }))} />
+            <DocumentUploadCard docType="vehicle_photo_right" label="Vehicle Photo (Right)" folder="vehicle" testID="rider.onboarding.upload-vehicle-photo-right" onUploadComplete={(url, fileSizeBytes) => setVehicleDocs((prev) => ({ ...prev, vehicle_photo_right: { url, fileSizeBytes } }))} />
           </View>
         )}
 
@@ -1320,9 +1330,12 @@ export default function OnboardingWizard() {
         {step === 4 && (
           <View>
             <Text style={secondaryLabelStyle}>Upload your personal documents. All are required.</Text>
-            {DRIVER_DOC_FIELDS.map((f) => (
-              <DocumentUploadCard key={f.key} docType={f.key} label={f.label} onUploadComplete={(url, fileSizeBytes) => setDriverDocs((prev) => ({ ...prev, [f.key]: { url, fileSizeBytes } }))} />
-            ))}
+            {/* UNROLLED for the same reason as step 3 — see the note there. Same sync
+                hazard via step4Valid / DRIVER_DOC_FIELDS. */}
+            <DocumentUploadCard docType="nid_front" label="NID (Front)" testID="rider.onboarding.upload-nid-front" onUploadComplete={(url, fileSizeBytes) => setDriverDocs((prev) => ({ ...prev, nid_front: { url, fileSizeBytes } }))} />
+            <DocumentUploadCard docType="nid_back" label="NID (Back)" testID="rider.onboarding.upload-nid-back" onUploadComplete={(url, fileSizeBytes) => setDriverDocs((prev) => ({ ...prev, nid_back: { url, fileSizeBytes } }))} />
+            <DocumentUploadCard docType="license_front" label="Driving License (Front)" testID="rider.onboarding.upload-license-front" onUploadComplete={(url, fileSizeBytes) => setDriverDocs((prev) => ({ ...prev, license_front: { url, fileSizeBytes } }))} />
+            <DocumentUploadCard docType="license_back" label="Driving License (Back)" testID="rider.onboarding.upload-license-back" onUploadComplete={(url, fileSizeBytes) => setDriverDocs((prev) => ({ ...prev, license_back: { url, fileSizeBytes } }))} />
           </View>
         )}
 

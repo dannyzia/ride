@@ -1,42 +1,63 @@
 # ==============================================================================
-# Flow: Part 2 - Driver Onboarding (Upload Documents + Owner Consent)
+# Flow: Part 2 - Driver Onboarding (the real 7-step wizard)
 # Device: emulator-5556 (Driver).
 # Run:  maestro test --device emulator-5556 maestro/flows/driver-onboarding.yaml
 # Preconditions:
-#   - A driver record with status='pending' that lands on the "Upload Documents"
-#     screen (a fresh registration). The canonical active test driver
-#     (+8801700000001) is already approved and will NOT see this screen.
-# SEMI-MANUAL: every "Upload" step opens the Android system Photo Picker (via
-#   expo-image-picker) — the operator must choose an image when the picker
-#   appears. The flow waits (up to 120s) after each upload for the "Done" label
-#   to appear on that row before continuing.
-# NOTE: the multi-step BRTA / walkaround / Brand-Model-Year onboarding described
-#   in older plan docs does NOT exist in the driver app. The real onboarding is
-#   this Upload-Documents + Owner-Consent flow (app/(main)/(rider)/onboarding/documents.tsx).# AMBIGUITY: while uploading, multiple "Upload" buttons are visible at once (the
-# not-yet-uploaded rows). tapOn: "Upload" relies on Maestro tapping the
-# topmost/first match in reading order, which is the next document.
+#   - A driver record with status='pending' that lands on the onboarding wizard (a
+#     fresh registration). The canonical active test driver (+8801700000001) is
+#     already approved and will NOT see this screen.
 #
-# GATE 1 REWIRE PASS 2 — PARTIAL, with a logged gap.
-# Converted: the footer CTA ("Next" / "Submit Documents") is a single control,
-# rider.onboarding.go-next (onboarding/index.tsx L1425, onPress={goNext}; the
-# label is "Continue" until step 7 and "Submit" on it — the old "Next" label did
-# not exist). The four consent rows are rider.onboarding.set-consent (L1400,
-# accessibilityRole="checkbox"), tapped by index.
-# NOT converted: the upload cards themselves. They render through
-# components/DocumentUploadCard.tsx, which has no testID prop, so they stay text.
-# That is a component gap, not a flow gap — a `testID?: string` on the card
-# forwarded to its TouchableOpacity would close it; deliberately NOT added here
-# because the surrounding flow structure is also wrong (see next).
-# KNOWN STRUCTURAL DRIFT (not fixed here, out of QA scope): this flow models the
-# onboarding as "upload 4 documents, then consent, then submit". The real screen
-# (app/(main)/(rider)/onboarding/index.tsx) is a 7-step wizard — step 3 uploads
-# VEHICLE_DOC_FIELDS, step 4 uploads DRIVER_DOC_FIELDS, step 5 is rideshare
-# experience, and consent sits on a later step. Rewriting this flow against the
-# wizard is a separate task; the conversions below are still correct because
-# every element is addressed by testID rather than by position or copy.
+# REWRITTEN 2026-10-03 against the actual screen. The previous version modelled
+# "upload 4 documents, then consent, then submit" and asserted a "Documents
+# Submitted" alert. None of that exists:
+#   * The screen is a 7-step wizard (STEP_TITLES, onboarding/index.tsx:124):
+#       1 Profile · 2 Vehicle · 3 Vehicle Documents · 4 Driver Documents
+#       5 Rideshare Experience · 6 Payout · 7 Review & Consent
+#   * Steps 3 and 4 upload SEVEN and FOUR cards respectively — 11 in total, not 4.
+#   * Consent is on step 7, two steps after the documents, not immediately after.
+#   * Submission does NOT raise a success alert: finishOnboarding() calls
+#     router.replace("/(main)/(rider)/verification") (onboarding/index.tsx:958).
+#     The old "Documents Submitted" + tapOn "OK" tail was dead on both counts.
+#
+# STEP GROUNDS. Each step asserts the wizard's own step TITLE, which is a literal
+# in STEP_TITLES (onboarding/index.tsx:124) — and then immediately asserts that
+# step's first control by testID, which is what pins the position. The progress
+# header renders `Step ${step} of 7 — ${STEP_TITLES[step-1]}`, so the phrase
+# "Step 3 of 7" is interpolated and exists in no source file: flow-xcheck's
+# dead-copy advisory cannot verify it, and a flow asserting only copy it cannot
+# check is copy that will rot unnoticed. The titles are literals, so they hold up.
+#
+# SEMI-MANUAL: each Upload opens the Android system Photo Picker
+# (expo-image-picker). The operator picks an image when the picker appears; the
+# flow then waits up to 180s for that card to flip to its post-upload state
+# ("Tap to replace document", DocumentUploadCard.tsx:104). Eleven of these.
+#
+# STEP 2 IS DETERMINISTIC. Brand/model options are loaded from the vehicle-models
+# API, which would make the flow data-dependent — except both pickers offer
+# "Others" as their last option (onboarding/index.tsx:1460/1468). Choosing it
+# swaps the list for a free-text field, and `resolvedBrand`/`resolvedModel`
+# (onboarding/index.tsx:668) then read those fields, satisfying step2Valid without
+# any seeded vehicle_models. Picking "Others" for brand also reveals the model
+# text field directly (onboarding/index.tsx:1172), so the model picker is never
+# opened.
+#
+# STEP 2 SKIP PATH: rider.onboarding.skip-vehicle-step is rendered only when
+# `me?.vehicle_id != null` (onboarding/index.tsx:1289) — i.e. a driver who already
+# has a vehicle. A fresh registration does not, so this flow drives step 2 in full
+# and must NOT depend on that control.
+#
+# GATE: 237 id: selectors resolve and exist in their own app file; 0 dead-copy
+#   candidates. The eleven upload IDs below exist only because DocumentUploadCard
+#   gained a testID prop this pass — see components/DocumentUploadCard.tsx.
+# Env (all defaulted; override to match your seed data):
+#   NAME DRIVER_NAME · BODY_TYPE · BRAND · MODEL · REG_YEAR · ENGINE_CC · SEATS
+#   · PLATE · BKASH
+# BKASH must satisfy /^01\d{9}$/ (onboarding/index.tsx:711) or step 6 will not
+# advance.
+# Class: SEMI-MANUAL (photo picker), AUTOMATABLE otherwise.
 # ==============================================================================
 appId: com.ride.bd
-name: "Part 2 - Driver Onboarding (Upload Documents + Owner Consent)"
+name: "Part 2 - Driver Onboarding (7-step wizard)"
 tags:
   - driver
   - onboarding
@@ -44,59 +65,220 @@ tags:
 ---
 - launchApp:
     appId: com.ride.bd
-# Landing screen (pending driver is routed here).
+
+# A pending driver is routed to onboarding on launch.
 - extendedWaitUntil:
     visible:
       id: "rider.onboarding.go-next"
-    timeout: 15000
-- assertVisible:
-    id: "rider.onboarding.go-next"
+    timeout: 30000
 
-# --- Step 1: upload the 4 required documents (operator picks an image each time) ---
-# G-02 remainder: DocumentUploadCard exposes no testID.
-
-# NID (Front) -> picker opens; operator selects an image
-- tapOn: "Upload"
-- extendedWaitUntil:
-    visible: "Done"
-    timeout: 120000
-- swipe:
-    direction: UP
-    duration: 300
-
-# NID (Back)
-- tapOn: "Upload"
-- extendedWaitUntil:
-    visible: "Done"
-    timeout: 120000
-- swipe:
-    direction: UP
-    duration: 300
-
-# Driving License
-- tapOn: "Upload"
-- extendedWaitUntil:
-    visible: "Done"
-    timeout: 120000
-- swipe:
-    direction: UP
-    duration: 300
-
-# Vehicle Registration
-- tapOn: "Upload"
-- extendedWaitUntil:
-    visible: "Done"
-    timeout: 120000
-
-# All four uploaded -> footer CTA advances the wizard.
+# ── Step 1/7 — Profile ──────────────────────────────────────────────────────
+# step1Valid is `name.trim().length > 0` (onboarding/index.tsx:695); the profile
+# photo is optional.
+- assertVisible: ".*Profile.*"
+# step 1 ground is the literal STEP_TITLES[0] = "Profile"; the
+# following control (set-name) is what pins the step position.
+- tapOn:
+    id: "rider.onboarding.set-name"
+- inputText: ${DRIVER_NAME:Maestro Driver}
 - tapOn:
     id: "rider.onboarding.go-next"
-- extendedWaitUntil:
-    visible:
-      id: "rider.onboarding.set-consent"
-    timeout: 10000
 
-# --- Step 2: tick all 4 consent statements (each row is the same checkbox testID) ---
+# ── Step 2/7 — Vehicle ──────────────────────────────────────────────────────
+# step2Valid needs bodyType, brand, model, regYear, engineCc, seats and plate
+# (onboarding/index.tsx:700). Body-type options are the group labels rendered by
+# BodyTypePickerModal; "Bike" is always present.
+- assertVisible: ".*Vehicle.*"
+# step 2 ground is the literal STEP_TITLES[1] = "Vehicle"; the
+# following control (set-body-type-modal-visible) is what pins the step position.
+- tapOn:
+    id: "rider.onboarding.set-body-type-modal-visible"
+- tapOn:
+    id: "rider.onboarding.on-select-2"
+    text: "${BODY_TYPE:Bike}"
+
+# Brand: pick "Others" so the free-text field appears.
+- tapOn:
+    id: "rider.onboarding.set-picker-modal"
+- tapOn:
+    id: "rider.onboarding.on-select"
+    text: "Others"
+- tapOn:
+    id: "rider.onboarding.set-brand-text"
+- inputText: ${BRAND:Honda}
+- tapOn:
+    id: "rider.onboarding.set-model-text"
+- inputText: ${MODEL:Activa}
+
+# BRTA registration year — real options, generated from CURRENT_YEAR backwards.
+- tapOn:
+    id: "rider.onboarding.set-picker-modal-3"
+- tapOn:
+    id: "rider.onboarding.on-select"
+    text: "${REG_YEAR:2021}"
+
+- tapOn:
+    id: "rider.onboarding.set-engine-cc"
+- inputText: ${ENGINE_CC:150}
+- tapOn:
+    id: "rider.onboarding.set-seats"
+- inputText: ${SEATS:4}
+- tapOn:
+    id: "rider.onboarding.set-plate"
+- inputText: ${PLATE:ABC-1234}
+- tapOn:
+    id: "rider.onboarding.go-next"
+
+# ── Step 3/7 — Vehicle Documents (7 cards, all required) ────────────────────
+# step3Valid requires EVERY entry of VEHICLE_DOC_FIELDS (onboarding/index.tsx:708).
+# Cards are addressed by per-card testID (added this pass — they used to render
+# through a .map(), so the only available selector was the literal "Upload",
+# which Maestro resolves to whichever card happens to be topmost in reading order).
+- assertVisible: ".*Vehicle Documents.*"
+# step 3 ground is the literal STEP_TITLES[2] = "Vehicle Documents"; the
+# following control (upload-reg-scan-front) is what pins the step position.
+- scrollUntilVisible:
+    element:
+      id: "rider.onboarding.upload-reg-scan-front"
+    direction: DOWN
+- tapOn:
+    id: "rider.onboarding.upload-reg-scan-front"
+- extendedWaitUntil:
+    visible: ".*Tap to replace document.*"
+    timeout: 180000
+- scrollUntilVisible:
+    element:
+      id: "rider.onboarding.upload-reg-scan-back"
+    direction: DOWN
+- tapOn:
+    id: "rider.onboarding.upload-reg-scan-back"
+- extendedWaitUntil:
+    visible: ".*Tap to replace document.*"
+    timeout: 180000
+- scrollUntilVisible:
+    element:
+      id: "rider.onboarding.upload-brta-certificate"
+    direction: DOWN
+- tapOn:
+    id: "rider.onboarding.upload-brta-certificate"
+- extendedWaitUntil:
+    visible: ".*Tap to replace document.*"
+    timeout: 180000
+- scrollUntilVisible:
+    element:
+      id: "rider.onboarding.upload-vehicle-photo-front"
+    direction: DOWN
+- tapOn:
+    id: "rider.onboarding.upload-vehicle-photo-front"
+- extendedWaitUntil:
+    visible: ".*Tap to replace document.*"
+    timeout: 180000
+- scrollUntilVisible:
+    element:
+      id: "rider.onboarding.upload-vehicle-photo-left"
+    direction: DOWN
+- tapOn:
+    id: "rider.onboarding.upload-vehicle-photo-left"
+- extendedWaitUntil:
+    visible: ".*Tap to replace document.*"
+    timeout: 180000
+- scrollUntilVisible:
+    element:
+      id: "rider.onboarding.upload-vehicle-photo-back"
+    direction: DOWN
+- tapOn:
+    id: "rider.onboarding.upload-vehicle-photo-back"
+- extendedWaitUntil:
+    visible: ".*Tap to replace document.*"
+    timeout: 180000
+- scrollUntilVisible:
+    element:
+      id: "rider.onboarding.upload-vehicle-photo-right"
+    direction: DOWN
+- tapOn:
+    id: "rider.onboarding.upload-vehicle-photo-right"
+- extendedWaitUntil:
+    visible: ".*Tap to replace document.*"
+    timeout: 180000
+- tapOn:
+    id: "rider.onboarding.go-next"
+
+# ── Step 4/7 — Driver Documents (4 cards, all required) ─────────────────────
+# step4Valid requires EVERY entry of DRIVER_DOC_FIELDS (onboarding/index.tsx:709).
+- assertVisible: ".*Driver Documents.*"
+# step 4 ground is the literal STEP_TITLES[3] = "Driver Documents"; the
+# following control (upload-nid-front) is what pins the step position.
+- scrollUntilVisible:
+    element:
+      id: "rider.onboarding.upload-nid-front"
+    direction: DOWN
+- tapOn:
+    id: "rider.onboarding.upload-nid-front"
+- extendedWaitUntil:
+    visible: ".*Tap to replace document.*"
+    timeout: 180000
+- scrollUntilVisible:
+    element:
+      id: "rider.onboarding.upload-nid-back"
+    direction: DOWN
+- tapOn:
+    id: "rider.onboarding.upload-nid-back"
+- extendedWaitUntil:
+    visible: ".*Tap to replace document.*"
+    timeout: 180000
+- scrollUntilVisible:
+    element:
+      id: "rider.onboarding.upload-license-front"
+    direction: DOWN
+- tapOn:
+    id: "rider.onboarding.upload-license-front"
+- extendedWaitUntil:
+    visible: ".*Tap to replace document.*"
+    timeout: 180000
+- scrollUntilVisible:
+    element:
+      id: "rider.onboarding.upload-license-back"
+    direction: DOWN
+- tapOn:
+    id: "rider.onboarding.upload-license-back"
+- extendedWaitUntil:
+    visible: ".*Tap to replace document.*"
+    timeout: 180000
+- tapOn:
+    id: "rider.onboarding.go-next"
+
+# ── Step 5/7 — Rideshare Experience ──────────────────────────────────────────
+# step5Valid is hardcoded `true` (onboarding/index.tsx:710), so the CTA is live
+# regardless. Answering "No" keeps the four optional LEGACY_DOC_FIELDS cards
+# hidden (they render only when legacyAnswer === "yes"). Both chips share one
+# testID, so the choice is made by text.
+- assertVisible: ".*Rideshare Experience.*"
+# step 5 ground is the literal STEP_TITLES[4] = "Rideshare Experience"; the
+# following control (set-legacy-answer) is what pins the step position.
+- tapOn:
+    id: "rider.onboarding.set-legacy-answer"
+    text: "No"
+- tapOn:
+    id: "rider.onboarding.go-next"
+
+# ── Step 6/7 — Payout ───────────────────────────────────────────────────────
+# step6Valid is bkashValid = /^01\d{9}$/ (onboarding/index.tsx:711).
+- assertVisible: ".*Payout.*"
+# step 6 ground is the literal STEP_TITLES[5] = "Payout"; the
+# following control (set-bkash) is what pins the step position.
+- tapOn:
+    id: "rider.onboarding.set-bkash"
+- inputText: ${BKASH:01700000000}
+- tapOn:
+    id: "rider.onboarding.go-next"
+
+# ── Step 7/7 — Review & Consent ─────────────────────────────────────────────
+# step7Valid is consent.every(Boolean) over four CONSENT_ITEMS
+# (onboarding/index.tsx:713). All four rows share one testID, so they are tapped
+# by index.
+- assertVisible: ".*Review & Consent.*"
+# step 7 ground is the literal STEP_TITLES[6] = "Review & Consent"; the
+# following control (set-consent) is what pins the step position.
 - tapOn:
     id: "rider.onboarding.set-consent"
     index: 0
@@ -110,13 +292,15 @@ tags:
     id: "rider.onboarding.set-consent"
     index: 3
 
-# --- Submit (same footer CTA; label is "Submit" on the final step) ---
+# Same footer control as every step; its label flips to "Submit" on step 7
+# (onboarding/index.tsx:1429).
 - tapOn:
     id: "rider.onboarding.go-next"
 
-# --- Success alert -> home ---
+# ── Landing ─────────────────────────────────────────────────────────────────
+# finishOnboarding() POSTs the documents, then router.replace()s to the
+# verification screen. There is NO success alert to dismiss.
 - extendedWaitUntil:
-    visible: "Documents Submitted"
-    timeout: 20000
-# G-02 remainder: OS Alert.alert, no testID space.
-- tapOn: "OK"
+    visible:
+      id: "rider.verification.handle-refresh"
+    timeout: 60000

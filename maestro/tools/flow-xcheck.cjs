@@ -182,11 +182,19 @@ const corpus = new Set();
       else if (v && typeof v === "object") Object.values(v).forEach(rec);
     })(json);
   }
-  // App-source string literals AND JSX text nodes. The second is not optional:
-  // most screen titles/labels are bare JSX text, not quoted strings. Collecting
-  // only literals flagged the live "Complete Registration" (register.tsx:99)
-  // as dead copy.
-  for (const f of walk(APP_DIR, [], /\.(tsx|ts|jsx|js)$/)) {
+  // App AND components source: string literals AND JSX text nodes. Three separate
+  // gaps were found by running the advisory and reading what it flagged:
+  //  - JSX text is not optional; most labels are bare text, not quoted strings.
+  //    Literals alone flagged the live "Complete Registration" (register.tsx:99).
+  //  - components/ was not scanned at all, so every string that reaches the user
+  //    through a shared component was invisible: "Tap to replace document" lives in
+  //    components/DocumentUploadCard.tsx and was reported as dead copy.
+  //  - tag-stripping with /<[^>]*>/ is WRONG: `=>` inside onPress ends the span
+  //    early and the strip desynchronizes, swallowing real labels.
+  for (const f of [
+    ...walk(APP_DIR, [], /\.(tsx|ts|jsx|js)$/),
+    ...walk(path.join(ROOT, "components"), [], /\.(tsx|ts|jsx|js)$/),
+  ]) {
     const src = fs.readFileSync(f, "utf8");
     for (const m of src.matchAll(/(["'`])([^"'`$\n]{2,80})\1/g)) add(m[2]);
     const text = src

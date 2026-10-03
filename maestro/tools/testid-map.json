@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-03T07:11:14.589Z",
-  "total": 1096,
+  "generatedAt": "2026-10-03T07:25:28.805Z",
+  "total": 1107,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -1777,19 +1777,19 @@
     "(main)/(customer)/finding-driver/index.tsx": [
       {
         "id": "customer.finding-driver.set-theme",
-        "line": 332
+        "line": 335
       },
       {
         "id": "customer.finding-driver.set-finding-state",
-        "line": 430
+        "line": 433
       },
       {
         "id": "customer.finding-driver.set-finding-state-2",
-        "line": 458
+        "line": 461
       },
       {
         "id": "customer.finding-driver.handle-cancel",
-        "line": 471
+        "line": 474
       }
     ],
     "(main)/(customer)/no-drivers-available/index.tsx": [
@@ -3050,24 +3050,68 @@
         "line": 1295
       },
       {
-        "id": "rider.onboarding.set-legacy-answer",
+        "id": "rider.onboarding.upload-reg-scan-front",
+        "line": 1319
+      },
+      {
+        "id": "rider.onboarding.upload-reg-scan-back",
+        "line": 1320
+      },
+      {
+        "id": "rider.onboarding.upload-brta-certificate",
+        "line": 1321
+      },
+      {
+        "id": "rider.onboarding.upload-vehicle-photo-front",
+        "line": 1322
+      },
+      {
+        "id": "rider.onboarding.upload-vehicle-photo-left",
+        "line": 1323
+      },
+      {
+        "id": "rider.onboarding.upload-vehicle-photo-back",
+        "line": 1324
+      },
+      {
+        "id": "rider.onboarding.upload-vehicle-photo-right",
+        "line": 1325
+      },
+      {
+        "id": "rider.onboarding.upload-nid-front",
+        "line": 1335
+      },
+      {
+        "id": "rider.onboarding.upload-nid-back",
+        "line": 1336
+      },
+      {
+        "id": "rider.onboarding.upload-license-front",
         "line": 1337
       },
       {
+        "id": "rider.onboarding.upload-license-back",
+        "line": 1338
+      },
+      {
+        "id": "rider.onboarding.set-legacy-answer",
+        "line": 1350
+      },
+      {
         "id": "rider.onboarding.set-bkash",
-        "line": 1367
+        "line": 1380
       },
       {
         "id": "rider.onboarding.set-consent",
-        "line": 1400
+        "line": 1413
       },
       {
         "id": "rider.onboarding.go-back-2",
-        "line": 1415
+        "line": 1428
       },
       {
         "id": "rider.onboarding.go-next",
-        "line": 1425
+        "line": 1438
       }
     ],
     "(main)/(rider)/packages.tsx": [
