@@ -26,16 +26,18 @@
 set -e
 
 echo "⏳ Pre-commit: vacuous-assertion gate (staged test files)..."
-node scripts/check-vacuous-assertions.js --staged
-if [ $? -ne 0 ]; then
+# `if ! cmd` (not `cmd; if [ $? -ne 0 ]`) — under `set -e` the latter aborts at
+# the failing command and the handler never prints. Stages 1 and 2 still carried
+# that idiom when the flow-xcheck stage below was fixed for it on 2026-10-03; the
+# fix was propagated here too.
+if ! node scripts/check-vacuous-assertions.js --staged; then
   echo "❌ Vacuous-assertion gate failed — commit blocked."
   echo "   Placeholder assertions like expect(true).toBe(true) pin no behavior."
   exit 1
 fi
 
 echo "⏳ Pre-commit: Date-in-sql gate (staged files)..."
-node scripts/check-date-in-sql.js --staged
-if [ $? -ne 0 ]; then
+if ! node scripts/check-date-in-sql.js --staged; then
   echo "❌ Date-in-sql gate failed — commit blocked."
   echo "   Raw JS Date objects in sql templates crash postgres.js (ISSUE-47)."
   echo "   Use DB-side now() - interval or typed drizzle operators (lt/eq/gt)."
@@ -142,4 +144,5 @@ fi
 rm -f "$LINT_LOG"
 
 echo "✅ Pre-commit passed."
-echo "   (tsc + web export run at push time — pre-push hook)"
+echo "   (tsc + native-import check run at push time — pre-push hook. No web export:"
+echo "    that gate was REMOVED by owner ruling 2026-08-31, not missed.)"
