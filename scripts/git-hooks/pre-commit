@@ -4,6 +4,13 @@
 #
 # Install: node scripts/install-hooks.js
 #
+# 2026-10-03 flow-selector gate: a staged flow using an id: that is not in
+# maestro/tools/testid-map.json would ship a selector that can never resolve on
+# device, and would NOT be caught by tsc/lint (YAML is not linted). This stage
+# runs maestro/tools/flow-xcheck.cjs (exit 2 = missing selectors, 1 = broken)
+# before the lint stage — it MUST sit above lint, because lint exits 0 early
+# when no JS/TS files are staged, and flow commits stage YAML only.
+#
 # 2026-09-28 lint-stage rewrite: the old pipeline
 #   `xargs -n 40 timeout 30 npx eslint --quiet`
 # intermittently died on Windows (npx cmd-shim spawn exit 123, or the 30s
@@ -33,6 +40,31 @@ if [ $? -ne 0 ]; then
   echo "   Raw JS Date objects in sql templates crash postgres.js (ISSUE-47)."
   echo "   Use DB-side now() - interval or typed drizzle operators (lt/eq/gt)."
   exit 1
+fi
+
+echo "⏳ Pre-commit: Maestro flow selector gate (staged flows)..."
+# Any staged maestro/flows/**.yaml triggers the gate. The tool validates ALL flow
+# files (~1s) rather than just the staged ones — the map is a repo-wide
+# invariant, and a red gate anywhere should block rather than hide.
+STAGED_FLOWS=()
+while IFS= read -r -d '' f; do
+  STAGED_FLOWS+=("$f")
+done < <(git diff --cached --name-only -z --diff-filter=ACM | grep -zE '^maestro/flows/.*\.yaml$' || true)
+
+if [ ${#STAGED_FLOWS[@]} -eq 0 ]; then
+  echo "✅ No staged Maestro flow files — skipping flow selector gate."
+else
+  # `if ! cmd` (not `cmd; if [ $? -ne 0 ]`) — under `set -e` the latter aborts
+  # before the handler can print anything, which is the exact bug class the lint
+  # rewrite below was written to eliminate.
+  if ! node maestro/tools/flow-xcheck.cjs; then
+    echo "❌ Flow selector gate failed — commit blocked."
+    echo "   A flow's id: selector does not exist in maestro/tools/testid-map.json."
+    echo "   Fix:  use a real testID (verify it against the screen source, not the map alone),"
+    echo "         or regenerate the manifest after an app/ change:"
+    echo "         node maestro/tools/testid-manifest.cjs"
+    exit 1
+  fi
 fi
 
 echo "⏳ Pre-commit: lint staged files..."

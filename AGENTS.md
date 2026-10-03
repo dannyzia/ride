@@ -202,6 +202,15 @@ Get-ChildItem app/, lib/, utils-server/, src/ -Recurse -Include "*.ts", "*.tsx" 
 # On Linux/Mac:
 grep -r "console\.log" app/ lib/ utils-server/ src/       # must return nothing
 grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return nothing
+
+# Automated pre-commit gate — scripts/git-hooks/pre-commit (install: node scripts/install-hooks.js)
+# 4 stages, any failure BLOCKS the commit, in order:
+#   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector  4 eslint (staged files only)
+# Stage 3 runs `node maestro/tools/flow-xcheck.cjs` whenever a maestro/flows/**.yaml is staged:
+# a flow `id:` selector absent from maestro/tools/testid-map.json can never resolve on device,
+# and neither tsc nor eslint sees YAML. It MUST stay above the lint stage, which exits 0 early
+# when no JS/TS is staged (flow commits stage YAML only).
+# After ANY app/ change: node maestro/tools/testid-manifest.cjs   (regenerate the map first)
 ```
 
 ## ⛔ HARD CONSTRAINT: Expo Managed Workflow (Non-Negotiable)
