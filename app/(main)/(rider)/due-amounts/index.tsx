@@ -199,7 +199,7 @@ export default function DueAmounts() {
                 className="rounded-full w-full py-[12px] items-center mt-3"
                 style={{ backgroundColor: colors.primary }}
                 onPress={() => router.push("/(main)/(rider)/packages")}
-               testID="rider.due-amounts.push-main">
+               testID="rider.due-amounts.push-packages">
                 <Text className="text-[15px] font-JakartaBold text-white">
                   Renew
                 </Text>
@@ -220,7 +220,7 @@ export default function DueAmounts() {
                 className="rounded-full w-full py-[12px] items-center mt-3"
                 style={{ backgroundColor: colors.primary }}
                 onPress={() => router.push("/(main)/(rider)/packages")}
-               testID="rider.due-amounts.push-main-2">
+               testID="rider.due-amounts.push-packages-2">
                 <Text className="text-[15px] font-JakartaBold text-white">
                   Browse Packages
                 </Text>

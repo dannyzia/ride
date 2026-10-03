@@ -432,7 +432,7 @@ export default function DriverDetail() {
                 alignItems: "center",
                 paddingVertical: 10,
               }}
-             testID="fleet.drivers.id.push-main">
+             testID="fleet.drivers.id.push-vehicles">
               <Text
                 style={{
                   fontFamily: "Jakarta-SemiBold",
@@ -482,7 +482,7 @@ export default function DriverDetail() {
                 paddingHorizontal: 16,
                 paddingVertical: 8,
               }}
-             testID="fleet.drivers.id.push-main-2">
+             testID="fleet.drivers.id.push-assign">
               <Text
                 style={{
                   fontFamily: "Jakarta-SemiBold",

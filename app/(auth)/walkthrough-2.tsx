@@ -68,7 +68,7 @@ export default function Walkthrough2() {
         <CustomButton
           title="Next"
           onPress={() => router.push("/(auth)/walkthrough-3")}
-         testID="walkthrough-2.push-auth"/>
+         testID="walkthrough-2.push-walkthrough-3"/>
 
         <Text
           className="text-[16px] font-Jakarta"

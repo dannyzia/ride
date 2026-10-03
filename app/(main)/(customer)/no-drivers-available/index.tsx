@@ -44,14 +44,14 @@ export default function NoDriversAvailable() {
           className="rounded-full w-full py-[16px] items-center"
           style={{ backgroundColor: colors.primary }}
           onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
-         testID="customer.no-drivers-available.replace-main">
+         testID="customer.no-drivers-available.replace-home">
           <Text className="text-[18px] font-JakartaBold text-goWhite">{t('no_drivers_available.try_again')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           className="border rounded-full w-full py-[16px] items-center"
           style={{ borderColor }}
           onPress={() => router.push("/(main)/(customer)/schedule-ride")}
-         testID="customer.no-drivers-available.push-main">
+         testID="customer.no-drivers-available.push-schedule-ride">
           <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('no_drivers_available.schedule_for_later')}</Text>
         </TouchableOpacity>
       </View>

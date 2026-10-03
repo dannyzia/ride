@@ -220,7 +220,7 @@ export default function EarningsDashboard() {
               onPress={() =>
                 router.push("/(main)/(rider)/earnings-breakdown")
               }
-             testID="rider.earnings.push-main">
+             testID="rider.earnings.push-earnings-breakdown">
               <View className="flex-row justify-between items-center">
                 <View>
                   <Text
@@ -250,7 +250,7 @@ export default function EarningsDashboard() {
               onPress={() =>
                 router.push("/(main)/(rider)/commission-statement")
               }
-             testID="rider.earnings.push-main-2">
+             testID="rider.earnings.push-commission-statement">
               <View className="flex-row justify-between items-center">
                 <View>
                   <Text
@@ -278,7 +278,7 @@ export default function EarningsDashboard() {
               className="p-[14px] border rounded-[12px]"
               style={{ backgroundColor: surfaceBg, borderColor }}
               onPress={() => router.push("/(main)/(rider)/due-amounts")}
-             testID="rider.earnings.push-main-3">
+             testID="rider.earnings.push-due-amounts">
               <View className="flex-row justify-between items-center">
                 <View>
                   <Text

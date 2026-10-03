@@ -1148,7 +1148,7 @@ export default function DriverHome() {
                     backgroundColor: colors.amber,
                     alignItems: "center", justifyContent: "center",
                   }}
-                 testID="rider.d.push-main">
+                 testID="rider.d.push-break-mode">
                   <Ionicons name="cafe-outline" size={18} color={colors.white} />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -1174,7 +1174,7 @@ export default function DriverHome() {
                   backgroundColor: colors.amber,
                   alignItems: "center", justifyContent: "center",
                 }}
-               testID="rider.d.push-main-2">
+               testID="rider.d.push-break-mode-2">
                 <Ionicons name="cafe-outline" size={18} color={colors.white} />
               </TouchableOpacity>
             )}
@@ -1308,7 +1308,7 @@ export default function DriverHome() {
                 paddingVertical: spacing.sm,
                 alignItems: "center",
               }}
-             testID="rider.d.push-main-3">
+             testID="rider.d.push-packages">
               <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: colors.primary }}>
                 {t('driver_home.buy_package')}
               </Text>
@@ -1331,7 +1331,7 @@ export default function DriverHome() {
                 alignItems: "center",
                 justifyContent: "space-between",
               }}
-             testID="rider.d.push-main-4">
+             testID="rider.d.push-hotspot-map">
               <View
                 style={{
                   flexDirection: "row",
@@ -1414,7 +1414,7 @@ export default function DriverHome() {
               }}
               accessibilityLabel="Marketplace bidding — view and bid on rental requests"
               accessibilityRole="button"
-             testID="rider.d.push-main-5">
+             testID="rider.d.push-rental-bidder">
               <View
                 style={{
                   width: 44, height: 44, borderRadius: 12,

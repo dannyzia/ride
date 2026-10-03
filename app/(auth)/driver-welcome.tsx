@@ -33,12 +33,12 @@ export default function DriverWelcome() {
         <CustomButton
           title="Driver Sign In"
           onPress={() => router.replace("/(auth)/phone-entry")}
-         testID="driver-welcome.replace-auth"/>
+         testID="driver-welcome.replace-phone-entry"/>
         <CustomButton
           title="Driver Sign Up"
           bgVariant="secondary"
           onPress={() => router.replace("/(auth)/phone-entry")}
-         testID="driver-welcome.replace-auth-2"/>
+         testID="driver-welcome.replace-phone-entry-2"/>
       </View>
     </SafeAreaView>
   );

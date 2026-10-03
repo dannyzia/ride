@@ -123,14 +123,14 @@ useEffect(() => {
             className="border rounded-[12px] py-[14px] items-center mb-3"
             style={{ backgroundColor: surfaceBg, borderColor }}
             onPress={() => router.push(`/(main)/(customer)/(tabs)/activity/share-receipt?rideId=${ride.id}`)}
-           testID="customer.history-detail.push-main">
+           testID="customer.history-detail.push-share-receipt">
             <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{t('history_detail.view_receipt')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="rounded-[12px] py-[14px] items-center"
             style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor: colors.danger }}
             onPress={() => router.push(`/(main)/(customer)/report-issue?rideId=${ride.id}`)}
-           testID="customer.history-detail.push-main-2">
+           testID="customer.history-detail.push-report-issue">
             <Text className="text-[15px] font-JakartaBold" style={{ color: colors.danger }}>{t('ride.report_an_issue')}</Text>
           </TouchableOpacity>
         </ScrollView>

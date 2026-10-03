@@ -157,7 +157,7 @@ export default function FleetDashboard() {
               flexDirection: "row", alignItems: "center",
               backgroundColor: isDark ? "#3A2A1A" : colors.amberLight,
               borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.amber,
-            }} testID="fleet.dashboard.push-main">
+            }} testID="fleet.dashboard.push-more">
               <Ionicons name="warning" size={20} color={colors.amber} />
               <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: textPrimary, marginLeft: 10, flex: 1 }}>
                 {data.unread_alerts} outstanding alert{data.unread_alerts > 1 ? "s" : ""}
@@ -171,7 +171,7 @@ export default function FleetDashboard() {
               flexDirection: "row", alignItems: "center",
               backgroundColor: isDark ? "#3A1A1A" : "#FEF2F2",
               borderRadius: 12, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: colors.danger,
-            }} testID="fleet.dashboard.push-main-2">
+            }} testID="fleet.dashboard.push-integrations">
               <Ionicons name="cloud-offline" size={20} color={colors.danger} />
               <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 14, color: textPrimary, marginLeft: 10, flex: 1 }}>
                 {integrationIssues.length} integration{integrationIssues.length > 1 ? "s" : ""} need{integrationIssues.length === 1 ? "s" : ""} attention

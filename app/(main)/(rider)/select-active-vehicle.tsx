@@ -245,7 +245,7 @@ export default function SelectActiveVehicle() {
             className="rounded-full w-full py-[16px] items-center"
             style={{ backgroundColor: colors.primary }}
             onPress={() => router.replace("/(main)/(rider)/d")}
-           testID="rider.select-active-vehicle.replace-main">
+           testID="rider.select-active-vehicle.replace-d">
             <Text
               className="text-[16px] font-JakartaBold"
               style={{ color: colors.white }}
@@ -260,7 +260,7 @@ export default function SelectActiveVehicle() {
               className="rounded-full w-full py-[16px] items-center"
               style={{ backgroundColor: colors.primary }}
               onPress={() => router.push("/(main)/(rider)/add-vehicle")}
-             testID="rider.select-active-vehicle.push-main">
+             testID="rider.select-active-vehicle.push-add-vehicle">
               <Text
                 className="text-[16px] font-JakartaBold"
                 style={{ color: colors.white }}

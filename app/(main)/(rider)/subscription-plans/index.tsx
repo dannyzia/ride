@@ -95,7 +95,7 @@ export default function SubscriptionPlans() {
               className="p-[16px] border rounded-[12px]"
               style={{ backgroundColor: surfaceBg, borderColor }}
               onPress={() => router.push(`/(main)/(rider)/subscription-details?planId=${p.id}`)}
-             testID="rider.subscription-plans.push-main">
+             testID="rider.subscription-plans.push-subscription-details">
               <View className="flex-row justify-between items-center">
                 <View>
                   <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>{p.name}</Text>

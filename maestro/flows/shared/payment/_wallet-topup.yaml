@@ -1,7 +1,7 @@
 # _wallet-topup — wallet → top-up → amount → initiate.
 # §9. MANIFEST: BLOCKED (payments sandbox, PortPos WebView opaque to Maestro — Gap 4).
 # Gate 1 REWIRE (semantic IDs via testid-map.json): top-up button on wallet screen =
-# customer.wallet.push-main (wallet/index.tsx L246, t('wallet.top_up')); manual
+# customer.wallet.push-top-up (wallet/index.tsx L246, t('wallet.top_up')); manual
 # amount input = customer.settings.top-up.set-amount (top-up/index.tsx L58, numeric);
 # continue = customer.settings.top-up.handle-continue (L83). Deterministic manual
 # amount (eraseText + type ${AMOUNT}) instead of preset chips — works for any AMOUNT.
@@ -14,7 +14,7 @@ appId: com.ride.bd
     visible: ".*Top Up.*|.*top-up.*|.*Add money.*"
     timeout: 15000
 - tapOn:
-    id: "customer.wallet.push-main"
+    id: "customer.wallet.push-top-up"
 - extendedWaitUntil:
     visible: ".*Amount.*|.*৳.*"
     timeout: 15000

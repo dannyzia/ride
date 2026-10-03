@@ -40,14 +40,14 @@ export default function TopUpSuccess() {
         className="rounded-full w-full py-[16px] items-center mb-3"
         style={{ backgroundColor: colors.primary }}
         onPress={() => router.replace("/(main)/(customer)/(tabs)/rides")}
-       testID="customer.settings.top-up-success.replace-main">
+       testID="customer.settings.top-up-success.replace-rides">
         <Text className="text-[18px] font-JakartaBold text-goWhite">{t('top_up_success.view_transactions')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         className="border rounded-full w-full py-[16px] items-center"
         style={{ borderColor }}
         onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
-       testID="customer.settings.top-up-success.replace-main-2">
+       testID="customer.settings.top-up-success.replace-home">
         <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('ride.back_to_home')}</Text>
       </TouchableOpacity>
       <TouchableOpacity

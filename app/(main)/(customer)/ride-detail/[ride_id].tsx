@@ -449,7 +449,7 @@ const RideDetailScreen = () => {
             }
             accessibilityRole="button"
             accessibilityLabel={t('ride_detail.dispute_a11y')}
-           testID="customer.ride-detail.ride_id.push-main">
+           testID="customer.ride-detail.ride_id.push-fare-dispute">
             <Text style={[styles.disputeBtnText, { color: colors.amber }]}>
               {t('ride_detail.dispute_fare')}
             </Text>
@@ -463,7 +463,7 @@ const RideDetailScreen = () => {
           }
           accessibilityRole="button"
           accessibilityLabel={t('ride_detail.report_a11y')}
-         testID="customer.ride-detail.ride_id.push-main-2">
+         testID="customer.ride-detail.ride_id.push-report-issue">
           <Text style={[styles.reportBtnText, { color: textPrimary }]}>{t('ride_detail.report_issue')}</Text>
         </TouchableOpacity>
       </ScrollView>

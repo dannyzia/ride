@@ -75,7 +75,7 @@ export default function SubscriptionRenewal() {
       <TouchableOpacity
         className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3"
         onPress={() => router.push("/(main)/(rider)/subscription-plans")}
-       testID="rider.subscription-renewal.push-main">
+       testID="rider.subscription-renewal.push-subscription-plans">
         <Text className="text-[18px] font-JakartaBold text-goWhite">Renew now</Text>
       </TouchableOpacity>
       <TouchableOpacity

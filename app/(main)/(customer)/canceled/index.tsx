@@ -36,7 +36,7 @@ export default function RideCanceled() {
         className="rounded-full w-full py-[16px] items-center"
         style={{ backgroundColor: colors.primary }}
         onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
-       testID="customer.canceled.replace-main">
+       testID="customer.canceled.replace-home">
         <Text className="text-[18px] font-JakartaBold text-goWhite">{t('ride.back_to_home')}</Text>
       </TouchableOpacity>
     </SafeAreaView>

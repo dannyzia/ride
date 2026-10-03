@@ -46,14 +46,14 @@ export default function UserArrived() {
         className="rounded-full w-full py-[16px] items-center mb-3"
         style={{ backgroundColor: colors.primary }}
         onPress={() => router.replace("/(main)/(customer)/rate-driver")}
-       testID="customer.user-arrived.replace-main">
+       testID="customer.user-arrived.replace-rate-driver">
         <Text className="text-[18px] font-JakartaBold text-goWhite">{t('user_arrived.rate_your_driver')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         className="border rounded-full w-full py-[16px] items-center"
         style={{ borderColor }}
         onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
-       testID="customer.user-arrived.replace-main-2">
+       testID="customer.user-arrived.replace-home">
         <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('user_arrived.skip')}</Text>
       </TouchableOpacity>
     </SafeAreaView>

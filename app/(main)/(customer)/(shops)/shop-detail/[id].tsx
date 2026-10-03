@@ -186,7 +186,7 @@ useEffect(() => {
               paddingHorizontal: 24,
               paddingVertical: 12,
             }}
-           testID="customer.shops.shop-detail.id.push-main">
+           testID="customer.shops.shop-detail.id.push-order-create">
             <Text style={{ color: "#FFFFFF", fontSize: 15, fontFamily: "JakartaSemiBold" }}>
               Checkout
             </Text>

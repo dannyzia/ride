@@ -290,7 +290,7 @@ export default function OperationsHub() {
           padding: 12,
           marginBottom: 16,
         }}
-       testID="fleet.operations.push-main">
+       testID="fleet.operations.push-assign">
         <Ionicons name="add-circle" size={20} color="#FFFFFF" />
         <Text
           style={{

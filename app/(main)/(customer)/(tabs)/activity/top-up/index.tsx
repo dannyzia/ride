@@ -69,7 +69,7 @@ useEffect(() => {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/activity")} testID="customer.activity.top-up.replace-main">
+        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/activity")} testID="customer.activity.top-up.replace-activity">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('wallet.top_up')}</Text>
@@ -113,7 +113,7 @@ useEffect(() => {
           className="rounded-full w-full py-[16px] items-center"
           style={{ backgroundColor: colors.primary }}
           onPress={() => router.push("/(main)/(customer)/(tabs)/settings/top-up")}
-         testID="customer.activity.top-up.push-main">
+         testID="customer.activity.top-up.push-top-up">
           <Text className="text-[18px] font-JakartaBold" style={{ color: colors.white }}>{t('top_up.top_up_wallet')}</Text>
         </TouchableOpacity>
       </ScrollView>

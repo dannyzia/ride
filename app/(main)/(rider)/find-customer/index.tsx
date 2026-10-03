@@ -576,7 +576,7 @@ const ReachCustomer = () => {
             accessibilityRole="button"
             accessibilityLabel={t('find_customer.cancel_ride')}
             style={{ marginTop: spacing.md, alignItems: "center" }}
-           testID="rider.find-customer.push-main">
+           testID="rider.find-customer.push-cancellation-reasons">
             <Text style={{ color: colors.danger, fontSize: 14, fontFamily: "Jakarta-Bold" }}>
               {t('find_customer.cancel_ride')}
             </Text>

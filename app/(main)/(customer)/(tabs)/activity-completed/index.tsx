@@ -56,7 +56,7 @@ export default function ActivityCompleted() {
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: border }}>
-        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/home")} testID="customer.activity-completed.replace-main">
+        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/home")} testID="customer.activity-completed.replace-home">
           <Text style={{ fontSize: 16, fontFamily: fonts.body, color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text style={{ flex: 1, textAlign: "center", fontSize: 18, fontFamily: fonts.heading, color: textPrimary }}>{t('activity.completed')}</Text>
@@ -94,13 +94,13 @@ export default function ActivityCompleted() {
                 <TouchableOpacity
                   style={{ flex: 1, backgroundColor: surface, borderWidth: 1, borderColor: border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: "center" }}
                   onPress={() => router.push(`/(main)/(customer)/ride-detail/${ride.id}`)}
-                 testID="customer.activity-completed.push-main">
+                 testID="customer.activity-completed.push-ride-detail">
                   <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: textPrimary }}>{t('activity_completed.view_receipt')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: "center" }}
                   onPress={() => router.push("/(main)/(customer)/rate-driver")}
-                 testID="customer.activity-completed.push-main-2">
+                 testID="customer.activity-completed.push-rate-driver">
                   <Text style={{ fontSize: 14, fontFamily: fonts.heading, color: colors.white }}>{t('ride.rate_driver')}</Text>
                 </TouchableOpacity>
               </View>

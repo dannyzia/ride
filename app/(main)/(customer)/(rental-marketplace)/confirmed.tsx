@@ -126,7 +126,7 @@ export default function RentalConfirmedScreen() {
               alignItems: "center",
               justifyContent: "center",
             }}
-           testID="customer.rental-marketplace.confirmed.replace-main">
+           testID="customer.rental-marketplace.confirmed.replace-home">
             <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
               Back to Home
             </Text>

@@ -73,7 +73,7 @@ export default function DriverSettingsAccount() {
           className="p-[14px] border rounded-[12px] mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/settings/change-password")}
-         testID="rider.settings.account-security.push-main">
+         testID="rider.settings.account-security.push-change-password">
           <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Security & Login Info</Text>
           <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>Phone number & login method</Text>
         </TouchableOpacity>

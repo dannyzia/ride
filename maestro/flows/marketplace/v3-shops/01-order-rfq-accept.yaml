@@ -10,7 +10,7 @@
 # Gate 1 REWIRE (semantic IDs via testid-map.json): vertical entry =
 # customer.home.set-selected-category (id+text "Shop"); add-to-cart =
 # customer.shops.shop-detail.id.add-to-cart (shop-detail/[id].tsx L141);
-# checkout = customer.shops.shop-detail.id.push-main (L189); fulfillment chip =
+# checkout = customer.shops.shop-detail.id.push-order-create (L189); fulfillment chip =
 # customer.shops.order-create.id.set-cart-fulfillment (order-create/[id].tsx L124);
 # order submit = customer.shops.order-create.id.handle-submit (L254).
 # Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until shop roster fixtures land.
@@ -40,7 +40,7 @@ tags: [marketplace, v3-shops, counterpart-api]
 - tapOn:
     id: "customer.shops.shop-detail.id.add-to-cart"
 - tapOn:
-    id: "customer.shops.shop-detail.id.push-main"
+    id: "customer.shops.shop-detail.id.push-order-create"
 - tapOn:
     id: "customer.shops.order-create.id.set-cart-fulfillment"
     text: ".*Delivery.*"

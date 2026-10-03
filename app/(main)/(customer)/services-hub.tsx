@@ -161,7 +161,7 @@ export default function ServicesHub() {
             }}
             onPress={() => router.push("/(main)/(customer)/(shops)")}
             activeOpacity={0.8}
-           testID="customer.services-hub.push-main">
+           testID="customer.services-hub.push-shops">
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-3"
               style={{ backgroundColor: colors.primary + "18" }}
@@ -192,7 +192,7 @@ export default function ServicesHub() {
             }}
             onPress={() => router.push("/(main)/(customer)/(rental-marketplace)")}
             activeOpacity={0.8}
-           testID="customer.services-hub.push-main-2">
+           testID="customer.services-hub.push-rental-marketplace">
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-3"
               style={{ backgroundColor: colors.amber + "18" }}
@@ -226,7 +226,7 @@ export default function ServicesHub() {
             }}
             onPress={() => router.push("/(main)/(customer)/(delivery)")}
             activeOpacity={0.8}
-           testID="customer.services-hub.push-main-3">
+           testID="customer.services-hub.push-delivery">
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-3"
               style={{ backgroundColor: colors.primary + "18" }}
@@ -260,7 +260,7 @@ export default function ServicesHub() {
             activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel={t("services_hub.a11y_emergency_ambulance")}
-           testID="customer.services-hub.push-main-4">
+           testID="customer.services-hub.push-emergency">
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-3"
               style={{ backgroundColor: colors.danger + "18" }}

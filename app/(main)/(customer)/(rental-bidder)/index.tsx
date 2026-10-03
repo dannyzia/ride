@@ -250,7 +250,7 @@ export default function BidderRequestsScreen() {
                   marginBottom: 12,
                 }}
                 accessibilityLabel={`${CATEGORY_LABELS[req.category] ?? req.category} request to ${req.dropoff_address}${req.already_bid ? ' — already bid' : ''}`}
-               testID="customer.rental-bidder.push-main">
+               testID="customer.rental-bidder.push-rental-bidder">
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <Ionicons

@@ -358,7 +358,7 @@ export default function VehicleManagement() {
               className="rounded-full w-full py-[16px] items-center mt-2"
               style={{ backgroundColor: colors.primary }}
               onPress={() => router.push("/(main)/(rider)/add-vehicle")}
-             testID="rider.vehicle-management.push-main">
+             testID="rider.vehicle-management.push-add-vehicle">
               <Text
                 className="text-[18px] font-JakartaBold"
                 style={{ color: colors.white }}

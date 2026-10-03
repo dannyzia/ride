@@ -601,7 +601,7 @@ const FinishRide = () => {
                 router.push(`/(main)/(rider)/rate-rider?rideId=${completedRideId}`);
               }
             }}
-           testID="rider.finish-ride.push-main"/>
+           testID="rider.finish-ride.push-rate-rider"/>
           <CustomButton
             title={t('finish_ride.back_to_home')}
             className="w-full"

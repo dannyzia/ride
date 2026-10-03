@@ -26,13 +26,13 @@ tags:
 # WARNING: If the driver already has an active subscription, "Calls Remaining" is shown
 # instead and this step fails. Use a driver with 0 calls or no subscription.
 # Gate 1 REWIRE PASS 2: both taps are now testIDs (verified in testid-map.json) —
-# rider.d.push-main-3 is the driver-home buy-package card that pushes /(main)/(rider)/packages
+# rider.d.push-packages is the driver-home buy-package card that pushes /(main)/(rider)/packages
 # (d/(tabs)/index.tsx:1299), and rider.packages.handle-buy is the per-row "Buy Now"
 # CustomButton (packages.tsx:280). The success "OK" tap below stays TEXT — it is an
 # OS Alert.alert, which exposes no testID space.
 - assertVisible: "Buy a Package to Start"
 - tapOn:
-    id: "rider.d.push-main-3"
+    id: "rider.d.push-packages"
 # Step 2: Package listing screen.
 - extendedWaitUntil:
     visible: "Call Packages"

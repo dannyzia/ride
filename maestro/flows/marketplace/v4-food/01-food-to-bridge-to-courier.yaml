@@ -28,7 +28,7 @@ tags: [marketplace, v4-food, counterpart-api]
 - tapOn:
     id: "customer.shops.shop-detail.id.add-to-cart"
 - tapOn:
-    id: "customer.shops.shop-detail.id.push-main"
+    id: "customer.shops.shop-detail.id.push-order-create"
 - tapOn:
     id: "customer.shops.order-create.id.handle-submit"
 - extendedWaitUntil:

@@ -130,14 +130,14 @@ export default function RideDetailsScheduled() {
               className="flex-1 rounded-full py-[14px] items-center"
               style={{ backgroundColor: colors.primary }}
               onPress={() => router.push("/(main)/(customer)/rate-driver")}
-             testID="customer.ride-details-scheduled.id.push-main">
+             testID="customer.ride-details-scheduled.id.push-rate-driver">
               <Text className="text-[16px] font-JakartaBold text-goWhite">{t('ride.rate_driver')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               className="flex-1 border rounded-full py-[14px] items-center"
               style={{ borderColor }}
               onPress={() => router.replace("/(main)/(customer)/cancel-reason")}
-             testID="customer.ride-details-scheduled.id.replace-main">
+             testID="customer.ride-details-scheduled.id.replace-cancel-reason">
               <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>

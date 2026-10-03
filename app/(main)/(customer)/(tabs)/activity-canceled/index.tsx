@@ -120,7 +120,7 @@ useEffect(() => {
             className="rounded-full w-full py-[16px] items-center mt-4"
             style={{ backgroundColor: colors.primary }}
             onPress={() => router.replace("/(main)/(customer)/(tabs)/home")}
-           testID="customer.activity-canceled.replace-main">
+           testID="customer.activity-canceled.replace-home">
             <Text className="text-[18px] font-JakartaBold" style={{ color: colors.white }}>{t('activity_canceled.book_new_ride')}</Text>
           </TouchableOpacity>
         </ScrollView>

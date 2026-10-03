@@ -50,7 +50,7 @@ export default function DriverSettingsAppearance() {
           className="mt-4 p-[14px] border rounded-[12px]"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/settings/language")}
-         testID="rider.settings.appearance.push-main">
+         testID="rider.settings.appearance.push-language">
           <View className="flex-row justify-between items-center">
             <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Language</Text>
             <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>English ›</Text>

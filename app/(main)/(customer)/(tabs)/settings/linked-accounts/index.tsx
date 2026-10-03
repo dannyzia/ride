@@ -57,7 +57,7 @@ export default function SettingsLinkedAccounts() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px] border-b" style={{ borderColor }}>
-        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")} testID="customer.settings.linked-accounts.replace-main">
+        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/settings")} testID="customer.settings.linked-accounts.replace-settings">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('settings.linked_accounts')}</Text>

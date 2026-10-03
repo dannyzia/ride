@@ -150,7 +150,7 @@ export default function RiderNoShow() {
           className="mt-4 py-[12px]"
           onPress={() => router.push(`/(main)/(rider)/cancellation-reasons?rideId=${rideId}`)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-         testID="rider.rider-no-show.push-main">
+         testID="rider.rider-no-show.push-cancellation-reasons">
           <Text className="text-[15px] font-Jakarta" style={{ color: colors.primary }}>Cancel ride instead</Text>
         </TouchableOpacity>
       </View>

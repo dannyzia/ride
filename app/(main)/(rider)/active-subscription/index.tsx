@@ -72,7 +72,7 @@ export default function ActiveSubscription() {
           <TouchableOpacity
             className="bg-goPrimary rounded-full px-[24px] py-[14px]"
             onPress={() => router.push("/(main)/(rider)/subscription-plans")}
-           testID="rider.active-subscription.push-main">
+           testID="rider.active-subscription.push-subscription-plans">
             <Text className="text-[16px] font-JakartaBold text-goWhite">Browse Packages</Text>
           </TouchableOpacity>
         </View>
@@ -105,14 +105,14 @@ export default function ActiveSubscription() {
           <TouchableOpacity
             className="bg-goPrimary rounded-full w-full py-[16px] items-center mb-3"
             onPress={() => router.push("/(main)/(rider)/subscription-plans")}
-           testID="rider.active-subscription.push-main-2">
+           testID="rider.active-subscription.push-subscription-plans-2">
             <Text className="text-[18px] font-JakartaBold text-goWhite">Renew early</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="border rounded-full w-full py-[16px] items-center"
             style={{ borderColor }}
             onPress={() => router.push("/(main)/(rider)/subscription-plans")}
-           testID="rider.active-subscription.push-main-3">
+           testID="rider.active-subscription.push-subscription-plans-3">
             <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>Change plan</Text>
           </TouchableOpacity>
         </ScrollView>

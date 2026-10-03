@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T05:00:40.230Z",
+  "generatedAt": "2026-10-03T06:00:55.029Z",
   "total": 1121,
   "screens": {
     "(auth)/_layout.tsx": [
@@ -30,29 +30,29 @@
     ],
     "(auth)/driver-walkthrough-1.tsx": [
       {
-        "id": "driver-walkthrough-1.push-auth",
+        "id": "driver-walkthrough-1.push-driver-walkthrough-2",
         "line": 71
       }
     ],
     "(auth)/driver-walkthrough-2.tsx": [
       {
-        "id": "driver-walkthrough-2.push-auth",
+        "id": "driver-walkthrough-2.push-driver-walkthrough-3",
         "line": 71
       }
     ],
     "(auth)/driver-walkthrough-3.tsx": [
       {
-        "id": "driver-walkthrough-3.replace-auth",
+        "id": "driver-walkthrough-3.replace-driver-welcome",
         "line": 71
       }
     ],
     "(auth)/driver-welcome.tsx": [
       {
-        "id": "driver-welcome.replace-auth",
+        "id": "driver-welcome.replace-phone-entry",
         "line": 36
       },
       {
-        "id": "driver-welcome.replace-auth-2",
+        "id": "driver-welcome.replace-phone-entry-2",
         "line": 41
       }
     ],
@@ -118,7 +118,7 @@
         "line": 141
       },
       {
-        "id": "login.push-auth",
+        "id": "login.push-forgot-password",
         "line": 146
       }
     ],
@@ -192,29 +192,29 @@
     ],
     "(auth)/walkthrough-1.tsx": [
       {
-        "id": "walkthrough-1.push-auth",
+        "id": "walkthrough-1.push-walkthrough-2",
         "line": 71
       }
     ],
     "(auth)/walkthrough-2.tsx": [
       {
-        "id": "walkthrough-2.push-auth",
+        "id": "walkthrough-2.push-walkthrough-3",
         "line": 71
       }
     ],
     "(auth)/walkthrough-3.tsx": [
       {
-        "id": "walkthrough-3.replace-auth",
+        "id": "walkthrough-3.replace-phone-entry",
         "line": 71
       }
     ],
     "(auth)/welcome.tsx": [
       {
-        "id": "welcome.replace-auth",
+        "id": "welcome.replace-phone-entry",
         "line": 67
       },
       {
-        "id": "welcome.replace-auth-2",
+        "id": "welcome.replace-phone-entry-2",
         "line": 72
       }
     ],
@@ -302,7 +302,7 @@
     ],
     "(main)/(customer)/(delivery)/index.tsx": [
       {
-        "id": "customer.delivery.push-main",
+        "id": "customer.delivery.push-request-detail",
         "line": 88
       },
       {
@@ -310,11 +310,11 @@
         "line": 117
       },
       {
-        "id": "customer.delivery.push-main-2",
+        "id": "customer.delivery.push-request-create",
         "line": 123
       },
       {
-        "id": "customer.delivery.push-main-3",
+        "id": "customer.delivery.push-request-create-2",
         "line": 145
       }
     ],
@@ -418,7 +418,7 @@
         "line": 177
       },
       {
-        "id": "customer.rental-bidder.push-main",
+        "id": "customer.rental-bidder.push-rental-bidder",
         "line": 253
       },
       {
@@ -464,7 +464,7 @@
     ],
     "(main)/(customer)/(rental-marketplace)/confirmed.tsx": [
       {
-        "id": "customer.rental-marketplace.confirmed.replace-main",
+        "id": "customer.rental-marketplace.confirmed.replace-home",
         "line": 129
       },
       {
@@ -558,7 +558,7 @@
         "line": 107
       },
       {
-        "id": "customer.rental-marketplace.request-history.push-main",
+        "id": "customer.rental-marketplace.request-history.push-request-detail",
         "line": 141
       }
     ],
@@ -572,7 +572,7 @@
         "line": 126
       },
       {
-        "id": "customer.shops.push-main",
+        "id": "customer.shops.push-shop-detail",
         "line": 155
       }
     ],
@@ -616,7 +616,7 @@
         "line": 149
       },
       {
-        "id": "customer.shops.shop-detail.id.push-main",
+        "id": "customer.shops.shop-detail.id.push-order-create",
         "line": 189
       }
     ],
@@ -632,7 +632,7 @@
         "line": 78
       },
       {
-        "id": "customer.activity-canceled.replace-main",
+        "id": "customer.activity-canceled.replace-home",
         "line": 123
       },
       {
@@ -642,15 +642,15 @@
     ],
     "(main)/(customer)/(tabs)/activity-completed/index.tsx": [
       {
-        "id": "customer.activity-completed.replace-main",
+        "id": "customer.activity-completed.replace-home",
         "line": 59
       },
       {
-        "id": "customer.activity-completed.push-main",
+        "id": "customer.activity-completed.push-ride-detail",
         "line": 97
       },
       {
-        "id": "customer.activity-completed.push-main-2",
+        "id": "customer.activity-completed.push-rate-driver",
         "line": 103
       },
       {
@@ -660,15 +660,15 @@
     ],
     "(main)/(customer)/(tabs)/activity-scheduled/index.tsx": [
       {
-        "id": "customer.activity-scheduled.replace-main",
+        "id": "customer.activity-scheduled.replace-home",
         "line": 58
       },
       {
-        "id": "customer.activity-scheduled.push-main",
+        "id": "customer.activity-scheduled.push-ride-details-scheduled",
         "line": 97
       },
       {
-        "id": "customer.activity-scheduled.replace-main-2",
+        "id": "customer.activity-scheduled.replace-cancel-reason",
         "line": 104
       },
       {
@@ -678,15 +678,15 @@
     ],
     "(main)/(customer)/(tabs)/activity/index.tsx": [
       {
-        "id": "customer.activity.replace-main",
+        "id": "customer.activity.replace-home",
         "line": 58
       },
       {
-        "id": "customer.activity.push-main",
+        "id": "customer.activity.push-driver-info",
         "line": 96
       },
       {
-        "id": "customer.activity.push-main-2",
+        "id": "customer.activity.push-chat",
         "line": 103
       },
       {
@@ -696,7 +696,7 @@
     ],
     "(main)/(customer)/(tabs)/activity/share-receipt/index.tsx": [
       {
-        "id": "customer.activity.share-receipt.replace-main",
+        "id": "customer.activity.share-receipt.replace-activity",
         "line": 27
       },
       {
@@ -714,7 +714,7 @@
     ],
     "(main)/(customer)/(tabs)/activity/top-up-details/index.tsx": [
       {
-        "id": "customer.activity.top-up-details.replace-main",
+        "id": "customer.activity.top-up-details.replace-activity",
         "line": 23
       },
       {
@@ -728,11 +728,11 @@
     ],
     "(main)/(customer)/(tabs)/activity/top-up/index.tsx": [
       {
-        "id": "customer.activity.top-up.replace-main",
+        "id": "customer.activity.top-up.replace-activity",
         "line": 72
       },
       {
-        "id": "customer.activity.top-up.push-main",
+        "id": "customer.activity.top-up.push-top-up",
         "line": 116
       },
       {
@@ -762,7 +762,7 @@
         "line": 76
       },
       {
-        "id": "customer.driver-history.push-main",
+        "id": "customer.driver-history.push-driver-history",
         "line": 102
       },
       {
@@ -776,11 +776,11 @@
         "line": 82
       },
       {
-        "id": "customer.history-detail.push-main",
+        "id": "customer.history-detail.push-share-receipt",
         "line": 126
       },
       {
-        "id": "customer.history-detail.push-main-2",
+        "id": "customer.history-detail.push-report-issue",
         "line": 133
       },
       {
@@ -978,7 +978,7 @@
         "line": 414
       },
       {
-        "id": "customer.rides.push-main",
+        "id": "customer.rides.push-ride-detail",
         "line": 528
       },
       {
@@ -990,7 +990,7 @@
         "line": 550
       },
       {
-        "id": "customer.rides.push-main-2",
+        "id": "customer.rides.push-home",
         "line": 582
       },
       {
@@ -1010,11 +1010,11 @@
         "line": 660
       },
       {
-        "id": "customer.rides.push-main-3",
+        "id": "customer.rides.push-inbox",
         "line": 677
       },
       {
-        "id": "customer.rides.push-main-4",
+        "id": "customer.rides.push-referral",
         "line": 686
       }
     ],
@@ -1084,7 +1084,7 @@
     ],
     "(main)/(customer)/(tabs)/settings/data-analytics/index.tsx": [
       {
-        "id": "customer.settings.data-analytics.replace-main",
+        "id": "customer.settings.data-analytics.replace-settings",
         "line": 87
       },
       {
@@ -1096,11 +1096,11 @@
         "line": 102
       },
       {
-        "id": "customer.settings.data-analytics.push-main",
+        "id": "customer.settings.data-analytics.push-request-data",
         "line": 106
       },
       {
-        "id": "customer.settings.data-analytics.push-main-2",
+        "id": "customer.settings.data-analytics.push-delete-data",
         "line": 109
       },
       {
@@ -1224,15 +1224,15 @@
     ],
     "(main)/(customer)/(tabs)/settings/help-support/index.tsx": [
       {
-        "id": "customer.settings.help-support.replace-main",
+        "id": "customer.settings.help-support.replace-settings",
         "line": 25
       },
       {
-        "id": "customer.settings.help-support.push-main",
+        "id": "customer.settings.help-support.push-faq",
         "line": 34
       },
       {
-        "id": "customer.settings.help-support.push-main-2",
+        "id": "customer.settings.help-support.push-contact-support",
         "line": 39
       },
       {
@@ -1240,15 +1240,15 @@
         "line": 44
       },
       {
-        "id": "customer.settings.help-support.push-main-3",
+        "id": "customer.settings.help-support.push-emergency-contacts",
         "line": 52
       },
       {
-        "id": "customer.settings.help-support.push-main-4",
+        "id": "customer.settings.help-support.push-privacy-policy",
         "line": 60
       },
       {
-        "id": "customer.settings.help-support.push-main-5",
+        "id": "customer.settings.help-support.push-terms-of-service",
         "line": 65
       },
       {
@@ -1264,7 +1264,7 @@
     ],
     "(main)/(customer)/(tabs)/settings/linked-accounts/index.tsx": [
       {
-        "id": "customer.settings.linked-accounts.replace-main",
+        "id": "customer.settings.linked-accounts.replace-settings",
         "line": 60
       },
       {
@@ -1450,7 +1450,7 @@
     ],
     "(main)/(customer)/(tabs)/settings/saved-addresses/add-address/index.tsx": [
       {
-        "id": "customer.settings.saved-addresses.add-address.replace-main",
+        "id": "customer.settings.saved-addresses.add-address.replace-saved-addresses",
         "line": 87
       },
       {
@@ -1484,7 +1484,7 @@
     ],
     "(main)/(customer)/(tabs)/settings/saved-addresses/index.tsx": [
       {
-        "id": "customer.settings.saved-addresses.push-main",
+        "id": "customer.settings.saved-addresses.push-saved-addresses",
         "line": 160
       },
       {
@@ -1520,11 +1520,11 @@
     ],
     "(main)/(customer)/(tabs)/settings/top-up-success/index.tsx": [
       {
-        "id": "customer.settings.top-up-success.replace-main",
+        "id": "customer.settings.top-up-success.replace-rides",
         "line": 43
       },
       {
-        "id": "customer.settings.top-up-success.replace-main-2",
+        "id": "customer.settings.top-up-success.replace-home",
         "line": 50
       },
       {
@@ -1560,7 +1560,7 @@
         "line": 215
       },
       {
-        "id": "customer.wallet.push-main",
+        "id": "customer.wallet.push-top-up",
         "line": 246
       },
       {
@@ -1658,7 +1658,7 @@
         "line": 27
       },
       {
-        "id": "customer.canceled.replace-main",
+        "id": "customer.canceled.replace-home",
         "line": 39
       }
     ],
@@ -1904,11 +1904,11 @@
         "line": 27
       },
       {
-        "id": "customer.no-drivers-available.replace-main",
+        "id": "customer.no-drivers-available.replace-home",
         "line": 47
       },
       {
-        "id": "customer.no-drivers-available.push-main",
+        "id": "customer.no-drivers-available.push-schedule-ride",
         "line": 54
       }
     ],
@@ -2024,11 +2024,11 @@
         "line": 440
       },
       {
-        "id": "customer.ride-detail.ride_id.push-main",
+        "id": "customer.ride-detail.ride_id.push-fare-dispute",
         "line": 452
       },
       {
-        "id": "customer.ride-detail.ride_id.push-main-2",
+        "id": "customer.ride-detail.ride_id.push-report-issue",
         "line": 466
       }
     ],
@@ -2042,11 +2042,11 @@
         "line": 89
       },
       {
-        "id": "customer.ride-details-scheduled.id.push-main",
+        "id": "customer.ride-details-scheduled.id.push-rate-driver",
         "line": 133
       },
       {
-        "id": "customer.ride-details-scheduled.id.replace-main",
+        "id": "customer.ride-details-scheduled.id.replace-cancel-reason",
         "line": 140
       },
       {
@@ -2060,17 +2060,17 @@
         "line": 52
       },
       {
-        "id": "customer.ride-scheduled.replace-main",
+        "id": "customer.ride-scheduled.replace-activity",
         "line": 112
       },
       {
-        "id": "customer.ride-scheduled.replace-main-2",
+        "id": "customer.ride-scheduled.replace-home",
         "line": 120
       }
     ],
     "(main)/(customer)/ride-tracking/[ride_id].tsx": [
       {
-        "id": "customer.ride-tracking.ride_id.replace-main",
+        "id": "customer.ride-tracking.ride_id.replace-home",
         "line": 390
       },
       {
@@ -2090,7 +2090,7 @@
         "line": 557
       },
       {
-        "id": "customer.ride-tracking.ride_id.push-main",
+        "id": "customer.ride-tracking.ride_id.push-chat",
         "line": 561
       },
       {
@@ -2106,7 +2106,7 @@
         "line": 630
       },
       {
-        "id": "customer.ride-tracking.ride_id.push-main-2",
+        "id": "customer.ride-tracking.ride_id.push-chat-2",
         "line": 634
       },
       {
@@ -2114,7 +2114,7 @@
         "line": 638
       },
       {
-        "id": "customer.ride-tracking.ride_id.push-main-3",
+        "id": "customer.ride-tracking.ride_id.push-rate-driver",
         "line": 663
       }
     ],
@@ -2146,19 +2146,19 @@
         "line": 118
       },
       {
-        "id": "customer.services-hub.push-main",
+        "id": "customer.services-hub.push-shops",
         "line": 164
       },
       {
-        "id": "customer.services-hub.push-main-2",
+        "id": "customer.services-hub.push-rental-marketplace",
         "line": 195
       },
       {
-        "id": "customer.services-hub.push-main-3",
+        "id": "customer.services-hub.push-delivery",
         "line": 229
       },
       {
-        "id": "customer.services-hub.push-main-4",
+        "id": "customer.services-hub.push-emergency",
         "line": 263
       }
     ],
@@ -2168,11 +2168,11 @@
         "line": 30
       },
       {
-        "id": "customer.user-arrived.replace-main",
+        "id": "customer.user-arrived.replace-rate-driver",
         "line": 49
       },
       {
-        "id": "customer.user-arrived.replace-main-2",
+        "id": "customer.user-arrived.replace-home",
         "line": 56
       }
     ],
@@ -2186,17 +2186,17 @@
         "line": 142
       },
       {
-        "id": "fleet.dashboard.push-main",
+        "id": "fleet.dashboard.push-more",
         "line": 160
       },
       {
-        "id": "fleet.dashboard.push-main-2",
+        "id": "fleet.dashboard.push-integrations",
         "line": 174
       }
     ],
     "(main)/(fleet)/(tabs)/finance/index.tsx": [
       {
-        "id": "fleet.finance.push-main",
+        "id": "fleet.finance.push-trips",
         "line": 119
       }
     ],
@@ -2222,7 +2222,7 @@
         "line": 265
       },
       {
-        "id": "fleet.operations.push-main",
+        "id": "fleet.operations.push-assign",
         "line": 293
       },
       {
@@ -2254,11 +2254,11 @@
         "line": 147
       },
       {
-        "id": "fleet.drivers.id.push-main",
+        "id": "fleet.drivers.id.push-vehicles",
         "line": 435
       },
       {
-        "id": "fleet.drivers.id.push-main-2",
+        "id": "fleet.drivers.id.push-assign",
         "line": 485
       }
     ],
@@ -2282,11 +2282,11 @@
         "line": 149
       },
       {
-        "id": "fleet.vehicles.id.push-main",
+        "id": "fleet.vehicles.id.push-drivers",
         "line": 398
       },
       {
-        "id": "fleet.vehicles.id.push-main-2",
+        "id": "fleet.vehicles.id.push-assign",
         "line": 459
       }
     ],
@@ -2296,15 +2296,15 @@
         "line": 56
       },
       {
-        "id": "rider.active-subscription.push-main",
+        "id": "rider.active-subscription.push-subscription-plans",
         "line": 75
       },
       {
-        "id": "rider.active-subscription.push-main-2",
+        "id": "rider.active-subscription.push-subscription-plans-2",
         "line": 108
       },
       {
-        "id": "rider.active-subscription.push-main-3",
+        "id": "rider.active-subscription.push-subscription-plans-3",
         "line": 115
       },
       {
@@ -2608,7 +2608,7 @@
         "line": 361
       },
       {
-        "id": "rider.d.earning.push-main",
+        "id": "rider.d.earning.push-earnings-detail",
         "line": 400
       },
       {
@@ -2672,7 +2672,7 @@
         "line": 1132
       },
       {
-        "id": "rider.d.push-main",
+        "id": "rider.d.push-break-mode",
         "line": 1151
       },
       {
@@ -2680,7 +2680,7 @@
         "line": 1163
       },
       {
-        "id": "rider.d.push-main-2",
+        "id": "rider.d.push-break-mode-2",
         "line": 1177
       },
       {
@@ -2688,15 +2688,15 @@
         "line": 1250
       },
       {
-        "id": "rider.d.push-main-3",
+        "id": "rider.d.push-packages",
         "line": 1311
       },
       {
-        "id": "rider.d.push-main-4",
+        "id": "rider.d.push-hotspot-map",
         "line": 1334
       },
       {
-        "id": "rider.d.push-main-5",
+        "id": "rider.d.push-rental-bidder",
         "line": 1417
       },
       {
@@ -2728,7 +2728,7 @@
         "line": 353
       },
       {
-        "id": "rider.d.wallet.push-main",
+        "id": "rider.d.wallet.push-payout-method",
         "line": 365
       }
     ],
@@ -2760,11 +2760,11 @@
         "line": 128
       },
       {
-        "id": "rider.due-amounts.push-main",
+        "id": "rider.due-amounts.push-packages",
         "line": 202
       },
       {
-        "id": "rider.due-amounts.push-main-2",
+        "id": "rider.due-amounts.push-packages-2",
         "line": 223
       }
     ],
@@ -2806,15 +2806,15 @@
         "line": 136
       },
       {
-        "id": "rider.earnings.push-main",
+        "id": "rider.earnings.push-earnings-breakdown",
         "line": 223
       },
       {
-        "id": "rider.earnings.push-main-2",
+        "id": "rider.earnings.push-commission-statement",
         "line": 253
       },
       {
-        "id": "rider.earnings.push-main-3",
+        "id": "rider.earnings.push-due-amounts",
         "line": 281
       }
     ],
@@ -2944,7 +2944,7 @@
         "line": 553
       },
       {
-        "id": "rider.find-customer.push-main",
+        "id": "rider.find-customer.push-cancellation-reasons",
         "line": 579
       },
       {
@@ -2962,7 +2962,7 @@
         "line": 421
       },
       {
-        "id": "rider.finish-ride.push-main",
+        "id": "rider.finish-ride.push-rate-rider",
         "line": 604
       },
       {
@@ -3412,7 +3412,7 @@
         "line": 145
       },
       {
-        "id": "rider.rider-no-show.push-main",
+        "id": "rider.rider-no-show.push-cancellation-reasons",
         "line": 153
       },
       {
@@ -3430,7 +3430,7 @@
         "line": 123
       },
       {
-        "id": "rider.safety.push-main",
+        "id": "rider.safety.push-emergency-contacts",
         "line": 140
       },
       {
@@ -3478,11 +3478,11 @@
         "line": 134
       },
       {
-        "id": "rider.select-active-vehicle.replace-main",
+        "id": "rider.select-active-vehicle.replace-d",
         "line": 248
       },
       {
-        "id": "rider.select-active-vehicle.push-main",
+        "id": "rider.select-active-vehicle.push-add-vehicle",
         "line": 263
       }
     ],
@@ -3492,7 +3492,7 @@
         "line": 65
       },
       {
-        "id": "rider.settings.account-security.push-main",
+        "id": "rider.settings.account-security.push-change-password",
         "line": 76
       },
       {
@@ -3534,7 +3534,7 @@
         "line": 41
       },
       {
-        "id": "rider.settings.appearance.push-main",
+        "id": "rider.settings.appearance.push-language",
         "line": 53
       },
       {
@@ -3686,7 +3686,7 @@
     ],
     "(main)/(rider)/subscription-confirmation/index.tsx": [
       {
-        "id": "rider.subscription-confirmation.replace-main",
+        "id": "rider.subscription-confirmation.replace-rider",
         "line": 30
       },
       {
@@ -3704,7 +3704,7 @@
         "line": 83
       },
       {
-        "id": "rider.subscription-details.push-main",
+        "id": "rider.subscription-details.push-subscription-checkout",
         "line": 105
       },
       {
@@ -3722,7 +3722,7 @@
         "line": 81
       },
       {
-        "id": "rider.subscription-plans.push-main",
+        "id": "rider.subscription-plans.push-subscription-details",
         "line": 98
       },
       {
@@ -3736,7 +3736,7 @@
         "line": 57
       },
       {
-        "id": "rider.subscription-renewal.push-main",
+        "id": "rider.subscription-renewal.push-subscription-plans",
         "line": 78
       },
       {
@@ -3754,15 +3754,15 @@
         "line": 22
       },
       {
-        "id": "rider.support.push-main",
+        "id": "rider.support.push-faq",
         "line": 33
       },
       {
-        "id": "rider.support.push-main-2",
+        "id": "rider.support.push-contact-support",
         "line": 46
       },
       {
-        "id": "rider.support.push-main-3",
+        "id": "rider.support.push-report-issue",
         "line": 59
       },
       {
@@ -3802,7 +3802,7 @@
         "line": 165
       },
       {
-        "id": "rider.vehicle-management.push-main",
+        "id": "rider.vehicle-management.push-add-vehicle",
         "line": 361
       }
     ],

@@ -243,7 +243,7 @@ export default function WalletScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={t('rider_wallet.top_up_wallet')}
                   activeOpacity={0.85}
-                 testID="customer.wallet.push-main">
+                 testID="customer.wallet.push-top-up">
                   <Text style={styles.topUpButtonText}>{t('wallet.top_up')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity

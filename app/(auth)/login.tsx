@@ -143,7 +143,7 @@ export default function LoginScreen() {
       <TouchableOpacity
         onPress={() => router.push("/(auth)/forgot-password")}
         className="items-center mt-4"
-       testID="login.push-auth">
+       testID="login.push-forgot-password">
         <Text
           className="text-[14px] font-JakartaBold"
           style={{ color: colors.primary }}

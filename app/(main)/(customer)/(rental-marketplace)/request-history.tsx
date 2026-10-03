@@ -138,7 +138,7 @@ export default function RequestHistoryScreen() {
                   padding: 14,
                   marginBottom: 10,
                 }}
-               testID="customer.rental-marketplace.request-history.push-main">
+               testID="customer.rental-marketplace.request-history.push-request-detail">
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <Ionicons

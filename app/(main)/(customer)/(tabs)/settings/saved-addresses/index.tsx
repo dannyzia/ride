@@ -157,7 +157,7 @@ export default function SavedAddresses() {
           router.push(`/(main)/(customer)/(tabs)/settings/saved-addresses/${item.id}`)
         }
         activeOpacity={0.8}
-       testID="customer.settings.saved-addresses.push-main">
+       testID="customer.settings.saved-addresses.push-saved-addresses">
         <View style={[styles.iconBox, { backgroundColor: colors.primaryLight }]}>
           <Ionicons name={addressIcon(item.label)} size={24} color={colors.primary} />
         </View>

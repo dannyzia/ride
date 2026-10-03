@@ -102,7 +102,7 @@ export default function SubscriptionDetails() {
           <TouchableOpacity
             className="bg-goPrimary rounded-full w-full py-[16px] items-center"
             onPress={() => router.push(`/(main)/(rider)/subscription-checkout?planId=${plan.id}`)}
-           testID="rider.subscription-details.push-main">
+           testID="rider.subscription-details.push-subscription-checkout">
             <Text className="text-[18px] font-JakartaBold text-goWhite">Proceed to checkout</Text>
           </TouchableOpacity>
         </ScrollView>

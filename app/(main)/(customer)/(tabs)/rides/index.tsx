@@ -525,7 +525,7 @@ export default function RidesScreen() {
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={t('rides_list.a11y_view_details')}
-                 testID="customer.rides.push-main">
+                 testID="customer.rides.push-ride-detail">
                   <Text style={[styles.modalActionTextSecondary, { color: textPrimary }]}>
                     {t('rides_list.view_details')}
                   </Text>
@@ -579,7 +579,7 @@ export default function RidesScreen() {
         onPress={() => router.push("/(main)/(customer)/(tabs)/home")}
         accessibilityRole="button"
         accessibilityLabel={t('rides_list.book_a_ride')}
-       testID="customer.rides.push-main-2">
+       testID="customer.rides.push-home">
         <Text style={styles.bookBtnText}>{t('rides_list.book_a_ride')}</Text>
       </TouchableOpacity>
     </View>
@@ -674,7 +674,7 @@ export default function RidesScreen() {
           onPress={() => router.push("/(main)/(customer)/(tabs)/inbox")}
           accessibilityRole="button"
           accessibilityLabel={t('rides_list.a11y_inbox')}
-         testID="customer.rides.push-main-3">
+         testID="customer.rides.push-inbox">
           <Text style={[styles.navChipText, { color: textSecondary }]}>{t('rides_list.inbox')}</Text>
           <Ionicons name="arrow-forward" size={14} color={textSecondary} />
         </TouchableOpacity>
@@ -683,7 +683,7 @@ export default function RidesScreen() {
           onPress={() => router.push("/(main)/(customer)/(tabs)/referral")}
           accessibilityRole="button"
           accessibilityLabel={t('rides_list.a11y_referral')}
-         testID="customer.rides.push-main-4">
+         testID="customer.rides.push-referral">
           <Text style={[styles.navChipText, { color: textSecondary }]}>{t('rides_list.referral')}</Text>
           <Ionicons name="arrow-forward" size={14} color={textSecondary} />
         </TouchableOpacity>

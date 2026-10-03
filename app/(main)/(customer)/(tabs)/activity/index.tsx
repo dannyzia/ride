@@ -55,7 +55,7 @@ export default function ActivityOngoing() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/home")} testID="customer.activity.replace-main">
+        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/home")} testID="customer.activity.replace-home">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('rider_activity.ongoing')}</Text>
@@ -93,14 +93,14 @@ export default function ActivityOngoing() {
                 className="rounded-full w-full py-[14px] items-center"
                 style={{ backgroundColor: colors.primary }}
                 onPress={() => router.push("/(main)/(customer)/driver-info")}
-               testID="customer.activity.push-main">
+               testID="customer.activity.push-driver-info">
                 <Text className="text-[16px] font-JakartaBold" style={{ color: colors.white }}>{t('rider_activity.driver_info')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className="rounded-full shadow-go-sm w-full py-[14px] items-center"
                 style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
                 onPress={() => router.push(`/(main)/(customer)/chat/${activeRide.id}`)}
-               testID="customer.activity.push-main-2">
+               testID="customer.activity.push-chat">
                 <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>{t('rider_activity.chat')}</Text>
               </TouchableOpacity>
             </View>

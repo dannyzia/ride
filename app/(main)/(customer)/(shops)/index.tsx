@@ -152,7 +152,7 @@ useEffect(() => {
               padding: 16,
               marginBottom: 12,
             }}
-           testID="customer.shops.push-main">
+           testID="customer.shops.push-shop-detail">
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View
                 style={{

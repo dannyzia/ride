@@ -20,7 +20,7 @@ export default function TopUpDetails() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={bg} />
       <View className="flex-row items-center px-[24px] py-[16px]" style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
-        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/activity")} testID="customer.activity.top-up-details.replace-main">
+        <TouchableOpacity onPress={() => router.replace("/(main)/(customer)/(tabs)/activity")} testID="customer.activity.top-up-details.replace-activity">
           <Text className="text-[16px] font-Jakarta" style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[18px] font-JakartaBold" style={{ color: textPrimary }}>{t('top_up_details.title')}</Text>

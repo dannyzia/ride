@@ -30,7 +30,7 @@ export default function DriverSupport() {
           className="p-[14px] border rounded-[12px] mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/faq")}
-         testID="rider.support.push-main">
+         testID="rider.support.push-faq">
           <View className="flex-row justify-between items-center">
             <View>
               <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>FAQ</Text>
@@ -43,7 +43,7 @@ export default function DriverSupport() {
           className="p-[14px] border rounded-[12px] mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/contact-support")}
-         testID="rider.support.push-main-2">
+         testID="rider.support.push-contact-support">
           <View className="flex-row justify-between items-center">
             <View>
               <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Contact support</Text>
@@ -56,7 +56,7 @@ export default function DriverSupport() {
           className="p-[14px] border rounded-[12px] mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/report-issue")}
-         testID="rider.support.push-main-3">
+         testID="rider.support.push-report-issue">
           <View className="flex-row justify-between items-center">
             <View>
               <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>Report an issue</Text>

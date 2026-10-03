@@ -84,7 +84,7 @@ export default function AddAddress() {
           className="rounded-full w-full py-[16px] items-center mb-3"
           style={{ backgroundColor: colors.primary }}
           onPress={() => router.replace("/(main)/(customer)/(tabs)/settings/saved-addresses")}
-         testID="customer.settings.saved-addresses.add-address.replace-main">
+         testID="customer.settings.saved-addresses.add-address.replace-saved-addresses">
           <Text className="text-[18px] font-JakartaBold text-goWhite">{t('saved_addresses.done')}</Text>
         </TouchableOpacity>
         <TouchableOpacity

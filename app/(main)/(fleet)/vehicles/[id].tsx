@@ -395,7 +395,7 @@ export default function VehicleDetail() {
                 alignItems: "center",
                 paddingVertical: 10,
               }}
-             testID="fleet.vehicles.id.push-main">
+             testID="fleet.vehicles.id.push-drivers">
               <Text
                 style={{
                   fontFamily: "Jakarta-SemiBold",
@@ -456,7 +456,7 @@ export default function VehicleDetail() {
                 paddingHorizontal: 16,
                 paddingVertical: 8,
               }}
-             testID="fleet.vehicles.id.push-main-2">
+             testID="fleet.vehicles.id.push-assign">
               <Text
                 style={{
                   fontFamily: "Jakarta-SemiBold",

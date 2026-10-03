@@ -99,7 +99,7 @@ useEffect(() => {
               className="flex-row justify-between items-center p-[14px] border rounded-[12px] mb-3"
               style={{ backgroundColor: surfaceBg, borderColor }}
               onPress={() => router.push(`/(main)/(customer)/(tabs)/driver-history/${trip.ride_id}`)}
-             testID="customer.driver-history.push-main">
+             testID="customer.driver-history.push-driver-history">
               <View>
                 <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>
                   {trip.destination_address ?? t('driver_history.destination')}

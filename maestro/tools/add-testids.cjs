@@ -119,10 +119,24 @@ function deriveFunction(attrs, sf) {
     let body = expr;
     if (ts.isArrowFunction(expr) || ts.isParenthesizedExpression(expr)) body = expr.body;
     const text = body.getText(sf);
-    const routerMatch = text.match(/router\.(push|replace|navigate)\(\s*[`'"]\/?([^`'")]*)/);
+    // M-1 fix (2026-10-03): the capture must NOT exclude ')'. It previously read
+    // a character class that stopped at the first route group's closing paren:
+    //   router.push("/(main)/(customer)/(tabs)/settings/top-up")
+    //     -> capture "(main" -> pop() "(main" -> slug "main" -> "push-main"
+    // All 44 `push-main` IDs came from this; the same bug produced
+    // "login.push-auth" from router.push("/(auth)/forgot-password").
+    // Capture to the closing quote only, then take the last real path segment.
+    const routerMatch = text.match(/router\.(push|replace|navigate)\(\s*[`'"]([^`'"]*)/);
     if (routerMatch) {
-      const target = routerMatch[2].split('/').filter(Boolean).pop() || routerMatch[1];
-      return slug(`${routerMatch[1]}-${target}`);
+      const raw = routerMatch[2]
+        .split('?')[0] // drop query string (?id=…, ?status=…)
+        .replace(/\$\{[^}]*\}/g, ''); // drop interpolations
+      const segs = raw
+        .split('/')
+        .map((s) => s.replace(/[()]/g, '').trim())
+        .filter(Boolean);
+      const leaf = segs[segs.length - 1] || routerMatch[1];
+      return slug(`${routerMatch[1]}-${leaf}`);
     }
     const callMatch = text.match(/(?:^|[^\w.])([a-zA-Z][\w]*)\s*\(/);
     if (callMatch && !['if', 'for', 'while', 'switch', 'catch', 'return'].includes(callMatch[1])) {

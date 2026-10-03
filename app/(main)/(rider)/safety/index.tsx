@@ -137,7 +137,7 @@ export default function DriverSafety() {
           className="p-[14px] border rounded-[12px] mt-2 mb-3"
           style={{ backgroundColor: surfaceBg, borderColor }}
           onPress={() => router.push("/(main)/(rider)/emergency-contacts")}
-         testID="rider.safety.push-main">
+         testID="rider.safety.push-emergency-contacts">
           <View className="flex-row justify-between items-center">
             <View>
               <Text className="text-[15px] font-JakartaBold" style={{ color: textPrimary }}>{t('safety.emergency_contacts')}</Text>

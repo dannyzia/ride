@@ -397,7 +397,7 @@ export default function EarningScreen() {
                     }
                     accessibilityRole="button"
                     accessibilityLabel={`Earnings for ${dayLabel(day.date)}`}
-                   testID="rider.d.earning.push-main">
+                   testID="rider.d.earning.push-earnings-detail">
                     <View style={styles.dayLeft}>
                       <Text style={[styles.dayLabel, { color: textPrimary }]}>
                         {dayLabel(day.date)}

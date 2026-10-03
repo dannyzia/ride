@@ -27,7 +27,7 @@ export default function SubscriptionConfirmation() {
       <TouchableOpacity
         className="bg-goPrimary rounded-full w-full py-[16px] items-center"
         onPress={() => router.replace("/(main)/(rider)/")}
-       testID="rider.subscription-confirmation.replace-main">
+       testID="rider.subscription-confirmation.replace-rider">
         <Text className="text-[18px] font-JakartaBold text-goWhite">Go online</Text>
       </TouchableOpacity>
       <TouchableOpacity

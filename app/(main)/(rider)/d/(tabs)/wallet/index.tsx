@@ -362,7 +362,7 @@ export default function WalletScreen() {
           className="rounded-[12px] p-[14px] flex-row items-center justify-between"
           style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
           onPress={() => router.push("/(main)/(rider)/payout-method")}
-         testID="rider.d.wallet.push-main">
+         testID="rider.d.wallet.push-payout-method">
           <View className="flex-row items-center gap-2">
             <Ionicons
               name="card-outline"

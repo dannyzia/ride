@@ -85,7 +85,7 @@ export default function DeliveryListScreen() {
       style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
       onPress={() => router.push(`/(main)/(customer)/(delivery)/request-detail?id=${item.id}`)}
       activeOpacity={0.7}
-     testID="customer.delivery.push-main">
+     testID="customer.delivery.push-request-detail">
       <View className="flex-row justify-between items-start mb-2">
         <Text className="text-sm font-JakartaBold" style={{ color: textPrimary }} numberOfLines={1}>
           {item.pickup_address} → {item.dropoff_address}
@@ -120,7 +120,7 @@ export default function DeliveryListScreen() {
         <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
           Delivery
         </Text>
-        <TouchableOpacity onPress={() => router.push('/(main)/(customer)/(delivery)/request-create')} testID="customer.delivery.push-main-2">
+        <TouchableOpacity onPress={() => router.push('/(main)/(customer)/(delivery)/request-create')} testID="customer.delivery.push-request-create">
           <Ionicons name="add-circle" size={28} color={colors.primary} />
         </TouchableOpacity>
       </View>
@@ -142,7 +142,7 @@ export default function DeliveryListScreen() {
             className="mt-6 px-8 py-3 rounded-xl"
             style={{ backgroundColor: colors.primary }}
             onPress={() => router.push('/(main)/(customer)/(delivery)/request-create')}
-           testID="customer.delivery.push-main-3">
+           testID="customer.delivery.push-request-create-2">
             <Text className="text-white font-JakartaBold">Send a Package</Text>
           </TouchableOpacity>
         </View>
