@@ -44,7 +44,12 @@ const sql = postgres(DATABASE_URL, { prepare: false, max: 1 });
     const driverId = driverRows[0].id;
     console.log(`[grant] driver ${DRIVER_PHONE} -> ${driverId}`);
 
-    // Upsert the Test Unlimited package (no unique constraint on name; check-then-act).
+    // Upsert the Test Unlimited package. This is still check-then-act (no
+    // advisory lock here, unlike ensureLaunchFreePackage), but packages.name is
+    // no longer unconstrained: packages_name_live_uq (migration 0057) makes it
+    // unique among LIVE rows. So a concurrent run now surfaces 23505 instead of
+    // quietly minting a duplicate row. The index is PARTIAL, so the
+    // `deleted_at = NULL` below frees the name again for a later re-run.
     const existing = await sql<{ id: string }[]>`
       SELECT id FROM packages WHERE name = ${PACKAGE_NAME} AND deleted_at IS NULL LIMIT 1
     `;

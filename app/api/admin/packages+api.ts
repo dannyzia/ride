@@ -56,6 +56,14 @@ export async function POST(request: Request) {
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (errors.getErrorStatus(err) === 403)
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+    // packages_name_live_uq (migration 0057): a LIVE package already holds this
+    // name. Previously this was silently allowed and produced duplicate plan
+    // rows; it is a conflict, not a server fault.
+    if (errors.getErrorCode(err) === '23505')
+      return Response.json(
+        { error: 'package_name_taken', message: 'A live package with this name already exists' },
+        { status: 409 },
+      );
     logger.error("[admin/packages] create error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }
@@ -82,6 +90,12 @@ export async function PUT(request: Request) {
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     if (errors.getErrorStatus(err) === 403)
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+    // Renaming onto a live package's name now trips packages_name_live_uq.
+    if (errors.getErrorCode(err) === '23505')
+      return Response.json(
+        { error: 'package_name_taken', message: 'A live package with this name already exists' },
+        { status: 409 },
+      );
     logger.error("[admin/packages] update error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
   }

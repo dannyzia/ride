@@ -459,7 +459,18 @@ export const packages = pgTable(
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
     deleted_at: timestamptz("deleted_at"),
   },
-  (t) => [index("packages_vehicle_type_idx").on(t.vehicle_type)],
+  (t) => [
+    index("packages_vehicle_type_idx").on(t.vehicle_type),
+    // M-3 defense in depth: packages.name had NO uniqueness, so two racing
+    // creators could each mint a "Launch Free" row. ensureLaunchFreePackage
+    // serializes with pg_advisory_xact_lock, but a lock only covers writers
+    // that take it; this makes the invariant a property of the SCHEMA.
+    // Scoped to live rows: packages are soft-deleted (admin DELETE sets
+    // deleted_at) and the ensure lookup filters `deleted_at IS NULL`, so a
+    // plain UNIQUE(name) would permanently reserve a retired name — and would
+    // not even apply to the 4 live+soft-deleted name groups already in the DB.
+    uniqueIndex("packages_name_live_uq").on(t.name).where(sql`${t.deleted_at} IS NULL`),
+  ],
 );
 
 export const promoCodes = pgTable(
