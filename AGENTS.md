@@ -204,8 +204,17 @@ grep -r "console\.log" app/ lib/ utils-server/ src/       # must return nothing
 grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return nothing
 
 # Automated pre-commit gate — scripts/git-hooks/pre-commit (install: node scripts/install-hooks.js)
-# 4 stages, any failure BLOCKS the commit, in order:
-#   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector  4 eslint (staged files only)
+# 5 stages, any failure BLOCKS the commit, in order:
+#   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector
+#   4 testID codemod idempotence (B-1)  5 eslint (staged files only)
+# Stage 4 runs `node maestro/tools/testid-idempotence.cjs` whenever an app/**.tsx? or
+# maestro/tools/add-testids.cjs is staged. Proves the Gate-1 codemod is a FIXED POINT:
+# a second write-mode run touches zero files (B-1 double-prefixed every testID across
+# 221 files this way), --strip -> regen reproduces app/ byte-for-byte, and no ID repeats
+# a path segment. Runs against a SANDBOX COPY of app/ (add-testids.cjs honours
+# APP_TESTIDS_ROOT) because --strip deletes every testID it is pointed at; the real tree
+# is never written. Nothing else in the pipeline can catch this: tsc/eslint ignore
+# testIDs, and flow-xcheck passes a self-consistent wrong map by construction.
 # Stage 3 runs `node maestro/tools/flow-xcheck.cjs` whenever a maestro/flows/**.yaml is staged.
 # TWO BLOCKING checks: (a) a flow `id:` selector absent from maestro/tools/testid-map.json can
 # never resolve on device; (b) MAP DRIFT — the selector is in the map but no longer in the app/

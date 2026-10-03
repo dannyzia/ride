@@ -33,7 +33,14 @@ const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
 
-const APP = path.resolve(__dirname, '..', '..', 'app');
+// APP_TESTIDS_ROOT lets the idempotence gate (maestro/tools/testid-idempotence.cjs)
+// point this codemod at a SANDBOX COPY of app/ instead of the working tree. The
+// strip->regen proof has to run --strip, which DELETES every testID attribute, so
+// running it against the real tree would destroy the developer's work. The
+// override exists for that reason alone; unset, behaviour is unchanged.
+const APP = process.env.APP_TESTIDS_ROOT
+  ? path.resolve(process.env.APP_TESTIDS_ROOT)
+  : path.resolve(__dirname, '..', '..', 'app');
 const DRY_RUN = process.argv.includes('--dry-run');
 const STRIP_ONLY = process.argv.includes('--strip');
 

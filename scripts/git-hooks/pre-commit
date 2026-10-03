@@ -75,6 +75,34 @@ else
   fi
 fi
 
+echo "⏳ Pre-commit: testID codemod idempotence gate (B-1)..."
+# Runs whenever the codemod or any app/ file is staged — B-1 was a codemod that
+# double-prefixed every testID (_layout._layout.set-theme) across 221 files on a
+# write-mode re-run. It shipped once and was caught only by reading the diff. The
+# gate proves re-run is a no-op, strip→regen round-trips, and no ID repeats a
+# path segment. It runs against a SANDBOX copy of app/ (--strip deletes every
+# testID, so it must never touch the working tree). Must sit ABOVE lint, which
+# exits 0 early when no JS/TS is staged.
+STAGED_APP=()
+while IFS= read -r -d '' f; do
+  STAGED_APP+=("$f")
+done < <(git diff --cached --name-only -z --diff-filter=ACM | grep -zE '^(app/.*\.tsx?|maestro/tools/add-testids\.cjs)$' || true)
+
+if [ ${#STAGED_APP[@]} -eq 0 ]; then
+  echo "✅ No staged app/ files or codemod changes — skipping idempotence gate."
+else
+  if ! node maestro/tools/testid-idempotence.cjs; then
+    echo "❌ testID codemod idempotence gate failed — commit blocked."
+    echo "   The Gate-1 codemod must be idempotent: a second write-mode run has to touch"
+    echo "   zero files, and --strip → regen has to reproduce app/ byte-for-byte. A"
+    echo "   non-zero re-run count is B-1 returning (every testID double-prefixed)."
+    echo "   Fix: repair the preserve-branch in maestro/tools/add-testids.cjs so it keeps"
+    echo "         its own output, then run: node maestro/tools/add-testids.cjs"
+    echo "         and commit the resulting app/ changes."
+    exit 1
+  fi
+fi
+
 echo "⏳ Pre-commit: lint staged files..."
 
 # NUL-delimited staged .ts/.tsx/.js/.jsx (only those still on disk, i.e. the
