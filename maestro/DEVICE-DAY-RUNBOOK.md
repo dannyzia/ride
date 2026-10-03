@@ -6,13 +6,51 @@
 **Source of truth:** `TEST-SETUP.md` §1–2 (IP sync + startup order) — this runbook extends it for Maestro unattended runs, it does not replace it
 **Related (concrete paths):**
   - `maestro/utils/run-device-day.sh` — **executable form of §1B–§8 below** (one unattended command)
+  - `maestro/utils/adb-env.sh` — **single-adb resolver every device script sources** (see "One adb, one build")
+  - `maestro/utils/adb-env-selftest.sh` — proves all device scripts resolve the same adb
+  - `maestro/utils/section7-preflight-gate.sh` — proves the §7 preflight gate below still fails fast
   - `maestro/utils/bootstrap-device-day.sh` — automated steps 1–5 of this runbook
   - `maestro/utils/adb-gps-banani.sh`, `maestro/utils/adb-gps-gulshan.sh` — GPS seeding (emulator only)
   - `maestro/COVERAGE-MANIFEST.md` §7 G-02 / round notes — what the key-flows-×2 run must produce
   - `TEST-SETUP.md` §5 — failure modes table (splash-hang, black screen, stale IP)
   - `scripts/dev-env-sync.js` — the LAN-IP sync every session depends on
-**Last verified:** 2026-10-03, by testing model (adb dual-build pinning, headless-emulator image name, and the `adb-unauthorized` blocker all confirmed live)
+**Last verified:** 2026-10-03, by testing model (adb dual-build pinning now centralised in `adb-env.sh` + proven by `adb-env-selftest.sh`, the §7 preflight gate proven by `section7-preflight-gate.sh`, headless-emulator image name, and the `adb-unauthorized` blocker all confirmed live)
 **How to update:** after every device day, append newly hit failure modes to the table at the bottom and correct any step that drifted.
+
+---
+
+## One adb, one build
+
+Two adb builds are installed side by side on this host (`platform-tools/adb.exe`
+v37 on PATH, and `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` v36). Both
+start a server on **tcp:5037**, so a session that mixes them produces
+diagnostics describing whichever binary answered — the `unauthorized` state on
+2026-10-03 was partly chased against the build the emulator never invoked.
+
+**All device tooling resolves one adb through `maestro/utils/adb-env.sh`.** Every
+script under `maestro/utils/` sources it and calls `"$ADB"`, so one device day
+cannot drive two binaries:
+
+```bash
+. maestro/utils/adb-env.sh        # prints the resolved binary + version
+ADB=/path/to/adb bash maestro/utils/bootstrap-device-day.sh   # explicit override
+```
+
+Resolution order: `$ADB` → PATH → Android SDK. **PATH wins by default on
+purpose** — it is the build the emulator client itself invokes, so pinning to a
+different build could desynchronise the emulator rather than fix it. The pin
+guarantees *consistency*, not a different binary. Any other build found is
+reported; override with `ADB=` if you need the other one.
+
+Verify after editing any device script:
+
+```bash
+bash maestro/utils/adb-env-selftest.sh    # exit 0 = one adb everywhere
+```
+
+It checks all device scripts resolve identically, that none is left calling bare
+`adb`, that `ADB=` is honoured, and that a bad `ADB=` fails loudly instead of
+silently falling back to PATH.
 
 ---
 
@@ -201,6 +239,51 @@ If it hangs at splash / black screen → TEST-SETUP.md §5 table: 99% stale IP. 
 
 > Executed automatically by `maestro/utils/run-device-day.sh` (see "One-command path"). The loop below is the manual/equivalent form and stays authoritative for the reset-between-runs semantics.
 
+### §7 preflight gate — run this BEFORE the loop, every time
+
+```bash
+. maestro/utils/adb-env.sh          # same pinned adb the loop will use
+
+ST="$(adb devices | awk '/emulator-[0-9]+|device-/{print $2; exit}')"
+BOOTED="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+
+if [ "$ST" = "unauthorized" ]; then
+  echo "BLOCKED: adb auth failed — the guest never accepted the host key."
+  echo "  No flow can run. Maestro times out per-step instead of failing fast."
+  echo "  Verified 2026-10-03 NOT fixed by: cold boot, -wipe-data, headless -no-window,"
+  echo "  unifying the two adb builds, or a fresh ADB_VENDOR_KEYS keyring — and it"
+  echo "  reproduces on two independent AVDs, so the image is not corrupt."
+  echo "  Needs an interactive desktop session to show the key confirmation."
+  exit 1
+fi
+if [ "$ST" != "device" ] || [ "$BOOTED" != "1" ]; then
+  echo "BLOCKED: device not ready (state='${ST:-absent}' sys.boot_completed='${BOOTED:-unset}')."
+  echo "  Re-run the §1B boot wait; do NOT start the loop."
+  exit 1
+fi
+echo "preflight OK: state=$ST boot_completed=$BOOTED"
+```
+
+**Why this gate exists.** `adb wait-for-device` returns immediately against an
+`unauthorized` target, and `maestro test` then burns its per-step timeout on
+every step of every flow — on the 2026-10-03 blocked day that is the difference
+between a clear diagnosis and 6 flows × 2 runs × minutes of identical timeouts,
+with logs that never mention the real cause. The gate turns that into one line.
+
+**Two distinct outcomes, and the wording matters.** `unauthorized` is the adb
+**auth** failure. Any other non-`device` state (including `offline`, which is a
+normal early-boot state) is **not ready** — the gate still stops, because flows
+must not start, but it must never be reported as an auth blocker. The automated
+path performs the equivalent check at §1B and dies with the `adb-unauthorized`
+blocker code; this is the manual equivalent, kept here so the two cannot drift.
+
+Verify this snippet without a device (it extracts the block above and runs it
+against a stub `adb`):
+
+```bash
+bash maestro/utils/section7-preflight-gate.sh    # exit 0 = gate behaves
+```
+
 Per-flow, twice, with state reset between the two runs (login flows are naturally re-runnable; booking/ride flows need the account reset or a fresh ride):
 
 ```bash
@@ -272,5 +355,5 @@ adb kill-server
 | `adb shell emu geo fix` on physical phone | command is emulator-only | physical = mock-location app (out of unattended scope) |
 | bootstrap says servers "already listening" but flows still fail | stale process from a previous network session | kill and restart both (Metro picks up new IP only on restart) |
 | **Emulator boots but `adb devices` shows `unauthorized` forever** (2026-10-03) | emulator guest never accepts the host adb key. NOT fixed by cold boot, `-wipe-data`, headless `-no-window`, unified adb builds, or a fresh `ADB_VENDOR_KEYS` keyring. **Reproduced on two independent AVDs (Medium_Phone AND Pixel_6a)**, so it is not a corrupt image — the authorization path itself is unavailable, most likely because there is no interactive desktop session to show the key-confirmation. | stop-the-day; no unattended fix from the shell. Needs an interactive session, or a device/emulator host that can complete adb auth. Evidence: `maestro/test-results/2026-10-03/` |
-| **Two different `adb` builds both on PATH** (2026-10-03) | `C:\Users\callz\platform-tools\adb.exe` (v37.0.0, first on PATH, invoked by the emulator client) and `...\Android\Sdk\platform-tools\adb.exe` (v36.0.0) both start servers on tcp:5037 | pin one for the whole session — `adb` from PATH — before any device work, or diagnostics point at the wrong server |
+| **Two different `adb` builds both on PATH** (2026-10-03) | `C:\Users\callz\platform-tools\adb.exe` (v37.0.0, first on PATH, invoked by the emulator client) and `...\Android\Sdk\platform-tools\adb.exe` (v36.0.0) both start servers on tcp:5037 | **FIXED 2026-10-03:** every script under `maestro/utils/` now resolves one adb through `adb-env.sh` ($ADB → PATH → SDK), so the session cannot mix builds. Verify with `bash maestro/utils/adb-env-selftest.sh`. The two installs remain on the box, so a manual `adb ...` typed outside these scripts is still unpinned — export it first. |
 | `-wipe-data` crashes the emulator at launch with `UpdateLayeredWindowIndirect failed … (A device attached to the system is not functioning.)` | guest window creation fails; windowing is unavailable in this environment | drop `-wipe-data`; use `-no-window -no-audio -gpu swiftshader_indirect` (process survives headless, though adb auth still failed here) |

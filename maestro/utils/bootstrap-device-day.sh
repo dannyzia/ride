@@ -45,8 +45,13 @@ fi
 
 if [ "${1:-}" != "--no-emulator" ]; then
   echo "== 4) emulator + app =="
-  adb start-server >/dev/null 2>&1 || true
-  adb devices | grep -q "emulator\|device" || echo "WARN: no device attached — start the emulator (04 Emulator Android.bat) and re-run"
+  # One adb for the whole session (adb-env.sh), so this script cannot drive a
+  # different build than run-device-day.sh / adb-gps-*.sh. Both installs on this
+  # box bind tcp:5037; mixing them is what made the 2026-10-03 `unauthorized`
+  # diagnosis ambiguous. Override with ADB=/path/to/adb.
+  . "$ROOT/maestro/utils/adb-env.sh"
+  "$ADB" start-server >/dev/null 2>&1 || true
+  "$ADB" devices | grep -q "emulator\|device" || echo "WARN: no device attached — start the emulator (04 Emulator Android.bat) and re-run"
   # Permission boot config (§15)
   for PERM in \
     android.permission.ACCESS_FINE_LOCATION \
@@ -54,10 +59,10 @@ if [ "${1:-}" != "--no-emulator" ]; then
     android.permission.READ_EXTERNAL_STORAGE \
     android.permission.POST_NOTIFICATIONS \
     android.permission.READ_MEDIA_IMAGES; do
-    adb shell pm grant com.ride.bd "$PERM" >/dev/null 2>&1 || true
+    "$ADB" shell pm grant com.ride.bd "$PERM" >/dev/null 2>&1 || true
   done
-  adb shell am force-stop com.ride.bd || true
-  adb shell monkey -p com.ride.bd 1 || true
+  "$ADB" shell am force-stop com.ride.bd || true
+  "$ADB" shell monkey -p com.ride.bd 1 || true
 fi
 
 echo "== bootstrap done =="

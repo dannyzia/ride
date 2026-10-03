@@ -76,12 +76,25 @@ die() {
 
 qemu_running() { tasklist 2>/dev/null | grep -qi "qemu"; }
 
+# One adb for the whole run, via the shared resolver every device script uses
+# (adb-env.sh). Sourced HERE, before cleanup() is defined, because cleanup runs
+# from `trap ... EXIT` and can fire on a preflight die() before the §0 section —
+# so $ADB must already exist by then.
+#
+# This REPLACES an earlier inline pin that put the SDK build ahead of PATH: that
+# pinned a DIFFERENT binary than bootstrap-device-day.sh and the adb-gps-*.sh
+# scripts used, so a single device day drove two builds that both bind tcp:5037.
+# The resolver defaults to the PATH build — the one the emulator client itself
+# invokes — and reports any other build found.
+ADB_ENV_QUIET=1
+. "$(dirname "$0")/adb-env.sh"
+
 # The headless emulator's image is qemu-system-x86_64-headless.exe, NOT the
 # windowed qemu-system-x86_64.exe — matching only the latter leaves a headless
 # emulator running after cleanup (verified 2026-10-03). Try both.
 # shellcheck disable=SC2329  # invoked from cleanup(), which is trap-installed
 kill_emulator() {
-  adb emu kill >/dev/null 2>&1 || true
+  "$ADB" emu kill >/dev/null 2>&1 || true
   taskkill //F //IM qemu-system-x86_64.exe >/dev/null 2>&1 || true
   taskkill //F //IM qemu-system-x86_64-headless.exe >/dev/null 2>&1 || true
   for _ in 1 2 3 4 5; do
@@ -103,7 +116,7 @@ cleanup() {
   else
     log "WARN: a qemu process is still running — kill it manually before the next run"
   fi
-  adb kill-server >/dev/null 2>&1 || true
+  "$ADB" kill-server >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -118,9 +131,9 @@ port_listening() {
 }
 
 # adb shell emits CRLF on Windows; strip before comparing.
-sh_() { adb shell "$@" 2>/dev/null | tr -d '\r'; }
+sh_() { "$ADB" shell "$@" 2>/dev/null | tr -d '\r'; }
 
-device_state() { adb devices 2>/dev/null | awk '/emulator-[0-9]+/ {print $2; exit}'; }
+device_state() { "$ADB" devices 2>/dev/null | awk '/emulator-[0-9]+/ {print $2; exit}'; }
 
 # ── §0 preflight ─────────────────────────────────────────────────────────────
 step "§0 preflight"
@@ -134,20 +147,7 @@ log "date:        $(date)"
           "install Maestro 2.6.x or set MAESTRO_BIN=/path/to/maestro"
 log "maestro:     $( (maestro --version 2>/dev/null || "$MAESTRO_BIN" --version 2>/dev/null) | head -1)"
 
-# §10 row: two adb builds both binding tcp:5037 produce misleading `unauthorized`.
-# Pin ONE for the whole run and say so, rather than diagnosing against the wrong server.
-SDK_ADB="${LOCALAPPDATA:-}/Android/Sdk/platform-tools/adb.exe"
-if [ -x "$SDK_ADB" ]; then
-  SDK_V="$("$SDK_ADB" version 2>/dev/null | sed -n '2p' | tr -d '\r')"
-  PATH_V="$(adb version 2>/dev/null | sed -n '2p' | tr -d '\r')"
-  PATH_PREFIX="$(dirname "$SDK_ADB")"
-  export PATH="$PATH_PREFIX:$PATH"
-  log "adb:         pinned SDK build ($SDK_V) ahead of PATH build (${PATH_V:-unknown})"
-  [ "$SDK_V" != "$PATH_V" ] && log "NOTE: two adb builds present; SDK one is now first on PATH for this run"
-else
-  log "adb:         $(command -v adb)"
-fi
-command -v adb >/dev/null 2>&1 || die "adb-missing" "adb not on PATH" "add Android SDK platform-tools to PATH"
+adb_env_warn_duplicates
 
 ls "$USERPROFILE/.android/avd/$AVD.ini" >/dev/null 2>&1 \
   || die "avd-missing" "AVD '$AVD' does not exist" \
@@ -165,7 +165,7 @@ nohup "$LOCALAPPDATA/Android/Sdk/emulator/emulator.exe" "${EMU_ARGS[@]}" \
   > "$EVIDENCE/emulator-boot.log" 2>&1 &
 disown 2>/dev/null || true
 
-adb start-server >/dev/null 2>&1 || true
+"$ADB" start-server >/dev/null 2>&1 || true
 
 log "waiting for boot (timeout ${BOOT_TIMEOUT_S}s)…"
 DEADLINE=$(( $(date +%s) + BOOT_TIMEOUT_S ))
@@ -194,7 +194,7 @@ done
 [ "$BOOTED" = "1" ] || die "emulator-boot-timeout" \
   "device did not reach 'device' + sys.boot_completed=1 within ${BOOT_TIMEOUT_S}s (last state: ${LAST_STATE})" \
   "raise BOOT_TIMEOUT_S for a cold first boot, or check $EVIDENCE/emulator-boot.log"
-log "booted: $(adb devices | grep emulator | tr -d '\r')"
+log "booted: $("$ADB" devices | grep emulator | tr -d '\r')"
 
 # ── §2 env sync ──────────────────────────────────────────────────────────────
 step "§2 env sync"
@@ -253,7 +253,7 @@ done
 # ── §5 GPS seeding ───────────────────────────────────────────────────────────
 step "§5 GPS seeding"
 bash maestro/utils/adb-gps-banani.sh  >>"$LOG" 2>&1 \
-  || die "gps-seed-failed" "adb-gps-banani.sh failed (adb shell emu geo fix)" \
+  || die "gps-seed-failed" "adb-gps-banani.sh failed ("$ADB" shell emu geo fix)" \
           "GPS must be seeded BEFORE app launch; the JS layer caches the first fix"
 log "gps:         banani 90.4066 23.7937 seeded"
 
@@ -262,26 +262,26 @@ step "§6 app launch + permissions"
 for PERM in android.permission.ACCESS_FINE_LOCATION android.permission.CAMERA \
            android.permission.READ_EXTERNAL_STORAGE android.permission.POST_NOTIFICATIONS \
            android.permission.READ_MEDIA_IMAGES; do
-  adb shell pm grant "$APP_ID" "$PERM" >/dev/null 2>&1 || true  # absent on some API levels
+  "$ADB" shell pm grant "$APP_ID" "$PERM" >/dev/null 2>&1 || true  # absent on some API levels
 done
 log "granted:     location, camera, storage, notifications"
 
-adb shell am force-stop "$APP_ID" >/dev/null 2>&1 || true
-adb shell monkey -p "$APP_ID" 1 >/dev/null 2>&1 \
+"$ADB" shell am force-stop "$APP_ID" >/dev/null 2>&1 || true
+"$ADB" shell monkey -p "$APP_ID" 1 >/dev/null 2>&1 \
   || die "app-launch-failed" "could not launch $APP_ID via monkey" \
-          "confirm a dev build is installed: adb shell pm list packages | grep com.ride.bd"
+          "confirm a dev build is installed: "$ADB" shell pm list packages | grep com.ride.bd"
 
 # Splash-to-real-screen within ~15s of bundle completion (TEST-SETUP.md §2).
 log "waiting for $APP_ID to pass splash…"
 APP_UP=0
 for i in $(seq 1 30); do
-  if adb shell dumpsys activity activities 2>/dev/null | grep -q "$APP_ID"; then APP_UP=1; break; fi
+  if "$ADB" shell dumpsys activity activities 2>/dev/null | grep -q "$APP_ID"; then APP_UP=1; break; fi
   sleep 3
 done
 [ "$APP_UP" = "1" ] || die "app-not-foreground" \
   "$APP_ID never reached the foreground within 90s" \
           "99% a stale LAN IP — re-run §2, RESTART Metro, then relaunch. Never debug deeper before re-checking the IP (TEST-SETUP.md §5)"
-adb exec-out screencap -p > "$EVIDENCE/06-app-launched.png" 2>/dev/null || true
+"$ADB" exec-out screencap -p > "$EVIDENCE/06-app-launched.png" 2>/dev/null || true
 log "app:         foregrounded (screenshot: 06-app-launched.png)"
 
 # ── §7 key flows ×N ──────────────────────────────────────────────────────────
@@ -311,7 +311,7 @@ run_twice() {
     else
       st+=("FAIL")
       DAYS_STATUS=2
-      adb exec-out screencap -p > "$EVIDENCE/$name-run$i-FAIL.png" 2>/dev/null || true
+      "$ADB" exec-out screencap -p > "$EVIDENCE/$name-run$i-FAIL.png" 2>/dev/null || true
       log "    FAIL (exit $rc) — screenshot $name-run$i-FAIL.png"
     fi
     sleep 3
@@ -339,7 +339,7 @@ if [ "$DAYS_STATUS" = "0" ]; then
   {
     printf '\n## Device day %s — GREEN\n\n' "$DATE"
     printf -- '- AVD: %s\n- Maestro: %s\n- adb: %s\n- env host: %s\n- GPS: banani 90.4066 23.7937\n\n' \
-      "$AVD" "$("$MAESTRO_BIN" --version 2>/dev/null | head -1)" "$(adb version 2>/dev/null | sed -n '2p' | tr -d '\r')" "$HOST_IP"
+      "$AVD" "$("$MAESTRO_BIN" --version 2>/dev/null | head -1)" "$("$ADB" version 2>/dev/null | sed -n '2p' | tr -d '\r')" "$HOST_IP"
     cat "$MATRIX"
   } > "$EVIDENCE/RESULT.md"
   log ""
