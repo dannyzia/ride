@@ -22,31 +22,39 @@ tags:
 - extendedWaitUntil:
     visible: "Enter your phone number to continue"
     timeout: 20000
-- tapOn: "1XXXXXXXXX"
+- tapOn:
+    id: "phone-entry.set-phone"
 - inputText: "${PHONE}"
-- tapOn: "Login"
+- tapOn:
+    id: "phone-entry.handle-login"
 - extendedWaitUntil:
     visible: "Welcome Back"
     timeout: 15000
-- tapOn: "Password"
+- tapOn:
+    id: "login.set-password"
 - inputText: "test1234"
-- tapOn: "Login"
+- tapOn:
+    id: "login.handle-login"
 - extendedWaitUntil:
     visible: "${EXPECT}"
     timeout: 30000
 - assertVisible: "${EXPECT}"
 
 # --- Registration variant (NEW account only; needs a phone NOT already registered) ---
-# - tapOn: "1XXXXXXXXX"
+# Gate 1 REWIRE PASS 2 — these were text taps on labels that never existed
+# ("Send OTP"; the buttons are "Login"/"Register"). testIDs below are verified in
+# maestro/tools/testid-map.json. register.tsx:44 rejects a mismatched confirm
+# password, so set-confirm-password is mandatory — it was missing entirely.
+# - tapOn: { id: "phone-entry.set-phone" }
 # - inputText: "<fresh number, e.g. 1700000099>"
-# - tapOn: "Driver"            # or "Rider" toggle (role only matters for registration)
-# - tapOn: "Register"          # -> otp-verify
-# - extendedWaitUntil: { visible: "Verify OTP", timeout: 15000 }
-# - tapOn: "Enter 6-digit OTP"
+# - tapOn: { id: "phone-entry.set-role-2" }   # Driver chip (set-role = Rider)
+# - tapOn: { id: "phone-entry.handle-register" }  # -> otp-verify
+# - extendedWaitUntil: { visible: "Enter 6-digit OTP", timeout: 15000 }
+# - tapOn: { id: "otp-verify.set-otp" }
 # - inputText: "123456"        # DEV_OTP_BYPASS=true fixed code
-# - tapOn: "Verify OTP"        # -> register
+# - tapOn: { id: "otp-verify.handle-verify-otp" }  # -> register
 # - extendedWaitUntil: { visible: "Complete Registration", timeout: 15000 }
-# - tapOn: "Full Name" ; inputText: "Test User"
-# - tapOn: "Password (min 6 characters)" ; inputText: "test1234"
-# - tapOn: "Confirm Password" ; inputText: "test1234"
-# - tapOn: "Register"
+# - tapOn: { id: "register.set-name" } ; inputText: "Test User"
+# - tapOn: { id: "register.set-password" } ; inputText: "test1234"
+# - tapOn: { id: "register.set-confirm-password" } ; inputText: "test1234"
+# - tapOn: { id: "register.handle-register" }

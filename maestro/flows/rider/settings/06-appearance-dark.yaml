@@ -1,7 +1,16 @@
-# rider/settings/06-appearance-dark — toggle appearance to dark and assert dark renders.
-# Feature: R-SETT appearance (§4). Selector source: settings.appearance.toggle_theme=
-# "Appearance" (en/common.json §settings); NativeWind dark: variants per AGENTS.md
-# (no ThemeProvider). Class: AUTOMATABLE.
+# rider/settings/06-appearance-dark — set appearance to dark and assert dark renders.
+# Feature: R-SETT appearance (§4). NativeWind dark: variants per AGENTS.md
+# (no ThemeProvider).
+# Gate 1 REWIRE PASS 2 — full testID conversion. Both taps were copy selectors
+# (".*Appearance.*", ".*Dark.*"). They are now:
+#   customer.profile.push-appearance                 — the Appearance SettingsRow
+#     (added in this pass; components/SettingsRow.tsx had no testID prop at all,
+#      which is the root cause recorded as G-02 in COVERAGE-MANIFEST.md §7)
+#   customer.settings.app-appearance.set-theme-dark   — the "Dark" theme row
+#     (app-appearance/index.tsx:110). The three theme rows are written out
+#     literally rather than .map()-ed so each testID stays a string literal the
+#     Gate 1 manifest tool can record.
+# Class: AUTOMATABLE.
 appId: com.ride.bd
 name: "Rider Settings - Appearance Dark"
 tags: [rider, settings, appearance]
@@ -13,8 +22,15 @@ tags: [rider, settings, appearance]
     commands:
       - runFlow: ../../../shared/auth/_login-rider.yaml
 - runFlow: ../../../shared/util/_open-settings-hub.yaml
-- tapOn: ".*Appearance.*"
-- tapOn: ".*Dark.*"
+- tapOn:
+    id: "customer.profile.push-appearance"
 - extendedWaitUntil:
-    visible: ".*Appearance.*"
-    timeout: 10000
+    visible:
+      id: "customer.settings.app-appearance.set-theme-dark"
+    timeout: 15000
+- tapOn:
+    id: "customer.settings.app-appearance.set-theme-dark"
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible:
+    id: "customer.settings.app-appearance.set-theme-light"

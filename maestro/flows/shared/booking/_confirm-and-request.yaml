@@ -1,15 +1,20 @@
-# _confirm-and-request — tap Confirm ride → assert finding-driver screen.
-# §9 Booking Subflows. Gate 1 REWIRE (semantic IDs, app/(main)/(customer)/confirm-ride/
-# via maestro/tools/testid-map.json): customer.confirm-ride.handle-request-ride is
-# the primary action button ("Confirm ride" → "Request Ride" → "Requesting…" states).
+# _confirm-and-request — tap the booking sheet's primary action → assert finding-driver.
+# §9 Booking Subflows. Gate 1 REWIRE PASS 2 — TARGET CORRECTION.
+# This used customer.confirm-ride.handle-request-ride, but app/(main)/(customer)/
+# confirm-ride/ is unreachable for the same reason as find-ride (see
+# _select-vehicle.yaml for the route-deadness proof). The primary action now lives on
+# the home booking sheet: customer.home.handle-call-for-ride (home/index.tsx L1288,
+# onPress={handleCallForRide}, renders rider_home.call_for_ride = "Call for Ride",
+# disabled until a vehicle tier is chosen).
 # Class: AUTOMATABLE (assertion can fail — it demands the finding-driver surface).
 appId: com.ride.bd
 ---
 - extendedWaitUntil:
-    visible: ".*Confirm your ride.*"
+    visible:
+      id: "customer.home.handle-call-for-ride"
     timeout: 15000
 - tapOn:
-    id: "customer.confirm-ride.handle-request-ride"
+    id: "customer.home.handle-call-for-ride"
 - extendedWaitUntil:
-    visible: ".*Requesting….*|.*Finding.*|.*finding.*"
+    visible: ".*Finding.*|.*finding.*|.*Searching.*|.*Requesting.*"
     timeout: 20000

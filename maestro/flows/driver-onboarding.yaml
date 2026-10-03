@@ -12,12 +12,28 @@
 #   to appear on that row before continuing.
 # NOTE: the multi-step BRTA / walkaround / Brand-Model-Year onboarding described
 #   in older plan docs does NOT exist in the driver app. The real onboarding is
-#   this Upload-Documents + Owner-Consent flow (app/(main)/(rider)/onboarding/documents.tsx).
-# AMBIGUITY: while uploading, multiple "Upload" buttons are visible at once (the
-#   not-yet-uploaded rows). tapOn: "Upload" relies on Maestro tapping the
-#   topmost/first match in reading order, which is the next document
-#   (NID Front -> NID Back -> Driving License -> Vehicle Registration). The
-#   "Done" wait after each tap confirms the correct row uploaded.
+#   this Upload-Documents + Owner-Consent flow (app/(main)/(rider)/onboarding/documents.tsx).# AMBIGUITY: while uploading, multiple "Upload" buttons are visible at once (the
+# not-yet-uploaded rows). tapOn: "Upload" relies on Maestro tapping the
+# topmost/first match in reading order, which is the next document.
+#
+# GATE 1 REWIRE PASS 2 — PARTIAL, with a logged gap.
+# Converted: the footer CTA ("Next" / "Submit Documents") is a single control,
+# rider.onboarding.go-next (onboarding/index.tsx L1425, onPress={goNext}; the
+# label is "Continue" until step 7 and "Submit" on it — the old "Next" label did
+# not exist). The four consent rows are rider.onboarding.set-consent (L1400,
+# accessibilityRole="checkbox"), tapped by index.
+# NOT converted: the upload cards themselves. They render through
+# components/DocumentUploadCard.tsx, which has no testID prop, so they stay text.
+# That is a component gap, not a flow gap — a `testID?: string` on the card
+# forwarded to its TouchableOpacity would close it; deliberately NOT added here
+# because the surrounding flow structure is also wrong (see next).
+# KNOWN STRUCTURAL DRIFT (not fixed here, out of QA scope): this flow models the
+# onboarding as "upload 4 documents, then consent, then submit". The real screen
+# (app/(main)/(rider)/onboarding/index.tsx) is a 7-step wizard — step 3 uploads
+# VEHICLE_DOC_FIELDS, step 4 uploads DRIVER_DOC_FIELDS, step 5 is rideshare
+# experience, and consent sits on a later step. Rewriting this flow against the
+# wizard is a separate task; the conversions below are still correct because
+# every element is addressed by testID rather than by position or copy.
 # ==============================================================================
 appId: com.ride.bd
 name: "Part 2 - Driver Onboarding (Upload Documents + Owner Consent)"
@@ -30,11 +46,14 @@ tags:
     appId: com.ride.bd
 # Landing screen (pending driver is routed here).
 - extendedWaitUntil:
-    visible: "Upload Documents"
+    visible:
+      id: "rider.onboarding.go-next"
     timeout: 15000
-- assertVisible: "Upload Documents"
+- assertVisible:
+    id: "rider.onboarding.go-next"
 
 # --- Step 1: upload the 4 required documents (operator picks an image each time) ---
+# G-02 remainder: DocumentUploadCard exposes no testID.
 
 # NID (Front) -> picker opens; operator selects an image
 - tapOn: "Upload"
@@ -69,23 +88,35 @@ tags:
     visible: "Done"
     timeout: 120000
 
-# All four uploaded -> header toggle "Next" switches the screen to "Owner Consent".
-- tapOn: "Next"
+# All four uploaded -> footer CTA advances the wizard.
+- tapOn:
+    id: "rider.onboarding.go-next"
 - extendedWaitUntil:
-    visible: "Please review and confirm each statement before submitting."
+    visible:
+      id: "rider.onboarding.set-consent"
     timeout: 10000
 
-# --- Step 2: tick all 4 consent statements (tap each statement text to toggle) ---
-- tapOn: "I confirm that all submitted documents are genuine and belong to me."
-- tapOn: "I agree to the Terms of Service and Privacy Policy."
-- tapOn: "I consent to background verification as required by regulatory authorities."
-- tapOn: "I understand that submitting false documents will result in permanent account rejection."
+# --- Step 2: tick all 4 consent statements (each row is the same checkbox testID) ---
+- tapOn:
+    id: "rider.onboarding.set-consent"
+    index: 0
+- tapOn:
+    id: "rider.onboarding.set-consent"
+    index: 1
+- tapOn:
+    id: "rider.onboarding.set-consent"
+    index: 2
+- tapOn:
+    id: "rider.onboarding.set-consent"
+    index: 3
 
-# --- Submit ---
-- tapOn: "Submit Documents"
+# --- Submit (same footer CTA; label is "Submit" on the final step) ---
+- tapOn:
+    id: "rider.onboarding.go-next"
 
 # --- Success alert -> home ---
 - extendedWaitUntil:
     visible: "Documents Submitted"
     timeout: 20000
+# G-02 remainder: OS Alert.alert, no testID space.
 - tapOn: "OK"

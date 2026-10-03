@@ -1,9 +1,17 @@
 # _reset-rider-state — POST /api/test/reset-rider → idle state (module teardown).
 # §9. MANIFEST: BLOCKED-GATE (Gate 2 absent). Class: COUNTERPART-API (once live).
+# The command is a YAML block scalar (>-), not a plain scalar: the raw curl line
+# contains `Content-Type: application/json`, and an unquoted colon-space inside a
+# sequence entry makes YAML read it as a mapping — this file (and its three
+# siblings) was silently malformed YAML before this pass.
 appId: com.ride.bd
 ---
 - runScript:
     when:
       true
     commands:
-      - curl -s -X POST "${API_BASE}/api/test/reset-rider" -H "Content-Type: application/json" -H "Authorization: Bearer ${API_TOKEN}" -d '{"riderId":"${RIDER_ID}"}'
+      - >-
+        curl -s -X POST "${API_BASE}/api/test/reset-rider"
+        -H "Content-Type: application/json"
+        -H "Authorization: Bearer ${API_TOKEN}"
+        -d '{"riderId":"${RIDER_ID}"}'

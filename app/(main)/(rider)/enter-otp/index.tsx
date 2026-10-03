@@ -179,6 +179,7 @@ const EnterOtp = () => {
             length={4}
             error={!!error}
             accessibilityLabel="Ride PIN"
+            testID="rider.enter-otp.set-pin"
           />
         </Animated.View>
 

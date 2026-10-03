@@ -1,21 +1,25 @@
-# _apply-promo — Apply-promos sheet → enter PROMO_CODE → apply.
-# §9 Booking Subflows. Gate 1 REWIRE (semantic IDs via testid-map.json,
-# app/(main)/(customer)/apply-promos/index.tsx): promo input =
-# customer.apply-promos.set-promo-code (L149); apply button =
-# customer.apply-promos.handle-apply (L169). Sheet entry point is TEXT
-# ("Available discounts" affordance on the fare screen has no testID — G-02
-# remainder). Class: AUTOMATABLE.
+# _apply-promo — fare sheet → select an available discount chip.
+# §9 Booking Subflows. Gate 1 REWIRE PASS 2 — SHEET REPLACED.
+# The old subflow drove customer.apply-promos.set-promo-code / handle-apply, but
+# app/(main)/(customer)/apply-promos/ is unreachable: nothing in the tree routes
+# to it (same dead-screen class as find-ride/ and confirm-ride/ — see
+# _select-vehicle.yaml for the proof pattern). The live fare sheet has no promo-code
+# entry at all; discounts are pre-fetched and offered as inline chips on the home
+# sheet, customer.home.set-selected-promo (home/index.tsx L1247,
+# onPress={() => setSelectedPromo(isSelected ? null : d)}).
+# ${PROMO_CODE} is now matched against the chip's rendered description — callers
+# must pass a description (or a regex fragment of one), not a raw code.
+# Redeeming by typed code is NOT testable until the apply-promos route is wired up;
+# logged to maestro/COVERAGE-MANIFEST.md as a coverage gap, not a selector gap.
+# Class: AUTOMATABLE (chip select); typed-code redemption is GAP-BLOCKED.
 appId: com.ride.bd
 ---
-- tapOn: ".*Available discounts.*|.*Promo.*|.*promos.*"
 - extendedWaitUntil:
-    visible: ".*Promo.*|.*promo.*"
-    timeout: 15000
+    visible:
+      id: "customer.home.set-selected-promo"
+    timeout: 20000
 - tapOn:
-    id: "customer.apply-promos.set-promo-code"
-- inputText: ${PROMO_CODE}
-- tapOn:
-    id: "customer.apply-promos.handle-apply"
-- extendedWaitUntil:
-    visible: ".*${PROMO_CODE}.*|.*off.*"
-    timeout: 15000
+    id: "customer.home.set-selected-promo"
+    text: ".*${PROMO_CODE}.*"
+- waitForAnimationToEnd:
+    timeout: 2000

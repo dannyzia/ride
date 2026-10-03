@@ -1,14 +1,22 @@
 # _rate-rider — driver post-ride rating screen → tap STARS → submit.
-# §9. Selector source: app/(main)/(rider)/rate-rider/ (i18n rate_rider section).
+# §9. Gate 1 REWIRE PASS 2 — the "★" glyph tap is gone. Matching a ★/☆ character
+# is fragile (it depends on the filled/outline icon font actually rendering that
+# codepoint); the star row is addressable as rider.rate-rider.set-rating
+# (rate-rider/index.tsx L219, mapped [1..5]) and the CTA as
+# rider.rate-rider.handle-submit (L254). This screen IS still routed — from
+# finish-ride/index.tsx:601 — unlike find-ride/confirm-ride.
+# index = STARS - 1 (caller passes it; default 5-star).
 # Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - extendedWaitUntil:
-    visible: ".*Rate.*|.*star.*|.*rating.*"
+    visible:
+      id: "rider.rate-rider.set-rating"
     timeout: 30000
 - tapOn:
-    text: "★"
-    index: 3
-- tapOn: ".*Submit.*|.*Done.*|.*Skip.*"
+    id: "rider.rate-rider.set-rating"
+    index: ${STAR_INDEX}
+- tapOn:
+    id: "rider.rate-rider.handle-submit"
 - waitForAnimationToEnd:
     timeout: 3000

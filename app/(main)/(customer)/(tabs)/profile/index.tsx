@@ -246,6 +246,7 @@ const Profile = () => {
               icon="person-outline"
               label={t('profile.edit_profile')}
               onPress={() => router.push(EDIT_ROUTE)}
+              testID="customer.profile.push-edit-profile"
             />
             <SettingsRow
               icon="call-outline"
@@ -262,6 +263,7 @@ const Profile = () => {
               icon="key-outline"
               label={t('profile.change_password')}
               onPress={() => router.push(CHANGE_PASSWORD_ROUTE)}
+              testID="customer.profile.push-change-password"
               isLast
             />
           </>,
@@ -274,21 +276,25 @@ const Profile = () => {
               icon="sunny-outline"
               label={t('app_appearance.title')}
               onPress={() => router.push(APPEARANCE_ROUTE)}
+              testID="customer.profile.push-appearance"
             />
             <SettingsRow
               icon="notifications-outline"
               label={t('settings.notifications')}
               onPress={() => router.push(NOTIFICATIONS_ROUTE)}
+              testID="customer.profile.push-notifications"
             />
             <SettingsRow
               icon="home-outline"
               label={t('profile.saved_addresses')}
               onPress={() => router.push(SAVED_ADDRESSES_ROUTE)}
+              testID="customer.profile.push-saved-addresses"
             />
             <SettingsRow
               icon="warning-outline"
               label={t('profile.emergency_contacts')}
               onPress={() => router.push(EMERGENCY_CONTACTS_ROUTE)}
+              testID="customer.profile.push-emergency-contacts"
               isLast
             />
           </>,
@@ -297,17 +303,19 @@ const Profile = () => {
         {renderSection(
           t('profile.section_support'),
           <>
-            <SettingsRow icon="help-circle-outline" label={t('profile.faq')} onPress={() => router.push(FAQ_ROUTE)} />
+            <SettingsRow icon="help-circle-outline" label={t('profile.faq')} onPress={() => router.push(FAQ_ROUTE)} testID="customer.profile.push-faq" />
             <SettingsRow
               icon="headset-outline"
               label={t('profile.contact_support')}
               onPress={() => router.push(CONTACT_SUPPORT_ROUTE)}
+              testID="customer.profile.push-contact-support"
             />
             <SettingsRow
               icon="flag-outline"
               iconColor={colors.amber}
               label={t('profile.report_issue')}
               onPress={() => router.push(REPORT_ISSUE_ROUTE)}
+              testID="customer.profile.push-report-issue"
               isLast
             />
           </>,

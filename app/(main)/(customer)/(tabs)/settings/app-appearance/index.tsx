@@ -87,17 +87,38 @@ export default function SettingsAppAppearance() {
           {t('app_appearance.theme')}
         </Text>
         <View style={[styles.card, { backgroundColor: surface }]}>
-          {THEME_OPTIONS.map((option, index) => (
-            <SettingsRow
-              key={option.mode}
-              icon={option.icon}
-              label={t(option.labelKey)}
-              onPress={() => setTheme(option.mode)}
-              showChevron={false}
-              rightElement={renderRadio(theme === option.mode)}
-              isLast={index === THEME_OPTIONS.length - 1}
-            />
-          ))}
+          {/*
+            Rows are written out rather than .map()-ed so each testID is a string
+            LITERAL on the element: maestro/tools/testid-manifest.cjs only records
+            testID attributes whose value is a plain string literal, so a computed
+            attribute would be invisible to maestro/tools/flow-xcheck.cjs and no
+            flow could select a row by id.
+          */}
+          <SettingsRow
+            icon={THEME_OPTIONS[0].icon}
+            label={t(THEME_OPTIONS[0].labelKey)}
+            onPress={() => setTheme(THEME_OPTIONS[0].mode)}
+            showChevron={false}
+            rightElement={renderRadio(theme === THEME_OPTIONS[0].mode)}
+            testID="customer.settings.app-appearance.set-theme-light"
+          />
+          <SettingsRow
+            icon={THEME_OPTIONS[1].icon}
+            label={t(THEME_OPTIONS[1].labelKey)}
+            onPress={() => setTheme(THEME_OPTIONS[1].mode)}
+            showChevron={false}
+            rightElement={renderRadio(theme === THEME_OPTIONS[1].mode)}
+            testID="customer.settings.app-appearance.set-theme-dark"
+          />
+          <SettingsRow
+            icon={THEME_OPTIONS[2].icon}
+            label={t(THEME_OPTIONS[2].labelKey)}
+            onPress={() => setTheme(THEME_OPTIONS[2].mode)}
+            showChevron={false}
+            rightElement={renderRadio(theme === THEME_OPTIONS[2].mode)}
+            isLast
+            testID="customer.settings.app-appearance.set-theme-system"
+          />
         </View>
         <Text style={[styles.hint, { color: textSecondary }]}>
           {t('app_appearance.hint')}

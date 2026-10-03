@@ -25,8 +25,14 @@ tags:
 # Step 1: Verify the "Buy a Package to Start" button is present (no active subscription).
 # WARNING: If the driver already has an active subscription, "Calls Remaining" is shown
 # instead and this step fails. Use a driver with 0 calls or no subscription.
+# Gate 1 REWIRE PASS 2: both taps are now testIDs (verified in testid-map.json) —
+# rider.d.push-main-3 is the driver-home buy-package card that pushes /(main)/(rider)/packages
+# (d/(tabs)/index.tsx:1299), and rider.packages.handle-buy is the per-row "Buy Now"
+# CustomButton (packages.tsx:280). The success "OK" tap below stays TEXT — it is an
+# OS Alert.alert, which exposes no testID space.
 - assertVisible: "Buy a Package to Start"
-- tapOn: "Buy a Package to Start"
+- tapOn:
+    id: "rider.d.push-main-3"
 # Step 2: Package listing screen.
 - extendedWaitUntil:
     visible: "Call Packages"
@@ -34,7 +40,8 @@ tags:
 - extendedWaitUntil:
     visible: "Buy Now"
     timeout: 10000
-- tapOn: "Buy Now"
+- tapOn:
+    id: "rider.packages.handle-buy"
 # Step 3: Payment WebView opens.
 # ===== SEMI-MANUAL PAYMENT STEP =====
 # The PortPos hosted-checkout WebView is now displayed inside a Modal.
@@ -47,6 +54,7 @@ tags:
     visible: "Package purchased successfully!"
     timeout: 300000
 # Step 4: Dismiss the success alert and confirm the subscription is active.
+# G-02 remainder: OS Alert.alert, no testID space.
 - tapOn: "OK"
 - waitForAnimationToEnd:
     timeout: 3000

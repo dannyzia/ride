@@ -3,23 +3,28 @@ appId: com.ride.bd
 name: Rider Login (no clearState)
 tags: [rider-login]
 ---
+# Gate 1 REWIRE PASS 2 — text taps replaced with the testIDs verified in
+# maestro/tools/testid-map.json (app/(auth)/phone-entry.tsx, app/(auth)/login.tsx):
+# "Login" -> phone-entry.handle-login, role chip -> phone-entry.set-role,
+# password -> login.set-password. Ad-hoc no-clearState variant; the maintained
+# path is auth/02-rider-login.yaml via shared/auth/_login-rider.yaml.
 - tapOn:
-    text: "1XXXXXXXXX"
+    id: "phone-entry.set-phone"
 - eraseText
 - inputText: "1613249520"
 - tapOn:
-    text: "Rider"
+    id: "phone-entry.set-role"
 - tapOn:
-    text: "Login"
+    id: "phone-entry.handle-login"
 - extendedWaitUntil:
     visible: "Welcome Back"
     timeout: 15000
 - tapOn:
-    text: "Password"
+    id: "login.set-password"
 - eraseText
 - inputText: "test1234"
 - tapOn:
-    text: "Login"
+    id: "login.handle-login"
 - extendedWaitUntil:
     visible: "Search destination"
     timeout: 30000

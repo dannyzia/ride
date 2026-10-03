@@ -14,6 +14,10 @@ interface PinInputProps {
   /** Grab focus (and open the numeric keyboard) on mount. */
   autoFocus?: boolean;
   accessibilityLabel?: string;
+  /** E2E handle for the hidden input that actually receives the keystrokes.
+   *  Without it, Maestro has to match the rendered placeholder boxes
+   *  ("Ride Pin" / "digit") — see maestro/COVERAGE-MANIFEST.md §7 G-02. */
+  testID?: string;
 }
 
 /**
@@ -35,6 +39,7 @@ export default function PinInput({
   error = false,
   autoFocus = false,
   accessibilityLabel = "PIN entry",
+  testID,
 }: PinInputProps) {
   const inputRef = useRef<TextInput>(null);
   const isDark = useIsDark();
@@ -91,6 +96,7 @@ export default function PinInput({
         selectionColor="transparent"
         style={styles.hiddenInput}
         accessibilityLabel={`Hidden ${accessibilityLabel} input`}
+        testID={testID}
       />
     </View>
   );

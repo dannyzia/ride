@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-28T04:58:28.931Z",
-  "total": 1108,
+  "generatedAt": "2026-10-03T05:00:40.230Z",
+  "total": 1121,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -902,12 +902,48 @@
         "line": 219
       },
       {
+        "id": "customer.profile.push-edit-profile",
+        "line": 249
+      },
+      {
+        "id": "customer.profile.push-change-password",
+        "line": 266
+      },
+      {
+        "id": "customer.profile.push-appearance",
+        "line": 279
+      },
+      {
+        "id": "customer.profile.push-notifications",
+        "line": 285
+      },
+      {
+        "id": "customer.profile.push-saved-addresses",
+        "line": 291
+      },
+      {
+        "id": "customer.profile.push-emergency-contacts",
+        "line": 297
+      },
+      {
+        "id": "customer.profile.push-faq",
+        "line": 306
+      },
+      {
+        "id": "customer.profile.push-contact-support",
+        "line": 311
+      },
+      {
+        "id": "customer.profile.push-report-issue",
+        "line": 318
+      },
+      {
         "id": "customer.profile.confirm-sign-out",
-        "line": 321
+        "line": 329
       },
       {
         "id": "customer.profile.el-2",
-        "line": 329
+        "line": 337
       }
     ],
     "(main)/(customer)/(tabs)/referral/index.tsx": [
@@ -1000,6 +1036,18 @@
       {
         "id": "customer.settings.app-appearance.set-theme",
         "line": 77
+      },
+      {
+        "id": "customer.settings.app-appearance.set-theme-light",
+        "line": 103
+      },
+      {
+        "id": "customer.settings.app-appearance.set-theme-dark",
+        "line": 111
+      },
+      {
+        "id": "customer.settings.app-appearance.set-theme-system",
+        "line": 120
       }
     ],
     "(main)/(customer)/(tabs)/settings/app-language/index.tsx": [
@@ -2848,8 +2896,12 @@
         "line": 128
       },
       {
+        "id": "rider.enter-otp.set-pin",
+        "line": 182
+      },
+      {
         "id": "rider.enter-otp.handle-verify",
-        "line": 206
+        "line": 207
       }
     ],
     "(main)/(rider)/faq/index.tsx": [

@@ -1,17 +1,21 @@
 # _enter-pin — type PIN digits → Start Ride.
-# §9. Gate 1 REWIRE (semantic IDs, app/(main)/(rider)/enter-otp/ via
-# maestro/tools/testid-map.json): rider.enter-otp.handle-verify is the Start Ride
-# button; the PIN field itself has no testID yet (G-02 remainder) — text match on
-# the "Ride Pin" input retained.
+# §9. Gate 1 REWIRE PASS 2 — the PIN field itself is now addressable:
+# rider.enter-otp.set-pin (enter-otp/index.tsx:182), forwarded by components/
+# PinInput.tsx onto the hidden TextInput that actually receives keystrokes. That
+# component had no testID prop at all, which is why this flow used to match the
+# rendered placeholder boxes ("Ride Pin" / "digit") — the input is
+# invisible (opacity 0) and stretched over the boxes, so that text match was
+# hitting a non-interactive element. Start Ride = rider.enter-otp.handle-verify.
 # PIN is passed from the caller (read from the rider device screen — dual-device
 # coordination is manual per §11 architecture decision). Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - extendedWaitUntil:
-    visible: "Ride Pin"
+    visible:
+      id: "rider.enter-otp.set-pin"
     timeout: 30000
 - tapOn:
-    textField: ".*Ride Pin.*|.*digit.*"
+    id: "rider.enter-otp.set-pin"
 - inputText: ${PIN}
 - tapOn:
     id: "rider.enter-otp.handle-verify"

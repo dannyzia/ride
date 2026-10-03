@@ -1,7 +1,10 @@
 # _go-online — toggle driver online → assert Go Offline / Connected badge.
-# §9 Driver Operation Subflows. Selectors VERIFIED against maestro/flows/driver-go-online.yaml
-# (device-proven 2026-09 session): "Go Online" button, OS "While using the app" dialog,
-# "Go Offline" + "Connected" badges. Class: AUTOMATABLE.
+# §9 Driver Operation Subflows. Gate 1 REWIRE PASS 2: the toggle is addressed by
+# testID (verified in maestro/tools/testid-map.json) — rider.d.toggle-online is the
+# offline-state onPress={toggleOnline} control (d/(tabs)/index.tsx:1001) and
+# rider.d.toggle-online-2 is its online-state counterpart (:1163). The OS
+# "While using the app" tap stays TEXT (G-02 remainder, OS dialog).
+# Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - extendedWaitUntil:
@@ -11,7 +14,8 @@ appId: com.ride.bd
     when:
       visible: "Go Online"
     commands:
-      - tapOn: "Go Online"
+      - tapOn:
+          id: "rider.d.toggle-online"
       - runFlow:
           when:
             visible: "While using the app"

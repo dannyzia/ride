@@ -1,8 +1,22 @@
 # _register-rider — full new-rider registration: phone-entry → OTP → register (name+password).
-# §9 Authentication Subflows. Selector source: app/(auth)/phone-entry.tsx, otp-verify.tsx,
-# register.tsx; i18n auth.send_otp="Send OTP", auth.verify_otp="Verify OTP",
-# auth.register="Create Account". Fixtures: fresh rider phone (Rider B roster),
-# OTP bypass 123456. Class: AUTOMATABLE.
+# §9 Authentication Subflows. Gate 1 REWIRE PASS 2 — every tap below is now a
+# testID verified against source (maestro/tools/testid-map.json):
+#   app/(auth)/phone-entry.tsx  phone-entry.set-phone / phone-entry.set-role (Rider)
+#                               / phone-entry.handle-register
+#   app/(auth)/otp-verify.tsx   otp-verify.set-otp / otp-verify.handle-verify-otp
+#   app/(auth)/register.tsx     register.set-name / register.set-password
+#                               / register.set-confirm-password / register.handle-register
+# Three defects fixed in this pass (all were text-selector debt hiding real breakage):
+#   1. "Send OTP" never existed — phone-entry's buttons are "Login" and "Register"
+#      (phone-entry.tsx:216/222). handleRegister (not handleLogin) is the one that
+#      routes to /otp-verify (phone-entry.tsx:98 vs :55).
+#   2. register.tsx:44 hard-fails with "Passwords do not match" unless
+#      confirmPassword equals password. The old flow never typed it, so
+#      registration could never complete.
+#   3. The old textFields ("Full Name"/"Password") were placeholder matching against
+#      RN TextInputs; the testIDs are the stable address.
+# Fixtures: fresh rider phone (Rider B roster), OTP bypass 123456.
+# Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - launchApp:
@@ -12,28 +26,34 @@ appId: com.ride.bd
     visible: ".*Enter your phone number.*"
     timeout: 20000
 - tapOn:
-    textField: "1XXXXXXXXX"
+    id: "phone-entry.set-phone"
 - inputText: ${PHONE}
-- tapOn: "Send OTP"
+- tapOn:
+    id: "phone-entry.set-role"
+- tapOn:
+    id: "phone-entry.handle-register"
 - extendedWaitUntil:
     visible: "Enter 6-digit OTP"
     timeout: 20000
 - tapOn:
-    textField: "Enter 6-digit OTP"
+    id: "otp-verify.set-otp"
 - inputText: ${OTP_CODE}
-- tapOn: "Verify OTP"
+- tapOn:
+    id: "otp-verify.handle-verify-otp"
 - extendedWaitUntil:
-    visible: ".*Create Account.*|.*Name.*"
+    visible: "Complete Registration"
     timeout: 20000
 - tapOn:
-    textField: ".*Name.*"
-    optional: true
+    id: "register.set-name"
 - inputText: ${NAME}
 - tapOn:
-    textField: ".*Password.*"
-    optional: true
+    id: "register.set-password"
 - inputText: ${PASSWORD}
-- tapOn: "Create Account"
+- tapOn:
+    id: "register.set-confirm-password"
+- inputText: ${PASSWORD}
+- tapOn:
+    id: "register.handle-register"
 - extendedWaitUntil:
     visible: ".*Search destination.*|.*Home.*"
     timeout: 30000

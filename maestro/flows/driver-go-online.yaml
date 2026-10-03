@@ -11,12 +11,18 @@ tags:
 ---
 - launchApp:
     appId: com.ride.bd
+# Gate 1 REWIRE PASS 2: the go-online control is rider.d.toggle-online
+# (d/(tabs)/index.tsx:1001, accessibilityLabel driver_home.go_online_label, the
+# onPress={toggleOnline} TouchableOpacity). The "While using the app" tap stays
+# TEXT by design — it is the OS location-permission dialog, not app UI.
 - assertVisible: "Go Online"
-- tapOn: "Go Online"
+- tapOn:
+    id: "rider.d.toggle-online"
 - runFlow:
     when:
       visible: "While using the app"
     commands:
+      # G-02 remainder: OS permission dialog exposes no testID.
       - tapOn: "While using the app"
 - waitForAnimationToEnd:
     timeout: 4000

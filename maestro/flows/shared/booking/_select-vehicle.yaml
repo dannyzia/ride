@@ -1,18 +1,25 @@
-# _select-vehicle — tap the vehicle card for VEHICLE_TYPE on the fare screen.
-# §9 Booking Subflows. Gate 1 REWIRE (semantic IDs via testid-map.json): fare-tier
-# card = customer.find-ride.set-selected-vehicle-type (app/(main)/(customer)/
-# find-ride/index.tsx L311, tier TouchableOpacity list) filtered by the
-# ${VEHICLE_TYPE} display label ("Bike Basic" … "Car XL" per i18n §find_ride).
-# Mission fare assertions (৳441/৳535/৳589) are asserted in journey flows, NOT here:
-# pricing is DB-driven (manifest G-01) — flows probe /api/pricing first.
+# _select-vehicle — tap the vehicle card for VEHICLE_TYPE on the fare sheet.
+# §9 Booking Subflows. Gate 1 REWIRE PASS 2 — TARGET CORRECTION.
+# The fare tier card was addressed as customer.find-ride.set-selected-vehicle-type,
+# but app/(main)/(customer)/find-ride/ is no longer reachable: the only reference to
+# the route left in the tree is a comment in finding-driver/index.tsx:80, and
+# (tabs)/_layout.tsx registers only home|rides|chat|profile. The booking sheet was
+# absorbed into app/(main)/(customer)/(tabs)/home/index.tsx, where the card is
+# customer.home.set-selected-vehicle-type (L1157) inside renderFares(), gated on
+# bookingStep === "FARES". The wait is now keyed on that testID instead of the
+# "Choose a ride"/"FARES" copy, which the sheet does not render.
+# The ${VEHICLE_TYPE} text sub-selector picks the tier out of the repeated testID
+# ("Bike Basic" … "Car XL" per i18n). Mission fare assertions (৳441/৳535/৳589) are
+# asserted in journey flows, NOT here — pricing is DB-driven (manifest G-01).
 # Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - extendedWaitUntil:
-    visible: ".*Choose a ride.*|.*FARES.*"
+    visible:
+      id: "customer.home.set-selected-vehicle-type"
     timeout: 20000
 - tapOn:
-    id: "customer.find-ride.set-selected-vehicle-type"
+    id: "customer.home.set-selected-vehicle-type"
     text: ".*${VEHICLE_TYPE}.*"
 - waitForAnimationToEnd:
     timeout: 2000

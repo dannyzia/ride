@@ -1,21 +1,26 @@
 ---
 appId: com.ride.bd
 ---
+# Gate 1 REWIRE PASS 2 — text taps replaced with the testIDs verified in
+# maestro/tools/testid-map.json (app/(auth)/phone-entry.tsx, app/(auth)/login.tsx).
+# Same covered path as rider-login-only.yaml; kept as a second regression probe.
 - tapOn:
-    textField: "1XXXXXXXXX"
+    id: "phone-entry.set-phone"
 - eraseText
 - inputText: "1613249520"
 - tapOn:
-    text: "Rider"
+    id: "phone-entry.set-role"
 - tapOn:
-    text: "Login"
-- wait: 10000
+    id: "phone-entry.handle-login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
 - tapOn:
-    text: "Password"
+    id: "login.set-password"
 - eraseText
 - inputText: "test1234"
 - tapOn:
-    text: "Login"
+    id: "login.handle-login"
 - wait: 10000
 - scrollUntil:
     visible: "Search destination"

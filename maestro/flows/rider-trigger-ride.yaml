@@ -1,7 +1,24 @@
 # Device: emulator-5554 (Rider).
 # Run: maestro test maestro/flows/rider-trigger-ride.yaml   (only emulator-5554 connected)
-# Preconditions: rider account +8801613249520 is logged in and on Home ("Search destination...").
+# Preconditions: rider account +8801613249520 is logged in and on Home.
 # Request-only helper. For the full rider half incl. completion/rating, use rider-core.yaml.
+#
+# Gate 1 REWIRE PASS 2 — LABEL DRIFT CORRECTION + testID conversion.
+# Every copy selector in this flow was stale: it addressed a booking UI generation
+# that no longer exists. The live rider booking surface is a single BottomSheet inside
+# app/(main)/(customer)/(tabs)/home/index.tsx (bookingStep LOCATIONS -> FARES); the
+# find-ride/ and confirm-ride/ screens are unreachable. Per-step mapping:
+#   "Search destination..." (home row) -> customer.home.el-2        (home/index.tsx L882)
+#   autocomplete input                  -> customer.autocomplete.set-query      (L207)
+#   ".*Savar.*" result row              -> customer.autocomplete.handle-place-select (L239)
+#   "Use .*"                            -> DROPPED. That was customer.find-ride.use-current-location
+#                                         on the dead screen; pickup now comes from the device GPS that
+#                                         maestro/utils/adb-gps-*.sh seeds host-side before the run.
+#   "Find now"                          -> customer.home.handle-next            (L1022, renders "Next")
+#   "Bike Plus"                         -> customer.home.set-selected-vehicle-type (L1157)
+#   "Request Ride"                      -> customer.home.handle-call-for-ride  (L1288, renders "Call for Ride")
+# Waits that were keyed on dead copy ("Choose Vehicle", "Confirm Ride") now key on the
+# testIDs themselves, which is the point of Gate 1: the flow no longer breaks on copy edits.
 appId: com.ride.bd
 name: "Rider - Trigger Ride Request (Savar intercity)"
 tags:
@@ -11,45 +28,50 @@ tags:
 ---
 - launchApp:
     appId: com.ride.bd
-- assertVisible: "Search destination..."
-- tapOn: "Search destination..."               # home row -> autocomplete
 - extendedWaitUntil:
-    visible: "Where do you want to go?"
-    timeout: 10000
-- tapOn: "Search destination..."               # autocomplete search input (same placeholder)
+    visible:
+      id: "customer.home.el-2"
+    timeout: 20000
+# home "Where to?" row -> autocomplete
+- tapOn:
+    id: "customer.home.el-2"
+- extendedWaitUntil:
+    visible:
+      id: "customer.autocomplete.set-query"
+    timeout: 15000
+- tapOn:
+    id: "customer.autocomplete.set-query"
 - inputText: "Savar"
 - extendedWaitUntil:
     visible: ".*Savar.*"
-    timeout: 15000
+    timeout: 20000
 - tapOn:
+    id: "customer.autocomplete.handle-place-select"
     text: ".*Savar.*"
+    index: 0
 - waitForAnimationToEnd:
     timeout: 3000
-- extendedWaitUntil:
-    visible: "Find now"
-    timeout: 15000
+# LOCATIONS -> FARES
 - tapOn:
-    text: "Use .*"                            # "Use Current Location" or "Use Dhaka Center"
-- waitForAnimationToEnd:
-    timeout: 1500
-- tapOn: "Find now"
+    id: "customer.home.handle-next"
 - extendedWaitUntil:
-    visible: "Choose Vehicle"
-    timeout: 15000
+    visible:
+      id: "customer.home.set-selected-vehicle-type"
+    timeout: 20000
 - swipe:
     direction: UP
     duration: 300                             # reveal vehicle list if needed
+- tapOn:
+    id: "customer.home.set-selected-vehicle-type"
+    text: ".*Bike Plus.*"
 - extendedWaitUntil:
-    visible: "Bike Plus"
-    timeout: 10000
-- tapOn: "Bike Plus"
-- extendedWaitUntil:
-    visible: "Confirm Ride"
+    visible:
+      id: "customer.home.handle-call-for-ride"
     timeout: 15000
-- waitForAnimationToEnd:
-    timeout: 1500
-- tapOn: "Request Ride"
+- tapOn:
+    id: "customer.home.handle-call-for-ride"
 - extendedWaitUntil:
-    visible: "Finding your ride..."
+    visible: ".*Finding.*|.*finding.*|.*Searching.*"
     timeout: 20000
-- assertVisible: "Finding your ride..."
+- assertVisible:
+    id: "customer.finding-driver.handle-cancel"

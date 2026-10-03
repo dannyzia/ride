@@ -1,15 +1,21 @@
 # _block-driver — block toggle on rate-driver → confirm block.
-# §9. Selector source: app/(main)/(customer)/rate-driver/ (i18n rate_driver section;
-# block control is a toggle+confirm per blueprint). Class: AUTOMATABLE.
+# §9. Gate 1 REWIRE PASS 2 — the ".*Block.*" copy selector is now
+# customer.rate-driver.toggle-block (rate-driver/index.tsx L371, onPress=
+# {toggleBlock}, renders rate_driver.block_this_driver). The confirm step stays
+# TEXT by design: it is an OS Alert.alert (RN modal chrome exposes no testID
+# space) — G-02 remainder, same class as the logout confirm in _logout.yaml.
+# Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - runFlow:
     when:
-      visible: ".*Block.*"
+      visible:
+        id: "customer.rate-driver.toggle-block"
     commands:
-      - tapOn: ".*Block.*"
       - tapOn:
-          text: ".*Confirm.*|.*Yes.*"
+          id: "customer.rate-driver.toggle-block"
+      - tapOn:
+          text: ".*Confirm.*|.*Yes.*|.*Block.*"
           optional: true
 - extendedWaitUntil:
     visible: ".*Blocked.*|.*block.*"

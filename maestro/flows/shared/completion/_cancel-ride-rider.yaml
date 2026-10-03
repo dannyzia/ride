@@ -1,15 +1,18 @@
-# _cancel-ride-rider — cancel-reason screen → select reason REASON_INDEX → confirm.
-# §9 Completion and Trust Subflows. Gate 1 REWIRE (semantic IDs via testid-map.json,
-# app/(main)/(customer)/cancel-reason/index.tsx): confirm button =
-# customer.cancel-reason.confirm-cancel (L149); optional note input =
-# customer.cancel-reason.set-note (L142). Reason rows are a mapped list of text
-# rows without per-row testIDs — index tap retained (G-02 remainder).
-# Class: AUTOMATABLE.
+# _cancel-ride-rider — finding-driver → cancel-reason screen → reason → confirm.
+# §9 Completion and Trust Subflows. Gate 1 REWIRE PASS 2 — the ".*Cancel.*" entry
+# tap is now customer.finding-driver.handle-cancel (finding-driver/index.tsx L471,
+# onPress={handleCancel}; the source comment marks it "Cancel Booking — always
+# visible", so it is a dependable ground). Downstream IDs were already rewired:
+# customer.cancel-reason.set-note (L142) and customer.cancel-reason.confirm-cancel
+# (L149). Reason rows are a mapped list with no per-row testID — the index tap
+# stays (G-02 remainder). Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
-- tapOn: ".*Cancel.*"
+- tapOn:
+    id: "customer.finding-driver.handle-cancel"
 - extendedWaitUntil:
-    visible: ".*reason.*|.*Reason.*|.*Why.*"
+    visible:
+      id: "customer.cancel-reason.confirm-cancel"
     timeout: 15000
 - tapOn:
     text: ".*"

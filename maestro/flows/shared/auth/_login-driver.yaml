@@ -1,31 +1,43 @@
 # _login-driver — shared auth subflow: phone → password login → driver home.
-# §9 Authentication Subflows. Selector source: app/(auth)/login.tsx (shared with
-# rider; role chip "Driver" has no testID yet — G-02 remainder). Gate 1 REWIRE
-# (semantic IDs, maestro/tools/testid-map.json): login.set-phone / login.set-password /
-# login.handle-login. Class: AUTOMATABLE.
+# §9 Authentication Subflows. Gate 1 REWIRE PASS 2 (semantic IDs, verified against
+# source in maestro/tools/testid-map.json):
+#   app/(auth)/phone-entry.tsx  phone-entry.set-phone / phone-entry.set-role-2
+#                               (Driver chip) / phone-entry.handle-login
+#   app/(auth)/login.tsx        login.set-password / login.handle-login
+# SCREEN-AFFINITY FIX: the whole credential block used to sit behind
+# `when: visible: "Log In"`, which never matches — app/_layout.tsx:150 lands on
+# /(auth)/phone-entry, whose button reads "Login". The runFlow block was therefore
+# skipped entirely and the subflow failed at the driver-home assertion. The guard is
+# gone (a clearState launch is deterministic) and the steps are now testID-addressed.
+# Class: AUTOMATABLE.
+# The launch is explicit here because every one of the 13 callers invokes this
+# subflow as its first action (most preceded only by the no-op _set-gps-banani),
+# so a deterministic clearState → phone-entry is safe and removes the previous
+# dependence on the device happening to already sit on a login screen.
 appId: com.ride.bd
 ---
-- runFlow:
-    when:
-      visible: "Log In"
-    commands:
-      - tapOn:
-          id: "login.set-phone"
-      - eraseText
-      - inputText: ${PHONE}
-      - tapOn:
-          text: "Driver"
-          optional: true
-      - tapOn:
-          id: "login.handle-login"
-      - extendedWaitUntil:
-          visible: "Password"
-          timeout: 10000
-      - tapOn:
-          id: "login.set-password"
-      - inputText: ${PASSWORD}
-      - tapOn:
-          id: "login.handle-login"
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: "Enter your phone number to continue"
+    timeout: 20000
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: ${PHONE}
+- tapOn:
+    id: "phone-entry.set-role-2"
+- tapOn:
+    id: "phone-entry.handle-login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn:
+    id: "login.set-password"
+- inputText: ${PASSWORD}
+- tapOn:
+    id: "login.handle-login"
 # Driver home ground: map + status surfaces (labels per driver_home i18n section).
 - extendedWaitUntil:
     visible: ".*Connected.*|.*Offline.*|.*Calls Remaining.*"

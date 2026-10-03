@@ -1,8 +1,12 @@
-# auth/07-role-selector — role chip toggles between Rider and Driver at login.
-# Feature: R-AUTH-01 (§4). Chips are display-labeled TouchableOpacity elements
-# WITHOUT testIDs in the codemod output (G-02 remainder: e2e copy strings, not
-# handler-derived) — text taps retained by design, NOT an oversight.
-# Class: AUTOMATABLE.
+# auth/07-role-selector — role chip toggles between Rider and Driver at phone entry.
+# Feature: R-AUTH-01 (§4). GATE 1 REWIRE PASS 2 — the chips DO have testIDs; the
+# previous header claimed they were "display-labeled TouchableOpacity WITHOUT
+# testIDs (G-02 remainder: e2e copy strings, not handler-derived)". That was wrong:
+# app/(auth)/phone-entry.tsx:181 and :195 put phone-entry.set-role (Rider) and
+# phone-entry.set-role-2 (Driver) on the chip TouchableOpacitys. The copmod
+# derived them from setRole('rider'|'driver'); only the *_meta note in
+# flow-testid-map.json still called them text-only, and it is corrected in this
+# pass. Class: AUTOMATABLE.
 appId: com.ride.bd
 name: "Auth - Role Selector"
 tags: [auth]
@@ -11,9 +15,14 @@ tags: [auth]
     appId: com.ride.bd
     clearState: true
 - extendedWaitUntil:
-    visible: "Log In"
+    visible: "Enter your phone number to continue"
     timeout: 20000
-- tapOn: "Driver"
-- tapOn: "Rider"
+# tap Driver, then back to Rider — both chips are addressable by testID now.
+- tapOn:
+    id: "phone-entry.set-role-2"
+- tapOn:
+    id: "phone-entry.set-role"
 - assertVisible: ".*Enter your phone number.*"
-- assertVisible: "Log In"
+- assertVisible: "Get Started"
+- assertVisible: "Rider"
+- assertVisible: "Driver"

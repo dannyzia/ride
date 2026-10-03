@@ -12,6 +12,10 @@ interface SettingsRowProps {
   showChevron?: boolean;
   rightElement?: React.ReactNode;
   isLast?: boolean;
+  /** Optional E2E handle. Rows are label-only otherwise, which forces
+   *  Maestro flows onto brittle copy selectors — see maestro/COVERAGE-MANIFEST.md
+   *  §7 G-02. Call sites are expected to pass a semantic id. */
+  testID?: string;
 }
 
 const SettingsRow = ({
@@ -22,6 +26,7 @@ const SettingsRow = ({
   showChevron = true,
   rightElement,
   isLast = false,
+  testID,
 }: SettingsRowProps) => {
   const isDark = useIsDark();
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -36,6 +41,7 @@ const SettingsRow = ({
         onPress={onPress}
         activeOpacity={0.7}
         style={styles.row}
+        testID={testID}
       >
         <Ionicons name={icon} size={24} color={iconColor ?? colors.primary} />
         <Text style={[styles.label, { color: textPrimary }]} numberOfLines={1}>

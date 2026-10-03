@@ -1,5 +1,10 @@
 # rider/settings/09-faq — FAQ screen renders content (READ-ONLY render assertion).
-# Feature: R-SETT support/FAQ (§4, LOW risk). Class: READ-ONLY (render assert).
+# Feature: R-SETT support/FAQ (§4, LOW risk).
+# Gate 1 REWIRE PASS 2 — the ".*FAQ.*|.*Help.*" copy selector is now
+# customer.profile.push-faq (the FAQ SettingsRow, added in this pass), and the
+# screen ground is customer.settings.faq.el-1 (the header back button, so the
+# assertion is "the FAQ screen is mounted" rather than a copy match).
+# Class: READ-ONLY (render assert).
 appId: com.ride.bd
 name: "Rider Settings - FAQ"
 tags: [rider, settings]
@@ -11,7 +16,11 @@ tags: [rider, settings]
     commands:
       - runFlow: ../../../shared/auth/_login-rider.yaml
 - runFlow: ../../../shared/util/_open-settings-hub.yaml
-- tapOn: ".*FAQ.*|.*Help.*"
+- tapOn:
+    id: "customer.profile.push-faq"
 - extendedWaitUntil:
-    visible: ".*FAQ.*|.*question.*|.*Help.*"
+    visible:
+      id: "customer.settings.faq.el-1"
     timeout: 20000
+- assertVisible:
+    id: "customer.settings.faq.el-1"

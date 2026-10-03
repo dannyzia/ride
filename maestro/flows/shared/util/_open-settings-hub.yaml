@@ -1,14 +1,25 @@
-# _open-settings-hub — Profile tab → Settings.
-# §9. Gate 1 REWIRE: tab tap = customer._layout.on-press (customer (tabs)/_layout.tsx
-# L55 wrapper TouchableWithoutFeedback) filtered by the tab label. The Settings row
-# itself has no testID (settings/index.tsx exposes only its back button) — text tap
-# retained (G-02 remainder). Class: AUTOMATABLE.
+# _open-settings-hub — open the rider Profile tab (the settings surface).
+# §9. Gate 1 REWIRE PASS 2 — CORRECTION.
+# This subflow used to tap a "Settings" row after opening the Profile tab. There
+# is no such row: the rider profile renders its settings inline (profile/index.tsx
+# renderSection blocks for account / preferences / support). The separate hub at
+# app/(main)/(customer)/(tabs)/settings/index.tsx DOES exist and carries
+# customer.settings.el-1 per row, but nothing in the rider tree routes to it —
+# the only inbound router.push/replace calls are three sub-screens navigating back.
+# That is an app-level navigation gap (logged to COVERAGE-MANIFEST.md), not a
+# selector problem, so this subflow now stops at the Profile tab and callers tap
+# the specific row directly via the SettingsRow testIDs added in this pass
+# (components/SettingsRow.tsx gained an optional testID prop).
+# Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - tapOn:
     id: "customer._layout.on-press"
     text: ".*Profile.*|.*Account.*"
+# Ground on customer.profile.el-1 (the Edit Profile row, first item in the account
+# section) rather than confirm-sign-out, which sits at the bottom of a ScrollView
+# and may be outside the rendered hierarchy before a scroll.
 - extendedWaitUntil:
-    visible: ".*Settings.*"
+    visible:
+      id: "customer.profile.el-1"
     timeout: 15000
-- tapOn: ".*Settings.*"

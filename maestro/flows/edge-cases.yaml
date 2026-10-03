@@ -1,7 +1,13 @@
 # Device: emulator-5554 (Rider).
 # Run: maestro test maestro/flows/edge-cases.yaml   (only emulator-5554 connected)
-# Preconditions: rider account +8801613249520 is logged in and on Home ("Search destination...").
-# Active case: live-flow cancellation from the "Finding your ride..." screen.
+# Preconditions: rider account +8801613249520 is logged in and on Home.
+# Active case: live-flow cancellation from the finding-driver screen.
+# Gate 1 REWIRE PASS 2 — LABEL DRIFT CORRECTION + testID conversion (same mapping as
+# rider-trigger-ride.yaml: the old copy selectors belonged to the retired find-ride/
+# confirm-ride booking screens; the live sheet lives in (tabs)/home/index.tsx).
+# Cancellation itself is now customer.finding-driver.handle-cancel
+# (finding-driver/index.tsx L471, onPress={handleCancel}); the source comment calls it
+# "Cancel Booking — always visible", so it is a reliable presence proxy for that screen.
 # EXCLUDED cases (verified absent in code as of 2026-07):
 #   - Wallet Top-Up: screens exist but are NOT reachable from the tab bar (deep-link only).
 #   - Driver Min-Rate slider: components/MinRateSlider.tsx is imported by ZERO screens; no such UI.
@@ -16,54 +22,54 @@ tags:
 ---
 - launchApp:
     appId: com.ride.bd
-- assertVisible: "Search destination..."
-- tapOn: "Search destination..."
 - extendedWaitUntil:
-    visible: "Where do you want to go?"
-    timeout: 10000
-- tapOn: "Search destination..."
+    visible:
+      id: "customer.home.el-2"
+    timeout: 20000
+- tapOn:
+    id: "customer.home.el-2"
+- extendedWaitUntil:
+    visible:
+      id: "customer.autocomplete.set-query"
+    timeout: 15000
+- tapOn:
+    id: "customer.autocomplete.set-query"
 - inputText: "Savar"
 - extendedWaitUntil:
     visible: ".*Savar.*"
-    timeout: 15000
+    timeout: 20000
 - tapOn:
+    id: "customer.autocomplete.handle-place-select"
     text: ".*Savar.*"
+    index: 0
 - waitForAnimationToEnd:
     timeout: 3000
-- extendedWaitUntil:
-    visible: "Find now"
-    timeout: 15000
 - tapOn:
-    text: "Use .*"
-- waitForAnimationToEnd:
-    timeout: 1500
-- tapOn: "Find now"
+    id: "customer.home.handle-next"
 - extendedWaitUntil:
-    visible: "Choose Vehicle"
-    timeout: 15000
+    visible:
+      id: "customer.home.set-selected-vehicle-type"
+    timeout: 20000
 - swipe:
     direction: UP
     duration: 300
-- extendedWaitUntil:
-    visible: "Bike Plus"
-    timeout: 10000
-- tapOn: "Bike Plus"
-- extendedWaitUntil:
-    visible: "Confirm Ride"
-    timeout: 15000
-- waitForAnimationToEnd:
-    timeout: 1500
-- tapOn: "Request Ride"
-- extendedWaitUntil:
-    visible: "Finding your ride..."
-    timeout: 20000
+- tapOn:
+    id: "customer.home.set-selected-vehicle-type"
+    text: ".*Bike Plus.*"
+- tapOn:
+    id: "customer.home.handle-call-for-ride"
 # --- cancel the in-flight request ---
-- assertVisible: "Cancel Request"
-- tapOn: "Cancel Request"
+- extendedWaitUntil:
+    visible:
+      id: "customer.finding-driver.handle-cancel"
+    timeout: 30000
+- tapOn:
+    id: "customer.finding-driver.handle-cancel"
 - waitForAnimationToEnd:
     timeout: 3000
-- assertNotVisible: "Finding your ride..."
+- assertNotVisible:
+    id: "customer.finding-driver.handle-cancel"
 - extendedWaitUntil:
-    visible: "Search destination..."
+    visible:
+      id: "customer.home.el-2"
     timeout: 15000
-- assertVisible: "Search destination..."

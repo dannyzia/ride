@@ -1,5 +1,18 @@
 # rider/settings/07-loyalty-points — loyalty screen renders points balance (GROWTH BC-15).
 # Redemption mechanics are backend-gated; render assertion is the safe floor.
+#
+# Gate 1 REWIRE PASS 2 — KNOWN APP-LEVEL GAP, flow works around it.
+# The old flow tapped ".*Loyalty.*" on the rider profile. There is NO loyalty row
+# there: the profile renders account/preferences/support sections only. Loyalty
+# lives exclusively on the separate hub at (main)/(customer)/(tabs)/settings
+# (settings/index.tsx items[] → settings.loyalty), and nothing in the rider tree
+# routes to that hub — the only inbound calls are three sub-screens doing
+# router.replace() back to it. Recorded as a navigation gap in
+# maestro/COVERAGE-MANIFEST.md, not fixed here (product decision, out of QA scope).
+# Workaround: deep-link straight to the hub (app scheme "ride", app.config.js:17),
+# then select the row by its testID customer.settings.el-1 filtered by the label.
+# If the owner later adds a profile row for the hub, this deep link should be
+# replaced by a profile-row tap.
 # Class: AUTOMATABLE (render).
 appId: com.ride.bd
 name: "Rider Settings - Loyalty Points"
@@ -11,8 +24,17 @@ tags: [rider, settings, growth]
       PASSWORD: "test1234"
     commands:
       - runFlow: ../../../shared/auth/_login-rider.yaml
-- runFlow: ../../../shared/util/_open-settings-hub.yaml
-- tapOn: ".*Loyalty.*"
+- openLink: "ride:///(main)/(customer)/(tabs)/settings"
 - extendedWaitUntil:
-    visible: ".*point.*|.*Point.*|.*৳.*"
+    visible:
+      id: "customer.settings.el-1"
     timeout: 20000
+- tapOn:
+    id: "customer.settings.el-1"
+    text: ".*Loyalty.*"
+- extendedWaitUntil:
+    visible:
+      id: "customer.settings.loyalty.el-1"
+    timeout: 20000
+- assertVisible:
+    id: "customer.settings.loyalty.el-1"

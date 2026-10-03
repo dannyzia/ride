@@ -2,6 +2,11 @@
 # ("Incorrect Ride Pin. Ask your rider and try again." — i18n enter_otp.incorrect_pin,
 # device-proven in driver-core.yaml manual-check block).
 # Feature: D-SAFETY PIN negative (§4 N). Class: AUTOMATABLE (paired-run).
+# Gate 1 REWIRE PASS 2: the ".*Ride Pin.*|.*digit.*" textField match hit the
+# placeholder boxes, not the invisible input that takes keystrokes. It is now
+# rider.enter-otp.set-pin, and "Start Ride" is rider.enter-otp.handle-verify.
+# The error copy assertion stays TEXT — it is dynamic server/i18n text
+# (enter_otp.incorrect_pin), which is exactly what this negative flow is testing.
 appId: com.ride.bd
 name: "Driver Rides - PIN Entry Wrong"
 tags: [driver, in-ride, negative]
@@ -16,12 +21,14 @@ tags: [driver, in-ride, negative]
 - runFlow: ../../../shared/driver/_accept-ride.yaml
 - runFlow: ../../../shared/driver/_slide-arrive.yaml
 - extendedWaitUntil:
-    visible: "Ride Pin"
+    visible:
+      id: "rider.enter-otp.set-pin"
     timeout: 30000
 - tapOn:
-    textField: ".*Ride Pin.*|.*digit.*"
+    id: "rider.enter-otp.set-pin"
 - inputText: "0000"
-- tapOn: "Start Ride"
+- tapOn:
+    id: "rider.enter-otp.handle-verify"
 - extendedWaitUntil:
     visible: "Incorrect Ride Pin"
     timeout: 15000

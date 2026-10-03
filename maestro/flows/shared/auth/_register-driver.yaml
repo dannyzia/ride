@@ -1,7 +1,16 @@
 # _register-driver — full new-driver registration: phone-entry → OTP → register as Driver.
-# §9 Authentication Subflows. Selector source: app/(auth)/*.tsx; role chip "Driver"
-# (e2e copy, verified in login.tsx selector inventory). Fixtures: Driver C (pending)
-# roster phone; OTP bypass 123456. Class: AUTOMATABLE.
+# §9 Authentication Subflows. Gate 1 REWIRE PASS 2 — every tap below is now a
+# testID verified against source (maestro/tools/testid-map.json):
+#   app/(auth)/phone-entry.tsx  phone-entry.set-phone / phone-entry.set-role-2
+#                               (Driver chip) / phone-entry.handle-register
+#   app/(auth)/otp-verify.tsx   otp-verify.set-otp / otp-verify.handle-verify-otp
+#   app/(auth)/register.tsx     register.set-name / register.set-password
+#                               / register.set-confirm-password / register.handle-register
+# Same three defects as _register-rider, fixed: the "Send OTP" label never existed
+# (the buttons are "Login"/"Register"), handleRegister is the branch that routes to
+# /otp-verify with &role=driver (phone-entry.tsx:98), and register.tsx:44 rejects a
+# mismatched confirmPassword — which the old flow never typed at all.
+# Fixtures: Driver C (pending) roster phone; OTP bypass 123456. Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - launchApp:
@@ -11,31 +20,34 @@ appId: com.ride.bd
     visible: ".*Enter your phone number.*"
     timeout: 20000
 - tapOn:
-    textField: "1XXXXXXXXX"
+    id: "phone-entry.set-phone"
 - inputText: ${PHONE}
 - tapOn:
-    text: "Driver"
-    optional: true
-- tapOn: "Send OTP"
+    id: "phone-entry.set-role-2"
+- tapOn:
+    id: "phone-entry.handle-register"
 - extendedWaitUntil:
     visible: "Enter 6-digit OTP"
     timeout: 20000
 - tapOn:
-    textField: "Enter 6-digit OTP"
+    id: "otp-verify.set-otp"
 - inputText: ${OTP_CODE}
-- tapOn: "Verify OTP"
+- tapOn:
+    id: "otp-verify.handle-verify-otp"
 - extendedWaitUntil:
-    visible: ".*Create Account.*|.*Name.*"
+    visible: "Complete Registration"
     timeout: 20000
 - tapOn:
-    textField: ".*Name.*"
-    optional: true
+    id: "register.set-name"
 - inputText: ${NAME}
 - tapOn:
-    textField: ".*Password.*"
-    optional: true
+    id: "register.set-password"
 - inputText: ${PASSWORD}
-- tapOn: "Create Account"
+- tapOn:
+    id: "register.set-confirm-password"
+- inputText: ${PASSWORD}
+- tapOn:
+    id: "register.handle-register"
 # DriverStatusGuard routes new drivers to the pending/onboarding surface.
 - extendedWaitUntil:
     visible: ".*pending.*|.*verification.*|.*onboarding.*|.*Welcome.*"
