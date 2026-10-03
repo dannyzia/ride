@@ -5,13 +5,41 @@
 **Status:**      ACTIVE
 **Source of truth:** `TEST-SETUP.md` §1–2 (IP sync + startup order) — this runbook extends it for Maestro unattended runs, it does not replace it
 **Related (concrete paths):**
+  - `maestro/utils/run-device-day.sh` — **executable form of §1B–§8 below** (one unattended command)
   - `maestro/utils/bootstrap-device-day.sh` — automated steps 1–5 of this runbook
   - `maestro/utils/adb-gps-banani.sh`, `maestro/utils/adb-gps-gulshan.sh` — GPS seeding (emulator only)
   - `maestro/COVERAGE-MANIFEST.md` §7 G-02 / round notes — what the key-flows-×2 run must produce
   - `TEST-SETUP.md` §5 — failure modes table (splash-hang, black screen, stale IP)
   - `scripts/dev-env-sync.js` — the LAN-IP sync every session depends on
-**Last verified:** 2026-09-28, by testing model (ports/emulator/APK-cache facts checked live on this machine)
+**Last verified:** 2026-10-03, by testing model (adb dual-build pinning, headless-emulator image name, and the `adb-unauthorized` blocker all confirmed live)
 **How to update:** after every device day, append newly hit failure modes to the table at the bottom and correct any step that drifted.
+
+---
+
+## One-command path (recommended)
+
+`maestro/utils/run-device-day.sh` is this runbook in executable form — §1B through §8, unattended, in order:
+
+```bash
+bash maestro/utils/run-device-day.sh                      # default AVD, headless
+bash maestro/utils/run-device-day.sh --avd Pixel_6a      # different AVD
+bash maestro/utils/run-device-day.sh --windowed           # show the emulator window
+bash maestro/utils/run-device-day.sh --keep-emulator      # leave the emulator up afterwards
+```
+
+Exit codes: **0** all key flows passed ×2 · **1** BLOCKED at a bring-up step · **2** bring-up OK but a flow failed (§7 stop-the-day).
+
+It **fails loudly at the first blocked step**: each step calls `die BLOCKER "cause" "remedy"`, printing the blocker name, what caused it, how to fix it, and where the evidence landed — then exits non-zero. It deliberately does *not* use `set -e`, because a bare exit code tells you nothing and `set -e` also aborts on incidental non-zero exits (`adb pm grant` on an absent permission) that are expected.
+
+Things it does that the manual sections do not, all of which bit us on 2026-10-03:
+
+- **Pins one adb build** and warns when two disagree (both bind tcp:5037 → misleading `unauthorized`).
+- **Aborts on the `unauthorized` state immediately** instead of burning the boot timeout, with the full "this is not fixable from the shell" diagnosis.
+- **Defaults to headless** (`-no-window`); window creation is what crashed the emulator on this host.
+- **Kills the right process on cleanup** — the headless image is `qemu-system-x86_64-headless.exe`, so matching only the windowed name silently leaks an emulator between runs.
+- Writes `maestro/test-results/<date>/` with a per-run log, failure screenshots, a pass matrix, and a `RESULT.md`.
+
+The sections below remain authoritative for *why* each step matters and for manual/fallback execution. Overridable via env: `BOOT_TIMEOUT_S`, `SERVER_TIMEOUT_S`, `FLOW_TIMEOUT_S`, `RUNS_PER_FLOW`, `MAESTRO_BIN`.
 
 ---
 
@@ -171,6 +199,8 @@ If it hangs at splash / black screen → TEST-SETUP.md §5 table: 99% stale IP. 
 
 ## 7. Executing key flows ×2 (unattended loop)
 
+> Executed automatically by `maestro/utils/run-device-day.sh` (see "One-command path"). The loop below is the manual/equivalent form and stays authoritative for the reset-between-runs semantics.
+
 Per-flow, twice, with state reset between the two runs (login flows are naturally re-runnable; booking/ride flows need the account reset or a fresh ride):
 
 ```bash
@@ -241,3 +271,6 @@ adb kill-server
 | Rider booking flow can't find pickup | GPS not seeded or seeded after app start | §5 before app launch, or force-stop + relaunch |
 | `adb shell emu geo fix` on physical phone | command is emulator-only | physical = mock-location app (out of unattended scope) |
 | bootstrap says servers "already listening" but flows still fail | stale process from a previous network session | kill and restart both (Metro picks up new IP only on restart) |
+| **Emulator boots but `adb devices` shows `unauthorized` forever** (2026-10-03) | emulator guest never accepts the host adb key. NOT fixed by cold boot, `-wipe-data`, headless `-no-window`, unified adb builds, or a fresh `ADB_VENDOR_KEYS` keyring. **Reproduced on two independent AVDs (Medium_Phone AND Pixel_6a)**, so it is not a corrupt image — the authorization path itself is unavailable, most likely because there is no interactive desktop session to show the key-confirmation. | stop-the-day; no unattended fix from the shell. Needs an interactive session, or a device/emulator host that can complete adb auth. Evidence: `maestro/test-results/2026-10-03/` |
+| **Two different `adb` builds both on PATH** (2026-10-03) | `C:\Users\callz\platform-tools\adb.exe` (v37.0.0, first on PATH, invoked by the emulator client) and `...\Android\Sdk\platform-tools\adb.exe` (v36.0.0) both start servers on tcp:5037 | pin one for the whole session — `adb` from PATH — before any device work, or diagnostics point at the wrong server |
+| `-wipe-data` crashes the emulator at launch with `UpdateLayeredWindowIndirect failed … (A device attached to the system is not functioning.)` | guest window creation fails; windowing is unavailable in this environment | drop `-wipe-data`; use `-no-window -no-audio -gpu swiftshader_indirect` (process survives headless, though adb auth still failed here) |

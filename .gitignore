@@ -63,6 +63,12 @@ yarn-error.*
 *.log
 expo-server*.log
 
+# Device-day evidence is the exception: maestro/test-results/<date>/ holds the
+# bring-up logs a BLOCKED.md cites by filename, so ignoring *.log would commit a
+# report whose evidence is missing. Scoped to that directory only — dev logs
+# elsewhere stay ignored.
+!maestro/test-results/**/*.log
+
 # OS artifacts
 Thumbs.db
 Desktop.ini

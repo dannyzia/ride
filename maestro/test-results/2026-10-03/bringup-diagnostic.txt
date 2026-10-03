@@ -1,0 +1,29 @@
+=== adb devices ===
+List of devices attached
+emulator-5554	unauthorized
+
+
+=== sys.boot_completed ===
+adb.exe: device unauthorized.
+This adb server's $ADB_VENDOR_KEYS is C:/Users/callz/AppData/Local/Temp/ride-device-day-adbkey
+Try 'adb kill-server' if that seems wrong.
+Otherwise check for a confirmation dialog on your device.
+
+=== emulator process ===
+qemu-system-x86_64-headle     6688 Console                    1  2,282,088 K
+
+=== adb version(s) ===
+Android Debug Bridge version 1.0.41
+Version 37.0.0-14910828
+Android Debug Bridge version 1.0.41
+Version 36.0.0-13206524
+
+=== AVDs ===
+Medium_Phone.avd
+Pixel_6a.avd
+=== FINAL: adb devices ===
+List of devices attached
+emulator-5554	authorizing
+
+=== qemu after teardown ===
+2

@@ -1,0 +1,70 @@
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-03
+date:        Sat Oct  3 11:41:09 BST 2026
+maestro:     2.6.1
+adb:         pinned SDK build (Version 36.0.0-13206524) ahead of PATH build (Version 37.0.0-14910828)
+NOTE: two adb builds present; SDK one is now first on PATH for this run
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 240s)…
+  t+1s device state: unauthorized
+
+############################################################
+## BLOCKED at: adb-unauthorized
+## cause:    emulator booted but adb reports 'unauthorized' — the guest never accepted the host key. Verified 2026-10-03 to be NOT fixed by: cold boot, -wipe-data, headless -no-window, unifying the two adb builds, or a fresh ADB_VENDOR_KEYS keyring, and it reproduces on two independent AVDs (so the image is not corrupt). The authorization path is unavailable on this host — most likely no interactive desktop session to show the key-confirmation.
+## remedy:   needs an interactive desktop session, or a device/emulator host that can complete adb auth. Unattended shell fixes do not exist for this one.
+## evidence: maestro/test-results/2026-10-03
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-03
+date:        Sat Oct  3 11:42:22 BST 2026
+maestro:     2.6.1
+adb:         pinned SDK build (Version 36.0.0-13206524) ahead of PATH build (Version 37.0.0-14910828)
+NOTE: two adb builds present; SDK one is now first on PATH for this run
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 200s)…
+  t+3s device state: offline
+  t+48s device state: unauthorized
+
+############################################################
+## BLOCKED at: adb-unauthorized
+## cause:    emulator booted but adb reports 'unauthorized' — the guest never accepted the host key. Verified 2026-10-03 to be NOT fixed by: cold boot, -wipe-data, headless -no-window, unifying the two adb builds, or a fresh ADB_VENDOR_KEYS keyring, and it reproduces on two independent AVDs (so the image is not corrupt). The authorization path is unavailable on this host — most likely no interactive desktop session to show the key-confirmation.
+## remedy:   needs an interactive desktop session, or a device/emulator host that can complete adb auth. Unattended shell fixes do not exist for this one.
+## evidence: maestro/test-results/2026-10-03
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-03
+date:        Sat Oct  3 11:44:11 BST 2026
+maestro:     2.6.1
+adb:         pinned SDK build (Version 36.0.0-13206524) ahead of PATH build (Version 37.0.0-14910828)
+NOTE: two adb builds present; SDK one is now first on PATH for this run
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 200s)…
+  t+1s device state: offline
+  t+28s device state: unauthorized
+
+############################################################
+## BLOCKED at: adb-unauthorized
+## cause:    emulator booted but adb reports 'unauthorized' — the guest never accepted the host key. Verified 2026-10-03 to be NOT fixed by: cold boot, -wipe-data, headless -no-window, unifying the two adb builds, or a fresh ADB_VENDOR_KEYS keyring, and it reproduces on two independent AVDs (so the image is not corrupt). The authorization path is unavailable on this host — most likely no interactive desktop session to show the key-confirmation.
+## remedy:   needs an interactive desktop session, or a device/emulator host that can complete adb auth. Unattended shell fixes do not exist for this one.
+## evidence: maestro/test-results/2026-10-03
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
