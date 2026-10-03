@@ -8,6 +8,8 @@ tags: [rider-login]
 # "Login" -> phone-entry.handle-login, role chip -> phone-entry.set-role,
 # password -> login.set-password. Ad-hoc no-clearState variant; the maintained
 # path is auth/02-rider-login.yaml via shared/auth/_login-rider.yaml.
+# B-1: both trailing steps asserted the dead "Search destination" string (home.search_destination
+# is "Where to?"); they would have burned 30s then failed. Now the el-2 testID.
 - tapOn:
     id: "phone-entry.set-phone"
 - eraseText
@@ -26,6 +28,8 @@ tags: [rider-login]
 - tapOn:
     id: "login.handle-login"
 - extendedWaitUntil:
-    visible: "Search destination"
+    visible:
+      id: "customer.home.el-2"
     timeout: 30000
-- assertVisible: "Search destination"
+- assertVisible:
+    id: "customer.home.el-2"

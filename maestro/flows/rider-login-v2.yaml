@@ -4,6 +4,9 @@ appId: com.ride.bd
 # Gate 1 REWIRE PASS 2 — text taps replaced with the testIDs verified in
 # maestro/tools/testid-map.json (app/(auth)/phone-entry.tsx, app/(auth)/login.tsx).
 # Same covered path as rider-login-only.yaml; kept as a second regression probe.
+# B-1: scrollUntil keyed on the dead "Search destination" string (home.search_destination is
+# "Where to?"). scrollTimes: 0 means this never scrolled anyway — it was a pure wait wearing
+# a scrollUntil costume. Now the el-2 testID.
 - tapOn:
     id: "phone-entry.set-phone"
 - eraseText
@@ -23,6 +26,7 @@ appId: com.ride.bd
     id: "login.handle-login"
 - wait: 10000
 - scrollUntil:
-    visible: "Search destination"
+    visible:
+      id: "customer.home.el-2"
     timeout: 30000
     scrollTimes: 0

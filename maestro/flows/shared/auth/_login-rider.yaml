@@ -11,6 +11,12 @@
 # /(auth)/phone-entry, so those taps targeted elements that did not exist yet and the
 # leading `visible: "Log In"` guard could never match (phone-entry renders "Login",
 # not "Log In"). Now it drives phone-entry explicitly, then the password screen.
+# GROUND FIX (B-1): the post-login wait asserted ".*Search destination.*", a string that
+# exists nowhere in the app — home.search_destination is "Where to?" (en/common.json:176).
+# Now keyed on that row's testID. It is the right ground because every booking flow taps
+# it as its very next step (_select-destination.yaml:11), so it is provably rendered at
+# this point, whereas the old text matched nothing and burned the full 30s timeout.
+# 29 flows depend on this subflow, so the defect was one of the most expensive in the suite.
 # Class: AUTOMATABLE (real login through live Supabase auth + app API).
 appId: com.ride.bd
 ---
@@ -37,5 +43,6 @@ appId: com.ride.bd
 - tapOn:
     id: "login.handle-login"
 - extendedWaitUntil:
-    visible: ".*Search destination.*"
+    visible:
+      id: "customer.home.el-2"
     timeout: 30000

@@ -2,9 +2,11 @@
 # Feature: R-AUTH-05 (§4 matrix). Gate 1 REWIRE: entry steps run through
 # ../shared/auth/_login-rider.yaml which taps semantic IDs (login.set-phone /
 # login.set-password / login.handle-login per maestro/tools/flow-testid-map.json).
-# Final assert is TEXT on the rider home search surface — rider home exposes no
-# search testID (G-02 remainder); exact landing is proven by booking flows, which
-# continue from here into _select-destination (id: customer.home.el-2).
+# Final assert is the rider home search row's testID. The previous comment here claimed
+# "rider home exposes no search testID (G-02 remainder)" — that was stale and self-contradicting,
+# since the line below it already named the id. home.search_destination is "Where to?"
+# (en/common.json:176); the row is customer.home.el-2 (home/index.tsx L882) and is the first
+# thing every booking flow taps after this one.
 # Fixtures: Rider A +8801613249520 / test1234 (§13 roster).
 # Class: AUTOMATABLE.
 appId: com.ride.bd
@@ -19,4 +21,5 @@ tags: [auth, smoke]
     commands:
       - runFlow: ../shared/auth/_login-rider.yaml
 - runFlow: ../shared/util/_dismiss-dialogs.yaml
-- assertVisible: ".*Search destination.*|.*Where to.*"
+- assertVisible:
+    id: "customer.home.el-2"

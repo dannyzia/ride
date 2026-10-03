@@ -1,5 +1,7 @@
 # rider/home/01-map-loads — map renders with GPS seeded; no crash; location CTA absent.
 # Feature: R-HOME-01/R-HOME-02 (§4). GPS pre-seeded BEFORE launch (§3.2 doctrine).
+# B-1: the wait alternated a dead branch (".*Search destination.*" — home.search_destination
+# is "Where to?") against a live one; the dead half is dropped in favour of the el-2 testID.
 # Class: AUTOMATABLE.
 appId: com.ride.bd
 name: "Rider Home - Map Loads"
@@ -14,6 +16,7 @@ tags: [rider, smoke]
       - runFlow: ../../../shared/auth/_login-rider.yaml
 - runFlow: ../../../shared/util/_dismiss-dialogs.yaml
 - extendedWaitUntil:
-    visible: ".*Search destination.*|.*Where to.*"
+    visible:
+      id: "customer.home.el-2"
     timeout: 30000
 - assertVisible: ".*Home.*"

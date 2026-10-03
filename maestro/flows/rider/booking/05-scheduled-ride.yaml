@@ -1,14 +1,32 @@
 # rider/booking/05-scheduled-ride — toggle Schedule for later, set T+15min, submit,
 # entry appears under Scheduled.
-# Feature: R-BOOK scheduled (§4, BC-13). Gate 1 REWIRE (semantic IDs via
-# testid-map.json): schedule toggle = customer.confirm-ride.set-schedule-later
-# (confirm-ride/index.tsx L656); submit = customer.schedule-ride.handle-schedule
-# (schedule-ride/index.tsx L295). Date/time pickers are OS surfaces — text asserts
-# retained. NOTE: reminder timing needs Gate 5 override — not asserted here.
-# Class: AUTOMATABLE.
+# *** BLOCKED-B-3 — NOT RUNNABLE. The steps below are the INTENDED journey, preserved as the
+#     spec for whoever resolves the owner decision. Do not run: step 4 taps a dead route. ***
+# Feature: R-BOOK scheduled (§4, BC-13).
+# B-3 evidence (verified against source this pass, not inherited):
+#   1. The live booking sheet has NO schedule affordance. `grep -i schedule
+#      app/(main)/(customer)/(tabs)/home/index.tsx` returns ZERO matches — the rider cannot
+#      pre-book from the sheet at all.
+#   2. customer.confirm-ride.set-schedule-later (step 4's target) lives in
+#      app/(main)/(customer)/confirm-ride/, which is UNREACHABLE for the same reason as
+#      find-ride/ (see shared/booking/_select-vehicle.yaml for the route-deadness proof).
+#   3. The i18n strings survive (confirm_ride.schedule_for_later, schedule_ride.*), so the
+#      copy in this file's assertions is not obviously stale — which is exactly why a
+#      name-based grep audit kept missing this. Only the dead screen renders them.
+#   4. schedule-ride/ has exactly ONE inbound route: no-drivers-available/index.tsx:53
+#      (testID customer.no-drivers-available.push-schedule-ride), i.e. reachable only AFTER
+#      an immediate request fails with no drivers online. That path is fleet-state dependent
+#      and inverts the feature under test (post-failure recovery, not pre-booking), so it is
+#      NOT a legitimate repoint.
+# OWNER DECISION REQUIRED: is "schedule for later" a live feature that lost its UI, or a
+# deleted one? If live, the booking sheet needs a schedule affordance and this flow needs a
+# rebuild. If deleted, delete the flow AND the dead confirm-ride/schedule-ride screens
+# together (AGENTS.md: screen deletion is an owner call, not QA's).
+# Tagged `blocked` per the house convention (cf. rider/wallet/02-wallet-topup-initiate.yaml).
+# Class: BLOCKED (was AUTOMATABLE — that claim was wrong).
 appId: com.ride.bd
 name: "Rider Booking - Scheduled Ride"
-tags: [rider, booking, scheduling]
+tags: [rider, booking, scheduling, blocked]
 ---
 - runFlow: ../../../shared/location/_set-gps-banani.yaml
 - runFlow:
