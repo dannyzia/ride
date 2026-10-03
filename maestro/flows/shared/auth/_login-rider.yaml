@@ -11,8 +11,13 @@
 # /(auth)/phone-entry, so those taps targeted elements that did not exist yet and the
 # leading `visible: "Log In"` guard could never match (phone-entry renders "Login",
 # not "Log In"). Now it drives phone-entry explicitly, then the password screen.
-# GROUND FIX (B-1): the post-login wait asserted ".*Search destination.*", a string that
-# exists nowhere in the app — home.search_destination is "Where to?" (en/common.json:176).
+# GROUND FIX (B-1): the post-login wait asserted ".*Search destination.*". That
+# literal is rendered by no screen — but it is NOT absent from the codebase: it is the
+# value of `home.search` (en/common.json:181), a locale key nothing references.
+# The live row renders `home.search_destination` = "Where to?" (:176). The real
+# defect was an ORPHANED LOCALE KEY, not a missing string — which is why grepping the
+# string DOES find a hit, and why this note's earlier "exists nowhere in the app"
+# wording was itself imprecise.
 # Now keyed on that row's testID. It is the right ground because every booking flow taps
 # it as its very next step (_select-destination.yaml:11), so it is provably rendered at
 # this point, whereas the old text matched nothing and burned the full 30s timeout.

@@ -61,10 +61,16 @@ else
   # rewrite below was written to eliminate.
   if ! node maestro/tools/flow-xcheck.cjs; then
     echo "❌ Flow selector gate failed — commit blocked."
-    echo "   A flow's id: selector does not exist in maestro/tools/testid-map.json."
+    echo "   Either a flow's id: selector is absent from maestro/tools/testid-map.json, or it"
+    echo "   exists in the map but no longer exists in the app/ file the map attributes it to"
+    echo "   (a stale manifest — editing app/ without regenerating keeps a deleted element"
+    echo "   resolvable indefinitely)."
     echo "   Fix:  use a real testID (verify it against the screen source, not the map alone),"
     echo "         or regenerate the manifest after an app/ change:"
     echo "         node maestro/tools/testid-manifest.cjs"
+    echo "   Note: this gate does NOT verify screen-affinity (whether an element is on the"
+    echo "   screen the flow is standing on). That is a runtime property; see the header in"
+    echo "   flow-xcheck.cjs for the two static approximations that were measured and rejected."
     exit 1
   fi
 fi

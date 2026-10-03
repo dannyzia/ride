@@ -76,7 +76,8 @@ tags:
     visible: "Ride Completed ✅"
     timeout: 30000
 - assertVisible: "Total Fare"
-- tapOn: "Browse Home"
+- tapOn:
+    id: "rider.finish-ride.handle-go-home"
 - waitForAnimationToEnd:
     timeout: 3000
 # Back on driver home; calls should have decremented. "Connected" is optional

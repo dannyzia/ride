@@ -1,0 +1,20 @@
+{
+  "_comment": "Suppressions for the ADVISORY dead-copy check in flow-xcheck.cjs. This check warns, it never blocks — an unsuppressed finding is a prompt to look, not an error. Suppress here only when the text genuinely renders from outside app source. Adding an entry to silence the warning is how this file rots: each one must carry a reason that would still be true six months from now.",
+  "schema": {
+    "match": "Normalized (lowercased, whitespace-collapsed) equality against the assertion's cleaned literal — not a regex.",
+    "reason": "Why the text can render without appearing in app/ or i18n/locales/en.",
+    "category": "os-dialog | external-data | device-dependent"
+  },
+  "entries": [
+    {
+      "match": "while using the app",
+      "category": "os-dialog",
+      "reason": "Android runtime-permission dialog radio option (location/notifications). Rendered by the OS, not by this app, so it can never appear in app source or the locale files."
+    },
+    {
+      "match": "savar",
+      "category": "external-data",
+      "reason": "Barikoi/Nominatim geocoder result asserted after typing a destination. The text comes from a third-party API response, not from app copy."
+    }
+  ]
+}

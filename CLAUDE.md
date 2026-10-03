@@ -166,10 +166,19 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # Automated pre-commit gate — scripts/git-hooks/pre-commit (install: node scripts/install-hooks.js)
 # 4 stages, any failure BLOCKS the commit, in order:
 #   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector  4 eslint (staged files only)
-# Stage 3 runs `node maestro/tools/flow-xcheck.cjs` whenever a maestro/flows/**.yaml is staged:
-# a flow `id:` selector absent from maestro/tools/testid-map.json can never resolve on device,
-# and neither tsc nor eslint sees YAML. It MUST stay above the lint stage, which exits 0 early
-# when no JS/TS is staged (flow commits stage YAML only).
+# Stage 3 runs `node maestro/tools/flow-xcheck.cjs` whenever a maestro/flows/**.yaml is staged.
+# TWO BLOCKING checks: (a) a flow `id:` selector absent from maestro/tools/testid-map.json can
+# never resolve on device; (b) MAP DRIFT — the selector is in the map but no longer in the app/
+# file the map attributes it to, which is exactly what editing app/ without regenerating the
+# manifest leaves behind. Neither tsc nor eslint sees YAML. Plus a NON-BLOCKING dead-copy
+# advisory: an assertion literal found in no locale value and no app-source string (suppress
+# via maestro/tools/flow-xcheck-suppressions.json).
+# It MUST stay above the lint stage, which exits 0 early when no JS/TS is staged (flow commits
+# stage YAML only).
+# It does NOT verify screen-affinity — that is a runtime property. The two static
+# approximations (route reachability, orphaned-i18n detection) were built, measured against
+# this tree, and REJECTED on evidence; the header in flow-xcheck.cjs records why. Curated
+# affinity evidence lives in maestro/tools/flow-testid-map.json (its DEAD section).
 # After ANY app/ change: node maestro/tools/testid-manifest.cjs   (regenerate the map first)
 ```
 

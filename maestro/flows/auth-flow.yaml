@@ -3,7 +3,9 @@
 #   ${PHONE}  = phone digits WITHOUT +880 prefix
 #   ${EXPECT} = home-screen marker to assert success
 #
-# Rider:  maestro test --device emulator-5554 -e PHONE=1613249520 -e EXPECT="Search destination..." maestro/flows/auth-flow.yaml
+# Rider:  maestro test --device emulator-5554 -e PHONE=1613249520 -e EXPECT="Where to?"
+#   (was "Search destination..." — orphaned `home.search` locale key; see B-1 in _login-rider.yaml)
+#   maestro/flows/auth-flow.yaml
 # Driver: maestro test --device emulator-5556 -e PHONE=1700000001 -e EXPECT="Calls Remaining"        maestro/flows/auth-flow.yaml
 #
 # Existing accounts use PASSWORD login (test1234). OTP 123456 is only for new-account registration.
