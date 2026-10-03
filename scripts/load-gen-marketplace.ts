@@ -52,6 +52,14 @@ function percentile(sorted: number[], p: number): number {
   return sorted[Math.max(0, idx)];
 }
 
+/**
+ * Run-level job failures, module-scoped so the tail can read the result.
+ * The per-job catch in main() deliberately keeps measuring after a failure, so
+ * main() RESOLVES even when every job failed on every iteration. That is why
+ * the exit code cannot be derived from main() completing successfully.
+ */
+const jobFailures: Record<string, string[]> = {};
+
 async function main(): Promise<void> {
   loadEnv();
   const { db } = await import("../src/db/index.ts");
@@ -168,7 +176,6 @@ async function main(): Promise<void> {
     "48_sweepConfirmationDeadlines",
   ] as const;
   const durations: Record<string, number[]> = {};
-  const jobFailures: Record<string, string[]> = {};
   for (const name of jobNames) durations[name] = [];
 
   // Audit-fix M4: the scans return { count, notifyQueue } — pushes dispatch
@@ -270,7 +277,20 @@ async function main(): Promise<void> {
 }
 
 main()
-  .then(() => process.exit(0))
+  .then(() => {
+    // Same class as the M-2 launch_free fix: a rig run where EVERY job failed on
+    // EVERY iteration still resolves main(), so the old unconditional exit(0)
+    // here reported success over a total outage. Derive the code from what ran.
+    const failed = Object.keys(jobFailures);
+    if (failed.length > 0) {
+      console.error(
+        `[a8-rig] ${failed.length} job(s) recorded failures (${failed.join(", ")}) ` +
+          "— see the .failures block in the report",
+      );
+      process.exitCode = 1;
+    }
+    process.exit(process.exitCode ?? 0);
+  })
   .catch((e) => {
     console.error("[a8-rig] FAILED:", e);
     process.exit(1);

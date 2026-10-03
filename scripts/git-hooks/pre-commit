@@ -11,6 +11,15 @@
 # before the lint stage — it MUST sit above lint, because lint exits 0 early
 # when no JS/TS files are staged, and flow commits stage YAML only.
 #
+# 2026-10-03 testID-map freshness gate (stage 5): the stage above proves the
+# codemod is a fixed point, but nothing proved the generated manifest matches
+# app/. Stage 3 does re-read app/ for the selectors a flow actually uses, so a
+# stale map does not by itself defeat it — but flows reference only 91 of the
+# map's 1107 ids, and the other 1016 were verified to rot with flow-xcheck still
+# reporting "every id: selector resolves". This stage regenerates the map from
+# the STAGED app/ tree in a sandbox and diffs id -> file attribution against the
+# STAGED map. Six stages now, eslint last (it exits 0 early when no JS/TS staged).
+#
 # 2026-09-28 lint-stage rewrite: the old pipeline
 #   `xargs -n 40 timeout 30 npx eslint --quiet`
 # intermittently died on Windows (npx cmd-shim spawn exit 123, or the 30s
@@ -99,6 +108,44 @@ else
     echo "   Fix: repair the preserve-branch in maestro/tools/add-testids.cjs so it keeps"
     echo "         its own output, then run: node maestro/tools/add-testids.cjs"
     echo "         and commit the resulting app/ changes."
+    exit 1
+  fi
+fi
+
+echo "⏳ Pre-commit: testID map freshness gate..."
+# Runs whenever ANY app/ path is staged (declarations INCLUDED — a deleted screen
+# drops its ids out of the regenerated map, which only a stale committed map can
+# contradict) or the map itself is staged. Stage 3 is NOT the reason this stage
+# exists: its MAP DRIFT check re-reads app/, so a flow-referenced id that goes
+# stale still fails there (verified). What stage 3 never looks at is the 1016 of
+# 1107 map ids no flow selects — verified to rot to no signal at all. And stage 3
+# only runs on flow commits, so that rot is discovered by whoever later selects
+# the id, in an unrelated commit, where it looks like a flow bug. The map is also
+# a rewiring/audit artifact read by humans and agents.
+#
+# Both sides are read from the INDEX, not the working tree: the question is
+# whether the tree being committed is self-consistent. Comparing the worktree
+# instead would demand a map regenerated from code that is not in this commit, and
+# would pass a commit whose staged .tsx and staged map disagree.
+STAGED_MAP_INPUT=()
+while IFS= read -r -d '' f; do
+  STAGED_MAP_INPUT+=("$f")
+done < <(git diff --cached --name-only -z --diff-filter=ACMRD -- app/ maestro/tools/testid-map.json || true)
+
+if [ ${#STAGED_MAP_INPUT[@]} -eq 0 ]; then
+  echo "✅ No staged app/ files or map changes — skipping map freshness gate."
+else
+  if ! node maestro/tools/testid-map-freshness.cjs; then
+    echo "❌ testID map freshness gate failed — commit blocked."
+    echo "   maestro/tools/testid-map.json does not describe the app/ tree this commit contains."
+    echo "   The map is read for flow rewiring and audit, and 1016 of its ids are not checked by"
+    echo "   any flow gate at all, so staleness here is invisible until it is used."
+    echo "   Fix:  node maestro/tools/testid-manifest.cjs && git add maestro/tools/testid-map.json"
+    echo "   The generator reads your WORKING TREE and this gate compares the INDEX, so stage any"
+    echo "   other app/ edits first (or commit them separately) — a map regenerated from unstaged"
+    echo "   code would describe a tree this commit does not contain."
+    echo "   Only id -> file attribution is enforced. Line-number drift is reported, not blocked:"
+    echo "   nothing downstream reads the map's line numbers."
     exit 1
   fi
 fi

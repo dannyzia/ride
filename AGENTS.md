@@ -204,9 +204,19 @@ grep -r "console\.log" app/ lib/ utils-server/ src/       # must return nothing
 grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return nothing
 
 # Automated pre-commit gate — scripts/git-hooks/pre-commit (install: node scripts/install-hooks.js)
-# 5 stages, any failure BLOCKS the commit, in order:
+# 6 stages, any failure BLOCKS the commit, in order:
 #   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector
-#   4 testID codemod idempotence (B-1)  5 eslint (staged files only)
+#   4 testID codemod idempotence (B-1)  5 testID map freshness  6 eslint (staged files only)
+# ON-DEMAND HARNESS (opt-in, ~2.5min for all 12 cases): node scripts/pre-commit-harness.cjs [--gate 5] [--list]
+#   [--json] [--keep] [--base <ref>] [--no-copy]. Runs the REAL hook in a disposable git worktree
+#   (node_modules linked so stage 6's CWD-relative eslint path resolves) and asserts every gate
+#   still BLOCKS its fault and still PASSES. It asserts two things beyond exit status, and both are
+#   load-bearing: a BLOCK case must show THAT GATE's banner (the hook exits at the first failure,
+#   so finding it is what proves the earlier gates passed), and a PASS case must show the gate's
+#   "it ran" marker — because a run with nothing staged exits 0 with all six stages SKIPPED, which
+#   is indistinguishable from green unless you check. A baseline run (clean tree + benign app/ edit)
+#   gates the whole thing: if that fails, no case result means anything. Fast drift guards for the
+#   harness's own banner/marker strings live in tests/meta/pre-commit-harness.test.ts.
 # Stage 4 runs `node maestro/tools/testid-idempotence.cjs` whenever an app/**.tsx? or
 # maestro/tools/add-testids.cjs is staged. Proves the Gate-1 codemod is a FIXED POINT:
 # a second write-mode run touches zero files (B-1 double-prefixed every testID across
@@ -215,13 +225,33 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # APP_TESTIDS_ROOT) because --strip deletes every testID it is pointed at; the real tree
 # is never written. Nothing else in the pipeline can catch this: tsc/eslint ignore
 # testIDs, and flow-xcheck passes a self-consistent wrong map by construction.
+# Stage 5 runs `node maestro/tools/testid-map-freshness.cjs` whenever ANY app/ path is staged
+# (declarations INCLUDED — a deleted screen drops its ids out of the regenerated map, which only a
+# stale committed map can contradict) or the map itself is. It regenerates the manifest from the
+# STAGED app/ tree into a sandbox (git checkout-index, then testid-manifest.cjs's
+# TESTID_MAP_APP_ROOT/TESTID_MAP_OUT) and diffs id -> file ATTRIBUTION against the STAGED map.
+# THREE BLOCKING differences: `vanished` (the map records an id app/ no longer has), `unrecorded`
+# (app/ has an id the map does not), and `moved` (id attributed to a different file). Line drift is
+# reported, NOT blocked — attribution is what every consumer resolves, and nothing reads `line`.
+# MEASURED rationale (do not "simplify" this back): stage 3 is NOT defeated by a stale map — its
+# MAP DRIFT check re-reads app/, so a flow-referenced id that goes stale still fails there. Flows
+# reference 91 of the map's 1107 ids; the other 1016 rot with NO signal (verified: renaming an
+# unreferenced id leaves flow-xcheck at exit 0), and stage 3 only runs on flow commits, so the rot
+# surfaces later to whoever selects the id, in an unrelated commit. The map is also the index used
+# for flow REWRITING and the skeptic audit, read by humans and agents. Both sides come from the
+# INDEX, so the check answers "is the tree I am committing self-consistent?": it does not demand a
+# map regenerated from unstaged code, and it still catches a map regenerated in the working tree
+# but never staged.
 # Stage 3 runs `node maestro/tools/flow-xcheck.cjs` whenever a maestro/flows/**.yaml is staged.
 # TWO BLOCKING checks: (a) a flow `id:` selector absent from maestro/tools/testid-map.json can
 # never resolve on device; (b) MAP DRIFT — the selector is in the map but no longer in the app/
 # file the map attributes it to, which is exactly what editing app/ without regenerating the
-# manifest leaves behind. Neither tsc nor eslint sees YAML. Plus a NON-BLOCKING dead-copy
-# advisory: an assertion literal found in no locale value and no app-source string (suppress
-# via maestro/tools/flow-xcheck-suppressions.json).
+# manifest leaves behind. Neither tsc nor eslint sees YAML. Plus TWO NON-BLOCKING advisories:
+# (a) dead-copy — an assertion literal found in no locale value and no app-source string;
+# (b) MASKED COPY — an assertion that survives only as a mid-phrase fragment of a longer live
+# string (the dead "Documents Submitted" was masked by admin's "No documents submitted"). The
+# corpus excludes dotted i18n KEY literals, since a key never renders. Suppress via
+# maestro/tools/flow-xcheck-suppressions.json.
 # It MUST stay above the lint stage, which exits 0 early when no JS/TS is staged (flow commits
 # stage YAML only).
 # It does NOT verify screen-affinity — that is a runtime property. The two static
@@ -304,6 +334,7 @@ Supabase phone OTP. Client uses `lib/supabase.ts` (`EXPO_PUBLIC_SUPABASE_URL` + 
 
 ### Packages
 Call packages may be scoped to a specific vehicle type via `packages.vehicle_type` (nullable). NULL = universal (every driver sees it and can buy it); non-null = only drivers whose `drivers.vehicle_type` matches see it in `GET /api/package/list` and can purchase it. `POST /api/package/purchase` returns `403 vehicle_type_mismatch` if a driver tries to buy a package scoped to a different vehicle type. Mirrors the `incentive_definitions.vehicle_type_filter` pattern. Admin sets the scope via the Packages screen or `POST /api/admin/packages`.
+`packages.name` is UNIQUE among LIVE rows only (`packages_name_live_uq`, a partial index `WHERE deleted_at IS NULL`, migration `src/db/migrations/0057_packages_name_live_unique.sql`). It is scoped to live rows on purpose: packages are soft-deleted, so a plain `UNIQUE(name)` would permanently reserve a retired name. `ensureLaunchFreePackage` still takes `pg_advisory_xact_lock` — the lock serializes, the index is the schema backstop for any writer that forgets the lock. Admin create/rename onto a taken name returns `409 package_name_taken`.
 
 ### H3
 `h3-js` is imported ONLY in `lib/h3.ts` and `utils-server/h3Index.ts`. All other files use the wrappers. Resolution 9 (~174m diameter).

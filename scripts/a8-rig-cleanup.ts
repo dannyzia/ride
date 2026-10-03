@@ -47,6 +47,17 @@ async function main(): Promise<void> {
   console.log(`[a8-rig-cleanup] synthetic rows removed for pattern ${pattern}`);
 }
 
+// NOTE on the `exit(0)` below: this shape is a REAL bug in
+// scripts/load-gen-marketplace.ts and scripts/launch-free-subscription.ts, where
+// `.then(() => process.exit(0))` overrode a partial-failure `process.exitCode = 1`
+// set inside main() and reported a half-failed run as success.
+//
+// It is safe HERE only because main() is all-or-nothing: it never accumulates a
+// partial-failure count, so resolving always means every delete succeeded and any
+// throw is caught below and exits 1. If you add per-row error tolerance to
+// main(), change this to `process.exit(process.exitCode ?? 0)` and set
+// exitCode = 1 on each tolerated failure — otherwise you have just reintroduced
+// that bug. See scripts/load-gen-marketplace.ts for the fixed version.
 main()
   .then(() => process.exit(0))
   .catch((e) => {

@@ -78,7 +78,15 @@ function getStagedFiles() {
       .split("\n")
       .filter((f) => /\.(ts|tsx)$/.test(f));
   } catch {
-    return [];
+    // Do NOT swallow this into `[]`. An empty list is indistinguishable from
+    // "nothing is staged", so the old `catch { return [] }` made the gate print
+    // "No source files to scan" and exit 0 — a SILENT PASS on every commit
+    // whenever git could not be read (no repo, git missing, index locked).
+    // Verified: `GIT_DIR=/nonexistent node scripts/check-date-in-sql.js --staged`
+    // used to exit 0. A gate that cannot see the staged set has not passed; it
+    // has failed to run. `null` is the sentinel; the caller turns it into exit 1.
+    // check-vacuous-assertions.js solves the identical problem the same way.
+    return null;
   }
 }
 
@@ -106,7 +114,19 @@ function getAllSourceFiles(dirs) {
 // --- Main ---
 const staged = process.argv.includes("--staged");
 const repoRoot = path.resolve(__dirname, "..");
-const files = staged ? getStagedFiles().map((f) => path.join(repoRoot, f)) : getAllSourceFiles(SOURCE_DIRS);
+let files;
+if (staged) {
+  const stagedFiles = getStagedFiles();
+  if (stagedFiles === null) {
+    console.error("❌ Date-in-sql gate: could not read the staged file list (git diff --cached failed).");
+    console.error("   This is NOT a pass — the gate cannot check what it cannot see.");
+    console.error("   (not a git repo, git unavailable, or the index is locked/unreadable)");
+    process.exit(1);
+  }
+  files = stagedFiles.map((f) => path.join(repoRoot, f));
+} else {
+  files = getAllSourceFiles(SOURCE_DIRS);
+}
 
 if (files.length === 0) {
   console.log("✅ No source files to scan.");

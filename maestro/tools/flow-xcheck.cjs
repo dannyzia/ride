@@ -16,6 +16,13 @@
  *  3. DEAD-COPY (advisory, never blocks) A literal text assertion that appears
  *     in no locale value and no app-source literal cannot match at runtime.
  *     Suppress via maestro/tools/flow-xcheck-suppressions.json.
+ *  4. MASKED (advisory, never blocks) A claim that IS rescued by the corpus but
+ *     only by substring containment, not by a real copy string of its own.
+ *     rescue() accepts s.includes(c), so a claim survives whenever some LONGER
+ *     live string happens to contain it — the exact shape by which the dead
+ *     "Documents Submitted" survived (admin-only "No documents submitted"
+ *     contains it). This tier makes those rescues visible instead of silent,
+ *     so a masked claim gets repointed rather than trusted.
  *
  * ── WHAT THIS DELIBERATELY DOES NOT GATE ─────────────────────────────────────
  * Screen-affinity in the full sense — "is this element on the screen the flow is
@@ -50,6 +57,16 @@
  * live destination row renders `home.search_destination` = "Where to?". So a
  * flow asserting the former could never match, but the reason is an orphaned
  * locale key rather than a missing string.
+ *
+ * ── NOTE ON CORPUS PROVENANCE ───────────────────────────────────────────────
+ * The corpus harvests raw string literals from app/ and components/, so every
+ * `t('rider_activity.driver')` contributes a dotted i18n KEY to a set that is
+ * supposed to hold rendered copy. Measured: 1247 of 9827 entries (12.7%) were
+ * key-shaped. A key is not copy — it never renders — so key-shaped entries that
+ * come ONLY from source are now excluded (a value present in a locale file is
+ * kept regardless, since that one really does render). Dropping them flipped 0
+ * of 198 claims to dead, so this is neutral today and removes the mechanism by
+ * which a dead claim could later be masked by a neighbouring key's name.
  */
 const fs = require("fs");
 const path = require("path");
@@ -161,12 +178,12 @@ for (const id of idsUsedByFlows) {
 // ── check 3: dead-copy (advisory) ──────────────────────────────────────────────
 const corpus = new Set();
 {
-  const add = (s) => {
-    if (typeof s === "string") {
-      const t = norm(s);
-      if (t.length >= 2) corpus.add(t);
-    }
-  };
+  // Provenance matters: a dotted token harvested from a t('a.b') call is a KEY,
+  // and a key never renders. Locale values are tracked apart from source
+  // literals so a key-shaped string that also exists as a real locale value
+  // (and therefore really does render) is still kept.
+  const localeValues = new Set();
+  const sourceValues = new Set();
   // Every locale value. NOTE: orphaned keys are deliberately included — key
   // resolution is unsound here (see header), and excluding them would make this
   // check blind to the "Search destination..." class.
@@ -178,8 +195,10 @@ const corpus = new Set();
       continue;
     }
     (function rec(v) {
-      if (typeof v === "string") add(v);
-      else if (v && typeof v === "object") Object.values(v).forEach(rec);
+      if (typeof v === "string") {
+        const t = norm(v);
+        if (t.length >= 2) localeValues.add(t);
+      } else if (v && typeof v === "object") Object.values(v).forEach(rec);
     })(json);
   }
   // App AND components source: string literals AND JSX text nodes. Three separate
@@ -196,7 +215,12 @@ const corpus = new Set();
     ...walk(path.join(ROOT, "components"), [], /\.(tsx|ts|jsx|js)$/),
   ]) {
     const src = fs.readFileSync(f, "utf8");
-    for (const m of src.matchAll(/(["'`])([^"'`$\n]{2,80})\1/g)) add(m[2]);
+    const harvest = (s) => {
+      if (typeof s !== "string") return;
+      const t = norm(s);
+      if (t.length >= 2) sourceValues.add(t);
+    };
+    for (const m of src.matchAll(/(["'`])([^"'`$\n]{2,80})\1/g)) harvest(m[2]);
     const text = src
       .replace(/\/\*[\s\S]*?\*\//g, " ")
       .replace(/\/\/[^\n]*/g, " ");
@@ -205,7 +229,21 @@ const corpus = new Set();
     // the span early and the strip desynchronizes, swallowing real labels —
     // that silently hid the live "Complete Registration" (register.tsx:99).
     // Excluding <>{} keeps expression containers out with no tag parsing.
-    for (const m of text.matchAll(/>([^<>{}]{2,80})</g)) add(m[1]);
+    for (const m of text.matchAll(/>([^<>{}]{2,80})</g)) harvest(m[1]);
+  }
+
+  const KEY_SHAPED = /^[a-z0-9]+(_[a-z0-9]+)*(\.[a-z0-9_]+)+$/;
+  let keysDropped = 0;
+  for (const v of sourceValues) {
+    if (KEY_SHAPED.test(v) && !localeValues.has(v)) {
+      keysDropped++;
+      continue;
+    }
+    corpus.add(v);
+  }
+  for (const v of localeValues) corpus.add(v);
+  if (process.env.FLOW_XCHECK_VERBOSE) {
+    console.log(`  corpus: ${corpus.size} entries (${keysDropped} i18n key-shaped literals dropped)`);
   }
 }
 
@@ -217,19 +255,54 @@ try {
   /* suppressions are optional */
 }
 
-function isLive(c) {
-  if (corpus.has(c)) return true;
+// Returns the rescue witness, or null when nothing in the corpus backs `c`.
+// The witness is what makes check 4 (MASKED) possible: an exact hit is a real
+// copy string, whereas a containment hit means some OTHER string happened to
+// swallow this claim — true for a legitimate fragment ("Save" inside "Save
+// changes"), but also for a dead one ("Documents Submitted" inside admin's
+// "No documents submitted"). The caller reports the difference.
+function rescue(c) {
+  if (corpus.has(c)) return { how: "exact", just: c };
   for (const s of corpus) {
-    if (s.includes(c)) return true; // assertion is a fragment of real copy
+    // Assertion is a fragment of real copy.
+    if (s.includes(c)) return { how: "fragment", just: s };
     // Assertion wraps real copy. The length ratio matters: without it a short
     // token like "search" "matches" any candidate containing it, which is how
     // an earlier version of this rule reported "Search destination" as LIVE.
-    if (c.includes(s) && s.length >= Math.max(6, c.length * 0.6)) return true;
+    if (c.includes(s) && s.length >= Math.max(6, c.length * 0.6)) return { how: "wraps", just: s };
   }
-  return false;
+  return null;
+}
+
+// A containment rescue only counts as masking when the claim is a small,
+// word-internal part of a much longer string — the shape that let a dead
+// claim through. A claim that is most of its host string ("Tell your driver")
+// is an abbreviated assertion, which is legitimate and stays quiet.
+//
+// Phrase-shaped claims ONLY. A bare common word is not a masking signal: on
+// measurement, 14 of the 15 raw hits were single generic words ("request",
+// "bid", "rate", "balance", "quote") rescued by longer copy that contains
+// them, which says nothing about whether the claim is stale. "Documents
+// Submitted" was phrase-shaped, and so is every real instance of this class.
+function isMasked(w, c) {
+  if (!w || w.how === "exact") return false;
+  if (w.how === "wraps") return false; // claim wraps real copy, ratio already checked
+  if (c.length < 12 && !c.includes(" ")) return false; // bare word -> too weak a signal
+  // POSITION, not length, is the signal. A claim that begins at the start of
+  // its host is an abbreviation of that same string, and Maestro's substring
+  // match satisfies it ("Incorrect Ride Pin" inside "Incorrect Ride Pin. Ask
+  // your rider and try again."). A claim that starts MID-phrase is masked: it
+  // matches a string that never renders it ("Documents Submitted" inside admin's
+  // "No documents submitted").
+  //
+  // A length ratio is deliberately NOT used here. It was tried and it hides the
+  // exact case this tier exists to catch: "documents submitted" (19) vs "no
+  // documents submitted" (22) fails a 0.8 ratio, silently passing the bug.
+  return !w.just.startsWith(c);
 }
 
 const deadCopy = [];
+const maskedCopy = [];
 let skipEnv = 0;
 for (const c of copyClaims) {
   if (c.raw.includes("${")) {
@@ -243,7 +316,15 @@ for (const c of copyClaims) {
     .map(norm)
     .filter((s) => s.length >= 3);
   if (!cands.length) continue;
-  if (cands.some(isLive)) continue;
+
+  // Resolve every candidate so the best (most specific) rescue is the one we
+  // report: an exact hit outranks a fragment, a fragment outranks a wrap.
+  const witnesses = cands.map((x) => ({ cand: x, w: rescue(x) }));
+  const hit = witnesses.find((x) => x.w);
+  if (hit) {
+    if (isMasked(hit.w, hit.cand)) maskedCopy.push({ ...c, cand: hit.cand, ...hit.w });
+    continue;
+  }
   const sup = cands.map((x) => suppressed.get(x)).find(Boolean);
   if (sup) continue; // suppression matches -> already accounted for
   deadCopy.push({ ...c, cands });
@@ -283,6 +364,24 @@ if (deadCopy.length) {
   );
 } else {
   console.log("\n✅ no dead-copy candidates");
+}
+
+if (maskedCopy.length) {
+  console.log(`\n⚠ MASKED COPY (advisory, not blocking): ${maskedCopy.length}`);
+  console.log(
+    '  Each claim matched only as a fragment of a LONGER live string, never as copy of its own:'
+  );
+  maskedCopy.slice(0, 20).forEach((x) =>
+    console.log(`  ${x.f}\n     claim "${x.cand}"\n     only inside "${x.just}"`)
+  );
+  console.log(
+    "  Benign for genuine abbreviations; a bug when the claim is stale copy whose text"
+  );
+  console.log(
+    "  happens to sit inside an unrelated string. Suppress with maestro/tools/flow-xcheck-suppressions.json"
+  );
+} else {
+  console.log("✅ no masked-copy candidates");
 }
 
 if (blocked) process.exit(2);
