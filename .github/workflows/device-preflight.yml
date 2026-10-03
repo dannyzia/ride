@@ -1,0 +1,103 @@
+# Device-day preflight — the Bash form of maestro/DEVICE-DAY-RUNBOOK.md §1B
+# preconditions, on a hosted runner, so adb / AVD / key-flow drift is caught at
+# PR time instead of on the one machine that owns the AVD.
+#
+# Purpose:     Run `run-device-day.sh --check` — the SAME script the device day
+#              runs — under PREFLIGHT_DEVICE=optional, then run the two
+#              self-tests that guard the preflight logic itself. A CI runner has
+#              no emulator and no AVD, so those two checks report SKIP instead
+#              of failing; everything else (adb resolution, Maestro CLI, key-flow
+#              files) stays blocking. The gate therefore fails for real drift and
+#              never for "this machine has no phone".
+# Owner:       Testing model (QA lane); device-day mechanics owned by Zia
+# Status:      ACTIVE
+# Related (concrete paths):
+#   - maestro/utils/run-device-day.sh — the script under test; the `--check`
+#     block and the PREFLIGHT_DEVICE knob are documented in its header
+#   - maestro/utils/adb-env.sh — the single-adb resolver this preflight pins to
+#   - maestro/utils/adb-env-selftest.sh — proves every device script resolves
+#     the SAME adb and that the resolver stops instead of falling through
+#   - maestro/utils/section7-preflight-gate.sh — proves the §7 auth preflight
+#     gate still fails fast
+#   - maestro/DEVICE-DAY-RUNBOOK.md — the prose authority these scripts encode
+#   - .github/workflows/ci.yml — push-triggered lint/typecheck/test gate (this
+#     workflow is the device-day lane and is deliberately NOT folded into it)
+# Last verified: 2026-10-03 by testing model — run LOCALLY against a simulated
+#   ubuntu-latest (no LOCALAPPDATA / USERPROFILE / USERNAME, no AVD, stub adb
+#   and maestro on a minimal PATH) because pushing was out of scope. Verified
+#   exit 0 for the healthy+no-device case, exit 1 for missing adb and for a
+#   missing Maestro, and exit 2 when the adb resolver's no-adb-anywhere path is
+#   fault-injected. The FIRST real GitHub runner execution is still unproven;
+#   treat a red first run as a finding about the installer steps below, not
+#   about the preflight.
+# How to update: keep this workflow pointing at the scripts, never a copy of
+#   their logic — a re-implementation here is exactly the drift it exists to
+#   catch. If a check moves between blocking and skipped, change
+#   PREFLIGHT_DEVICE semantics in run-device-day.sh, not the steps below.
+
+name: Device preflight
+
+on:
+  push:
+    branches: [main, develop, implementation]
+    # Path-filtered on purpose: the job only re-checks the Maestro toolchain, so
+    # an app-only change has nothing to say about adb/AVD/flow drift and should
+    # not spend a runner. workflow_dispatch runs it on demand regardless.
+    paths:
+      - 'maestro/**'
+      - '.github/workflows/device-preflight.yml'
+  pull_request:
+    paths:
+      - 'maestro/**'
+      - '.github/workflows/device-preflight.yml'
+  workflow_dispatch:
+
+jobs:
+  preflight:
+    name: device-day preflight (no device required)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The preflight resolves ONE pinned adb and must prove it resolves. The
+      # runner image normally ships platform-tools; if a future image drops it,
+      # install it rather than failing — an absent adb here means "the image
+      # changed", which is not the drift this job is hunting for.
+      - name: Ensure adb is resolvable
+        run: |
+          if ! command -v adb >/dev/null 2>&1; then
+            echo "::notice::runner image has no adb; installing platform-tools"
+            yes | sdkmanager --licenses >/dev/null 2>&1 || true
+            sdkmanager "platform-tools" >/dev/null
+            echo "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/platform-tools" >> "$GITHUB_PATH"
+          fi
+          adb version
+
+      # Maestro is a hard precondition in --check under BOTH modes, so it must
+      # exist here: this is what turns "the install recipe rotted" into a loud
+      # failure instead of a silently skipped check. Both install locations are
+      # added to PATH because the installer has used each of them.
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/maestro/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      # THE gate. Same script, same code path as a real device day; only the
+      # device-bound pair (emulator binary, AVD) degrades to SKIP. Exit 1 means
+      # adb, Maestro, or a §7 key-flow file drifted — read the transcript.
+      - name: Device-day preflight (PREFLIGHT_DEVICE=optional)
+        env:
+          PREFLIGHT_DEVICE: optional
+        run: bash maestro/utils/run-device-day.sh --check
+
+      # adb drift proper: a NEW script under maestro/utils/ that calls bare
+      # `adb`, or that stops sourcing adb-env.sh, fails here. Discovery is
+      # dynamic, so adding a script is covered without editing this workflow.
+      - name: Single-adb pinning self-test
+        run: bash maestro/utils/adb-env-selftest.sh
+
+      # The §7 gate is extracted from the runbook markdown at runtime, so this
+      # also fails if the runbook's preflight section drifts from its intent.
+      - name: §7 preflight gate self-test
+        run: bash maestro/utils/section7-preflight-gate.sh

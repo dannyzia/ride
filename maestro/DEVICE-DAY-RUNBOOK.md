@@ -8,13 +8,15 @@
   - `maestro/utils/run-device-day.sh` — **executable form of §1B–§8 below** (one unattended command)
   - `maestro/utils/adb-env.sh` — **single-adb resolver every device script sources** (see "One adb, one build")
   - `maestro/utils/adb-env-selftest.sh` — proves all device scripts resolve the same adb
+  - `maestro/utils/run-flow-twice.sh` — **the §7 ×N harness itself** (repeat, timeout, log, FAIL screenshot, matrix row); run it directly for an ad-hoc flow
   - `maestro/utils/section7-preflight-gate.sh` — proves the §7 preflight gate below still fails fast
+  - `.github/workflows/device-preflight.yml` — **CI gate** that runs this runbook's preflight on `ubuntu-latest` (which owns no device) so adb / AVD / key-flow drift fails a PR instead of the next device day
   - `maestro/utils/bootstrap-device-day.sh` — automated steps 1–5 of this runbook
   - `maestro/utils/adb-gps-banani.sh`, `maestro/utils/adb-gps-gulshan.sh` — GPS seeding (emulator only)
   - `maestro/COVERAGE-MANIFEST.md` §7 G-02 / round notes — what the key-flows-×2 run must produce
   - `TEST-SETUP.md` §5 — failure modes table (splash-hang, black screen, stale IP)
   - `scripts/dev-env-sync.js` — the LAN-IP sync every session depends on
-**Last verified:** 2026-10-03, by testing model (adb dual-build pinning now centralised in `adb-env.sh` + proven by `adb-env-selftest.sh`, the §7 preflight gate proven by `section7-preflight-gate.sh`, headless-emulator image name, and the `adb-unauthorized` blocker all confirmed live)
+**Last verified:** 2026-10-03, by testing model (adb dual-build pinning now centralised in `adb-env.sh` + proven by `adb-env-selftest.sh`, the §7 preflight gate proven by `section7-preflight-gate.sh`, headless-emulator image name, and the `adb-unauthorized` blocker all confirmed live). Device-day preflight is now ALSO run in CI by `.github/workflows/device-preflight.yml` under `PREFLIGHT_DEVICE=optional` — verified locally against a simulated `ubuntu-latest` (no `LOCALAPPDATA`/`USERPROFILE`/`USERNAME`, no AVD, stub `adb`+`maestro` on a minimal PATH): exit 0 healthy, exit 1 for a missing adb or a missing Maestro. Two defects that would have made that gate fail on a real runner are fixed — `adb-env.sh` died with `USERNAME: unbound variable` (that variable does not exist on Linux), and `adb_env_die` was called with the remedy text in its exit-status slot, so `exit` failed and the resolver carried on with an empty `$ADB` instead of stopping. `adb-env-selftest.sh` case 6 now guards the second one. The first real GitHub runner execution is still unproven
 **How to update:** after every device day, append newly hit failure modes to the table at the bottom and correct any step that drifted.
 
 ---
@@ -66,6 +68,51 @@ bash maestro/utils/run-device-day.sh --keep-emulator      # leave the emulator u
 ```
 
 Exit codes: **0** all key flows passed ×2 · **1** BLOCKED at a bring-up step · **2** bring-up OK but a flow failed (§7 stop-the-day).
+
+**Check first, without touching anything:**
+
+```bash
+bash maestro/utils/run-device-day.sh --check          # preconditions only
+bash maestro/utils/run-device-day.sh --check --avd Pixel_6a
+```
+
+`--check` validates and exits **0** when everything is ready, **1** when a
+precondition fails. It resolves and reports the pinned adb, checks the Maestro
+CLI, the emulator binary, the AVD, and every §7 key-flow file, and reports any
+already-attached device. It does **not** boot an emulator, start
+Metro/utils-server, or run a single flow, and it creates no evidence directory.
+It also exits before the `trap cleanup EXIT` is installed — the normal path
+kills any running `qemu` and stops the adb server, so a "check" that went
+through that trap could tear down an emulator you were using for something
+else. Worth running before a device day, and when a flow misbehaves, to tell
+"environment is wrong" apart from "the flow is wrong".
+
+### The same preflight in CI
+
+`--check` has one knob, `PREFLIGHT_DEVICE`, because a CI runner is not a
+device-day host. It owns no emulator and no AVD, so those two preconditions
+are reported as `⊘` SKIP rather than failing; **everything else stays
+blocking** — pinned-adb resolution, the Maestro CLI, and every §7 key-flow file:
+
+```bash
+PREFLIGHT_DEVICE=required bash maestro/utils/run-device-day.sh --check  # device-day host (default)
+PREFLIGHT_DEVICE=optional bash maestro/utils/run-device-day.sh --check  # CI runner, no device
+```
+
+`.github/workflows/device-preflight.yml` runs the `optional` form on
+`ubuntu-latest` on every push/PR touching `maestro/**`, then runs
+`adb-env-selftest.sh` (a new script calling bare `adb`, or one that stops
+sourcing `adb-env.sh`, fails there — discovery is dynamic, so nothing has
+to be registered) and `section7-preflight-gate.sh`. The workflow calls these
+scripts; it never re-implements them, because a copy here would be exactly
+the drift the gate exists to catch.
+
+So CI catches: a renamed or deleted key flow, a broken adb resolver, an
+unpinned device script, a drifted §7 gate, a rotted Maestro install recipe.
+It deliberately does NOT claim to catch AVD state — an AVD is a per-machine
+artefact that only the device-day host has, so its absence on a runner is
+reported, never treated as a failure.
+
 
 It **fails loudly at the first blocked step**: each step calls `die BLOCKER "cause" "remedy"`, printing the blocker name, what caused it, how to fix it, and where the evidence landed — then exits non-zero. It deliberately does *not* use `set -e`, because a bare exit code tells you nothing and `set -e` also aborts on incidental non-zero exits (`adb pm grant` on an absent permission) that are expected.
 
@@ -238,6 +285,30 @@ If it hangs at splash / black screen → TEST-SETUP.md §5 table: 99% stale IP. 
 ## 7. Executing key flows ×2 (unattended loop)
 
 > Executed automatically by `maestro/utils/run-device-day.sh` (see "One-command path"). The loop below is the manual/equivalent form and stays authoritative for the reset-between-runs semantics.
+
+### Running one ad-hoc flow on the same harness
+
+The ×N loop below is implemented in `maestro/utils/run-flow-twice.sh` and sourced
+by `run-device-day.sh`, so an ad-hoc flow gets the identical treatment rather than
+a hand-rolled copy:
+
+```bash
+# one flow, twice, default evidence dir
+bash maestro/utils/run-flow-twice.sh maestro/flows/rider/booking/02-all-vehicle-types.yaml
+
+# once only, scratch evidence, append a matrix row
+bash maestro/utils/run-flow-twice.sh --runs 1 --evidence /tmp/scratch \
+     --matrix /tmp/scratch/m.txt maestro/flows/edge-cases.yaml
+```
+
+Options: `--runs N` (default 2) · `--timeout SECONDS` (default 420) ·
+`--evidence DIR` · `--matrix FILE` · `--label NAME`.
+Exit: **0** all runs passed · **1** a run failed (bring-up was fine) · **2**
+bad usage or a missing flow file.
+
+It assumes a device is already up — it is the §7 loop, not §1B. Run `--check`
+first to confirm the environment, and the §7 preflight gate below to confirm the
+device is ready.
 
 ### §7 preflight gate — run this BEFORE the loop, every time
 

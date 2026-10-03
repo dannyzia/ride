@@ -6,11 +6,32 @@
 # executable form. Every step names its own failure and remedy via die().
 #
 #   bash maestro/utils/run-device-day.sh [--avd NAME] [--windowed] [--keep-emulator]
+#   bash maestro/utils/run-device-day.sh --check
 #
 # Exit codes:
-#   0  all key flows passed twice
+#   0  all key flows passed twice   (or, with --check, every precondition passed)
 #   1  BLOCKED — a bring-up step failed; see the BLOCKED reason + evidence dir
+#      (or, with --check, a precondition failed)
 #   2  DAY INCOMPLETE — bring-up succeeded but a flow failed (§7 stop-the-day)
+#
+# --check validates preconditions and exits: it resolves adb, checks the Maestro
+# CLI, the AVD, the emulator binary and every key-flow file, reports any attached
+# device, and stops. It does NOT boot the emulator, start Metro/utils-server, or
+# run a single flow, and it creates no evidence directory. That matters because
+# the normal path installs `trap cleanup EXIT`, which kills any running qemu and
+# stops the adb server — so a "check" that went through it could tear down an
+# emulator someone was using for other work. --check therefore exits before the
+# trap is installed.
+#
+# PREFLIGHT_DEVICE=required|optional (default: required)
+#   required  the emulator binary and the AVD are hard preconditions. Correct on
+#             a device-day host: you cannot start the day without them.
+#   optional  those two degrade to SKIP when absent. This is what
+#             .github/workflows/device-preflight.yml uses to run this same
+#             script on a CI runner, which owns no emulator and no AVD. Every
+#             other check (adb resolution, Maestro CLI, key-flow files) stays
+#             blocking under both modes, so CI still catches adb, Maestro and
+#             flow drift — it just does not fail for having no device.
 #
 # Why explicit die() instead of `set -e`: a bare non-zero exit tells you nothing.
 # Every blocker below has a known cause and a known fix, so the script prints both
@@ -25,12 +46,16 @@ cd "$ROOT" || { echo "FATAL: cannot cd to repo root" >&2; exit 1; }
 AVD="Medium_Phone"
 WINDOWED=0
 KEEP_EMULATOR=0
+CHECK=0
 APP_ID="com.ride.bd"
 MAESTRO_BIN="${MAESTRO_BIN:-$(command -v maestro || echo /c/maestro/bin/maestro)}"
 BOOT_TIMEOUT_S="${BOOT_TIMEOUT_S:-300}"     # §1B cold boot
 SERVER_TIMEOUT_S="${SERVER_TIMEOUT_S:-180}" # §4 Metro/utils-server readiness
 FLOW_TIMEOUT_S="${FLOW_TIMEOUT_S:-420}"     # §7 per-run (runbook §10 keyguard landmine)
 RUNS_PER_FLOW="${RUNS_PER_FLOW:-2}"         # §7 the ×2
+# required = emulator + AVD must exist (device-day host, the default).
+# optional = they may be absent and are reported as SKIP (CI runner, see header).
+PREFLIGHT_DEVICE="${PREFLIGHT_DEVICE:-required}"
 
 KEY_FLOWS=(
   "maestro/flows/auth/02-rider-login.yaml"
@@ -46,10 +71,117 @@ while [ $# -gt 0 ]; do
     --avd) AVD="${2:-}"; shift 2 ;;
     --windowed) WINDOWED=1; shift ;;
     --keep-emulator) KEEP_EMULATOR=1; shift ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    --check) CHECK=1; shift ;;
+    -h|--help) sed -n '2,33p' "$0"; exit 0 ;;
     *) echo "unknown arg: $1" >&2; exit 1 ;;
   esac
 done
+
+case "$PREFLIGHT_DEVICE" in
+  required|optional) : ;;
+  *) echo "FATAL: PREFLIGHT_DEVICE must be 'required' or 'optional' (got '$PREFLIGHT_DEVICE')" >&2; exit 1 ;;
+esac
+
+# ── --check: validate preconditions, then stop ───────────────────────────────
+# Deliberately placed BEFORE the evidence dir is created and before cleanup is
+# trapped, so checking is side-effect free and cannot kill a running emulator.
+if [ "$CHECK" = 1 ]; then
+  fails=0
+  skips=0
+  ok_()   { printf '  \342\234\223  %s\n' "$1"; }
+  bad_()  { printf '  \342\234\227  %s\n' "$1"; fails=$((fails + 1)); }
+  # A check that could not run here and whose absence is EXPECTED on this host.
+  # Deliberately not bad_: a skip never blocks the run, but it is still counted
+  # and printed, so the transcript records what this preflight did not cover.
+  skip_() { printf '  \342\212\030  %s\n' "$1"; skips=$((skips + 1)); }
+  # The device-bound preconditions — the emulator binary and the AVD — are hard
+  # failures by default, but report as SKIP under PREFLIGHT_DEVICE=optional.
+  device_fail() {
+    if [ "$PREFLIGHT_DEVICE" = "optional" ]; then skip_ "$1"; else bad_ "$1"; fi
+  }
+  head_() { printf '\n== %s ==\n' "$1"; }
+
+  head_ "repo"
+  ok_ "root:            $ROOT"
+
+  head_ "adb (single pinned build)"
+  # adb-env.sh signals "not found" with `exit`, and because it is SOURCED that
+  # would terminate this script at line 1 of the report instead of listing a
+  # missing adb alongside every other failed precondition. Probe it inside a
+  # subshell first — the exit then ends only the probe — and source it for real
+  # once it is known to resolve.
+  # shellcheck source=maestro/utils/adb-env.sh
+  if ( ADB_ENV_QUIET=1 . "$(dirname "$0")/adb-env.sh" ) >/dev/null 2>&1; then
+    # shellcheck source=maestro/utils/adb-env.sh
+    . "$(dirname "$0")/adb-env.sh"
+    ok_ "adb:             $ADB ($("$ADB" version 2>/dev/null | sed -n '2p' | tr -d '\r'))"
+  else
+    bad_ "adb not resolvable — set ADB=/path/to/adb or install platform-tools"
+  fi
+
+  head_ "maestro CLI"
+  if [ -f "$MAESTRO_BIN" ] || command -v maestro >/dev/null 2>&1; then
+    ok_ "maestro:         $( (maestro --version 2>/dev/null || "$MAESTRO_BIN" --version 2>/dev/null) | head -1)"
+  else
+    bad_ "maestro CLI not found (tried '$MAESTRO_BIN' and PATH) — set MAESTRO_BIN=/path/to/maestro"
+  fi
+
+  head_ "emulator + AVD"
+  # Resolve the emulator binary portably: PATH first (same precedence adb-env.sh
+  # gives adb), then the SDK roots, then the Windows default. This used to be
+  # hardcoded to %LOCALAPPDATA%\Android\Sdk\emulator\emulator.exe, so on a
+  # Linux runner LOCALAPPDATA is empty and it reported the nonsense path
+  # "/Android/Sdk/emulator/emulator.exe" as a real failure.
+  EMU_EXE=""
+  for _emu_cand in \
+    "$(command -v emulator 2>/dev/null || true)" \
+    "${ANDROID_HOME:-}/emulator/emulator" \
+    "${ANDROID_SDK_ROOT:-}/emulator/emulator" \
+    "${LOCALAPPDATA:-}/Android/Sdk/emulator/emulator.exe"; do
+    if [ -n "$_emu_cand" ] && [ -x "$_emu_cand" ]; then EMU_EXE="$_emu_cand"; break; fi
+  done
+  if [ -n "$EMU_EXE" ]; then ok_ "emulator:        $EMU_EXE"
+  else device_fail "emulator binary not found (looked on PATH, \$ANDROID_HOME, \$ANDROID_SDK_ROOT, %LOCALAPPDATA%)"; fi
+
+  # An AVD is a per-machine artefact: the device-day host has one, a CI runner
+  # has none. Probe the standard per-user location, then ask the emulator.
+  AVD_DIR="${ANDROID_AVD_HOME:-${USERPROFILE:-$HOME}/.android}/avd"
+  if [ -f "$AVD_DIR/$AVD.ini" ]; then ok_ "avd:             $AVD"
+  elif [ -n "$EMU_EXE" ] && "$EMU_EXE" -list-avds 2>/dev/null | grep -qx "$AVD"; then ok_ "avd:             $AVD (via -list-avds)"
+  else device_fail "AVD '$AVD' not found — 'emulator -list-avds', or pass --avd <name>"; fi
+
+  head_ "key flow files (§7)"
+  missing_flows=0
+  for f in "${KEY_FLOWS[@]}"; do
+    if [ -f "$f" ]; then ok_ "$f"; else bad_ "missing: $f"; missing_flows=$((missing_flows + 1)); fi
+  done
+
+  head_ "attached device (informational)"
+  # Read-only. A device being absent is EXPECTED before a boot, so this never
+  # counts as a failure — it only tells you whether one is already up.
+  if [ -n "${ADB:-}" ]; then
+    st="$("$ADB" devices 2>/dev/null | awk '/emulator-[0-9]+|device-/{print $1" "$2; exit}')"
+    if [ -n "$st" ]; then
+      printf '  \342\224\250  %s\n' "${st}  (already attached; --check does not use it)"
+    else
+      printf '  \342\224\250  none attached — expected, --check does not boot one\n'
+    fi
+  fi
+
+  head_ "planned run"
+  printf '  avd=%s runs/flow=%s boot-timeout=%ss flow-timeout=%ss\n' \
+    "$AVD" "$RUNS_PER_FLOW" "$BOOT_TIMEOUT_S" "$FLOW_TIMEOUT_S"
+  printf '  %d key flows, %d runs total\n' "${#KEY_FLOWS[@]}" "$(( ${#KEY_FLOWS[@]} * RUNS_PER_FLOW ))"
+
+  printf '\n'
+  if [ "$fails" -eq 0 ]; then
+    printf '\342\234\223 preconditions OK — nothing was booted and no flow was run.\n'
+    [ "$skips" -gt 0 ] && printf '   %d device-bound check(s) skipped (PREFLIGHT_DEVICE=optional).\n' "$skips"
+    exit 0
+  fi
+  printf '\342\234\227 %d precondition(s) failed — do not start the day.\n' "$fails"
+  exit 1
+fi
 
 DATE="$(date +%F)"
 EVIDENCE="maestro/test-results/$DATE"
@@ -86,7 +218,9 @@ qemu_running() { tasklist 2>/dev/null | grep -qi "qemu"; }
 # scripts used, so a single device day drove two builds that both bind tcp:5037.
 # The resolver defaults to the PATH build — the one the emulator client itself
 # invokes — and reports any other build found.
+# shellcheck disable=SC2034  # consumed by adb-env.sh, which this sources next
 ADB_ENV_QUIET=1
+# shellcheck source=maestro/utils/adb-env.sh
 . "$(dirname "$0")/adb-env.sh"
 
 # The headless emulator's image is qemu-system-x86_64-headless.exe, NOT the
@@ -253,7 +387,7 @@ done
 # ── §5 GPS seeding ───────────────────────────────────────────────────────────
 step "§5 GPS seeding"
 bash maestro/utils/adb-gps-banani.sh  >>"$LOG" 2>&1 \
-  || die "gps-seed-failed" "adb-gps-banani.sh failed ("$ADB" shell emu geo fix)" \
+  || die "gps-seed-failed" "adb-gps-banani.sh failed (\"$ADB\" shell emu geo fix)" \
           "GPS must be seeded BEFORE app launch; the JS layer caches the first fix"
 log "gps:         banani 90.4066 23.7937 seeded"
 
@@ -269,7 +403,7 @@ log "granted:     location, camera, storage, notifications"
 "$ADB" shell am force-stop "$APP_ID" >/dev/null 2>&1 || true
 "$ADB" shell monkey -p "$APP_ID" 1 >/dev/null 2>&1 \
   || die "app-launch-failed" "could not launch $APP_ID via monkey" \
-          "confirm a dev build is installed: "$ADB" shell pm list packages | grep com.ride.bd"
+          "confirm a dev build is installed: \"$ADB\" shell pm list packages | grep com.ride.bd\""
 
 # Splash-to-real-screen within ~15s of bundle completion (TEST-SETUP.md §2).
 log "waiting for $APP_ID to pass splash…"
@@ -294,38 +428,15 @@ MATRIX="$EVIDENCE/pass-matrix.txt"
 } > "$MATRIX"
 DAYS_STATUS=0   # 0 = all green, 2 = stop-the-day
 
-run_twice() {
-  local flow="$1" name i rc
-  local -a st=() codes=()
-  name="$(basename "$flow" .yaml)"
-  [ -f "$flow" ] || die "flow-missing" "flow not found: $flow" "check the path against maestro/COVERAGE-MANIFEST.md §6"
-  for i in $(seq 1 "$RUNS_PER_FLOW"); do
-    log "  → $name run $i/$RUNS_PER_FLOW"
-    # `maestro test` blocks on its own; the timeout guards the keyguard hang (runbook §10).
-    timeout "$FLOW_TIMEOUT_S" "$MAESTRO_BIN" test "$flow" \
-      > "$EVIDENCE/$name-run$i.log" 2>&1
-    rc=$?
-    codes+=("$rc")
-    if [ "$rc" = "0" ]; then
-      st+=("PASS")
-    else
-      st+=("FAIL")
-      DAYS_STATUS=2
-      "$ADB" exec-out screencap -p > "$EVIDENCE/$name-run$i-FAIL.png" 2>/dev/null || true
-      log "    FAIL (exit $rc) — screenshot $name-run$i-FAIL.png"
-    fi
-    sleep 3
-  done
-  # Matrix row is built from the arrays so it stays correct for any RUNS_PER_FLOW.
-  local row="$name"
-  local s c
-  for s in "${st[@]}"; do row=$(printf '%-46s %-6s' "$row" "$s"); done
-  for c in "${codes[@]}"; do row="$row $c"; done
-  printf '%s\n' "$row" | tee -a "$MATRIX"
-}
+# The ×N harness lives in run-flow-twice.sh so an ad-hoc flow gets the SAME
+# loop (repeat, per-run timeout, per-run log, FAIL screenshot, matrix row).
+# Sourced, not executed: it has to append to THIS script's $MATRIX and set THIS
+# script's DAYS_STATUS, which a subprocess could not do.
+# shellcheck source=maestro/utils/run-flow-twice.sh
+. "$(dirname "$0")/run-flow-twice.sh"
 
 for f in "${KEY_FLOWS[@]}"; do
-  run_twice "$f"
+  run_flow_twice "$f" || true  # failure is recorded in DAYS_STATUS, not fatal here
 done
 
 # ── §8 evidence ──────────────────────────────────────────────────────────────

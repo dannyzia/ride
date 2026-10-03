@@ -5,6 +5,7 @@
 # driving a different build than bootstrap/run-device-day — two builds on this
 # box both bind tcp:5037, and mixing them makes the resulting state describe the
 # wrong binary. Override with ADB=/path/to/adb.
+# shellcheck source=maestro/utils/adb-env.sh
 . "$(dirname "$0")/adb-env.sh"
 
 "$ADB" shell emu geo fix 90.4152 23.7956

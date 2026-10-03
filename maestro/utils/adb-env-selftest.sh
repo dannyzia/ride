@@ -94,6 +94,37 @@ else
   note "  ok    bad override rejected"
 fi
 
+# ── 6. no adb ANYWHERE fails loudly and does not fall through ────────────────
+# This is the path a CI runner takes if the image ever stops shipping
+# platform-tools. It used to be broken: adb_env_die's third argument is the exit
+# STATUS, but that call site passed the remedy text there, so `exit` died with
+# "numeric argument required" and the resolver carried on with an empty $ADB
+# instead of stopping — the caller saw a source that "succeeded".
+note "== 6. no adb anywhere stops instead of falling through =="
+# Invoke bash by ABSOLUTE path: the PATH below hides adb, and would also hide
+# bash itself, which would turn this case into "env: bash not found" — a pass
+# for the wrong reason.
+BASH_ABS="$(command -v bash)"
+noadb_out="$(env -u ADB -u LOCALAPPDATA PATH="/nonexistent-dir-only" \
+             ADB_ENV_QUIET=1 "$BASH_ABS" -c '. maestro/utils/adb-env.sh' 2>&1)"
+noadb_rc=$?
+if [ "$noadb_rc" -ne 0 ]; then
+  note "  ok    exits non-zero (rc=$noadb_rc) with no adb on PATH"
+else
+  note "  FAIL  sourcing succeeded with no adb available — ADB would be empty downstream"
+  fail=1
+fi
+case "$noadb_out" in
+  *"numeric argument required"*|*"unbound variable"*)
+    note "  FAIL  resolver leaked a shell error instead of a clean adb-missing: $noadb_out"
+    fail=1 ;;
+  *"adb-missing"*)
+    note "  ok    reported adb-missing cleanly" ;;
+  *)
+    note "  FAIL  unexpected output: $noadb_out"
+    fail=1 ;;
+esac
+
 note ""
 if [ "$fail" -eq 0 ]; then
   note "PASS — one adb for every device script ($resolved)"

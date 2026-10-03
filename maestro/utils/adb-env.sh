@@ -42,9 +42,16 @@ if [ -n "${ADB_ENV_SOURCED:-}" ]; then
 fi
 ADB_ENV_SOURCED=1
 
+# adb_env_die <code> <cause> [exit-status] [remedy]
+# The status is the THIRD argument and the remedy the fourth. Getting that order
+# wrong is not cosmetic: a call that puts the remedy third makes `exit` fail with
+# "numeric argument required", execution CONTINUES, and the caller proceeds with
+# an empty $ADB instead of stopping. Guarded because this file inherits `set -u`
+# from whichever script sources it.
 adb_env_die() {
   echo "ERROR: $1" >&2
   echo "       $2" >&2
+  [ -n "${4:-}" ] && echo "       fix: $4" >&2
   exit "${3:-1}"
 }
 
@@ -72,6 +79,7 @@ adb_env_resolve() {
 
   adb_env_die "adb-missing" \
     "no adb found: not on PATH and not at '$sdk'" \
+    1 \
     "install Android SDK platform-tools, or set ADB=/path/to/adb"
 }
 
@@ -103,7 +111,11 @@ adb_env_warn_duplicates() {
     [ -n "$v" ] && [ "$v" != "$mine" ] && others="$others $v (SDK)"
   fi
 
-  local legacy="/c/Users/$USERNAME/platform-tools/adb.exe"
+  # ${USERNAME:-} is required, not defensive: USERNAME is a Git-Bash/Windows
+  # variable and is unset on a Linux CI runner. Sourcing this file under the
+  # caller's `set -u` there made the resolver die with "USERNAME: unbound
+  # variable" even when adb had resolved perfectly.
+  local legacy="/c/Users/${USERNAME:-}/platform-tools/adb.exe"
   [ -x "$legacy" ] && [ "$(cd "$(dirname "$legacy")" && pwd)" != "$(cd "$(dirname "$ADB")" && pwd)" ] && {
     v="$("$legacy" version 2>/dev/null | sed -n '2p' | tr -d '\r')"
     [ -n "$v" ] && [ "$v" != "$mine" ] && others="$others $v (legacy PATH dir)"
