@@ -1153,6 +1153,7 @@
     "select_vehicle": "{{name}} গাড়ি হিসেবে নির্বাচন করুন",
     "date_time": "তারিখ ও সময়",
     "a11y_schedule": "এই রাইডটি নির্ধারণ করুন",
+    "schedule_for_later": "পরে রাইডের জন্য সময় নিন",
     "schedule_ride": "রাইড নির্ধারণ করুন",
     "vehicle_bike_basic": "বাইক বেসিক",
     "vehicle_bike_standard": "বাইক স্ট্যান্ডার্ড",

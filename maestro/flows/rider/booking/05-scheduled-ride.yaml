@@ -1,36 +1,27 @@
-# rider/booking/05-scheduled-ride — toggle Schedule for later, set T+15min, submit,
-# entry appears under Scheduled.
-# *** BLOCKED-B-3 — NOT RUNNABLE. The steps below are the INTENDED journey, preserved as the
-#     spec for whoever resolves the owner decision. Do not run: step 4 taps a dead route. ***
+# rider/booking/05-scheduled-ride — pre-book a ride from the live booking sheet:
+# tap "Schedule for later", submit the schedule screen's default time, verify the
+# confirmation screen.
 # Feature: R-BOOK scheduled (§4, BC-13).
-# B-3 evidence (verified against source this pass, not inherited):
-#   1. The live booking sheet has NO schedule affordance. `grep -i schedule
-#      app/(main)/(customer)/(tabs)/home/index.tsx` returns ZERO matches — the rider cannot
-#      pre-book from the sheet at all.
-#   2. customer.confirm-ride.set-schedule-later (step 4's target) lives in
-#      app/(main)/(customer)/confirm-ride/, which is UNREACHABLE for the same reason as
-#      find-ride/ (see shared/booking/_select-vehicle.yaml for the route-deadness proof).
-#   3. The i18n strings survive (confirm_ride.schedule_for_later, schedule_ride.*), so the
-#      copy in this file's assertions is not obviously stale — which is exactly why a
-#      name-based grep audit kept missing this. Only the dead screen renders them.
-#   4. schedule-ride/ has exactly ONE inbound route: no-drivers-available/index.tsx:53
-#      (testID customer.no-drivers-available.push-schedule-ride), i.e. reachable only AFTER
-#      an immediate request fails with no drivers online. That path is fleet-state dependent
-#      and inverts the feature under test (post-failure recovery, not pre-booking), so it is
-#      NOT a legitimate repoint.
-# OWNER DECISION REQUIRED: is "schedule for later" a live feature that lost its UI, or a
-# deleted one? If live, the booking sheet needs a schedule affordance and this flow needs a
-# rebuild. If deleted, delete the flow AND the dead confirm-ride/schedule-ride screens
-# together (AGENTS.md: screen deletion is an owner call, not QA's).
-# Tagged `blocked` per the house convention (cf. rider/wallet/02-wallet-topup-initiate.yaml).
-# 2026-10-03: confirm-ride/ and find-ride/ and apply-promos/ were DELETED (owner call) as
-# unreachable dead screens. The step that toggled the schedule lived in confirm-ride/ and is
-# now commented out above. B-3 is therefore no longer a "which screen?" question — there is
-# no schedule UI at all in the tree, so the feature is either unbuilt or retired.
-# Class: BLOCKED (was AUTOMATABLE — that claim was wrong).
+# B-3 RESOLVED 2026-10-04 — DECISION: BUILD (the feature is server-complete and a
+# full schedule screen already exists; only the entry point was missing).
+#   1. Server: POST /api/ride/schedule — 30min–7d lead, overlap 409, ≤3/hour,
+#      status 'scheduled'; scheduler promotes scheduled → finding
+#      (utils-server/scheduler.ts); covered by tests/api/ride/schedule.test.ts.
+#   2. app/(main)/(customer)/schedule-ride/ is the scheduling screen; it reads
+#      pickup/destination from useCustomer() and vehicle from useRiderStore() —
+#      the same stores the home sheet writes — so the booking-sheet selection
+#      carries over with no extra params.
+#   3. Entry point rebuilt: customer.home.push-schedule-ride on the FARES step
+#      (app/(main)/(customer)/(tabs)/home/index.tsx), replacing the toggle that
+#      lived in the deleted confirm-ride/. ScheduleRideSheet remains the date/time
+#      control on the schedule screen.
+#   4. The schedule screen defaults scheduled_at to now+1h rounded up to the next
+#      half-hour — inside the server window by construction — so this flow accepts
+#      the default instead of driving the date/time pickers.
+# Class: AUTOMATABLE. NOT device-verified (device day ENV-blocked).
 appId: com.ride.bd
 name: "Rider Booking - Scheduled Ride"
-tags: [rider, booking, scheduling, blocked]
+tags: [rider, booking, scheduling]
 ---
 - runFlow: ../../../shared/location/_set-gps-banani.yaml
 - runFlow:
@@ -49,20 +40,19 @@ tags: [rider, booking, scheduling, blocked]
       VEHICLE_TYPE: "Bike Basic"
     commands:
       - runFlow: ../../../shared/booking/_select-vehicle.yaml
+- scrollUntilVisible:
+    element:
+      id: "customer.home.push-schedule-ride"
+    direction: DOWN
+- tapOn:
+    id: "customer.home.push-schedule-ride"
 - extendedWaitUntil:
-    visible: ".*Confirm your ride.*"
+    visible:
+      id: "customer.schedule-ride.handle-schedule"
     timeout: 20000
-# DELETED 2026-10-03 along with app/(main)/(customer)/confirm-ride/. The schedule
-# toggle had no live counterpart on the booking sheet — that is B-3, and it is why
-# this flow is tagged `blocked`. Kept as documentation rather than a live step: a
-# selector pointing at a deleted screen now fails the MAP DRIFT check by design.
-# - tapOn:
-#     id: "customer.confirm-ride.set-schedule-later"
-- extendedWaitUntil:
-    visible: ".*Schedule ride.*|.*date.*|.*time.*"
-    timeout: 15000
 - tapOn:
     id: "customer.schedule-ride.handle-schedule"
 - extendedWaitUntil:
-    visible: ".*Scheduled.*|.*schedule.*"
+    visible:
+      id: "customer.ride-scheduled.set-theme"
     timeout: 20000

@@ -1,6 +1,5 @@
 {
-  "generatedAt": "2026-10-03T07:25:28.805Z",
-  "total": 1107,
+  "total": 1108,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -850,40 +849,44 @@
         "line": 1247
       },
       {
+        "id": "customer.home.push-schedule-ride",
+        "line": 1283
+      },
+      {
         "id": "customer.home.handle-call-for-ride",
-        "line": 1288
+        "line": 1303
       },
       {
         "id": "customer.home.handle-map-pin-confirm",
-        "line": 1335
-      },
-      {
-        "id": "customer.home.handle-map-pin-confirm-2",
-        "line": 1342
-      },
-      {
-        "id": "customer.home.set-map-pin-coords",
         "line": 1350
       },
       {
+        "id": "customer.home.handle-map-pin-confirm-2",
+        "line": 1357
+      },
+      {
+        "id": "customer.home.set-map-pin-coords",
+        "line": 1365
+      },
+      {
         "id": "customer.home.set-theme",
-        "line": 1364
+        "line": 1379
       },
       {
         "id": "customer.home.set-save-place-label",
-        "line": 1442
+        "line": 1457
       },
       {
         "id": "customer.home.set-save-place-label-2",
-        "line": 1480
+        "line": 1495
       },
       {
         "id": "customer.home.set-show-save-place-2",
-        "line": 1497
+        "line": 1512
       },
       {
         "id": "customer.home.handle-save-place",
-        "line": 1504
+        "line": 1519
       }
     ],
     "(main)/(customer)/(tabs)/inbox/index.tsx": [

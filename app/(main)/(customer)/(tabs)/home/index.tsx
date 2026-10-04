@@ -1272,6 +1272,21 @@ useEffect(() => {
           </>
         )}
 
+      {/* Schedule for later — pre-book entry (B-3 resolved 2026-10-04 BUILD).
+          Opens the full schedule screen; pickup/destination/vehicle carry over
+          through useCustomer()/useRiderStore(), which both screens share. */}
+      <TouchableOpacity
+        style={[styles.scheduleBtn, { borderColor: colors.primary }]}
+        onPress={() => router.push("/(main)/(customer)/schedule-ride")}
+        accessibilityRole="button"
+        accessibilityLabel={t('schedule_ride.schedule_for_later')}
+       testID="customer.home.push-schedule-ride">
+        <Ionicons name="time-outline" size={18} color={colors.primary} />
+        <Text style={[styles.scheduleBtnText, { color: colors.primary }]}>
+          {t('schedule_ride.schedule_for_later')}
+        </Text>
+      </TouchableOpacity>
+
       {/* Call for Ride button */}
       <TouchableOpacity
         style={[
@@ -1661,6 +1676,20 @@ const styles = StyleSheet.create({
   vehicleRowPrice: {
     fontFamily: "Jakarta-Bold",
     fontSize: 18,
+  },
+  scheduleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 16,
+  },
+  scheduleBtnText: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 15,
   },
   callBtn: {
     height: 56,

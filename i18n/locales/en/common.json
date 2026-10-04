@@ -1153,6 +1153,7 @@
     "select_vehicle": "Select {{name}} as your vehicle",
     "date_time": "Date & Time",
     "a11y_schedule": "Schedule this ride",
+    "schedule_for_later": "Schedule for later",
     "schedule_ride": "Schedule Ride",
     "vehicle_bike_basic": "Bike Basic",
     "vehicle_bike_standard": "Bike Standard",
