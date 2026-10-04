@@ -13,9 +13,39 @@
  *     app/ file the map attributes it to. Guards against a stale manifest: the
  *     map is a generated snapshot, so editing app/ without regenerating it
  *     would otherwise keep a deleted element resolvable indefinitely.
- *  3. DEAD-COPY (advisory, never blocks) A literal text assertion that appears
- *     in no locale value and no app-source literal cannot match at runtime.
+ *  3. DEAD-COPY (BLOCKING as of 2026-10-03, was advisory) A literal text
+ *     assertion that appears in no locale value AND no app/components source
+ *     literal cannot match at runtime, so the flow fails on device after
+ *     burning the full wait timeout. This now exits 2 and blocks the commit.
  *     Suppress via maestro/tools/flow-xcheck-suppressions.json.
+ *
+ *     WHY THE CORPUS IS "LOCALE **OR** SOURCE" AND NOT "LOCALE ONLY":
+ *     the obvious stricter rule — every assertion must appear in i18n — was
+ *     measured before this was promoted, and it is wrong. Of 178 distinct
+ *     assertion literals in maestro/flows, 125 resolve in a locale value, 40
+ *     resolve ONLY in app/components source, and 13 resolve in neither. Those
+ *     40 are NOT broken: they are hard-coded JSX that renders perfectly well
+ *     ("Enter your phone number to continue" lives in phone-entry.tsx, "Tap to
+ *     replace document" in components/DocumentUploadCard.tsx). Blocking them
+ *     would reject ~40 currently-committed, currently-working assertions on an
+ *     i18n-convention technicality, not a runtime failure. What actually breaks
+ *     a test is a literal that matches NOTHING — that is what this tier blocks.
+ *     Do not "tighten" this to locale-only without first re-measuring, and treat
+ *     such a change as an i18n-discipline decision rather than a bug fix.
+ *  3b. LOCALE-ONLY (BLOCKING, ratcheted from a baseline) A literal that resolves
+ *     in app/components SOURCE but in no locale value is hard-coded JSX. It
+ *     renders correctly, so dead-copy passes it and the flow works today — but
+ *     it is not localizable, so the assertion breaks when that screen is wired
+ *     to a t() key, or when the app runs under a non-en locale. This blocks any
+ *     such literal NOT listed in maestro/tools/flow-locale-baseline.json.
+ *     MEASURED 2026-10-03: 39 distinct literals / 74 assertion steps across ~15
+ *     files predate this gate and are grandfathered in that baseline, rather
+ *     than force-fixed here — blocking all of them at once would reject working,
+ *     committed flows and bury a real regression under pre-existing noise. The
+ *     baseline is a RATCHET: it must only ever shrink. An earlier hand-rolled
+ *     audit put this at "40" and also reported 13 spurious DEAD COPY findings;
+ *     both were wrong, because it scanned app/ but not components/. Do not
+ *     re-derive these numbers by hand — run this gate.
  *  4. MASKED (advisory, never blocks) A claim that IS rescued by the corpus but
  *     only by substring containment, not by a real copy string of its own.
  *     rescue() accepts s.includes(c), so a claim survives whenever some LONGER
@@ -176,13 +206,15 @@ for (const id of idsUsedByFlows) {
 }
 
 // ── check 3: dead-copy (advisory) ──────────────────────────────────────────────
+/** Hoisted to module scope: the locale-only check (check 3b) needs it after the
+ *  corpus block closes. Populated below from every locale value, orphans included. */
+const localeValues = new Set();
 const corpus = new Set();
 {
   // Provenance matters: a dotted token harvested from a t('a.b') call is a KEY,
   // and a key never renders. Locale values are tracked apart from source
   // literals so a key-shaped string that also exists as a real locale value
   // (and therefore really does render) is still kept.
-  const localeValues = new Set();
   const sourceValues = new Set();
   // Every locale value. NOTE: orphaned keys are deliberately included — key
   // resolution is unsound here (see header), and excluding them would make this
@@ -303,6 +335,7 @@ function isMasked(w, c) {
 
 const deadCopy = [];
 const maskedCopy = [];
+const localeMiss = [];
 let skipEnv = 0;
 for (const c of copyClaims) {
   if (c.raw.includes("${")) {
@@ -323,6 +356,15 @@ for (const c of copyClaims) {
   const hit = witnesses.find((x) => x.w);
   if (hit) {
     if (isMasked(hit.w, hit.cand)) maskedCopy.push({ ...c, cand: hit.cand, ...hit.w });
+    // CHECK 3b — LOCALE-ONLY. `hit` proves the literal resolves SOMEWHERE; this
+    // asks the narrower question of whether it resolves in i18n specifically.
+    // A rescue satisfied only by app/components source means the copy is
+    // hard-coded JSX: it renders correctly and the flow passes, but the string
+    // is not localizable, so the assertion breaks the day that screen is wired
+    // to a locale key (or run under a non-en locale).
+    if (!cands.some((x) => localeValues.has(x))) {
+      localeMiss.push({ ...c, cand: hit.cand, via: hit.w.just });
+    }
     continue;
   }
   const sup = cands.map((x) => suppressed.get(x)).find(Boolean);
@@ -354,13 +396,18 @@ if (drift.length) {
 }
 
 if (deadCopy.length) {
-  console.log(`\n⚠ DEAD COPY (advisory, not blocking): ${deadCopy.length}`);
+  blocked = true;
+  console.log(`\n❌ DEAD COPY (blocking): ${deadCopy.length}`);
   deadCopy.slice(0, 20).forEach((x) => console.log(`  ${x.f}  "${x.raw}"`));
   console.log(
-    "  These literals appear in no locale value and no app-source string, so they cannot match."
+    "  These literals appear in no locale value and no app/components source string,"
+  );
+  console.log("  so they cannot match on device — the step will burn its full wait timeout.");
+  console.log(
+    "  Fix: point the step at copy that actually renders (prefer a testID), or if the text"
   );
   console.log(
-    "  If the text really renders (OS dialog, third-party API), add it to maestro/tools/flow-xcheck-suppressions.json"
+    "  really is external (OS dialog, third-party API), add it to maestro/tools/flow-xcheck-suppressions.json"
   );
 } else {
   console.log("\n✅ no dead-copy candidates");
@@ -384,9 +431,73 @@ if (maskedCopy.length) {
   console.log("✅ no masked-copy candidates");
 }
 
+// ── check 3b: locale-only copy (BLOCKING, ratcheted from a baseline) ──────────
+// A literal rescued by app/components SOURCE but by no locale value is
+// hard-coded JSX. It renders correctly, so dead-copy passes it and the flow
+// works — but the string is not localizable, so the assertion breaks the day
+// that screen is wired to a locale key, or runs under a non-en locale.
+//
+// This blocks NEW such literals. The 74 that already exist are baselined in
+// maestro/tools/flow-locale-baseline.json rather than force-fixed here: a
+// mechanical block on all of them would reject working, committed flows across
+// ~15 files and bury a real regression under a wall of pre-existing noise. The
+// baseline is a ratchet, not an excuse — it should only ever shrink.
+const baselinePath = path.join(__dirname, "flow-locale-baseline.json");
+let localeBaseline = new Set();
+try {
+  localeBaseline = new Set(
+    (JSON.parse(fs.readFileSync(baselinePath, "utf8")).entries || []).map((e) => norm(e.lit))
+  );
+} catch (err) {
+  if (err.code === "ENOENT") {
+    // A MISSING baseline must not degrade to "empty baseline", which would
+    // report all 39 pre-existing literals as new violations and block every flow
+    // commit with a message that looks like a real regression. Fail loudly with
+    // the actual cause instead.
+    console.error(
+      `❌ ${path.relative(ROOT, baselinePath)} is missing, so the locale-only ratchet cannot run.`
+    );
+    console.error(
+      "   This file grandfathers the pre-existing hard-coded literals. Restore it from git"
+    );
+    console.error("   (git checkout -- maestro/tools/flow-locale-baseline.json) — do NOT commit");
+    console.error("   without it, or every flow commit fails with a misleading violation list.");
+    process.exit(2);
+  }
+  {
+    console.error(`❌ could not read ${baselinePath}: ${err.message}`);
+    process.exit(2);
+  }
+}
+const localeMisses = new Map();
+for (const x of localeMiss) {
+  if (localeBaseline.has(x.cand)) continue;
+  if (!localeMisses.has(x.cand)) localeMisses.set(x.cand, new Set());
+  localeMisses.get(x.cand).add(x.f);
+}
+if (localeMisses.size) {
+  blocked = true;
+  console.log(`\n❌ LOCALE-ONLY COPY (blocking): ${localeMisses.size} literal(s) resolve in app/ but in NO locale file`);
+  for (const [cand, files] of localeMisses) {
+    console.log(`  ${JSON.stringify(cand)}`);
+    console.log(`      ${[...files].join("\n      ")}`);
+  }
+  console.log("\n  These render correctly today, so this is an i18n problem, not a dead test:");
+  console.log("  the copy is hard-coded JSX and will not exist in a non-en locale.");
+  console.log("  Fix: wire the string to a t() locale key in the screen it renders on,");
+  console.log("  then this assertion resolves in i18n and the entry can be removed from");
+  console.log(`  ${path.relative(ROOT, baselinePath)}.`);
+} else {
+  const n = localeMiss.length;
+  console.log(
+    `\n✅ locale-only copy: clean (${n} baselined hard-coded literal(s) remain, none new)`
+  );
+}
+
 if (blocked) process.exit(2);
 console.log(
-  "✅ every id: selector resolves and exists in its own app file" +
+  "✅ every id: selector resolves, exists in its own app file, and every text" +
+    " assertion resolves to real copy" +
     (skipEnv ? ` (${skipEnv} env-interpolated assertions not text-checked)` : "")
 );
 console.log(

@@ -204,16 +204,16 @@ grep -r "console\.log" app/ lib/ utils-server/ src/       # must return nothing
 grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return nothing
 
 # Automated pre-commit gate — scripts/git-hooks/pre-commit (install: node scripts/install-hooks.js)
-# 6 stages, any failure BLOCKS the commit, in order:
+# 7 stages, any failure BLOCKS the commit, in order:
 #   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector
-#   4 testID codemod idempotence (B-1)  5 testID map freshness  6 eslint (staged files only)
-# ON-DEMAND HARNESS (opt-in, ~2.5min for all 12 cases): node scripts/pre-commit-harness.cjs [--gate 5] [--list]
+#   4 testID codemod idempotence (B-1)  5 testID map freshness  6 testID flow currency  7 eslint (staged files only)
+# ON-DEMAND HARNESS (opt-in, ~3min for all 14 cases): node scripts/pre-commit-harness.cjs [--gate 5] [--list]
 #   [--json] [--keep] [--base <ref>] [--no-copy]. Runs the REAL hook in a disposable git worktree
-#   (node_modules linked so stage 6's CWD-relative eslint path resolves) and asserts every gate
+#   (node_modules linked so stage 7's CWD-relative eslint path resolves) and asserts every gate
 #   still BLOCKS its fault and still PASSES. It asserts two things beyond exit status, and both are
 #   load-bearing: a BLOCK case must show THAT GATE's banner (the hook exits at the first failure,
 #   so finding it is what proves the earlier gates passed), and a PASS case must show the gate's
-#   "it ran" marker — because a run with nothing staged exits 0 with all six stages SKIPPED, which
+#   "it ran" marker — because a run with nothing staged exits 0 with all seven stages SKIPPED, which
 #   is indistinguishable from green unless you check. A baseline run (clean tree + benign app/ edit)
 #   gates the whole thing: if that fails, no case result means anything. Fast drift guards for the
 #   harness's own banner/marker strings live in tests/meta/pre-commit-harness.test.ts.
@@ -242,13 +242,46 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # INDEX, so the check answers "is the tree I am committing self-consistent?": it does not demand a
 # map regenerated from unstaged code, and it still catches a map regenerated in the working tree
 # but never staged.
+# Stage 6 runs `node maestro/tools/testid-flow-currency.cjs` on the SAME trigger as stage 5. Stage 5
+# proves the map agrees with app/ but says NOTHING about the flows: rename a testID, regenerate the map
+# correctly, commit only app/ + the map — stage 5 is green (the map really was regenerated) and stage 3
+# never runs (no flow staged), so every flow selecting the old id keeps a DEAD selector until some
+# later unrelated commit touches that flow and makes it read as a flow bug. Stage 6 intersects the
+# ids this commit REMOVES with the set flows actually select (91 of ~1108 ids), so it blocks ONLY real
+# orphans — renaming an id no flow uses stays green. It stands down when any flow is staged, because
+# stage 3 then verifies every selector authoritatively. Both maps come from git (`HEAD:` vs `:`), so it
+# asks "what does THIS commit delete". MEASURED, do not "simplify" this back: writing the selector
+# regex with the POSIX class `[[:space:]]` is VALID in the `git grep -E` pattern but NOT in JavaScript
+# (it means "one of [ : s p a c e then a literal ]"), which yields ZERO selectors and turns this into
+# a gate that silently passes every commit forever. `tests/meta/testid-flow-currency.test.ts` pins the
+# live count at exactly 91 for that reason.
 # Stage 3 runs `node maestro/tools/flow-xcheck.cjs` whenever a maestro/flows/**.yaml is staged.
 # TWO BLOCKING checks: (a) a flow `id:` selector absent from maestro/tools/testid-map.json can
 # never resolve on device; (b) MAP DRIFT — the selector is in the map but no longer in the app/
 # file the map attributes it to, which is exactly what editing app/ without regenerating the
-# manifest leaves behind. Neither tsc nor eslint sees YAML. Plus TWO NON-BLOCKING advisories:
-# (a) dead-copy — an assertion literal found in no locale value and no app-source string;
-# (b) MASKED COPY — an assertion that survives only as a mid-phrase fragment of a longer live
+# manifest leaves behind. Neither tsc nor eslint sees YAML. Plus ONE BLOCKING check and ONE
+# non-blocking advisory:
+# (a) dead-copy — BLOCKING as of 2026-10-03 (was advisory). An assertion literal found in NO locale
+# value AND no app/components source string cannot match on device, so the step burns its full wait
+# timeout. The corpus is "locale OR source" on purpose: of 178 distinct flow assertion literals, 125
+# resolve in a locale value and 40 resolve ONLY in app/components source. Those 40 render fine (they
+# are hard-coded JSX — "Enter your phone number to continue" in phone-entry.tsx, "Tap to replace
+# document" in components/DocumentUploadCard.tsx), so a locale-ONLY rule would block ~40 working,
+# already-committed assertions on an i18n-convention technicality rather than a runtime failure.
+# MEASURED, do not "tighten" this to locale-only without re-measuring — and treat that as an i18n
+# -discipline decision, not a bug fix. Suppress genuinely external text (OS dialog, third-party API)
+# via maestro/tools/flow-xcheck-suppressions.json.
+# (a2) LOCALE-ONLY COPY — BLOCKING, ratcheted. A literal that resolves in app/components SOURCE but in
+# NO locale value is hard-coded JSX: it renders today so the flow works, but it is not localizable and
+# the assertion breaks the day that screen is wired to a t() key or the app runs non-en. Any such
+# literal NOT in maestro/tools/flow-locale-baseline.json blocks. MEASURED 2026-10-03: 39 distinct
+# literals / 74 assertion steps across ~15 files predate the gate and are grandfathered in that
+# baseline rather than force-fixed here — blocking all of them at once would reject working, committed
+# flows and bury a real regression under pre-existing noise. The baseline is a RATCHET: it must only
+# ever shrink, each entry being deleted as its screen is localized. Do NOT re-derive these numbers by
+# hand: an earlier hand-rolled audit reported "40" plus 13 spurious DEAD COPY findings, both wrong
+# because it scanned app/ but not components/.
+# (b) MASKED COPY — NON-BLOCKING — an assertion that survives only as a mid-phrase fragment of a longer live
 # string (the dead "Documents Submitted" was masked by admin's "No documents submitted"). The
 # corpus excludes dotted i18n KEY literals, since a key never renders. Suppress via
 # maestro/tools/flow-xcheck-suppressions.json.
@@ -256,8 +289,52 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # stage YAML only).
 # It does NOT verify screen-affinity — that is a runtime property. The two static
 # approximations (route reachability, orphaned-i18n detection) were built, measured against
-# this tree, and REJECTED on evidence; the header in flow-xcheck.cjs records why. Curated
-# affinity evidence lives in maestro/tools/flow-testid-map.json (its DEAD section).
+# this tree, and REJECTED on evidence; the header in flow-xcheck.cjs records why. The
+# reachability half has since been rebuilt soundly as scripts/audit-nav-integrity.cjs and the
+# orphaned-i18n half as scripts/audit-i18n-orphans.cjs (both below) — standalone audits that
+# stage 3 does NOT consume. Curated affinity evidence lives in
+# maestro/tools/flow-testid-map.json (its DEAD section).
+# Stage 3's tiers are pinned directly by tests/meta/flow-xcheck.test.ts: the SHIPPED tool is copied
+# into a throwaway tree (it resolves every input from __dirname, so no overrides exist) and run
+# against one deliberately broken fixture per tier — missing selector, map drift (id renamed, and
+# attributed file deleted), dead copy, new locale-only literal, missing baseline — each asserting
+# exit 2, plus a clean tree at exit 0, the advisory masked tier at exit 0, and an unreadable map at
+# exit 1. Every blocking tier is PAIRED with a fault-injected copy whose detector is neutralised,
+# asserting the outcome flips to (or from) 0 — so a tier that has become a no-op fails the suite
+# instead of passing quietly. Mutating the sandbox copy only; the repo's tool is asserted unchanged.
+# CI runs this via `npm run test:all` (ci.yml) — the only gate coverage CI has, since it runs none
+# of the 7 pre-commit gates.
+# Screen reachability audit — scripts/audit-nav-integrity.cjs (NOT a hook; `--gate` exists but is
+# not wired): AST resolver over app/** + components/** that fixes what the rejected regex could
+# not see — route constants in the NEAREST enclosing scope (module and function-local), the admin
+# SPA's navigation TABLE (components/admin/AdminShell.tsx `NAV` -> router.push(item.route) through
+# filter/map chains), app/index.tsx's forwarder wrapper (`redirect(href)` -> router.replace(href)),
+# and <Stack.Screen name> relative to its layout dir. Three buckets, none a guess: RESOLVED /
+# DANGLING (a concrete target matching NO route file — provable, exit 2 under --gate) / UNRESOLVED
+# (runtime-dependent; LISTED, never counted dead — the honesty budget whose absence caused the old
+# tool's 99 false positives). Router-receiver validation keeps String.replace/Array.push out of the
+# site set (coverage bound printed: AST sites vs textual candidates, 0 suspicious drops). Measured
+# 2026-10-04: 232 route files, 297 sites, RESOLVED 609, DANGLING 2, UNRESOLVED 4; reachability
+# 168/232, 19 no inbound edge, 9 admin screens absent from NAV (product finding, not broken flow).
+# Pinned by tests/meta/audit-nav-integrity.test.ts (22 tests: fixture trees + fault injection per
+# tier; the sandbox junctions the repo node_modules because the tool requires typescript from its
+# <root>). Known DANGLING targets (unfixed, product call): components/RiderHeader.tsx ->
+# /(auth)/sign-in (app/(auth)/login.tsx is the real file) and
+# app/(main)/(fleet)/(tabs)/dashboard/index.tsx -> /(main)/(fleet)/integrations (no such screen).
+# Run: node scripts/audit-nav-integrity.cjs [--json] [--gate]
+# i18n orphan audit — scripts/audit-i18n-orphans.cjs (NOT a hook; audit-only, no --gate because
+# the 236 existing orphans predate it and gating needs an owner ruling): AST resolver over app/** +
+# components/** (minus app/api, __tests__, *.test.*, *.d.ts) that classifies every locale key as
+# ORPHANED (no reference of any kind), SHIELDED (reachable only through dynamic evidence, listed
+# with its reasons + site), MISSING (called, absent from en — with file:line) or PARITY (en/bn
+# divergence). Evidence tiers: static t() calls; `t(`ns.${x}`)` prefixes; identifiers resolved to
+# file-local const tables (t(TABLE[k])); and a per-file fallback for callback-parameter calls
+# (t(item.titleKey)) whose key-shaped literals would otherwise be false orphans. Measured
+# 2026-10-04: 334 runtime files, 1,419 static + 45 dynamic calls; 236 orphans, 133 shielded,
+# 0 missing, 0 parity drift — including the full 106-key set of the screens deleted 2026-10-03
+# (confirm_ride 58, find_ride 36, apply_promos 11, ride.request 1). Pinned by
+# tests/meta/audit-i18n-orphans.test.ts (20 tests: fixture trees + one fault injection per tier).
+# Run: node scripts/audit-i18n-orphans.cjs [--json]
 # After ANY app/ change: node maestro/tools/testid-manifest.cjs   (regenerate the map first)
 ```
 
