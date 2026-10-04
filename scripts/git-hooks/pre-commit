@@ -18,7 +18,14 @@
 # map's 1107 ids, and the other 1016 were verified to rot with flow-xcheck still
 # reporting "every id: selector resolves". This stage regenerates the map from
 # the STAGED app/ tree in a sandbox and diffs id -> file attribution against the
-# STAGED map. Six stages now, eslint last (it exits 0 early when no JS/TS staged).
+# STAGED map. Seven stages now, eslint last (it exits 0 early when no JS/TS staged).
+#
+# 2026-10-03 flow-currency gate (stage 6): the stage above proves the map agrees
+# with app/ but says nothing about the FLOWS. Rename a testID and regenerate the
+# map correctly: stage 5 is green, stage 3 never runs (no flow staged), and every
+# flow selecting the old id keeps a dead selector until some later unrelated commit
+# touches that flow and makes it look like a flow bug. This stage intersects removed
+# ids with the flow-selected set (93 of ~1108 ids) so it blocks ONLY real orphans.
 #
 # 2026-09-28 lint-stage rewrite: the old pipeline
 #   `xargs -n 40 timeout 30 npx eslint --quiet`
@@ -146,6 +153,38 @@ else
     echo "   code would describe a tree this commit does not contain."
     echo "   Only id -> file attribution is enforced. Line-number drift is reported, not blocked:"
     echo "   nothing downstream reads the map's line numbers."
+    exit 1
+  fi
+fi
+
+echo "⏳ Pre-commit: testID flow-currency gate..."
+# Runs on the same trigger as stage 5 (app/ or the map staged). Stage 5 proves the
+# map agrees with app/; it says NOTHING about the FLOWS. Rename a testID, regenerate
+# the map, commit only app/ + the map: stage 5 is green because the map really was
+# regenerated, and stage 3 never runs because no flow is staged — so a flow keeps
+# selecting a testID that no longer exists. That surfaces in some LATER unrelated
+# commit that happens to touch the flow, where it reads as a flow bug and sends the
+# next agent hunting for the wrong file entirely.
+#
+# Only 93 of the map's ~1108 ids are flow-selected, so this intersects removals with
+# the selector set rather than blocking every testID change: renaming an id no flow
+# uses is harmless and must not block. If any flow IS staged, stage 3 owns the
+# verification and this stands down rather than duplicating it more weakly.
+STAGED_FLOW_OR_APP=()
+while IFS= read -r -d '' f; do
+  STAGED_FLOW_OR_APP+=("$f")
+done < <(git diff --cached --name-only -z --diff-filter=ACMRD -- app/ maestro/tools/testid-map.json || true)
+
+if [ ${#STAGED_FLOW_OR_APP[@]} -eq 0 ]; then
+  echo "✅ No staged app/ files or map changes — skipping flow-currency gate."
+else
+  if ! node maestro/tools/testid-flow-currency.cjs; then
+    echo "❌ testID flow-currency gate failed — commit blocked."
+    echo "   This commit removes a testID that a Maestro flow still selects, and stages no flow."
+    echo "   Flows are only cross-checked when a flow is staged, so committing the rename alone"
+    echo "   leaves a dead selector that fails much later in an unrelated commit."
+    echo "   Fix:  update the flow(s) named above to the new testID and stage them here, or"
+    echo "         restore the testID if the rename was not intended."
     exit 1
   fi
 fi
