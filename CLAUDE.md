@@ -152,6 +152,10 @@ npx tsc --noEmit                # Type check (must pass)
 npm run lint                    # Lint (must pass; unused _-prefixed vars allowed)
 npx jest --testPathPattern="name"  # Single test
 
+# Concurrency lane (opt-in, real Postgres) — run before billing/schema changes (see AGENTS.md Testing)
+npm run test:concurrency           # tests/concurrency with RUN_CONCURRENCY_TESTS=1. DB PREREQUISITE: SCRATCH_DATABASE_URL from
+                                   #   `node scripts/concurrency-scratch-project.mjs` — never the shared dev project
+
 # Database
 npx drizzle-kit generate        # Generate migration SQL from schema
 npx drizzle-kit push            # Push to remote Supabase DB  (alias: `npm run push`)
@@ -167,8 +171,8 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # 7 stages, any failure BLOCKS the commit, in order:
 #   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector
 #   4 testID codemod idempotence (B-1)  5 testID map freshness  6 testID flow currency  7 eslint (staged files only)
-# ON-DEMAND HARNESS (opt-in, ~3min for all 14 cases): node scripts/pre-commit-harness.cjs [--gate 5] [--list]
-#   [--json] [--keep] [--base <ref>] [--no-copy]. Runs the REAL hook in a disposable git worktree
+# ON-DEMAND HARNESS (opt-in, ~3min pre-commit / ~5min pre-push): node scripts/pre-commit-harness.cjs [--gate 5] [--list]
+#   [--json] [--keep] [--base <ref>] [--no-copy] [--push]. Runs the REAL hook in a disposable git worktree
 #   (node_modules linked so stage 7's CWD-relative eslint path resolves) and asserts every gate
 #   still BLOCKS its fault and still PASSES. It asserts two things beyond exit status, and both are
 #   load-bearing: a BLOCK case must show THAT GATE's banner (the hook exits at the first failure,
@@ -177,6 +181,11 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 #   is indistinguishable from green unless you check. A baseline run (clean tree + benign app/ edit)
 #   gates the whole thing: if that fails, no case result means anything. Fast drift guards for the
 #   harness's own banner/marker strings live in tests/meta/pre-commit-harness.test.ts.
+#   --push drives scripts/git-hooks/pre-push instead: one case per exit 1 site (missing tsc, tsc
+#   failure, missing scripts/check-web-imports.js, failing native import check), each fed git's ref
+#   line on stdin; the two import-check exits additionally require the type check's success marker,
+#   so a stage reorder fails the harness instead of proving the wrong path. Its baseline is a CLEAN
+#   tree that must print all three success markers — which is also its pass direction.
 # Stage 4 runs `node maestro/tools/testid-idempotence.cjs` whenever an app/**.tsx? or
 # maestro/tools/add-testids.cjs is staged. Proves the Gate-1 codemod is a FIXED POINT:
 # a second write-mode run touches zero files (B-1 double-prefixed every testID across
@@ -231,6 +240,29 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # MEASURED, do not "tighten" this to locale-only without re-measuring — and treat that as an i18n
 # -discipline decision, not a bug fix. Suppress genuinely external text (OS dialog, third-party API)
 # via maestro/tools/flow-xcheck-suppressions.json.
+# Since 2026-10-05 the corpus admits only LIVE locale values: a key classified ORPHANED by
+# scripts/audit-i18n-orphans.cjs (spawned at RUN time with --json, like the nav audit) renders
+# nothing, so its value must never rescue an assertion — the shape by which the 106 keys purged
+# 2026-10-05 (confirm_ride.*, find_ride.*, apply_promos.*, ride.request) could satisfy assertions
+# no screen can ever render (SHIELDED keys count as live; they render through dynamic evidence).
+# If the orphan audit cannot run the gate REFUSES (exit 2, loudly) instead of degrading to the full
+# value set — degrading would silently re-enable the masking. MEASURED 2026-10-05: 73 locale
+# values carried only by orphaned keys are excluded; 7 distinct assertion candidates matched an
+# orphaned value and no live one, all still rescued by source/containment, so 0 assertions flipped
+# to dead. Two "log in" claims in the logout flows (auth/08-logout.yaml,
+# shared/auth/_logout.yaml) now surface in the advisory MASKED tier, where the orphan `auth.login`
+# ("Log in") had been silently exact-rescuing them; they still match on device via the live
+# "Sign up or log in to continue" sentence. This is a live-copy rule, not a locale-only tightening:
+# source literals keep rescuing exactly as before.
+# 2026-10-05, extractor widened: assertions written block-style (the keyword on one line,
+# `text: "…"` on the next) matched no regex and were UNCHECKED — 57 lines / 51 checkable claims
+# across ~20 flows, 4 of them dead. Disposition (owner ruling): the 3 Barikoi result-row claims
+# were already covered by the `savar` suppression; the bilingual truckCatalog Freight tab gained
+# external-data suppressions (freight / মালবাহী); 8 locale-only catalog-label claims (others, now,
+# food, truck, ton, furniture, bls) joined the locale ratchet as 7 entries. A claim the gate
+# cannot see is worse than a masked one — the "every text assertion resolves" pass message would
+# be a lie — so `text:` lines are claims like any other (12 env-interpolated claims are now
+# tracked and skipped, up from 5).
 # (a2) LOCALE-ONLY COPY — BLOCKING, ratcheted. A literal that resolves in app/components SOURCE but in
 # NO locale value is hard-coded JSX: it renders today so the flow works, but it is not localizable and
 # the assertion breaks the day that screen is wired to a t() key or the app runs non-en. Any such
@@ -238,7 +270,12 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # literals / 74 assertion steps across ~15 files predate the gate and are grandfathered in that
 # baseline rather than force-fixed here — blocking all of them at once would reject working, committed
 # flows and bury a real regression under pre-existing noise. The baseline is a RATCHET: it must only
-# ever shrink, each entry being deleted as its screen is localized. Do NOT re-derive these numbers by
+# ever shrink, each entry being deleted as its screen is localized (the count moved 39 → 40 entries /
+# 74 → 75 steps on 2026-10-04, when a dead-screen purge unmasked a pre-existing hard-coded "Payout"
+# in the driver onboarding; its reason field records the fix; and 40 → 47 entries / 75 → 85 steps
+# on 2026-10-05, when block-style `text:` extraction surfaced 8 catalog-label claims — others, now,
+# food, truck, ton, furniture, bls — baselined per owner ruling rather than force-wired, since
+# they are catalog/data labels, not t() copy). Do NOT re-derive these numbers by
 # hand: an earlier hand-rolled audit reported "40" plus 13 spurious DEAD COPY findings, both wrong
 # because it scanned app/ but not components/.
 # (b) MASKED COPY — NON-BLOCKING — an assertion that survives only as a mid-phrase fragment of a longer live
@@ -247,55 +284,105 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # maestro/tools/flow-xcheck-suppressions.json.
 # It MUST stay above the lint stage, which exits 0 early when no JS/TS is staged (flow commits
 # stage YAML only).
-# It does NOT verify screen-affinity — that is a runtime property. The two static
-# approximations (route reachability, orphaned-i18n detection) were built, measured against
-# this tree, and REJECTED on evidence; the header in flow-xcheck.cjs records why. The
-# reachability half has since been rebuilt soundly as scripts/audit-nav-integrity.cjs and the
-# orphaned-i18n half as scripts/audit-i18n-orphans.cjs (both below) — standalone audits that
-# stage 3 does NOT consume. Curated affinity evidence lives in
-# maestro/tools/flow-testid-map.json (its DEAD section).
+# (b2) SCREEN AFFINITY — NON-BLOCKING (added 2026-10-04) — every flow-selected testID is
+# attributed to its owner screen via testid-map.json and owners outside the reachability set of
+# scripts/audit-nav-integrity.cjs (spawned at RUN time with --json, so no snapshot goes stale)
+# are listed. ADVISORY because `reachable` is a FLOOR: UNRESOLVED sites are not edges and
+# `_layout.tsx` files get no inbound edge, so 57 of the map's 218 screens sit outside it while
+# demonstrably live. MEASURED: 0 of 58 id-bearing flows flagged. If the audit cannot run, the
+# tier says so loudly and still exits 0 — it must never print the word "skipped" (the ci.yml
+# precommit-gates job fails on skipped/skipping lines in hook output).
+# Screen-affinity in the full sense — whether the element is on the screen the flow is standing
+# on right now — remains a RUNTIME property no static pass can gate on. The regex-era
+# reachability attempts were rejected on evidence (99 of 234 screens flagged, most live); the AST
+# rebuild resolves their three causes but the set is still a floor, which is why the severity is
+# advisory. Curated affinity evidence lives in maestro/tools/flow-testid-map.json (its DEAD
+# section); the orphaned-i18n audit + gate (scripts/audit-i18n-orphans.cjs, below) is consumed by
+# stage 3 ONLY as dead-copy corpus provenance — keys it classifies ORPHANED may not rescue a claim
+# (§Stage 3, dead-copy) — while its own findings gate via `npm run check:i18n-orphans`.
 # Stage 3's tiers are pinned directly by tests/meta/flow-xcheck.test.ts: the SHIPPED tool is copied
 # into a throwaway tree (it resolves every input from __dirname, so no overrides exist) and run
 # against one deliberately broken fixture per tier — missing selector, map drift (id renamed, and
-# attributed file deleted), dead copy, new locale-only literal, missing baseline — each asserting
-# exit 2, plus a clean tree at exit 0, the advisory masked tier at exit 0, and an unreadable map at
-# exit 1. Every blocking tier is PAIRED with a fault-injected copy whose detector is neutralised,
-# asserting the outcome flips to (or from) 0 — so a tier that has become a no-op fails the suite
-# instead of passing quietly. Mutating the sandbox copy only; the repo's tool is asserted unchanged.
-# CI runs this via `npm run test:all` (ci.yml) — the only gate coverage CI has, since it runs none
-# of the 7 pre-commit gates.
+# attributed file deleted), dead copy, block-style dead copy (the extractor's blind spot until
+# 2026-10-05), orphan-masked copy (an assertion rescued only by an orphaned
+# key's value), new locale-only literal, missing baseline, missing orphan classification — each
+# asserting exit 2, plus a clean tree at exit 0 (both advisory tiers clean), the advisory masked and
+# screen-affinity tiers at exit 0 (the sandbox stubs scripts/audit-nav-integrity.cjs AND
+# scripts/audit-i18n-orphans.cjs, which cannot run there), the nav-audit-unavailable path at exit 0,
+# and an unreadable map at exit 1. Every tier —
+# blocking and advisory — is PAIRED with a fault-injected copy whose detector is neutralised,
+# asserting the exit code or the tier's own finding flips — so a tier that has become a no-op fails
+# the suite instead of passing quietly. Mutating the sandbox copy only; the repo's tool is asserted unchanged.
+# CI runs the fixture suite via `npm run test:all` (ci.yml). Since 2026-10-04 the ci.yml
+# `maestro-drift` job also runs THIS stage's tool (and stage 4's) against the real tree, so a commit
+# that bypassed the local hook — web UI, fresh clone, --no-verify — is still caught. The ci.yml
+# `precommit-gates` job (PR runs only) closes the index-scoped gap the other jobs cannot reach: it
+# replays the PR as a staged changeset on a throwaway branch (`git reset --soft` to base), adds four
+# benign probes so every stage gets real work, then runs the REAL hook and requires zero
+# skipped/skipping lines — stages 5/6 are no longer hook-only. Stages 1/2/7 keep their repo-wide CI
+# equivalents (check:vacuous, check:date-in-sql, lint).
 # Screen reachability audit — scripts/audit-nav-integrity.cjs (NOT a hook; `--gate` exists but is
-# not wired): AST resolver over app/** + components/** that fixes what the rejected regex could
+# not wired; stage 3 consumes its --json `screens`/`reachable` fields for the advisory affinity
+# tier above): AST resolver over app/** + components/** that fixes what the rejected regex could
 # not see — route constants in the NEAREST enclosing scope (module and function-local), the admin
 # SPA's navigation TABLE (components/admin/AdminShell.tsx `NAV` -> router.push(item.route) through
 # filter/map chains), app/index.tsx's forwarder wrapper (`redirect(href)` -> router.replace(href)),
 # and <Stack.Screen name> relative to its layout dir. Three buckets, none a guess: RESOLVED /
 # DANGLING (a concrete target matching NO route file — provable, exit 2 under --gate) / UNRESOLVED
 # (runtime-dependent; LISTED, never counted dead — the honesty budget whose absence caused the old
-# tool's 99 false positives). Router-receiver validation keeps String.replace/Array.push out of the
-# site set (coverage bound printed: AST sites vs textual candidates, 0 suspicious drops). Measured
-# 2026-10-04: 232 route files, 297 sites, RESOLVED 609, DANGLING 2, UNRESOLVED 4; reachability
-# 168/232, 19 no inbound edge, 9 admin screens absent from NAV (product finding, not broken flow).
-# Pinned by tests/meta/audit-nav-integrity.test.ts (22 tests: fixture trees + fault injection per
+# tool's 99 false positives). A fourth, separate bucket — TABLE DANGLING — validates every nav-key
+# string/template literal that is a direct element of an array-table row (the drawer's
+# CUSTOMER_ITEMS/DRIVER_ITEMS/ADMIN_ITEMS shape) even when the consumer chain stays UNRESOLVED
+# (the `route as never` forwarder), deduped against site findings; both buckets gate. Router-receiver
+# validation keeps String.replace/Array.push out of the site set (coverage bound printed: AST sites
+# vs textual candidates, 0 suspicious drops). Measured 2026-10-05 (final, after the 9 no-inbound
+# admin screens were surfaced in the AdminShell NAV — §4 of docs/testing plan/reports/
+# DEAD-SCREEN-AUDIT-2026-10-04.md): 229 route files, 295 sites, RESOLVED 616, DANGLING 2,
+# UNRESOLVED 4, 137 data-table targets checked (0 dangling); reachability 168/229, 7 no inbound
+# edge, 0 admin screens absent from NAV.
+# Pinned by tests/meta/audit-nav-integrity.test.ts (28 tests: fixture trees + fault injection per
 # tier; the sandbox junctions the repo node_modules because the tool requires typescript from its
-# <root>). Known DANGLING targets (unfixed, product call): components/RiderHeader.tsx ->
+# <root>). Known gap: literal pushes in lib/ (e.g. lib/notificationRouter.ts) are outside the scan
+# scope (app/** + components/** only) — the sweep covers the static data-table class, not lib
+# literals. Known DANGLING targets (unfixed, product call): components/RiderHeader.tsx ->
 # /(auth)/sign-in (app/(auth)/login.tsx is the real file) and
 # app/(main)/(fleet)/(tabs)/dashboard/index.tsx -> /(main)/(fleet)/integrations (no such screen).
 # Run: node scripts/audit-nav-integrity.cjs [--json] [--gate]
-# i18n orphan audit — scripts/audit-i18n-orphans.cjs (NOT a hook; audit-only, no --gate because
-# the 236 existing orphans predate it and gating needs an owner ruling): AST resolver over app/** +
-# components/** (minus app/api, __tests__, *.test.*, *.d.ts) that classifies every locale key as
-# ORPHANED (no reference of any kind), SHIELDED (reachable only through dynamic evidence, listed
-# with its reasons + site), MISSING (called, absent from en — with file:line) or PARITY (en/bn
-# divergence). Evidence tiers: static t() calls; `t(`ns.${x}`)` prefixes; identifiers resolved to
-# file-local const tables (t(TABLE[k])); and a per-file fallback for callback-parameter calls
-# (t(item.titleKey)) whose key-shaped literals would otherwise be false orphans. Measured
-# 2026-10-04: 334 runtime files, 1,419 static + 45 dynamic calls; 236 orphans, 133 shielded,
-# 0 missing, 0 parity drift — including the full 106-key set of the screens deleted 2026-10-03
-# (confirm_ride 58, find_ride 36, apply_promos 11, ride.request 1). Pinned by
-# tests/meta/audit-i18n-orphans.test.ts (20 tests: fixture trees + one fault injection per tier).
-# Run: node scripts/audit-i18n-orphans.cjs [--json]
+# i18n orphan audit + gate — scripts/audit-i18n-orphans.cjs. Audit mode classifies every locale
+# key as ORPHANED (no reference of any kind), SHIELDED (reachable only through dynamic evidence,
+# listed with its reasons + site), MISSING (called, absent from en — with file:line) or PARITY
+# (en/bn divergence), over app/** + components/** (minus app/api, __tests__, *.test.*, *.d.ts).
+# Gate mode (`--gate`, wired as `npm run check:i18n-orphans`, a step in the CI `test` job) blocks
+# only keys orphaned AFTER the gate existed: the backlog that predates it is grandfathered in
+# scripts/i18n-orphan-baseline.json — a RATCHET that should only shrink (delete each entry once
+# its key is deleted from both locales or referenced again; `node scripts/purge-orphan-keys.cjs
+# --new` deletes exactly the gate's new orphans from both locales and prunes the same keys in one
+# step); stale entries are reported, not blocked; a missing/malformed baseline exits 2 loudly,
+# never degrading to an empty one.
+# Evidence tiers: static t() calls; `t(`ns.${x}`)` prefixes; identifiers resolved through
+# file-local const chains, IMPORTED module tables (./x, `@/x`), and ITERATION-CALLBACK parameters
+# (ARR.map((p) => t(p.key)) binds p to ARR's elements). Every dynamic site carries an `evidence`
+# list (local / import:<spec> / callback:<method>) naming what resolved it. A per-file fallback
+# still catches genuinely unresolved calls — render-prop destructuring, useState-derived keys,
+# same-file helper parameters, call results — via key-shaped literals in that file.
+# Measured 2026-10-04 after the resolution extension and the same-day purge of the deleted-screen
+# sets: 334 runtime files, 1,419 static + 45 dynamic calls; 10 unresolved (was 21), 130 orphans
+# (all baselined), 133 shielded (dynamic-table 86, file-fallback 41, template-prefix 6), 0
+# missing, 0 parity drift. The purge removed the full 106-key set of the screens deleted
+# 2026-10-03 (confirm_ride 58, find_ride 36, apply_promos 11, ride.request 1) from both locales
+# and pruned the baseline 236 → 130 via scripts/purge-orphan-keys.cjs; the same-day trio
+# deletion (top-up / top-up-details / add-payment) purged its 17 new keys the same way —
+# baseline stayed at 130, locales 1,364 → 1,347. Pinned by
+# tests/meta/audit-i18n-orphans.test.ts (38 tests: fixture trees + a fault injection per tier +
+# gate fault pairs + real-tree baseline/resolution checks) and tests/meta/purge-orphan-keys.test.ts
+# (18 tests: purge + its fault pairs).
+# Run: node scripts/audit-i18n-orphans.cjs [--json | --gate [--json]]
 # After ANY app/ change: node maestro/tools/testid-manifest.cjs   (regenerate the map first)
+# Deleting a screen: preview the damage with `node scripts/audit-deletion-impact.cjs` (every
+# no-inbound screen + the testIDs and locale keys that die with it); then §Deleting a screen of
+# docs/testing plan/reports/DEAD-SCREEN-AUDIT-2026-10-04.md (testID map regen, `--gate`,
+# `node scripts/purge-orphan-keys.cjs --new`, flow-xcheck — all in the same change; terse
+# checklist is Workflow 9 of the local .claude/WORKFLOWS.md).
 ```
 
 ## Architecture Map
@@ -494,6 +581,7 @@ Testing must be fast. Follow this loop:
 3. **A task is complete only when impacted tests pass.** Paste the jest summary line (e.g. `Tests: 42 passed, 42 total`) as evidence in the response. No evidence = not complete.
 4. **`--bail`/targeted runs never substitute for the full gate.** At phase gates the order is unchanged: `npm run lint` → `npx tsc --noEmit` → `npm run check:vacuous` → `npx jest --watchAll=false` (full-suite floor).
 
+- **Concurrency advisory-lock proofs** (`tests/concurrency/`) are opt-in and need a real Postgres: `npm run test:concurrency` (= `RUN_CONCURRENCY_TESTS=1 npx jest tests/concurrency --watchAll=false`, cross-platform via cross-env). A default suite run SKIPS them (pinned by `tests/meta/concurrency-gate.test.ts`); CI runs the lane on every PR in the `concurrency-locks` job of `.github/workflows/ci.yml` (disposable `postgres:16` service container, schema via `drizzle-kit push --force`, `DATABASE_SSL=disable`). For LOCAL runs, provision the disposable project with `node scripts/concurrency-scratch-project.mjs` (needs `SUPABASE_ACCESS_TOKEN`) and run with the `SCRATCH_DATABASE_URL` it writes to `.env.scratch.local` — the harnesses prefer `SCRATCH_DATABASE_URL` and refuse to run without it (`tests/concurrency/scratch-db-url.ts`, proven by `tests/meta/concurrency-gate.test.ts`), so a forgotten override can never run scratch databases on the shared dev project.
 - **Dispatch invariants (Phase D — sequential dispatch, debit-on-offer)** that must always pass: (1) exactly one outstanding offer per ride at any time, (2) single deduction per `(ride_id, driver_id)`, (3) `calls_remaining = 0` drivers never in candidate pool, (4) daily cap exceeded drivers never in candidate pool, (5) no driver receives the same offer twice, (6) every offered driver has a `call_ledger` deduction row regardless of outcome, (7) declined/expired offer → next candidate offered, (8) rider cancel mid-chain → chain aborts, no further offers, no refunds, (9) re-dispatch → previously billed drivers not re-billed, (10) billing atomicity — `dispatch_offers` row + deduction commit in ONE transaction.
 - **Payment invariants**: (1) same idempotency key → exactly one `payment_events` row, (2) duplicate callback activates subscription exactly once, (3) failed activation → `compensation_queue` entry within 30 seconds.
 - Test templates: `docs/Plan/22-TEST-TEMPLATES.md`.

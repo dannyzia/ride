@@ -1,13 +1,23 @@
 # CI — Ride monorepo (Expo app + utils-server).
 #
-# Purpose:     Hosted gate on every push/PR: lint → typecheck (both packages) →
-#               vacuous-assertion gate → full jest suite. Complements the local
+# Purpose:     Hosted gate on every push/PR: lint → date-in-sql + i18n orphan
+#               gates → typecheck (both packages) → vacuous-assertion gate → full
+#               jest suite, plus the `maestro-drift`
+#               job (Maestro flow-selector + testID codemod idempotence gates —
+#               the static half of the Maestro toolchain), the `precommit-gates`
+#               job (the REAL pre-commit hook replayed against the PR as a
+#               staged changeset on a throwaway branch — this is what brings the
+#               index-scoped stages 3-7 into CI; PR runs only), and the
+#               `concurrency-locks` job (advisory-lock proofs against a
+#               disposable postgres:16 service container). Complements the local
 #               pre-commit/pre-push hooks (scripts/git-hooks/*).
 # Owner:       Coding model (test lane)
 # Status:      ACTIVE
 # Related (concrete paths):
 #   - scripts/check-vacuous-assertions.js — vacuous gate CLI (also inside test:all)
 #   - tests/meta/vacuous-assertion-gate.test.ts — in-suite meta gate
+#   - tests/concurrency/*.test.ts — advisory-lock proofs run by `concurrency-locks`
+#   - tests/meta/concurrency-gate.test.ts — pins the default-suite skip gate
 #   - package.json — scripts: lint / test:all / check:vacuous
 # Last verified: 2026-09-09 (npm workspace conversion) — root package.json
 #   declares "workspaces": ["utils-server"], so ONE `npm ci` at the root
@@ -21,8 +31,61 @@
 #   1976/1976, tsc 0/0, lint 0 errors.
 #   2026-09-09 (actions bump): checkout/setup-node v4 → v7 — both run on the
 #   Node 24 runner runtime, clearing the Node 20 deprecation annotation.
+#   2026-10-04 (maestro-drift job): stages 3 and 4 of the pre-commit hook
+#   (flow-xcheck, testID codemod idempotence) now run here as their OWN job, so
+#   a commit made where the hook is absent — web UI, fresh clone without
+#   `node scripts/install-hooks.js`, `--no-verify` — is still caught. Both
+#   commands were verified locally, exit 0, in the working tree AND in a
+#   throwaway worktree at HEAD (proves no gitignored/local-only dependency):
+#   flow-xcheck ~1s, 261 selectors resolve; idempotence ~14s, run-2
+#   filesTouched=0, strip→regen mismatches=0, 0 double-prefixed ids. First
+#   GitHub-runner execution is unproven — treat a red first run as a finding
+#   about the job wiring, not about the tools.
+#   2026-10-04 (concurrency-locks job): tests/concurrency/** — the advisory-lock
+#   proofs gated behind RUN_CONCURRENCY_TESTS=1 — now run on every PR against a
+#   disposable `postgres:16` service container, instead of only when a developer
+#   remembered the env var and had a scratch DB. Schema via
+#   `drizzle-kit push --force` (NOT `migrate`: _journal.json is missing
+#   0057_packages_name_live_unique, and the M-3 negative control asserts that
+#   index). DB via `DATABASE_SSL=disable` (the container serves no TLS and
+#   postgres.js `ssl: "require"` cannot complete that handshake — wire-verified
+#   2026-10-04; the opt-out is the literal value `disable` only, so no deployed
+#   environment can lose TLS by accident). Recipe verified end-to-end locally
+#   against a scratch database: push rc 0 (125 tables, 305 enum labels, all
+#   three backstop indexes present), then the full lane rc 0 — 4 suites, 7
+#   tests, 58s. First GitHub-runner execution is unproven — a red first run is
+#   a finding about the job wiring, not the proofs.
+#   2026-10-04 (precommit-gates job): the REAL pre-commit hook now runs in CI
+#   against the PR as a staged changeset. Before this job, the index-scoped
+#   stages (3-7) were hook-only on CI: on a clean checkout their
+#   `git diff --cached` / `git show :path` inputs are empty, so they would
+#   compare HEAD with itself. The job takes the PR merge commit, `git reset
+#   --soft` to the base commit with the merged tree still in the index, adds
+#   four benign probes (test file, sql lib file, flow comment, app tsx comment —
+#   all pass fixtures the local harness already proves benign), runs
+#   `bash scripts/git-hooks/pre-commit`, and REQUIRES: exit 0; every stage
+#   banner printed (the expected count is DERIVED from the hook under test, so
+#   a 6- or 7-stage hook is both valid); zero `skipped`/`skipping` lines (every
+#   stage did real work, not a skip path); and the final pass marker. Verified
+#   locally end-to-end in a throwaway worktree with a simulated PR merge commit:
+#   staged diff correct, and both the 6-stage HEAD hook and the 7-stage working
+#   tree hook exit 0 with every stage executing and zero skip lines. First
+#   GitHub-runner execution is unproven — a red first run is a finding about the
+#   job wiring, not the gates.
+#   2026-10-04 (i18n orphan gate): the `test` job now runs
+#   `npm run check:i18n-orphans` — scripts/audit-i18n-orphans.cjs --gate against
+#   scripts/i18n-orphan-baseline.json, which grandfathers the 236 locale keys
+#   orphaned before the gate existed. A key orphaned AFTER the baseline (a
+#   deleted screen's keys, a rename that leaves the old key behind) fails the run
+#   with exit 2; stale baseline entries are reported, not blocked. Locally
+#   verified exit 0 against the full app/ tree.
 # How to update: keep step order aligned with the house validation order
-#   (lint → typecheck → test); do not add deploy steps here.
+#   (lint → typecheck → test); do not add deploy steps here. The two drift gates
+#   must stay in lockstep with stages 3/4 of scripts/git-hooks/pre-commit — if a
+#   trigger or tool changes there, mirror it in the `maestro-drift` job. For
+#   `precommit-gates`: when a stage's trigger changes in the hook, extend its
+#   probe set in the same commit — the zero-skip assertion is exactly what stops
+#   the replay from going vacuous.
 
 name: CI
 
@@ -61,6 +124,15 @@ jobs:
       - name: Date-in-sql gate
         run: npm run check:date-in-sql
 
+      # i18n orphan gate: blocks locale keys newly orphaned since the baseline
+      # (scripts/i18n-orphan-baseline.json) recorded the 236-key backlog that
+      # predates the gate. Exit 2 = a NEW orphan (a deleted screen's keys, or a
+      # rename that left the old key behind), exit 1 = the tool could not run.
+      # Stale baseline entries are reported, not blocked — the baseline is a
+      # ratchet and only has to shrink.
+      - name: i18n orphan gate (new orphans only)
+        run: npm run check:i18n-orphans
+
       - name: Typecheck (root)
         run: npx tsc --noEmit
 
@@ -82,3 +154,271 @@ jobs:
       # upgrade); see .kilo/plans/findings/2026-09-09-npm-audit-triage.md.
       - name: Dependency audit gate (critical)
         run: npm audit --audit-level=critical
+
+  # ── Maestro flow + testID drift gates ───────────────────────────────────────
+  # The static half of the Maestro toolchain. Before this job, stages 3 and 4 of
+  # scripts/git-hooks/pre-commit ran ONLY where the hook was installed, so a
+  # commit from the GitHub web UI, a fresh clone without
+  # `node scripts/install-hooks.js`, or `git commit --no-verify` bypassed both
+  # gates entirely. The jest suites pin the gate LOGIC against fixture trees
+  # (tests/meta/flow-xcheck.test.ts, tests/meta/testid-idempotence.test.ts), and
+  # the real-tree idempotence proof is opt-in (RUN_IDEMPOTENCE_E2E=1) — nothing
+  # else checked either invariant against the real app/ and maestro/ trees.
+  #
+  # Deliberately a SEPARATE job, not extra steps in `test`: the drift gates are
+  # their own invariant class, and folding them into `test` would let one red
+  # gate suppress lint/tsc/jest output (and the run's other signal) entirely.
+  maestro-drift:
+    name: Maestro flow + testID drift gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Same single-workspace `npm ci` contract as the test job — never a nested
+      # utils-server install. The idempotence gate needs node_modules
+      # (maestro/tools/add-testids.cjs requires `typescript`); flow-xcheck reads
+      # the committed map, flows, app/, and en locale, and since 2026-10-04 its
+      # advisory screen-affinity tier also spawns scripts/audit-nav-integrity.cjs,
+      # which requires typescript from the repo root — do not drop this install.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies (workspace root)
+        run: npm ci
+
+      # Stage 3 of the pre-commit hook. Every `id:` selector in
+      # maestro/flows/**.yaml must exist in maestro/tools/testid-map.json AND
+      # still exist in the app/ file the map attributes it to (stale-map drift),
+      # plus the dead-copy / locale-only-copy tiers and the advisory screen-affinity
+      # tier. Exit 2 = blocking findings,
+      # exit 1 = unreadable map / broken inputs. Both fail the job.
+      - name: Maestro flow selector gate
+        run: node maestro/tools/flow-xcheck.cjs
+
+      # Stage 4. The B-1 fingerprint proof: a second write-mode codemod run must
+      # touch ZERO files, --strip → regen must reproduce app/ byte-for-byte, and
+      # no testID may repeat a path segment. The tool sandboxes app/ itself (the
+      # --strip step deletes every testID) and only READs the real tree.
+      # Exit 2 = B-1 regression, exit 1 = cannot run. Both fail the job.
+      - name: testID codemod idempotence gate (B-1)
+        run: node maestro/tools/testid-idempotence.cjs
+
+  # ── The pre-commit gates against the PR as a staged changeset ───────────────
+  # Stages 3–7 of scripts/git-hooks/pre-commit are INDEX-scoped (`git diff
+  # --cached`, `git show :path`), so on a clean CI checkout they see nothing
+  # staged and compare HEAD with itself — the reason stages 5/6 were documented
+  # as hook-only. This job rebuilds the context the hook was written for: it
+  # takes the PR merge commit, moves a throwaway branch back to the base commit
+  # with the merged tree still in the index (`git reset --soft`), adds four
+  # benign probes that give every stage real work, then runs the REAL hook
+  # script and asserts that it passed, that every stage banner printed, and that
+  # no stage took a skip path. Nothing is pushed; the branch exists only in the
+  # runner.
+  #
+  # The four probes are the pass fixtures the local harness already proves
+  # benign (scripts/pre-commit-harness.cjs): a real-assertion test file (stage
+  # 1), a DB-side now() sql file (stage 2), a comment appended to a flow file
+  # (stage 3), and a comment appended to an app/ tsx (stages 4-7). The expected
+  # stage count is DERIVED from the hook file under test, never hardcoded, so a
+  # PR that adds or removes a stage is replayed against the hook that PR ships.
+  precommit-gates:
+    name: Pre-commit gates (staged replay)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The recipe needs a PR merge commit and its base; push runs have neither
+    # (the PR run that produced the merge already validated it).
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Depth 2 fetches the merge commit AND both parents (base + head).
+          fetch-depth: 2
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      # Same single-workspace `npm ci` contract as the other jobs — never a
+      # nested utils-server install. Stage 7 lints via node_modules/eslint and
+      # stage 4 needs `typescript`.
+      - name: Install dependencies (workspace root)
+        run: npm ci
+
+      # Rebuild the local hook context on a branch that never leaves the runner:
+      # HEAD becomes the base commit, the PR's merged tree becomes the STAGED
+      # changeset (`reset --soft` moves HEAD only — index and worktree stay).
+      - name: Stage the PR on a throwaway branch
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          PARENTS=$(git rev-list --parents -n1 HEAD | wc -w)
+          if [ "$PARENTS" -ne 3 ]; then
+            echo "::error::HEAD is not the PR merge commit (found $((PARENTS - 1)) parent(s)) — cannot replay."
+            exit 1
+          fi
+          if ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            # The base moved after this run's merge ref was built; the merge
+            # commit's first parent is the base it was actually built on.
+            echo "base sha ${BASE_SHA} not present locally — using the merge commit's first parent"
+            BASE_SHA=$(git rev-parse HEAD^1)
+          fi
+          git checkout -B precommit-gates-replay
+          # `reset --soft` keeps index/worktree at the merged tree while moving
+          # the branch to base, so `git diff --cached` is exactly the PR.
+          git reset --soft "$BASE_SHA"
+          echo "staged PR changeset: $(git diff --cached --name-only | wc -l) file(s)"
+          git diff --cached --stat | tail -5
+
+      # Give every stage real work. All four edits are the local harness's
+      # proven-benign pass fixtures, ported here so the assertions below can
+      # require zero skip lines instead of tolerating a vacuous run.
+      - name: Add benign probes (every stage gets real work)
+        run: |
+          set -euo pipefail
+          APP_PROBE="app/(auth)/_layout.tsx"
+          FLOW_PROBE="maestro/flows/shared/util/_open-settings-hub.yaml"
+          for f in "$APP_PROBE" "$FLOW_PROBE"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::probe target $f is missing (deleted or renamed by the PR?) — pick a replacement probe."
+              exit 1
+            fi
+          done
+          for f in tests/precommit-gates-probe/real.test.ts lib/precommit-gates-probe.ts; do
+            if [ -e "$f" ]; then
+              echo "::error::probe path $f already exists in this PR — rename the probe."
+              exit 1
+            fi
+          done
+          mkdir -p tests/precommit-gates-probe
+          printf '%s\n' \
+            'describe("pre-commit gate probe", () => {' \
+            '  it("adds", () => {' \
+            '    expect(1 + 1).toBe(2);' \
+            '  });' \
+            '});' > tests/precommit-gates-probe/real.test.ts
+          printf '%s\n' \
+            'import { sql } from "drizzle-orm";' \
+            '' \
+            'export const probe = sql`SELECT now()`;' > lib/precommit-gates-probe.ts
+          printf '\n// pre-commit gate probe: triggers stages 4-7 (no testID or map change)\n' >> "$APP_PROBE"
+          printf '\n# pre-commit gate probe: triggers stage 3 (no selector change)\n' >> "$FLOW_PROBE"
+          git add -- "$APP_PROBE" "$FLOW_PROBE" tests/precommit-gates-probe/real.test.ts lib/precommit-gates-probe.ts
+          echo "staged changeset after probes: $(git diff --cached --name-only | wc -l) file(s)"
+          git diff --cached --name-only
+
+      # Run the hook exactly as the local gate does (git invokes the same script
+      # via .git/hooks). Assertions, in order: the hook passed; every stage's
+      # banner printed (count derived from the hook under test); no stage took a
+      # skip path (the wording every skip branch uses, plus the vacuous
+      # checker's own "check skipped" line); the final pass marker printed.
+      - name: Run the pre-commit gates (real hook script)
+        run: |
+          set -euo pipefail
+          LOG="$RUNNER_TEMP/precommit-gates-replay.log"
+          if ! bash scripts/git-hooks/pre-commit >"$LOG" 2>&1; then
+            echo "::error::a pre-commit gate blocked the replay"
+            cat "$LOG"
+            exit 1
+          fi
+          cat "$LOG"
+          EXPECTED=$(grep -cE '^echo "⏳ Pre-commit:' scripts/git-hooks/pre-commit || true)
+          RAN=$(grep -cF '⏳ Pre-commit:' "$LOG" || true)
+          if [ "$RAN" -ne "$EXPECTED" ]; then
+            echo "::error::reached $RAN of $EXPECTED stage(s) — the hook exited before running every gate"
+            exit 1
+          fi
+          if grep -nE 'skipped|skipping' "$LOG"; then
+            echo "::error::a stage took its skip path, so this run proves nothing about it — add or extend a probe above."
+            exit 1
+          fi
+          grep -qF '✅ Pre-commit passed.' "$LOG" || {
+            echo "::error::hook exited 0 without printing its pass marker"
+            exit 1
+          }
+          echo "✅ replay: all $RAN pre-commit stage(s) executed and passed"
+
+  # ── Concurrency advisory-lock proofs (real Postgres) ───────────────────────
+  # tests/concurrency/* are gated behind RUN_CONCURRENCY_TESTS=1 precisely
+  # because a mock proves nothing about pg_advisory_xact_lock: the M-3 and U-4
+  # harnesses must observe a real second session BLOCKED on the lock. Until this
+  # job existed they ran only when a developer remembered the env var AND had a
+  # scratch database, so a lock regression could land silently. This job gives
+  # them a disposable database on every PR.
+  #
+  # Deliberately a SEPARATE job, for the same reason as maestro-drift: one red
+  # proof must not suppress the main suite's signal. The `test` job keeps these
+  # suites SKIPPED (RUN_CONCURRENCY_TESTS unset there — pinned by
+  # tests/meta/concurrency-gate.test.ts).
+  #
+  # The two load-bearing details: the `postgres:16` service container with its
+  # health check, and `DATABASE_SSL=disable` — src/db/index.ts defaults to
+  # `ssl: "require"`, which cannot complete against a container serving no TLS.
+  concurrency-locks:
+    name: Concurrency advisory-lock proofs (postgres:16)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ride_ci
+        ports:
+          - 5432:5432
+        # GitHub holds the job steps until this health check passes, so
+        # `drizzle-kit push` never races the server's first-boot init.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # 127.0.0.1, not `localhost`: avoids a ::1 resolution where the published
+      # port is not listening. No sslmode in the URL — TLS is controlled solely
+      # by DATABASE_SSL below.
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ride_ci
+      # This service container IS the scratch database: tests/concurrency refuse
+      # to run without SCRATCH_DATABASE_URL (tests/concurrency/scratch-db-url.ts),
+      # so a forgotten local override can never run scratch databases on the
+      # shared dev project.
+      SCRATCH_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ride_ci
+      DATABASE_SSL: disable
+      RUN_CONCURRENCY_TESTS: "1"
+    steps:
+      - uses: actions/checkout@v7
+
+      # Same single-workspace `npm ci` contract as the other jobs — never a
+      # nested utils-server install.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies (workspace root)
+        run: npm ci
+
+      # Schema first, via push --force. NOT `drizzle-kit migrate`:
+      # src/db/migrations/meta/_journal.json has 55 entries but the directory
+      # holds 58 .sql files — 0057_packages_name_live_unique is absent from the
+      # journal, and the M-3 negative control asserts that exact index exists.
+      # `push` also matches the documented deploy path (AGENTS.md § Deploy
+      # Order). Locally verified against a scratch DB: rc 0, 125 tables,
+      # 305 enum labels, including the `packages_name_live_uq`,
+      # `subs_one_active_per_driver` and `call_ledger_no_double_deduct`
+      # backstops the proofs rely on.
+      - name: Push schema to the service container
+        run: npx drizzle-kit push --force
+
+      # The four harnesses: M-3 launch-free-package lock, U-4
+      # activateSubscription lock, promo-lock and its no-contention twin.
+      # --runInBand: each file owns a scratch schema/database and drops it in
+      # afterAll; serial execution keeps cluster-wide advisory locks from
+      # overlapping across workers (also how the local full-lane proof ran:
+      # 4 suites, 7 tests, 58s).
+      - name: Concurrency advisory-lock proofs
+        run: npx jest tests/concurrency --watchAll=false --ci --runInBand --silent
