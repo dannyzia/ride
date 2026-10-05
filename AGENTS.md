@@ -171,6 +171,20 @@ Handoff notes:
 
 §`.kilo/plans/rhizome-upstream-reports.md` for the install command, data-root config, and the Kilo client-side rendering caveat (older clients drop `structuredContent`). The three rhizome guides at `rhizome://guides/*` are the authoritative API reference.
 
+### Orchestrator Protocol (Ride)
+
+> **Activation:** active while Rhizome `01M45P6SWP6D1157H5PZD1JNMD` (ISSUE-83, "ORCHESTRATOR LOOP — builder hub") is open. On its closure this section retires and normal single-agent workflow applies.
+
+Roles: **orchestrator** (instructs, answers, verifies — skill: `rhizome-orchestrator`) and **builder** (builds, reports, asks — skill: `rhizome-builder`). Load your skill at session start.
+
+- Hub: ISSUE-83 (`01M45P6SWP6D1157H5PZD1JNMD`). All coordination is comments there.
+- Builder tags: `STEP <n>:` after every build step (even small), `STAGE REPORT:` at stage end, `QUESTION:` for clarifications and follow-ups.
+- Orchestrator tags: stage orders, `ANSWER:`, `OWNER-DECISION:`, `VERIFIED:`.
+- The builder never contacts the owner; business/risk/money/irreversible items route through the orchestrator.
+- Both roles check Rhizome intermittently; silence never means approval.
+- Verification rule: claims are checked against the repo, CI (exact PR head SHA), and the live surface — for Ride this is device verification of UI flows via Maestro/execbro when device+Metro are available (state explicitly when skipped), plus exact build/version identifiers where a hosted surface applies. Green health endpoints are not proof.
+- Project standing rules: money = integer paisa; write-ownership boundaries per §Critical Rules; validation order `npm run lint` → `npx tsc --noEmit` → targeted jest (full suite at phase gates); Conventional Commits with `git diff --cached --stat` verified before every `git add` (§Write Discipline); secrets never printed or committed.
+
 ## Essential Commands
 
 ```bash
@@ -208,12 +222,12 @@ grep -r "console\.log" app/ lib/ utils-server/ src/       # must return nothing
 grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return nothing
 
 # Automated pre-commit gate — scripts/git-hooks/pre-commit (install: node scripts/install-hooks.js)
-# 7 stages, any failure BLOCKS the commit, in order:
+# 8 stages, any failure BLOCKS the commit, in order:
 #   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector
-#   4 testID codemod idempotence (B-1)  5 testID map freshness  6 testID flow currency  7 eslint (staged files only)
+#   4 testID codemod idempotence (B-1)  5 testID map freshness  6 testID flow currency  7 shellcheck (shell scripts)  8 eslint (staged files only)
 # ON-DEMAND HARNESS (opt-in, ~3min pre-commit / ~5min pre-push): node scripts/pre-commit-harness.cjs [--gate 5] [--list]
 #   [--json] [--keep] [--base <ref>] [--no-copy] [--push]. Runs the REAL hook in a disposable git worktree
-#   (node_modules linked so stage 7's CWD-relative eslint path resolves) and asserts every gate
+#   (node_modules linked so stage 8's CWD-relative eslint path resolves) and asserts every gate
 #   still BLOCKS its fault and still PASSES. It asserts two things beyond exit status, and both are
 #   load-bearing: a BLOCK case must show THAT GATE's banner (the hook exits at the first failure,
 #   so finding it is what proves the earlier gates passed), and a PASS case must show the gate's
@@ -244,7 +258,8 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # reported, NOT blocked — attribution is what every consumer resolves, and nothing reads `line`.
 # MEASURED rationale (do not "simplify" this back): stage 3 is NOT defeated by a stale map — its
 # MAP DRIFT check re-reads app/, so a flow-referenced id that goes stale still fails there. Flows
-# reference 91 of the map's 1107 ids; the other 1016 rot with NO signal (verified: renaming an
+# reference 93 of the map's ids (map total 1101 at the 2026-10-05 post-purge regen — regenerate with
+# node maestro/tools/testid-manifest.cjs before quoting); the rest rot with NO signal (verified: renaming an
 # unreferenced id leaves flow-xcheck at exit 0), and stage 3 only runs on flow commits, so the rot
 # surfaces later to whoever selects the id, in an unrelated commit. The map is also the index used
 # for flow REWRITING and the skeptic audit, read by humans and agents. Both sides come from the
@@ -256,14 +271,27 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # correctly, commit only app/ + the map — stage 5 is green (the map really was regenerated) and stage 3
 # never runs (no flow staged), so every flow selecting the old id keeps a DEAD selector until some
 # later unrelated commit touches that flow and makes it read as a flow bug. Stage 6 intersects the
-# ids this commit REMOVES with the set flows actually select (91 of ~1108 ids), so it blocks ONLY real
+# ids this commit REMOVES with the set flows actually select (93 of the map's ids, test-pinned), so it blocks ONLY real
 # orphans — renaming an id no flow uses stays green. It stands down when any flow is staged, because
 # stage 3 then verifies every selector authoritatively. Both maps come from git (`HEAD:` vs `:`), so it
 # asks "what does THIS commit delete". MEASURED, do not "simplify" this back: writing the selector
 # regex with the POSIX class `[[:space:]]` is VALID in the `git grep -E` pattern but NOT in JavaScript
 # (it means "one of [ : s p a c e then a literal ]"), which yields ZERO selectors and turns this into
 # a gate that silently passes every commit forever. `tests/meta/testid-flow-currency.test.ts` pins the
-# live count at exactly 91 for that reason.
+# live count at exactly 93 for that reason.
+# CI MODES (2026-10-05, owner ruling): both tools gained `--head-vs-worktree`, and the
+# `maestro-drift` job runs them on every PR — on a clean checkout the index modes above compare
+# HEAD with itself, so CI audits the COMMITTED state instead: stage 5 diffs the map AT HEAD against
+# the manifest regenerated from the CHECKED-OUT tree; stage 6's removal diff is map-at-HEAD vs the
+# map regenerated from the tree (the ruling's wording), intersected with the worktree's flow
+# selectors. Neither mode needs git history (shallow checkouts are fine); stage 6's flow-staged
+# stand-down does not apply there (no index, and stage 3 runs on every maestro-drift run anyway).
+# MEASURED 2026-10-05 on the real tree (uncommitted screen deletions present): stage 5 exit 2 —
+# 8 vanished + 1 unrecorded (13 line-drift, advisory) — stage 6 exit 0 (8 removed, none
+# flow-selected). Proofs: tests/meta/testid-map-freshness.test.ts and
+# tests/meta/testid-flow-currency.test.ts each run the SHIPPED CLI in a throwaway git repo for
+# this mode, PAIRED with a fault-injected copy whose detector is neutralised and must flip the
+# outcome (6 new tests; a no-op gate fails the suite instead of passing quietly).
 # Stage 3 runs `node maestro/tools/flow-xcheck.cjs` whenever a maestro/flows/**.yaml is staged.
 # TWO BLOCKING checks: (a) a flow `id:` selector absent from maestro/tools/testid-map.json can
 # never resolve on device; (b) MAP DRIFT — the selector is in the map but no longer in the app/
