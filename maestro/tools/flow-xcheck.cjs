@@ -32,6 +32,35 @@
  *     a test is a literal that matches NOTHING — that is what this tier blocks.
  *     Do not "tighten" this to locale-only without first re-measuring, and treat
  *     such a change as an i18n-discipline decision rather than a bug fix.
+ *
+ *     WHY ONLY *LIVE* LOCALE VALUES (2026-10-05): a locale value whose key is
+ *     ORPHANED renders nothing, so letting it satisfy an assertion is exactly
+ *     the masking this tier must stop. The 106 keys purged 2026-10-05
+ *     (confirm_ride.*, find_ride.*, apply_promos.*, ride.request) were exactly
+ *     that shape — copy sitting in common.json that no screen could ever show,
+ *     yet able to rescue an assertion as dead as it was. The locale side of the
+ *     corpus is therefore values of keys scripts/audit-i18n-orphans.cjs does
+ *     NOT classify ORPHANED (SHIELDED counts as live: those render through
+ *     dynamic evidence). The classification is spawned at RUN time (--json),
+ *     like check 5's nav audit, so no snapshot can go stale; when the audit
+ *     cannot run the gate REFUSES (exit 2, loudly) rather than degrade to the
+ *     full value set, because degrading silently re-enables the masking.
+ *     MEASURED 2026-10-05: 7 of 156 distinct assertion candidates matched an
+ *     orphaned value and no live one; all 7 are still rescued by
+ *     source/containment, so 0 real assertions flipped to dead. This is a
+ *     live-copy rule, NOT a locale-only tightening: source literals keep
+ *     rescuing exactly as before.
+ *
+ *     EXTRACTOR WIDENED 2026-10-05: assertions written block-style (the
+ *     assertion keyword on one line, `text: "…"` on the next) never matched
+ *     COPY_RE and were therefore UNCHECKED — 57 lines / 51 checkable claims
+ *     across ~20 flows, 4 of them dead. Disposition (owner ruling): the 3
+ *     Barikoi result-row claims were already covered by the `savar`
+ *     suppression; the bilingual truckCatalog Freight tab gained external-data
+ *     suppressions (freight / মালবাহী); 8 locale-only catalog-label claims
+ *     (others, now, food, truck, ton, furniture, bls) joined the locale
+ *     ratchet. A claim the gate cannot see is worse than a masked one — the
+ *     pass message lies — so `text:` lines are claims like any other.
  *  3b. LOCALE-ONLY (BLOCKING, ratcheted from a baseline) A literal that resolves
  *     in app/components SOURCE but in no locale value is hard-coded JSX. It
  *     renders correctly, so dead-copy passes it and the flow works today — but
@@ -53,53 +82,82 @@
  *     "Documents Submitted" survived (admin-only "No documents submitted"
  *     contains it). This tier makes those rescues visible instead of silent,
  *     so a masked claim gets repointed rather than trusted.
+ *  5. SCREEN AFFINITY (advisory, never blocks) Every flow-selected testID is
+ *     attributed to its owner screen via testid-map.json, and owners that fall
+ *     outside scripts/audit-nav-integrity.cjs's `reachable` set are reported.
+ *     The audit is spawned at RUN time (`node scripts/audit-nav-integrity.cjs
+ *     --json`), so no committed JSON snapshot can go stale. It is ADVISORY
+ *     because `reachable` is a documented FLOOR: UNRESOLVED navigation sites are
+ *     not edges, `_layout.tsx` files get no inbound edge (Tabs.Screen children,
+ *     AdminShell-mounted admin screens), and external/URL entry is a
+ *     declaration, not an edge. MEASURED 2026-10-04: raw `reachable` is 168 of
+ *     232 route files; 57 of the map's 218 screens sit outside it while
+ *     demonstrably live, and 0 of the 58 flows with id: selectors were flagged.
+ *     Blocking on a floor would reject legitimate commits — the tier makes the
+ *     gap visible, it does not gate. When the audit cannot run at all the tier
+ *     says so loudly and still passes.
  *
  * ── WHAT THIS DELIBERATELY DOES NOT GATE ─────────────────────────────────────
  * Screen-affinity in the full sense — "is this element on the screen the flow is
  * standing on right now" — is a RUNTIME property and cannot be decided from
- * source. Both static approximations were built and measured against this tree;
- * both were rejected on evidence, not intuition:
+ * source. Check 5 reports it advisorily for that reason; the two static
+ * approximations were built and measured against this tree, and are treated
+ * differently today:
  *
- *  · Reachability / orphan-screen detection. Three implementations. Final run
- *    flagged 99 of 234 screens, most demonstrably live, for structural reasons
- *    no amount of regex fixes: routes live in module constants
- *    (const R = "/(main)/…"; router.push(R)), which inline-literal matching
- *    cannot resolve; app/admin/_layout.tsx contains ZERO router.push/href — the
- *    60-screen admin SPA navigates some other way entirely; and app/track/
- *    [rideId].tsx plus app/payment/success.tsx are entered by an external URL
- *    scheme/redirect, not by any router call. Gating on this would block
- *    legitimate commits.
+ *  · Reachability / orphan-screen detection — REBUILT. The three regex-era
+ *    attempts were rejected on evidence (the final run flagged 99 of 234
+ *    screens, most demonstrably live) for structural reasons no regex fixes:
+ *    routes live in module constants (const R = "/(main)/…"; router.push(R));
+ *    app/admin's navigation is a table with ZERO router.push/href calls; and
+ *    app/track/[rideId].tsx plus app/payment/success.tsx are entered through an
+ *    external URL scheme, not by any router call. scripts/audit-nav-integrity.cjs
+ *    now resolves all three with an AST — module and function-local constants,
+ *    the AdminShell NAV table, app/index.tsx's redirect forwarder — and is what
+ *    check 5 consumes. Its `reachable` set is still a FLOOR (UNRESOLVED sites
+ *    are not edges; 21 screens remain outside it once layouts and imports are
+ *    accounted for, and 9 admin screens are absent from AdminShell's NAV), so
+ *    check 5 warns and never blocks.
  *
- *  · Orphaned-i18n-key detection (a value present in common.json but whose key
- *    nothing renders). This is the only technique that catches the "Search
- *    destination..." class of bug, and it is not sound: `home.search` is matched
- *    as referenced because API routes contain the bare literal "search", while
- *    live strings like "Welcome Back" get flagged. Key resolution needs a real
- *    parser, not regex.
+ *  · Orphaned-i18n-key detection as a GATE of its own (a value present in
+ *    common.json but whose key nothing renders). Key resolution needs a real
+ *    parser — the regex era matched `home.search` as referenced because API
+ *    routes contain the bare literal "search", while flagging live strings like
+ *    "Welcome Back". The sound evidence-tiered version
+ *    (scripts/audit-i18n-orphans.cjs) IS now consumed by check 3, but only for
+ *    CORPUS PROVENANCE: a key it classifies ORPHANED may not rescue a claim.
+ *    Its findings still do not gate here — the 130 pre-existing orphans are
+ *    ratcheted in scripts/i18n-orphan-baseline.json behind
+ *    `npm run check:i18n-orphans`.
  *
  * Screen-affinity judgments therefore stay CURATED in
  * maestro/tools/flow-testid-map.json (its DEAD section carries per-screen
- * evidence), which is where this repo already records them.
+ * evidence), which check 5 supplements with a live reachability signal but does
+ * not replace: a flow is only ever as precise as that curated map.
  *
  * ── NOTE ON A CORRECTED FACT ────────────────────────────────────────────────
  * "Search destination..." is NOT absent from the codebase: it is the value of
  * `home.search` in i18n/locales/en/common.json:181, a key nothing renders. The
  * live destination row renders `home.search_destination` = "Where to?". So a
  * flow asserting the former could never match, but the reason is an orphaned
- * locale key rather than a missing string.
+ * locale key rather than a missing string. That masking path is CLOSED since
+ * 2026-10-05: the dead-copy corpus admits only LIVE locale values (see tier 3),
+ * so a claim only an orphaned key's value can satisfy is flagged as dead copy —
+ * which is the truth, because that copy renders nowhere.
  *
  * ── NOTE ON CORPUS PROVENANCE ───────────────────────────────────────────────
  * The corpus harvests raw string literals from app/ and components/, so every
  * `t('rider_activity.driver')` contributes a dotted i18n KEY to a set that is
  * supposed to hold rendered copy. Measured: 1247 of 9827 entries (12.7%) were
  * key-shaped. A key is not copy — it never renders — so key-shaped entries that
- * come ONLY from source are now excluded (a value present in a locale file is
- * kept regardless, since that one really does render). Dropping them flipped 0
+ * come ONLY from source are now excluded (a value present in a LIVE locale key
+ * is kept regardless, since that one really does render — an orphaned value
+ * does not). Dropping them flipped 0
  * of 198 claims to dead, so this is neutral today and removes the mechanism by
  * which a dead claim could later be masked by a neighbouring key's name.
  */
 const fs = require("fs");
 const path = require("path");
+const { spawnSync } = require("child_process");
 
 const ROOT = path.join(__dirname, "..", "..");
 const mapPath = path.join(__dirname, "testid-map.json");
@@ -155,6 +213,13 @@ const ID_RE = /^\s*(?:- )?id:\s*["']?([^"'\s#]+)/gm;
 // Assertion text: Maestro's visible/assert family, plus text-only tapOn.
 const COPY_RE =
   /^\s*(?:-\s*)?(?:assertVisible|extendedWaitUntil|waitUntil|notVisible|assertNotVisible|visible|tapOn)\s*:\s*["'](.+?)["']\s*$/;
+// Block-style matcher value: the same assertion family with `text: "…"` on its
+// own line (`- assertVisible:` / `tapOn:` / `extendedWaitUntil:` … then a
+// nested `text:`). 57 such lines (51 checkable claims) across ~20 flows were
+// invisible to COPY_RE before 2026-10-05 and went unchecked — 4 of them dead.
+// Every `text:` line in a flow is a Maestro matcher value, so no nesting logic
+// is needed to decide whether it is an assertion.
+const TEXT_LINE_RE = /^\s*(?:-\s*)?text:\s*["'](.+?)["']\s*$/;
 
 for (const f of flowFiles) {
   const rel = posix(path.relative(ROOT, f));
@@ -174,7 +239,7 @@ for (const f of flowFiles) {
   }
   for (const line of txt.split("\n")) {
     if (/^\s*#/.test(line)) continue; // documentation, not an assertion
-    const m = line.match(COPY_RE);
+    const m = line.match(COPY_RE) || line.match(TEXT_LINE_RE);
     if (m) copyClaims.push({ f: rel, raw: m[1] });
   }
 }
@@ -190,9 +255,15 @@ function appSource(relFile) {
 }
 
 const idsUsedByFlows = new Set();
+const idFlows = new Map(); // id -> flow files (root-relative) that select it
 for (const f of flowFiles) {
+  const rel = posix(path.relative(ROOT, f));
   const txt = fs.readFileSync(f, "utf8");
-  for (const m of txt.matchAll(ID_RE)) idsUsedByFlows.add(m[1]);
+  for (const m of txt.matchAll(ID_RE)) {
+    idsUsedByFlows.add(m[1]);
+    if (!idFlows.has(m[1])) idFlows.set(m[1], new Set());
+    idFlows.get(m[1]).add(rel);
+  }
 }
 for (const id of idsUsedByFlows) {
   if (!idOwner.has(id)) continue; // already reported by check 1
@@ -205,20 +276,69 @@ for (const id of idsUsedByFlows) {
   }
 }
 
+// ── live-locale classification (spawned at RUN time) ──────────────────────────
+// Which locale keys actually render is decided by scripts/audit-i18n-orphans.cjs
+// (evidence-tiered and sound — unlike the regex era described in the header),
+// spawned now with --json so no committed snapshot can go stale, same as check 5
+// spawns the nav audit. Its ORPHANED keys are kept out of the dead-copy corpus
+// below. If the audit cannot run, this REFUSES (exit 2, loudly) instead of
+// degrading to the full value set: degrading would silently re-enable the exact
+// masking this rule exists to close.
+const orphanedKeys = new Set();
+{
+  const auditPath = path.join(ROOT, "scripts", "audit-i18n-orphans.cjs");
+  let report = null;
+  try {
+    const r = spawnSync(process.execPath, [auditPath, "--json"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      timeout: 120000,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (r.error) throw r.error;
+    if (r.status !== 0) {
+      const tail = (r.stderr || "").trim().split("\n").filter(Boolean).slice(-2).join(" | ");
+      throw new Error(`audit exited ${r.status}${tail ? `: ${tail}` : ""}`);
+    }
+    report = JSON.parse(r.stdout);
+  } catch (err) {
+    console.error(`❌ cannot classify live locale values: ${err.message}`);
+    console.error("   The dead-copy corpus may contain ONLY live locale values, so that an");
+    console.error("   orphaned key's value can never mask a dead flow assertion.");
+    console.error("   scripts/audit-i18n-orphans.cjs did not produce a classification; refusing");
+    console.error("   to run with a corpus that could mask. Restore the audit, then re-run.");
+    process.exit(2);
+  }
+  for (const o of report.orphans || []) {
+    const k = o && (typeof o === "string" ? o : o.key);
+    if (k) orphanedKeys.add(k);
+  }
+}
+
 // ── check 3: dead-copy (advisory) ──────────────────────────────────────────────
 /** Hoisted to module scope: the locale-only check (check 3b) needs it after the
- *  corpus block closes. Populated below from every locale value, orphans included. */
+ *  corpus block closes. Populated below from EVERY locale value, orphans
+ *  included — check 3b asks "is this literal in the i18n files at all", a
+ *  ratcheted localizability question, not "does it render". */
 const localeValues = new Set();
+/** LIVE locale values only: values of keys the run-time orphan classification
+ *  (scripts/audit-i18n-orphans.cjs) does not list as ORPHANED. This is what
+ *  enters the dead-copy corpus — an orphaned key's value never renders, so
+ *  letting it rescue a claim is the masking this tier exists to stop. */
+const liveValues = new Set();
 const corpus = new Set();
 {
   // Provenance matters: a dotted token harvested from a t('a.b') call is a KEY,
   // and a key never renders. Locale values are tracked apart from source
-  // literals so a key-shaped string that also exists as a real locale value
-  // (and therefore really does render) is still kept.
+  // literals so a key-shaped string that also exists as a real LIVE locale
+  // value (and therefore really does render) is still kept.
   const sourceValues = new Set();
-  // Every locale value. NOTE: orphaned keys are deliberately included — key
-  // resolution is unsound here (see header), and excluding them would make this
-  // check blind to the "Search destination..." class.
+  // Every locale value lands in localeValues (check 3b's "is this in the i18n
+  // files at all" question). Only LIVE values — keys the run-time orphan
+  // classification does not list — reach liveValues and the corpus: an orphaned
+  // key's value never renders, so it must never rescue a claim. That exclusion
+  // is what closes the masking by which orphaned copy (the purged confirm_ride.*
+  // class) could satisfy an assertion no screen can ever render.
   for (const f of walk(I18N_DIR, [], /\.json$/)) {
     let json;
     try {
@@ -226,12 +346,17 @@ const corpus = new Set();
     } catch {
       continue;
     }
-    (function rec(v) {
+    (function rec(v, k) {
       if (typeof v === "string") {
         const t = norm(v);
-        if (t.length >= 2) localeValues.add(t);
-      } else if (v && typeof v === "object") Object.values(v).forEach(rec);
-    })(json);
+        if (t.length >= 2) {
+          localeValues.add(t);
+          if (!orphanedKeys.has(k)) liveValues.add(t);
+        }
+      } else if (v && typeof v === "object") {
+        for (const [key, child] of Object.entries(v)) rec(child, k ? `${k}.${key}` : key);
+      }
+    })(json, "");
   }
   // App AND components source: string literals AND JSX text nodes. Three separate
   // gaps were found by running the advisory and reading what it flagged:
@@ -267,15 +392,18 @@ const corpus = new Set();
   const KEY_SHAPED = /^[a-z0-9]+(_[a-z0-9]+)*(\.[a-z0-9_]+)+$/;
   let keysDropped = 0;
   for (const v of sourceValues) {
-    if (KEY_SHAPED.test(v) && !localeValues.has(v)) {
+    if (KEY_SHAPED.test(v) && !liveValues.has(v)) {
       keysDropped++;
       continue;
     }
     corpus.add(v);
   }
-  for (const v of localeValues) corpus.add(v);
+  for (const v of liveValues) corpus.add(v);
   if (process.env.FLOW_XCHECK_VERBOSE) {
-    console.log(`  corpus: ${corpus.size} entries (${keysDropped} i18n key-shaped literals dropped)`);
+    console.log(
+      `  corpus: ${corpus.size} entries (${keysDropped} i18n key-shaped literals dropped, ` +
+        `${localeValues.size - liveValues.size} orphaned locale values excluded)`
+    );
   }
 }
 
@@ -494,6 +622,90 @@ if (localeMisses.size) {
   );
 }
 
+// ── check 5: screen affinity (advisory, never blocks) ─────────────────────────
+// For each id: selector a flow uses, find its owner screen in testid-map.json
+// (same attribution check 2 verifies) and ask whether the nav audit's BFS can
+// actually route to that screen. The audit is spawned at RUN time rather than
+// read from a committed snapshot, so this can never go stale relative to the
+// app/ tree the map and flows were checked against. A spawn/parse failure
+// downgrades the tier to a loud note: `reachable` is a FLOOR (see header), and a
+// flow commit must not become unrunnable because the audit could not report.
+const affinity = { status: "clean", byOwner: new Map(), note: null };
+{
+  const auditPath = path.join(ROOT, "scripts", "audit-nav-integrity.cjs");
+  let report = null;
+  try {
+    const r = spawnSync(process.execPath, [auditPath, "--json"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      timeout: 120000,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (r.error) throw r.error;
+    if (r.status !== 0) {
+      const tail = (r.stderr || "").trim().split("\n").filter(Boolean).slice(-2).join(" | ");
+      throw new Error(`audit exited ${r.status}${tail ? `: ${tail}` : ""}`);
+    }
+    report = JSON.parse(r.stdout);
+  } catch (err) {
+    affinity.status = "unavailable";
+    affinity.note = err.message;
+  }
+  if (report) {
+    const screens = new Set(report.screens || []);
+    const reachable = new Set(report.reachable || []);
+    const hits = [];
+    for (const id of idsUsedByFlows) {
+      const owner = idOwner.get(id);
+      if (!owner) continue; // check 1 already reported this selector
+      const screen = `app/${owner}`;
+      if (!screens.has(screen)) continue; // not an addressable screen (layout / component / private)
+      if (reachable.has(screen)) continue;
+      hits.push({ screen, id });
+    }
+    for (const h of hits) {
+      if (!affinity.byOwner.has(h.screen)) affinity.byOwner.set(h.screen, new Set());
+      affinity.byOwner.get(h.screen).add(h.id);
+    }
+    if (hits.length) affinity.status = "findings";
+  }
+}
+
+if (affinity.status === "unavailable") {
+  console.log(`\n⚠ SCREEN AFFINITY (advisory, not blocking): unavailable — ${affinity.note}`);
+  console.log(
+    "  scripts/audit-nav-integrity.cjs did not produce a reachability report, so " +
+      "flow→screen affinity was not evaluated. This is NOT a failure."
+  );
+} else if (affinity.status === "findings") {
+  console.log(
+    `\n⚠ SCREEN AFFINITY (advisory, not blocking): ${affinity.byOwner.size} screen(s) ` +
+      "hold flow-selected testIDs but fall outside the audit's reachable set"
+  );
+  for (const [owner, ids] of affinity.byOwner) {
+    console.log(`  ${owner}`);
+    for (const id of [...ids].sort()) {
+      console.log(`      ${id}  <- ${[...(idFlows.get(id) || [])].join(", ")}`);
+    }
+  }
+  console.log(
+    "  `reachable` is a FLOOR (BFS from app/index.tsx over resolved nav edges; " +
+      "UNRESOLVED sites are not edges,"
+  );
+  console.log(
+    "  and `_layout.tsx` files get no inbound edge), so check the screen before " +
+      "trusting it dead. Curated"
+  );
+  console.log(
+    "  affinity evidence lives in maestro/tools/flow-testid-map.json (DEAD section). " +
+      "This never blocks."
+  );
+} else {
+  console.log(
+    "✅ screen affinity: every flow-selected id lives on a reachable screen (advisory tier)"
+  );
+}
+
 if (blocked) process.exit(2);
 console.log(
   "✅ every id: selector resolves, exists in its own app file, and every text" +
@@ -501,5 +713,6 @@ console.log(
     (skipEnv ? ` (${skipEnv} env-interpolated assertions not text-checked)` : "")
 );
 console.log(
-  "   note: this gate does NOT verify screen-affinity — see the header in this file."
+  "   note: screen-affinity is reported ADVISORILY (check 5) and never blocks — see the" +
+    " header in this file."
 );

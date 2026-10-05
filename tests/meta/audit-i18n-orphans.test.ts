@@ -28,6 +28,23 @@
  * longer matches, and the contract test at the end re-checks every anchor
  * against the shipped tool, so a refactor names itself instead of surfacing
  * as an unexplained pass.
+ *
+ * GATE. The tool also has a --gate mode: scripts/i18n-orphan-baseline.json
+ * grandfathers the 236 orphans that predate it, --gate exits 2 on any orphan
+ * not baselined, and a MISSING or malformed baseline exits 2 loudly instead of
+ * degrading to an empty one (which would flag the whole backlog as new). The
+ * gate block below proves the pass / block / stale paths; its fault pairs prove
+ * the comparison AND the baseline load are load-bearing; and one test runs the
+ * SHIPPED tool against this repository's real tree, so the committed baseline
+ * cannot silently desynchronize from the committed locales.
+ *
+ * RESOLUTION EXTENSION (2026-10-04). Three tiers were added after the first run
+ * left 21 unresolved dynamic sites and 75 file-fallback-shielded keys: imported
+ * key tables (relative and `@/` specifiers, named/default exports), iteration-
+ * callback parameter bindings (`ARR.map((p) => t(p.key))`), and transitive
+ * file-local const chains (`const key = TABLE[x]`). Each has its own fixture +
+ * fault pair below, and the real-tree test pins the resulting unresolved count,
+ * so a resolution regression cannot pass as "still works".
  */
 import fs from "fs";
 import os from "os";
@@ -63,6 +80,16 @@ interface DynamicSite {
   keys: string[];
   prefix: string | null;
   unresolved: boolean;
+  evidence?: string[];
+}
+
+interface GateSummary {
+  baseline: string;
+  baselined: number;
+  orphans: number;
+  new: OrphanKey[];
+  stale: string[];
+  passed: boolean;
 }
 
 interface I18nReport {
@@ -73,6 +100,8 @@ interface I18nReport {
   missing: MissingKey[];
   parity: { onlyInEn: string[]; onlyInBn: string[] };
   dynamic: DynamicSite[];
+  /** Present only under --gate. */
+  gate?: GateSummary;
 }
 
 interface AuditDef {
@@ -85,6 +114,10 @@ interface AuditDef {
   bn?: Record<string, unknown>;
   /** Run the human-readable report instead of --json. */
   text?: boolean;
+  /** Run with --gate. */
+  gate?: boolean;
+  /** Raw JSON written to scripts/i18n-orphan-baseline.json (read only under --gate). */
+  baseline?: unknown;
   /** Fault injection: rewrite the copied script. Never touches the repo copy. */
   mutate?: (src: string) => string;
 }
@@ -134,6 +167,9 @@ function runAudit(f: AuditDef): AuditRun {
   let src = fs.readFileSync(TOOL, "utf8").replace(/\r\n/g, "\n");
   if (f.mutate) src = f.mutate(src);
   write(root, "scripts/audit-i18n-orphans.cjs", src);
+  if (f.baseline !== undefined) {
+    write(root, "scripts/i18n-orphan-baseline.json", JSON.stringify(f.baseline, null, 2));
+  }
 
   for (const [rel, body] of Object.entries(f.app ?? {})) write(root, `app/${rel}`, body);
   for (const [rel, body] of Object.entries(f.components ?? {})) write(root, `components/${rel}`, body);
@@ -142,6 +178,7 @@ function runAudit(f: AuditDef): AuditRun {
 
   const args = [
     path.join(root, "scripts", "audit-i18n-orphans.cjs"),
+    ...(f.gate ? ["--gate"] : []),
     ...(f.text ? [] : ["--json"]),
   ];
   const r = spawnSync(process.execPath, args, {
@@ -253,9 +290,10 @@ const TEMPLATE_PREFIX = (): AuditDef => ({
 });
 
 /**
- * `t(r.key)` inside ROWS.map: `r` is a callback parameter, so no local
- * analysis can bind it — the file fallback must catch the table literals, or
- * these become false orphans.
+ * A callback whose receiver is a component prop: no local analysis can bind
+ * `rows` to the array, so this file keeps the per-file fallback — which must
+ * catch the table literals, or these become false orphans. (A `.map` over a
+ * RESOLVABLE array is bound by the callback tier; see CALLBACK_BINDING.)
  */
 const FILE_FALLBACK = (): AuditDef => ({
   en: { fb: { one: "1", two: "2", three: "3" } },
@@ -263,9 +301,86 @@ const FILE_FALLBACK = (): AuditDef => ({
     "a.tsx": [
       T_IMPORT,
       'const ROWS = [{ key: "fb.one" }, { key: "fb.two" }];',
+      "export default function Screen({ rows }: { rows: { key: string }[] }) {",
+      "  const { t } = useTranslation();",
+      "  return rows.map((r) => <Text key={r.key}>{t(r.key)}</Text>);",
+      "}",
+    ].join("\n"),
+  },
+});
+
+/**
+ * `ROWS.map((r) => t(r.key))` where ROWS IS resolvable: the callback parameter
+ * binds to the array's elements, so the property the call reads resolves
+ * precisely — dynamic-table evidence, not the coarse file fallback.
+ */
+const CALLBACK_BINDING = (): AuditDef => ({
+  en: { cb: { one: "1", two: "2", three: "3" } },
+  app: {
+    "a.tsx": [
+      T_IMPORT,
+      'const ROWS = [{ key: "cb.one" }, { key: "cb.two" }];',
       "export default function Screen() {",
       "  const { t } = useTranslation();",
       "  return ROWS.map((r) => <Text key={r.key}>{t(r.key)}</Text>);",
+      "}",
+    ].join("\n"),
+  },
+});
+
+/** `ITEMS.map((s) => t(s))` over an array of strings: the whole element binds. */
+const CALLBACK_STRINGS = (): AuditDef => ({
+  en: { cs: { one: "1", two: "2", three: "3" } },
+  app: {
+    "a.tsx": [
+      T_IMPORT,
+      'const ITEMS = ["cs.one", "cs.two"];',
+      "export default function Screen() {",
+      "  const { t } = useTranslation();",
+      "  return ITEMS.map((s) => <Text>{t(s)}</Text>);",
+      "}",
+    ].join("\n"),
+  },
+});
+
+/** A key table exported by another module, reached by relative AND alias specifiers. */
+const IMPORTED_TABLE = (): AuditDef => ({
+  en: { imp: { a: "A", b: "B", c: "C", d: "D", e: "E" } },
+  components: {
+    "keys.ts": [
+      'export const RELATIVE_KEYS: Record<string, string> = { one: "imp.a", two: "imp.b" };',
+      'export const ALIAS_KEYS: Record<string, string> = { three: "imp.c", four: "imp.d" };',
+    ].join("\n"),
+  },
+  app: {
+    "a.tsx": [
+      T_IMPORT,
+      'import { RELATIVE_KEYS } from "../components/keys";',
+      'import { ALIAS_KEYS } from "@/components/keys";',
+      "export default function Screen({ k }: { k: string }) {",
+      "  const { t } = useTranslation();",
+      "  return (",
+      "    <Text>",
+      "      {t(RELATIVE_KEYS[k])}",
+      "      {t(ALIAS_KEYS[k])}",
+      "    </Text>",
+      "  );",
+      "}",
+    ].join("\n"),
+  },
+});
+
+/** `const key = TABLE[x]; t(key)` — the const chain resolves one more hop. */
+const CONST_CHAIN = (): AuditDef => ({
+  en: { chain: { a: "1", b: "2", c: "3" } },
+  app: {
+    "a.tsx": [
+      T_IMPORT,
+      'const TABLE: Record<string, string> = { one: "chain.a", two: "chain.b" };',
+      "export default function Screen({ rel }: { rel: string }) {",
+      "  const { t } = useTranslation();",
+      "  const key = TABLE[rel];",
+      "  return <Text>{key ? t(key) : rel}</Text>;",
       "}",
     ].join("\n"),
   },
@@ -316,10 +431,21 @@ const ANCHORS = {
   callee: "if (isTranslationCallee(node.expression)) {",
   /** `t(`ns.${x}`)` -> prefix "ns." shields every key under it. */
   templatePrefix: "const prefix = templatePrefix(arg);",
-  /** identifiers in the argument resolve to file-local const initializers. */
-  identifierTable: "if (decls.has(name)) for (const init of decls.get(name)) collectLiterals(init, keys);",
-  /** the coarse file fallback for callback-parameter calls. */
+  /** a name resolves to its file-local const initializer first. */
+  localTable: "if (ctx.decls.has(name)) {",
+  /** a name absent locally resolves through its import to the target export. */
+  imports: "const abs = specifierToPath(ctx.abs, imp.spec);",
+  /** identifiers INSIDE an initializer resolve one hop further (const chains). */
+  constChain:
+    "for (const name of collectIdentifiers(node)) {\n    for (const ref of lookupInitializers(name, ctx, state)) collectFromNode(ref.init, ref.ctx, out, state);\n  }",
+  /** an iteration callback's first parameter binds to the iterated array. */
+  callbackBinding: "const elements = resolveArrayElements(call.expression.expression, ctx, state);",
+  /** the coarse file fallback for still-unresolved dynamic calls. */
   fileFallback: "const fallbackKeys = hasUnresolved ? res.fileLiterals : EMPTY;",
+  /** --gate compares current orphans against the baseline key set. */
+  gateCompare: "const newOrphans = r.orphans.filter((o) => !baselined.has(o.key));",
+  /** --gate loads the baseline from disk (a missing file must never become an empty set). */
+  baselineLoad: "baselined = new Set(parsed.keys);",
   /** __tests__/ and *.test.* files are not runtime UI. */
   testsExcluded: 'if (rel.includes("__tests__")) return false;',
   /** app/api/** is server code, never translations. */
@@ -331,15 +457,25 @@ const FAULTS = {
   anyCallCounts: (s: string) => neutralize(s, ANCHORS.callee, "if (true) {"),
   /** template prefixes stop resolving: those keys become orphans. */
   noTemplatePrefix: (s: string) => neutralize(s, ANCHORS.templatePrefix, "const prefix = null;"),
-  /** identifier tables stop resolving: the site degrades to unresolved. */
-  noIdentifierTable: (s: string) =>
-    neutralize(s, ANCHORS.identifierTable, "/* identifier-table resolution neutralised */"),
+  /** local const tables stop resolving: the site degrades to unresolved. */
+  noLocalTable: (s: string) => neutralize(s, ANCHORS.localTable, "if (false) {"),
+  /** imports stop resolving: only the importing file's own literals remain. */
+  noImports: (s: string) => neutralize(s, ANCHORS.imports, "const abs = null;"),
+  /** const chains stop following: `const key = TABLE[x]` no longer resolves. */
+  noConstChain: (s: string) =>
+    neutralize(s, ANCHORS.constChain, "/* const-chain following neutralised */"),
+  /** callback parameters stop binding: those sites fall back to the file net. */
+  noCallbackBinding: (s: string) => neutralize(s, ANCHORS.callbackBinding, "const elements = null;"),
   /** the fallback net is removed: shielded keys become orphans. */
   noFileFallback: (s: string) => neutralize(s, ANCHORS.fileFallback, "const fallbackKeys = EMPTY;"),
   /** test files slip into the scan and their calls mark keys used. */
   testsCounted: (s: string) => neutralize(s, ANCHORS.testsExcluded, "if (false) return false;"),
   /** api files slip into the scan. */
   apiCounted: (s: string) => neutralize(s, ANCHORS.apiExcluded, "if (false) return false;"),
+  /** every orphan looks baselined: the gate goes blind to new orphans. */
+  gateBlind: (s: string) => neutralize(s, ANCHORS.gateCompare, "const newOrphans = [];"),
+  /** the baseline loads empty: the whole grandfather backlog flags as new. */
+  emptyBaseline: (s: string) => neutralize(s, ANCHORS.baselineLoad, "baselined = new Set();"),
 } as const;
 
 // ── tests ─────────────────────────────────────────────────────────────────────
@@ -356,11 +492,11 @@ describe("healthy tree", () => {
     expect(r.code).toBe(0);
   });
 
-  it("prints a human report with the counts and the audit-only note", () => {
+  it("prints a human report with the counts and the audit/gate note", () => {
     const r = runAudit({ ...HEALTHY(), text: true });
     expect(r.out).toContain("locales read : en 1 keys, bn 1 keys");
     expect(r.out).toContain("ORPHANED (in locale, no reference of any kind): 0 keys");
-    expect(r.out).toContain("Audit, not a gate");
+    expect(r.out).toContain("--gate blocks only orphaned keys not in");
     expect(r.code).toBe(0);
   });
 });
@@ -414,7 +550,7 @@ describe("dynamic carrier shapes (false-orphan prevention)", () => {
   });
 
   it("degrades the table site to unresolved and the keys to file-fallback once table resolution stops (non-vacuity)", () => {
-    const r = runAudit({ ...DYNAMIC_TABLE(), mutate: FAULTS.noIdentifierTable });
+    const r = runAudit({ ...DYNAMIC_TABLE(), mutate: FAULTS.noLocalTable });
     const j = report(r);
     expect(j.dynamic[0]?.unresolved).toBe(true);
     const shielded = Object.fromEntries(j.shielded.map((s) => [s.key, s.reasons]));
@@ -439,7 +575,7 @@ describe("dynamic carrier shapes (false-orphan prevention)", () => {
     expect(j.orphans.map((o) => o.key)).toEqual(["hot.one", "hot.two", "hot_extra.three"]);
   });
 
-  it("shields callback-parameter calls through the file fallback", () => {
+  it("keeps the file fallback for a callback whose receiver cannot be bound", () => {
     const r = runAudit(FILE_FALLBACK());
     const j = report(r);
     expect(j.orphans.map((o) => o.key)).toEqual(["fb.three"]);
@@ -447,6 +583,9 @@ describe("dynamic carrier shapes (false-orphan prevention)", () => {
     expect(shielded["fb.one"]).toContain("file-fallback");
     expect(shielded["fb.two"]).toContain("file-fallback");
     expect(j.scan.unresolvedDynamic).toBe(1);
+    // The callback tier must NOT have claimed this one.
+    expect(j.dynamic[0]?.unresolved).toBe(true);
+    expect(j.dynamic[0]?.evidence).toEqual([]);
   });
 
   it("orphans the table literals once the fallback is removed (non-vacuity)", () => {
@@ -463,6 +602,91 @@ describe("dynamic carrier shapes (false-orphan prevention)", () => {
     // No evidence, no shield: the key stays in the orphan list.
     expect(j.orphans.map((o) => o.key)).toEqual(["mystery.a"]);
     expect(j.shielded).toEqual([]);
+  });
+});
+
+describe("imported key tables (resolution across modules)", () => {
+  it("resolves tables exported by another module, through relative and alias specifiers", () => {
+    const r = runAudit(IMPORTED_TABLE());
+    const j = report(r);
+    // imp.e is the only key no table reaches.
+    expect(j.orphans.map((o) => o.key)).toEqual(["imp.e"]);
+    const byFirstKey = Object.fromEntries(j.dynamic.map((x) => [x.keys[0], x]));
+    expect(byFirstKey["imp.a"]?.keys).toEqual(["imp.a", "imp.b"]);
+    expect(byFirstKey["imp.a"]?.unresolved).toBe(false);
+    expect(byFirstKey["imp.a"]?.evidence).toContain("import:../components/keys");
+    expect(byFirstKey["imp.c"]?.keys).toEqual(["imp.c", "imp.d"]);
+    expect(byFirstKey["imp.c"]?.evidence).toContain("import:@/components/keys");
+  });
+
+  it("orphans the imported keys once import resolution stops (non-vacuity)", () => {
+    const r = runAudit({ ...IMPORTED_TABLE(), mutate: FAULTS.noImports });
+    const j = report(r);
+    // No fallback can save them: the literals live in a module with no t() call.
+    expect(j.orphans.map((o) => o.key)).toEqual(["imp.a", "imp.b", "imp.c", "imp.d", "imp.e"]);
+    expect(j.dynamic.every((x) => x.unresolved)).toBe(true);
+  });
+});
+
+describe("callback-parameter bindings (iteration callbacks)", () => {
+  it("binds the parameter to a resolvable array and reads only the property used", () => {
+    const r = runAudit(CALLBACK_BINDING());
+    const j = report(r);
+    expect(j.orphans.map((o) => o.key)).toEqual(["cb.three"]);
+    expect(j.dynamic[0]?.unresolved).toBe(false);
+    expect(j.dynamic[0]?.keys).toEqual(["cb.one", "cb.two"]);
+    expect(j.dynamic[0]?.evidence).toContain("callback:map");
+    const shielded = Object.fromEntries(j.shielded.map((s) => [s.key, s.reasons]));
+    expect(shielded["cb.one"]).toContain("dynamic-table");
+    expect(shielded["cb.one"]).not.toContain("file-fallback");
+  });
+
+  it("degrades to the file fallback once callback binding stops (non-vacuity)", () => {
+    const r = runAudit({ ...CALLBACK_BINDING(), mutate: FAULTS.noCallbackBinding });
+    const j = report(r);
+    expect(j.dynamic[0]?.unresolved).toBe(true);
+    expect(j.dynamic[0]?.evidence).toEqual([]);
+    const shielded = Object.fromEntries(j.shielded.map((s) => [s.key, s.reasons]));
+    expect(shielded["cb.one"]).toContain("file-fallback");
+    // The fallback still prevents false orphans — the tiers compose.
+    expect(j.orphans.map((o) => o.key)).toEqual(["cb.three"]);
+  });
+
+  it("binds a whole element for t(p) over an array of strings", () => {
+    const r = runAudit(CALLBACK_STRINGS());
+    const j = report(r);
+    expect(j.orphans.map((o) => o.key)).toEqual(["cs.three"]);
+    expect(j.dynamic[0]?.keys).toEqual(["cs.one", "cs.two"]);
+    expect(j.dynamic[0]?.evidence).toContain("callback:map");
+  });
+
+  it("falls back to the file net once callback binding stops, for strings too (non-vacuity)", () => {
+    const r = runAudit({ ...CALLBACK_STRINGS(), mutate: FAULTS.noCallbackBinding });
+    const j = report(r);
+    expect(j.dynamic[0]?.unresolved).toBe(true);
+    const shielded = Object.fromEntries(j.shielded.map((s) => [s.key, s.reasons]));
+    expect(shielded["cs.one"]).toContain("file-fallback");
+    expect(j.orphans.map((o) => o.key)).toEqual(["cs.three"]);
+  });
+});
+
+describe("const chains (resolution through local declarations)", () => {
+  it("follows `const key = TABLE[x]` to the table and shields its keys", () => {
+    const r = runAudit(CONST_CHAIN());
+    const j = report(r);
+    expect(j.orphans.map((o) => o.key)).toEqual(["chain.c"]);
+    expect(j.dynamic[0]?.unresolved).toBe(false);
+    expect(j.dynamic[0]?.keys).toEqual(["chain.a", "chain.b"]);
+    expect(j.dynamic[0]?.evidence).toContain("local");
+  });
+
+  it("degrades to the file fallback once const-chain following stops (non-vacuity)", () => {
+    const r = runAudit({ ...CONST_CHAIN(), mutate: FAULTS.noConstChain });
+    const j = report(r);
+    expect(j.dynamic[0]?.unresolved).toBe(true);
+    const shielded = Object.fromEntries(j.shielded.map((s) => [s.key, s.reasons]));
+    expect(shielded["chain.a"]).toContain("file-fallback");
+    expect(j.orphans.map((o) => o.key)).toEqual(["chain.c"]);
   });
 });
 
@@ -505,6 +729,135 @@ describe("scan scope", () => {
   });
 });
 
+describe("gate: newly orphaned keys fail, baselined keys do not", () => {
+  it("passes when every orphan is baselined, printing the ratchet summary", () => {
+    const r = runAudit({
+      ...ORPHANS(),
+      gate: true,
+      text: true,
+      baseline: { keys: ["dead.one", "dead.two"] },
+    });
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("✅ i18n orphan gate: clean (2 baselined key(s) remain, none new)");
+  });
+
+  it("blocks a new orphan with exit 2 and names it", () => {
+    const r = runAudit({
+      ...ORPHANS(),
+      gate: true,
+      text: true,
+      baseline: { keys: ["dead.one"] },
+    });
+    expect(r.code).toBe(2);
+    expect(r.out).toContain("1 NEW orphaned key(s) not in scripts/i18n-orphan-baseline.json");
+    expect(r.out).toContain("dead.two");
+    // The baselined key is not dragged into the violation list.
+    expect(r.out).not.toContain("dead.one");
+  });
+
+  it("reports baselined keys that are no longer orphaned without blocking", () => {
+    const r = runAudit({
+      ...ORPHANS(),
+      gate: true,
+      text: true,
+      baseline: { keys: ["dead.one", "dead.two", "gone.key"] },
+    });
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("1 baselined key(s) are no longer orphaned");
+    expect(r.out).toContain("gone.key");
+  });
+
+  it("emits the gate verdict in JSON while keeping every report key", () => {
+    const r = runAudit({
+      ...ORPHANS(),
+      gate: true,
+      baseline: { keys: ["dead.one", "dead.two"] },
+    });
+    const j = report(r);
+    expect(j.gate).toEqual({
+      baseline: "scripts/i18n-orphan-baseline.json",
+      baselined: 2,
+      orphans: 2,
+      new: [],
+      stale: [],
+      passed: true,
+    });
+    // Gate is additive: the audit payload is still the full report.
+    expect(j.orphans.map((o) => o.key)).toEqual(["dead.one", "dead.two"]);
+  });
+
+  it("fails loudly when the baseline is missing — never degrades to an empty baseline", () => {
+    const r = runAudit({ ...ORPHANS(), gate: true, text: true });
+    expect(r.code).toBe(2);
+    expect(r.err).toContain("is missing, so the i18n orphan ratchet cannot run");
+  });
+
+  it("fails loudly when the baseline is malformed", () => {
+    const r = runAudit({ ...ORPHANS(), gate: true, text: true, baseline: { entries: [] } });
+    expect(r.code).toBe(2);
+    expect(r.err).toContain("missing a `keys` array of strings");
+  });
+
+  it("ignores the baseline entirely without --gate (the audit stays exit 0)", () => {
+    const r = runAudit({ ...ORPHANS(), baseline: { keys: [] } });
+    expect(r.code).toBe(0);
+    const j = report(r);
+    expect(j.gate).toBeUndefined();
+    expect(j.orphans.length).toBe(2);
+  });
+
+  it("would let the new orphan through if the comparison were neutralised (non-vacuity)", () => {
+    const r = runAudit({
+      ...ORPHANS(),
+      gate: true,
+      text: true,
+      baseline: { keys: ["dead.one"] },
+      mutate: FAULTS.gateBlind,
+    });
+    expect(r.code).toBe(0);
+  });
+
+  it("would flag the whole baselined backlog if it loaded as empty (non-vacuity)", () => {
+    const r = runAudit({
+      ...ORPHANS(),
+      gate: true,
+      text: true,
+      baseline: { keys: ["dead.one", "dead.two"] },
+      mutate: FAULTS.emptyBaseline,
+    });
+    expect(r.code).toBe(2);
+    expect(r.out).toContain("dead.one");
+    expect(r.out).toContain("dead.two");
+  });
+});
+
+describe("the committed baseline stays in sync with the real tree", () => {
+  it("passes --gate on this repository: every current orphan is baselined, none new", () => {
+    const r = spawnSync(process.execPath, [TOOL, "--gate", "--json"], {
+      cwd: REPO,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    expect(r.status).toBe(0);
+    const j = JSON.parse(r.stdout) as I18nReport;
+    expect(j.gate?.passed).toBe(true);
+    expect(j.gate?.new).toEqual([]);
+    // Gate mode still produces the audit payload.
+    expect(j.orphans.length).toBeGreaterThan(0);
+    // Resolution health: 21 sites before the imported-table + callback-binding
+    // extension (2026-10-04), 10 after. A rise means a new unresolvable shape
+    // slipped in — inspect the --json dynamic list before raising this pin.
+    expect(j.scan.unresolvedDynamic).toBe(10);
+
+    // The baseline itself is a sorted, duplicate-free key list.
+    const baseline = JSON.parse(
+      fs.readFileSync(path.join(REPO, "scripts", "i18n-orphan-baseline.json"), "utf8"),
+    ) as { keys: string[] };
+    expect(new Set(baseline.keys).size).toBe(baseline.keys.length);
+    expect([...baseline.keys].sort()).toEqual(baseline.keys);
+  });
+});
+
 describe("fault-injection contract", () => {
   it("every anchor still matches the shipped tool", () => {
     // If a refactor moves any of these lines, the non-vacuity tests above would
@@ -518,7 +871,7 @@ describe("fault-injection contract", () => {
 
   it("mutates the sandbox copy only, never the repo's tool", () => {
     const before = fs.readFileSync(TOOL, "utf8");
-    runAudit({ ...DYNAMIC_TABLE(), mutate: FAULTS.noIdentifierTable });
+    runAudit({ ...DYNAMIC_TABLE(), mutate: FAULTS.noLocalTable });
     expect(fs.readFileSync(TOOL, "utf8")).toBe(before);
   });
 });

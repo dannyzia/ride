@@ -12,8 +12,11 @@ appId: com.ride.bd
       visible: ".*Allow.*|.*While using the app.*"
     commands:
       - tapOn: ".*While using the app.*|.*Allow.*"
+# STALE-FLOW AUDIT 2026-10-04: the second conditional's "Allow location" branch was
+# the value of ORPHANED find_ride.location_permission_required (find-ride/ deleted,
+# G-02b) — dropped. "Enable location" is the live CTA.
 - runFlow:
     when:
-      visible: ".*Enable location.*|.*Allow location.*"
+      visible: ".*Enable location.*"
     commands:
       - tapOn: ".*Allow.*"

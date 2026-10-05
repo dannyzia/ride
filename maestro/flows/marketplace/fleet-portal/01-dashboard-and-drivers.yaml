@@ -1,12 +1,21 @@
 # marketplace/fleet-portal/01-dashboard-and-drivers — fleet portal surfaces
 # (13 screens under app/(main)/(fleet)): dashboard → operations → drivers list →
 # driver detail → vehicles. Fleet roles live in fleet_members (AGENTS.md § Auth);
-# the portal is reachable in the same app via the fleet mode switch (local state,
-# never a users.role mutation).
-# Class: AUTOMATABLE (read-mostly portal; mutations covered by fleet flows later).
+# mode switching is client-local state (store/useFleetStore.ts), never a users.role
+# mutation.
+# BLOCKED 2026-10-04 (stale-flow audit) — THE FLEET ENTRY DOES NOT EXIST ON DISK.
+# `enterFleet`/`setActiveMode` have ZERO callers outside store/useFleetStore.ts
+# (grep app/, components/, lib/, store/, scripts/); INITIAL_ACTIVE_MODE is "RIDER"
+# (useFleetStore.ts:15); no commit ever wired a caller (git log -S enterFleet --
+# app/ components/ → empty); and app/(main)/(fleet)/_layout.tsx:15 redirects away
+# unless activeMode === "FLEET". The portal is therefore unreachable in-app and the
+# first tap below cannot switch modes — the flow is unrunnable, not merely
+# unselectored. Tagged blocked so a device run is not mistaken for a selector
+# failure. See maestro/COVERAGE-MANIFEST.md round note 2026-10-04.
+# Class: BLOCKED (no in-app entry point — evidence above).
 appId: com.ride.bd
 name: "Fleet Portal - Dashboard and Drivers"
-tags: [fleet, cross-cutting]
+tags: [fleet, cross-cutting, blocked]
 ---
 - runFlow:
     env:

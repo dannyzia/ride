@@ -1,5 +1,5 @@
 {
-  "_comment": "Suppressions for the ADVISORY dead-copy check in flow-xcheck.cjs. This check warns, it never blocks — an unsuppressed finding is a prompt to look, not an error. Suppress here only when the text genuinely renders from outside app source. Adding an entry to silence the warning is how this file rots: each one must carry a reason that would still be true six months from now.",
+  "_comment": "Suppressions for the BLOCKING dead-copy check in flow-xcheck.cjs (blocking since 2026-10-03; this comment said 'advisory, never blocks' until 2026-10-05 — it was stale). An unsuppressed finding BLOCKS the commit: it is a prompt to look, not an error to silence. Suppress here only when the text genuinely renders from outside app source. Adding an entry to silence the gate is how this file rots: each one must carry a reason that would still be true six months from now.",
   "schema": {
     "match": "Normalized (lowercased, whitespace-collapsed) equality against the assertion's cleaned literal — not a regex.",
     "reason": "Why the text can render without appearing in app/ or i18n/locales/en.",
@@ -15,6 +15,16 @@
       "match": "savar",
       "category": "external-data",
       "reason": "Barikoi/Nominatim geocoder result asserted after typing a destination. The text comes from a third-party API response, not from app copy."
+    },
+    {
+      "match": "freight",
+      "category": "external-data",
+      "reason": "truckCatalog labelEn of the marketplace truck-picker use-case tabs (asserted as \".*Freight.*|.*মালবাহী.*\" in marketplace/v5-truck). The label renders from seed/catalog data (labelEn/labelBn), not from app source or the locale files."
+    },
+    {
+      "match": "মালবাহী",
+      "category": "external-data",
+      "reason": "truckCatalog labelBn — the Bengali alternate of the same Freight tab, asserted together with the EN label. Also seed/catalog data, not t() copy."
     }
   ]
 }

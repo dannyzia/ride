@@ -23,6 +23,7 @@ Read: 03-TECH-STACK.md to understand which service each variable belongs to.
 | Variable | Required | Default | Description | How to get |
 |----------|----------|---------|-------------|------------|
 | `DATABASE_URL` | yes | — | Supabase PostgreSQL connection string (pooled, from Supabase Dashboard → Settings → Database) | Supabase Dashboard → Settings → Database → Connection string → URI |
+| `DATABASE_SSL` | no | `"require"` (TLS on) | TLS opt-out for the app pool (`src/db/index.ts`): set to exactly `disable` to connect plaintext to a disposable Postgres that serves no TLS — the `concurrency-locks` CI job's `postgres:16` service container. Any other value (or unset) keeps `ssl: "require"`. Never set in a deployed environment. | — |
 | `SUPABASE_URL` | yes | — | Supabase project URL (e.g. https://xxx.supabase.co) | Supabase Dashboard → Settings → API → Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | yes | — | Supabase service role key (server-side only, bypasses RLS) | Supabase Dashboard → Settings → API → service_role key |
 | `PORTPOS_APP_KEY` | yes | — | PortPos merchant app key | PortPos panel → Generate App Key |

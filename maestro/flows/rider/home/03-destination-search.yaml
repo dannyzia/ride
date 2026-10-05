@@ -1,6 +1,12 @@
 # rider/home/03-destination-search — open search, type a Barikoi place, land on fare screen.
 # Feature: R-HOME-04 / R-BOOK-01 (§4). Consumes _select-destination.
 # DEST fixture: "Banani" (§3.2 coverage area; Barikoi live key, rate-limited in QA).
+# STALE-FLOW AUDIT 2026-10-04: the final wait asserted
+# ".*Confirm ride.*|.*Choose a ride.*" — both literals are values of ORPHANED
+# find_ride.* keys (find_ride.confirm_ride / find_ride.choose_a_ride, common.json
+# :1073/:1068) with zero references since find-ride/ was deleted (G-02b), so the wait
+# could never match and burned its full timeout. Repointed to the live FARES surface
+# testID — the same ground 02-all-vehicle-types.yaml uses.
 # Class: AUTOMATABLE.
 appId: com.ride.bd
 name: "Rider Booking - Destination Search"
@@ -19,5 +25,6 @@ tags: [rider, booking]
     commands:
       - runFlow: ../../../shared/booking/_select-destination.yaml
 - extendedWaitUntil:
-    visible: ".*Confirm ride.*|.*Choose a ride.*"
+    visible:
+      id: "customer.home.set-selected-vehicle-type"
     timeout: 30000

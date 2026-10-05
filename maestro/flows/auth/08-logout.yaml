@@ -1,7 +1,8 @@
 # auth/08-logout — signed-in rider signs out and returns to the auth surface.
 # Feature: R-HOME-05 (§4). Consumes _logout shared subflow (Gate 1 REWIRE: tab via
 # customer._layout.on-press, sign-out via customer.profile.confirm-sign-out, confirm
-# via customer.settings.logout-confirmation.handle-logout). Fixtures: Rider A.
+# via the OS Alert.alert TEXT — profile/index.tsx:120; the separate
+# settings/logout-confirmation route/id is NOT this path). Fixtures: Rider A.
 # Class: AUTOMATABLE.
 appId: com.ride.bd
 name: "Auth - Logout"

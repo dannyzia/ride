@@ -24,21 +24,37 @@
  *   <expr>.t('a.b')              property-access callee (i18n.t)
  *   t(`ns.${x}`)                 template with a static prefix -> every locale
  *                                key starting with `ns.` is treated as reachable
- *   t(TABLE[k])                  identifiers in the argument resolve to
- *                                file-local const initializers; every literal
- *                                in them is treated as reachable
- *   t(item.k) / t(key)           callback/function parameters cannot be
- *                                resolved statically. If a file still has such
- *                                UNSOLVED dynamic calls after the above, every
+ *   t(TABLE[k])                  identifiers in the argument resolve through
+ *                                file-local const chains (`const key =
+ *                                TABLE[x]` resolves), and IMPORTS are followed:
+ *                                a table exported by another module (./x,
+ *                                `@/x`) resolves to its initializer. Every
+ *                                literal in them is treated as reachable.
+ *   ARR.map((p) => t(p))         ITERATION-CALLBACK bindings: the callback's
+ *   ARR.map((p) => t(p.key))     first parameter is bound to the elements of
+ *                                ARR when ARR resolves to an array literal
+ *                                (inline, local const chain, or imported). A
+ *                                read property collects only that property's
+ *                                literals, so this is precise where the file
+ *                                fallback below is coarse. `.map`, `.flatMap`,
+ *                                `.forEach`, `.filter`, `.some`, `.every`,
+ *                                `.find`, `.findIndex` only — `.reduce` and
+ *                                `.sort` do NOT pass elements first.
+ *   t(item.k) / t(key)           anything still unresolved (render-prop
+ *                                destructuring, useState-derived keys, call
+ *                                results) keeps the per-file fallback: every
  *                                key-shaped literal in that file (outside call
  *                                arguments) is treated as reachable and lands
  *                                in the SHIELDED bucket, never silently in
  *                                ORPHANS.
  *
  * DELIBERATELY REPORTED, NOT GUESSED: dynamic calls are listed with their
- * evidence. A key shielded by evidence the tool could not resolve is output in
- * `shielded` with a reason, so the uncertainty is visible instead of folded
- * into either verdict. ORPHANS is the "no reference of any kind" list.
+ * evidence — every resolved site records `local` / `import:<spec>` /
+ * `callback:<method>` tags naming what reached it, so a resolution can be
+ * audited and a degradation shows up as an empty list. A key shielded by
+ * evidence the tool could not resolve is output in `shielded` with a reason, so
+ * the uncertainty is visible instead of folded into either verdict. ORPHANS is
+ * the "no reference of any kind" list.
  *
  * SCOPE: app/ and components/ only, excluding app/api/** (server code whose
  * key-shaped strings are RBAC scopes and catalog codes), __tests__/, *.test.*,
@@ -46,13 +62,25 @@
  * only translation caller is the UI tree). i18n/locales/** is read as data.
  *
  * Usage:
- *   node scripts/audit-i18n-orphans.cjs           # human-readable
- *   node scripts/audit-i18n-orphans.cjs --json    # machine-readable
+ *   node scripts/audit-i18n-orphans.cjs           # human-readable audit
+ *   node scripts/audit-i18n-orphans.cjs --json    # machine-readable audit
+ *   node scripts/audit-i18n-orphans.cjs --gate    # gate: fail on NEW orphans
+ *   node scripts/audit-i18n-orphans.cjs --gate --json
  *
- * Exit codes: 0 = report produced (regardless of findings — it is an AUDIT and
- * reports, it does not gate), 1 = could not run (missing typescript / unreadable
- * locale). Making it a gate requires an owner ruling on the existing orphan
- * backlog first; see the note in report().
+ * Exit codes: 0 = report produced (audit) or gate passed; 1 = could not run
+ * (missing typescript / unreadable locale); 2 = --gate only: orphaned keys that
+ * are not in scripts/i18n-orphan-baseline.json, or a missing/unreadable baseline.
+ *
+ * THE GATE AND ITS RATCHET (added 2026-10-04): the keys that were already
+ * orphaned when the gate was added are grandfathered in
+ * scripts/i18n-orphan-baseline.json (236 at introduction; the same-day purge of
+ * the deleted-screen sets took it to 130); --gate blocks only keys orphaned
+ * AFTER that point. The baseline is a RATCHET: delete each key's entry once the
+ * key is deleted from the locales or referenced again — or purge a whole
+ * namespace with scripts/purge-orphan-keys.cjs, which keeps both in sync — and
+ * never add an entry to silence --gate unless the orphan state is deliberate.
+ * Baselined keys that are no longer orphaned are reported, not blocked, so
+ * bookkeeping never becomes the reason the gate cannot pass.
  */
 const fs = require("fs");
 const path = require("path");
@@ -164,22 +192,230 @@ function buildDecls(sf) {
   return decls;
 }
 
-// ─── per-file analysis ───────────────────────────────────────────────────────
+// ─── module graph: imported key tables ───────────────────────────────────────
+// `t(TABLE[k])` is answered by reading TABLE's initializer. When TABLE is not in
+// this file, follow the import: resolve the specifier (relative or `@/` alias),
+// parse the target module on demand, and continue from its EXPORTED declaration.
+// That keeps the resolution sound — a module can only contribute what it exports
+// — and it composes with the file-local const chain (`const key = TABLE[x]`).
 
-function scanFile(file) {
-  const rel = relPath(file);
-  const src = fs.readFileSync(file, "utf8");
+const moduleCache = new Map(); // abs path -> { sf, decls, imports, exports }
+
+function parseModule(abs) {
+  let mod = moduleCache.get(abs);
+  if (mod) return mod;
+  const src = fs.readFileSync(abs, "utf8");
   const sf = ts.createSourceFile(
-    file,
+    abs,
     src,
     ts.ScriptTarget.Latest,
     true,
-    /\.tsx$/.test(file) ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    /\.tsx$/.test(abs) ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
   const decls = buildDecls(sf);
+  mod = { abs, sf, decls, imports: buildImports(sf), exports: buildExports(sf, decls) };
+  moduleCache.set(abs, mod);
+  return mod;
+}
+
+/** Named/default/namespace import clauses, local name -> { spec, imported }. */
+function buildImports(sf) {
+  const imports = new Map();
+  for (const stmt of sf.statements) {
+    if (!ts.isImportDeclaration(stmt) || !stmt.importClause) continue;
+    if (!ts.isStringLiteral(stmt.moduleSpecifier)) continue;
+    const spec = stmt.moduleSpecifier.text;
+    const clause = stmt.importClause;
+    if (clause.name) imports.set(clause.name.text, { spec, imported: "default" });
+    const bindings = clause.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) imports.set(bindings.name.text, { spec, imported: "*" });
+    else if (bindings && ts.isNamedImports(bindings)) {
+      for (const el of bindings.elements) {
+        imports.set(el.name.text, { spec, imported: el.propertyName ? el.propertyName.text : el.name.text });
+      }
+    }
+  }
+  return imports;
+}
+
+/** `export const X = ...` and local `export { X }`, exported name -> initializers. */
+function buildExports(sf, decls) {
+  const exports = new Map();
+  const add = (name, inits) => {
+    if (!inits || inits.length === 0) return;
+    if (!exports.has(name)) exports.set(name, []);
+    exports.get(name).push(...inits);
+  };
+  for (const stmt of sf.statements) {
+    const exported =
+      ts.canHaveModifiers(stmt) &&
+      (ts.getModifiers(stmt) || []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+    if (exported && ts.isVariableStatement(stmt)) {
+      for (const d of stmt.declarationList.declarations) {
+        if (ts.isIdentifier(d.name) && d.initializer) add(d.name.text, [d.initializer]);
+      }
+    } else if (
+      ts.isExportDeclaration(stmt) &&
+      !stmt.moduleSpecifier &&
+      stmt.exportClause &&
+      ts.isNamedExports(stmt.exportClause)
+    ) {
+      for (const el of stmt.exportClause.elements) {
+        add(el.name.text, decls.get(el.propertyName ? el.propertyName.text : el.name.text) || []);
+      }
+    }
+  }
+  return exports;
+}
+
+/** Repo path for `./x`, `../x` and `@/x` specifiers, with extension probing. */
+function specifierToPath(fromAbs, spec) {
+  let base;
+  if (spec.startsWith("@/")) base = path.join(ROOT, spec.slice(2));
+  else if (spec.startsWith(".")) base = path.resolve(path.dirname(fromAbs), spec);
+  else return null; // bare specifier: a package, not a repo module
+  const candidates = [base, `${base}.ts`, `${base}.tsx`, path.join(base, "index.ts"), path.join(base, "index.tsx")];
+  for (const cand of candidates) {
+    try {
+      if (fs.statSync(cand).isFile()) return cand;
+    } catch {
+      // probe the next candidate
+    }
+  }
+  return null;
+}
+
+const ITERATION_METHODS = new Set([
+  "map",
+  "flatMap",
+  "forEach",
+  "filter",
+  "some",
+  "every",
+  "find",
+  "findIndex",
+]);
+
+/**
+ * Initializers a name can mean in `ctx` — the file-local const first, then the
+ * exported declaration of an imported module. Each ref carries the context its
+ * initializer must be resolved in: an import switches module. `seen` keeps
+ * const chains and import cycles from looping, keyed by module + name.
+ */
+function lookupInitializers(name, ctx, state) {
+  const key = `${ctx.abs}:${name}`;
+  if (state.seen.has(key)) return EMPTY;
+  state.seen.add(key);
+  if (ctx.decls.has(name)) {
+    state.evidence.add("local");
+    return ctx.decls.get(name).map((init) => ({ init, ctx }));
+  }
+  const imp = ctx.imports.get(name);
+  if (imp && imp.imported !== "*") {
+    const abs = specifierToPath(ctx.abs, imp.spec);
+    if (abs) {
+      const target = parseModule(abs);
+      const inits = target.exports.get(imp.imported);
+      if (inits && inits.length) {
+        state.evidence.add(`import:${imp.spec}`);
+        const next = { abs, decls: target.decls, imports: target.imports };
+        return inits.map((init) => ({ init, ctx: next }));
+      }
+    }
+  }
+  return EMPTY;
+}
+
+/** Literals + identifiers of an initializer subtree, followed transitively. */
+function collectFromNode(node, ctx, out, state) {
+  collectLiterals(node, out);
+  for (const name of collectIdentifiers(node)) {
+    for (const ref of lookupInitializers(name, ctx, state)) collectFromNode(ref.init, ref.ctx, out, state);
+  }
+}
+
+/** The direct `p` / `p.prop` shape of a translation argument, if it has one. */
+function directBinding(arg) {
+  if (ts.isIdentifier(arg)) return { name: arg.text, propName: null };
+  if (ts.isPropertyAccessExpression(arg) && ts.isIdentifier(arg.expression)) {
+    return { name: arg.expression.text, propName: arg.name.text };
+  }
+  return null;
+}
+
+function enclosingFunction(node) {
+  let fn = node;
+  while (fn && !ts.isFunctionLike(fn)) fn = fn.parent;
+  return fn;
+}
+
+/** Element expressions of an array literal reached inline or by name. */
+function resolveArrayElements(expr, ctx, state) {
+  if (ts.isArrayLiteralExpression(expr)) return expr.elements;
+  if (ts.isIdentifier(expr)) {
+    const out = [];
+    for (const ref of lookupInitializers(expr.text, ctx, state)) {
+      if (ts.isArrayLiteralExpression(ref.init)) out.push(...ref.init.elements);
+    }
+    return out.length ? out : null;
+  }
+  return null;
+}
+
+/** Keys an element contributes for `p` (all literals) or `p.prop` (that property). */
+function collectElement(el, propName, ctx, out, state) {
+  if (propName === null) {
+    collectFromNode(el, ctx, out, state);
+    return;
+  }
+  if (!ts.isObjectLiteralExpression(el)) return;
+  for (const prop of el.properties) {
+    if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name) && prop.name.text === propName) {
+      collectFromNode(prop.initializer, ctx, out, state);
+    }
+  }
+}
+
+/**
+ * `ARR.map((p) => ... t(p.key))`: bind the callback's first parameter to the
+ * elements of ARR when ARR resolves to an array literal. `.reduce`/`.sort` are
+ * excluded — their first parameter is not an element.
+ */
+function collectFromCallback(binding, callNode, ctx, out, state) {
+  let fn = enclosingFunction(callNode);
+  while (fn) {
+    const first = fn.parameters[0];
+    if (first && ts.isIdentifier(first.name) && first.name.text === binding.name) {
+      const call = fn.parent;
+      if (
+        call &&
+        ts.isCallExpression(call) &&
+        call.arguments.includes(fn) &&
+        ts.isPropertyAccessExpression(call.expression) &&
+        ITERATION_METHODS.has(call.expression.name.text)
+      ) {
+        const elements = resolveArrayElements(call.expression.expression, ctx, state);
+        if (elements) {
+          state.evidence.add(`callback:${call.expression.name.text}`);
+          for (const el of elements) collectElement(el, binding.propName, ctx, out, state);
+        }
+      }
+      return;
+    }
+    fn = enclosingFunction(fn.parent);
+  }
+}
+
+// ─── per-file analysis ───────────────────────────────────────────────────────
+
+function scanFile(file) {
+  const mod = parseModule(file);
+  const rel = relPath(file);
+  const sf = mod.sf;
+  const ctx = { abs: file, decls: mod.decls, imports: mod.imports };
 
   const staticUses = []; // { key, file, line }
-  const dynamic = []; // { file, line, kind, keys, prefix, unresolved }
+  const dynamic = []; // { file, line, kind, keys, prefix, unresolved, evidence }
   const argRanges = []; // [start, end] of every translation call's first argument
 
   function visit(node) {
@@ -192,11 +428,26 @@ function scanFile(file) {
           if (KEY_SHAPE.test(arg.text)) staticUses.push({ key: arg.text, file: rel, line });
         } else {
           const keys = new Set();
+          const state = { seen: new Set(), evidence: new Set() };
+          // Literals directly in the argument (t(cond ? "a.b" : "c.d")).
           collectLiterals(arg, keys);
-          const prefix = templatePrefix(arg);
-          for (const name of collectIdentifiers(arg)) {
-            if (decls.has(name)) for (const init of decls.get(name)) collectLiterals(init, keys);
+          // The direct `p` / `p.prop` shape: a local/imported table, or the
+          // first parameter of the iteration callback the call sits in.
+          const binding = directBinding(arg);
+          if (binding) {
+            for (const ref of lookupInitializers(binding.name, ctx, state)) {
+              collectFromNode(ref.init, ref.ctx, keys, state);
+            }
+            collectFromCallback(binding, node, ctx, keys, state);
           }
+          // Any other identifier in the argument (e.g. t(f(x).k)) follows the
+          // same local/import chain.
+          for (const name of collectIdentifiers(arg)) {
+            for (const ref of lookupInitializers(name, ctx, state)) {
+              collectFromNode(ref.init, ref.ctx, keys, state);
+            }
+          }
+          const prefix = templatePrefix(arg);
           const keyList = [...keys].filter((k) => KEY_SHAPE.test(k));
           dynamic.push({
             file: rel,
@@ -205,6 +456,7 @@ function scanFile(file) {
             keys: keyList,
             prefix,
             unresolved: keyList.length === 0 && !prefix,
+            evidence: [...state.evidence].sort(),
           });
         }
       }
@@ -340,6 +592,91 @@ function analyze() {
   };
 }
 
+// ─── gate ────────────────────────────────────────────────────────────────────
+// The ratchet, for CI and `npm run check:i18n-orphans`. The baseline records
+// the orphan backlog that predates the gate; a key not in it that becomes
+// orphaned is a NEW regression (usually a deleted screen's keys, or a rename
+// that left the old key behind) and blocks. Everything else stays a report.
+
+function gate(r) {
+  const json = process.argv.includes("--json");
+  const baselineRel = path.join("scripts", "i18n-orphan-baseline.json").split(path.sep).join("/");
+  const baselinePath = path.join(ROOT, "scripts", "i18n-orphan-baseline.json");
+  let baselined;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(baselinePath, "utf8"));
+    if (!parsed || !Array.isArray(parsed.keys) || !parsed.keys.every((k) => typeof k === "string")) {
+      throw new Error("missing a `keys` array of strings");
+    }
+    baselined = new Set(parsed.keys);
+  } catch (err) {
+    if (err.code === "ENOENT") {
+      // A MISSING baseline must not degrade to "empty baseline": that would
+      // report all 236 pre-existing orphans as new and fail every run with a
+      // message that looks like a regression. Fail loudly with the real cause.
+      console.error(`❌ ${baselineRel} is missing, so the i18n orphan ratchet cannot run.`);
+      console.error("   This file grandfathers the pre-existing orphaned keys. Restore it from git");
+      console.error(`   (git checkout -- ${baselineRel}) — do NOT commit without it.`);
+    } else {
+      console.error(`❌ could not read ${baselineRel}: ${err.message}`);
+    }
+    return 2;
+  }
+
+  const current = r.orphans.map((o) => o.key);
+  const currentSet = new Set(current);
+  const newOrphans = r.orphans.filter((o) => !baselined.has(o.key));
+  const stale = [...baselined].filter((k) => !currentSet.has(k)).sort();
+
+  if (json) {
+    console.log(
+      JSON.stringify(
+        {
+          ...r,
+          gate: {
+            baseline: baselineRel,
+            baselined: baselined.size,
+            orphans: r.orphans.length,
+            new: newOrphans,
+            stale,
+            passed: newOrphans.length === 0,
+          },
+        },
+        null,
+        2,
+      ),
+    );
+  } else {
+    if (newOrphans.length) {
+      console.log(
+        `❌ i18n orphan gate: ${newOrphans.length} NEW orphaned key(s) not in ${baselineRel}`,
+      );
+      console.log("");
+      for (const o of newOrphans) console.log(`  ${o.key}   [${o.locales.join(", ")}]`);
+      console.log("");
+      console.log("  An orphan is a locale key no translation call in app/ or components/ can");
+      console.log("  reach. Delete it from i18n/locales/*/common.json, or restore the reference");
+      console.log("  if its loss was accidental — a deleted screen's keys are the common cause:");
+      console.log("    node scripts/purge-orphan-keys.cjs --new");
+      console.log("  removes exactly these keys from both locales and prunes the baseline.");
+      console.log(`  Do NOT add them to ${baselineRel} to silence this check —`);
+      console.log("  that file is the ratchet for the backlog that predates the gate.");
+    } else {
+      console.log(
+        `✅ i18n orphan gate: clean (${r.orphans.length} baselined key(s) remain, none new)`,
+      );
+    }
+    if (stale.length) {
+      console.log(
+        `ℹ️  ${stale.length} baselined key(s) are no longer orphaned — delete them from ${baselineRel}:`,
+      );
+      for (const k of stale.slice(0, 20)) console.log(`  ${k}`);
+      if (stale.length > 20) console.log(`  ... +${stale.length - 20} more (use --json for the full list)`);
+    }
+  }
+  return newOrphans.length === 0 ? 0 : 2;
+}
+
 // ─── output ──────────────────────────────────────────────────────────────────
 
 function report(r) {
@@ -374,8 +711,13 @@ function report(r) {
     "\nNOTE: everything in SHIELDED is reachable through at least one dynamic call —",
   );
   console.log(
-    "      the uncertainty budget on ORPHANED. Audit, not a gate: see report() in this file.",
+    "      the uncertainty budget on ORPHANED. This audit run exits 0 regardless;",
+  );
+  console.log(
+    "      --gate blocks only orphaned keys not in scripts/i18n-orphan-baseline.json.",
   );
 }
 
-report(analyze());
+const result = analyze();
+if (process.argv.includes("--gate")) process.exitCode = gate(result);
+else report(result);

@@ -1,5 +1,5 @@
 {
-  "total": 1108,
+  "total": 1101,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -711,34 +711,6 @@
         "line": 73
       }
     ],
-    "(main)/(customer)/(tabs)/activity/top-up-details/index.tsx": [
-      {
-        "id": "customer.activity.top-up-details.replace-activity",
-        "line": 23
-      },
-      {
-        "id": "customer.activity.top-up-details.el-1",
-        "line": 42
-      },
-      {
-        "id": "customer.activity.top-up-details.set-theme",
-        "line": 51
-      }
-    ],
-    "(main)/(customer)/(tabs)/activity/top-up/index.tsx": [
-      {
-        "id": "customer.activity.top-up.replace-activity",
-        "line": 72
-      },
-      {
-        "id": "customer.activity.top-up.push-top-up",
-        "line": 116
-      },
-      {
-        "id": "customer.activity.top-up.set-theme",
-        "line": 125
-      }
-    ],
     "(main)/(customer)/(tabs)/chat/index.tsx": [
       {
         "id": "customer.chat.set-theme",
@@ -898,55 +870,59 @@
     "(main)/(customer)/(tabs)/profile/index.tsx": [
       {
         "id": "customer.profile.set-theme",
-        "line": 198
+        "line": 202
       },
       {
         "id": "customer.profile.el-1",
-        "line": 219
+        "line": 223
       },
       {
         "id": "customer.profile.push-edit-profile",
-        "line": 249
+        "line": 253
       },
       {
         "id": "customer.profile.push-change-password",
-        "line": 266
+        "line": 270
+      },
+      {
+        "id": "customer.profile.push-settings-hub",
+        "line": 283
       },
       {
         "id": "customer.profile.push-appearance",
-        "line": 279
+        "line": 289
       },
       {
         "id": "customer.profile.push-notifications",
-        "line": 285
+        "line": 295
       },
       {
         "id": "customer.profile.push-saved-addresses",
-        "line": 291
+        "line": 301
       },
       {
         "id": "customer.profile.push-emergency-contacts",
-        "line": 297
+        "line": 307
       },
       {
         "id": "customer.profile.push-faq",
-        "line": 306
+        "line": 316
       },
       {
         "id": "customer.profile.push-contact-support",
-        "line": 311
+        "line": 321
       },
       {
         "id": "customer.profile.push-report-issue",
-        "line": 318
+        "line": 328
       },
       {
         "id": "customer.profile.confirm-sign-out",
-        "line": 329
+        "line": 339
       },
       {
         "id": "customer.profile.el-2",
-        "line": 337
+        "line": 347
       }
     ],
     "(main)/(customer)/(tabs)/referral/index.tsx": [
@@ -1019,16 +995,6 @@
       {
         "id": "customer.rides.push-referral",
         "line": 686
-      }
-    ],
-    "(main)/(customer)/(tabs)/settings/add-payment/index.tsx": [
-      {
-        "id": "customer.settings.add-payment.el-1",
-        "line": 23
-      },
-      {
-        "id": "customer.settings.add-payment.set-theme",
-        "line": 46
       }
     ],
     "(main)/(customer)/(tabs)/settings/app-appearance/index.tsx": [

@@ -51,9 +51,30 @@ const NAV: NavItem[] = [
     roles: OWNER_ADMIN_OPS, // verification.write
   },
   {
+    route: "/admin/documents",
+    label: "Documents",
+    icon: "file-check",
+    group: "Operations",
+    roles: OWNER_ADMIN_OPS, // verification.write
+  },
+  {
     route: "/admin/monitoring",
     label: "Monitoring",
     icon: "chart-line",
+    group: "Operations",
+    // admin.read — all roles
+  },
+  {
+    route: "/admin/live-ops",
+    label: "Live Ops",
+    icon: "pulse",
+    group: "Operations",
+    // admin.read — all roles
+  },
+  {
+    route: "/admin/riders",
+    label: "Riders",
+    icon: "account-multiple",
     group: "Operations",
     // admin.read — all roles
   },
@@ -79,6 +100,13 @@ const NAV: NavItem[] = [
     roles: OWNER_OPS, // review.write
   },
   {
+    route: "/admin/support",
+    label: "Support Tickets",
+    icon: "headset",
+    group: "Operations",
+    roles: OWNER_ADMIN, // finance.write per current tickets API
+  },
+  {
     route: "/admin/broadcast",
     label: "Broadcast",
     icon: "bullhorn",
@@ -96,6 +124,20 @@ const NAV: NavItem[] = [
     route: "/admin/trust-safety",
     label: "Trust & Safety",
     icon: "shield-check",
+    group: "Operations",
+    roles: OWNER_OPS_MOD, // safety.write
+  },
+  {
+    route: "/admin/sos-alerts",
+    label: "SOS Alerts",
+    icon: "alarm-light",
+    group: "Operations",
+    roles: OWNER_OPS_MOD, // safety.write
+  },
+  {
+    route: "/admin/sos-contacts",
+    label: "SOS Contacts",
+    icon: "phone-alert",
     group: "Operations",
     roles: OWNER_OPS_MOD, // safety.write
   },
@@ -174,6 +216,13 @@ const NAV: NavItem[] = [
     roles: OWNER_ADMIN, // catalog.write
   },
   {
+    route: "/admin/rider-intro-configs",
+    label: "Intro Discounts",
+    icon: "sale",
+    group: "Programs",
+    roles: OWNER_ADMIN, // catalog.write
+  },
+  {
     route: "/admin/preferences",
     label: "Preferences",
     icon: "tune-vertical",
@@ -200,6 +249,13 @@ const NAV: NavItem[] = [
     icon: "calendar-star",
     group: "Programs",
     roles: OWNER_ADMIN_OPS, // support.write
+  },
+  {
+    route: "/admin/premium-allowlist",
+    label: "Premium Allowlist",
+    icon: "crown",
+    group: "Programs",
+    roles: OWNER_ADMIN, // catalog.write
   },
   {
     route: "/admin/vehicle-models",
@@ -318,6 +374,13 @@ const NAV: NavItem[] = [
     icon: "cash-multiple",
     group: "Config",
     roles: OWNER_ADMIN, // config.write
+  },
+  {
+    route: "/admin/cancellation-policies",
+    label: "Cancellation Policies",
+    icon: "calendar-remove",
+    group: "Config",
+    roles: OWNER_ADMIN, // catalog.write
   },
 ];
 

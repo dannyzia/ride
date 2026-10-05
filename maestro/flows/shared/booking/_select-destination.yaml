@@ -4,13 +4,19 @@
 # index.tsx L882 → router.push autocomplete); query input = customer.autocomplete.
 # set-query (autocomplete/index.tsx L207, autoFocus TextInput shared by from/stop/to
 # modes); result row = customer.autocomplete.handle-place-select (L239, FlatList row)
-# filtered by ${DEST_NAME} text + index 0. Class: AUTOMATABLE.
+# filtered by ${DEST_NAME} text + index 0.
+# STALE-FLOW AUDIT 2026-10-04: the open-wait's second alternative, "Enter or choose
+# a location", is the value of ORPHANED find_ride.enter_or_choose_location and
+# renders nowhere (find-ride/ deleted, G-02b). Repointed to the query input's own
+# testID — the very element this subflow taps next, so it is provably present.
+# Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - tapOn:
     id: "customer.home.el-2"
 - extendedWaitUntil:
-    visible: ".*Where to.*|.*Enter or choose a location.*"
+    visible:
+      id: "customer.autocomplete.set-query"
     timeout: 15000
 - tapOn:
     id: "customer.autocomplete.set-query"

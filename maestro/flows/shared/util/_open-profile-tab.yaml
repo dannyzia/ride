@@ -1,0 +1,23 @@
+# _open-profile-tab — open the rider Profile tab and wait for it to render.
+# §9. Gate 1 REWIRE PASS 2 — CORRECTION.
+# This subflow used to tap a "Settings" row after opening the Profile tab. There
+# is no such row: the rider profile renders its settings inline (profile/index.tsx
+# renderSection blocks for account / preferences / support). The separate hub at
+# app/(main)/(customer)/(tabs)/settings/index.tsx DOES exist and carries
+# customer.settings.el-1 per row, and it is now reachable via
+# customer.profile.push-settings-hub — but callers of THIS subflow tap their
+# row on the profile (push-appearance, push-faq, ...), so this subflow must stop
+# at the profile. Use _open-settings-hub.yaml when you want the hub itself.
+# Class: AUTOMATABLE.
+appId: com.ride.bd
+---
+- tapOn:
+    id: "customer._layout.on-press"
+    text: ".*Profile.*|.*Account.*"
+# Ground on customer.profile.el-1 (the Edit Profile row, first item in the account
+# section) rather than confirm-sign-out, which sits at the bottom of a ScrollView
+# and may be outside the rendered hierarchy before a scroll.
+- extendedWaitUntil:
+    visible:
+      id: "customer.profile.el-1"
+    timeout: 15000

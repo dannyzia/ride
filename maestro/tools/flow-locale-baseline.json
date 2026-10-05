@@ -1,5 +1,5 @@
 {
-  "_comment": "Baselined locale-only misses. An assertion literal that resolves in app/components source but in NO i18n locale file is hard-coded JSX: it renders now and breaks when that screen is wired to a locale key or run under a non-en locale. flow-xcheck BLOCKS any such literal not listed here. These 39 predate the gate and are grandfathered so it did not have to reject working flows; each entry must be deleted as its screen is localized. This file must only ever SHRINK.",
+  "_comment": "Baselined locale-only misses. An assertion literal that resolves in app/components source but in NO i18n locale file is hard-coded JSX: it renders now and breaks when that screen is wired to a locale key or run under a non-en locale. flow-xcheck BLOCKS any such literal not listed here. These 39 predate the gate and are grandfathered so it did not have to reject working flows; one further literal, unmasked by the 2026-10-04 dead-screen purge, was added the same day; each entry must be deleted as its screen is localized. This file must only ever SHRINK.",
   "entries": [
     {
       "lit": "enter your phone number to continue",
@@ -156,6 +156,38 @@
     {
       "lit": "update",
       "reason": "Pre-existing hard-coded JSX, present when the locale-only gate was added (2026-10-03). It renders correctly today, so the flow is not broken. Wire the string to a t() locale key on the screen that renders it, then DELETE this entry - the baseline is a ratchet and must only shrink."
+    },
+    {
+      "lit": "payout",
+      "reason": "Hard-coded STEP_TITLES[5] = \"Payout\" in app/(main)/(rider)/onboarding/index.tsx:130 (all seven onboarding step titles are hard-coded English). It was masked until 2026-10-04, when the dead top-up screens were deleted and wallet.transaction_types.payout = \"Payout\" was purged from the locale; the driver-onboarding step-6 ground then had no locale match. It renders correctly today. Wire STEP_TITLES to a t() locale key, then DELETE this entry - the baseline is a ratchet and must only ever shrink."
+    },
+    {
+      "lit": "others",
+      "reason": "Surfaced 2026-10-05 when the dead-copy extractor was widened to block-style text: matchers (this claim was unchecked before). Driver-onboarding body-type option label (bodyTypeEnum list copy), asserted in maestro/flows/driver-onboarding.yaml. Owner ruling 2026-10-05: catalog/data labels are baselined, not force-wired to t(). DELETE this entry if the label is ever moved to a t() locale key - the baseline is a ratchet and must only ever shrink."
+    },
+    {
+      "lit": "now",
+      "reason": "Surfaced 2026-10-05 when the dead-copy extractor was widened to block-style text: matchers (this claim was unchecked before). Marketplace rental action label, asserted in maestro/flows/marketplace/v2-rental/01-request-to-award.yaml and 02-demote-reselect.yaml. Owner ruling 2026-10-05: catalog/data labels are baselined, not force-wired to t(). DELETE this entry if the label is ever moved to a t() locale key - the baseline is a ratchet and must only ever shrink."
+    },
+    {
+      "lit": "food",
+      "reason": "Surfaced 2026-10-05 when the dead-copy extractor was widened to block-style text: matchers (this claim was unchecked before). Marketplace use-case tab label, asserted in maestro/flows/marketplace/v4-food/01-food-to-bridge-to-courier.yaml. Owner ruling 2026-10-05: catalog/data labels are baselined, not force-wired to t(). DELETE this entry if the label is ever moved to a t() locale key - the baseline is a ratchet and must only ever shrink."
+    },
+    {
+      "lit": "truck",
+      "reason": "Surfaced 2026-10-05 when the dead-copy extractor was widened to block-style text: matchers (this claim was unchecked before). Marketplace use-case tab label, asserted in maestro/flows/marketplace/v5-truck/01-catalog-picker-request.yaml. Owner ruling 2026-10-05: catalog/data labels are baselined, not force-wired to t(). DELETE this entry if the label is ever moved to a t() locale key - the baseline is a ratchet and must only ever shrink."
+    },
+    {
+      "lit": "ton",
+      "reason": "Surfaced 2026-10-05 when the dead-copy extractor was widened to block-style text: matchers (this claim was unchecked before). Truck tonnage chip label (asserted as .*ton.*), maestro/flows/marketplace/v5-truck/01-catalog-picker-request.yaml. Owner ruling 2026-10-05: catalog/data labels are baselined, not force-wired to t(). DELETE this entry if the label is ever moved to a t() locale key - the baseline is a ratchet and must only ever shrink."
+    },
+    {
+      "lit": "furniture",
+      "reason": "Surfaced 2026-10-05 when the dead-copy extractor was widened to block-style text: matchers (this claim was unchecked before). Truck cargo-type chip label (asserted as .*Furniture.*|.*Goods.*|.*cargo chip.*; hit candidate is furniture), maestro/flows/marketplace/v5-truck/01-catalog-picker-request.yaml. Owner ruling 2026-10-05: catalog/data labels are baselined, not force-wired to t(). DELETE this entry if the label is ever moved to a t() locale key - the baseline is a ratchet and must only ever shrink."
+    },
+    {
+      "lit": "bls",
+      "reason": "Surfaced 2026-10-05 when the dead-copy extractor was widened to block-style text: matchers (this claim was unchecked before). Ambulance-class chip label (asserted as .*BLS.*|.*Basic.*), maestro/flows/marketplace/v7-ambulance/02-scheduled-ambulance.yaml. Owner ruling 2026-10-05: catalog/data labels are baselined, not force-wired to t(). DELETE this entry if the label is ever moved to a t() locale key - the baseline is a ratchet and must only ever shrink."
     }
   ]
 }

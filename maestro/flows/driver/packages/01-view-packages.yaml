@@ -1,10 +1,26 @@
 # driver/packages/01-view-packages — packages list renders with calls/price cards.
-# Feature: D-PKG list (§4). Gate 1 NOTE: driver home has NO Packages nav testID
-# (d/(tabs) exposes toggle-online/push-packages; rider.d.push-packages is the Buy-a-package
-# card shown when calls run low — not the browse surface) and rider.packages has only
-# rider.packages.handle-buy — the list render assert stays TEXT. Package scope by
-# vehicle_type (AGENTS.md § Packages) is implicitly exercised: Driver B sees
-# universal + matching packages. Class: AUTOMATABLE (render).
+# Feature: D-PKG list (§4).
+# STALE-FLOW AUDIT 2026-10-04 — REPOINTED. The old navigation tapped
+# ".*Packages.*|.*Calls.*" on driver home, but with launch_free every driver has an
+# active subscription, so the home "Buy a package" card (rider.d.push-packages,
+# d/(tabs)/index.tsx:1299) is NOT rendered — the ternary shows the Calls-Remaining
+# card instead — and the tap only matched that card's non-interactive "Calls
+# Remaining" label; the following wait ".*calls.*|.*৳.*" was satisfied by the same
+# label, a vacuous pass that never rendered the packages list.
+# Live path (verified against source 2026-10-04): home stats bar ("Today: ৳…",
+# DriverStatsBar.tsx:56 — the component has no testID, text tap retained per the
+# G-02 remainder convention) → rider.earnings screen (earnings/index.tsx:281) →
+# due-amounts (rider.due-amounts.*) → packages (rider.packages.*). Due Amounts
+# renders exactly ONE of two push buttons — `rider.due-amounts.push-packages`
+# (Renew) when a subscription row exists, `…push-packages-2` (Browse Packages)
+# otherwise. The flow waits for the Renew branch, which is the documented
+# device-day precondition: launch_free grants every driver an active plan
+# (COVERAGE-MANIFEST §9; driver/home/02-go-online asserts the same precondition).
+# The screen is hard-coded English with ZERO t() calls, so there is no
+# locale-backed text ground to wait on and an id-only wait is used.
+# Package scope by vehicle_type (AGENTS.md § Packages) is implicitly exercised:
+# Driver B sees universal + matching packages.
+# Class: AUTOMATABLE (render).
 appId: com.ride.bd
 name: "Driver Packages - View Packages"
 tags: [driver, packages, smoke]
@@ -15,7 +31,31 @@ tags: [driver, packages, smoke]
       PASSWORD: "test1234"
     commands:
       - runFlow: ../../../shared/auth/_login-driver.yaml
-- tapOn: ".*Packages.*|.*Calls.*"
+# Home → Earnings via the stats bar (no testID on the component; "Today:" is its
+# literal — home screen renders no other "Today" text).
+- tapOn: ".*Today.*"
 - extendedWaitUntil:
-    visible: ".*calls.*|.*৳.*"
+    visible:
+      id: "rider.earnings.push-due-amounts"
     timeout: 20000
+- tapOn:
+    id: "rider.earnings.push-due-amounts"
+# Due Amounts header renders immediately; the Renew button appears once the
+# /api/driver/dues round-trip lands (id-only wait — the screen's copy is not
+# locale-backed and would trip the locale-only ratchet as an assertion ground).
+- extendedWaitUntil:
+    visible:
+      id: "rider.due-amounts.el-1"
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "rider.due-amounts.push-packages"
+    timeout: 20000
+- tapOn:
+    id: "rider.due-amounts.push-packages"
+- extendedWaitUntil:
+    visible:
+      id: "rider.packages.el-1"
+    timeout: 20000
+- assertVisible:
+    id: "rider.packages.handle-buy"

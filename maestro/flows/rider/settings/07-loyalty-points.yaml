@@ -1,18 +1,12 @@
 # rider/settings/07-loyalty-points — loyalty screen renders points balance (GROWTH BC-15).
 # Redemption mechanics are backend-gated; render assertion is the safe floor.
 #
-# Gate 1 REWIRE PASS 2 — KNOWN APP-LEVEL GAP, flow works around it.
-# The old flow tapped ".*Loyalty.*" on the rider profile. There is NO loyalty row
-# there: the profile renders account/preferences/support sections only. Loyalty
-# lives exclusively on the separate hub at (main)/(customer)/(tabs)/settings
-# (settings/index.tsx items[] → settings.loyalty), and nothing in the rider tree
-# routes to that hub — the only inbound calls are three sub-screens doing
-# router.replace() back to it. Recorded as a navigation gap in
-# maestro/COVERAGE-MANIFEST.md, not fixed here (product decision, out of QA scope).
-# Workaround: deep-link straight to the hub (app scheme "ride", app.config.js:17),
-# then select the row by its testID customer.settings.el-1 filtered by the label.
-# If the owner later adds a profile row for the hub, this deep link should be
-# replaced by a profile-row tap.
+# Gate 1 REWIRE PASS 2 — the app-level navigation gap is now CLOSED.
+# This flow used to deep-link straight to the settings hub because there was no
+# loyalty row on the profile AND nothing in the rider tree routed to the hub.
+# `customer.profile.push-settings-hub` now exists (profile/index.tsx, Preferences
+# section), so the journey is driven in-app: Profile -> Settings -> Loyalty.
+# The deep link is gone; the row IDs below all resolve against the map.
 # Class: AUTOMATABLE (render).
 appId: com.ride.bd
 name: "Rider Settings - Loyalty Points"
@@ -24,11 +18,9 @@ tags: [rider, settings, growth]
       PASSWORD: "test1234"
     commands:
       - runFlow: ../../../shared/auth/_login-rider.yaml
-- openLink: "ride:///(main)/(customer)/(tabs)/settings"
-- extendedWaitUntil:
-    visible:
-      id: "customer.settings.el-1"
-    timeout: 20000
+- runFlow: ../shared/util/_open-settings-hub.yaml
+# _open-settings-hub already lands on the hub (taps customer.profile.push-settings-hub
+# and grounds on customer.settings.el-1), so select the Loyalty row from here.
 - tapOn:
     id: "customer.settings.el-1"
     text: ".*Loyalty.*"

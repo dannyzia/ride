@@ -59,7 +59,7 @@ interface NavItem {
 const CUSTOMER_ITEMS: NavItem[] = [
   { route: "/(main)/(customer)/services-hub", label: "Services Hub", icon: "grid", group: "Ride" },
   { route: "/(main)/(customer)/(tabs)/home", label: "Home", icon: "home", group: "Ride" },
-  { route: "/(main)/(customer)/find-ride", label: "Book Ride", icon: "car", group: "Ride" },
+  { route: "/(main)/(customer)/(tabs)/home", label: "Book Ride", icon: "car", group: "Ride" },
   { route: "/(main)/(customer)/schedule-ride", label: "Schedule Ride", icon: "calendar", group: "Ride" },
   { route: "/(main)/(customer)/(tabs)/rides", label: "My Rides", icon: "time", group: "Activity" },
   { route: "/(main)/(customer)/(tabs)/inbox", label: "Inbox", icon: "mail", group: "Activity" },
@@ -67,7 +67,7 @@ const CUSTOMER_ITEMS: NavItem[] = [
   { route: "/(main)/(customer)/(tabs)/profile", label: "Profile", icon: "person", group: "Account" },
   { route: "/(main)/(customer)/(tabs)/wallet", label: "Wallet", icon: "wallet", group: "Account" },
   { route: "/(main)/(customer)/(tabs)/settings", label: "Settings", icon: "settings", group: "Account" },
-  { route: "/(main)/(customer)/apply-promos", label: "Promos", icon: "ticket", group: "Account" },
+  { route: "/(main)/(customer)/(tabs)/settings/loyalty", label: "Promos", icon: "ticket", group: "Account" },
 ];
 
 const DRIVER_ITEMS: NavItem[] = [

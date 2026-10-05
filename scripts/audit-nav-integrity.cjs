@@ -40,17 +40,33 @@
  *   RESOLVED   → matched ≥1 route file. An inbound edge.
  *   DANGLING   → resolved to a concrete pattern that matches NO route file. A
  *                real bug: the app navigates to a screen that does not exist.
- *                This is the only bucket that can gate, and only because it is
- *                provable without a false positive.
+ *                Gated, and only because it is provable without a false
+ *                positive.
  *   UNRESOLVED → the value genuinely depends on runtime data (a redirect
  *                callback, a server response, a computed id). Counted and
  *                LISTED, never folded into "dead". A statically-undecidable
  *                edge is not a missing edge, and treating it as one is precisely
  *                how the earlier tools produced 99 false positives.
+ *   TABLE DANGLING → a nav-key string literal in a static data-table row that
+ *                matches NO route file (see DATA-TABLE SWEEP below). Gated for
+ *                the same reason: the miss is provable without the consumer
+ *                chain resolving.
  *
  * UNRESOLVED is the honesty budget on every number below. If it is large, the
  * DANGLING count is still sound (a dangling target is dangling regardless of what
  * the unresolved sites do), but the UNREACHABLE count is a floor, not a total.
+ *
+ * DATA-TABLE SWEEP. A navigation table's targets are strings in the source even
+ * when the consumer chain is not statically resolvable: the app-wide drawer
+ * pushes `route as never` from inside a `useCallback` (so the forwarder's call
+ * sites resolve to nothing), and the settings/profile lists map over grouped or
+ * filtered collections the map resolver cannot follow. The 2026-10-04
+ * dead-screen audit found four dead refs of exactly this shape by hand. So every
+ * nav-key string/template literal that is a DIRECT element of an array literal
+ * (a static data-table row) is validated against the route tree and reported as
+ * TABLE DANGLING when it matches no route file. A literal already reported as a
+ * dangling SITE (same file + target) is not reported twice. The sweep validates
+ * declarations, not edges: RESOLVED / UNRESOLVED / reachability are unchanged.
  *
  * ROUTE MATCHING. Expo Router drops `(group)` segments from the URL but accepts
  * them in paths, and this codebase writes them consistently (`/(main)/…`), so
@@ -64,13 +80,14 @@
  * Usage:
  *   node scripts/audit-nav-integrity.cjs          # human-readable report
  *   node scripts/audit-nav-integrity.cjs --json   # machine-readable
- *   node scripts/audit-nav-integrity.cjs --gate   # exit 2 on DANGLING
+ *   node scripts/audit-nav-integrity.cjs --gate   # exit 2 on DANGLING / TABLE DANGLING
  *
  * Exit codes: 0 = report produced (it is an AUDIT; see --gate), 1 = could not run,
- * 2 = --gate and at least one DANGLING target.
+ * 2 = --gate and at least one DANGLING or TABLE DANGLING target.
  *
- * JSON CONSUMER: the `screens` and `reachable` fields are read by the
- * screen-affinity tier in maestro/tools/flow-xcheck.cjs. `reachable` is the BFS
+ * JSON CONSUMERS: the `screens` and `reachable` fields are read by the
+ * screen-affinity tier in maestro/tools/flow-xcheck.cjs; `screens` and
+ * `unreachable` by scripts/audit-deletion-impact.cjs. `reachable` is the BFS
  * set from ENTRY_FILES intersected with the addressable screens; it is a FLOOR,
  * not a claim of exclusion (see the UNRESOLVED note above).
  */
@@ -575,7 +592,33 @@ function resolveScreenName(sf, node) {
   return segs;
 }
 
+/**
+ * A nav-key string/template literal that is a DIRECT element of an array literal:
+ * a static data-table row target (see DATA-TABLE SWEEP in the header). Returns
+ * { file, line, key, value } or null. `as`/`satisfies` casts are transparent on
+ * both hops (the row object and its initializer).
+ */
+function tableRowTarget(file, sf, node) {
+  if (!ts.isPropertyAssignment(node) || !ts.isIdentifier(node.name)) return null;
+  if (!NAV_KEYS.includes(node.name.text)) return null;
+  let elem = node.parent.parent; // property -> row object -> its container
+  while (elem && UNWRAP.has(elem.kind)) elem = elem.expression;
+  if (!ts.isArrayLiteralExpression(elem)) return null;
+  let init = node.initializer;
+  while (init && UNWRAP.has(init.kind)) init = init.expression;
+  let value = null;
+  if (ts.isStringLiteral(init) || ts.isNoSubstitutionTemplateLiteral(init)) value = init.text;
+  else if (ts.isTemplateExpression(init)) {
+    value = init.head.text;
+    for (const span of init.templateSpans) value += WILD + span.literal.text;
+  }
+  if (!value || !value.startsWith("/")) return null;
+  return { file, line: sf.getLineAndCharacterOfPosition(node.getStart()).line + 1, key: node.name.text, value };
+}
+
 const sites = [];
+/** Static data-table row targets, validated after the walk (see DATA-TABLE SWEEP). */
+const tableRows = [];
 /** Every line a TEXTUAL scan would call a navigation site — used only as a coverage
  *  bound. A regex cannot decide whether `.push(` is an array push, but it can
  *  prove the AST found FEWER sites than a dumb scan does, which means something
@@ -596,6 +639,10 @@ for (const dir of SCAN_DIRS) {
     const routers = routerNames(sf);
 
     const visit = (node) => {
+      // Static data-table row target — collected regardless of whether any site
+      // consumes it (DATA-TABLE SWEEP in the header).
+      const rowTarget = tableRowTarget(f, sf, node);
+      if (rowTarget) tableRows.push(rowTarget);
       // Only a CONFIRMED expo-router receiver makes a call a navigation site.
       if (
         ts.isCallExpression(node) &&
@@ -688,6 +735,21 @@ for (const s of sites) {
   }
 }
 
+// ── static data-table sweep ───────────────────────────────────────────────────
+// Validated after the sites so a literal already caught as a dangling SITE is
+// not reported twice (same file + target). See DATA-TABLE SWEEP in the header:
+// this is the tier that covers the drawer/forwarder class the site resolver can
+// only mark UNRESOLVED.
+const tableDangling = [];
+const danglingSiteKeys = new Set(dangling.map((d) => `${d.file}|${d.target}`));
+for (const row of tableRows) {
+  const pattern = toPattern(row.value);
+  const target = "/" + pattern.join("/");
+  if (matchRoutes(pattern).length) continue;
+  if (danglingSiteKeys.has(`${rel(row.file)}|${target}`)) continue;
+  tableDangling.push({ file: rel(row.file), line: row.line, key: row.key, target });
+}
+
 // ── reachability ──────────────────────────────────────────────────────────────
 
 const ENTRY_FILES = [path.join(APP_DIR, "index.tsx")];
@@ -721,7 +783,9 @@ const dropped = regexCandidates.filter((c) => !siteKeys.has(`${c.file}:${c.line}
  * Addressable screens, for JSON consumers. The screen-affinity tier in
  * maestro/tools/flow-xcheck.cjs reads `screens` and `reachable` to decide
  * whether a flow's selected testIDs live on a screen the app can actually route
- * to; keep both field names stable or update that consumer in the same commit.
+ * to; scripts/audit-deletion-impact.cjs reads `screens` and `unreachable` for
+ * its deletion-impact join. Keep both field names stable or update each
+ * consumer in the same commit.
  */
 const screenFiles = new Set(routeFiles.map((r) => r.file));
 
@@ -736,6 +800,12 @@ if (AS_JSON) {
         resolved: resolved.length,
         dangling,
         unresolved,
+        // Additive (2026-10-05): the static data-table sweep. `tableTargets`
+        // counts every nav-key literal validated in an array-table row;
+        // `tableDangling` lists the ones with no matching route file (deduped
+        // against `dangling`).
+        tableTargets: tableRows.length,
+        tableDangling,
         droppedByReceiverCheck: dropped.length,
         unreachable: unreachable.map((u) => rel(u.file)),
         adminUnlisted: adminUnlisted.map((u) => rel(u.file)),
@@ -751,13 +821,19 @@ if (AS_JSON) {
     )
   );
 } else {
-  console.log(`route files: ${routeFiles.length} | navigation sites: ${sites.length}`);
+  console.log(`route files: ${routeFiles.length} | navigation sites: ${sites.length} | data-table targets: ${tableRows.length}`);
   console.log(`RESOLVED ${resolved.length}  DANGLING ${dangling.length}  UNRESOLVED ${unresolved.length}`);
   if (dangling.length) {
     console.log(`\n❌ DANGLING navigation targets (no matching route file): ${dangling.length}`);
     for (const d of dangling.slice(0, 40)) console.log(`  ${d.file}:${d.line}  ${d.kind} -> ${d.target}`);
   } else {
     console.log("\n✅ no dangling navigation targets");
+  }
+  if (tableDangling.length) {
+    console.log(`\n❌ DANGLING data-table targets (static table literals with no matching route file): ${tableDangling.length}`);
+    for (const d of tableDangling.slice(0, 40)) console.log(`  ${d.file}:${d.line}  ${d.key} -> ${d.target}`);
+  } else {
+    console.log(`✅ no dangling data-table targets (${tableRows.length} static table literals checked)`);
   }
   if (unresolved.length) {
     console.log(`\n⚠ UNRESOLVED (runtime-dependent; NOT counted as dead): ${unresolved.length}`);
@@ -794,7 +870,10 @@ if (AS_JSON) {
   }
 }
 
-if (AS_GATE && dangling.length) {
-  console.error(`\n❌ ${dangling.length} dangling navigation target(s) — the app navigates to screens that do not exist.`);
+if (AS_GATE && (dangling.length || tableDangling.length)) {
+  const findings = [];
+  if (dangling.length) findings.push(`${dangling.length} dangling navigation target(s)`);
+  if (tableDangling.length) findings.push(`${tableDangling.length} dangling data-table target(s)`);
+  console.error(`\n❌ ${findings.join(" + ")} — the app navigates to screens that do not exist.`);
   process.exitCode = 2;
 }

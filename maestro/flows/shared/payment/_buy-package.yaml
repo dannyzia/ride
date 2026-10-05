@@ -2,13 +2,33 @@
 # §9. MANIFEST: BLOCKED (PortPos sandbox; bypass shim absent — Gap 4).
 # Purchase is idempotency-wired in the app (package/purchase), but the payment
 # step itself is unreachable from Maestro without the shim.
+# STALE-FLOW AUDIT 2026-10-04: the old entry ("tap .*Packages.*|.*Calls.*" on
+# driver home) was vacuous for the same reason repointed in
+# driver/packages/01-view-packages.yaml — with launch_free the home "Buy a package"
+# card is not rendered, so the tap only matched the non-interactive Calls-Remaining
+# label and the wait was satisfied by that same label. Navigation now follows the
+# live path home stats bar → earnings → due-amounts → packages, waiting for the
+# Renew branch (device-day precondition; the unsubscribed Browse-Packages branch is
+# not asserted here). Package select/buy taps below stay as authored (BLOCKED flow).
 # Class: BLOCKED.
 appId: com.ride.bd
 ---
-- tapOn:
-    text: ".*Packages.*|.*Calls.*"
+- tapOn: ".*Today.*"
 - extendedWaitUntil:
-    visible: ".*calls.*|.*৳.*"
+    visible:
+      id: "rider.earnings.push-due-amounts"
+    timeout: 20000
+- tapOn:
+    id: "rider.earnings.push-due-amounts"
+- extendedWaitUntil:
+    visible:
+      id: "rider.due-amounts.push-packages"
+    timeout: 20000
+- tapOn:
+    id: "rider.due-amounts.push-packages"
+- extendedWaitUntil:
+    visible:
+      id: "rider.packages.el-1"
     timeout: 15000
 - tapOn: ".*${PACKAGE_NAME}.*|.*Buy.*"
 - tapOn: ".*Confirm.*|.*Purchase.*|.*Pay.*"

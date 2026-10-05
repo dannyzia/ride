@@ -1,6 +1,12 @@
 # rider/booking/09-multi-stop-ride — add two stops; multi-leg fare shows on confirm.
 # Feature: R-BOOK multi-stop (§4). Consumes _add-stop twice. Fixture stops are
-# Dhaka-local (Banani corridor per §3.2). Class: AUTOMATABLE.
+# Dhaka-local (Banani corridor per §3.2).
+# STALE-FLOW AUDIT 2026-10-04: the final wait's third alternative, "Confirm ride",
+# is the value of ORPHANED find_ride.confirm_ride (common.json:1073) and renders
+# nowhere (find-ride/ deleted, G-02b); its "Stop 1/2" alternatives are template copy
+# ("Stop {{number}}") that no static corpus can witness. Replaced with the live
+# testID each stop row's control carries, so the wait stands on a resolvable ground.
+# Class: AUTOMATABLE.
 appId: com.ride.bd
 name: "Rider Booking - Multi-Stop Ride"
 tags: [rider, booking]
@@ -28,5 +34,6 @@ tags: [rider, booking]
     commands:
       - runFlow: ../../../shared/booking/_add-stop.yaml
 - extendedWaitUntil:
-    visible: ".*Stop 1.*|.*Stop 2.*|.*Confirm ride.*"
+    visible:
+      id: "customer.home.set-stops"
     timeout: 20000

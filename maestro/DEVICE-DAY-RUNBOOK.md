@@ -10,13 +10,13 @@
   - `maestro/utils/adb-env-selftest.sh` — proves all device scripts resolve the same adb
   - `maestro/utils/run-flow-twice.sh` — **the §7 ×N harness itself** (repeat, timeout, log, FAIL screenshot, matrix row); run it directly for an ad-hoc flow
   - `maestro/utils/section7-preflight-gate.sh` — proves the §7 preflight gate below still fails fast
-  - `.github/workflows/device-preflight.yml` — **CI gate** that runs this runbook's preflight on `ubuntu-latest` (which owns no device) so adb / AVD / key-flow drift fails a PR instead of the next device day
+  - `.github/workflows/device-preflight.yml` — **CI gate, two lanes**: `preflight` on `ubuntu-latest` (no device — adb / Maestro / key-flow drift fails a PR) and `device-day` on the self-hosted Windows AVD host (real AVD — emulator + AVD are verified, not skipped)
   - `maestro/utils/bootstrap-device-day.sh` — automated steps 1–5 of this runbook
   - `maestro/utils/adb-gps-banani.sh`, `maestro/utils/adb-gps-gulshan.sh` — GPS seeding (emulator only)
   - `maestro/COVERAGE-MANIFEST.md` §7 G-02 / round notes — what the key-flows-×2 run must produce
   - `TEST-SETUP.md` §5 — failure modes table (splash-hang, black screen, stale IP)
   - `scripts/dev-env-sync.js` — the LAN-IP sync every session depends on
-**Last verified:** 2026-10-03, by testing model (adb dual-build pinning now centralised in `adb-env.sh` + proven by `adb-env-selftest.sh`, the §7 preflight gate proven by `section7-preflight-gate.sh`, headless-emulator image name, and the `adb-unauthorized` blocker all confirmed live). Device-day preflight is now ALSO run in CI by `.github/workflows/device-preflight.yml` under `PREFLIGHT_DEVICE=optional` — verified locally against a simulated `ubuntu-latest` (no `LOCALAPPDATA`/`USERPROFILE`/`USERNAME`, no AVD, stub `adb`+`maestro` on a minimal PATH): exit 0 healthy, exit 1 for a missing adb or a missing Maestro. Two defects that would have made that gate fail on a real runner are fixed — `adb-env.sh` died with `USERNAME: unbound variable` (that variable does not exist on Linux), and `adb_env_die` was called with the remedy text in its exit-status slot, so `exit` failed and the resolver carried on with an empty `$ADB` instead of stopping. `adb-env-selftest.sh` case 6 now guards the second one. The first real GitHub runner execution is still unproven
+**Last verified:** 2026-10-03, by testing model (adb dual-build pinning now centralised in `adb-env.sh` + proven by `adb-env-selftest.sh`, the §7 preflight gate proven by `section7-preflight-gate.sh`, headless-emulator image name, and the `adb-unauthorized` blocker all confirmed live). Device-day preflight is now ALSO run in CI by `.github/workflows/device-preflight.yml` under `PREFLIGHT_DEVICE=optional` — verified locally against a simulated `ubuntu-latest` (no `LOCALAPPDATA`/`USERPROFILE`/`USERNAME`, no AVD, stub `adb`+`maestro` on a minimal PATH): exit 0 healthy, exit 1 for a missing adb or a missing Maestro. Two defects that would have made that gate fail on a real runner are fixed — `adb-env.sh` died with `USERNAME: unbound variable` (that variable does not exist on Linux), and `adb_env_die` was called with the remedy text in its exit-status slot, so `exit` failed and the resolver carried on with an empty `$ADB` instead of stopping. `adb-env-selftest.sh` case 6 now guards the second one. The first real GitHub runner execution is still unproven. 2026-10-04, coding model: the real-AVD lane (`device-day` job) was added; its three commands exit 0 on the AVD-owning host itself (required-mode `--check` with emulator ✓ and AVD `Medium_Phone` ✓, both self-tests ✓), but no self-hosted runner with label `ride-avd` is registered yet — the lane's first GitHub execution is pending
 **How to update:** after every device day, append newly hit failure modes to the table at the bottom and correct any step that drifted.
 
 ---
@@ -89,29 +89,57 @@ else. Worth running before a device day, and when a flow misbehaves, to tell
 
 ### The same preflight in CI
 
-`--check` has one knob, `PREFLIGHT_DEVICE`, because a CI runner is not a
-device-day host. It owns no emulator and no AVD, so those two preconditions
-are reported as `⊘` SKIP rather than failing; **everything else stays
-blocking** — pinned-adb resolution, the Maestro CLI, and every §7 key-flow file:
+`--check` has one knob, `PREFLIGHT_DEVICE`, because not every runner is a
+device-day host. On a host without an emulator and an AVD, those two
+preconditions are reported as `⊘` SKIP rather than failing; **everything else
+stays blocking** — pinned-adb resolution, the Maestro CLI, and every §7
+key-flow file:
 
 ```bash
 PREFLIGHT_DEVICE=required bash maestro/utils/run-device-day.sh --check  # device-day host (default)
-PREFLIGHT_DEVICE=optional bash maestro/utils/run-device-day.sh --check  # CI runner, no device
+PREFLIGHT_DEVICE=optional bash maestro/utils/run-device-day.sh --check  # runner with no device
 ```
 
-`.github/workflows/device-preflight.yml` runs the `optional` form on
-`ubuntu-latest` on every push/PR touching `maestro/**`, then runs
-`adb-env-selftest.sh` (a new script calling bare `adb`, or one that stops
-sourcing `adb-env.sh`, fails there — discovery is dynamic, so nothing has
-to be registered) and `section7-preflight-gate.sh`. The workflow calls these
-scripts; it never re-implements them, because a copy here would be exactly
-the drift the gate exists to catch.
+`.github/workflows/device-preflight.yml` runs BOTH forms on every push/PR
+touching `maestro/**`, then runs `adb-env-selftest.sh` (a new script calling
+bare `adb`, or one that stops sourcing `adb-env.sh`, fails there — discovery
+is dynamic, so nothing has to be registered) and `section7-preflight-gate.sh`.
+The workflow calls these scripts; it never re-implements them, because a copy
+here would be exactly the drift the gate exists to catch.
 
-So CI catches: a renamed or deleted key flow, a broken adb resolver, an
-unpinned device script, a drifted §7 gate, a rotted Maestro install recipe.
-It deliberately does NOT claim to catch AVD state — an AVD is a per-machine
-artefact that only the device-day host has, so its absence on a runner is
-reported, never treated as a failure.
+- **`preflight` — hosted lane** (`ubuntu-latest`, `optional`): always
+  available, even when the AVD host is off. Catches a renamed or deleted key
+  flow, a broken adb resolver, an unpinned device script, a drifted §7 gate, a
+  rotted Maestro install recipe.
+- **`device-day` — real-AVD lane** (self-hosted Windows, `required`): runs on
+  the machine that owns the AVD, pinned by the runner label `ride-avd`, so the
+  emulator binary and the AVD are verified preconditions — not skips. This is
+  the lane that catches AVD state (a deleted or renamed AVD, a broken emulator
+  install) and re-checks adb / Maestro / key-flow in the real resolution
+  environment. Forked PRs are excluded from this lane on purpose: a
+  self-hosted runner must never execute a fork's code.
+
+Runner setup for the real-AVD lane — one-time, on the AVD-owning Windows host
+(automated by `maestro/utils/bootstrap-ride-avd-runner.ps1`, which encodes the
+three steps below AND runs the lane's three commands before declaring success;
+the steps are kept here as the prose authority):
+
+1. Settings → Actions → Runners → New self-hosted runner (Windows), then
+   register it with `config.cmd --labels ride-avd` — the custom label is what
+   pins the job to this machine.
+2. Run the runner **as the AVD-owning user** (service logon account = that
+   user, or an interactive `run.cmd` from their session). The AVD lives in
+   `%USERPROFILE%\.android\avd` and the emulator resolves through
+   `%LOCALAPPDATA%`, so a `LocalSystem` service sees neither. `--check` never
+   boots anything, so a service logon is fine — no desktop session required.
+3. The runner's PATH must match an interactive device day: Git Bash (`bash`),
+   adb, and Maestro. The job installs nothing on purpose — the host toolchain
+   is the thing under test, and an installer would mask the drift.
+
+If the host is off, the `device-day` job queues for a matching runner (GitHub
+waits up to 24 h) while the hosted lane still runs. On Windows, a fresh
+checkout must not hand Git Bash CRLF scripts — `.gitattributes` pins `*.sh`
+(and `scripts/git-hooks/*`) to LF for exactly this lane.
 
 
 It **fails loudly at the first blocked step**: each step calls `die BLOCKER "cause" "remedy"`, printing the blocker name, what caused it, how to fix it, and where the evidence landed — then exits non-zero. It deliberately does *not* use `set -e`, because a bare exit code tells you nothing and `set -e` also aborts on incidental non-zero exits (`adb pm grant` on an absent permission) that are expected.

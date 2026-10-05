@@ -6,12 +6,18 @@
 # continue = customer.settings.top-up.handle-continue (L83). Deterministic manual
 # amount (eraseText + type ${AMOUNT}) instead of preset chips — works for any AMOUNT.
 # The credit assertion depends on _portpos-bypass which is BLOCKED-GATE.
+# STALE-FLOW AUDIT 2026-10-04: the wallet entry was a bare text tap and the wait's
+# "Add money" alternative exists in no locale value and no app source (dead) — the
+# tab is now addressed like rider/wallet/01 (customer._layout.on-press + label) and
+# the dead alternative is dropped.
 # Class: BLOCKED.
 appId: com.ride.bd
 ---
-- tapOn: ".*Wallet.*"
+- tapOn:
+    id: "customer._layout.on-press"
+    text: ".*Wallet.*"
 - extendedWaitUntil:
-    visible: ".*Top Up.*|.*top-up.*|.*Add money.*"
+    visible: ".*Top Up.*|.*top-up.*"
     timeout: 15000
 - tapOn:
     id: "customer.wallet.push-top-up"

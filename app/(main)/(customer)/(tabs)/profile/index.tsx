@@ -46,6 +46,10 @@ const APPEARANCE_ROUTE = "/(main)/(customer)/(tabs)/settings/app-appearance";
 const NOTIFICATIONS_ROUTE = "/(main)/(customer)/(tabs)/settings/notifications";
 const SAVED_ADDRESSES_ROUTE = "/(main)/(customer)/(tabs)/settings/saved-addresses";
 const EMERGENCY_CONTACTS_ROUTE = "/(main)/(customer)/(tabs)/settings/emergency-contacts";
+// The full settings hub. Until this row existed nothing in the rider tree routed
+// to the hub, so screens that only live there (loyalty, ride pass, top-up,
+// linked accounts, data controls) were unreachable in-app and QA had to deep-link.
+const SETTINGS_HUB_ROUTE = "/(main)/(customer)/(tabs)/settings";
 const FAQ_ROUTE = "/(main)/(customer)/(tabs)/settings/faq";
 const CONTACT_SUPPORT_ROUTE = "/(main)/(customer)/(tabs)/settings/contact-support";
 const REPORT_ISSUE_ROUTE = "/(main)/(customer)/report-issue";
@@ -272,6 +276,12 @@ const Profile = () => {
         {renderSection(
           t('profile.section_preferences'),
           <>
+            <SettingsRow
+              icon="settings-outline"
+              label={t('settings.title')}
+              onPress={() => router.push(SETTINGS_HUB_ROUTE)}
+              testID="customer.profile.push-settings-hub"
+            />
             <SettingsRow
               icon="sunny-outline"
               label={t('app_appearance.title')}

@@ -12,7 +12,10 @@
  * (`redirect(href)` -> `router.replace(href)`), without which the root has no
  * outgoing edges. A resolver that silently stops following one of those hops
  * still exits 0 on the real tree and still prints a plausible report — the
- * silent-regression shape this repo's gate proofs exist to catch.
+ * silent-regression shape this repo's gate proofs exist to catch. A fourth
+ * class — dead literals inside static navigation tables whose consumer chain
+ * cannot be resolved (the drawer's `route as never` forwarder) — is covered by
+ * the data-table sweep and pinned below.
  *
  * HOW. Same contract as tests/meta/flow-xcheck.test.ts: copy the SHIPPED tool
  * into a throwaway tree, lay out app/** and components/** around it, and run the
@@ -67,12 +70,23 @@ interface UnresolvedSite {
   reason: string;
 }
 
+interface TableDanglingTarget {
+  file: string;
+  line: number;
+  key: string;
+  target: string;
+}
+
 interface NavReport {
   routeFiles: number;
   sites: number;
   resolved: number;
   dangling: DanglingSite[];
   unresolved: UnresolvedSite[];
+  /** Static data-table sweep: nav-key literals validated in array-table rows. */
+  tableTargets: number;
+  /** Subset with no matching route file (deduped against `dangling`). */
+  tableDangling: TableDanglingTarget[];
   droppedByReceiverCheck: number;
   unreachable: string[];
   adminUnlisted: string[];
@@ -243,6 +257,37 @@ const ADMIN = (ghost = false): AuditDef => ({
   },
 });
 
+/**
+ * The class the 2026-10-04 dead-screen audit found BY HAND: a static data-table
+ * row pointing at a deleted screen, whose consumer chain the site resolver
+ * cannot follow (the drawer pushes `route as never` from inside a `useCallback`,
+ * so neither the body nor the call sites resolve). The table sweep is the only
+ * tier that can catch it — which is why it exists.
+ */
+const STATIC_TABLE = (ghost = false): AuditDef => ({
+  components: {
+    "DrawerItems.tsx": [
+      'import { useCallback } from "react";',
+      ROUTER,
+      "const ITEMS = [",
+      '  { route: "/drawer/live", label: "Live" },',
+      `  { route: "/drawer/${ghost ? "ghost" : "live2"}", label: "Row" },`,
+      "];",
+      "export default function DrawerItems() {",
+      "  const router = useRouter();",
+      "  const navigateTo = useCallback((route: string) => {",
+      "    router.push(route as never);",
+      "  }, []);",
+      "  return <Pressable onPress={() => navigateTo(ITEMS[0].route)} />;",
+      "}",
+    ].join("\n"),
+  },
+  app: {
+    "drawer/live.tsx": SCREEN,
+    "drawer/live2.tsx": SCREEN,
+  },
+});
+
 /** The app entry point: an indirect wrapper whose call sites carry the targets. */
 const FORWARDER = (ghost = false): AuditDef => ({
   app: {
@@ -350,6 +395,8 @@ const ANCHORS = {
   danglingCollector: 'dangling.push({ file: from, line: s.line, kind: s.kind, target: "/" + key });',
   /** the receiver check that keeps String/Array methods out of the site set. */
   receiverCheck: "routers.has(node.expression.expression.text)",
+  /** the static data-table sweep: nav-key literals in array rows are validated. */
+  staticTableSweep: "if (rowTarget) tableRows.push(rowTarget);",
 } as const;
 
 const FAULTS = {
@@ -377,6 +424,9 @@ const FAULTS = {
   danglingDropped: (s: string) => neutralize(s, ANCHORS.danglingCollector, "/* dangling collector removed */"),
   /** any receiver counts as a router: String.replace / Array.push become "navigation". */
   receiverCheck: (s: string) => neutralize(s, ANCHORS.receiverCheck, "true"),
+  /** the table sweep stops collecting: a dead table literal disappears silently. */
+  staticTableSweep: (s: string) =>
+    neutralize(s, ANCHORS.staticTableSweep, "/* static-table collector removed */"),
 } as const;
 
 // ── tests ─────────────────────────────────────────────────────────────────────
@@ -457,6 +507,7 @@ describe("data-table navigation (the admin SPA NAV array)", () => {
     const r = runAudit({ ...ADMIN(true), text: true, gate: true });
     expect(r.out).toContain("❌ DANGLING navigation targets (no matching route file): 1");
     expect(r.out).toContain("-> /admin/ghost");
+    expect(r.err).toContain("1 dangling navigation target(s)");
     expect(r.code).toBe(2);
   });
 
@@ -473,6 +524,64 @@ describe("data-table navigation (the admin SPA NAV array)", () => {
     expect(j.dangling).toEqual([]);
     expect(j.unresolved.length).toBe(1);
     expect(j.unresolved[0].reason).toContain("maps over a runtime collection");
+    expect(r.code).toBe(0);
+  });
+});
+
+describe("static data-table sweep (the caught-by-hand class)", () => {
+  it("validates table literals even when the consumer chain stays UNRESOLVED", () => {
+    const r = runAudit(STATIC_TABLE());
+    const j = report(r);
+    expect(j.tableTargets).toBe(2);
+    expect(j.tableDangling).toEqual([]);
+    // The forwarder body (`router.push(route as never)`) is genuinely
+    // undecidable and the drawer's call sites are not even collected — the
+    // sweep is the tier that covers this shape.
+    expect(j.unresolved.length).toBe(1);
+    expect(j.unresolved[0].reason).toContain("is not a route constant");
+    expect(j.dangling).toEqual([]);
+    expect(r.code).toBe(0);
+  });
+
+  it("prints the clean check line with the validated count", () => {
+    const r = runAudit({ ...STATIC_TABLE(), text: true });
+    expect(r.out).toContain("data-table targets: 2");
+    expect(r.out).toContain("✅ no dangling data-table targets (2 static table literals checked)");
+    expect(r.code).toBe(0);
+  });
+
+  it("reports a dead table literal as TABLE DANGLING and gates (exit 2)", () => {
+    const r = runAudit({ ...STATIC_TABLE(true), gate: true });
+    const j = report(r);
+    expect(j.tableTargets).toBe(2);
+    expect(j.tableDangling.map((d) => d.target)).toEqual(["/drawer/ghost"]);
+    expect(j.dangling).toEqual([]); // no site resolves it: the sweep is the catcher
+    expect(r.err).toContain("1 dangling data-table target(s)");
+    expect(r.code).toBe(2);
+  });
+
+  it("prints the data-table banner in the text report", () => {
+    const r = runAudit({ ...STATIC_TABLE(true), text: true, gate: true });
+    expect(r.out).toContain("DANGLING data-table targets");
+    expect(r.out).toContain("route -> /drawer/ghost");
+    expect(r.code).toBe(2);
+  });
+
+  it("does not double-report a table literal already caught as a dangling SITE", () => {
+    // ADMIN's NAV rows are resolvable through filter/map, so the ghost is a
+    // dangling site; the sweep validates the same literal and must stay silent.
+    const r = runAudit({ ...ADMIN(true), gate: true });
+    const j = report(r);
+    expect(j.dangling.map((d) => d.target)).toEqual(["/admin/ghost"]);
+    expect(j.tableDangling).toEqual([]);
+    expect(r.code).toBe(2);
+  });
+
+  it("misses the table ghost once the sweep is neutralised (non-vacuity)", () => {
+    const r = runAudit({ ...STATIC_TABLE(true), gate: true, mutate: FAULTS.staticTableSweep });
+    const j = report(r);
+    expect(j.tableTargets).toBe(0);
+    expect(j.tableDangling).toEqual([]);
     expect(r.code).toBe(0);
   });
 });

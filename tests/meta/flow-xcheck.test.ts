@@ -4,8 +4,13 @@
  * Gate-level proof for maestro/tools/flow-xcheck.cjs (pre-commit stage 3).
  *
  * WHY THIS FILE EXISTS. stage 3 has four blocking tiers (missing selector, map
- * drift, dead copy, locale-only copy), one blocking input guard (the ratchet
- * baseline must exist) and one advisory tier (masked copy). Until now the only
+ * drift, dead copy, locale-only copy), two blocking input guards (the ratchet
+ * baseline must exist; the orphan classification must run, because dead copy
+ * admits only LIVE locale values) and two advisory tiers (masked copy; screen
+ * affinity). Two run-time spawns are stubbed in every fixture here, since the
+ * sandbox cannot run the real audits: scripts/audit-nav-integrity.cjs (check 5)
+ * and scripts/audit-i18n-orphans.cjs (dead copy's live-locale classification).
+ * Until now the only
  * coverage was three cases in scripts/pre-commit-harness.cjs, which exercise the
  * gate through the real hook — good for proving the hook is wired, useless for
  * proving a tier still FIRES. A gate that has been refactored into a no-op, or
@@ -58,6 +63,22 @@ interface FlowDef {
   baseline?: { lit: string; reason?: string }[] | null;
   /** null omits flow-xcheck-suppressions.json. */
   suppressions?: { match: string; reason: string }[] | null;
+  /**
+   * Stub for scripts/audit-nav-integrity.cjs, which check 5 (screen affinity)
+   * spawns at run time and the sandbox cannot run for real (no node_modules for
+   * `typescript`). undefined = derive `screens` from this fixture's `screens`
+   * keys, all reachable, so the advisory tier stays quiet; null = write no stub,
+   * which exercises the tier's unavailable path.
+   */
+  audit?: { screens?: string[]; reachable?: string[] } | null;
+  /**
+   * Stub for scripts/audit-i18n-orphans.cjs, which check 3 (dead copy) spawns
+   * at run time to classify locale keys LIVE vs ORPHANED (only LIVE values may
+   * enter the corpus). undefined = clean stub (nothing orphaned, every locale
+   * value counts as live); an object reports its `orphaned` keys as ORPHANED;
+   * null = write no stub, which exercises the tier's refuse-to-run input guard.
+   */
+  i18nAudit?: { orphaned?: string[] } | null;
   /** Fault injection: rewrite the copied script. Never touches the repo copy. */
   mutate?: (src: string) => string;
 }
@@ -140,6 +161,20 @@ function runGate(f: FlowDef): GateRun {
       JSON.stringify({ entries: f.suppressions ?? [] }, null, 2)
     );
   }
+  if (f.audit !== null) {
+    const allScreens = Object.keys(f.screens ?? {}).map((rel) => `app/${rel}`);
+    const payload = JSON.stringify({
+      screens: f.audit?.screens ?? allScreens,
+      reachable: f.audit?.reachable ?? allScreens,
+    });
+    write(root, "scripts/audit-nav-integrity.cjs", `console.log(${JSON.stringify(payload)});\n`);
+  }
+  if (f.i18nAudit !== null) {
+    const payload = JSON.stringify({
+      orphans: (f.i18nAudit?.orphaned ?? []).map((key) => ({ key })),
+    });
+    write(root, "scripts/audit-i18n-orphans.cjs", `console.log(${JSON.stringify(payload)});\n`);
+  }
 
   const r = spawnSync(process.execPath, [path.join(root, "maestro", "tools", "flow-xcheck.cjs")], {
     cwd: root,
@@ -199,6 +234,57 @@ const KEY_SHAPED_SOURCE = (): FlowDef => ({
   locale: CLEAN_LOCALE,
 });
 
+/**
+ * The masking this gate must never allow again: the assertion's only match is
+ * the value of an ORPHANED key (the purged confirm_ride.* shape) — the copy sits
+ * in the locale file but no screen renders it, so the claim is dead.
+ */
+const ORPHAN_MASKED = (): FlowDef => ({
+  flows: {
+    "a.yaml": flow(...tapCta, '- assertVisible: "Continue"', '- assertVisible: "Ride Confirmed!"'),
+  },
+  app: CLEAN_APP,
+  screens: CLEAN_SCREENS,
+  locale: { dead: { title: "Ride Confirmed!" }, entry: { continue: "Continue" } },
+  i18nAudit: { orphaned: ["dead.title"] },
+});
+
+/** The same value under an orphaned key AND a live key still rescues: it renders via the live key. */
+const ORPHAN_SHARED = (): FlowDef => ({
+  flows: { "a.yaml": flow(...tapCta, '- assertVisible: "Continue"') },
+  app: CLEAN_APP,
+  screens: CLEAN_SCREENS,
+  locale: { dead: { continue: "Continue" }, entry: { continue: "Continue" } },
+  i18nAudit: { orphaned: ["dead.continue"] },
+});
+
+/**
+ * Block-style matcher: the assertion keyword on one line, `text: "…"` on the
+ * next. Invisible to the inline-only regex until 2026-10-05 — 51 such claims
+ * were unchecked, 4 of them dead.
+ */
+const BLOCK_STYLE_DEAD = (): FlowDef => ({
+  flows: {
+    "a.yaml": flow(
+      ...tapCta,
+      "- assertVisible:",
+      '    text: "Zzz ghost block copy"',
+      '- assertVisible: "Continue"'
+    ),
+  },
+  app: CLEAN_APP,
+  screens: CLEAN_SCREENS,
+  locale: CLEAN_LOCALE,
+});
+
+/** The same shape carrying copy that resolves — extraction must not turn into a hammer. */
+const BLOCK_STYLE_LIVE = (): FlowDef => ({
+  flows: { "a.yaml": flow(...tapCta, "- assertVisible:", '    text: "Continue"') },
+  app: CLEAN_APP,
+  screens: CLEAN_SCREENS,
+  locale: CLEAN_LOCALE,
+});
+
 const MASKED = (): FlowDef => ({
   // "Documents Submitted" survives only as a mid-phrase fragment of admin's
   // longer live string — advisory. It is also, necessarily, not itself a locale
@@ -211,6 +297,21 @@ const MASKED = (): FlowDef => ({
   screens: CLEAN_SCREENS,
   locale: { ...CLEAN_LOCALE, docs: { empty: "No documents submitted" } },
   baseline: [{ lit: "documents submitted", reason: "fixture: abbreviation of a longer live string" }],
+});
+
+/** A flow selecting an id whose owner screen the nav audit cannot route to. */
+const AFFINITY = (): FlowDef => ({
+  flows: { "a.yaml": flow(...tapCta, '- tapOn:', '    id: "dead.cta"', '- assertVisible: "Continue"') },
+  app: { ...CLEAN_APP, "(main)/hidden/entry.tsx": appEntry("dead.cta") },
+  screens: {
+    ...CLEAN_SCREENS,
+    "(main)/hidden/entry.tsx": [{ id: "dead.cta", line: 2 }],
+  },
+  locale: CLEAN_LOCALE,
+  audit: {
+    screens: ["app/(auth)/entry.tsx", "app/(main)/hidden/entry.tsx"],
+    reachable: ["app/(auth)/entry.tsx"],
+  },
 });
 
 const CLEAN = (): FlowDef => ({
@@ -229,6 +330,10 @@ const ANCHORS = {
   localeMiss: "localeMiss.push({ ...c, cand: hit.cand, via: hit.w.just });",
   localeBaseline: "if (localeBaseline.has(x.cand)) continue;",
   missingBaselineGuard: 'violation list.");\n    process.exit(2);',
+  orphanExclusion: "if (!orphanedKeys.has(k)) liveValues.add(t);",
+  orphanAuditGuard: 'Restore the audit, then re-run.");\n    process.exit(2);',
+  blockText: "const m = line.match(COPY_RE) || line.match(TEXT_LINE_RE);",
+  affinity: "hits.push({ screen, id });",
 } as const;
 
 const FAULTS = {
@@ -250,6 +355,20 @@ const FAULTS = {
   localeBaseline: (s: string) => neutralize(s, ANCHORS.localeBaseline, "/* ratchet filter removed */"),
   /** the missing-baseline input guard degrades to an empty baseline. */
   missingBaselineGuard: (s: string) => neutralize(s, ANCHORS.missingBaselineGuard, 'violation list.");\n    process.exit(0);'),
+  /**
+   * check 3 stops excluding ORPHANED keys' values from the corpus, so the
+   * masking this rule closes comes back. Direction matters: widening the corpus
+   * makes the orphan-masked fixture PASS, which is the finding flipping.
+   */
+  orphanExclusion: (s: string) =>
+    neutralize(s, ANCHORS.orphanExclusion, "if (true) liveValues.add(t);"),
+  /** the orphan-classification input guard degrades to a pass instead of refusing. */
+  orphanAuditGuard: (s: string) =>
+    neutralize(s, ANCHORS.orphanAuditGuard, 'Restore the audit, then re-run.");\n    process.exit(0);'),
+  /** check 3 stops reading block-style `text:` matchers (the 2026-10-05 blind spot returns). */
+  blockText: (s: string) => neutralize(s, ANCHORS.blockText, "const m = line.match(COPY_RE);"),
+  /** check 5 stops collecting ids whose owner screen is outside reachable. */
+  affinity: (s: string) => neutralize(s, ANCHORS.affinity, "if (false) hits.push({ screen, id });"),
 } as const;
 
 // ── tests ─────────────────────────────────────────────────────────────────────
@@ -261,6 +380,9 @@ describe("flow-xcheck: healthy tree", () => {
     expect(r.out).toContain("✅ no dead-copy candidates");
     expect(r.out).toContain("✅ no masked-copy candidates");
     expect(r.out).toContain("✅ locale-only copy: clean");
+    expect(r.out).toContain(
+      "✅ screen affinity: every flow-selected id lives on a reachable screen"
+    );
     expect(r.out).not.toContain("❌");
     expect(r.code).toBe(0);
   });
@@ -347,10 +469,75 @@ describe("check 3 — DEAD COPY (blocking, promoted from advisory 2026-10-03)", 
     expect(r.code).toBe(2);
   });
 
+  it("does not let an orphaned key's value rescue a dead claim (live-values corpus)", () => {
+    // The purged confirm_ride.* shape: the copy sits in common.json under a key
+    // nothing renders, so it can never appear on device. The old corpus counted
+    // it as a rescue; the live-values corpus must not.
+    const r = runGate(ORPHAN_MASKED());
+    expect(r.out).toContain("❌ DEAD COPY (blocking)");
+    expect(r.out).toContain("Ride Confirmed!");
+    expect(r.code).toBe(2);
+  });
+
+  it("still counts a value a LIVE key carries, even when an orphaned key shares it", () => {
+    // Values decide, not keys: "Continue" renders through entry.continue, so the
+    // dead.continue twin must not poison it.
+    const r = runGate(ORPHAN_SHARED());
+    expect(r.out).toContain("✅ no dead-copy candidates");
+    expect(r.code).toBe(0);
+  });
+
   it("does not block once the detector is neutralised (non-vacuity)", () => {
     const r = runGate({ ...DEAD_COPY(), mutate: FAULTS.deadCopy });
     expect(r.code).toBe(0);
     expect(r.out).not.toContain("DEAD COPY (blocking)");
+  });
+
+  it("lets the orphaned value mask the claim again once the exclusion is neutralised (non-vacuity)", () => {
+    const r = runGate({ ...ORPHAN_MASKED(), mutate: FAULTS.orphanExclusion });
+    expect(r.code).toBe(0);
+    expect(r.out).not.toContain("DEAD COPY (blocking)");
+  });
+
+  it("checks block-style `text:` matchers, not just inline quotes (blind spot until 2026-10-05)", () => {
+    // `- assertVisible:` with `text: "…"` on its own line matched no line-regex
+    // before, so these claims were UNCHECKED — 51 across ~20 real flows, 4 of
+    // them dead. A claim the gate cannot see is worse than a masked one: the
+    // "every text assertion resolves" pass message would be a lie.
+    const r = runGate(BLOCK_STYLE_DEAD());
+    expect(r.out).toContain("❌ DEAD COPY (blocking)");
+    expect(r.out).toContain("Zzz ghost block copy");
+    expect(r.code).toBe(2);
+  });
+
+  it("keeps block-style copy that resolves", () => {
+    const r = runGate(BLOCK_STYLE_LIVE());
+    expect(r.out).toContain("✅ no dead-copy candidates");
+    expect(r.code).toBe(0);
+  });
+
+  it("does not see block-style copy once the extractor is neutralised (non-vacuity)", () => {
+    const r = runGate({ ...BLOCK_STYLE_DEAD(), mutate: FAULTS.blockText });
+    expect(r.code).toBe(0);
+    expect(r.out).not.toContain("DEAD COPY (blocking)");
+  });
+});
+
+describe("check 3 input guard — orphan classification (refuses to run)", () => {
+  it("refuses to run, loudly, when the orphan audit cannot run", () => {
+    // Degrading to the full value set would silently re-enable the exact masking
+    // the live-values corpus exists to close.
+    const r = runGate({ ...CLEAN(), i18nAudit: null });
+    expect(r.code).toBe(2);
+    expect(r.err).toContain("orphaned key's value can never mask a dead flow assertion");
+    expect(r.err).toContain("refusing");
+    // Same ci.yml constraint as check 5: hook output must never say "skipped".
+    expect(r.all).not.toMatch(/skip(ping|ped)/i);
+  });
+
+  it("does not block once the guard is neutralised (non-vacuity)", () => {
+    const r = runGate({ ...CLEAN(), i18nAudit: null, mutate: FAULTS.orphanAuditGuard });
+    expect(r.code).toBe(0);
   });
 });
 
@@ -406,6 +593,33 @@ describe("check 4 — MASKED COPY (advisory, must never block)", () => {
     expect(r.out).toContain("⚠ MASKED COPY (advisory, not blocking)");
     expect(r.out).toContain("only inside");
     expect(r.code).toBe(0);
+  });
+});
+
+describe("check 5 — SCREEN AFFINITY (advisory, must never block)", () => {
+  it("warns when a flow-selected id lives on a screen outside the audit's reachable set", () => {
+    const r = runGate(AFFINITY());
+    expect(r.out).toContain("⚠ SCREEN AFFINITY (advisory, not blocking)");
+    expect(r.out).toContain("app/(main)/hidden/entry.tsx");
+    // The finding must name the FLOW that selects the id, not just the id —
+    // otherwise the report tells the author nothing they can open.
+    expect(r.out).toContain("dead.cta  <- maestro/flows/a.yaml");
+    expect(r.code).toBe(0);
+  });
+
+  it("says so loudly (and still passes) when the nav audit cannot run at all", () => {
+    // The ci.yml `precommit-gates` job fails on any skipped/skipping line in
+    // hook output, so this tier must never reach for that vocabulary either.
+    const r = runGate({ ...CLEAN(), audit: null });
+    expect(r.out).toContain("SCREEN AFFINITY (advisory, not blocking): unavailable");
+    expect(r.out).not.toMatch(/skip(ping|ped)/i);
+    expect(r.code).toBe(0);
+  });
+
+  it("does not warn once the collector is neutralised (non-vacuity)", () => {
+    const r = runGate({ ...AFFINITY(), mutate: FAULTS.affinity });
+    expect(r.code).toBe(0);
+    expect(r.out).not.toContain("hold flow-selected testIDs");
   });
 });
 

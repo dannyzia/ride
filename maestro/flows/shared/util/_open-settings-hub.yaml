@@ -1,25 +1,26 @@
-# _open-settings-hub — open the rider Profile tab (the settings surface).
-# §9. Gate 1 REWIRE PASS 2 — CORRECTION.
-# This subflow used to tap a "Settings" row after opening the Profile tab. There
-# is no such row: the rider profile renders its settings inline (profile/index.tsx
-# renderSection blocks for account / preferences / support). The separate hub at
-# app/(main)/(customer)/(tabs)/settings/index.tsx DOES exist and carries
-# customer.settings.el-1 per row, but nothing in the rider tree routes to it —
-# the only inbound router.push/replace calls are three sub-screens navigating back.
-# That is an app-level navigation gap (logged to COVERAGE-MANIFEST.md), not a
-# selector problem, so this subflow now stops at the Profile tab and callers tap
-# the specific row directly via the SettingsRow testIDs added in this pass
-# (components/SettingsRow.tsx gained an optional testID prop).
+# _open-settings-hub — land on the rider settings HUB.
+# Opens the Profile tab, then taps customer.profile.push-settings-hub (the
+# "Settings" row added to the profile's Preferences section) and waits for the
+# hub to render. The hub carries customer.settings.el-1 per row and is the only
+# place several screens live (loyalty, ride pass, top-up, linked accounts, data
+# controls) — before that row existed nothing in the rider tree routed here and
+# QA had to deep-link, which is how rider/settings/07-loyalty-points.yaml used
+# to reach loyalty.
+# For the profile tab itself (tap a customer.profile.* row), use
+# _open-profile-tab.yaml instead — that is what most callers want.
 # Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - tapOn:
     id: "customer._layout.on-press"
     text: ".*Profile.*|.*Account.*"
-# Ground on customer.profile.el-1 (the Edit Profile row, first item in the account
-# section) rather than confirm-sign-out, which sits at the bottom of a ScrollView
-# and may be outside the rendered hierarchy before a scroll.
 - extendedWaitUntil:
     visible:
       id: "customer.profile.el-1"
     timeout: 15000
+- tapOn:
+    id: "customer.profile.push-settings-hub"
+- extendedWaitUntil:
+    visible:
+      id: "customer.settings.el-1"
+    timeout: 20000

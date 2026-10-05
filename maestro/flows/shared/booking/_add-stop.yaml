@@ -4,13 +4,18 @@
 # L867, "rider_home.add_stop_button"); stop entry reuses the same autocomplete
 # surface (type=stop mode) → customer.autocomplete.set-query input + text-filtered
 # customer.autocomplete.handle-place-select result row.
+# STALE-FLOW AUDIT 2026-10-04: the open-wait's alternatives included "Enter or choose
+# a location" (ORPHANED find_ride.enter_or_choose_location) and a "search_stop"
+# fragment; both are unrenderable now that find-ride/ is deleted (G-02b). Repointed
+# to the query input's own testID — the element this subflow taps next.
 # Class: AUTOMATABLE.
 appId: com.ride.bd
 ---
 - tapOn:
     id: "customer.home.set-stops-2"
 - extendedWaitUntil:
-    visible: ".*Where to.*|.*Enter or choose a location.*|.*search_stop.*"
+    visible:
+      id: "customer.autocomplete.set-query"
     timeout: 15000
 - tapOn:
     id: "customer.autocomplete.set-query"

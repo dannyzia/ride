@@ -24,7 +24,10 @@ tags: [driver, smoke]
 - extendedWaitUntil:
     visible: ".*Calls Remaining.*"
     timeout: 20000
+# STALE-FLOW AUDIT 2026-10-04: dropped the "Launch Free" alternative — it is the
+# DB plan NAME (no locale value, no app source; the home card renders no plan name),
+# so it could never match here. "Unlimited" is the card's live sentinel rendering.
 - assertVisible:
-    text: ".*Launch Free.*|.*Unlimited.*|.*Calls Remaining.*"
+    text: ".*Unlimited.*|.*Calls Remaining.*"
 - runFlow: ../../../shared/driver/_go-online.yaml
 - assertVisible: ".*Calls Remaining.*"

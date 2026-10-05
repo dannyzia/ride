@@ -13,7 +13,7 @@
  * Deep-link URL contract:
  *   ride://driver/home
  *   ride://driver/ride-tracking/{uuid}
- *   ride://rider/find-ride
+ *   ride://rider
  */
 
 import { router } from "expo-router";
@@ -174,7 +174,7 @@ const RIDER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
 
   // Promos
   "promo:available": () => {
-    router.push("/(main)/(customer)/apply-promos" as never);
+    router.push("/(main)/(customer)/(tabs)/settings/loyalty" as never);
     return true;
   },
 };
@@ -301,8 +301,9 @@ const DEEP_LINK_ROUTES: DeepLinkRoute[] = [
     handler: () => router.push("/(main)/(customer)/(tabs)/wallet" as never),
   },
   {
+    // Legacy alias: the find-ride screen was deleted; old shared links land on home.
     pattern: /^\/?rider\/find-ride\/?$/,
-    handler: () => router.push("/(main)/(customer)/find-ride" as never),
+    handler: () => router.push("/(main)/(customer)/(tabs)/home" as never),
   },
 ];
 
