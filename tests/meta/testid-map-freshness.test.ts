@@ -186,3 +186,144 @@ describe("runFreshnessCheck — module contract", () => {
     expect(after.length).toBe(before.length);
   });
 });
+
+// ── --head-vs-worktree (stage 5 in CI) ─────────────────────────────────────────────
+// The CI mode's whole value is WHAT it reads — the map at HEAD and the working
+// tree instead of the index — which unit fixtures cannot reach. So the SHIPPED
+// CLI is copied into a throwaway git repo (it resolves ROOT and MANIFEST from
+// __dirname, so a copy is a valid instance) and run exactly as the
+// `maestro-drift` job runs it. Each blocking case is PAIRED with a
+// fault-injected copy whose comparison is neutralised, asserting the outcome
+// flips: a gate that has become a no-op must FAIL this suite, not pass it.
+// The child env sets NODE_PATH to the repo's node_modules because the copied
+// testid-manifest.cjs requires `typescript`, which a tmpdir tree cannot see.
+describe("testid-map-freshness: --head-vs-worktree (stage 5 in CI)", () => {
+  const TOOLS = path.resolve(__dirname, "..", "..", "maestro", "tools");
+  const CHILD_ENV = {
+    ...process.env,
+    NODE_PATH: path.join(__dirname, "..", "..", "node_modules"),
+  };
+
+  const git = (root: string, args: string[]): void => {
+    execFileSync("git", args, {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...CHILD_ENV,
+        GIT_AUTHOR_NAME: "fixture",
+        GIT_AUTHOR_EMAIL: "fixture@example.com",
+        GIT_COMMITTER_NAME: "fixture",
+        GIT_COMMITTER_EMAIL: "fixture@example.com",
+      },
+    });
+  };
+
+  /**
+   * A committed map STALE for the committed tree: the tree declares "x.one",
+   * the map claims "x.gone" (vanished) and never records "x.one" (unrecorded).
+   * `fault` string-replaces the comparison in the copied tool.
+   */
+  const makeRepo = (fault?: { from: string; to: string }): string => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "fresh-hvw-"));
+    fs.mkdirSync(path.join(root, "maestro", "tools"), { recursive: true });
+    fs.mkdirSync(path.join(root, "app"), { recursive: true });
+    for (const f of ["testid-map-freshness.cjs", "testid-manifest.cjs"]) {
+      let src = fs.readFileSync(path.join(TOOLS, f), "utf8");
+      if (fault && f === "testid-map-freshness.cjs") {
+        expect(src).toContain(fault.from); // the injection point must exist
+        src = src.replace(fault.from, fault.to);
+      }
+      fs.writeFileSync(path.join(root, "maestro", "tools", f), src);
+    }
+    fs.writeFileSync(
+      path.join(root, "app", "a.tsx"),
+      'import { View } from "react-native";\nexport function A() {\n  return <View testID="x.one" />;\n}\n'
+    );
+    fs.writeFileSync(
+      path.join(root, "maestro", "tools", "testid-map.json"),
+      JSON.stringify({ total: 1, screens: { "a.tsx": [{ id: "x.gone", line: 1 }] } })
+    );
+    git(root, ["init", "-q"]);
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "fixture"]);
+    return root;
+  };
+
+  // stdout is the --json result and stderr the banners — kept separate because
+  // the failure path writes both, and only stdout is parseable JSON.
+  const run = (root: string): { code: number; stdout: string; stderr: string } => {
+    try {
+      const stdout = execFileSync(
+        process.execPath,
+        ["maestro/tools/testid-map-freshness.cjs", "--head-vs-worktree", "--json"],
+        { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: CHILD_ENV }
+      );
+      return { code: 0, stdout, stderr: "" };
+    } catch (err) {
+      const e = err as { status: number; stdout?: string; stderr?: string };
+      return { code: e.status, stdout: e.stdout || "", stderr: e.stderr || "" };
+    }
+  };
+
+  it(
+    "blocks a committed map that is stale for the checked-out tree (exit 2)",
+    () => {
+      const root = makeRepo();
+      try {
+        const { code, stdout } = run(root);
+        expect(code).toBe(2);
+        const parsed = JSON.parse(stdout);
+        expect(parsed.ok).toBe(false);
+        expect(parsed.stats.mode).toBe("head-vs-worktree");
+        expect(parsed.stats.vanished).toBe(1); // x.gone claimed by HEAD, absent from the tree
+        expect(parsed.stats.unrecorded).toBe(1); // x.one in the tree, absent from HEAD's map
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    },
+    60000
+  );
+
+  it(
+    "passes when the committed map matches the checked-out tree (exit 0)",
+    () => {
+      const root = makeRepo();
+      try {
+        // Regenerate the map from the tree and commit it — the state the gate exists to accept.
+        execFileSync(process.execPath, ["maestro/tools/testid-manifest.cjs"], {
+          cwd: root,
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+          env: CHILD_ENV,
+        });
+        git(root, ["add", "-A"]);
+        git(root, ["commit", "-q", "-m", "regen"]);
+        const { code, stdout } = run(root);
+        expect(code).toBe(0);
+        expect(JSON.parse(stdout).ok).toBe(true);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    },
+    60000
+  );
+
+  it(
+    "fault pair: neutralising the comparison turns the stale fixture GREEN — the exit 2 is the detector's, not the plumbing's",
+    () => {
+      const root = makeRepo({
+        from: "const from = buildAttribution(committed);",
+        to: "const from = buildAttribution(fresh);",
+      });
+      try {
+        const { code, stdout } = run(root);
+        expect(JSON.parse(stdout).ok).toBe(true);
+        expect(code).toBe(0);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    },
+    60000
+  );
+});

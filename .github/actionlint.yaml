@@ -1,0 +1,19 @@
+# Configuration — actionlint (workflow-YAML lint).
+#
+# Purpose:     Declares self-hosted runner labels actionlint cannot know, so
+#              its runner-label check stops flagging them as unknown. Read
+#              automatically by actionlint when run from the repo root.
+# Owner:       Coding model
+# Status:      ACTIVE
+# Source of truth: this file IS the runner-label registry.
+# Related (concrete paths):
+#   - .github/workflows/device-preflight.yml — the self-hosted lane that runs on `ride-avd`
+#   - .github/workflows/ci.yml — the `actionlint` job that consumes this file
+# Last verified: 2026-10-05, by Coding model, actionlint 1.7.12 clean on all
+#   three workflow files after registering `ride-avd`.
+# How to update: when a workflow gains a self-hosted runner label, add it here;
+#   only CUSTOM labels belong here (GitHub-hosted labels actionlint already
+#   knows). Glob patterns are supported if a runner fleet shares a prefix.
+self-hosted-runner:
+  labels:
+    - ride-avd

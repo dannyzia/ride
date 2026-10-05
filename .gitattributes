@@ -1,0 +1,11 @@
+# Shell scripts must check out with LF on every OS.
+#
+# The Maestro device-day scripts are executed by Git Bash on Windows — including
+# the self-hosted `device-day` lane in .github/workflows/device-preflight.yml —
+# and Git for Windows defaults to core.autocrlf=true, which would write CRLF
+# into these files on a fresh checkout and corrupt them for bash. `eol=lf`
+# overrides autocrlf for these paths regardless of the machine's git config.
+# Same class for the git hooks (scripts/git-hooks/*), which Git executes with
+# its bundled bash on Windows.
+*.sh text eol=lf
+scripts/git-hooks/* text eol=lf

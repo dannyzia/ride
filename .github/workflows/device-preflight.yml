@@ -1,14 +1,18 @@
 # Device-day preflight — the Bash form of maestro/DEVICE-DAY-RUNBOOK.md §1B
-# preconditions, on a hosted runner, so adb / AVD / key-flow drift is caught at
-# PR time instead of on the one machine that owns the AVD.
+# preconditions. TWO lanes: a hosted runner (no device — adb / Maestro / key-flow
+# drift fails a PR) and a self-hosted Windows device-day host (real AVD — the
+# emulator + AVD preconditions that SKIP on ubuntu are hard failures there).
 #
-# Purpose:     Run `run-device-day.sh --check` — the SAME script the device day
-#              runs — under PREFLIGHT_DEVICE=optional, then run the two
-#              self-tests that guard the preflight logic itself. A CI runner has
-#              no emulator and no AVD, so those two checks report SKIP instead
-#              of failing; everything else (adb resolution, Maestro CLI, key-flow
-#              files) stays blocking. The gate therefore fails for real drift and
-#              never for "this machine has no phone".
+# Purpose:     Lane 1 `preflight` runs `run-device-day.sh --check` — the SAME
+#              script the device day runs — under PREFLIGHT_DEVICE=optional on
+#              ubuntu-latest, then the two self-tests that guard the preflight
+#              logic itself. A hosted runner has no emulator and no AVD, so those
+#              two checks report SKIP instead of failing; everything else (adb
+#              resolution, Maestro CLI, key-flow files) stays blocking, so the
+#              lane fails for real drift and never for "this machine has no phone".
+#              Lane 2 `device-day` runs the same `--check` on the self-hosted
+#              Windows host that owns the AVD, under PREFLIGHT_DEVICE=required:
+#              the emulator binary and the AVD are verified, not skipped.
 # Owner:       Testing model (QA lane); device-day mechanics owned by Zia
 # Status:      ACTIVE
 # Related (concrete paths):
@@ -27,13 +31,30 @@
 #   and maestro on a minimal PATH) because pushing was out of scope. Verified
 #   exit 0 for the healthy+no-device case, exit 1 for missing adb and for a
 #   missing Maestro, and exit 2 when the adb resolver's no-adb-anywhere path is
-#   fault-injected. The FIRST real GitHub runner execution is still unproven;
-#   treat a red first run as a finding about the installer steps below, not
-#   about the preflight.
+#   fault-injected.
+#   2026-10-04 (real-AVD lane): the `device-day` job's three commands were run
+#   on the AVD-owning Windows host itself (the machine this lane pins to):
+#   PREFLIGHT_DEVICE=required --check exit 0 with emulator ✓ and AVD
+#   Medium_Phone ✓ (adb 37, maestro 2.6.1), adb-env-selftest exit 0,
+#   section7 gate exit 0. A runner for the lane is NOT yet registered on that
+#   host (Settings → Actions → Runners must add one with label `ride-avd`), so
+#   the first GitHub-queued execution of BOTH lanes is still unproven; treat a
+#   red first run as a finding about runner setup, not about the preflight.
+#   .gitattributes pins *.sh to LF so a Windows checkout cannot hand Git Bash a
+#   CRLF script.
+#   2026-10-05 (weekly schedule): a `schedule` trigger (Mondays 03:17 UTC =
+#   09:17 Asia/Dhaka) was added so the real-AVD lane catches adb/Maestro/AVD rot
+#   on the self-hosted host even when no maestro/ file changes — path-filtered
+#   triggers cannot do that. YAML parsed locally; like the lane's first queued
+#   run above, the first SCHEDULED run stays unproven until the `ride-avd`
+#   runner is registered on the host.
 # How to update: keep this workflow pointing at the scripts, never a copy of
 #   their logic — a re-implementation here is exactly the drift it exists to
 #   catch. If a check moves between blocking and skipped, change
-#   PREFLIGHT_DEVICE semantics in run-device-day.sh, not the steps below.
+#   PREFLIGHT_DEVICE semantics in run-device-day.sh, not the steps below. The
+#   hosted lane's job id/name are kept stable for required-status-check
+#   contexts; the device lane's runner requirements live in the comment above
+#   its job and in the runbook's §"The same preflight in CI".
 
 name: Device preflight
 
@@ -42,7 +63,9 @@ on:
     branches: [main, develop, implementation]
     # Path-filtered on purpose: the job only re-checks the Maestro toolchain, so
     # an app-only change has nothing to say about adb/AVD/flow drift and should
-    # not spend a runner. workflow_dispatch runs it on demand regardless.
+    # not spend a runner. workflow_dispatch runs it on demand regardless, and
+    # the weekly `schedule` below catches host/toolchain ROT when no maestro/
+    # change ever happens (see the cron comment).
     paths:
       - 'maestro/**'
       - '.github/workflows/device-preflight.yml'
@@ -51,13 +74,49 @@ on:
       - 'maestro/**'
       - '.github/workflows/device-preflight.yml'
   workflow_dispatch:
+  # Weekly rot check. Everything this lane pins can rot with ZERO commits in
+  # this repo — a Windows update, a platform-tools/adb change, a deleted AVD,
+  # a moved emulator, a Maestro install-recipe break — and the path-filtered
+  # triggers above stay silent through all of it. This is the only trigger
+  # that fires when the repo is quiet, which is exactly when host rot goes
+  # unnoticed. Monday 03:17 UTC = 09:17 Asia/Dhaka: start of the local work
+  # week (the device-day host is most likely powered on) and off GitHub's
+  # congested top of the hour. If the host is off, the self-hosted job simply
+  # queues until its runner connects; the hosted lane runs at schedule time
+  # regardless.
+  schedule:
+    - cron: '17 3 * * 1'
 
 jobs:
+  # Hosted lane — ALWAYS available, even when the AVD host is off. The job id
+  # and display name are kept unchanged on purpose: a required status check in
+  # branch protection is keyed to them.
   preflight:
     name: device-day preflight (no device required)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      # Static lint for the toolchain's bash — the same analyzer
+      # scripts/install-hooks.js runs on the pre-commit hook (`shellcheck -x`),
+      # now covering maestro/ in CI. Scripts are DISCOVERED via git ls-files,
+      # not listed, so a NEW script under maestro/ is linted the day it lands;
+      # `-x` follows the `# shellcheck source=` directives the scripts already
+      # carry (without it every sourced file reports SC1091).
+      - name: ShellCheck the Maestro scripts
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            echo "::notice::runner image has no shellcheck; installing it"
+            sudo apt-get update -qq
+            sudo apt-get install -y shellcheck
+          fi
+          mapfile -t scripts < <(git ls-files 'maestro/**/*.sh')
+          if [ "${#scripts[@]}" -eq 0 ]; then
+            echo "::error::no shell scripts found under maestro/ — the discovery pattern is broken"
+            exit 1
+          fi
+          echo "shellcheck: linting ${#scripts[@]} script(s)"
+          shellcheck -x "${scripts[@]}"
 
       # The preflight resolves ONE pinned adb and must prove it resolves. The
       # runner image normally ships platform-tools; if a future image drops it,
@@ -99,5 +158,62 @@ jobs:
 
       # The §7 gate is extracted from the runbook markdown at runtime, so this
       # also fails if the runbook's preflight section drifts from its intent.
+      - name: §7 preflight gate self-test
+        run: bash maestro/utils/section7-preflight-gate.sh
+
+  # ── Real-AVD lane (self-hosted Windows device-day host) ─────────────────────
+  # Runs the SAME `--check` as the hosted lane, but WHERE it runs is the point:
+  # this job's runner IS the device-day host, so PREFLIGHT_DEVICE=required turns
+  # the two preconditions that SKIP on ubuntu — the emulator binary and the AVD —
+  # into hard failures. Delete or rename the AVD, break the emulator install,
+  # and this lane goes red instead of reporting ⊘ SKIP forever.
+  #
+  # RUNNER SETUP (one-time, on the AVD-owning Windows host; prose in runbook
+  # §"The same preflight in CI"; automated by
+  # maestro/utils/bootstrap-ride-avd-runner.ps1, which also verifies this job's
+  # three commands before declaring success):
+  #   - Register the runner with the custom label `ride-avd` (Settings →
+  #     Actions → Runners → New self-hosted runner:
+  #     config.cmd --labels ride-avd). The label pins the job to the machine
+  #     that owns the AVD; any other Windows runner fails the required checks.
+  #   - Run the runner as the AVD-OWNING USER (service logon account = that
+  #     user, or an interactive run.cmd from their session). The AVD lives in
+  #     %USERPROFILE%\.android\avd and the emulator resolves via %LOCALAPPDATA%,
+  #     so a LocalSystem service sees neither. `--check` never boots anything,
+  #     so no desktop session is required — a service logon is fine.
+  #   - The runner's PATH must match an interactive device day: Git Bash
+  #     (`bash`), adb, and Maestro. This job installs NOTHING on purpose — the
+  #     host toolchain is the thing under test, and an installer here would mask
+  #     the very drift this lane exists to catch.
+  #
+  # Fork guard: a self-hosted runner must never execute a forked PR's code.
+  # Same-repo branches (this repo's normal PR flow) are unaffected.
+  device-day:
+    name: device-day preflight — real AVD (self-hosted)
+    runs-on: [self-hosted, windows, ride-avd]
+    timeout-minutes: 15
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      # THE gate. `required` is run-device-day.sh's device-day default, set
+      # explicitly so the lane cannot silently inherit a softer value: the
+      # emulator binary and the AVD are blocking preconditions here and the
+      # transcript shows ✓, never ⊘ SKIP. Still side-effect free: no boot, no
+      # Metro/utils-server, no flow, no evidence directory.
+      - name: Device-day preflight (real AVD, PREFLIGHT_DEVICE=required)
+        env:
+          PREFLIGHT_DEVICE: required
+        run: bash maestro/utils/run-device-day.sh --check
+
+      # Same two logic guards as the hosted lane. Run on the real host too
+      # because this resolution environment (Git Bash + the dual adb builds +
+      # the actual PATH) is where their coverage has teeth.
+      - name: Single-adb pinning self-test
+        run: bash maestro/utils/adb-env-selftest.sh
+
       - name: §7 preflight gate self-test
         run: bash maestro/utils/section7-preflight-gate.sh

@@ -6,7 +6,7 @@
  * and still PASSES what it claims to pass.
  *
  * Usage:
- *   node scripts/pre-commit-harness.cjs                 # all 7 gates, block+pass
+ *   node scripts/pre-commit-harness.cjs                 # all 8 gates, block+pass
  *   node scripts/pre-commit-harness.cjs --gate 5        # one gate
  *   node scripts/pre-commit-harness.cjs --push          # drive scripts/git-hooks/pre-push
  *   node scripts/pre-commit-harness.cjs --push --gate 4 # one pre-push exit path
@@ -90,15 +90,51 @@ const TOOL_FILES = [
   path.join("scripts", "check-vacuous-assertions.js"),
   path.join("scripts", "check-date-in-sql.js"),
   path.join("maestro", "tools", "flow-xcheck.cjs"),
+  // Stage 3's advisory screen-affinity tier SPAWNS this at run time. The harness
+  // worktree sits at the base commit, so without the copy the tier degrades to
+  // "unavailable" there instead of exercising the real reachability report.
+  path.join("scripts", "audit-nav-integrity.cjs"),
   path.join("maestro", "tools", "testid-idempotence.cjs"),
   path.join("maestro", "tools", "testid-map-freshness.cjs"),
   path.join("maestro", "tools", "testid-flow-currency.cjs"),
   // The locale-only ratchet reads this at RUN time. It must be copied into the
   // worktree or stage 3's missing-baseline guard aborts every harness case.
   path.join("maestro", "tools", "flow-locale-baseline.json"),
+  // Stage 3's dead-copy tier consumes these at RUN time too (same class as the
+  // two spawn notes above): the suppressions file, the orphan-audit resolver
+  // and its baseline (the live-values corpus REFUSES to run without the
+  // baseline). The CONTENT those tools scan — flows, app source, locales, the
+  // testID map — is CORPUS, not tools, and is overlaid wholesale below.
+  path.join("maestro", "tools", "flow-xcheck-suppressions.json"),
+  path.join("scripts", "audit-i18n-orphans.cjs"),
+  path.join("scripts", "i18n-orphan-baseline.json"),
   path.join("maestro", "tools", "testid-manifest.cjs"),
   path.join("maestro", "tools", "add-testids.cjs"),
 ];
+
+/**
+ * CORPUS — the content the gates SCAN (as opposed to the tools they run).
+ * Replaced WHOLESALE per directory, because deletions are state too: the base
+ * commit still contains flows/screens/locale keys the working tree has deleted
+ * or fixed, and a per-file copy would leave exactly that stale content behind.
+ * Overlaying the corpus is what keeps the worktree a CONSISTENT state — without
+ * it the run pairs the WORKING-TREE gates with the base commit's corpus and
+ * reports findings that exist in neither state. MEASURED 2026-10-05 (twice):
+ * gate 3's pass case blocked first on HEAD-era locale/suppressions skew, and
+ * after those were overlaid, on HEAD-era flows + source + map carrying two
+ * dead-copy findings and one new locale-only literal the working tree had
+ * already fixed. The harness proves the GATES behave on the working tree's
+ * corpus; the committed-state question belongs to the CI jobs, which audit the
+ * checkout.
+ */
+const CORPUS_DIRS = [
+  path.join("maestro", "flows"),
+  "app",
+  "components",
+  "i18n",
+];
+/** Selector resolution reads the map as data — same class as the dirs above. */
+const CORPUS_FILES = [path.join("maestro", "tools", "testid-map.json")];
 
 /** A benign app/ edit: every later stage RUNS on it, and all of them pass. */
 const BENIGN_APP_EDIT = "app/(auth)/_layout.tsx";
@@ -295,6 +331,33 @@ const GATES = [
   },
   {
     n: 7,
+    key: "shellcheck",
+    title: "shellcheck (shell scripts)",
+    blockBanner: "ShellCheck gate failed",
+    ranMarker: "ShellCheck gate: clean",
+    cases: [
+      {
+        // The probe is written into the worktree and staged, so `git ls-files`
+        // discovers it alongside the repo's real scripts — the gate lints the
+        // whole discovered set on every commit, not only staged changes.
+        name: "blocks a tracked shell script carrying a shellcheck finding (SC2086)",
+        expect: "block",
+        apply: (ctx) =>
+          ctx.write(
+            "harness-probe.sh",
+            "#!/bin/sh\n# harness probe — deliberately unquoted expansion (SC2086)\necho $harness_unquoted\n"
+          ),
+      },
+      {
+        name: "passes a clean shell script and reports that it linted",
+        expect: "pass",
+        apply: (ctx) =>
+          ctx.write("harness-probe.sh", "#!/bin/sh\n# harness probe\necho \"harness probe\"\n"),
+      },
+    ],
+  },
+  {
+    n: 8,
     key: "lint",
     title: "eslint (staged files only)",
     // No rule in .eslintrc.json is set to "error" (0 errors / 302 warnings at
@@ -493,7 +556,47 @@ function copyTools(root, wt, { copy }) {
     fs.copyFileSync(src, path.join(wt, rel));
     copied.push(rel);
   }
+  // The shellcheck gate (stage 7) lints the DISCOVERED shell scripts — its
+  // inputs, not tools. Overlay them from the root worktree for the same reason
+  // as TOOL_FILES: the worktree sits at the base commit, and MEASURED
+  // 2026-10-05 showed a HEAD-vs-worktree divergence (HEAD's
+  // maestro/utils/bootstrap-device-day.sh carried SC2034/SC2164 the working
+  // tree had already fixed) that failed the baseline and masked every case.
+  // The harness proves the GATES behave; the committed-state question belongs
+  // to the CI shellcheck job, which lints the checkout.
+  for (const rel of shellScriptSet(root)) {
+    const src = path.join(root, rel);
+    if (!fs.existsSync(src)) continue;
+    fs.copyFileSync(src, path.join(wt, rel));
+    copied.push(rel);
+  }
+  // Corpus is replaced WHOLESALE (rm + recursive copy), not copied file by
+  // file: the working tree's DELETIONS must propagate too, or the base
+  // commit's stale screens/flows come back and the gates find findings that
+  // the root working tree does not have.
+  for (const rel of CORPUS_DIRS) {
+    const src = path.join(root, rel);
+    if (!fs.existsSync(src)) continue;
+    const dest = path.join(wt, rel);
+    fs.rmSync(dest, { recursive: true, force: true });
+    fs.cpSync(src, dest, { recursive: true });
+    copied.push(rel + "/");
+  }
+  for (const rel of CORPUS_FILES) {
+    const src = path.join(root, rel);
+    if (!fs.existsSync(src)) continue;
+    fs.copyFileSync(src, path.join(wt, rel));
+    copied.push(rel);
+  }
   return copied;
+}
+
+/** The shellcheck gate's input set — the same discovery its hook stage uses. */
+function shellScriptSet(root) {
+  return git(["ls-files", "*.sh", "scripts/git-hooks/*"], root)
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 /**
@@ -609,7 +712,12 @@ function runHarness({ hook = "pre-commit", gates, base = "HEAD", copy = true, ke
   let baseline = null;
 
   try {
-    git(["worktree", "add", "--detach", "--quiet", wt, base], ROOT);
+    // Checkout with autocrlf=false: the host's Windows config would otherwise
+    // write CRLF into the worktree's shell scripts and the shellcheck gate
+    // (gate 7) would report SC1017 on every one — the case results would be
+    // measuring the host's EOL conversion instead of the gates. Linux CI checks
+    // out LF; this makes the harness see the same bytes CI does.
+    git(["-c", "core.autocrlf=false", "worktree", "add", "--detach", "--quiet", wt, base], ROOT);
     // After `worktree add` — the link target is inside the directory it creates.
     link = linkNodeModules(wt);
     copyTools(ROOT, wt, { copy });
@@ -824,4 +932,14 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { runHarness, GATES, PUSH_GATES, HOOKS, TOOL_FILES, prePushStdin, HarnessError };
+module.exports = {
+  runHarness,
+  GATES,
+  PUSH_GATES,
+  HOOKS,
+  TOOL_FILES,
+  CORPUS_DIRS,
+  CORPUS_FILES,
+  prePushStdin,
+  HarnessError,
+};

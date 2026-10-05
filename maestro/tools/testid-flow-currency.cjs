@@ -44,6 +44,20 @@
  * and the state being committed. Reading the worktree instead would credit the
  * commit with a rename the author has not staged yet.
  *
+ * ── CI MODE — `--head-vs-worktree` (2026-10-05, owner ruling) ──────────────────
+ * On a clean CI checkout nothing is staged, so the index diff is identity and
+ * this gate would pass vacuously. The CI mode asks the same question of the
+ * COMMITTED state: before = the map AT HEAD, after = the map REGENERATED from
+ * the checked-out app/ tree (the sibling testid-map-freshness.cjs's
+ * generateMap). Removed ids therefore = "ids the committed map claims but the
+ * tree no longer declares" — the map-at-HEAD-vs-regenerated reading the owner
+ * ruled for this mode (2026-10-05) — intersected, unchanged, with the ids
+ * flows select (read from the worktree in this mode). Needs no git history, so
+ * it works on shallow checkouts. The flow-staged stand-down does not apply
+ * here: there is no index, and the CI job runs stage 3 (flow-xcheck) on every
+ * run anyway, which is the authoritative selector-resolution check. Wired into
+ * the `maestro-drift` job of .github/workflows/ci.yml.
+ *
  * ── Cost ─────────────────────────────────────────────────────────────────────
  * Two `git show` and one `git grep --cached`. No `checkout-index`, no map
  * regeneration, no temp dirs — this stage is materially cheaper than stage 5 and
@@ -54,8 +68,13 @@
  *
  * Usage:  node maestro/tools/testid-flow-currency.cjs
  */
+const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
+// The CI mode regenerates the map from the tree — one generator contract, one
+// consumer here (same pattern as the scratch-db-url policy: never inline it).
+const { generateMap } = require("./testid-map-freshness.cjs");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const MAP_RELPATH = "maestro/tools/testid-map.json";
@@ -156,16 +175,19 @@ function parseMap(json, label) {
 }
 
 /**
- * Every `id:` selector the INDEX's flows select, mapped to the flows selecting
- * it. Read with `git grep --cached` (one subprocess for the whole tree) rather
- * than by walking files, so it sees the committed state and never the worktree.
+ * Every `id:` selector the flows select, mapped to the flows selecting it. By
+ * default read from the INDEX with `git grep --cached` (one subprocess for the
+ * whole tree) rather than by walking files, so it sees the committed state and
+ * never the worktree. `opts.source: "worktree"` (the CI mode) drops `--cached`
+ * so the same grep sees the working tree instead.
  *
  * `git grep` exits 1 when nothing matches. That is a legitimate empty result,
  * not a failure, so it is handled here instead of being allowed to surface as a
  * BrokenInputError — otherwise the very first commit with no flows would fail.
  */
-function flowSelectors() {
+function flowSelectors(opts = {}) {
   const used = new Map(); // id -> Set(flow relpaths)
+  const cached = opts.source === "worktree" ? [] : ["--cached"];
   let out;
   try {
     // -z makes git grep emit NUL-separated triplets (path \0 line \0 match), which
@@ -177,7 +199,7 @@ function flowSelectors() {
     // gate into a no-op that always passes. -z makes the parse total.
     out = git([
       "grep",
-      "--cached",
+      ...cached,
       "-z",
       "-n",
       "-o",
@@ -234,15 +256,35 @@ function diffRemoved(beforeIds, afterIds) {
   return removed.sort();
 }
 
+/** Regenerate the map from the WORKING TREE's app/ — the CI mode's after side. */
+function regeneratedWorktreeMapIds() {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "testid-flow-currency-"));
+  try {
+    const out = path.join(tmp, "regenerated-testid-map.json");
+    generateMap(path.join(ROOT, "app"), out);
+    return parseMap(fs.readFileSync(out, "utf8"), "map regenerated from the worktree app/ tree");
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 /**
  * Run the gate.
- * @returns {{blocked:boolean, reason:string, removed:string[], dead:string[], deadFiles:Map<string,string[]>, flowStaged:boolean, flowSelectorCount:number}}
+ * @param {{mode?: "index" | "head-vs-worktree"}} [opts] `index` (default) is the
+ *   pre-commit question: what does the state being committed delete? `head-vs-worktree`
+ *   is the CI question (2026-10-05): map at HEAD vs the map regenerated from the
+ *   checked-out tree — see the CI MODE header block.
+ * @returns {{blocked:boolean, reason:string, mode:string, removed:string[], dead:string[], deadFiles:Map<string,string[]>, flowStaged:boolean, flowSelectorCount:number}}
  */
-function runCurrencyCheck() {
+function runCurrencyCheck(opts = {}) {
+  const mode = opts.mode === "head-vs-worktree" ? "head-vs-worktree" : "index";
   const headJson = headMapJson();
-  const stagedJson = indexMapJson();
   const beforeIds = headJson ? parseMap(headJson, `HEAD:${MAP_RELPATH}`) : null;
-  const afterIds = parseMap(stagedJson, `staged ${MAP_RELPATH}`);
+  const afterIds =
+    mode === "head-vs-worktree"
+      ? regeneratedWorktreeMapIds()
+      : parseMap(indexMapJson(), `staged ${MAP_RELPATH}`);
+  const flowStaged = mode === "head-vs-worktree" ? false : anyFlowStaged();
 
   // No pre-commit map (initial commit): there is no "before", so nothing can have
   // been orphaned by this commit. Stage 5 still guards the map's self-consistency.
@@ -253,31 +295,36 @@ function runCurrencyCheck() {
       removed: [],
       dead: [],
       deadFiles: new Map(),
-      flowStaged: anyFlowStaged(),
+      mode,
+      flowStaged,
       flowSelectorCount: 0,
     };
   }
 
   const removed = diffRemoved(beforeIds, afterIds);
-  const selectors = flowSelectors();
+  const selectors = flowSelectors(
+    mode === "head-vs-worktree" ? { source: "worktree" } : {}
+  );
   const deadFiles = new Map();
   for (const id of removed) {
     const files = selectors.get(id);
     if (files) deadFiles.set(id, [...files].sort());
   }
   const dead = [...deadFiles.keys()].sort();
-  const flowStaged = anyFlowStaged();
 
   if (dead.length === 0) {
     return {
       blocked: false,
       reason:
         removed.length === 0
-          ? "this commit changes no testID identity — no selector can be orphaned"
+          ? mode === "head-vs-worktree"
+            ? "the checked-out tree removes no testID the map at HEAD claims — no selector can be orphaned"
+            : "this commit changes no testID identity — no selector can be orphaned"
           : `${removed.length} testID(s) removed, none selected by any flow`,
       removed,
       dead: [],
       deadFiles,
+      mode,
       flowStaged,
       flowSelectorCount: selectors.size,
     };
@@ -292,6 +339,7 @@ function runCurrencyCheck() {
       removed,
       dead,
       deadFiles,
+      mode,
       flowStaged,
       flowSelectorCount: selectors.size,
     };
@@ -299,19 +347,24 @@ function runCurrencyCheck() {
 
   return {
     blocked: true,
-    reason: `${dead.length} removed testID(s) are still selected by flows, and this commit stages no flow`,
+    reason:
+      mode === "head-vs-worktree"
+        ? `${dead.length} testID(s) the map at HEAD claims are gone from the checked-out tree and still selected by flows`
+        : `${dead.length} removed testID(s) are still selected by flows, and this commit stages no flow`,
     removed,
     dead,
     deadFiles,
+    mode,
     flowStaged,
     flowSelectorCount: selectors.size,
   };
 }
 
 function main() {
+  const mode = process.argv.includes("--head-vs-worktree") ? "head-vs-worktree" : "index";
   let r;
   try {
-    r = runCurrencyCheck();
+    r = runCurrencyCheck({ mode });
   } catch (err) {
     if (err instanceof BrokenInputError) {
       // Exit 2, never 0: an unreadable map or a git failure must not read as a
@@ -332,20 +385,33 @@ function main() {
       for (const f of r.deadFiles.get(id)) console.error(`       selected by ${f}`);
     }
     console.error("");
-    console.error(
-      "   Flows are only checked against testIDs when a flow is staged, so committing this"
-    );
-    console.error(
-      "   rename alone leaves dead selectors that surface later as an unrelated failure."
-    );
-    console.error("   Fix: update the flow(s) above to the new testID and stage them in this");
-    console.error("         commit, or restore the testID if the rename was not intended.");
+    if (mode === "head-vs-worktree") {
+      console.error(
+        "   The map at HEAD claims testID(s) the checked-out tree no longer declares, and"
+      );
+      console.error("   flows still select them. Fix: regenerate the map");
+      console.error("   (node maestro/tools/testid-manifest.cjs) and update the flow(s) above");
+      console.error("   to the new testID, in the same commit.");
+    } else {
+      console.error(
+        "   Flows are only checked against testIDs when a flow is staged, so committing this"
+      );
+      console.error(
+        "   rename alone leaves dead selectors that surface later as an unrelated failure."
+      );
+      console.error("   Fix: update the flow(s) above to the new testID and stage them in this");
+      console.error("         commit, or restore the testID if the rename was not intended.");
+    }
     process.exitCode = 1;
     return;
   }
 
+  // Default-mode output keeps its historical shape verbatim — the harness's
+  // gate 6 ranMarker pins it (tagging it `[index]` silently un-ran that gate,
+  // MEASURED 2026-10-05). The CI mode opts into its tag explicitly.
+  const tag = r.mode === "head-vs-worktree" ? " [head-vs-worktree]" : "";
   console.log(
-    `✅ flow currency gate: clean (${r.flowSelectorCount} flow-selected testIDs; ${r.reason})`
+    `✅ flow currency gate${tag}: clean (${r.flowSelectorCount} flow-selected testIDs; ${r.reason})`
   );
   process.exitCode = 0;
 }

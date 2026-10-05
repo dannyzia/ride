@@ -18,7 +18,18 @@
 # map's 1107 ids, and the other 1016 were verified to rot with flow-xcheck still
 # reporting "every id: selector resolves". This stage regenerates the map from
 # the STAGED app/ tree in a sandbox and diffs id -> file attribution against the
-# STAGED map. Seven stages now, eslint last (it exits 0 early when no JS/TS staged).
+# STAGED map. Eight stages now, eslint last (it exits 0 early when no JS/TS staged).
+#
+# 2026-10-05 shellcheck gate (stage 7): repo-wide parity with the CI `shellcheck`
+# job of .github/workflows/ci.yml — the SAME discovery (`git ls-files '*.sh'
+# 'scripts/git-hooks/*'`) and the SAME `shellcheck -x`, so a shell-script warning
+# blocks HERE before it ever reaches CI. Runs on EVERY commit, not only shell
+# commits: `-x` follows `# shellcheck source=` links, so an edit to a sourced
+# script can break a script this commit never staged — a staged-only trigger
+# would let that through. ~1s for the whole set. Absent shellcheck = WARN + skip
+# (install-hooks.js: "not a project dependency, so its absence is not a
+# failure"); the CI precommit-gates job installs shellcheck, so its zero-skip
+# rule still holds there.
 #
 # 2026-10-03 flow-currency gate (stage 6): the stage above proves the map agrees
 # with app/ but says nothing about the FLOWS. Rename a testID and regenerate the
@@ -84,9 +95,9 @@ else
     echo "   Fix:  use a real testID (verify it against the screen source, not the map alone),"
     echo "         or regenerate the manifest after an app/ change:"
     echo "         node maestro/tools/testid-manifest.cjs"
-    echo "   Note: this gate does NOT verify screen-affinity (whether an element is on the"
-    echo "   screen the flow is standing on). That is a runtime property; see the header in"
-    echo "   flow-xcheck.cjs for the two static approximations that were measured and rejected."
+    echo "   Note: screen-affinity (whether the element sits on the screen the flow is standing"
+    echo "   on) is checked ADVISORILY at the end of the gate output since 2026-10-04 and never"
+    echo "   blocks; see check 5 in flow-xcheck.cjs and scripts/audit-nav-integrity.cjs."
     exit 1
   fi
 fi
@@ -189,15 +200,38 @@ else
   fi
 fi
 
+echo "⏳ Pre-commit: ShellCheck gate (shell scripts)..."
+
+# Stage 7. Lints EVERY tracked shell script (worktree bytes) — see the header
+# note for why this is not staged-scoped. Zero scripts found = the discovery
+# pattern broke = fail closed, same as the CI job's guard.
+if ! command -v shellcheck >/dev/null 2>&1; then
+  echo "⚠ shellcheck not installed — skipping shellcheck gate (install: apt-get install shellcheck | winget install shellcheck)."
+else
+  mapfile -t SHELL_SCRIPTS < <(git ls-files '*.sh' 'scripts/git-hooks/*')
+  if [ ${#SHELL_SCRIPTS[@]} -eq 0 ]; then
+    echo "❌ ShellCheck gate could not run — git ls-files found no shell scripts (discovery pattern broken). Commit blocked."
+    exit 1
+  fi
+  echo "  → shellcheck -x on ${#SHELL_SCRIPTS[@]} script(s)..."
+  if ! shellcheck -x "${SHELL_SCRIPTS[@]}"; then
+    echo "❌ ShellCheck gate failed — commit blocked."
+    echo "   Fix the finding(s) above. Warnings block here on purpose: they are the exact"
+    echo "   failures the CI shellcheck job would otherwise be the first to report."
+    exit 1
+  fi
+  echo "✅ ShellCheck gate: clean (${#SHELL_SCRIPTS[@]} scripts)."
+fi
+
 echo "⏳ Pre-commit: lint staged files..."
 
-# NUL-delimited staged .ts/.tsx/.js/.jsx (only those still on disk, i.e. the
+# NUL-delimited staged .ts/.tsx/.js/.jsx/.cjs (only those still on disk, i.e. the
 # ACM filter). NUL is the only separator git guarantees — spaces in paths are
 # preserved, unlike the old xargs word-splitting.
 FILES=()
 while IFS= read -r -d '' f; do
   FILES+=("$f")
-done < <(git diff --cached --name-only -z --diff-filter=ACM | grep -zE '\.(ts|tsx|js|jsx)$' || true)
+done < <(git diff --cached --name-only -z --diff-filter=ACM | grep -zE '\.(ts|tsx|js|jsx|cjs)$' || true)
 
 if [ ${#FILES[@]} -eq 0 ]; then
   echo "✅ No staged JS/TS files — skipping lint."

@@ -61,6 +61,18 @@
  * TESTID_MAP_OUT, the same contract add-testids.cjs offers via APP_TESTIDS_ROOT.
  * The real tree and the real map are only ever READ.
  *
+ * CI MODE — `--head-vs-worktree` (2026-10-05, owner ruling)
+ * On a clean CI checkout nothing is staged, so the index mode would compare
+ * HEAD with itself and pass vacuously. This mode asks the CI question instead:
+ * is the map AT HEAD (`git show HEAD:maestro/tools/testid-map.json`) fresh for
+ * the CHECKED-OUT tree (the manifest regenerated from the worktree's app/)? A
+ * commit that bypassed the local hook — web UI, fresh clone, --no-verify —
+ * ships a stale map and is caught here. Needs no git history, so it works on
+ * shallow checkouts. Same exit codes. Wired into the `maestro-drift` job of
+ * .github/workflows/ci.yml alongside its flow-currency sibling's same-named
+ * mode (whose removal diff this ruling defines as map-at-HEAD vs the map
+ * regenerated from the tree).
+ *
  * KNOWN LIMIT
  * Two files claiming the same id collapse to one owner here, so this gate says
  * nothing about duplicate testIDs across screens. That is a different defect
@@ -121,6 +133,19 @@ function materializeIndex(destRoot, files) {
   git(["checkout-index", "-z", "--stdin", `--prefix=${destRoot}${path.sep}`], {
     input: `${files.join("\0")}\0`,
   });
+}
+
+/** The map blob at HEAD. Used by the CI (`--head-vs-worktree`) mode. */
+function headMapJson() {
+  try {
+    return git(["show", `HEAD:${MAP_RELPATH}`]);
+  } catch (err) {
+    throw new BrokenInputError(
+      `could not read HEAD:${MAP_RELPATH} — is this a git checkout with at least one ` +
+        `commit? The --head-vs-worktree mode compares the committed map against the tree ` +
+        `and cannot run without it.\n${err.message}`
+    );
+  }
 }
 
 /** The map blob this commit will contain. Throws if it is not in the index at all. */
@@ -222,22 +247,56 @@ const sample = (items, n = 5) =>
   items.slice(0, n).join("; ") + (items.length > n ? ` … (+${items.length - n} more)` : "");
 
 /**
- * Regenerate the map from the staged app/ tree and diff it against the staged map.
+ * Every app/ file in the WORKING TREE — the tree side of the CI mode. Untracked
+ * files count: a brand-new screen is exactly the case where the map is stale.
+ */
+function worktreeAppFiles() {
+  const out = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else out.push(path.relative(ROOT, p).split(path.sep).join("/"));
+    }
+  };
+  const appRoot = path.join(ROOT, "app");
+  if (fs.existsSync(appRoot)) walk(appRoot);
+  return out;
+}
+
+/**
+ * Regenerate the map from the app/ tree and diff it against the map under audit.
+ *
+ * @param {{mode?: "index" | "head-vs-worktree"}} [opts] `index` (default) is the
+ *   pre-commit question: staged map vs the STAGED app/ tree. `head-vs-worktree`
+ *   is the CI question (2026-10-05): the map AT HEAD vs the CHECKED-OUT tree —
+ *   on a clean checkout the index sides are identical, so the index mode would
+ *   compare HEAD with itself and pass vacuously.
  * @returns {{ok: boolean, violations: string[], advisories: string[], stats: object}}
  *   Never calls process.exit — the CLI wrapper owns the exit code.
  */
-function runFreshnessCheck() {
+function runFreshnessCheck(opts = {}) {
+  const mode = opts.mode === "head-vs-worktree" ? "head-vs-worktree" : "index";
+  const headMode = mode === "head-vs-worktree";
   if (!fs.existsSync(MANIFEST)) {
     throw new BrokenInputError(`missing required path: ${MANIFEST}`);
   }
 
-  const appFiles = indexAppFiles();
+  const appFiles = headMode ? worktreeAppFiles() : indexAppFiles();
   if (appFiles.length === 0) {
     throw new BrokenInputError(
-      "the git index has no files under app/ — is this the Ride repo root, and is the " +
-        "index populated? (an empty index means nothing is staged to check)"
+      headMode
+        ? "the worktree has no files under app/ — is this the Ride repo root checked out?"
+        : "the git index has no files under app/ — is this the Ride repo root, and is the " +
+          "index populated? (an empty index means nothing is staged to check)"
     );
   }
+
+  const mapLabel = headMode ? `HEAD:${MAP_RELPATH}` : `staged ${MAP_RELPATH}`;
+  const treeLabel = headMode ? "the worktree app/ tree" : "the staged app/ tree";
+  const treeDesc = headMode
+    ? "the checked-out worktree's app/ tree"
+    : "the app/ tree this commit contains";
 
   const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "testid-map-fresh-"));
   try {
@@ -247,14 +306,21 @@ function runFreshnessCheck() {
     // as path.relative(app) — i.e. "(auth)/_layout.tsx", matching the committed
     // map. Both halves matter: pointing either at the other root yields "app/..."
     // or "app/app/..." keys and reports all 1107 ids as moved.
-    materializeIndex(sandbox, appFiles);
+    // head-vs-worktree regenerates straight from ROOT/app (read-only) instead.
+    let appRoot;
+    if (headMode) {
+      appRoot = path.join(ROOT, "app");
+    } else {
+      materializeIndex(sandbox, appFiles);
+      appRoot = path.join(sandbox, "app");
+    }
 
-    const committed = parseMap(indexMapJson(), `staged ${MAP_RELPATH}`);
+    const committed = parseMap(headMode ? headMapJson() : indexMapJson(), mapLabel);
     const freshOut = path.join(sandbox, "regenerated-testid-map.json");
-    generateMap(path.join(sandbox, "app"), freshOut);
+    generateMap(appRoot, freshOut);
     const fresh = parseMap(
       fs.readFileSync(freshOut, "utf8"),
-      "manifest regenerated from the staged app/ tree"
+      `manifest regenerated from ${treeLabel}`
     );
 
     const from = buildAttribution(committed);
@@ -264,15 +330,15 @@ function runFreshnessCheck() {
     const violations = [];
     if (d.vanished.length) {
       violations.push(
-        `${d.vanished.length} id(s) are recorded in ${MAP_RELPATH} but do not exist in the ` +
-          `app/ tree this commit contains: ${sample(d.vanished)}. Nothing else verifies ids ` +
+        `${d.vanished.length} id(s) are recorded in ${MAP_RELPATH} but do not exist in ` +
+          `${treeDesc}: ${sample(d.vanished)}. Nothing else verifies ids ` +
           `that no flow selects, so this rots with no signal until someone rewires or ` +
           `audits a flow against the map.`
       );
     }
     if (d.unrecorded.length) {
       violations.push(
-        `${d.unrecorded.length} testID(s) in the staged app/ tree are absent from ` +
+        `${d.unrecorded.length} testID(s) in ${treeLabel} are absent from ` +
           `${MAP_RELPATH}: ${sample(d.unrecorded)}. The manifest is the index used to rewrite ` +
           `and audit flows, so an id it does not record is one no consumer can find.`
       );
@@ -295,7 +361,8 @@ function runFreshnessCheck() {
     }
 
     const stats = {
-      stagedAppFiles: appFiles.length,
+      mode,
+      appFiles: appFiles.length,
       mapScreens: Object.keys(committed.screens).length,
       appScreens: Object.keys(fresh.screens).length,
       mapIds: from.size,
@@ -315,9 +382,10 @@ function runFreshnessCheck() {
 // ── CLI ──────────────────────────────────────────────────────────────────────
 if (require.main === module) {
   const asJson = process.argv.includes("--json");
+  const mode = process.argv.includes("--head-vs-worktree") ? "head-vs-worktree" : "index";
   let result;
   try {
-    result = runFreshnessCheck();
+    result = runFreshnessCheck({ mode });
   } catch (err) {
     if (err instanceof BrokenInputError) {
       console.error(`❌ ${err.message}`);
@@ -330,9 +398,16 @@ if (require.main === module) {
     console.log(JSON.stringify(result, null, 2));
   } else {
     const s = result.stats;
+    // The default-mode summary keeps its historical shape verbatim —
+    // tests/meta/pre-commit-harness.test.ts pins it as gate 5's ranMarker, and
+    // tagging it `[index]` silently un-ran that gate (MEASURED 2026-10-05).
+    // The CI mode opts into its tag explicitly.
+    const tag = s.mode === "head-vs-worktree" ? " [head-vs-worktree]" : "";
+    const side = s.mode === "head-vs-worktree" ? "HEAD" : "staged";
+    const tree = s.mode === "head-vs-worktree" ? "worktree" : "staged";
     console.log(
-      `testid map freshness: staged map ${s.mapIds} ids / ${s.mapScreens} screens vs ` +
-        `staged app/ ${s.appIds} ids / ${s.appScreens} screens | ` +
+      `testid map freshness${tag}: ${side} map ${s.mapIds} ids / ${s.mapScreens} screens vs ` +
+        `${tree} app/ ${s.appIds} ids / ${s.appScreens} screens | ` +
         `vanished=${s.vanished} unrecorded=${s.unrecorded} moved=${s.moved} ` +
         `(line-only drift=${s.lineDrift}, not blocking)`
     );
@@ -345,22 +420,40 @@ if (require.main === module) {
       result.violations.forEach((v) => console.error(`  • ${v}`));
       console.error("");
     }
-    console.error("❌ testid map is stale for the app/ tree this commit contains — commit blocked.");
+    console.error(
+      mode === "head-vs-worktree"
+        ? "❌ testid map at HEAD is stale for the checked-out tree — blocked."
+        : "❌ testid map is stale for the app/ tree this commit contains — commit blocked."
+    );
     console.error(
       "   Fix:  node maestro/tools/testid-manifest.cjs && git add maestro/tools/testid-map.json"
     );
-    console.error(
-      "   The generator reads your WORKING TREE while this gate compares the INDEX, so stage"
-    );
-    console.error(
-      "   any other app/ edits first (or commit them separately) — a map regenerated from"
-    );
-    console.error("   unstaged code would describe a tree this commit does not contain.");
+    if (mode !== "head-vs-worktree") {
+      console.error(
+        "   The generator reads your WORKING TREE while this gate compares the INDEX, so stage"
+      );
+      console.error(
+        "   any other app/ edits first (or commit them separately) — a map regenerated from"
+      );
+      console.error("   unstaged code would describe a tree this commit does not contain.");
+    }
     process.exit(2);
   }
   if (!asJson) {
-    console.log("✅ testid-map.json matches the staged app/ tree (id -> file attribution).");
+    console.log(
+      mode === "head-vs-worktree"
+        ? "✅ testid-map.json at HEAD matches the checked-out tree (id -> file attribution)."
+        : "✅ testid-map.json matches the staged app/ tree (id -> file attribution)."
+    );
   }
 }
 
-module.exports = { runFreshnessCheck, diffAttribution, buildAttribution, parseMap, BrokenInputError };
+module.exports = {
+  runFreshnessCheck,
+  diffAttribution,
+  buildAttribution,
+  parseMap,
+  generateMap,
+  headMapJson,
+  BrokenInputError,
+};

@@ -7,7 +7,7 @@
 # Usage: bash maestro/utils/bootstrap-device-day.sh [--no-emulator]
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+cd "$ROOT" || exit 1
 
 # Port-in-use check, portable: lsof is absent on Windows Git Bash (silent
 # misbehavior in unattended runs) — netstat works on both. Args: PORT.
@@ -37,7 +37,7 @@ if port_listening 8081; then
 else
   (npx expo start --port 8081 > metro-test.log 2>&1 &)
   echo "Waiting for Metro to accept connections…"
-  for i in $(seq 1 60); do
+  for _ in $(seq 1 60); do
     port_listening 8081 && break
     sleep 2
   done

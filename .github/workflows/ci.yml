@@ -9,7 +9,12 @@
 #               staged changeset on a throwaway branch — this is what brings the
 #               index-scoped stages 3-7 into CI; PR runs only), and the
 #               `concurrency-locks` job (advisory-lock proofs against a
-#               disposable postgres:16 service container). Complements the local
+#               disposable postgres:16 service container), and the `shellcheck`
+#               job (every tracked shell script — the git hooks and
+#               scripts/verify-render-deploy.sh included), and the `actionlint`
+#               job (every workflow YAML file — static checks instead of hand
+#               verification; self-hosted runner labels are registered in
+#               .github/actionlint.yaml). Complements the local
 #               pre-commit/pre-push hooks (scripts/git-hooks/*).
 # Owner:       Coding model (test lane)
 # Status:      ACTIVE
@@ -31,6 +36,36 @@
 #   1976/1976, tsc 0/0, lint 0 errors.
 #   2026-09-09 (actions bump): checkout/setup-node v4 → v7 — both run on the
 #   Node 24 runner runtime, clearing the Node 20 deprecation annotation.
+#   2026-10-05 (shellcheck job): shellcheck coverage widened from the
+#   device-preflight.yml lane's maestro/** step (path-filtered to the device
+#   toolchain) to EVERY tracked shell script on every push/PR — including the
+#   extensionless git hooks and scripts/verify-render-deploy.sh, which nothing
+#   in CI linted before. Discovery via git ls-files, same contract as the
+#   maestro lane. MEASURED 2026-10-05: 13 scripts (11 *.sh + pre-commit +
+#   pre-push) all pass `shellcheck -x` at 0.11.0 once their EOLs are LF —
+#   build.sh/build-ws.sh were found CRLF in the Windows working tree (SC1017
+#   noise; git stores them LF, so Linux CI never sees it) and the two files'
+#   true finding count was zero after normalization.
+#   2026-10-05 (stages 5/6 in CI): the job now also runs testid-map-freshness
+#   and testid-flow-currency in their new --head-vs-worktree modes — on a clean
+#   checkout the index modes compare HEAD with themselves, so the CI modes audit
+#   the committed map against the checked-out tree (owner ruling 2026-10-05 for
+#   stage 6's removal diff). Both proven in tests/meta/testid-{map-freshness,
+#   flow-currency}.test.ts with fault-injection pairs.
+#   2026-10-05 (actionlint job): the workflow YAML itself is now LINTED by
+#   actionlint (pinned 1.7.12) instead of hand-verified — workflow syntax,
+#   expression typos, `needs:` graph errors, unknown action inputs, and shell
+#   errors in `run:` blocks (via its shellcheck integration, so the job
+#   installs shellcheck when missing — without it actionlint silently skips
+#   that half of the check). Discovery via git ls-files with the same
+#   zero-file guard as the shellcheck job. MEASURED 2026-10-05 at 1.7.12: 3
+#   workflow files, 2 findings — SC2016 on the precommit-gates probe writer
+#   (the backticks in single quotes are deliberate TS template-literal
+#   content; rewritten as a quoted heredoc, literal by construction — no lint
+#   suppression) and the `ride-avd` self-hosted label (registered in
+#   .github/actionlint.yaml). Clean on all 3 after both fixes. First
+#   GitHub-runner execution is unproven — treat a red first run as a finding
+#   about the job wiring.
 #   2026-10-04 (maestro-drift job): stages 3 and 4 of the pre-commit hook
 #   (flow-xcheck, testID codemod idempotence) now run here as their OWN job, so
 #   a commit made where the hook is absent — web UI, fresh clone without
@@ -65,7 +100,7 @@
 #   all pass fixtures the local harness already proves benign), runs
 #   `bash scripts/git-hooks/pre-commit`, and REQUIRES: exit 0; every stage
 #   banner printed (the expected count is DERIVED from the hook under test, so
-#   a 6- or 7-stage hook is both valid); zero `skipped`/`skipping` lines (every
+#   a 7- or 8-stage hook is both valid); zero `skipped`/`skipping` lines (every
 #   stage did real work, not a skip path); and the final pass marker. Verified
 #   locally end-to-end in a throwaway worktree with a simulated PR merge commit:
 #   staged diff correct, and both the 6-stage HEAD hook and the 7-stage working
@@ -205,6 +240,94 @@ jobs:
       - name: testID codemod idempotence gate (B-1)
         run: node maestro/tools/testid-idempotence.cjs
 
+      # Stages 5 and 6 in their --head-vs-worktree modes (2026-10-05). On a clean
+      # checkout nothing is staged, so the index modes would compare HEAD with
+      # themselves and pass vacuously; these modes audit the COMMITTED state
+      # instead — stage 5: the map at HEAD vs the manifest regenerated from the
+      # checked-out tree; stage 6: ids the map at HEAD claims but the tree no
+      # longer declares, intersected with the ids flows still select (owner
+      # ruling 2026-10-05). This is what catches a commit that bypassed the
+      # local hook — web UI, fresh clone, --no-verify. Neither mode needs git
+      # history (shallow checkouts are fine). Exit 2/1 = stale/broken (stage 5),
+      # exit 1/2 = dead selector/cannot run (stage 6). All fail the job.
+      - name: testID map freshness gate (HEAD vs worktree)
+        run: node maestro/tools/testid-map-freshness.cjs --head-vs-worktree
+
+      - name: testID flow-currency gate (HEAD vs worktree)
+        run: node maestro/tools/testid-flow-currency.cjs --head-vs-worktree
+
+  # ── ShellCheck over every tracked shell script ──────────────────────────────
+  # The repo-wide extension of the device-preflight.yml lane's maestro/** step:
+  # that job is path-filtered to the device toolchain, so a change to
+  # scripts/git-hooks/* or scripts/verify-render-deploy.sh never triggered it.
+  # This job runs on EVERY push/PR and covers the extensionless git hooks (the
+  # exact files scripts/install-hooks.js lints with `shellcheck -x` at install
+  # time — CI now re-proves what a fresh clone executes) alongside every *.sh.
+  # Discovery via git ls-files, not a hand-kept list: a NEW script is linted the
+  # day it lands. `-x` follows `# shellcheck source=` directives (without it
+  # every sourced file reports SC1091). Deliberately its own job — one red
+  # proof must not suppress the main suite's signal (same rule as maestro-drift).
+  shellcheck:
+    name: ShellCheck (all shell scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: ShellCheck every tracked shell script
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            echo "::notice::runner image has no shellcheck; installing it"
+            sudo apt-get update -qq
+            sudo apt-get install -y shellcheck
+          fi
+          mapfile -t scripts < <(git ls-files '*.sh' 'scripts/git-hooks/*')
+          if [ "${#scripts[@]}" -eq 0 ]; then
+            echo "::error::no shell scripts found — the discovery pattern is broken"
+            exit 1
+          fi
+          echo "shellcheck: linting ${#scripts[@]} script(s)"
+          shellcheck -x "${scripts[@]}"
+
+  # ── actionlint over every GitHub workflow file ──────────────────────────────
+  # The workflow YAML was hand-verified until now, so expression typos, broken
+  # `needs:` graphs, unknown action inputs, bad runner labels, and shell errors
+  # inside `run:` blocks only surfaced at run time. actionlint checks all of
+  # that statically. Discovery via git ls-files, not a hand-kept list: a NEW
+  # workflow is linted the day it lands (same contract + zero-file guard as the
+  # shellcheck job). The embedded shellcheck integration lints every `run:`
+  # block, so shellcheck is installed when missing — without it actionlint
+  # silently SKIPS that half. Custom self-hosted runner labels live in
+  # .github/actionlint.yaml. Deliberately its own job — one red proof must not
+  # suppress the main suite's signal (same rule as maestro-drift/shellcheck).
+  actionlint:
+    name: actionlint (workflow YAML)
+    runs-on: ubuntu-latest
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: actionlint every workflow file
+        run: |
+          if ! command -v actionlint >/dev/null 2>&1; then
+            echo "::notice::runner image has no actionlint; installing pinned ${ACTIONLINT_VERSION}"
+            curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- "${ACTIONLINT_VERSION}"
+            sudo mv actionlint /usr/local/bin/
+          fi
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            echo "::notice::runner image has no shellcheck; installing it (actionlint's run: block linting needs it)"
+            sudo apt-get update -qq
+            sudo apt-get install -y shellcheck
+          fi
+          mapfile -t workflows < <(git ls-files '.github/workflows/*.yml' '.github/workflows/*.yaml')
+          if [ "${#workflows[@]}" -eq 0 ]; then
+            echo "::error::no workflow files found — the discovery pattern is broken"
+            exit 1
+          fi
+          actionlint --version
+          echo "actionlint: linting ${#workflows[@]} workflow file(s)"
+          actionlint "${workflows[@]}"
+
   # ── The pre-commit gates against the PR as a staged changeset ───────────────
   # Stages 3–7 of scripts/git-hooks/pre-commit are INDEX-scoped (`git diff
   # --cached`, `git show :path`), so on a clean CI checkout they see nothing
@@ -242,7 +365,7 @@ jobs:
           cache: npm
 
       # Same single-workspace `npm ci` contract as the other jobs — never a
-      # nested utils-server install. Stage 7 lints via node_modules/eslint and
+      # nested utils-server install. Stage 8 lints via node_modules/eslint and
       # stage 4 needs `typescript`.
       - name: Install dependencies (workspace root)
         run: npm ci
@@ -300,15 +423,32 @@ jobs:
             '    expect(1 + 1).toBe(2);' \
             '  });' \
             '});' > tests/precommit-gates-probe/real.test.ts
-          printf '%s\n' \
-            'import { sql } from "drizzle-orm";' \
-            '' \
-            'export const probe = sql`SELECT now()`;' > lib/precommit-gates-probe.ts
-          printf '\n// pre-commit gate probe: triggers stages 4-7 (no testID or map change)\n' >> "$APP_PROBE"
+          # Quoted heredoc, not printf: the probe body is a TS template
+          # literal (backticks), and a single-quoted printf arg triggers
+          # SC2016 while double quotes would run command substitution.
+          cat > lib/precommit-gates-probe.ts <<'PRECOMMIT_PROBE_TS'
+          import { sql } from "drizzle-orm";
+
+          export const probe = sql`SELECT now()`;
+          PRECOMMIT_PROBE_TS
+          printf '\n// pre-commit gate probe: triggers stages 4-6 and 8 (no testID or map change)\n' >> "$APP_PROBE"
           printf '\n# pre-commit gate probe: triggers stage 3 (no selector change)\n' >> "$FLOW_PROBE"
           git add -- "$APP_PROBE" "$FLOW_PROBE" tests/precommit-gates-probe/real.test.ts lib/precommit-gates-probe.ts
           echo "staged changeset after probes: $(git diff --cached --name-only | wc -l) file(s)"
           git diff --cached --name-only
+
+      # Stage 7 (shellcheck) warn-skips when the binary is missing, and the
+      # assertion below REQUIRES zero skip lines — so the replay must have it.
+      # Same install-if-missing fallback as the shellcheck job and the
+      # device-preflight lane.
+      - name: Ensure shellcheck is present (stage 7 must not skip)
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            echo "::notice::runner image has no shellcheck; installing it"
+            sudo apt-get update -qq
+            sudo apt-get install -y shellcheck
+          fi
+          shellcheck --version | head -2
 
       # Run the hook exactly as the local gate does (git invokes the same script
       # via .git/hooks). Assertions, in order: the hook passed; every stage's

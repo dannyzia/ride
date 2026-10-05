@@ -13,7 +13,7 @@
   },
   "overrides": [
     {
-      "files": ["*.js", "scripts/**/*.js", "ridebase-proxy/**/*.js"],
+      "files": ["*.js", "**/*.cjs", "scripts/**/*.js", "ridebase-proxy/**/*.js"],
       "env": {
         "node": true,
         "browser": true

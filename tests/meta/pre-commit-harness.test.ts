@@ -19,7 +19,14 @@
  */
 import fs from "fs";
 import path from "path";
-import { GATES, TOOL_FILES, PUSH_GATES, prePushStdin } from "../../scripts/pre-commit-harness.cjs";
+import {
+  GATES,
+  TOOL_FILES,
+  CORPUS_DIRS,
+  CORPUS_FILES,
+  PUSH_GATES,
+  prePushStdin,
+} from "../../scripts/pre-commit-harness.cjs";
 
 const HOOK_SRC = fs.readFileSync(
   path.resolve(__dirname, "../../scripts/git-hooks/pre-commit"),
@@ -56,7 +63,7 @@ describe("pre-commit harness ↔ hook consistency", () => {
     // Stage 6 (testID flow currency) was added on 2026-10-03; the guard caught the
     // hook gaining a stage before the harness had a case for it, which is exactly
     // its job. Do NOT relax this to a range or a length comparison.
-    expect(GATES.map((g) => g.n)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(GATES.map((g) => g.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(HOOK_BANNERS).toHaveLength(GATES.length);
   });
 
@@ -109,11 +116,31 @@ describe("pre-commit harness ↔ hook consistency", () => {
     for (const rel of TOOL_FILES as string[]) {
       expect(fs.existsSync(path.resolve(__dirname, "../..", rel))).toBe(true);
     }
+    // The same anti-rot guard over the CORPUS overlay (what the gates SCAN):
+    // a moved directory would silently stop being overlaid, the worktree would
+    // pair working-tree gates with base-commit corpus content, and gate 3
+    // would report findings that exist in neither consistent state.
+    for (const rel of CORPUS_DIRS as string[]) {
+      expect({ rel, dir: fs.statSync(path.resolve(__dirname, "../..", rel)).isDirectory() }).toEqual({
+        rel,
+        dir: true,
+      });
+    }
+    for (const rel of CORPUS_FILES as string[]) {
+      expect(fs.existsSync(path.resolve(__dirname, "../..", rel))).toBe(true);
+    }
     // --push depends on these being staged too: without them the run would test
     // the base commit's hook and could skip the working tree's import checker.
     const normalized = (TOOL_FILES as string[]).map((p) => p.replace(/\\/g, "/"));
     expect(normalized).toContain("scripts/git-hooks/pre-push");
     expect(normalized).toContain("scripts/check-web-imports.js");
+    // Gate 3 scans ALL flows and resolves their selectors against the map —
+    // both must ride the corpus overlay or its pass case blocks on stale
+    // base-commit findings the working tree already fixed.
+    expect((CORPUS_DIRS as string[]).map((p) => p.replace(/\\/g, "/"))).toContain("maestro/flows");
+    expect((CORPUS_FILES as string[]).map((p) => p.replace(/\\/g, "/"))).toContain(
+      "maestro/tools/testid-map.json"
+    );
   });
 });
 
