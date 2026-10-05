@@ -10,18 +10,32 @@
  * there is no cap pressure. The pair together pins both directions:
  * serialization ENFORCES the cap, and serialization doesn't BREAK normal flow.
  *
- * Usage (CI never runs this — it has no Postgres):
+ * Usage:
  *   RUN_CONCURRENCY_TESTS=1 npx jest tests/concurrency --watchAll=false
+ * CI: the `concurrency-locks` job (.github/workflows/ci.yml) runs this lane on
+ * every PR against a disposable `postgres:16` service container. The default
+ * `test` job still SKIPS it (RUN_CONCURRENCY_TESTS unset) — pinned by
+ * tests/meta/concurrency-gate.test.ts.
+ * LOCAL RUNS: never point this at the shared dev project — provision the
+ * throwaway project with `node scripts/concurrency-scratch-project.mjs` and run
+ * with its SCRATCH_DATABASE_URL (see .env.scratch.local) — the harness prefers
+ * SCRATCH_DATABASE_URL and refuses to run without it
+ * (tests/concurrency/scratch-db-url.ts).
  *
  * @jest-environment node
  * @jest-environment-options {"customExportConditions": ["node"]}
  */
 import "../../scripts/_load-env";
 import postgresTag from "postgres";
+import { requireScratchDbUrl } from "./scratch-db-url";
 
 const RUN = process.env.RUN_CONCURRENCY_TESTS === "1";
 const COND = RUN ? describe : describe.skip;
-const DB_URL = process.env.DATABASE_URL;
+// Preference rule (tests/concurrency/scratch-db-url.ts): a set
+// SCRATCH_DATABASE_URL wins outright over DATABASE_URL. The fallback is
+// unreachable past the requireScratchDbUrl() guard in beforeAll; the binding
+// stays non-throwing at module scope so a default-suite run still SKIPs.
+const DB_URL = process.env.SCRATCH_DATABASE_URL || process.env.DATABASE_URL;
 
 const SCHEMA = "promo_concurrency_test_nc";
 const N_RIDERS = 12;
@@ -123,7 +137,7 @@ COND("P1-1 promo-lock concurrency — no contention (real Postgres)", () => {
   let h: Harness;
 
   beforeAll(async () => {
-    if (!DB_URL) throw new Error("DATABASE_URL required for the concurrency harness");
+    requireScratchDbUrl(); // scratch-only policy: throws BEFORE any connection
     h = makeHarness();
     await h.setup();
   });

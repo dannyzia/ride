@@ -19,6 +19,7 @@
     "web": "expo start --web",
     "test": "jest --watchAll",
     "test:all": "npm run check:vacuous && jest --watchAll=false --ci",
+    "test:concurrency": "cross-env RUN_CONCURRENCY_TESTS=1 jest tests/concurrency --watchAll=false",
     "postinstall": "node scripts/postinstall.js",
     "lint": "cross-env ESLINT_USE_FLAT_CONFIG=false npx eslint .",
     "check:web-export": "cross-env NODE_OPTIONS=--max-old-space-size=8192 npx expo export --platform web",
@@ -27,6 +28,7 @@
     "check:web-imports": "node scripts/check-web-imports.js",
     "check:vacuous": "node scripts/check-vacuous-assertions.js",
     "check:date-in-sql": "node scripts/check-date-in-sql.js",
+    "check:i18n-orphans": "node scripts/audit-i18n-orphans.cjs --gate",
     "storybook:ios": "cross-env STORYBOOK_ENABLED=true expo run:ios",
     "storybook:android": "cross-env STORYBOOK_ENABLED=true expo run:android"
   },

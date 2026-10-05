@@ -144,7 +144,13 @@ function createPool() {
    * for transaction mode and is already set.)
    */
   const client = postgres(DATABASE_URL as string, {
-    ssl: "require",
+    // `DATABASE_SSL=disable` is an explicit OPT-OUT for a disposable Postgres
+    // that serves no TLS — the concurrency CI job's `postgres:16` service
+    // container (verified with a wire probe 2026-10-04: default sends an
+    // SSLRequest, disable sends a plaintext StartupMessage). The default stays
+    // "require": the shared Supabase pooler needs TLS, and no deployed
+    // environment may drop encryption. postgres.js `ssl: false` = plaintext.
+    ssl: process.env.DATABASE_SSL === "disable" ? false : "require",
     prepare: false,
     max: APP_POOL_SIZE,
     // 300s, not 30s. The failure that freezes this pool is a RECONNECT that

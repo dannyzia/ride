@@ -72,19 +72,34 @@
  * rather than sleeping and inferring: it is the only one of the three whose
  * verdict does not depend on how fast the pooler is.
  *
- * Usage (CI never runs this — it has no Postgres):
+ * Usage:
  *   RUN_CONCURRENCY_TESTS=1 npx jest tests/concurrency --watchAll=false
- * DATABASE_URL comes from .env.local (scripts/_load-env.ts pattern).
+ * DATABASE_URL comes from the process environment in CI, or .env.local locally
+ * (scripts/_load-env.ts fills it from .env.local only when unset).
+ * CI: the `concurrency-locks` job (.github/workflows/ci.yml) runs this lane on
+ * every PR against a disposable `postgres:16` service container. The default
+ * `test` job still SKIPS it (RUN_CONCURRENCY_TESTS unset) — pinned by
+ * tests/meta/concurrency-gate.test.ts.
+ * LOCAL RUNS: never point this at the shared dev project — provision the
+ * throwaway project with `node scripts/concurrency-scratch-project.mjs` and run
+ * with its SCRATCH_DATABASE_URL (see .env.scratch.local) — the harness prefers
+ * SCRATCH_DATABASE_URL and refuses to run without it
+ * (tests/concurrency/scratch-db-url.ts).
  *
  * @jest-environment node
  * @jest-environment-options {"customExportConditions": ["node"]}
  */
 import "../../scripts/_load-env";
 import postgresTag from "postgres";
+import { requireScratchDbUrl } from "./scratch-db-url";
 
 const RUN = process.env.RUN_CONCURRENCY_TESTS === "1";
 const COND = RUN ? describe : describe.skip;
-const DB_URL = process.env.DATABASE_URL;
+// Preference rule (tests/concurrency/scratch-db-url.ts): a set
+// SCRATCH_DATABASE_URL wins outright over DATABASE_URL. The fallback is
+// unreachable past the requireScratchDbUrl() guard in beforeAll; the binding
+// stays non-throwing at module scope so a default-suite run still SKIPs.
+const DB_URL = process.env.SCRATCH_DATABASE_URL || process.env.DATABASE_URL;
 
 const SCRATCH_DB = "launchfree_lock_test";
 const LOCK_SQL = "SELECT pg_advisory_xact_lock(hashtext('ensure_launch_free_package'))";
@@ -252,7 +267,7 @@ async function planRowCount(): Promise<number> {
 
 COND("M-3 ensureLaunchFreePackage advisory lock (real Postgres)", () => {
   beforeAll(async () => {
-    if (!DB_URL) throw new Error("DATABASE_URL required for the launch_free lock harness");
+    requireScratchDbUrl(); // scratch-only policy: throws BEFORE any connection
     admin = postgresTag(DB_URL!, { max: 1, connect_timeout: 15 });
     // FORCE terminates stragglers: the app pool below may still hold a session.
     await admin.unsafe(`DROP DATABASE IF EXISTS ${SCRATCH_DB} WITH (FORCE)`);
