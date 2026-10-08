@@ -1,4 +1,4 @@
-# _login-rider — shared auth subflow: phone → password login → rider home.
+# _login-rider — shared auth subflow: load dev build → ensure logged in → rider home.
 # §9 Authentication Subflows of plans/maestro-architecture.md. Zero hardcoded creds:
 # PHONE/PASSWORD come from the caller's env block (see maestro/config/test-accounts.yaml).
 # Gate 1 REWIRE PASS 2 (semantic IDs, verified against source in
@@ -23,31 +23,127 @@
 # this point, whereas the old text matched nothing and burned the full 30s timeout.
 # 29 flows depend on this subflow, so the defect was one of the most expensive in the suite.
 # Class: AUTOMATABLE (real login through live Supabase auth + app API).
+#
+# DEV-BUILD LOAD HOP (2026-10-07, first device verification — all points MEASURED on
+# Pixel_6a / API 36):
+#   * NO clearState. `launchApp clearState: true` (pm clear) poisons the expo dev
+#     launcher: its first link attempts after a clear crash or abort their manifest
+#     fetch ({ error: [AbortError: Aborted] } in logcat), sometimes dying to the
+#     Android home screen. Every observed successful load had launcher data intact.
+#     Resetting to logged-out is a device-day OPERATOR step (adb pm clear + one
+#     manual deep-link cycle) — runbook §0 — never part of this subflow.
+#   * maestro's openLink DELIVERS the ride:// VIEW intent but fires it ~40s after
+#     the command returns (driver pathway, logcat uid shell START). The launcher
+#     then self-relaunches, fetches Metro, and pops the dev menu ~70-100s after
+#     openLink returned. The menu ("Runtime version: 1.0.4"; .* regex because
+#     Maestro text selectors are FULL-string matches) is therefore the
+#     load-success signal — and it STAYS up until dismissed, so the fatal gate
+#     below catches it whenever any attempt loads.
+#   * URL 10.0.2.2 = the Android-emulator alias for the host's loopback, routed
+#     by the emulator NAT — no host-firewall rule needed. The LAN-IP URL
+#     (192.168.0.206 era) died when the WiFi lease reassigned the host (.206 →
+#     .196) and the firewall began blocking inbound 8081. For PHYSICAL devices
+#     swap in the LAN IP from .env.local (scripts/dev-env-sync.js) AND open the
+#     host firewall for 8081/3001.
+#   * The repeat loop fires the link again each round (a poisoned launcher may
+#     need 2 attempts) and paces with bounded non-fatal asserts —
+#     waitForAnimationToEnd returns instantly on a static screen, and
+#     assertVisible takes no timeout prop, so 8 optional asserts ≈ 80s/round.
+# CONTRACT CHANGE (2026-10-07): with clearState gone the app keeps its session,
+# so this subflow no longer guarantees a logged-OUT start — it guarantees a
+# logged-IN rider home. If phone-entry shows, it logs in; if the rider home is
+# already up (previous run's session), it skips straight to the final gate. A
+# logged-in account OTHER than ${PHONE} is not detected here — flows needing a
+# specific identity must reset app state out-of-band and accept the launcher's
+# post-pm-clear abort bug (device-day runbook §0).
 appId: com.ride.bd
 ---
-- launchApp:
-    appId: com.ride.bd
-    clearState: true
+- stopApp: com.ride.bd
+- repeat:
+    times: 2
+    commands:
+      - openLink: "ride://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081"
+      # Pacing only — ~80s while the delayed intent + fetch + load run. The
+      # dev menu, once up, covers the app UI so these stay WARNED until the
+      # fatal gate below (do NOT dismiss the menu here).
+      - assertVisible:
+          id: "welcome.replace-phone-entry"
+          optional: true
+      - assertVisible:
+          id: "phone-entry.set-phone"
+          optional: true
+      - assertVisible:
+          id: "customer.home.el-2"
+          optional: true
+      - assertVisible:
+          id: "welcome.replace-phone-entry"
+          optional: true
+      - assertVisible:
+          id: "phone-entry.set-phone"
+          optional: true
+      - assertVisible:
+          id: "customer.home.el-2"
+          optional: true
+      - assertVisible:
+          id: "welcome.replace-phone-entry"
+          optional: true
+      - assertVisible:
+          id: "phone-entry.set-phone"
+          optional: true
+# FATAL load gate: the menu pops exactly when a load succeeds and stays up.
+# A launcher stuck on blank/error screens (dead URL, poisoned post-clear
+# state) times out here with a clean signal instead of failing downstream.
 - extendedWaitUntil:
-    visible: "Enter your phone number to continue"
-    timeout: 20000
-- tapOn:
-    id: "phone-entry.set-phone"
-- eraseText
-- inputText: ${PHONE}
-- tapOn:
-    id: "phone-entry.set-role"
-- tapOn:
-    id: "phone-entry.handle-login"
-- extendedWaitUntil:
-    visible: "Welcome Back"
-    timeout: 15000
-- tapOn:
-    id: "login.set-password"
-- inputText: ${PASSWORD}
-- tapOn:
-    id: "login.handle-login"
+    visible: ".*Runtime version.*"
+    timeout: 150000
+# Dismiss the menu — BACK lands on MainActivity with the app UI under it.
+- pressKey: BACK
+# Two possible app states after a load: logged-out data shows the welcome
+# walkthrough (tap Sign In → phone-entry); an existing session boots straight
+# to the rider home. Drive the walkthrough when present, then settle.
+- repeat:
+    times: 6
+    commands:
+      - runFlow:
+          when:
+            visible: "Welcome to Ride"
+          commands:
+            - tapOn:
+                id: "welcome.replace-phone-entry"
+      # Bounded non-fatal waits — the round's sleep; each succeeds fast once
+      # its element is on screen, so settled-state rounds are nearly free.
+      - assertVisible:
+          id: "phone-entry.set-phone"
+          optional: true
+      - assertVisible:
+          id: "customer.home.el-2"
+          optional: true
+# Login ONLY when phone-entry is up (logged-out run). A logged-in run skips
+# the whole block.
+- runFlow:
+    when:
+      visible:
+        id: "phone-entry.set-phone"
+    commands:
+      - tapOn:
+          id: "phone-entry.set-phone"
+      - eraseText
+      - inputText: ${PHONE}
+      - tapOn:
+          id: "phone-entry.set-role"
+      - tapOn:
+          id: "phone-entry.handle-login"
+      - extendedWaitUntil:
+          visible: "Welcome Back"
+          timeout: 15000
+      - tapOn:
+          id: "login.set-password"
+      - inputText: ${PASSWORD}
+      - tapOn:
+          id: "login.handle-login"
+# Final gate (fatal, unconditional): rider home must be up — either we just
+# logged in or the session already put us there.
 - extendedWaitUntil:
     visible:
       id: "customer.home.el-2"
-    timeout: 30000
+    timeout: 30000

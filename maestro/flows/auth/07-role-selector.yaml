@@ -15,7 +15,7 @@ tags: [auth]
     appId: com.ride.bd
     clearState: true
 - extendedWaitUntil:
-    visible: "Enter your phone number to continue"
+    visible: "Enter your phone number"
     timeout: 20000
 # tap Driver, then back to Rider — both chips are addressable by testID now.
 - tapOn:

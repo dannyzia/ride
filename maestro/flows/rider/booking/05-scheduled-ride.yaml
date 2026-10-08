@@ -23,23 +23,23 @@ appId: com.ride.bd
 name: "Rider Booking - Scheduled Ride"
 tags: [rider, booking, scheduling]
 ---
-- runFlow: ../../../shared/location/_set-gps-banani.yaml
+- runFlow: ../../shared/location/_set-gps-banani.yaml
 - runFlow:
     env:
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - runFlow:
     env:
       DEST_NAME: "Gulshan"
     commands:
-      - runFlow: ../../../shared/booking/_select-destination.yaml
+      - runFlow: ../../shared/booking/_select-destination.yaml
 - runFlow:
     env:
       VEHICLE_TYPE: "Bike Basic"
     commands:
-      - runFlow: ../../../shared/booking/_select-vehicle.yaml
+      - runFlow: ../../shared/booking/_select-vehicle.yaml
 - scrollUntilVisible:
     element:
       id: "customer.home.push-schedule-ride"

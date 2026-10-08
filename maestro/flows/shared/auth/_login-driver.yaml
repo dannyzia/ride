@@ -20,7 +20,7 @@ appId: com.ride.bd
     appId: com.ride.bd
     clearState: true
 - extendedWaitUntil:
-    visible: "Enter your phone number to continue"
+    visible: "Enter your phone number"
     timeout: 20000
 - tapOn:
     id: "phone-entry.set-phone"
