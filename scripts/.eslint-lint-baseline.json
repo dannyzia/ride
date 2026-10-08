@@ -1,0 +1,9 @@
+{
+  "scripts/pre-commit-harness.cjs": [
+    {
+      "ruleId": "no-undef",
+      "line": 546,
+      "hash": "'env' is not defined."
+    }
+  ]
+}
