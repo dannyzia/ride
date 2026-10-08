@@ -1,0 +1,18 @@
+{
+  "_comment": "Grandfathered dead-key/hard-coded-copy pairs. A PAIR is a locale key that scripts/audit-i18n-orphans.cjs reports ORPHANED (no t() call can reach it) while the same copy is still hard-coded in a runtime screen/component — i.e. the translation exists in both languages but the screen shows English only. scripts/audit-i18n-dead-refs.cjs --gate BLOCKS any pair not listed here. The gate was introduced 2026-10-05 with the 13 keys measured on that day (the same sweep that then wired the 7 orphaned auth.* keys in app/(auth)/). The baseline is a RATCHET: delete each key's entry once the screen renders t('that.key') or the key is purged from both locales — it must only ever shrink. Never add an entry to silence --gate unless the hard-coded copy is deliberate.",
+  "keys": [
+    "driver.account_suspended",
+    "driver.cancellation_credits",
+    "driver.documents_rejected",
+    "driver.loading_profile",
+    "driver.recent_transactions",
+    "driver.reupload_documents",
+    "driver.verification_pending",
+    "driver.verification_pending_desc",
+    "notification.payment_confirmed",
+    "profile.personal_profile",
+    "profile.ratings",
+    "ride.select_category",
+    "settings.account_security"
+  ]
+}

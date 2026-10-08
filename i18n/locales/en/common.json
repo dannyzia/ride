@@ -17,7 +17,6 @@
     "no_data": "No data available",
     "pull_to_refresh": "Pull to refresh",
     "load_more": "Load More",
-    "offline": "You are offline",
     "sign_out": "Sign Out",
     "hotspot_title": "Hotspots",
     "hotspot_low": "Low",
@@ -90,7 +89,8 @@
     "register": "Create Account",
     "login": "Log In",
     "get_started": "Get Started",
-    "tagline": "Your ride, your way"
+    "tagline": "Your ride, your way",
+    "welcome_title": "Welcome to Ride"
   },
   "driver": {
     "home": "Home",
@@ -102,20 +102,13 @@
     "go_online": "Go Online",
     "go_offline": "Go Offline",
     "connected": "Connected",
-    "reconnecting": "Reconnecting…",
     "calls_remaining": "Calls Remaining",
     "unlimited": "Unlimited",
-    "daily_goal": "Daily Goal",
-    "set_goal": "Set Daily Earnings Goal",
-    "goal_reached": "Goal reached!",
     "no_trips": "No trips found",
-    "trip_history_placeholder": "Your ride history will appear here",
     "total_earnings": "Driver wallet balance",
     "top_up": "Top Up",
     "active_package": "Active Package",
     "expires": "Expires",
-    "outstanding_dues": "Outstanding Dues",
-    "commission_owed": "Commission owed on completed rides",
     "cancellation_credits": "Cancellation Credits",
     "pending": "pending",
     "no_withdrawals": "Wallet balance is credited at ride completion and from gamification rewards. Withdrawals are not yet available.",
@@ -161,9 +154,7 @@
     "documents_rejected": "Documents Rejected",
     "reupload_documents": "Re-upload Documents",
     "contact_support": "Contact Support",
-    "loading_profile": "Loading profile...",
-    "document_expired": "Document expiring soon",
-    "vehicle_expired": "Vehicle document expiry warning"
+    "loading_profile": "Loading profile..."
   },
   "tabs": {
     "home": "Home",
@@ -181,17 +172,12 @@
     "search": "Search destination...",
     "calls_remaining": "Calls Remaining",
     "connected": "Connected",
-    "welcome_name": "Welcome, {{name}}",
-    "your_current_location": "Your Current Location:",
-    "no_recent_rides": "No recent rides found",
-    "fetching": "Locating you..."
+    "no_recent_rides": "No recent rides found"
   },
   "ride": {
     "cancel": "Cancel Ride",
-    "share_trip": "Share Trip",
     "rate_driver": "Rate Driver",
     "add_tip": "Add Tip",
-    "dispute_fare": "Dispute this fare",
     "driver_found": "Driver Found",
     "on_the_way": "On the way",
     "arrived": "Arrived",
@@ -218,8 +204,7 @@
     "describe_issue": "Describe the issue",
     "tell_us_what_happened": "Tell us what happened",
     "submit": "Submit",
-    "select_category": "Please select a category",
-    "describe_the_issue": "Please describe the issue"
+    "select_category": "Please select a category"
   },
   "activity": {
     "all": "All",
@@ -342,10 +327,8 @@
   },
   "earnings": {
     "daily_goal": "Daily Goal",
-    "set_goal": "Set goal",
     "edit_goal": "Edit",
     "remove_goal": "Remove Goal",
-    "goal_range": "Goal must be between ৳100 and ৳50,000",
     "earned_today": "earned",
     "goal_label": "Goal:",
     "goal_reached": "Goal reached!",
@@ -371,7 +354,6 @@
     "today": "Today",
     "last_7_days": "Last 7 Days",
     "no_earnings": "No completed trips in the last 7 days.",
-    "earnings_overview": "Earnings Overview",
     "earnings_breakdown": "Earnings Breakdown",
     "title": "Earnings",
     "not_authenticated": "Not authenticated",
@@ -387,30 +369,22 @@
   },
   "vehicle": {
     "add_vehicle": "Add Vehicle",
-    "manage_vehicles": "Manage Vehicles",
-    "select_active": "Select Active Vehicle",
     "vehicle_type": "Vehicle Type",
     "manufacturer": "Manufacturer",
     "model": "Model",
     "year": "Year",
-    "registration_number": "Registration Number",
     "photos": "Photos",
-    "documents": "Documents",
-    "expiry_warning": "Document expiring soon",
-    "active_vehicle": "Active Vehicle"
+    "documents": "Documents"
   },
   "legal": {
     "terms_of_service": "Terms of Service",
     "privacy_policy": "Privacy Policy",
-    "effective_date": "Effective Date",
-    "revision_date": "Last Revised"
+    "effective_date": "Effective Date"
   },
   "notification": {
     "ride_offer": "New Ride Offer",
     "ride_cancelled": "Ride Cancelled",
-    "payment_confirmed": "Payment Confirmed",
-    "package_expiring": "Package Expiring",
-    "document_expiry": "Document Expiring"
+    "payment_confirmed": "Payment Confirmed"
   },
   "driver_home": {
     "getting_location": "Getting your location...",

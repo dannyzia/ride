@@ -233,6 +233,25 @@ function main() {
     }
     afterLocale = after[0].size;
     afterBaseline = afterBaselineKeys.length;
+  } else {
+    // PROJECT the result. Before 2026-10-05 a dry run left afterLocale and
+    // afterBaseline at their BEFORE values, so it printed "locales : 1347 ->
+    // 1347" for a 27-key purge — an approval artifact that looked like it had
+    // deleted nothing. The selection and the live-copy refusal above were
+    // always correct; only the projected counts were placeholders. The
+    // projection runs the same deleteKey over a deep copy, so it cannot
+    // diverge from what a real write would produce.
+    const projected = LOCALE_FILES.map((rel) => {
+      const copy = JSON.parse(JSON.stringify(localeDocs.get(rel)));
+      for (const key of selected) deleteKey(copy, key);
+      return flatten(copy);
+    });
+    if (projected[0].size !== projected[1].size || [...projected[0]].some((k) => !projected[1].has(k))) {
+      console.error("❌ refusing to project: en/bn key sets would diverge after this purge");
+      return 1;
+    }
+    afterLocale = projected[0].size;
+    afterBaseline = baseline.keys.filter((k) => !selectedSet.has(k)).length;
   }
 
   if (asJson) {

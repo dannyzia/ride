@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { API_URL } from '@/lib/config';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StatusBar } from 'react-native';
 import { router } from 'expo-router';
@@ -19,6 +20,7 @@ export default function ForgotPasswordScreen() {
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   const isDark = useIsDark();
+  const { t } = useTranslation();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -164,7 +166,7 @@ export default function ForgotPasswordScreen() {
       <View className="flex-1 px-6 justify-center">
 
         <Text className="text-[28px] font-JakartaBold font-bold mb-1" style={{ color: textPrimary }}>
-          {step === 'phone' ? 'Forgot Password' : step === 'otp' ? 'Verify OTP' : 'Reset Password'}
+          {step === 'phone' ? 'Forgot Password' : step === 'otp' ? t('auth.verify_otp') : 'Reset Password'}
         </Text>
         <Text className="text-[14px] font-JakartaBold mb-6" style={{ color: textSecondary }}>
           {step === 'phone'
@@ -201,12 +203,12 @@ export default function ForgotPasswordScreen() {
               onPress={handleSendOtp}
               disabled={loading}
               accessibilityRole="button"
-              accessibilityLabel="Send OTP"
+              accessibilityLabel={t('auth.send_otp')}
              testID="forgot-password.handle-send-otp">
               {loading ? (
                 <ActivityIndicator size={20} color={colors.white} />
               ) : (
-                <Text className="text-[16px] font-JakartaBold font-bold text-goWhite">Send OTP</Text>
+                <Text className="text-[16px] font-JakartaBold font-bold text-goWhite">{t('auth.send_otp')}</Text>
               )}
             </TouchableOpacity>
           </>
@@ -236,12 +238,12 @@ export default function ForgotPasswordScreen() {
               onPress={handleVerifyOtp}
               disabled={loading}
               accessibilityRole="button"
-              accessibilityLabel="Verify OTP"
+              accessibilityLabel={t('auth.verify_otp')}
              testID="forgot-password.handle-verify-otp">
               {loading ? (
                 <ActivityIndicator size={20} color={colors.white} />
               ) : (
-                <Text className="text-[16px] font-JakartaBold font-bold text-goWhite">Verify OTP</Text>
+                <Text className="text-[16px] font-JakartaBold font-bold text-goWhite">{t('auth.verify_otp')}</Text>
               )}
             </TouchableOpacity>
 

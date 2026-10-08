@@ -2,10 +2,6 @@
   "_comment": "Baselined locale-only misses. An assertion literal that resolves in app/components source but in NO i18n locale file is hard-coded JSX: it renders now and breaks when that screen is wired to a locale key or run under a non-en locale. flow-xcheck BLOCKS any such literal not listed here. These 39 predate the gate and are grandfathered so it did not have to reject working flows; one further literal, unmasked by the 2026-10-04 dead-screen purge, was added the same day; each entry must be deleted as its screen is localized. This file must only ever SHRINK.",
   "entries": [
     {
-      "lit": "enter your phone number to continue",
-      "reason": "Pre-existing hard-coded JSX, present when the locale-only gate was added (2026-10-03). It renders correctly today, so the flow is not broken. Wire the string to a t() locale key on the screen that renders it, then DELETE this entry - the baseline is a ratchet and must only shrink."
-    },
-    {
       "lit": "enter 6-digit otp",
       "reason": "Pre-existing hard-coded JSX, present when the locale-only gate was added (2026-10-03). It renders correctly today, so the flow is not broken. Wire the string to a t() locale key on the screen that renders it, then DELETE this entry - the baseline is a ratchet and must only shrink."
     },

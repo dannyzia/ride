@@ -2,12 +2,14 @@ import { View, Text } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import CustomButton from "@/components/CustomButton";
 
 export default function Walkthrough1() {
   const isDark = useIsDark();
+  const { t } = useTranslation();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -33,7 +35,7 @@ export default function Walkthrough1() {
         className="text-[28px] font-JakartaBold text-center mb-3"
         style={{ color: textPrimary }}
       >
-        Welcome to Ride
+        {t("auth.welcome_title")}
       </Text>
 
       {/* Description */}

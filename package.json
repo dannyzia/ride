@@ -29,6 +29,7 @@
     "check:vacuous": "node scripts/check-vacuous-assertions.js",
     "check:date-in-sql": "node scripts/check-date-in-sql.js",
     "check:i18n-orphans": "node scripts/audit-i18n-orphans.cjs --gate",
+    "check:i18n-dead-refs": "node scripts/audit-i18n-dead-refs.cjs --gate",
     "storybook:ios": "cross-env STORYBOOK_ENABLED=true expo run:ios",
     "storybook:android": "cross-env STORYBOOK_ENABLED=true expo run:android"
   },

@@ -17,7 +17,6 @@
     "no_data": "কোনো তথ্য পাওয়া যায়নি",
     "pull_to_refresh": "রিফ্রেশ করতে টেনে দিন",
     "load_more": "আরো লোড করুন",
-    "offline": "আপনি অফলাইনে আছেন",
     "sign_out": "সাইন আউট",
     "hotspot_title": "হটস্পট",
     "hotspot_low": "কম",
@@ -90,7 +89,8 @@
     "register": "অ্যাকাউন্ট তৈরি করুন",
     "login": "লগ ইন",
     "get_started": "শুরু করুন",
-    "tagline": "আপনার রাইড, আপনার পথে"
+    "tagline": "আপনার রাইড, আপনার পথে",
+    "welcome_title": "রাইডে স্বাগতম"
   },
   "driver": {
     "home": "হোম",
@@ -102,19 +102,13 @@
     "go_online": "অনলাইন হোন",
     "go_offline": "অফলাইন হোন",
     "connected": "সংযুক্ত",
-    "reconnecting": "পুনরায় সংযোগ হচ্ছে…",
     "calls_remaining": "অবশিষ্ট কল",
     "unlimited": "অসীমিত",
-    "daily_goal": "দৈনিক লক্ষ্য",
-    "set_goal": "দৈনিক আয়ের লক্ষ্য নির্ধারণ করুন",
-    "goal_reached": "লক্ষ্য অর্জিত!",
     "no_trips": "কোনো ট্রিপ পাওয়া যায়নি",
     "total_earnings": "ড্রাইভার ওয়ালেট ব্যালান্স",
     "top_up": "টপ আপ",
     "active_package": "সক্রিয় প্যাকেজ",
     "expires": "মেয়াদ শেষ",
-    "outstanding_dues": "বকেয়া পাওনা",
-    "commission_owed": "সম্পন্ন রাইডে কমিশন বকেয়া",
     "cancellation_credits": "বাতিলকরণ ক্রেডিট",
     "pending": "মুলতুবি",
     "no_withdrawals": "ওয়ালেট ব্যালান্স রাইড সম্পন্ন হলে এবং গেমিফিকেশন পুরস্কার থেকে জমা হয়। উত্তোলন এখনো পাওয়া যায়নি।",
@@ -160,10 +154,7 @@
     "documents_rejected": "নথি প্রত্যাখ্যাত",
     "reupload_documents": "নথি পুনরায় আপলোড করুন",
     "contact_support": "সাপোর্টে যোগাযোগ করুন",
-    "loading_profile": "প্রোফাইল লোড হচ্ছে...",
-    "document_expired": "নথির মেয়াদ শীঘ্রই শেষ হচ্ছে",
-    "trip_history_placeholder": "আপনার রাইডের ইতিহাস এখানে দেখা যাবে",
-    "vehicle_expired": "যানবাহনের ডকুমেন্টের মেয়াদ শেষের সতর্কতা"
+    "loading_profile": "প্রোফাইল লোড হচ্ছে..."
   },
   "tabs": {
     "home": "হোম",
@@ -181,17 +172,12 @@
     "search": "গন্তব্য অনুসন্ধান করুন...",
     "calls_remaining": "অবশিষ্ট কল",
     "connected": "সংযুক্ত",
-    "welcome_name": "স্বাগতম, {{name}}",
-    "your_current_location": "আপনার বর্তমান অবস্থান:",
-    "no_recent_rides": "সাম্প্রতিক রাইড নেই",
-    "fetching": "লোড হচ্ছে..."
+    "no_recent_rides": "সাম্প্রতিক রাইড নেই"
   },
   "ride": {
     "cancel": "রাইড বাতিল",
-    "share_trip": "ট্রিপ শেয়ার করুন",
     "rate_driver": "ড্রাইভার রেট দিন",
     "add_tip": "টিপ যোগ করুন",
-    "dispute_fare": "এই ভাড়া নিয়ে আপত্তি",
     "driver_found": "ড্রাইভার পাওয়া গেছে",
     "on_the_way": "পথে",
     "arrived": "পৌঁছেছেন",
@@ -218,8 +204,7 @@
     "describe_issue": "ইস্যু বর্ণনা করুন",
     "tell_us_what_happened": "আমাদের বলুন কী হয়েছে",
     "submit": "সাবমিট করুন",
-    "select_category": "অনুগ্রহ করে একটি ক্যাটাগরি নির্বাচন করুন",
-    "describe_the_issue": "অনুগ্রহ করে ইস্যু বর্ণনা করুন"
+    "select_category": "অনুগ্রহ করে একটি ক্যাটাগরি নির্বাচন করুন"
   },
   "activity": {
     "all": "সব",
@@ -342,10 +327,8 @@
   },
   "earnings": {
     "daily_goal": "দৈনিক লক্ষ্য",
-    "set_goal": "লক্ষ্য নির্ধারণ",
     "edit_goal": "সম্পাদনা",
     "remove_goal": "লক্ষ্য সরান",
-    "goal_range": "লক্ষ্য ৳১০০ থেকে ৳৫০,০০০ এর মধ্যে হতে হবে",
     "earned_today": "আয়",
     "goal_label": "লক্ষ্য:",
     "goal_reached": "লক্ষ্য অর্জিত!",
@@ -371,7 +354,6 @@
     "today": "আজ",
     "last_7_days": "গত ৭ দিন",
     "no_earnings": "গত ৭ দিনে কোনো সম্পন্ন ট্রিপ নেই।",
-    "earnings_overview": "আয়ের সারসংক্ষেপ",
     "earnings_breakdown": "আয়ের বিশ্লেষণ",
     "title": "আয়",
     "not_authenticated": "প্রমাণীকরণ হয়নি",
@@ -387,30 +369,22 @@
   },
   "vehicle": {
     "add_vehicle": "গাড়ি যোগ করুন",
-    "manage_vehicles": "গাড়ি পরিচালনা",
-    "select_active": "সক্রিয় গাড়ি নির্বাচন",
     "vehicle_type": "গাড়ির ধরন",
     "manufacturer": "প্রস্ততাকারক",
     "model": "মডেল",
     "year": "সাল",
-    "registration_number": "নিবন্ধন নম্বর",
     "photos": "ছবি",
-    "documents": "নথি",
-    "expiry_warning": "নথির মেয়াদ শীঘ্রই শেষ হচ্ছে",
-    "active_vehicle": "সক্রিয় গাড়ি"
+    "documents": "নথি"
   },
   "legal": {
     "terms_of_service": "সেবার শর্তাবলী",
     "privacy_policy": "গোপনীয়তা নীতি",
-    "effective_date": "কার্যকর তারিখ",
-    "revision_date": "শেষ সংশোধিত"
+    "effective_date": "কার্যকর তারিখ"
   },
   "notification": {
     "ride_offer": "নতুন রাইড অফার",
     "ride_cancelled": "রাইড বাতিল",
-    "payment_confirmed": "পেমেন্ট নিশ্চিত",
-    "package_expiring": "প্যাকেজের মেয়াদ শেষ হচ্ছে",
-    "document_expiry": "নথির মেয়াদ শেষ হচ্ছে"
+    "payment_confirmed": "পেমেন্ট নিশ্চিত"
   },
   "driver_home": {
     "getting_location": "আপনার অবস্থান নেওয়া হচ্ছে...",

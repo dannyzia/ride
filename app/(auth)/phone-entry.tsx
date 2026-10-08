@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { API_URL } from "@/lib/config";
 import { View, Text, TextInput, TouchableOpacity, Image } from "react-native";
 import { useRouter } from "expo-router";
@@ -11,6 +12,7 @@ import CustomButton from "@/components/CustomButton";
 export default function PhoneEntryScreen() {
   const router = useRouter();
   const isDark = useIsDark();
+  const { t } = useTranslation();
 
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"rider" | "driver">("rider");
@@ -124,7 +126,7 @@ export default function PhoneEntryScreen() {
           className="text-[15px] font-JakartaBold mb-1"
           style={{ color: textSecondary }}
         >
-          Your ride, your way
+          {t("auth.tagline")}
         </Text>
       </View>
 
@@ -132,13 +134,13 @@ export default function PhoneEntryScreen() {
         className="text-[22px] font-JakartaBold font-bold mb-1"
         style={{ color: textPrimary }}
       >
-        Get Started
+        {t("auth.get_started")}
       </Text>
       <Text
         className="text-[14px] font-JakartaBold mb-6"
         style={{ color: textSecondary }}
       >
-        Enter your phone number to continue
+        {t("auth.phone_entry")}
       </Text>
 
       {/* Phone Input */}
@@ -210,12 +212,12 @@ export default function PhoneEntryScreen() {
 
       <View className="gap-y-3">
         <CustomButton
-          title={loading ? "Loading..." : "Login"}
+          title={loading ? "Loading..." : t("auth.login")}
           onPress={handleLogin}
           disabled={loading}
          testID="phone-entry.handle-login"/>
         <CustomButton
-          title={loading ? "" : "Register"}
+          title={loading ? "" : t("auth.register")}
           bgVariant="secondary"
           onPress={handleRegister}
           disabled={loading}

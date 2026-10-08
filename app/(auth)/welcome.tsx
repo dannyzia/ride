@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { View, Text, Image } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,6 +9,7 @@ import { useIsDark } from "@/lib/useAppearance";
 
 export default function WelcomeScreen() {
   const isDark = useIsDark();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView
@@ -32,7 +34,7 @@ export default function WelcomeScreen() {
             color: isDark ? colors.textPrimaryDark : colors.textPrimaryLight,
           }}
         >
-          Welcome to Ride
+          {t("auth.welcome_title")}
         </Text>
         <Text
           className="text-[16px] font-Jakarta text-center mb-12"
@@ -66,7 +68,7 @@ export default function WelcomeScreen() {
           onPress={() => router.replace("/(auth)/phone-entry")}
          testID="welcome.replace-phone-entry"/>
         <CustomButton
-          title="Create Account"
+          title={t("auth.register")}
           bgVariant="secondary"
           onPress={() => router.replace("/(auth)/phone-entry")}
          testID="welcome.replace-phone-entry-2"/>

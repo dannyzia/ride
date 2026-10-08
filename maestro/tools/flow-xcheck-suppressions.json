@@ -25,6 +25,11 @@
       "match": "মালবাহী",
       "category": "external-data",
       "reason": "truckCatalog labelBn — the Bengali alternate of the same Freight tab, asserted together with the EN label. Also seed/catalog data, not t() copy."
+    },
+    {
+      "match": "runtime version",
+      "category": "device-dependent",
+      "reason": "Expo dev-launcher screen during the DEV-BUILD LOAD HOP (auth/_login-rider, measured 2026-10-07): the native launcher renders the update's runtime version while resolving the dev bundle. Rendered by expo-dev-launcher, never by app source or locale files."
     }
   ]
 }

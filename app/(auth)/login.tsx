@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -22,6 +23,7 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
 
   const isDark = useIsDark();
+  const { t } = useTranslation();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -135,7 +137,7 @@ export default function LoginScreen() {
       ) : null}
 
       <CustomButton
-        title={loading ? "Logging in..." : "Login"}
+        title={loading ? "Logging in..." : t("auth.login")}
         onPress={handleLogin}
         disabled={loading}
        testID="login.handle-login"/>
