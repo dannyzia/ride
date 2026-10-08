@@ -40,27 +40,28 @@
  * pre-fix shapes and must flip the outcome.
  */
 
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { promises as fs } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import glob from 'glob';
+import fs from "fs";
+import path from "path";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promises as fsp } from "node:fs";
+import glob from "glob";
 
-const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const MAESTRO = join(ROOT, '..', 'maestro');
-const ADB_ENV = join(MAESTRO, 'utils', 'adb-env.sh');
-const CMD = join(MAESTRO, 'utils', 'run-device-day.sh');
+const ROOT = process.cwd();
+const MAESTRO = path.join(ROOT, "maestro");
+const ADB_ENV = path.join(MAESTRO, "utils", "adb-env.sh");
+const CMD = path.join(MAESTRO, "utils", "run-device-day.sh");
 
-describe('adb-env.sh Linux-only variable guard', () => {
+describe("adb-env.sh Linux-only variable guard", () => {
   let tmp: string;
 
   beforeEach(async () => {
-    tmp = mkdtempSync(join(tmpdir(), 'adb-env-'));
+    tmp = mkdtempSync(join(tmpdir(), "adb-env-"));
   });
 
   afterEach(async () => {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fsp.rm(tmp, { recursive: true, force: true });
   });
 
   async function shell(
@@ -73,24 +74,24 @@ describe('adb-env.sh Linux-only variable guard', () => {
     }
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     const cmd = `bash -c 'set -uo pipefail; source "${source}" "$@"' _`;
-    const proc = await fs.execFileSync('bash', ['-c', cmd, 'bash', source], {
+    const proc = await fsp.execFileSync("bash", ["-c", cmd, "bash", source], {
       cwd: options.cwd,
       env: options.env,
       input: options.input,
       maxBuffer: options.maxBuffer ?? 16 * 1024 * 1024,
-      encoding: 'utf8',
+      encoding: "utf8",
     });
-    return { stdout: '', stderr: '', exitCode: 0 };
+    return { stdout: "", stderr: "", exitCode: 0 };
   }
 
-  it('resolves the pinned adb and prints its version without dying on a Linux env', async () => {
-    const adbBin = join(tmp, 'adb');
-    await fs.writeFile(
+  it("resolves the pinned adb and prints its version without dying on a Linux env", async () => {
+    const adbBin = join(tmp, "adb");
+    await fsp.writeFile(
       adbBin,
-      '#!/bin/sh\necho "adb version 36.1.10\n"',
-      'utf8'
+      "#!/bin/sh\necho \"adb version 36.1.10\n\"",
+      "utf8"
     );
-    await fs.chmod(adbBin, 0o755);
+    await fsp.chmod(adbBin, 0o755);
 
     const env: Node.ProcessEnv = {
       ...process.env,
@@ -98,7 +99,7 @@ describe('adb-env.sh Linux-only variable guard', () => {
       LOCALAPPDATA: undefined,
       USERPROFILE: undefined,
       ADB: undefined,
-      PATH: join(tmp, 'bin') + ':' + '/usr/bin:/bin',
+      PATH: join(tmp, "bin") + ":" + "/usr/bin:/bin",
     };
 
     const resolved = await shell(ADB_ENV, { cwd: MAESTRO, env });
@@ -106,14 +107,14 @@ describe('adb-env.sh Linux-only variable guard', () => {
     expect(resolved.stdout).toMatch(/adb version/);
   });
 
-  it('flags a bare $USERNAME in adb-env.sh as a Linux-only variable under set -u', async () => {
-    const faulted = ADB_ENV.replace('${USERNAME:-}', '$USERNAME');
-    const faultedPath = join(tmp, 'adb-env-faulted.sh');
-    await fs.writeFile(faultedPath, faulted, 'utf8');
+  it("flags a bare $USERNAME in adb-env.sh as a Linux-only variable under set -u", async () => {
+    const faulted = ADB_ENV.replace("${USERNAME:-}", "$USERNAME");
+    const faultedPath = join(tmp, "adb-env-faulted.sh");
+    await fsp.writeFile(faultedPath, faulted, "utf8");
 
-    const adbBin = join(tmp, 'adb');
-    await fs.writeFile(adbBin, '#!/bin/sh\necho "adb version 36.1.10\n"', 'utf8');
-    await fs.chmod(adbBin, 0o755);
+    const adbBin = join(tmp, "adb");
+    await fsp.writeFile(adbBin, "#!/bin/sh\necho \"adb version 36.1.10\n\"", "utf8");
+    await fsp.chmod(adbBin, 0o755);
 
     const env: Node.ProcessEnv = {
       ...process.env,
@@ -121,7 +122,7 @@ describe('adb-env.sh Linux-only variable guard', () => {
       LOCALAPPDATA: undefined,
       USERPROFILE: undefined,
       ADB: undefined,
-      PATH: join(tmp, 'bin') + ':' + '/usr/bin:/bin',
+      PATH: join(tmp, "bin") + ":" + "/usr/bin:/bin",
     };
 
     let threw = false;
@@ -135,14 +136,14 @@ describe('adb-env.sh Linux-only variable guard', () => {
     expect(threw).toBe(true);
   });
 
-  it('flags a bare $LOCALAPPDATA in run-device-day.sh as a Linux-only variable under set -u', async () => {
-    const faulted = CMD.replace('${LOCALAPPDATA:-}', '$LOCALAPPDATA');
-    const faultedPath = join(tmp, 'run-device-day-faulted.sh');
-    await fs.writeFile(faultedPath, faulted, 'utf8');
+  it("flags a bare $LOCALAPPDATA in run-device-day.sh as a Linux-only variable under set -u", async () => {
+    const faulted = CMD.replace("${LOCALAPPDATA:-}", "$LOCALAPPDATA");
+    const faultedPath = join(tmp, "run-device-day-faulted.sh");
+    await fsp.writeFile(faultedPath, faulted, "utf8");
 
-    const adbBin = join(tmp, 'adb');
-    await fs.writeFile(adbBin, '#!/bin/sh\necho "adb version 36.1.10\n"', 'utf8');
-    await fs.chmod(adbBin, 0o755);
+    const adbBin = join(tmp, "adb");
+    await fsp.writeFile(adbBin, "#!/bin/sh\necho \"adb version 36.1.10\n\"", "utf8");
+    await fsp.chmod(adbBin, 0o755);
 
     const env: Node.ProcessEnv = {
       ...process.env,
@@ -150,7 +151,7 @@ describe('adb-env.sh Linux-only variable guard', () => {
       LOCALAPPDATA: undefined,
       USERPROFILE: undefined,
       ADB: undefined,
-      PATH: join(tmp, 'bin') + ':' + '/usr/bin:/bin',
+      PATH: join(tmp, "bin") + ":" + "/usr/bin:/bin",
     };
 
     let threw = false;
@@ -164,11 +165,11 @@ describe('adb-env.sh Linux-only variable guard', () => {
     expect(threw).toBe(true);
   });
 
-  it('pins the class statically across every shell script under maestro/', async () => {
-    const files = await glob(join(MAESTRO, '**', '*.sh'), { absolute: true });
+  it("pins the class statically across every shell script under maestro/", async () => {
+    const files = await glob(join(MAESTRO, "**", "*.sh"), { absolute: true });
     const windowsOnly: string[] = [];
     for (const file of files) {
-      const src = await fs.readFile(file, 'utf8');
+      const src = await fsp.readFile(file, "utf8");
       if (/(^|[^:\w])USERNAME([^:\w]|$)/.test(src)) windowsOnly.push(file);
       if (/(^|[^:\w])LOCALAPPDATA([^:\w]|$)/.test(src)) windowsOnly.push(file);
       if (/(^|[^:\w])USERPROFILE([^:\w]|$)/.test(src)) windowsOnly.push(file);
