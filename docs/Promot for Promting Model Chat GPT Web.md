@@ -1164,11 +1164,11 @@ You are now the final prompt architect.
 
 Inputs:
 
-1. MASTER PLAN
-2. ORIGINAL DRAFT KILO PROMPT
-3. CLAUDE REPOSITORY AUDIT
-4. GEMINI WHOLE-SYSTEM AUDIT
-5. QWEN TECHNICAL DEPENDENCY AUDIT
+1. MASTER PLAN: 01-04 Plan V2.md
+2. ORIGINAL DRAFT KILO PROMPT: Code Skeptic Audit Prompt for Plan 01 - 04.md
+3. CLAUDE REPOSITORY AUDIT: Claudes Response.md
+4. GEMINI WHOLE-SYSTEM AUDIT: Screens Plan\Geminis Response.md
+5. QWEN TECHNICAL DEPENDENCY AUDIT: Qwen's Response.md
 
 Your job is to synthesize these findings into the FINAL KILO CODE
 PROMPT.

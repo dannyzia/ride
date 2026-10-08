@@ -222,9 +222,9 @@ grep -r "console\.log" app/ lib/ utils-server/ src/       # must return nothing
 grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return nothing
 
 # Automated pre-commit gate — scripts/git-hooks/pre-commit (install: node scripts/install-hooks.js)
-# 8 stages, any failure BLOCKS the commit, in order:
+# 9 stages, any failure BLOCKS the commit, in order:
 #   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector
-#   4 testID codemod idempotence (B-1)  5 testID map freshness  6 testID flow currency  7 shellcheck (shell scripts)  8 eslint (staged files only)
+#   4 testID codemod idempotence (B-1)  5 testID map freshness  6 testID flow currency  7 i18n orphan ratchet  8 shellcheck (shell scripts)  9 eslint (staged files only)
 # ON-DEMAND HARNESS (opt-in, ~3min pre-commit / ~5min pre-push): node scripts/pre-commit-harness.cjs [--gate 5] [--list]
 #   [--json] [--keep] [--base <ref>] [--no-copy] [--push]. Runs the REAL hook in a disposable git worktree
 #   (node_modules linked so stage 8's CWD-relative eslint path resolves) and asserts every gate
@@ -278,7 +278,9 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # regex with the POSIX class `[[:space:]]` is VALID in the `git grep -E` pattern but NOT in JavaScript
 # (it means "one of [ : s p a c e then a literal ]"), which yields ZERO selectors and turns this into
 # a gate that silently passes every commit forever. `tests/meta/testid-flow-currency.test.ts` pins the
-# live count at exactly 93 for that reason.
+# pre-commit INDEX-mode count at exactly 99 for that reason (its fixture tree is a copy of the
+# shipped CLI; the open tree's worktree-mode count is 100). Replace 93/99 only if a committed
+# flow selector set itself changes.
 # CI MODES (2026-10-05, owner ruling): both tools gained `--head-vs-worktree`, and the
 # `maestro-drift` job runs them on every PR — on a clean checkout the index modes above compare
 # HEAD with itself, so CI audits the COMMITTED state instead: stage 5 diffs the map AT HEAD against
@@ -382,8 +384,15 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # asserting the exit code or the tier's own finding flips — so a tier that has become a no-op fails
 # the suite instead of passing quietly. Mutating the sandbox copy only; the repo's tool is asserted unchanged.
 # CI runs the fixture suite via `npm run test:all` (ci.yml). Since 2026-10-04 the ci.yml
-# `maestro-drift` job also runs THIS stage's tool (and stage 4's) against the real tree, so a commit
-# that bypassed the local hook — web UI, fresh clone, --no-verify — is still caught. The ci.yml
+# `maestro-drift` job runs the same stage-6 tool (and stage 4's) against the real tree, so a commit
+# that bypassed the local hook — web UI, fresh clone, --no-verify — is still caught. The loop
+# version of this stage-6 gate read the INDEX; since 2026-10-05 it has run
+# `node maestro/tools/testid-flow-currency.cjs --head-vs-worktree` in the CI job, which reads
+# the worktree (`git grep` without --cached) — the only mode that catches a flow still selecting
+# an id the map-at-HEAD claims but the tree no longer declares. Both modes re-run on every PR, so
+# a commit made where the hook is absent (web UI, fresh clone, --no-verify) is still audited.
+# Measured 2026-10-07 on the real tree, the worktree mode reports 100 flow-selected testIDs;
+# the harness pins the pre-commit index mode at 99. The ci.yml
 # `precommit-gates` job (PR runs only) closes the index-scoped gap the other jobs cannot reach: it
 # replays the PR as a staged changeset on a throwaway branch (`git reset --soft` to base), adds four
 # benign probes so every stage gets real work, then runs the REAL hook and requires zero

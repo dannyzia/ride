@@ -168,9 +168,9 @@ grep -r "console\.log" app/ lib/ utils-server/ src/       # must return nothing
 grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 
 # Automated pre-commit gate — scripts/git-hooks/pre-commit (install: node scripts/install-hooks.js)
-# 8 stages, any failure BLOCKS the commit, in order:
+# 9 stages, any failure BLOCKS the commit, in order:
 #   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector
-#   4 testID codemod idempotence (B-1)  5 testID map freshness  6 testID flow currency  7 shellcheck (shell scripts)  8 eslint (staged files only)
+#   4 testID codemod idempotence (B-1)  5 testID map freshness  6 testID flow currency  7 i18n orphan ratchet  8 shellcheck (shell scripts)  9 eslint (staged files only)
 # ON-DEMAND HARNESS (opt-in, ~3min pre-commit / ~5min pre-push): node scripts/pre-commit-harness.cjs [--gate 5] [--list]
 #   [--json] [--keep] [--base <ref>] [--no-copy] [--push]. Runs the REAL hook in a disposable git worktree
 #   (node_modules linked so stage 8's CWD-relative eslint path resolves) and asserts every gate
@@ -233,7 +233,9 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # regex with the POSIX class `[[:space:]]` is VALID in the `git grep -E` pattern but NOT in JavaScript
 # (it means "one of [ : s p a c e then a literal ]"), which yields ZERO selectors and turns this into
 # a gate that silently passes every commit forever. `tests/meta/testid-flow-currency.test.ts` pins the
-# live count at exactly 93 for that reason.
+# pre-commit INDEX-mode count at exactly 99 for that reason (its fixture tree is a copy of the
+# shipped CLI; the open tree's worktree-mode count is 100). Replace 93/99 only if a committed
+# flow selector set itself changes.
 # CI MODES (2026-10-05, owner ruling): both tools gained `--head-vs-worktree`, and the
 # `maestro-drift` job runs them on every PR — on a clean checkout the index modes above compare
 # HEAD with itself, so CI audits the COMMITTED state instead: stage 5 diffs the map AT HEAD against
@@ -241,12 +243,19 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # map regenerated from the tree (the ruling's wording), intersected with the worktree's flow
 # selectors. Neither mode needs git history (shallow checkouts are fine); stage 6's flow-staged
 # stand-down does not apply there (no index, and stage 3 runs on every maestro-drift run anyway).
+# The `maestro-drift` job additionally re-runs BOTH drift tools on the real tree and treats any
+# non-zero exit as a block: flow-currency exit 2 = map unreadable/broken, exit 1 = a flow-selected
+# testID removed without an update to any flow (a dead selector, exactly the commit-class the
+# local hook can miss). Nothing else in CI audits the flow tree against the map with selector
+# resolution.
 # MEASURED 2026-10-05 on the real tree (uncommitted screen deletions present): stage 5 exit 2 —
 # 8 vanished + 1 unrecorded (13 line-drift, advisory) — stage 6 exit 0 (8 removed, none
 # flow-selected). Proofs: tests/meta/testid-map-freshness.test.ts and
 # tests/meta/testid-flow-currency.test.ts each run the SHIPPED CLI in a throwaway git repo for
 # this mode, PAIRED with a fault-injected copy whose detector is neutralised and must flip the
-# outcome (6 new tests; a no-op gate fails the suite instead of passing quietly).
+# outcome (6 new tests; a no-op gate fails the suite instead of passing quietly). On the open tree
+# the CI-mode number is 100 flow-selected testIDs (index mode, `git grep --cached`, is 99) —
+# do not re-pin the harness until the next committed flow edit.
 # Stage 3 runs `node maestro/tools/flow-xcheck.cjs` whenever a maestro/flows/**.yaml is staged.
 # TWO BLOCKING checks: (a) a flow `id:` selector absent from maestro/tools/testid-map.json can
 # never resolve on device; (b) MAP DRIFT — the selector is in the map but no longer in the app/
