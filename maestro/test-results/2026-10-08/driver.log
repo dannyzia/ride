@@ -1,0 +1,403 @@
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:00:24 BST 2026
+emulator:    skip  (PREFLIGHT_EMULATOR=skip)
+maestro:     2.6.1
+
+=== §1B emulator (Medium_Phone) — operator-managed (PREFLIGHT_EMULATOR=skip) ===
+
+############################################################
+## BLOCKED at: emulator-not-present
+## cause:    PREFLIGHT_EMULATOR=skip but no emulator is attached (offline)
+## remedy:   start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:01:43 BST 2026
+emulator:    skip  (PREFLIGHT_EMULATOR=skip)
+maestro:     2.6.1
+
+=== §1B emulator (Medium_Phone) — operator-managed (PREFLIGHT_EMULATOR=skip) ===
+
+############################################################
+## BLOCKED at: emulator-not-present
+## cause:    PREFLIGHT_EMULATOR=skip but no emulator is attached ()
+## remedy:   start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:03:44 BST 2026
+emulator:    skip  (PREFLIGHT_EMULATOR=skip)
+maestro:     2.6.1
+
+=== §1B emulator (Medium_Phone) — operator-managed (PREFLIGHT_EMULATOR=skip) ===
+
+############################################################
+## BLOCKED at: emulator-not-present
+## cause:    PREFLIGHT_EMULATOR=skip but no emulator is attached ()
+## remedy:   start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:04:35 BST 2026
+emulator:    skip  (PREFLIGHT_EMULATOR=skip)
+maestro:     2.6.1
+
+=== §1B emulator (Medium_Phone) — operator-managed (PREFLIGHT_EMULATOR=skip) ===
+
+############################################################
+## BLOCKED at: emulator-not-present
+## cause:    PREFLIGHT_EMULATOR=skip but no emulator is attached ()
+## remedy:   start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:05:15 BST 2026
+emulator:    skip  (PREFLIGHT_EMULATOR=skip)
+maestro:     2.6.1
+
+=== §1B emulator (Medium_Phone) — operator-managed (PREFLIGHT_EMULATOR=skip) ===
+
+############################################################
+## BLOCKED at: emulator-not-present
+## cause:    PREFLIGHT_EMULATOR=skip but no emulator is attached ()
+## remedy:   start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:05:58 BST 2026
+emulator:    skip  (PREFLIGHT_EMULATOR=skip)
+maestro:     2.6.1
+
+=== §1B emulator (Medium_Phone) — operator-managed (PREFLIGHT_EMULATOR=skip) ===
+
+############################################################
+## BLOCKED at: emulator-not-present
+## cause:    PREFLIGHT_EMULATOR=skip but no emulator is attached ()
+## remedy:   start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:06:44 BST 2026
+emulator:    skip  (PREFLIGHT_EMULATOR=skip)
+maestro:     2.6.1
+
+=== §1B emulator (Medium_Phone) — operator-managed (PREFLIGHT_EMULATOR=skip) ===
+
+############################################################
+## BLOCKED at: emulator-not-present
+## cause:    PREFLIGHT_EMULATOR=skip but no emulator is attached ()
+## remedy:   start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:07:28 BST 2026
+emulator:    skip  (PREFLIGHT_EMULATOR=skip)
+maestro:     2.6.1
+
+=== §1B emulator (Medium_Phone) — operator-managed (PREFLIGHT_EMULATOR=skip) ===
+
+############################################################
+## BLOCKED at: emulator-not-present
+## cause:    PREFLIGHT_EMULATOR=skip but no emulator is attached ()
+## remedy:   start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:10:13 BST 2026
+emulator:    boot  (PREFLIGHT_EMULATOR=boot)
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+4s device state: offline
+  t+52s device state: device
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:12:53 BST 2026
+emulator:    boot  (PREFLIGHT_EMULATOR=boot)
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ? (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: starting (INSTANCE_COUNT=1; two instances = split brain)
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+7s device state: device
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+s-server-down
+## cause:    nothing listening on 3001 after 180s (see utils-server-test.log)
+## remedy:   driver flows die without the dispatch server; check INSTANCE_COUNT=1 in utils-server/.env
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+env:        EXPO_PUBLIC_SERVER_URL host = ? (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: starting (INSTANCE_COUNT=1; two instances = split brain)
+cleanup: emulator stopped
+metro:       starting (cold start bundles ~2654 modules, ~80s)
+
+=== §5 GPS seeding ===
+adb:          /c/Users/callz/platform-tools/adb (Version 37.0.0-14910828)
+NOTE: other adb build(s) present: Version 36.0.0-13206524 (SDK)
+      pinned to /c/Users/callz/platform-tools/adb (Version 37.0.0-14910828) for this run. Both bind tcp:5037, so mixing
+      them makes diagnostics describe the wrong binary. Override with ADB=/path/to/adb.
+* daemon not running; starting now at tcp:5037
+* daemon started successfully
+adb.exe: no devices/emulators found
+gps seeded: banani 90.4066 23.7937
+gps:         banani 90.4066 23.7937 seeded
+
+=== §6 app launch + permissions ===
+granted:     location, camera, storage, notifications
+
+############################################################
+## BLOCKED at: app-launch-failed
+## cause:    could not launch com.ride.bd via monkey
+## remedy:   confirm a dev build is installed: "/c/Users/callz/platform-tools/adb" shell pm list packages | grep com.ride.bd"
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:18:36 BST 2026
+emulator:    skip  (PREFLIGHT_EMULATOR=skip)
+maestro:     2.6.1
+
+=== §1B emulator (Medium_Phone) — operator-managed (PREFLIGHT_EMULATOR=skip) ===
+
+############################################################
+## BLOCKED at: emulator-not-present
+## cause:    PREFLIGHT_EMULATOR=skip but no emulator is attached ()
+## remedy:   start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 00:19:15 BST 2026
+emulator:    skip  (PREFLIGHT_EMULATOR=skip)
+maestro:     2.6.1
+
+=== §1B emulator (Medium_Phone) — operator-managed (PREFLIGHT_EMULATOR=skip) ===
+
+############################################################
+## BLOCKED at: emulator-not-present
+## cause:    PREFLIGHT_EMULATOR=skip but no emulator is attached ()
+## remedy:   start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 09:43:44 BST 2026
+emulator:    skip  (PREFLIGHT_EMULATOR=skip)
+maestro:     2.6.1
+
+=== §1B emulator (Medium_Phone) — operator-managed (PREFLIGHT_EMULATOR=skip) ===
+
+############################################################
+## BLOCKED at: emulator-not-present
+## cause:    PREFLIGHT_EMULATOR=skip but no emulator is attached ()
+## remedy:   start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 09:45:06 BST 2026
+emulator:    boot  (PREFLIGHT_EMULATOR=boot)
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+2s device state: absent
+  t+12s device state: offline
+  t+58s device state: device
+
+############################################################
+## BLOCKED at: emulator-died
+## cause:    qemu process exited during boot (see maestro/test-results/2026-10-08/emulator-boot.log)
+## remedy:   if the log shows 'UpdateLayeredWindowIndirect failed', the host has no usable desktop session — keep -no-window, or run on a machine with one
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 09:48:36 BST 2026
+emulator:    boot  (PREFLIGHT_EMULATOR=boot)
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+3s device state: absent
+  t+11s device state: offline
+  t+34s device state: device
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ? (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: starting (INSTANCE_COUNT=1; two instances = split brain)
+
+############################################################
+## BLOCKED at: utils-server-down
+## cause:    nothing listening on 3001 after 180s (see utils-server-test.log)
+## remedy:   driver flows die without the dispatch server; check INSTANCE_COUNT=1 in utils-server/.env
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-08
+date:        Thu Oct  8 09:51:00 BST 2026
+emulator:    boot  (PREFLIGHT_EMULATOR=boot)
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+1s device state: offline
+  t+33s device state: device
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ? (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: starting (INSTANCE_COUNT=1; two instances = split brain)
+metro:       starting (cold start bundles ~2654 modules, ~80s)
+
+=== §5 GPS seeding ===
+adb:          /c/Users/callz/platform-tools/adb (Version 37.0.0-14910828)
+NOTE: other adb build(s) present: Version 36.0.0-13206524 (SDK)
+      pinned to /c/Users/callz/platform-tools/adb (Version 37.0.0-14910828) for this run. Both bind tcp:5037, so mixing
+      them makes diagnostics describe the wrong binary. Override with ADB=/path/to/adb.
+/system/bin/sh: emu: inaccessible or not found
+gps seeded: banani 90.4066 23.7937
+gps:         banani 90.4066 23.7937 seeded
+
+=== §6 app launch + permissions ===
+granted:     location, camera, storage, notifications
+
+############################################################
+## BLOCKED at: app-launch-failed
+## cause:    could not launch com.ride.bd via monkey
+## remedy:   confirm a dev build is installed: "/c/Users/callz/platform-tools/adb" shell pm list packages | grep com.ride.bd"
+## evidence: maestro/test-results/2026-10-08
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped

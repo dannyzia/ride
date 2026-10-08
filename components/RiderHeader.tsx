@@ -22,7 +22,7 @@ const RiderHeader = ({ hasPermissions: _hasPermissions, todayEarnings }: { hasPe
     const handleSignOut = async () => {
         try {
             await signOut();
-            router.replace('/(auth)/sign-in');
+            router.replace('/(auth)/login');
         } catch (err) {
             logger.error(JSON.stringify(err, null, 2));
         }

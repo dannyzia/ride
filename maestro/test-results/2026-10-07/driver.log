@@ -1,0 +1,499 @@
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 15:26:23 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+1s device state: device
+booted: emulator-5564	device
+
+=== §2 env sync ===
+[dev-env-sync] patched .env.local → 192.168.0.196
+  EXPO_PUBLIC_DEV_LAN_IP: (absent) → 192.168.0.196
+[dev-env-sync] NEXT: restart Metro so the new EXPO_PUBLIC_* values are inlined into the bundle.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ride-api-1t1o.onrender.com
+#EXPO_PUBLIC_WEB_SOCKET_SERVER_URL=wss (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: starting (INSTANCE_COUNT=1; two instances = split brain)
+metro:       already listening on 8081 — reusing
+
+=== §5 GPS seeding ===
+adb:          C:/Users/callz/platform-tools/adb (Version 37.0.0-14910828)
+NOTE: other adb build(s) present: Version 36.0.0-13206524 (SDK)
+      pinned to C:/Users/callz/platform-tools/adb (Version 37.0.0-14910828) for this run. Both bind tcp:5037, so mixing
+      them makes diagnostics describe the wrong binary. Override with ADB=/path/to/adb.
+adb.exe: more than one device/emulator
+gps seeded: banani 90.4066 23.7937
+gps:         banani 90.4066 23.7937 seeded
+
+=== §6 app launch + permissions ===
+granted:     location, camera, storage, notifications
+
+############################################################
+## BLOCKED at: app-launch-failed
+## cause:    could not launch com.ride.bd via monkey
+## remedy:   confirm a dev build is installed: "C:/Users/callz/platform-tools/adb" shell pm list packages | grep com.ride.bd"
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 15:32:00 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+1s device state: offline
+  t+27s device state: device
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ride-api-1t1o.onrender.com
+#EXPO_PUBLIC_WEB_SOCKET_SERVER_URL=wss (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: already listening on 3001 — reusing
+metro:       starting (cold start bundles ~2654 modules, ~80s)
+
+=== §5 GPS seeding ===
+adb:          C:/Users/callz/platform-tools/adb (Version 37.0.0-14910828)
+NOTE: other adb build(s) present: Version 36.0.0-13206524 (SDK)
+      pinned to C:/Users/callz/platform-tools/adb (Version 37.0.0-14910828) for this run. Both bind tcp:5037, so mixing
+      them makes diagnostics describe the wrong binary. Override with ADB=/path/to/adb.
+/system/bin/sh: emu: inaccessible or not found
+gps seeded: banani 90.4066 23.7937
+gps:         banani 90.4066 23.7937 seeded
+
+=== §6 app launch + permissions ===
+granted:     location, camera, storage, notifications
+
+############################################################
+## BLOCKED at: app-launch-failed
+## cause:    could not launch com.ride.bd via monkey
+## remedy:   confirm a dev build is installed: "C:/Users/callz/platform-tools/adb" shell pm list packages | grep com.ride.bd"
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 15:34:37 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+1s device state: offline
+  t+28s device state: device
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ride-api-1t1o.onrender.com
+#EXPO_PUBLIC_WEB_SOCKET_SERVER_URL=wss (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: starting (INSTANCE_COUNT=1; two instances = split brain)
+metro:       starting (cold start bundles ~2654 modules, ~80s)
+
+=== §5 GPS seeding ===
+adb:          C:/Users/callz/platform-tools/adb (Version 37.0.0-14910828)
+NOTE: other adb build(s) present: Version 36.0.0-13206524 (SDK)
+      pinned to C:/Users/callz/platform-tools/adb (Version 37.0.0-14910828) for this run. Both bind tcp:5037, so mixing
+      them makes diagnostics describe the wrong binary. Override with ADB=/path/to/adb.
+/system/bin/sh: emu: inaccessible or not found
+gps seeded: banani 90.4066 23.7937
+gps:         banani 90.4066 23.7937 seeded
+
+=== §6 app launch + permissions ===
+granted:     location, camera, storage, notifications
+
+############################################################
+## BLOCKED at: app-launch-failed
+## cause:    could not launch com.ride.bd via monkey
+## remedy:   confirm a dev build is installed: "C:/Users/callz/platform-tools/adb" shell pm list packages | grep com.ride.bd"
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: --keep-emulator set, leaving the emulator up
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 15:46:00 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+4s device state: device
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ride-api-1t1o.onrender.com
+#EXPO_PUBLIC_WEB_SOCKET_SERVER_URL=wss (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: already listening on 3001 — reusing
+metro:       starting (cold start bundles ~2654 modules, ~80s)
+
+=== §5 GPS seeding ===
+adb:          C:/Users/callz/platform-tools/adb (Version 37.0.0-14910828)
+NOTE: other adb build(s) present: Version 36.0.0-13206524 (SDK)
+      pinned to C:/Users/callz/platform-tools/adb (Version 37.0.0-14910828) for this run. Both bind tcp:5037, so mixing
+      them makes diagnostics describe the wrong binary. Override with ADB=/path/to/adb.
+/system/bin/sh: emu: inaccessible or not found
+gps seeded: banani 90.4066 23.7937
+gps:         banani 90.4066 23.7937 seeded
+
+=== §6 app launch + permissions ===
+granted:     location, camera, storage, notifications
+
+############################################################
+## BLOCKED at: app-launch-failed
+## cause:    could not launch com.ride.bd via monkey
+## remedy:   confirm a dev build is installed: "C:/Users/callz/platform-tools/adb" shell pm list packages | grep com.ride.bd"
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: --keep-emulator set, leaving the emulator up
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 15:49:52 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+1s device state: device
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ride-api-1t1o.onrender.com
+#EXPO_PUBLIC_WEB_SOCKET_SERVER_URL=wss (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: starting (INSTANCE_COUNT=1; two instances = split brain)
+
+############################################################
+## BLOCKED at: utils-server-down
+## cause:    nothing listening on 3001 after 180s (see utils-server-test.log)
+## remedy:   driver flows die without the dispatch server; check INSTANCE_COUNT=1 in utils-server/.env
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: --keep-emulator set, leaving the emulator up
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 15:55:59 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+3s device state: device
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ride-api-1t1o.onrender.com
+#EXPO_PUBLIC_WEB_SOCKET_SERVER_URL=wss (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: starting (INSTANCE_COUNT=1; two instances = split brain)
+
+############################################################
+## BLOCKED at: utils-server-down
+## cause:    nothing listening on 3001 after 180s (see utils-server-test.log)
+## remedy:   driver flows die without the dispatch server; check INSTANCE_COUNT=1 in utils-server/.env
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 22:58:50 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+119s device state: device
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ride-api-1t1o.onrender.com
+#EXPO_PUBLIC_WEB_SOCKET_SERVER_URL=wss (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: starting (INSTANCE_COUNT=1; two instances = split brain)
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 23:04:16 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+
+############################################################
+## BLOCKED at: utils-server-down
+## cause:    nothing listening on 3001 after 180s (see utils-server-test.log)
+## remedy:   driver flows die without the dispatch server; check INSTANCE_COUNT=1 in utils-server/.env
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: --keep-emulator set, leaving the emulator up
+  t+14s device state: device
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ride-api-1t1o.onrender.com
+#EXPO_PUBLIC_WEB_SOCKET_SERVER_URL=wss (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: starting (INSTANCE_COUNT=1; two instances = split brain)
+metro:       starting (cold start bundles ~2654 modules, ~80s)
+
+=== §5 GPS seeding ===
+adb:          C:/Users/callz/platform-tools/adb (Version 37.0.0-14910828)
+NOTE: other adb build(s) present: Version 36.0.0-13206524 (SDK)
+      pinned to C:/Users/callz/platform-tools/adb (Version 37.0.0-14910828) for this run. Both bind tcp:5037, so mixing
+      them makes diagnostics describe the wrong binary. Override with ADB=/path/to/adb.
+/system/bin/sh: emu: inaccessible or not found
+gps seeded: banani 90.4066 23.7937
+gps:         banani 90.4066 23.7937 seeded
+
+=== §6 app launch + permissions ===
+granted:     location, camera, storage, notifications
+
+############################################################
+## BLOCKED at: app-launch-failed
+## cause:    could not launch com.ride.bd via monkey
+## remedy:   confirm a dev build is installed: "C:/Users/callz/platform-tools/adb" shell pm list packages | grep com.ride.bd"
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 23:09:12 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+33s device state: offline
+  t+59s device state: device
+booted: emulator-5554	device
+
+=== §2 env sync ===
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+[dev-env-sync] OK — .env.local already synced to 192.168.0.196. Nothing to do.
+env:        EXPO_PUBLIC_SERVER_URL host = ride-api-1t1o.onrender.com
+#EXPO_PUBLIC_WEB_SOCKET_SERVER_URL=wss (emulator reaches the host at 10.0.2.2)
+
+=== §3 maestro driver ===
+on the emulator path there is no install restriction; the first 'maestro test'
+pays a ~30-60s driver-APK install. That delay is NOT a hang (runbook §3).
+
+=== §4 Metro + utils-server ===
+utils-server: starting (INSTANCE_COUNT=1; two instances = split brain)
+
+############################################################
+## BLOCKED at: utils-server-down
+## cause:    nothing listening on 3001 after 180s (see utils-server-test.log)
+## remedy:   driver flows die without the dispatch server; check INSTANCE_COUNT=1 in utils-server/.env
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 23:14:13 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+15s device state: offline
+  t+82s device state: device
+  t+203s device state: offline
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 23:18:50 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+6s device state: offline
+
+############################################################
+## BLOCKED at: emulator-boot-timeout
+## cause:    device did not reach 'device' + sys.boot_completed=1 within 300s (last state: offline)
+## remedy:   raise BOOT_TIMEOUT_S for a cold first boot, or check maestro/test-results/2026-10-07/emulator-boot.log
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 23:21:41 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+2s device state: offline
+
+############################################################
+## BLOCKED at: emulator-boot-timeout
+## cause:    device did not reach 'device' + sys.boot_completed=1 within 300s (last state: offline)
+## remedy:   raise BOOT_TIMEOUT_S for a cold first boot, or check maestro/test-results/2026-10-07/emulator-boot.log
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: --keep-emulator set, leaving the emulator up
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 23:26:43 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+2s device state: offline
+
+############################################################
+## BLOCKED at: emulator-boot-timeout
+## cause:    device did not reach 'device' + sys.boot_completed=1 within 300s (last state: offline)
+## remedy:   raise BOOT_TIMEOUT_S for a cold first boot, or check maestro/test-results/2026-10-07/emulator-boot.log
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 23:31:44 BST 2026
+maestro:     2.6.1
+
+############################################################
+## BLOCKED at: emulator-boot-timeout
+## cause:    device did not reach 'device' + sys.boot_completed=1 within 300s (last state: offline)
+## remedy:   raise BOOT_TIMEOUT_S for a cold first boot, or check maestro/test-results/2026-10-07/emulator-boot.log
+## evidence: maestro/test-results/2026-10-07
+############################################################
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+waiting for boot (timeout 300s)…
+  t+5s device state: offline
+
+=== §0 preflight ===
+repo:        /d/My Projects/Current Project/Ride
+avd:         Medium_Phone
+evidence:    maestro/test-results/2026-10-07
+date:        Wed Oct  7 23:53:01 BST 2026
+maestro:     2.6.1
+
+=== §1B emulator boot (Medium_Phone) ===
+launching: emulator -avd Medium_Phone -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554 -no-window -no-audio
+waiting for boot (timeout 300s)…
+  t+7s device state: offline
+
+############################################################
+## BLOCKED at: emulator-boot-timeout
+## cause:    device did not reach 'device' + sys.boot_completed=1 within 300s (last state: offline)
+## remedy:   raise BOOT_TIMEOUT_S for a cold first boot, or check maestro/test-results/2026-10-07/emulator-boot.log
+## evidence: maestro/test-results/2026-10-07
+############################################################
+cleanup: stopping emulator + adb server (--keep-emulator to skip)
+cleanup: emulator stopped
+cleanup: emulator stopped
+cleanup: emulator stopped
+cleanup: emulator stopped

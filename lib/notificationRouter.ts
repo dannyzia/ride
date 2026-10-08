@@ -173,6 +173,10 @@ const RIDER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
   },
 
   // Promos
+  // The apply-promos code-entry screen was deleted; promos now surface inline on
+  // the home booking sheet, and the loyalty/points screen keeps a list place for
+  // any future promo surface. Prefer loyalty; fall back to home only if loyalty is
+  // ever removed.
   "promo:available": () => {
     router.push("/(main)/(customer)/(tabs)/settings/loyalty" as never);
     return true;
