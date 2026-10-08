@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # run-device-day.sh — unattended driver for maestro/DEVICE-DAY-RUNBOOK.md §1B–§8.
 #
 # One command, bring-up to evidence, no interaction. Replaces hand-running the
@@ -39,8 +39,9 @@
 # (adb pm grant on an absent permission, etc.) that are expected and harmless.
 set -uo pipefail
 
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT" || { echo "FATAL: cannot cd to repo root" >&2; exit 1; }
+_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$_ROOT" || { echo "FATAL: cannot cd to repo root" >&2; exit 1; }
+ROOT="$PWD"
 
 # ── config ────────────────────────────────────────────────────────────────────
 AVD="Medium_Phone"
@@ -56,6 +57,14 @@ RUNS_PER_FLOW="${RUNS_PER_FLOW:-2}"         # §7 the ×2
 # required = emulator + AVD must exist (device-day host, the default).
 # optional = they may be absent and are reported as SKIP (CI runner, see header).
 PREFLIGHT_DEVICE="${PREFLIGHT_DEVICE:-required}"
+# Boot the emulator in §1B by default on a device-day host. On this host the
+# manual cold-start deep-link path is the working one (DEV-BUILD LOAD HOP in
+# maestro/flows/shared/auth/_login-rider.yaml), so set PREFLIGHT_EMULATOR=skip
+# when you want the script to stop after §4 and leave the bring-up to the
+# operator. "boot" and "skip" are the only values; anything else is fatal.
+PREFLIGHT_EMULATOR="${PREFLIGHT_EMULATOR:-boot}"
+
+ADB_ENV_SH="$(dirname "$0")/adb-env.sh"
 
 KEY_FLOWS=(
   "maestro/flows/auth/02-rider-login.yaml"
@@ -82,6 +91,27 @@ case "$PREFLIGHT_DEVICE" in
   *) echo "FATAL: PREFLIGHT_DEVICE must be 'required' or 'optional' (got '$PREFLIGHT_DEVICE')" >&2; exit 1 ;;
 esac
 
+case "$PREFLIGHT_EMULATOR" in
+  boot|skip) : ;;
+  *) echo "FATAL: PREFLIGHT_EMULATOR must be 'boot' or 'skip' (got '$PREFLIGHT_EMULATOR')" >&2; exit 1 ;;
+esac
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+# Source adb-env.sh once, idempotently, the same way in both the --check and the
+# real-run path. adb-env.sh is idempotent itself, but on this host it can already
+# be sourced before this script starts (BASH_ENV), so guard that here too: if
+# $ADB is already set from an earlier source, a second source is a safe no-op and
+# we skip the whole thing rather than re-running the resolution/fallback.
+source_adb_env() {
+  # shellcheck source=maestro/utils/adb-env.sh
+  if [ -n "${ADB:-}" ]; then
+    return 0
+  fi
+  if [ -f "$ADB_ENV_SH" ]; then
+    . "$ADB_ENV_SH"
+  fi
+}
+
 # ── --check: validate preconditions, then stop ───────────────────────────────
 # Deliberately placed BEFORE the evidence dir is created and before cleanup is
 # trapped, so checking is side-effect free and cannot kill a running emulator.
@@ -105,15 +135,8 @@ if [ "$CHECK" = 1 ]; then
   ok_ "root:            $ROOT"
 
   head_ "adb (single pinned build)"
-  # adb-env.sh signals "not found" with `exit`, and because it is SOURCED that
-  # would terminate this script at line 1 of the report instead of listing a
-  # missing adb alongside every other failed precondition. Probe it inside a
-  # subshell first — the exit then ends only the probe — and source it for real
-  # once it is known to resolve.
-  # shellcheck source=maestro/utils/adb-env.sh
-  if ( ADB_ENV_QUIET=1 . "$(dirname "$0")/adb-env.sh" ) >/dev/null 2>&1; then
-    # shellcheck source=maestro/utils/adb-env.sh
-    . "$(dirname "$0")/adb-env.sh"
+  source_adb_env
+  if [ -n "${ADB:-}" ]; then
     ok_ "adb:             $ADB ($("$ADB" version 2>/dev/null | sed -n '2p' | tr -d '\r'))"
   else
     bad_ "adb not resolvable — set ADB=/path/to/adb or install platform-tools"
@@ -172,6 +195,7 @@ if [ "$CHECK" = 1 ]; then
   printf '  avd=%s runs/flow=%s boot-timeout=%ss flow-timeout=%ss\n' \
     "$AVD" "$RUNS_PER_FLOW" "$BOOT_TIMEOUT_S" "$FLOW_TIMEOUT_S"
   printf '  %d key flows, %d runs total\n' "${#KEY_FLOWS[@]}" "$(( ${#KEY_FLOWS[@]} * RUNS_PER_FLOW ))"
+  printf '  emulator=%s  (PREFLIGHT_EMULATOR=%s)\n' "$AVD" "$PREFLIGHT_EMULATOR"
 
   printf '\n'
   if [ "$fails" -eq 0 ]; then
@@ -210,7 +234,7 @@ qemu_running() { tasklist 2>/dev/null | grep -qi "qemu"; }
 
 # One adb for the whole run, via the shared resolver every device script uses
 # (adb-env.sh). Sourced HERE, before cleanup() is defined, because cleanup runs
-# from `trap ... EXIT` and can fire on a preflight die() before the §0 section —
+# from `trap ... EXIT` and can fire on a preflight die() before the §0 section —-
 # so $ADB must already exist by then.
 #
 # This REPLACES an earlier inline pin that put the SDK build ahead of PATH: that
@@ -218,10 +242,7 @@ qemu_running() { tasklist 2>/dev/null | grep -qi "qemu"; }
 # scripts used, so a single device day drove two builds that both bind tcp:5037.
 # The resolver defaults to the PATH build — the one the emulator client itself
 # invokes — and reports any other build found.
-# shellcheck disable=SC2034  # consumed by adb-env.sh, which this sources next
-ADB_ENV_QUIET=1
-# shellcheck source=maestro/utils/adb-env.sh
-. "$(dirname "$0")/adb-env.sh"
+source_adb_env
 
 # The headless emulator's image is qemu-system-x86_64-headless.exe, NOT the
 # windowed qemu-system-x86_64.exe — matching only the latter leaves a headless
@@ -275,6 +296,7 @@ log "repo:        $ROOT"
 log "avd:         $AVD"
 log "evidence:    $EVIDENCE"
 log "date:        $(date)"
+log "emulator:    $PREFLIGHT_EMULATOR  (PREFLIGHT_EMULATOR=$PREFLIGHT_EMULATOR)"
 
 [ -f "$MAESTRO_BIN" ] || command -v maestro >/dev/null 2>&1 \
   || die "maestro-missing" "Maestro CLI not found (tried '$MAESTRO_BIN' and PATH)" \
@@ -283,52 +305,77 @@ log "maestro:     $( (maestro --version 2>/dev/null || "$MAESTRO_BIN" --version 
 
 adb_env_warn_duplicates
 
-ls "$USERPROFILE/.android/avd/$AVD.ini" >/dev/null 2>&1 \
+# ${USERPROFILE:-$HOME} is required, not defensive: USERPROFILE is a
+# Git-Bash/Windows variable, unset on a Linux runner, and this script runs
+# under `set -uo pipefail` — the bare expansion died with "USERPROFILE: unbound
+# variable" off Windows. Same fallback shape as the AVD probe in --check above.
+ls "${USERPROFILE:-$HOME}/.android/avd/$AVD.ini" >/dev/null 2>&1 \
   || die "avd-missing" "AVD '$AVD' does not exist" \
           "run 'emulator -list-avds' and re-run with --avd <name>"
 
 # ── §1B emulator ─────────────────────────────────────────────────────────────
-step "§1B emulator boot ($AVD)"
-EMU_ARGS=(-avd "$AVD" -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554)
-# Windowed mode is opt-in: on this host a wiped/windowed guest died with
-# "UpdateLayeredWindowIndirect failed … A device attached to the system is not
-# functioning" (§10). Headless survives; adb + Maestro work fine without a window.
-[ "$WINDOWED" = "1" ] || EMU_ARGS+=(-no-window -no-audio)
-log "launching: emulator ${EMU_ARGS[*]}"
-nohup "$LOCALAPPDATA/Android/Sdk/emulator/emulator.exe" "${EMU_ARGS[@]}" \
-  > "$EVIDENCE/emulator-boot.log" 2>&1 &
-disown 2>/dev/null || true
-
-"$ADB" start-server >/dev/null 2>&1 || true
-
-log "waiting for boot (timeout ${BOOT_TIMEOUT_S}s)…"
-DEADLINE=$(( $(date +%s) + BOOT_TIMEOUT_S ))
-BOOTED=0
-LAST_STATE="(none)"
-while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-  # The emulator process dying is terminal — stop waiting on a corpse.
-  if ! qemu_running; then
-    die "emulator-died" "qemu process exited during boot (see $EVIDENCE/emulator-boot.log)" \
-        "if the log shows 'UpdateLayeredWindowIndirect failed', the host has no usable desktop session — keep -no-window, or run on a machine with one"
-  fi
+# On this host the working device-day path is a MANUAL cold-start deep-link cycle:
+# the operator boots the emulator and runs the dev-build load hop themselves
+# (maestro/flows/shared/auth/_login-rider.yaml, DEV-BUILD LOAD HOP). The script
+# still supports the old auto-boot path for the other device-day host via
+# PREFLIGHT_EMULATOR=boot; on this host leave it at skip and do §2–§6 against the
+# already-running emulator the operator started.
+if [ "$PREFLIGHT_EMULATOR" = "skip" ]; then
+  step "§1B emulator ($AVD) — operator-managed (PREFLIGHT_EMULATOR=skip)"
   ST="$(device_state)"
-  [ "$ST" != "$LAST_STATE" ] && { LAST_STATE="$ST"; log "  t+$(( BOOT_TIMEOUT_S - (DEADLINE - $(date +%s)) ))s device state: ${ST:-absent}"; }
-  if [ "$ST" = "unauthorized" ]; then
-    # Exact signature from the 2026-10-03 blocked day. Diagnose now, loudly,
-    # instead of burning the whole boot timeout.
-    die "adb-unauthorized" \
-        "emulator booted but adb reports 'unauthorized' — the guest never accepted the host key. Verified 2026-10-03 to be NOT fixed by: cold boot, -wipe-data, headless -no-window, unifying the two adb builds, or a fresh ADB_VENDOR_KEYS keyring, and it reproduces on two independent AVDs (so the image is not corrupt). The authorization path is unavailable on this host — most likely no interactive desktop session to show the key-confirmation." \
-        "needs an interactive desktop session, or a device/emulator host that can complete adb auth. Unattended shell fixes do not exist for this one."
+  if [ -z "$ST" ] || [ "$ST" = "offline" ]; then
+    die "emulator-not-present" \
+      "PREFLIGHT_EMULATOR=skip but no emulator is attached ($ST)" \
+      "start the emulator manually, or set PREFLIGHT_EMULATOR=boot to let this script boot it"
   fi
-  if [ "$ST" = "device" ] && [ "$(sh_ getprop sys.boot_completed)" = "1" ]; then
-    BOOTED=1; break
-  fi
-  sleep 5
-done
-[ "$BOOTED" = "1" ] || die "emulator-boot-timeout" \
-  "device did not reach 'device' + sys.boot_completed=1 within ${BOOT_TIMEOUT_S}s (last state: ${LAST_STATE})" \
-  "raise BOOT_TIMEOUT_S for a cold first boot, or check $EVIDENCE/emulator-boot.log"
-log "booted: $("$ADB" devices | grep emulator | tr -d '\r')"
+  log "emulator:   $ST  (operator-managed; §1B boot skipped)"
+else
+  step "§1B emulator boot ($AVD)"
+  EMU_ARGS=(-avd "$AVD" -no-snapshot -no-boot-anim -gpu swiftshader_indirect -port 5554)
+  # Windowed mode is opt-in: on this host a wiped/windowed guest died with
+  # "UpdateLayeredWindowIndirect failed … A device attached to the system is not
+  # functioning" (§10). Headless survives; adb + Maestro work fine without a window.
+  [ "$WINDOWED" = "1" ] || EMU_ARGS+=(-no-window -no-audio)
+  log "launching: emulator ${EMU_ARGS[*]}"
+  # ${LOCALAPPDATA:-} is required, not defensive — same Windows-only variable
+  # class as above and as adb-env.sh's guards: bare, it is fatal under `set -u`
+  # off Windows. (Off Windows this resolves to a path that does not exist, which
+  # fails loudly at nohup instead of killing the shell at expansion time.)
+  nohup "${LOCALAPPDATA:-}/Android/Sdk/emulator/emulator.exe" "${EMU_ARGS[@]}" \
+    > "$EVIDENCE/emulator-boot.log" 2>&1 &
+  disown 2>/dev/null || true
+
+  "$ADB" start-server >/dev/null 2>&1 || true
+
+  log "waiting for boot (timeout ${BOOT_TIMEOUT_S}s)…"
+  DEADLINE=$(( $(date +%s) + BOOT_TIMEOUT_S ))
+  BOOTED=0
+  LAST_STATE="(none)"
+  while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+    # The emulator process dying is terminal — stop waiting on a corpse.
+    if ! qemu_running; then
+      die "emulator-died" "qemu process exited during boot (see $EVIDENCE/emulator-boot.log)" \
+          "if the log shows 'UpdateLayeredWindowIndirect failed', the host has no usable desktop session — keep -no-window, or run on a machine with one"
+    fi
+    ST="$(device_state)"
+    [ "$ST" != "$LAST_STATE" ] && { LAST_STATE="$ST"; log "  t+$(( BOOT_TIMEOUT_S - (DEADLINE - $(date +%s)) ))s device state: ${ST:-absent}"; }
+    if [ "$ST" = "unauthorized" ]; then
+      # Exact signature from the 2026-10-03 blocked day. Diagnose now, loudly,
+      # instead of burning the whole boot timeout.
+      die "adb-unauthorized" \
+          "emulator booted but adb reports 'unauthorized' — the guest never accepted the host key. Verified 2026-10-03 to be NOT fixed by: cold boot, -wipe-data, headless -no-window, unifying the two adb builds, or a fresh ADB_VENDOR_KEYS keyring, and it reproduces on two independent AVDs (so the image is not corrupt). The authorization path is unavailable on this host — most likely no interactive desktop session to show the key-confirmation." \
+          "needs an interactive desktop session, or a device/emulator host that can complete adb auth. Unattended shell fixes do not exist for this one."
+    fi
+    if [ "$ST" = "device" ] && [ "$(sh_ getprop sys.boot_completed)" = "1" ]; then
+      BOOTED=1; break
+    fi
+    sleep 5
+  done
+  [ "$BOOTED" = "1" ] || die "emulator-boot-timeout" \
+    "device did not reach 'device' + sys.boot_completed=1 within ${BOOT_TIMEOUT_S}s (last state: ${LAST_STATE})" \
+    "raise BOOT_TIMEOUT_S for a cold first boot, or check $EVIDENCE/emulator-boot.log"
+  log "booted: $("$ADB" devices | grep emulator | tr -d '\r')"
+fi
 
 # ── §2 env sync ──────────────────────────────────────────────────────────────
 step "§2 env sync"
@@ -338,7 +385,7 @@ node scripts/dev-env-sync.js >>"$LOG" 2>&1 \
 node scripts/dev-env-sync.js --check >>"$LOG" 2>&1 \
   || die "env-drift" ".env.local does not match the current network after sync" \
           "fix the network, then re-run; Metro must be RESTARTED afterwards to pick up a new IP"
-HOST_IP="$(node -e 'const fs=require("fs");const t=fs.readFileSync(".env.local","utf8");const m=t.match(/EXPO_PUBLIC_SERVER_URL=https?:\/\/([^:\/]+)/);console.log(m?m[1]:"?")' 2>/dev/null || echo '?')"
+HOST_IP="$(node -e 'const fs=require("fs");const t=fs.readFileSync(".env.local","utf8");const m=t.match(/EXPO_PUBLIC_SERVER_URL=https?:\/\/([^:\/\]+)/);console.log(m?m[1]:"?")' 2>/dev/null || echo '?')"
 log "env:        EXPO_PUBLIC_SERVER_URL host = $HOST_IP (emulator reaches the host at 10.0.2.2)"
 
 # ── §3 Maestro driver APK ────────────────────────────────────────────────────
