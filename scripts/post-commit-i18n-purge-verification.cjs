@@ -7,8 +7,8 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname);
 const AUDIT = path.join(ROOT, 'audit-i18n-orphans.cjs');
-const PURGE = path.join(ROOT, 'scripts', 'purge-orphan-keys.cjs');
-const BASELINE = path.join(ROOT, 'scripts', 'i18n-orphan-baseline.json');
+const PURGE = path.join(ROOT, 'purge-orphan-keys.cjs');
+const BASELINE = path.join(ROOT, 'i18n-orphan-baseline.json');
 
 // Purge set of the deleted-screen namespaces (2026-10-04).
 const PURGE_SET = new Set([
