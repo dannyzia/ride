@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = __dirname;
 const AUDIT = path.join(ROOT, 'scripts', 'audit-i18n-orphans.cjs');
 const PURGE = path.join(ROOT, 'scripts', 'purge-orphan-keys.cjs');
 const BASELINE = path.join(ROOT, 'scripts', 'i18n-orphan-baseline.json');
