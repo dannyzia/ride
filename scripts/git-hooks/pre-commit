@@ -18,7 +18,12 @@
 # map's 1107 ids, and the other 1016 were verified to rot with flow-xcheck still
 # reporting "every id: selector resolves". This stage regenerates the map from
 # the STAGED app/ tree in a sandbox and diffs id -> file attribution against the
-# STAGED map. Eight stages now, eslint last (it exits 0 early when no JS/TS staged).
+# STAGED map. Nine stages now, eslint last (it exits 0 early when no JS/TS staged).
+# 2026-10-05 i18n orphan gate (stage 7): `npm run check:i18n-orphans` ran only in
+#   the CI `test` job, so a commit that stranded a screen's i18n keys passed every
+#   local hook and failed after the push. This stage triggers on app/, components/,
+#   i18n/ or the ratchet file and blocks a key orphaned AFTER the baseline, which
+#   grandfathers the backlog that predates it.
 #
 # 2026-10-05 shellcheck gate (stage 7): repo-wide parity with the CI `shellcheck`
 # job of .github/workflows/ci.yml — the SAME discovery (`git ls-files '*.sh'
@@ -200,9 +205,47 @@ else
   fi
 fi
 
+echo "⏳ Pre-commit: i18n orphan gate (new orphaned locale keys)..."
+# Stage 7 (2026-10-05). Deleting or renaming a screen strands its i18n keys: the
+# keys stay in both locale files with nothing referencing them, so the Bengali
+# translation survives for copy that no screen can render and the dead weight
+# grows silently. `npm run check:i18n-orphans` has run in the CI `test` job since
+# 2026-10-04, which means this used to fail only AFTER the commit was pushed —
+# a local commit that stranded a screen's keys passed the hook cleanly. This stage
+# moves that failure to the commit that causes it.
+#
+# RATCHET, not a purge: scripts/i18n-orphan-baseline.json grandfathers the
+# backlog that predates the gate, so only keys orphaned AFTER it are new and only
+# those block. The baseline must never be extended to silence this.
+#
+# Trigger: anything that can change the answer — app/ and components/ (a deleted
+# or rewired screen orphans keys), i18n/ (adding an unreferenced key), or the
+# baseline itself (so the ratchet cannot be edited without the gate running).
+STAGED_I18N=()
+while IFS= read -r -d '' f; do
+  STAGED_I18N+=("$f")
+done < <(git diff --cached --name-only -z --diff-filter=ACMRD -- app/ components/ i18n/ scripts/i18n-orphan-baseline.json || true)
+
+if [ ${#STAGED_I18N[@]} -eq 0 ]; then
+  echo "✅ No staged app/, components/, i18n/ or ratchet changes — skipping i18n orphan gate."
+else
+  if ! node scripts/audit-i18n-orphans.cjs --gate; then
+    echo "❌ i18n orphan gate failed — commit blocked."
+    echo "   A locale key in i18n/locales/*/common.json is no longer reachable from any"
+    echo "   t() call, and it is not in scripts/i18n-orphan-baseline.json. That is what"
+    echo "   deleting or renaming a screen leaves behind."
+    echo "   Fix:  remove the key from BOTH locale files — and"
+    echo "         node scripts/purge-orphan-keys.cjs <key> [...] --dry-run first to preview."
+    echo "   Or:   restore the reference if the key's loss was accidental."
+    echo "   Do NOT add it to scripts/i18n-orphan-baseline.json — that file is the ratchet"
+    echo "   for the backlog that predates the gate, and must only ever shrink."
+    exit 1
+  fi
+fi
+
 echo "⏳ Pre-commit: ShellCheck gate (shell scripts)..."
 
-# Stage 7. Lints EVERY tracked shell script (worktree bytes) — see the header
+# Stage 8. Lints EVERY tracked shell script (worktree bytes) — see the header
 # note for why this is not staged-scoped. Zero scripts found = the discovery
 # pattern broke = fail closed, same as the CI job's guard.
 if ! command -v shellcheck >/dev/null 2>&1; then

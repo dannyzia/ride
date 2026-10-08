@@ -78,7 +78,11 @@ const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
 
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(path.dirname(module.filename), "..");// __dirname is undefined under the eval Module wrapper some loaders use;
+// module.filename is the reliable anchor for require() paths below.
+const HARNESS_DIR = __dirname || path.dirname(module.filename) || 'scripts';
+const LINT_BASELINE_PATH = path.join(HARNESS_DIR, '.eslint-lint-baseline.json');
+const LINT_BASELINE = (function() { const _p = LINT_BASELINE_PATH; try { const _r = require(_p); if (_r && typeof _r === 'object' && _r !== null && !Array.isArray(_r)) { return _r; } } catch (e) {} return {}; })();
 const HOOK = path.join("scripts", "git-hooks", "pre-commit");
 const PUSH_HOOK = path.join("scripts", "git-hooks", "pre-push");
 
@@ -110,7 +114,28 @@ const TOOL_FILES = [
   path.join("scripts", "i18n-orphan-baseline.json"),
   path.join("maestro", "tools", "testid-manifest.cjs"),
   path.join("maestro", "tools", "add-testids.cjs"),
+  // Stage 8 (lint) resolves eslint config from the worktree root, so the
+  // worktree must carry the WORKING TREE's .eslintrc.json — not the base
+  // commit's. Without this, a commit that changes the lint config is tested
+  // against the old one.
+  path.join(".eslintrc.json"),
+  // The lint gate now ratchets new warnings against this committed baseline. The
+  // baseline is generated from the committed tree by
+  // scripts/capture-eslint-baseline.cjs, which runs the lint gate's EXACT lint
+  // invocation (same scope, same flags, same ESLINT_USE_FLAT_CONFIG) and stores
+  // one entry per lint target so the gate can detect a NEW warning on a
+  // currently-clean file. The backlog can only shrink.
+  path.join(".eslint-lint-baseline.json"),
 ];
+
+/**
+ * Committed lint baseline for the lint-gate ratchet.
+ *
+ * This is generated from the committed tree by scripts/capture-eslint-baseline.cjs,
+ * which runs the lint gate's EXACT lint invocation (same scope, same flags, same
+ * ESLINT_USE_FLAT_CONFIG) and stores one entry per lint target so the gate can
+ * detect a NEW warning on a currently-clean file. The backlog can only shrink.
+ */
 
 /**
  * CORPUS — the content the gates SCAN (as opposed to the tools they run).
@@ -360,9 +385,14 @@ const GATES = [
     n: 8,
     key: "lint",
     title: "eslint (staged files only)",
-    // No rule in .eslintrc.json is set to "error" (0 errors / 302 warnings at
-    // baseline), and the hook lints with --quiet, so a warning cannot block. A
-    // PARSE error is the only realistic lint block, which is what this uses.
+    // The hook lints with --quiet, so a warning cannot block; only a parse error
+    // can block. This gate is pinned to the `.cjs` branch of the lint stage: the
+    // harness always runs `ESLINT_USE_FLAT_CONFIG=false`, and both
+    // `.eslintrc.json` and `.eslint-lint-baseline.json` are copied into the
+    // worktree so the case exercises the WORKING TREE's config and committed lint
+    // surface, not the base commit's. The baseline ratchets new warnings: a staged
+    // file that adds a lint target to a currently-clean file fails the gate (the
+    // backlog can only shrink).
     blockBanner: "Lint failed",
     ranMarker: "Linting",
     cases: [

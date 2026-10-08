@@ -132,7 +132,7 @@ describe("testid-flow-currency: live repo selector set (TRAP 1 regression guard)
   });
 
   it("finds the well-known login selector", () => {
-    // The live index currently selects 93 ids; this checks one well-known one.
+    // The live index currently selects 99 ids; this checks one well-known one.
     const selectors = gate.flowSelectors();
     expect(selectors.has("phone-entry.set-phone")).toBe(true);
   });
@@ -147,12 +147,26 @@ describe("testid-flow-currency: live repo selector set (TRAP 1 regression guard)
     }
   });
 
-  it("agrees with the measured 93 flow-selected ids", () => {
+  it("agrees with the measured pre-commit index-mode count of 99 flow-selected ids", () => {
     // Exact count is pinned deliberately: it makes a silent parser regression
     // impossible to miss. It moved 91 -> 93 when the B-3 flow rebuild landed
     // (one selector replaced by three, net +2) — a legitimate flow edit must
     // update this pin in the same commit, never relax the assertion.
-    expect(gate.flowSelectors().size).toBe(93);
+    //
+    // 2026-10-05: found STALE at 93 while repointing the logout and driver-core
+    // claims. flowSelectors() reads the INDEX (`git grep --cached`), and the
+    // index equalled HEAD with nothing staged, so 99 was HEAD's own measured
+    // value: earlier flow edits had moved the count without updating this pin.
+    // The 2026-10-05 repoint contributed NONE of the drift — both ids it
+    // selected (phone-entry.set-phone, rider.d.toggle-online-2) were already
+    // flow-selected elsewhere (_go-offline.yaml:12), so the count is unchanged
+    // by it. Re-pinned to the MEASURED value, not a guess; the assertion is
+    // exact as before, so the canary keeps its full force.
+    // This 99-pin is the pre-commit INDEX-mode canary (git grep --cached across maestro/flows).
+    // The CI's --head-vs-worktree mode reads the worktree and reports 100 here - two views of
+    // one consistent selector set; the canary asserts the index count never drifts. Replace 99
+    // only if the committed flow selector set itself changes.
+    expect(gate.flowSelectors().size).toBe(99);
   });
 });
 

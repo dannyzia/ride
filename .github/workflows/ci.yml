@@ -255,6 +255,31 @@ jobs:
 
       - name: testID flow-currency gate (HEAD vs worktree)
         run: node maestro/tools/testid-flow-currency.cjs --head-vs-worktree
+        # Audit-forward: every other job that reads this gate records its result here
+        # (labels: flow-currency=pass|blocked|broken). The hook-only path only inspects
+        # staged flows, so this is the ONLY CI place a commit that bypasses the local hook
+        # (web UI, fresh clone, --no-verify) is still checked against dead flow selectors.
+        # Exit 1 = a flow-selected testID was removed without an update to any flow (dead
+        # selector); exit 2 = the map is unreadable or git failed. Both are bugs, not skips —
+        # the gate must never be able to report "clean" when the tool itself errored.
+
+      # The advisory screen-affinity tier (check 5 of flow-xcheck) must never
+      # silently degrade to "unavailable" in CI. The tier prints a distinct
+      # clean marker when it runs against a real tree; an unavailable/spawned
+      # failure is a different string. Asserting the clean marker is the proof
+      # that the spawn+resolution path is healthy on the runner, not that the
+      # tier is skipped.
+      - name: screen-affinity tier clean marker (real tree)
+        run: |
+          out=$(node maestro/tools/flow-xcheck.cjs 2>&1) || true
+          echo "$out"
+          marker="screen affinity: every flow-selected id lives on a reachable screen"
+          if ! echo "$out" | grep -qF "$marker"; then
+            echo "::error::screen-affinity tier did not report its clean marker against the real tree"
+            echo "::error::expected marker: $marker"
+            echo "::error::tier may have degraded to unavailable, or the tool changed its wording"
+            exit 1
+          fi
 
   # ── ShellCheck over every tracked shell script ──────────────────────────────
   # The repo-wide extension of the device-preflight.yml lane's maestro/** step:
