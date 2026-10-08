@@ -72,53 +72,53 @@
     "(auth)/forgot-password.tsx": [
       {
         "id": "forgot-password.set-phone-input",
-        "line": 195
+        "line": 197
       },
       {
         "id": "forgot-password.handle-send-otp",
-        "line": 205
+        "line": 207
       },
       {
         "id": "forgot-password.set-otp",
-        "line": 230
+        "line": 232
       },
       {
         "id": "forgot-password.handle-verify-otp",
-        "line": 240
+        "line": 242
       },
       {
         "id": "forgot-password.set-step",
-        "line": 248
+        "line": 250
       },
       {
         "id": "forgot-password.set-new-password",
-        "line": 270
+        "line": 272
       },
       {
         "id": "forgot-password.set-confirm-password",
-        "line": 285
+        "line": 287
       },
       {
         "id": "forgot-password.handle-reset-password",
-        "line": 295
+        "line": 297
       }
     ],
     "(auth)/login.tsx": [
       {
         "id": "login.set-phone",
-        "line": 107
+        "line": 109
       },
       {
         "id": "login.set-password",
-        "line": 125
+        "line": 127
       },
       {
         "id": "login.handle-login",
-        "line": 141
+        "line": 143
       },
       {
         "id": "login.push-forgot-password",
-        "line": 146
+        "line": 148
       }
     ],
     "(auth)/notifications-permission.tsx": [
@@ -152,23 +152,23 @@
     "(auth)/phone-entry.tsx": [
       {
         "id": "phone-entry.set-phone",
-        "line": 167
+        "line": 169
       },
       {
         "id": "phone-entry.set-role",
-        "line": 181
+        "line": 183
       },
       {
         "id": "phone-entry.set-role-2",
-        "line": 195
+        "line": 197
       },
       {
         "id": "phone-entry.handle-login",
-        "line": 216
+        "line": 218
       },
       {
         "id": "phone-entry.handle-register",
-        "line": 222
+        "line": 224
       }
     ],
     "(auth)/register.tsx": [
@@ -210,11 +210,11 @@
     "(auth)/welcome.tsx": [
       {
         "id": "welcome.replace-phone-entry",
-        "line": 67
+        "line": 69
       },
       {
         "id": "welcome.replace-phone-entry-2",
-        "line": 72
+        "line": 74
       }
     ],
     "(main)/(ambulance-cert)/index.tsx": [

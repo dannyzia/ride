@@ -15,4 +15,10 @@ tags: [auth]
     commands:
       - runFlow: ../shared/auth/_login-rider.yaml
 - runFlow: ../shared/auth/_logout.yaml
-- assertVisible: ".*Log In.*|.*Get Started.*"
+# GROUND FIX: was ".*Log In.*|.*Get Started.*", an either/or alternation that
+# passed on EITHER branch and so never pinned the auth surface; its "Log In"
+# branch had also been rescued only by the orphaned auth.login value. The
+# _logout subflow now grounds on phone-entry's own testID, and this assertion
+# reuses that same ground rather than re-testing loose copy.
+- assertVisible:
+    id: "phone-entry.set-phone"

@@ -19,6 +19,15 @@ appId: com.ride.bd
 # OS Alert.alert destructive button — text only (no testID space)
 - tapOn:
     text: ".*Sign Out.*|.*Log out.*"
+# GROUND FIX: the final wait asserted ".*Log In.*|.*Get Started.*". That
+# alternation passed on EITHER branch, so it never pinned the screen it landed
+# on, and its "Log In" branch was rescued for a while only by the orphaned
+# auth.login value. Sign-out returns to /(auth)/phone-entry (app/_layout.tsx:150
+# redirects every unauthenticated session there), and phone-entry renders
+# "Get Started" and "Log In" from auth.get_started / auth.login. The screen's
+# own testID is the deterministic ground: it is present only on phone-entry, so
+# this cannot pass on the wrong screen the way an either/or alternation can.
 - extendedWaitUntil:
-    visible: ".*Log In.*|.*Get Started.*"
+    visible:
+      id: "phone-entry.set-phone"
     timeout: 20000

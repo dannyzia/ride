@@ -28,10 +28,21 @@ tags:
 - launchApp:
     appId: com.ride.bd
 # Sanity checks: confirm we are on the driver home and online.
-# Wait for the WS to (re)confirm Connected instead of asserting immediately,
-# so a slow handshake right after foregrounding does not false-fail the run.
+# Wait for the online control instead of asserting immediately, so a slow
+# handshake right after foregrounding does not false-fail the run.
+# GROUND FIX: this waited on visible "Connected", which matches NOTHING. Both
+# candidate keys (driver.connected, home.connected) are ORPHANED, and no runtime
+# source renders that literal at all — only the `wsConnected` identifier. The
+# online home shows a green dot plus the go-offline button, whose "Go offline"
+# text is an ACCESSIBILITY LABEL (driver_home.go_offline), never a visible text
+# node, so a `visible:` text matcher could not match it either. The wait
+# therefore burned its full 15s on every run and passed only because
+# extendedWaitUntil is a wait, not an assertion — it reported nothing.
+# rider.d.toggle-online-2 is that go-offline control: it is rendered only when
+# isOnline is true (index.tsx:1139-1165), which is exactly the state asserted.
 - extendedWaitUntil:
-    visible: "Connected"
+    visible:
+      id: "rider.d.toggle-online-2"
     timeout: 15000
 - assertVisible: "Calls Remaining"
 # Wait for the rider (emulator-5554) to request so an offer arrives.
@@ -80,11 +91,13 @@ tags:
     id: "rider.finish-ride.handle-go-home"
 - waitForAnimationToEnd:
     timeout: 3000
-# Back on driver home; calls should have decremented. "Connected" is optional
-# here in case the WS briefly re-handshakes during navigation.
+# Back on driver home; calls should have decremented. The online state is
+# optional here in case the session briefly drops during navigation. Same GROUND
+# FIX as above: "Connected" matched nothing, so this optional assertion was
+# vacuous. The go-offline control is the real online indicator.
 - assertVisible: "Calls Remaining"
 - assertVisible:
-    text: "Connected"
+    id: "rider.d.toggle-online-2"
     optional: true
 # ==============================================================================
 # OPTIONAL MANUAL CHECK (wrong Ride Pin) — uncomment to exercise the error path.
