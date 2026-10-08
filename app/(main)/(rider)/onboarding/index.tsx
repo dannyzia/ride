@@ -35,6 +35,9 @@ import { useTranslation } from "react-i18next";
 
 
 
+
+
+
 class ApiError extends Error {
   code: string;
   constructor(code: string, message: string) {
@@ -122,13 +125,13 @@ const YEARS: number[] = Array.from(
 );
 
 const STEP_TITLES = [
-  "Profile",
-  "Vehicle",
-  "Vehicle Documents",
-  "Driver Documents",
-  "Rideshare Experience",
-  "Payout",
-  "Review & Consent",
+  t("driver.onboarding.steps.profile"),
+  t("driver.onboarding.steps.vehicle"),
+  t("driver.onboarding.steps.vehicle_documents"),
+  t("driver.onboarding.steps.driver_documents"),
+  t("driver.onboarding.steps.rideshare_experience"),
+  t("driver.onboarding.steps.payout"),
+  t("driver.onboarding.steps.review_consent"),
 ];
 
 const VEHICLE_DOC_FIELDS = [
