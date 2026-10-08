@@ -154,7 +154,18 @@
     "documents_rejected": "নথি প্রত্যাখ্যাত",
     "reupload_documents": "নথি পুনরায় আপলোড করুন",
     "contact_support": "সাপোর্টে যোগাযোগ করুন",
-    "loading_profile": "প্রোফাইল লোড হচ্ছে..."
+    "loading_profile": "প্রোফাইল লোড হচ্ছে...",
+    "onboarding": {
+      "steps": {
+        "profile": "প্রোফাইল",
+        "vehicle": "গাড়ি",
+        "vehicle_documents": "গাড়ির নথিপত্র",
+        "driver_documents": "চাকরির নথিপত্র",
+        "rideshare_experience": "রাইডশেয়ার অভিজ্ঞতা",
+        "payout": "পেমেন্ট",
+        "review_consent": "পুনর্বিবেচনা ও সম্মতি"
+      }
+    }
   },
   "tabs": {
     "home": "হোম",

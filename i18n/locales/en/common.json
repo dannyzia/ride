@@ -154,7 +154,18 @@
     "documents_rejected": "Documents Rejected",
     "reupload_documents": "Re-upload Documents",
     "contact_support": "Contact Support",
-    "loading_profile": "Loading profile..."
+    "loading_profile": "Loading profile...",
+    "onboarding": {
+      "steps": {
+        "profile": "Profile",
+        "vehicle": "Vehicle",
+        "vehicle_documents": "Vehicle Documents",
+        "driver_documents": "Driver Documents",
+        "rideshare_experience": "Rideshare Experience",
+        "payout": "Payout",
+        "review_consent": "Review & Consent"
+      }
+    }
   },
   "tabs": {
     "home": "Home",
