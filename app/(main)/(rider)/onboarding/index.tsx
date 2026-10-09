@@ -336,6 +336,8 @@ function BodyTypePickerModal({
                   {group.group}
                 </Text>
                 {group.items.map((item) => {
+                  const isOthers = item.value === OTHERS;
+                  const displayLabel = isOthers ? othersLabel : item.en;
                   const selected = item.value === selectedValue;
                   return (
                     <TouchableOpacity
@@ -360,11 +362,13 @@ function BodyTypePickerModal({
                       />
                       <View style={{ marginLeft: spacing.md, flex: 1 }}>
                         <Text style={{ fontFamily: selected ? "Jakarta-SemiBold" : "Jakarta-Regular", fontSize: 15, color: selected ? colors.primary : textPrimary }}>
-                          {item.en}
+                          {displayLabel}
                         </Text>
-                        <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: textSecondary }}>
-                          {item.bn}
-                        </Text>
+                        {!isOthers && (
+                          <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 12, color: textSecondary }}>
+                            {item.bn}
+                          </Text>
+                        )}
                       </View>
                     </TouchableOpacity>
                   );
