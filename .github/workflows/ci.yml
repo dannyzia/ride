@@ -129,6 +129,13 @@ on:
     branches: [main, develop, implementation]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # Weekly full validation vs dependency / toolchain / host rot. Monday 03:17
+    # UTC = 09:17 Asia/Dhaka, and a whole 7 days with nothing needed — the
+    # file-scope triggers above stay silent while a dependency block, a runner
+    # image change, or a shell script vanishing from the discovery patterns
+    # rot quietly.
+    - cron: '17 3 * * 1'
 
 jobs:
   test:
@@ -352,6 +359,65 @@ jobs:
           actionlint --version
           echo "actionlint: linting ${#workflows[@]} workflow file(s)"
           actionlint "${workflows[@]}"
+
+
+  # ── Weekly scheduled full validation run ──────────────────────────────────────
+  # Add a weekly cron gate in addition to the per-push/PR lanes so host rot is
+  # loud: a Windows update, a runner image change, a dependency bump, a shell
+  # script being dropped from the discovery patterns, or a workflow token
+  # expiry is caught THERE even when no file in this repo changed.
+  #
+  # The gate replays the exact same step order as `test` — npm ci at the
+  # workspace root (single lockfile, single physical copy of every dep), then
+  # lint, date-in-sql + i18n orphan gates, root + utils-server typecheck, the
+  # full jest suite, and the critical npm audit — and treats the whole envelope
+  # as one scheduled validity check. It runs on every push/PR too, which keeps
+  # branch protection happy while the schedule keeps the weekly cadence.
+  weekly-validation:
+    name: scheduled full validation run
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [test, maestro-drift, shellcheck, actionlint, precommit-gates, concurrency-locks]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies (workspace root)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Date-in-sql gate
+        run: npm run check:date-in-sql
+
+      - name: i18n orphan gate (new orphans only)
+        run: npm run check:i18n-orphans
+
+      - name: Typecheck (root)
+        run: npx tsc --noEmit
+
+      - name: Typecheck (utils-server)
+        run: npx tsc --noEmit
+        working-directory: utils-server
+
+      - name: Vacuous-assertion gate + full test suite
+        run: npm run test:all
+
+      - name: Dependency audit gate (critical)
+        run: npm audit --audit-level=critical
+
+      - name: Record scheduled run result
+        if: always()
+        run: |
+          echo "weekly-validation result: ${{ job.status }}"
+          # job.status is skipped|success|failure|completed — the final step
+          # prints the envelope so a red gate is visible in the workflow run
+          # list even when no step fails loudly.
 
   # ── The pre-commit gates against the PR as a staged changeset ───────────────
   # Stages 3–7 of scripts/git-hooks/pre-commit are INDEX-scoped (`git diff
