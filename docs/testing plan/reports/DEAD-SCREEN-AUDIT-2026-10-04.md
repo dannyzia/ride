@@ -1,17 +1,15 @@
-**Purpose:**     Classify every route file with no inbound navigation edge (the reachability audit's `unreachable` bucket) as dead / live-via-unresolved-table / external-entry, and list broken live entry points still targeting deleted screens. Read before deleting or rewiring any screen.
-**Owner:**       Testing/QA tooling (whoever maintains `scripts/audit-nav-integrity.cjs`)
-**Status:**      ACTIVE
-**Source of truth:** `scripts/audit-nav-integrity.cjs` (measured state). This file is a dated snapshot + classification.
+**Purpose:**     How to run the screen-deletion impact report, what changed with this edit, and what the new flow-edit cost column means.
+**Owner:**       Testing/QA tooling (maintains `scripts/audit-deletion-impact.cjs`).
+**Status:**      ACTIVE — replacing docs/testing plan/reports/DEAD-SCREEN-AUDIT-2026-10-04.md.
+**Source of truth:** `scripts/audit-deletion-impact.cjs` (measured state). The report is a dated snapshot + classification.
 **Related (concrete paths):**
-  - `scripts/audit-nav-integrity.cjs` — the resolver that produced the 19-file no-inbound list
-  - `scripts/audit-deletion-impact.cjs` — the one-command join of that list with the i18n orphan audit: per no-inbound screen, the testIDs and locale keys that die with it
-  - `tests/meta/audit-nav-integrity.test.ts` — fault-injection suite pinning the resolver's tiers
-  - `components/GlobalActionButtons.tsx` — app-wide drawer; the broken-ref source
-  - `lib/notificationRouter.ts` — push-tap + deep-link router (live, imported by `app/_layout.tsx:22`)
-  - `app/(main)/(rider)/settings/index.tsx` — static SETTINGS table (why 3 "orphans" are live)
-  - `maestro/flows/` — flows select none of the dead screens' testIDs
-**Last verified:** 2026-10-05, by coding agent (Buffy): §5 repoint applied, then the audit tool gained the static data-table sweep (follow-up #5), then all 9 no-inbound admin screens were surfaced in the AdminShell NAV (§4). Re-verified with reference greps + `node scripts/audit-nav-integrity.cjs` (DANGLING stays the 2 pre-existing targets; 137 table literals checked, 0 dangling; adminUnlisted 0, no-inbound 7). Rest of the file from the 2026-10-04 audit run over `app/`, `components/`, `lib/`, `store/`, `utils-server/`, `maestro/`.
-**How to update:** Re-run `node scripts/audit-nav-integrity.cjs` and the literal scan (see § Method), then re-classify; delete entries as screens are removed/wired.
+  - `scripts/audit-deletion-impact.cjs` — one command that joins nav-integrity + i18n-orphan audits + `maestro/tools/testid-map.json`
+  - `scripts/audit-nav-integrity.cjs` — produces the no-inbound `unreachable` list
+  - `scripts/audit-i18n-orphans.cjs` — produces the orphaned locale keys
+  - `maestro/tools/testid-map.json` — attributes every testID to its declaring app file
+  - `maestro/flows/` — flows select testIDs that the impact report must list as flow-edit cost
+**Last verified:** 2026-10-09, by coding agent (Buffy): regenerated the deletion-impact report, confirmed the join outputs are non-empty and exit 0, then rewrote this file.
+**How to update:** Re-run `node scripts/audit-deletion-impact.cjs` (and `... --screen <path>`, `--json`) after any nav/route change; re-read the no-inbound list and its testID + locale-key join, then update this file's classification and the worked example.
 
 ---
 
@@ -67,7 +65,7 @@ All 9 are absent from the admin SPA's navigation table (`components/admin/AdminS
 
 Decision needed: surface in NAV vs archive. (Each has a live API route — e.g. `app/api/admin/riders+api.ts`, `.../sos-alerts+api.ts` — so they are functional if reached.)
 
-**Resolved 2026-10-05 — all 9 surfaced in the AdminShell NAV; none archived.** Every screen is the only UI for a backend feature that is demonstrably live, so archiving would have stranded working APIs; the panel gained 9 entries. Audit after: `adminUnlisted` 9 → 0, no-inbound screens 16 → 7 (the 4 live-via-table + 3 external-entry below), RESOLVED 607 → 616 on the unchanged route tree.
+**Resolved 2026-10-05 — all 9 surfaced in the AdminShell NAV; none archived.** Every screen is the only UI for a backend feature that is demonstrably live, so archiving would have stranded working APIs; the panel gained 9 entries. Audit after: `adminUnlisted` 9 → 0, no-inbound 16 → 7 (the 4 live-via-table + 3 external-entry below), RESOLVED 607 → 616 on the unchanged route tree.
 
 | Screen | Why it was kept (evidence) | NAV placement (role) |
 |---|---|---|
@@ -109,34 +107,28 @@ Comment rot (no runtime effect): `lib/driverLocationFix.ts:20` and `app/(main)/(
 
 ## Deleting a screen — same-change cleanup
 
-Deleting a screen strands two kinds of artifact: its testIDs (the map and any flow selecting
-them) and its locale keys (the gate fails on the new orphans). Both leave in the SAME change —
-a later, separate purge commit is not this procedure.
+Deleting a screen strands two kinds of artifact: its testIDs (the map and any flow selecting them) and its locale keys (the gate fails on the new orphans). Both leave in the SAME change — a later, separate purge commit is not this procedure.
 
-1. **Prove it is dead.** Zero inbound `router.push/replace/href`, and no `Tabs.Screen`/`Stack.Screen`
-   registration in any `_layout.tsx` — `node scripts/audit-nav-integrity.cjs`; classification per §1–5.
-   Preview the cost: `node scripts/audit-deletion-impact.cjs --screen <path>` lists the screen's
-   testIDs and the locale keys that die with it (the two audits joined, nothing inferred).
+1. **Prove it is dead.** Zero inbound `router.push/replace/href`, and no `Tabs.Screen`/`Stack.Screen` registration in any `_layout.tsx` — `node scripts/audit-nav-integrity.cjs`; classification per §1–5.
+   Preview the cost: `node scripts/audit-deletion-impact.cjs --screen <path>` lists the screen's testIDs and the locale keys that die with it (the two audits joined, nothing inferred).
+
 2. **Delete** the screen file(s) and every nav/notification ref still targeting its route.
-3. **Regenerate the testID map:** `node maestro/tools/testid-manifest.cjs` (stage
-   `maestro/tools/testid-map.json`; pre-commit stage 5 diffs its attribution against the staged `app/`).
-4. **Fix the flows:** repoint or delete flows (and comment refs) selecting the dead screen's testIDs;
-   update its entry in `maestro/tools/flow-testid-map.json` (date + why + absorbed-by). Pre-commit
-   stage 6 blocks a flow selector whose testID this commit removes.
-5. **Purge the stranded locale keys:** `node scripts/audit-i18n-orphans.cjs --gate` fails with the
-   screen's now-orphaned keys; `node scripts/purge-orphan-keys.cjs --new` deletes exactly those keys
-   from both locales and prunes `scripts/i18n-orphan-baseline.json` in one step. `--dry-run` previews;
-   a wholly dead namespace can be selected by name (`node scripts/purge-orphan-keys.cjs <namespace>...`),
-   which refuses if any matched key is still live.
-6. **Verify:** `node maestro/tools/flow-xcheck.cjs`; `node scripts/audit-i18n-orphans.cjs --gate`
-   (must exit 0); `npm run lint && npx tsc --noEmit`.
+
+3. **Regenerate the testID map:** `node maestro/tools/testid-manifest.cjs` (stage `maestro/tools/testid-map.json`; pre-commit stage 5 diffs its attribution against the staged `app/`).
+
+4. **Fix the flows + record flow-edit cost.** Flows selecting the dead screen's testIDs must be repointed or deleted (and the flow text/comments if they mention the dead screen). The testID map must be regenerated, and every dead screen needs a dated, owned entry in `maestro/tools/flow-testid-map.json` recording:
+   - `DELETED <date> (owner call)` — same proven-unreachable standard as the deleted-screen evidence in §1 (zero inbound router.push/replace/href, no `_layout.tsx` registration, no URL/deep-link origin);
+   - the flows affected + the testIDs that die with it (the impact report's flow-edit cost column, populated from `maestro/tools/testid-map.json` by `scripts/audit-deletion-impact.cjs`);
+   - what absorbed the function (route, screen, or inline behaviour), so a future revert can re-attach a flow.
+   Pre-commit stage 6 blocks a flow selector whose testID this commit removes.
+
+5. **Purge the stranded locale keys:** `node scripts/audit-i18n-orphans.cjs --gate` fails with the screen's now-orphaned keys; `node scripts/purge-orphan-keys.cjs --new` deletes exactly those keys from both locales and prunes `scripts/i18n-orphan-baseline.json` in one step. `--dry-run` previews; a wholly dead namespace can be selected by name (`node scripts/purge-orphan-keys.cjs <namespace>...`), which refuses if any matched key is still live.
+
+6. **Verify:** `node maestro/tools/flow-xcheck.cjs`; `node scripts/audit-i18n-orphans.cjs --gate` (must exit 0); `npm run lint && npx tsc --noEmit`.
+
 7. **Commit as one change:** deletion + testID map + flows + both locales + baseline.
 
-Worked example (2026-10-04): the 106 keys stranded by the 2026-10-03 deletions (`confirm_ride` 58,
-`find_ride` 36, `apply_promos` 11, `ride.request` 1) were purged with
-`node scripts/purge-orphan-keys.cjs confirm_ride find_ride apply_promos ride.request` — baseline
-236 → 130 entries, locales 1,470 → 1,364 flat keys each, gate green. The terse checklist lives as
-Workflow 9 in the local `.claude/WORKFLOWS.md`.
+Worked example (2026-10-04): the 106 keys stranded by the 2026-10-03 deletions (`confirm_ride` 58, `find_ride` 36, `apply_promos` 11, `ride.request` 1) were purged with `node scripts/purge-orphan-keys.cjs confirm_ride find_ride apply_promos ride.request` — baseline 236 → 130 entries, locales 1,470 → 1,364 flat keys each, gate green. The terse checklist lives as Workflow 9 in the local `.claude/WORKFLOWS.md`.
 
 ## Method & limits
 
