@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
+import { AdminToastProvider } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -36,7 +37,8 @@ export default function AdminRiders() {
   ];
 
   return (
-    <AdminShell title="Rider Management" subtitle="View and manage rider accounts">
+    <AdminToastProvider>
+      <AdminShell title="Rider Management" subtitle="View and manage rider accounts">
       <View style={{ flexDirection: "row", marginBottom: 12 }}>
         <View style={{ flex: 1, backgroundColor: colors.darkSecondary, borderRadius: 8, padding: 8 }}>
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
@@ -50,5 +52,6 @@ export default function AdminRiders() {
         <AdminTable columns={columns} rows={riders} rowKey={(r) => r.id} />
       )}
     </AdminShell>
+  </AdminToastProvider>
   );
 }
