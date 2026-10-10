@@ -108,6 +108,7 @@ source_adb_env() {
     return 0
   fi
   if [ -f "$ADB_ENV_SH" ]; then
+    # shellcheck source=maestro/utils/adb-env.sh
     . "$ADB_ENV_SH"
   fi
 }

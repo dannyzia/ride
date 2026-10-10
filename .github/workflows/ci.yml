@@ -137,6 +137,35 @@ on:
     # rot quietly.
     - cron: '17 3 * * 1'
 
+scheduled-validation:
+  name: scheduled-validation
+  description: reusable validation envelope (lint, date-in-sql, i18n orphan, typecheck both packages, full jest, npm audit critical)
+  runs:
+    using: composite
+    steps:
+      - name: Install dependencies (workspace root)
+        run: npm ci
+        shell: bash
+
+      - name: Run shared validation envelope
+        run: node scripts/ci-envelope.cjs
+        shell: bash
+
+      - name: Record scheduled run result
+        if: always()
+        run: |
+          echo "weekly-validation result: ${{ job.status }}"
+          # job.status is skipped|success|failure|completed — the status-check
+          # name is consumed by branch protection, so a red gate is visible in
+          # the workflow run list even when no single step fails loudly.
+  schedule:
+    # Weekly full validation vs dependency / toolchain / host rot. Monday 03:17
+    # UTC = 09:17 Asia/Dhaka, and a whole 7 days with nothing needed — the
+    # file-scope triggers above stay silent while a dependency block, a runner
+    # image change, or a shell script vanishing from the discovery patterns
+    # rot quietly.
+    - cron: '17 3 * * 1'
+
 jobs:
   test:
     name: lint + typecheck + tests
