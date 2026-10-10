@@ -1,5 +1,5 @@
 #!/bin/bash
-#!/bin/bash
+/bin/bash
 # Pre-commit hook — lint only staged files (~3-5s)
 # Blocks commit on lint errors. Type check + native import check run in pre-push.
 #
