@@ -1,192 +1,52 @@
 #!/bin/bash
+#!/bin/bash
 # Pre-commit hook — lint only staged files (~3-5s)
 # Blocks commit on lint errors. Type check + native import check run in pre-push.
 #
-# ── 2026-10-05 flow-selector gate (stage 3): a staged flow using an id: that is
+# 2026-10-05 flow-selector gate (stage 3): a staged flow using an id: that is
 # not in maestro/tools/testid-map.json would ship a selector that can never
 # resolve on device, and would NOT be caught by tsc/lint (YAML is not linted).
 #
-# ── 2026-10-05 testID-map freshness gate (stage 5): ... (unchanged).
+# `testid-map-freshness` job of .github/workflows/ci.yml — the SAME discovery
+# (git ls-files) and the SAME `node maestro/tools/testid-map-freshness.cjs`,
+# so a stale map blocks HERE before it ever reaches CI. Runs on EVERY commit,
+# not only map commits: both maps are regenerated from the STAGED worktree.
 #
-# ── 2026-10-05 i18n orphan gate (stage 7): ... (unchanged).
+# `check:i18n-orphans` job (npm run check:i18n-orphans) + HMR `prune` job.
 #
-# ── 2026-10-05 shellcheck gate (stage 8): repo-wide parity with the CI
 # `shellcheck` job of .github/workflows/ci.yml — the SAME discovery (git
-# ls-files '*.sh' 'scripts/git-hooks/*') and the SAME `shellcheck -x`, so a
-# shell-script warning blocks HERE before it ever reaches CI. Runs on EVERY
-# commit, not only shell commits: `-x` follows `# shellcheck source=` links, so
-# an edit to a sourced script can break a script this commit never staged — a
-# staged-only trigger would let that through. ~1s for the whole set.
+# ls-files '*.sh' 'scripts/git-hooks/*') and the SAME `shellcheck -x`,
+# so a shell-script warning blocks HERE before it ever reaches CI. Runs on
+# EVERY commit, not only shell commits: `-x` follows `# shellcheck source=`
+# links, so an edit to a sourced script can break a script this commit never
+# staged — a staged-only trigger would let that through. ~1s for the whole set.
 #
-#     shellcheck-disable AUDIT (2026-10-06): shellcheck's `shellcheck-disable`
-#     inline directives are user-side overrides that can silently nullify a
-#     real finding — including a finding in a script this commit never touched
-#     (a sourced file downstream can carry an old disable for a rule that now
-#     fires there). This stage therefore treats the disable set as a RATchet:
-#       • Any disable NOT in scripts/shellcheck-disable-baseline.json, and in
+# Stage-8 RATchet: any disable NOT in scripts/shellcheck-disable-baseline.json,
+# and in any file that shellcheck -x reports a finding for, BLOCKS the commit.
+# The baseline may only SHRINK: a commit may remove a disable from a file, and
+# that deletion deletes the baseline entry for that file (the baseline is a
+# set of file-to-disable-key pairs, not a free-form allow-list). It may never
+# add a disable to the baseline on its own authority: a disable must first be
+# removed from the file it currently carries.
+# Stage 8 ratchet: disable files, purge, and re-check.
+# Vanilla shellcheck -x treats every # shellcheck disable=X line as user-side
+# overrides that silently nullify real findings (including a finding in a
+# script this commit never touched: a sourced file downstream can carry an old
+# disable for a rule that now fires there). So this stage treats the disable
+# set as a RATchet:
+# 1. PURGE: delete every # shellcheck disable line whose key set is NOT in
+#    scripts/shellcheck-disable-baseline.json; if the file keeps no disables,
+#    delete the line entirely.
+# 2. CHECK: shellcheck -x again; any remaining disable that also fires BLOCKS
+#    the commit (the gate refuses to let a disabled finding survive the ratchet).
+# 3. RATSET: add newly-validated disables to the baseline (never the reverse),
+#    then re-check the baseline against the file set.
+# Discovery: the same git ls-files set stage 7 uses, so the baseline stays in
+# sync with the staged tree.
 #         any file that shellcheck -x reports a finding for, BLOCKS the commit.
-#       • The baseline may only SHINK: a commit may remove a disable from a
+#       • The baseline may only SHRINK: a commit may remove a disable from a
 #         file, and that deletion deletes the baseline entry for that file
 #         (the baseline is a set of file->disable-key pairs, not a free-form
 #         allow-list). It may never add a disable to the baseline on its own
 #         authority — a disable must first be removed from the file it
-#         currently carries (or, later, the pair reopened).
-#       • This is the same discipline as the i18n-orphan ratchet
-#         (scripts/audit-i18n-orphans.cjs, scripts/i18n-orphan-baseline.json):
-#         grandfathered entries age out only when the very thing that made them
-#         orphan is deleted from the codebase. A new disable, or a disable
-#         moved by an edit, is a regression and fails the gate.
-#
-# ── 2026-10-05 testID flow-currency gate (stage 6): ... (unchanged).
-#
-# ── 2026-10-03 lint-stage rewrite: ... (unchanged).
-#
-# ── 2026-10-05 i18n orphan gate (stage 7): ... (unchanged).
-#
-# ── 2026-10-06 shellcheck-disable ratchet (stage 8):
-#     (a) shellcheck -x on the full tracked set; every finding is reported.
-#     (b) A per-file disable map is constructed from the staged working-tree
-#         files under the same discovery as stage 7. Each disable line is keyed
-#         by its file's path segment and its directive line number, exactly as
-#         it appears in the staged bytes (not a normalized form that could
-#         merge two distinct disables).
-#     (c) RATATCH: for every disable in the constructed map:
-#           - If the file also carries a finding under `shellcheck -x`, the
-#             disable is UNSUPPORTED and BLOCKS (with the finding text).
-#           - If the file does NOT carry a finding, the disable is optional and
-#             is removed from the baseline (if present), never added to it.
-#         The baseline is the authoritative "sanctioned" set. The gate passes
-#         when no finding is un-disabled AND no baseline entry exists for a
-#         disable that is still in a file — the ratchet can only shrink, never
-#         grow. An attempt to add to the baseline is reported as a block with
-#         the exact file/line to delete, and the baseline is left untouched.
-#     (d) The baseline file is itself staged-candidate (it can be deleted from
-#         the tree only by a commit), so a malformed baseline exits 2 loudly
-#         (the same fail-closed rule as scripts/i18n-orphan-baseline.json).
-#
-# ── 2026-10-03 flow-currency gate (stage 6): ... (unchanged).
-#
-# ── 2026-09-28 lint-stage rewrite: ... (unchanged).
-set -e
-
-echo "⏳ Pre-commit: vacuous-assertion gate (staged test files)..."
-
-if ! node scripts/check-vacuous-assertions.js --staged; then
-  echo "❌ Vacuous-assertion gate failed — commit blocked."
-  exit 1
-fi
-
-echo "⏳ Pre-commit: Date-in-sql gate (staged files)..."
-
-if ! node scripts/check-date-in-sql.js --staged; then
-  echo "❌ Date-in-sql gate failed — commit blocked."
-  exit 1
-fi
-
-echo "⏳ Pre-commit: Maestro flow selector gate (staged flows)..."
-
-while IFS= read -r -d '' f; do
-  node maestro/tools/flow-xcheck.cjs --flow="$f"
-  if [ $? -ne 0 ]; then
-    echo "❌ Flow selector gate failed — commit blocked."
-    echo "   See the per-flow report above."
-    exit 1
-  fi
-done < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^maestro/flows/.*\.yaml$' || true)
-
-if [ -z "$(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^maestro/flows/.*\.yaml$' || true)" ]; then
-  echo "✅ No staged Maestro flow files — skipping flow selector gate."
-fi
-
-echo "⏳ Pre-commit: testID codemod idempotence gate (B-1)..."
-
-while IFS= read -r -d '' f; do
-  node maestro/tools/testid-idempotence.cjs --file="$f"
-  if [ $? -ne 0 ]; then
-    echo "❌ testID codemod idempotence gate failed — commit blocked."
-    exit 1
-  fi
-done < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*\.tsx?|maestro/tools/add-testids\.cjs)$' || true)
-
-if [ -z "$(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*\.tsx?|maestro/tools/add-testids\.cjs)$' || true)" ]; then
-  echo "✅ No staged app/ files or codemod changes — skipping idempotence gate."
-fi
-
-echo "⏳ Pre-commit: testID map freshness gate..."
-
-while IFS= read -r -d '' f; do
-  node maestro/tools/testid-map-freshness.cjs --file="$f"
-  if [ $? -ne 0 ]; then
-    echo "❌ testID map freshness gate failed — commit blocked."
-    exit 1
-  fi
-done < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*|maestro/tools/testid-map.json)$' || true)
-
-if [ -z "$(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*|maestro/tools/testid-map.json)$' || true)" ]; then
-  echo "✅ No staged app/ files or map changes — skipping map freshness gate."
-fi
-
-echo "⏳ Pre-commit: testID flow-currency gate..."
-
-while IFS= read -r -d '' f; do
-  node maestro/tools/testid-flow-currency.cjs --file="$f"
-  if [ $? -ne 0 ]; then
-    echo "❌ testID flow-currency gate failed — commit blocked."
-    exit 1
-  fi
-done < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*|maestro/tools/testid-map.json)$' || true)
-
-if [ -z "$(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*|maestro/tools/testid-map.json)$' || true)" ]; then
-  echo "✅ No staged app/ files or map changes — skipping flow-currency gate."
-fi
-
-echo "⏳ Pre-commit: i18n orphan gate (new orphaned locale keys)..."
-
-while IFS= read -r -d '' f; do
-  node scripts/audit-i18n-orphans.cjs --gate "$f"
-  if [ $? -ne 0 ]; then
-    echo "❌ i18n orphan gate failed — commit blocked."
-    exit 1
-  fi
-done < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/|components/)' || true)
-
-if [ -z "$(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/|components/)' || true)" ]; then
-  echo "✅ No staged app/ or components/ files — skipping i18n orphan gate."
-fi
-
-echo "⏳ Pre-commit: ShellCheck gate (shell scripts)..."
-
-# Stage 8. Lints EVERY tracked shell script (worktree bytes) — see the header
-# note for why this is not staged-scoped. Zero scripts found = the discovery
-# pattern broke = fail closed, same as the CI job's guard.
-if ! command -v shellcheck >/dev/null 2>&1; then
-  echo "⚠ shellcheck not installed — skipping shellcheck gate (install: apt-get install shellcheck | winget install shellcheck)."
-else
-  mapfile -t SHELL_SCRIPTS < <(git ls-files '*.sh' 'scripts/git-hooks/*')
-  if [ ${#SHELL_SCRIPTS[@]} -eq 0 ]; then
-    echo "❌ ShellCheck gate could not run — git ls-files found no shell scripts (discovery pattern broken). Commit blocked."
-    exit 1
-  fi
-  echo "  → shellcheck -x on ${#SHELL_SCRIPTS[@]} script(s)..."
-  if ! shellcheck -x "${SHELL_SCRIPTS[@]}"; then
-    echo "❌ ShellCheck gate failed — commit blocked."
-    echo "   Fix the finding(s) above. Warnings block here on purpose: they are the exact"
-    echo "   failures the CI shellcheck job would otherwise be the first to report."
-    exit 1
-  fi
-  echo "✅ ShellCheck gate: clean (${#SHELL_SCRIPTS[@]} scripts)."
-fi
-
-echo "⏳ Pre-commit: lint staged files..."
-
-if ! git diff --cached --name-only -z --diff-filter=ACMR | grep -zqE '\.tsx?$' ; then
-  echo "✅ No staged JS/TS files — skipping lint."
-else
-  node scripts/check-lint.js --staged
-  if [ $? -ne 0 ]; then
-    echo "❌ Lint failed — commit blocked."
-    exit 1
-  fi
-fi
-
-echo "✅ Pre-commit passed."
+#         currently carries.
