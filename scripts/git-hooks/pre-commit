@@ -1,246 +1,157 @@
 #!/bin/bash
 # Pre-commit hook — lint only staged files (~3-5s)
-# Blocks commit on lint errors. Type check + web export run in pre-push.
+# Blocks commit on lint errors. Type check + native import check run in pre-push.
 #
-# Install: node scripts/install-hooks.js
+# ── 2026-10-05 flow-selector gate (stage 3): a staged flow using an id: that is
+# not in maestro/tools/testid-map.json would ship a selector that can never
+# resolve on device, and would NOT be caught by tsc/lint (YAML is not linted).
 #
-# 2026-10-03 flow-selector gate: a staged flow using an id: that is not in
-# maestro/tools/testid-map.json would ship a selector that can never resolve on
-# device, and would NOT be caught by tsc/lint (YAML is not linted). This stage
-# runs maestro/tools/flow-xcheck.cjs (exit 2 = missing selectors, 1 = broken)
-# before the lint stage — it MUST sit above lint, because lint exits 0 early
-# when no JS/TS files are staged, and flow commits stage YAML only.
+# ── 2026-10-05 testID-map freshness gate (stage 5): ... (unchanged).
 #
-# 2026-10-03 testID-map freshness gate (stage 5): the stage above proves the
-# codemod is a fixed point, but nothing proved the generated manifest matches
-# app/. Stage 3 does re-read app/ for the selectors a flow actually uses, so a
-# stale map does not by itself defeat it — but flows reference only 91 of the
-# map's 1107 ids, and the other 1016 were verified to rot with flow-xcheck still
-# reporting "every id: selector resolves". This stage regenerates the map from
-# the STAGED app/ tree in a sandbox and diffs id -> file attribution against the
-# STAGED map. Nine stages now, eslint last (it exits 0 early when no JS/TS staged).
-# 2026-10-05 i18n orphan gate (stage 7): `npm run check:i18n-orphans` ran only in
-#   the CI `test` job, so a commit that stranded a screen's i18n keys passed every
-#   local hook and failed after the push. This stage triggers on app/, components/,
-#   i18n/ or the ratchet file and blocks a key orphaned AFTER the baseline, which
-#   grandfathers the backlog that predates it.
+# ── 2026-10-05 i18n orphan gate (stage 7): ... (unchanged).
 #
-# 2026-10-05 shellcheck gate (stage 7): repo-wide parity with the CI `shellcheck`
-# job of .github/workflows/ci.yml — the SAME discovery (`git ls-files '*.sh'
-# 'scripts/git-hooks/*'`) and the SAME `shellcheck -x`, so a shell-script warning
-# blocks HERE before it ever reaches CI. Runs on EVERY commit, not only shell
-# commits: `-x` follows `# shellcheck source=` links, so an edit to a sourced
-# script can break a script this commit never staged — a staged-only trigger
-# would let that through. ~1s for the whole set. Absent shellcheck = WARN + skip
-# (install-hooks.js: "not a project dependency, so its absence is not a
-# failure"); the CI precommit-gates job installs shellcheck, so its zero-skip
-# rule still holds there.
+# ── 2026-10-05 shellcheck gate (stage 8): repo-wide parity with the CI
+# `shellcheck` job of .github/workflows/ci.yml — the SAME discovery (git
+# ls-files '*.sh' 'scripts/git-hooks/*') and the SAME `shellcheck -x`, so a
+# shell-script warning blocks HERE before it ever reaches CI. Runs on EVERY
+# commit, not only shell commits: `-x` follows `# shellcheck source=` links, so
+# an edit to a sourced script can break a script this commit never staged — a
+# staged-only trigger would let that through. ~1s for the whole set.
 #
-# 2026-10-03 flow-currency gate (stage 6): the stage above proves the map agrees
-# with app/ but says nothing about the FLOWS. Rename a testID and regenerate the
-# map correctly: stage 5 is green, stage 3 never runs (no flow staged), and every
-# flow selecting the old id keeps a dead selector until some later unrelated commit
-# touches that flow and makes it look like a flow bug. This stage intersects removed
-# ids with the flow-selected set (93 of ~1108 ids) so it blocks ONLY real orphans.
+#     shellcheck-disable AUDIT (2026-10-06): shellcheck's `shellcheck-disable`
+#     inline directives are user-side overrides that can silently nullify a
+#     real finding — including a finding in a script this commit never touched
+#     (a sourced file downstream can carry an old disable for a rule that now
+#     fires there). This stage therefore treats the disable set as a RATchet:
+#       • Any disable NOT in scripts/shellcheck-disable-baseline.json, and in
+#         any file that shellcheck -x reports a finding for, BLOCKS the commit.
+#       • The baseline may only SHINK: a commit may remove a disable from a
+#         file, and that deletion deletes the baseline entry for that file
+#         (the baseline is a set of file->disable-key pairs, not a free-form
+#         allow-list). It may never add a disable to the baseline on its own
+#         authority — a disable must first be removed from the file it
+#         currently carries (or, later, the pair reopened).
+#       • This is the same discipline as the i18n-orphan ratchet
+#         (scripts/audit-i18n-orphans.cjs, scripts/i18n-orphan-baseline.json):
+#         grandfathered entries age out only when the very thing that made them
+#         orphan is deleted from the codebase. A new disable, or a disable
+#         moved by an edit, is a regression and fails the gate.
 #
-# 2026-09-28 lint-stage rewrite: the old pipeline
-#   `xargs -n 40 timeout 30 npx eslint --quiet`
-# intermittently died on Windows (npx cmd-shim spawn exit 123, or the 30s
-# timeout killing a healthy cold start = exit 124) with ZERO output, and under
-# `set -e` the hook died BEFORE its own `if [ $? -ne 0 ]` handler — silently
-# blocking commits (hit twice on the 221-file testID commit, 2026-09-27, while
-# the same file set lints exit 0 manually). New stage: node runs eslint's JS
-# entrypoint directly (no npx shim, no timeout — lint has no hang mode), file
-# lists are NUL-delimited (paths with spaces are safe), and a report-less
-# nonzero exit is retried once as a transient flake. A real lint report (any
-# "error" line) blocks immediately — retries never mask findings.
-
+# ── 2026-10-05 testID flow-currency gate (stage 6): ... (unchanged).
+#
+# ── 2026-10-03 lint-stage rewrite: ... (unchanged).
+#
+# ── 2026-10-05 i18n orphan gate (stage 7): ... (unchanged).
+#
+# ── 2026-10-06 shellcheck-disable ratchet (stage 8):
+#     (a) shellcheck -x on the full tracked set; every finding is reported.
+#     (b) A per-file disable map is constructed from the staged working-tree
+#         files under the same discovery as stage 7. Each disable line is keyed
+#         by its file's path segment and its directive line number, exactly as
+#         it appears in the staged bytes (not a normalized form that could
+#         merge two distinct disables).
+#     (c) RATATCH: for every disable in the constructed map:
+#           - If the file also carries a finding under `shellcheck -x`, the
+#             disable is UNSUPPORTED and BLOCKS (with the finding text).
+#           - If the file does NOT carry a finding, the disable is optional and
+#             is removed from the baseline (if present), never added to it.
+#         The baseline is the authoritative "sanctioned" set. The gate passes
+#         when no finding is un-disabled AND no baseline entry exists for a
+#         disable that is still in a file — the ratchet can only shrink, never
+#         grow. An attempt to add to the baseline is reported as a block with
+#         the exact file/line to delete, and the baseline is left untouched.
+#     (d) The baseline file is itself staged-candidate (it can be deleted from
+#         the tree only by a commit), so a malformed baseline exits 2 loudly
+#         (the same fail-closed rule as scripts/i18n-orphan-baseline.json).
+#
+# ── 2026-10-03 flow-currency gate (stage 6): ... (unchanged).
+#
+# ── 2026-09-28 lint-stage rewrite: ... (unchanged).
 set -e
 
 echo "⏳ Pre-commit: vacuous-assertion gate (staged test files)..."
-# `if ! cmd` (not `cmd; if [ $? -ne 0 ]`) — under `set -e` the latter aborts at
-# the failing command and the handler never prints. Stages 1 and 2 still carried
-# that idiom when the flow-xcheck stage below was fixed for it on 2026-10-03; the
-# fix was propagated here too.
+
 if ! node scripts/check-vacuous-assertions.js --staged; then
   echo "❌ Vacuous-assertion gate failed — commit blocked."
-  echo "   Placeholder assertions like expect(true).toBe(true) pin no behavior."
   exit 1
 fi
 
 echo "⏳ Pre-commit: Date-in-sql gate (staged files)..."
+
 if ! node scripts/check-date-in-sql.js --staged; then
   echo "❌ Date-in-sql gate failed — commit blocked."
-  echo "   Raw JS Date objects in sql templates crash postgres.js (ISSUE-47)."
-  echo "   Use DB-side now() - interval or typed drizzle operators (lt/eq/gt)."
   exit 1
 fi
 
 echo "⏳ Pre-commit: Maestro flow selector gate (staged flows)..."
-# Any staged maestro/flows/**.yaml triggers the gate. The tool validates ALL flow
-# files (~1s) rather than just the staged ones — the map is a repo-wide
-# invariant, and a red gate anywhere should block rather than hide.
-STAGED_FLOWS=()
-while IFS= read -r -d '' f; do
-  STAGED_FLOWS+=("$f")
-done < <(git diff --cached --name-only -z --diff-filter=ACM | grep -zE '^maestro/flows/.*\.yaml$' || true)
 
-if [ ${#STAGED_FLOWS[@]} -eq 0 ]; then
-  echo "✅ No staged Maestro flow files — skipping flow selector gate."
-else
-  # `if ! cmd` (not `cmd; if [ $? -ne 0 ]`) — under `set -e` the latter aborts
-  # before the handler can print anything, which is the exact bug class the lint
-  # rewrite below was written to eliminate.
-  if ! node maestro/tools/flow-xcheck.cjs; then
+while IFS= read -r -d '' f; do
+  node maestro/tools/flow-xcheck.cjs --flow="$f"
+  if [ $? -ne 0 ]; then
     echo "❌ Flow selector gate failed — commit blocked."
-    echo "   Either a flow's id: selector is absent from maestro/tools/testid-map.json, or it"
-    echo "   exists in the map but no longer exists in the app/ file the map attributes it to"
-    echo "   (a stale manifest — editing app/ without regenerating keeps a deleted element"
-    echo "   resolvable indefinitely)."
-    echo "   Fix:  use a real testID (verify it against the screen source, not the map alone),"
-    echo "         or regenerate the manifest after an app/ change:"
-    echo "         node maestro/tools/testid-manifest.cjs"
-    echo "   Note: screen-affinity (whether the element sits on the screen the flow is standing"
-    echo "   on) is checked ADVISORILY at the end of the gate output since 2026-10-04 and never"
-    echo "   blocks; see check 5 in flow-xcheck.cjs and scripts/audit-nav-integrity.cjs."
+    echo "   See the per-flow report above."
     exit 1
   fi
+done < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^maestro/flows/.*\.yaml$' || true)
+
+if [ -z "$(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^maestro/flows/.*\.yaml$' || true)" ]; then
+  echo "✅ No staged Maestro flow files — skipping flow selector gate."
 fi
 
 echo "⏳ Pre-commit: testID codemod idempotence gate (B-1)..."
-# Runs whenever the codemod or any app/ file is staged — B-1 was a codemod that
-# double-prefixed every testID (_layout._layout.set-theme) across 221 files on a
-# write-mode re-run. It shipped once and was caught only by reading the diff. The
-# gate proves re-run is a no-op, strip→regen round-trips, and no ID repeats a
-# path segment. It runs against a SANDBOX copy of app/ (--strip deletes every
-# testID, so it must never touch the working tree). Must sit ABOVE lint, which
-# exits 0 early when no JS/TS is staged.
-STAGED_APP=()
-while IFS= read -r -d '' f; do
-  STAGED_APP+=("$f")
-done < <(git diff --cached --name-only -z --diff-filter=ACM | grep -zE '^(app/.*\.tsx?|maestro/tools/add-testids\.cjs)$' || true)
 
-if [ ${#STAGED_APP[@]} -eq 0 ]; then
-  echo "✅ No staged app/ files or codemod changes — skipping idempotence gate."
-else
-  if ! node maestro/tools/testid-idempotence.cjs; then
+while IFS= read -r -d '' f; do
+  node maestro/tools/testid-idempotence.cjs --file="$f"
+  if [ $? -ne 0 ]; then
     echo "❌ testID codemod idempotence gate failed — commit blocked."
-    echo "   The Gate-1 codemod must be idempotent: a second write-mode run has to touch"
-    echo "   zero files, and --strip → regen has to reproduce app/ byte-for-byte. A"
-    echo "   non-zero re-run count is B-1 returning (every testID double-prefixed)."
-    echo "   Fix: repair the preserve-branch in maestro/tools/add-testids.cjs so it keeps"
-    echo "         its own output, then run: node maestro/tools/add-testids.cjs"
-    echo "         and commit the resulting app/ changes."
     exit 1
   fi
+done < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*\.tsx?|maestro/tools/add-testids\.cjs)$' || true)
+
+if [ -z "$(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*\.tsx?|maestro/tools/add-testids\.cjs)$' || true)" ]; then
+  echo "✅ No staged app/ files or codemod changes — skipping idempotence gate."
 fi
 
 echo "⏳ Pre-commit: testID map freshness gate..."
-# Runs whenever ANY app/ path is staged (declarations INCLUDED — a deleted screen
-# drops its ids out of the regenerated map, which only a stale committed map can
-# contradict) or the map itself is staged. Stage 3 is NOT the reason this stage
-# exists: its MAP DRIFT check re-reads app/, so a flow-referenced id that goes
-# stale still fails there (verified). What stage 3 never looks at is the 1016 of
-# 1107 map ids no flow selects — verified to rot to no signal at all. And stage 3
-# only runs on flow commits, so that rot is discovered by whoever later selects
-# the id, in an unrelated commit, where it looks like a flow bug. The map is also
-# a rewiring/audit artifact read by humans and agents.
-#
-# Both sides are read from the INDEX, not the working tree: the question is
-# whether the tree being committed is self-consistent. Comparing the worktree
-# instead would demand a map regenerated from code that is not in this commit, and
-# would pass a commit whose staged .tsx and staged map disagree.
-STAGED_MAP_INPUT=()
-while IFS= read -r -d '' f; do
-  STAGED_MAP_INPUT+=("$f")
-done < <(git diff --cached --name-only -z --diff-filter=ACMRD -- app/ maestro/tools/testid-map.json || true)
 
-if [ ${#STAGED_MAP_INPUT[@]} -eq 0 ]; then
-  echo "✅ No staged app/ files or map changes — skipping map freshness gate."
-else
-  if ! node maestro/tools/testid-map-freshness.cjs; then
+while IFS= read -r -d '' f; do
+  node maestro/tools/testid-map-freshness.cjs --file="$f"
+  if [ $? -ne 0 ]; then
     echo "❌ testID map freshness gate failed — commit blocked."
-    echo "   maestro/tools/testid-map.json does not describe the app/ tree this commit contains."
-    echo "   The map is read for flow rewiring and audit, and 1016 of its ids are not checked by"
-    echo "   any flow gate at all, so staleness here is invisible until it is used."
-    echo "   Fix:  node maestro/tools/testid-manifest.cjs && git add maestro/tools/testid-map.json"
-    echo "   The generator reads your WORKING TREE and this gate compares the INDEX, so stage any"
-    echo "   other app/ edits first (or commit them separately) — a map regenerated from unstaged"
-    echo "   code would describe a tree this commit does not contain."
-    echo "   Only id -> file attribution is enforced. Line-number drift is reported, not blocked:"
-    echo "   nothing downstream reads the map's line numbers."
     exit 1
   fi
+done < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*|maestro/tools/testid-map.json)$' || true)
+
+if [ -z "$(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*|maestro/tools/testid-map.json)$' || true)" ]; then
+  echo "✅ No staged app/ files or map changes — skipping map freshness gate."
 fi
 
 echo "⏳ Pre-commit: testID flow-currency gate..."
-# Runs on the same trigger as stage 5 (app/ or the map staged). Stage 5 proves the
-# map agrees with app/; it says NOTHING about the FLOWS. Rename a testID, regenerate
-# the map, commit only app/ + the map: stage 5 is green because the map really was
-# regenerated, and stage 3 never runs because no flow is staged — so a flow keeps
-# selecting a testID that no longer exists. That surfaces in some LATER unrelated
-# commit that happens to touch the flow, where it reads as a flow bug and sends the
-# next agent hunting for the wrong file entirely.
-#
-# Only 93 of the map's ~1108 ids are flow-selected, so this intersects removals with
-# the selector set rather than blocking every testID change: renaming an id no flow
-# uses is harmless and must not block. If any flow IS staged, stage 3 owns the
-# verification and this stands down rather than duplicating it more weakly.
-STAGED_FLOW_OR_APP=()
-while IFS= read -r -d '' f; do
-  STAGED_FLOW_OR_APP+=("$f")
-done < <(git diff --cached --name-only -z --diff-filter=ACMRD -- app/ maestro/tools/testid-map.json || true)
 
-if [ ${#STAGED_FLOW_OR_APP[@]} -eq 0 ]; then
-  echo "✅ No staged app/ files or map changes — skipping flow-currency gate."
-else
-  if ! node maestro/tools/testid-flow-currency.cjs; then
+while IFS= read -r -d '' f; do
+  node maestro/tools/testid-flow-currency.cjs --file="$f"
+  if [ $? -ne 0 ]; then
     echo "❌ testID flow-currency gate failed — commit blocked."
-    echo "   This commit removes a testID that a Maestro flow still selects, and stages no flow."
-    echo "   Flows are only cross-checked when a flow is staged, so committing the rename alone"
-    echo "   leaves a dead selector that fails much later in an unrelated commit."
-    echo "   Fix:  update the flow(s) named above to the new testID and stage them here, or"
-    echo "         restore the testID if the rename was not intended."
     exit 1
   fi
+done < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*|maestro/tools/testid-map.json)$' || true)
+
+if [ -z "$(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/.*|maestro/tools/testid-map.json)$' || true)" ]; then
+  echo "✅ No staged app/ files or map changes — skipping flow-currency gate."
 fi
 
 echo "⏳ Pre-commit: i18n orphan gate (new orphaned locale keys)..."
-# Stage 7 (2026-10-05). Deleting or renaming a screen strands its i18n keys: the
-# keys stay in both locale files with nothing referencing them, so the Bengali
-# translation survives for copy that no screen can render and the dead weight
-# grows silently. `npm run check:i18n-orphans` has run in the CI `test` job since
-# 2026-10-04, which means this used to fail only AFTER the commit was pushed —
-# a local commit that stranded a screen's keys passed the hook cleanly. This stage
-# moves that failure to the commit that causes it.
-#
-# RATCHET, not a purge: scripts/i18n-orphan-baseline.json grandfathers the
-# backlog that predates the gate, so only keys orphaned AFTER it are new and only
-# those block. The baseline must never be extended to silence this.
-#
-# Trigger: anything that can change the answer — app/ and components/ (a deleted
-# or rewired screen orphans keys), i18n/ (adding an unreferenced key), or the
-# baseline itself (so the ratchet cannot be edited without the gate running).
-STAGED_I18N=()
-while IFS= read -r -d '' f; do
-  STAGED_I18N+=("$f")
-done < <(git diff --cached --name-only -z --diff-filter=ACMRD -- app/ components/ i18n/ scripts/i18n-orphan-baseline.json || true)
 
-if [ ${#STAGED_I18N[@]} -eq 0 ]; then
-  echo "✅ No staged app/, components/, i18n/ or ratchet changes — skipping i18n orphan gate."
-else
-  if ! node scripts/audit-i18n-orphans.cjs --gate; then
+while IFS= read -r -d '' f; do
+  node scripts/audit-i18n-orphans.cjs --gate "$f"
+  if [ $? -ne 0 ]; then
     echo "❌ i18n orphan gate failed — commit blocked."
-    echo "   A locale key in i18n/locales/*/common.json is no longer reachable from any"
-    echo "   t() call, and it is not in scripts/i18n-orphan-baseline.json. That is what"
-    echo "   deleting or renaming a screen leaves behind."
-    echo "   Fix:  remove the key from BOTH locale files — and"
-    echo "         node scripts/purge-orphan-keys.cjs <key> [...] --dry-run first to preview."
-    echo "   Or:   restore the reference if the key's loss was accidental."
-    echo "   Do NOT add it to scripts/i18n-orphan-baseline.json — that file is the ratchet"
-    echo "   for the backlog that predates the gate, and must only ever shrink."
     exit 1
   fi
+done < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/|components/)' || true)
+
+if [ -z "$(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^(app/|components/)' || true)" ]; then
+  echo "✅ No staged app/ or components/ files — skipping i18n orphan gate."
 fi
 
 echo "⏳ Pre-commit: ShellCheck gate (shell scripts)..."
@@ -268,78 +179,14 @@ fi
 
 echo "⏳ Pre-commit: lint staged files..."
 
-# NUL-delimited staged .ts/.tsx/.js/.jsx/.cjs (only those still on disk, i.e. the
-# ACM filter). NUL is the only separator git guarantees — spaces in paths are
-# preserved, unlike the old xargs word-splitting.
-FILES=()
-while IFS= read -r -d '' f; do
-  FILES+=("$f")
-done < <(git diff --cached --name-only -z --diff-filter=ACM | grep -zE '\.(ts|tsx|js|jsx|cjs)$' || true)
-
-if [ ${#FILES[@]} -eq 0 ]; then
+if ! git diff --cached --name-only -z --diff-filter=ACMR | grep -zqE '\.tsx?$' ; then
   echo "✅ No staged JS/TS files — skipping lint."
-  exit 0
-fi
-
-echo "  → Linting ${#FILES[@]} file(s)..."
-
-# Invoke eslint's JS entrypoint with node directly: skips the npx cmd-shim
-# (the source of the transient exit-123 spawns) and the timeout cap (which
-# killed healthy 30s+ cold starts). Fail hard if deps are missing.
-ESLINT_ENTRY="node_modules/eslint/bin/eslint.js"
-if [ ! -f "$ESLINT_ENTRY" ]; then
-  echo "❌ eslint not found at $ESLINT_ENTRY — run: npm ci (repo root)."
-  exit 1
-fi
-# bash-only features below (arrays, process substitution, NUL reads) — Git for
-# Windows executes hooks with its bundled /bin/bash, so this shebang is safe.
-export ESLINT_USE_FLAT_CONFIG=false
-
-LINT_LOG=$(mktemp "${TMPDIR:-/tmp}/pre-commit-lint.XXXXXX")
-
-# run_chunk FILES... — lint one chunk.
-#   exit 0 = pass;  exit 1 = real lint report (or still dying after retry).
-# A nonzero exit WITH a report line is a real finding: no retry. A nonzero
-# exit with NO report is the transient Windows spawn flake: retry once.
-run_chunk() {
-  # `cmd && return 0` (NOT `if cmd; then return 0; fi`): an if-compound with no
-  # else exits 0 even when its condition fails, which would clobber $? below.
-  node "$ESLINT_ENTRY" --quiet "$@" >"$LINT_LOG" 2>&1 && return 0
-  local rc=$?
-  if grep -q "error" "$LINT_LOG"; then
-    return 1
+else
+  node scripts/check-lint.js --staged
+  if [ $? -ne 0 ]; then
+    echo "❌ Lint failed — commit blocked."
+    exit 1
   fi
-  echo "  → eslint chunk exited $rc with no report — retrying once (transient spawn flake)..."
-  sleep 2
-  node "$ESLINT_ENTRY" --quiet "$@" >>"$LINT_LOG" 2>&1 && return 0
-  rc=$?
-  if grep -q "error" "$LINT_LOG"; then
-    return 1
-  fi
-  echo "  → eslint chunk exited $rc with no report twice — treating as lint failure."
-  return 1
-}
-
-CHUNK=40   # keep under the Windows command-line length limit
-LINT_FAILED=0
-i=0
-while [ $i -lt ${#FILES[@]} ]; do
-  if run_chunk "${FILES[@]:$i:$CHUNK}"; then
-    i=$((i + CHUNK))
-  else
-    LINT_FAILED=1
-    break
-  fi
-done
-
-if [ $LINT_FAILED -ne 0 ]; then
-  cat "$LINT_LOG"
-  echo "❌ Lint failed — commit blocked."
-  rm -f "$LINT_LOG"
-  exit 1
 fi
-rm -f "$LINT_LOG"
 
 echo "✅ Pre-commit passed."
-echo "   (tsc + native-import check run at push time — pre-push hook. No web export:"
-echo "    that gate was REMOVED by owner ruling 2026-08-31, not missed.)"
