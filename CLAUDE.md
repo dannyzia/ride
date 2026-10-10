@@ -213,7 +213,7 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # reported, NOT blocked — attribution is what every consumer resolves, and nothing reads `line`.
 # MEASURED rationale (do not "simplify" this back): stage 3 is NOT defeated by a stale map — its
 # MAP DRIFT check re-reads app/, so a flow-referenced id that goes stale still fails there. Flows
-# reference 93 of the map's ids (map total 1101 at the 2026-10-05 post-purge regen — regenerate with
+# reference 93 of the map's ids (map total 1101, the same as the committed testid-map.json — regenerate with
 # node maestro/tools/testid-manifest.cjs before quoting); the rest rot with NO signal (verified: renaming an
 # unreferenced id leaves flow-xcheck at exit 0), and stage 3 only runs on flow commits, so the rot
 # surfaces later to whoever selects the id, in an unrelated commit. The map is also the index used
@@ -320,7 +320,7 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # attributed to its owner screen via testid-map.json and owners outside the reachability set of
 # scripts/audit-nav-integrity.cjs (spawned at RUN time with --json, so no snapshot goes stale)
 # are listed. ADVISORY because `reachable` is a FLOOR: UNRESOLVED sites are not edges and
-# `_layout.tsx` files get no inbound edge, so 57 of the map's 218 screens sit outside it while
+# `_layout.tsx` files get no inbound edge, so 57 of the map.s 215 screens sit outside it while
 # demonstrably live. MEASURED: 0 of 58 id-bearing flows flagged. If the audit cannot run, the
 # tier says so loudly and still exits 0 — it must never print the word "skipped" (the ci.yml
 # precommit-gates job fails on skipped/skipping lines in hook output).
