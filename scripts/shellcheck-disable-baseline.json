@@ -1,0 +1,25 @@
+{
+  "scripts/git-hooks/pre-commit": [
+    "SC1072",
+    "SC1073",
+    "SC1009",
+    "SC1017",
+    "SC1008"
+  ],
+  "scripts/purge-shellcheck-disable.cjs": [
+    "SC1008",
+    "SC1009",
+    "SC1010",
+    "SC1017",
+    "SC1072",
+    "SC1073"
+  ],
+  "scripts/check-shellcheck-disables.js": [
+    "SC1008",
+    "SC1009",
+    "SC1010",
+    "SC1017",
+    "SC1072",
+    "SC1073"
+  ]
+}
