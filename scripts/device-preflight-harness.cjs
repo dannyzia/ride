@@ -158,7 +158,7 @@ const CASES = [
     key: "missing-adb",
     expect: "block",
     name: "blocks when adb cannot be resolved (toolchain rot)",
-    steps: [5],
+    steps: [2, 5],
     stubs: { adb: false, maestro: true },
     exports: {},
     wantExit: 1,
@@ -168,7 +168,7 @@ const CASES = [
     key: "missing-maestro",
     expect: "block",
     name: "blocks when the Maestro CLI is missing (MAESTRO_BIN pinned dead — see MEASURED)",
-    steps: [5],
+    steps: [2, 5],
     stubs: { adb: true, maestro: false },
     // Both detection branches must fail: PATH (filtered of maestro) AND the
     // configured binary. Without this override the hardcoded /c/maestro/bin
@@ -189,6 +189,12 @@ const CASES = [
     // The skip glyph skip_() prints. Under `required` the device-bound checks
     // must be ✗ hard failures — a ⊘ anywhere means the knob regressed.
     forbidMarkers: ["\u2298"],
+    // coverFail = the step behind this knob must actually run when present,
+    // not be reported as skipped. Step 5 is the device-bound preflight;
+    // under `required` with a device-less host the preflight itself is the
+    // blocker, so the case asserts it ran and failed loudly instead of
+    // reporting NOT COVERED.
+    forbidCover: "step 5",
   },
 ];
 
@@ -315,9 +321,12 @@ function runCase(kase, { wt, avdScratch }) {
         continue;
       }
       if (step.requiresTool && runBash(`command -v ${step.requiresTool} >/dev/null`, { cwd: wt, env }).code !== 0) {
-        // Offline honesty: a missing tool is a loud "not covered", never a
-        // silent pass and never a fabricated failure.
-        results.push({ n, ran: false, skipped: `requires ${step.requiresTool}, not installed`, code: 0 });
+        // A run-gated step that never runs is a contract failure, not an
+        // offline skip: shellcheck (step 2) and PREFLIGHT_DEVICE=required
+        // (step 5) exist to prove the toolchain and the preflight gate are
+        // wired. Reporting "NOT COVERED" makes a green run mean the check was
+        // skipped, so these are loud block cases now.
+        results.push({ n, ran: false, skipped: `requires ${step.requiresTool}, not installed`, code: 1 });
         continue;
       }
       const prelude = simPrelude({
@@ -346,9 +355,23 @@ function runCase(kase, { wt, avdScratch }) {
         problems.push(`step ${r.n}: NOT COVERED — ${r.skipped}`);
       }
     } else {
-      const gate = results.find((x) => x.ran);
-      if (!gate) problems.push("no step ran — the block claim is vacuous");
-      else if (gate.code === 0) problems.push(`step ${gate.n}: exited 0, expected non-zero (detection dead)`);
+      const gate = results.find((x) => x.ran && x.code !== 0);
+      if (!gate) {
+        const ran = results.find((x) => x.ran);
+        if (!ran) problems.push("no step ran — the block claim is vacuous");
+        else problems.push(`step ${ran.n}: ran with exit 0, expected non-zero`);
+      } else {
+        problems.push(`step ${gate.n}: exited ${gate.code}, expected non-zero`);
+      }
+      for (const r of results.filter((x) => x.skipped)) {
+        problems.push(`step ${r.n}: NOT COVERED — ${r.skipped}`);
+      }
+
+      if (kase.forbidCover) {
+        for (const r of results.filter((x) => x.skipped)) {
+          problems.push(`step ${r.n} must not be skipped under ${kase.forbidCover}: ${r.skipped}`);
+        }
+      }
     }
     for (const m of kase.wantMarkers || []) {
       if (!combined.includes(m)) problems.push(`expected marker not printed: ${JSON.stringify(m)}`);

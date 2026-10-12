@@ -204,6 +204,14 @@ jobs:
       - name: i18n orphan gate (new orphans only)
         run: npm run check:i18n-orphans
 
+      # Scratch-only DB policy regression gate: asserts the concurrency-locks
+      # job and the default-suite skip gate in tests/meta/concurrency-gate.test.ts
+      # are still in place, so a regression (removed job, dropped env var, or a
+      # gated harness that no longer refuses without SCRATCH_DATABASE_URL) fails
+      # CI loudly instead of going unnoticed.
+      - name: Scratch-only DB policy regression gate
+        run: npm run check:scratch-policy
+
       - name: Typecheck (root)
         run: npx tsc --noEmit
 
@@ -680,5 +688,5 @@ jobs:
       # afterAll; serial execution keeps cluster-wide advisory locks from
       # overlapping across workers (also how the local full-lane proof ran:
       # 4 suites, 7 tests, 58s).
-      - name: Concurrency advisory-lock proofs
-        run: npx jest tests/concurrency --watchAll=false --ci --runInBand --silent
+      - name: Concurrency advisory-lock proofs (npm run test:concurrency)
+        run: npm run test:concurrency
