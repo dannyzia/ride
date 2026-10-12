@@ -46,12 +46,44 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promises as fsp } from "node:fs";
+import { spawnSync } from "node:child_process";
 import glob from "glob";
 
 const ROOT = process.cwd();
 const MAESTRO = path.join(ROOT, "maestro");
 const ADB_ENV = path.join(MAESTRO, "utils", "adb-env.sh");
-const CMD = path.join(MAESTRO, "utils", "run-device-day.sh");
+
+/**
+ * The sandbox runs under Git Bash on the Windows dev host (the environment that
+ * owns the device scripts) and plain bash on CI. System32\bash.exe on Windows
+ * is WSL — a DIFFERENT Linux with /mnt/* drive mappings the scripts never see —
+ * so on win32 we spawn the Git Bash binary explicitly and translate sandbox
+ * paths to MSYS drive form (/d/...), while node's own fsp calls keep using the
+ * Windows spelling of the same physical file.
+ */
+const GIT_BASH = "C:\\Program Files\\Git\\bin\\bash.exe";
+const BASH =
+  process.platform === "win32" && fs.existsSync(GIT_BASH) ? GIT_BASH : "bash";
+
+function toSandboxPath(p: string): string {
+  return p.replace(/\\/g, "/").replace(/^([A-Za-z]):/, (_m, d: string) => `/${d.toLowerCase()}`);
+}
+
+/**
+ * node's fsp.chmod cannot set the MSYS executable attribute on Windows/DrvFS,
+ * and without it Git Bash refuses to exec the stub (empty output). Write the
+ * two-line fake `adb version` payload, then set the exec bit FROM Git Bash —
+ * the same way the real device scripts end up executable.
+ */
+async function writeExecutableStub(binDir: string, adbBin: string): Promise<void> {
+  await fsp.mkdir(binDir, { recursive: true });
+  await fsp.writeFile(
+    adbBin,
+    "#!/bin/sh\necho \"Android Debug Bridge version 1.0.41\"\necho \"Version 36.1.10-fake\"\n",
+    "utf8"
+  );
+  spawnSync(BASH, ["-c", `chmod +x '${toSandboxPath(adbBin)}'`]);
+}
 
 describe("adb-env.sh Linux-only variable guard", () => {
   let tmp: string;
@@ -68,66 +100,93 @@ describe("adb-env.sh Linux-only variable guard", () => {
     source: string,
     options: {
       cwd: string;
-      env: Node.ProcessEnv;
+      env: NodeJS.ProcessEnv;
       input?: string;
       maxBuffer?: number;
+      /** shell fragment run between `set -u` and the source, e.g. `unset USERNAME` */
+      prelude?: string;
     }
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    const cmd = `bash -c 'set -uo pipefail; source "${source}" "$@"' _`;
-    const proc = await fsp.execFileSync("bash", ["-c", cmd, "bash", source], {
-      cwd: options.cwd,
-      env: options.env,
-      input: options.input,
-      maxBuffer: options.maxBuffer ?? 16 * 1024 * 1024,
-      encoding: "utf8",
-    });
-    return { stdout: "", stderr: "", exitCode: 0 };
+    const sandboxSource = toSandboxPath(source);
+    // MSYS2 re-synthesizes Windows variables (USERNAME, ...) from the Windows
+    // token no matter what the parent env omits — the only way to observe the
+    // Linux-runner condition locally is an explicit unset inside the sandbox.
+    const parts = ["set -uo pipefail"];
+    if (options.prelude) parts.push(options.prelude);
+    parts.push(`source '${sandboxSource}'`);
+    const proc = spawnSync(
+      BASH,
+      ["-c", parts.join("; ")],
+      {
+        cwd: options.cwd,
+        env: options.env,
+        input: options.input,
+        maxBuffer: options.maxBuffer ?? 16 * 1024 * 1024,
+        encoding: "utf8",
+      }
+    );
+    const stdout = proc.stdout ?? "";
+    const stderr = proc.stderr ?? "";
+    const exitCode = proc.status ?? (proc.error ? -1 : 0);
+    if (exitCode !== 0) {
+      throw new Error(
+        `adb-env sandbox exited ${exitCode} (spawn error: ${proc.error?.message ?? "none"})\n${stdout}\n${stderr}`
+      );
+    }
+    return { stdout, stderr, exitCode };
   }
 
   it("resolves the pinned adb and prints its version without dying on a Linux env", async () => {
-    const adbBin = join(tmp, "adb");
-    await fsp.writeFile(
-      adbBin,
-      "#!/bin/sh\necho \"adb version 36.1.10\n\"",
-      "utf8"
-    );
-    await fsp.chmod(adbBin, 0o755);
+    const binDir = join(tmp, "bin");
+    const adbBin = join(binDir, "adb");
+    await writeExecutableStub(binDir, adbBin);
 
-    const env: Node.ProcessEnv = {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
       USERNAME: undefined,
       LOCALAPPDATA: undefined,
       USERPROFILE: undefined,
       ADB: undefined,
-      PATH: join(tmp, "bin") + ":" + "/usr/bin:/bin",
+      PATH: toSandboxPath(binDir) + ":/usr/bin:/bin",
     };
 
     const resolved = await shell(ADB_ENV, { cwd: MAESTRO, env });
     expect(resolved.exitCode).toBe(0);
-    expect(resolved.stdout).toMatch(/adb version/);
+    // adb-env.sh reports `adb: <path> (<sed -n '2p' of "adb version">)`; the
+    // two-line fake adb makes that the stub's second line.
+    expect(resolved.stdout).toMatch(/Version 36\.1\.10-fake/);
   });
 
   it("flags a bare $USERNAME in adb-env.sh as a Linux-only variable under set -u", async () => {
-    const faulted = ADB_ENV.replace("${USERNAME:-}", "$USERNAME");
+    // Read the REAL resolver content — ADB_ENV is a path string, not content.
+    // replaceAll is load-bearing: the file mentions ${USERNAME:-} in a COMMENT
+    // before the code line, and a first-only replace would fault the comment
+    // while leaving the actual code line guarded (the fault never fires).
+    const faulted = (await fsp.readFile(ADB_ENV, "utf8")).replaceAll(
+      "${USERNAME:-}",
+      "$USERNAME"
+    );
     const faultedPath = join(tmp, "adb-env-faulted.sh");
     await fsp.writeFile(faultedPath, faulted, "utf8");
 
-    const adbBin = join(tmp, "adb");
-    await fsp.writeFile(adbBin, "#!/bin/sh\necho \"adb version 36.1.10\n\"", "utf8");
-    await fsp.chmod(adbBin, 0o755);
+    const binDir = join(tmp, "bin");
+    const adbBin = join(binDir, "adb");
+    await writeExecutableStub(binDir, adbBin);
 
-    const env: Node.ProcessEnv = {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
       USERNAME: undefined,
       LOCALAPPDATA: undefined,
       USERPROFILE: undefined,
       ADB: undefined,
-      PATH: join(tmp, "bin") + ":" + "/usr/bin:/bin",
+      PATH: toSandboxPath(binDir) + ":/usr/bin:/bin",
     };
 
     let threw = false;
     try {
-      await shell(faultedPath, { cwd: MAESTRO, env });
+      // `unset USERNAME` reproduces the Linux runner (MSYS2 would otherwise
+      // re-synthesize USERNAME from the Windows token, masking the fault).
+      await shell(faultedPath, { cwd: MAESTRO, env, prelude: "unset USERNAME" });
     } catch (err: unknown) {
       threw = true;
       const msg = err instanceof Error ? err.message : String(err);
@@ -136,22 +195,25 @@ describe("adb-env.sh Linux-only variable guard", () => {
     expect(threw).toBe(true);
   });
 
-  it("flags a bare $LOCALAPPDATA in run-device-day.sh as a Linux-only variable under set -u", async () => {
-    const faulted = CMD.replace("${LOCALAPPDATA:-}", "$LOCALAPPDATA");
-    const faultedPath = join(tmp, "run-device-day-faulted.sh");
+  it("flags a bare $LOCALAPPDATA in adb-env.sh as a Linux-only variable under set -u", async () => {
+    // The LOCALAPPDATA line is adb-env.sh's resolution step 3 (the SDK
+    // fallback), reached only when adb is NOT on PATH — so this sandbox has
+    // NO stub bin on PATH. Faulting the guarded expansion makes set -u abort
+    // at that line instead of dying the ordinary "no adb found" way.
+    const faulted = (await fsp.readFile(ADB_ENV, "utf8")).replaceAll(
+      "${LOCALAPPDATA:-}",
+      "$LOCALAPPDATA"
+    );
+    const faultedPath = join(tmp, "adb-env-faulted-localappdata.sh");
     await fsp.writeFile(faultedPath, faulted, "utf8");
 
-    const adbBin = join(tmp, "adb");
-    await fsp.writeFile(adbBin, "#!/bin/sh\necho \"adb version 36.1.10\n\"", "utf8");
-    await fsp.chmod(adbBin, 0o755);
-
-    const env: Node.ProcessEnv = {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
       USERNAME: undefined,
       LOCALAPPDATA: undefined,
       USERPROFILE: undefined,
       ADB: undefined,
-      PATH: join(tmp, "bin") + ":" + "/usr/bin:/bin",
+      PATH: "/usr/bin:/bin",
     };
 
     let threw = false;
