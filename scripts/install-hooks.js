@@ -48,6 +48,13 @@ const HOOKS_DIR = path.join(__dirname, "..", "scripts", "git-hooks");
 const GIT_HOOKS_DIR = path.join(__dirname, "..", ".git", "hooks");
 const SMOKE_TIMEOUT_MS = 120000;
 
+// System32\bash.exe on Windows is WSL — a different Linux that cannot read
+// D:\... paths, so every verification would fail with a false ENOENT. Prefer
+// the Git Bash binary (the environment the hooks are written for) when present.
+const GIT_BASH_EXE = "C:\\Program Files\\Git\\bin\\bash.exe";
+const BASH =
+  process.platform === "win32" && fs.existsSync(GIT_BASH_EXE) ? GIT_BASH_EXE : "bash";
+
 /** Run a command, never throwing. `timedOut` distinguishes "slow" from "failed". */
 function run(cmd, args, opts = {}) {
   // NO `shell: true`. With a shell, the path "D:\My Projects\...\pre-commit" is
@@ -112,7 +119,7 @@ function smokeRun(hookName, installedPath) {
       return { ok: false, reason: `could not build a clean index: ${seed.output || seed.status}` };
     }
 
-    const r = run("bash", [installedPath], {
+    const r = run(BASH, [installedPath], {
       cwd: repoRoot,
       timeout: SMOKE_TIMEOUT_MS,
       env: { ...process.env, GIT_INDEX_FILE: emptyIndex },
@@ -163,7 +170,7 @@ function indent(s) {
 }
 
 function verify(hookName, installedPath) {
-  const syntax = run("bash", ["-n", installedPath]);
+  const syntax = run(BASH, ["-n", installedPath]);
   if (!syntax.ok) {
     return { ok: false, reason: `bash -n syntax error:\n${indent(syntax.output)}` };
   }
