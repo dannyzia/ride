@@ -62,93 +62,118 @@ describe('compressIfNeeded — passthrough', () => {
 });
 
 describe('compressIfNeeded — format normalization (non-allowed mime)', () => {
-  it('converts HEIC to JPEG regardless of size', async () => {
+  it('converts HEIC to WebP regardless of size', async () => {
     getInfoAsync.mockResolvedValue({ exists: true, size: 50_000 });
-    manipulateAsync.mockResolvedValue({ uri: 'file:///tmp/conv.jpeg' });
+    manipulateAsync.mockResolvedValue({ uri: 'file:///tmp/conv.webp' });
     const out = await compressIfNeeded('file:///tmp/IMG_0001.heic', 'image/heic');
     expect(manipulateAsync).toHaveBeenCalledWith(
       'file:///tmp/IMG_0001.heic',
       [],
-      expect.objectContaining({ format: ImageManipulator.SaveFormat.JPEG }),
+      expect.objectContaining({ format: ImageManipulator.SaveFormat.WEBP }),
     );
-    expect(out.contentType).toBe('image/jpeg');
-    expect(out.uri).toBe('file:///tmp/conv.jpeg');
+    expect(out.contentType).toBe('image/webp');
+    expect(out.uri).toBe('file:///tmp/conv.webp');
   });
 
-  it('converts small GIF to JPEG (first frame), not an error', async () => {
+  it('converts small GIF to WebP (first frame), not an error', async () => {
     getInfoAsync.mockResolvedValue({ exists: true, size: 20_000 });
-    manipulateAsync.mockResolvedValue({ uri: 'file:///tmp/gif.jpeg' });
+    manipulateAsync.mockResolvedValue({ uri: 'file:///tmp/gif.webp' });
     const out = await compressIfNeeded('file:///tmp/anim.gif', 'image/gif');
-    expect(out.contentType).toBe('image/jpeg');
+    expect(out.contentType).toBe('image/webp');
   });
 
-  it('treats unknown mime as unsupported and normalizes to JPEG', async () => {
+  it('treats unknown mime as unsupported and normalizes to WebP', async () => {
     getInfoAsync.mockResolvedValue({ exists: true, size: 10 });
-    manipulateAsync.mockResolvedValue({ uri: 'file:///tmp/x.jpeg' });
+    manipulateAsync.mockResolvedValue({ uri: 'file:///tmp/x.webp' });
     const out = await compressIfNeeded('file:///tmp/mystery.bin');
-    expect(out.contentType).toBe('image/jpeg');
+    expect(out.contentType).toBe('image/webp');
   });
 });
 
 describe('compressIfNeeded — compression passes', () => {
-  it('large JPEG: pass 1 brings it under 2MB', async () => {
+  it('large JPEG: pass 1 brings it under 2MB, final encode emits WebP', async () => {
     let call = 0;
     getInfoAsync.mockImplementation(async () => {
       call += 1;
-      // 1st: source 3MB; 2nd: pass-1 output 1MB
+      // 1st: source 3MB; 2nd: pass-1 output 1MB; 3rd: final WebP output
       return call === 1
         ? { exists: true, size: 3 * 1024 * 1024 }
-        : { exists: true, size: 1024 * 1024 };
+        : call === 2
+          ? { exists: true, size: 1024 * 1024 }
+          : { exists: true, size: 700_000 };
     });
-    manipulateAsync.mockResolvedValue({ uri: 'file:///tmp/p1.jpeg' });
+    manipulateAsync
+      .mockResolvedValueOnce({ uri: 'file:///tmp/p1.jpeg' })
+      .mockResolvedValueOnce({ uri: 'file:///tmp/p1.webp' });
     const out = await compressIfNeeded('file:///tmp/big.jpg');
-    expect(manipulateAsync).toHaveBeenCalledTimes(1);
-    expect(manipulateAsync).toHaveBeenCalledWith(
+    expect(manipulateAsync).toHaveBeenCalledTimes(2);
+    // Intermediate pass stays JPEG (no compounding WebP generations)…
+    expect(manipulateAsync).toHaveBeenNthCalledWith(
+      1,
       'file:///tmp/big.jpg',
       [{ resize: { width: 1200 } }],
       expect.objectContaining({ compress: 0.75, format: 'JPEG' }),
     );
+    // …and the FINAL encode converts to WebP exactly once, no further resize.
+    expect(manipulateAsync).toHaveBeenNthCalledWith(
+      2,
+      'file:///tmp/p1.jpeg',
+      [],
+      expect.objectContaining({ compress: 0.65, format: 'WEBP' }),
+    );
     expect(out).toEqual({
-      uri: 'file:///tmp/p1.jpeg',
-      sizeBytes: 1024 * 1024,
-      contentType: 'image/jpeg',
+      uri: 'file:///tmp/p1.webp',
+      sizeBytes: 700_000,
+      contentType: 'image/webp',
     });
   });
 
-  it('still-too-large after pass 1 runs pass 2 (width 800, 0.65)', async () => {
+  it('still-too-large after pass 1 runs pass 2 (width 800, 0.65) then emits WebP', async () => {
     let call = 0;
     getInfoAsync.mockImplementation(async () => {
       call += 1;
       if (call === 1) return { exists: true, size: 4 * 1024 * 1024 }; // source
       if (call === 2) return { exists: true, size: 2_500_000 }; // pass 1
-      return { exists: true, size: 1_500_000 }; // pass 2
+      if (call === 3) return { exists: true, size: 1_500_000 }; // pass 2
+      return { exists: true, size: 1_100_000 }; // final WebP output
     });
     manipulateAsync
       .mockResolvedValueOnce({ uri: 'file:///tmp/p1.jpeg' })
-      .mockResolvedValueOnce({ uri: 'file:///tmp/p2.jpeg' });
+      .mockResolvedValueOnce({ uri: 'file:///tmp/p2.jpeg' })
+      .mockResolvedValueOnce({ uri: 'file:///tmp/p2.webp' });
     const out = await compressIfNeeded('file:///tmp/big.jpg');
-    expect(manipulateAsync).toHaveBeenCalledTimes(2);
-    expect(manipulateAsync).toHaveBeenLastCalledWith(
+    expect(manipulateAsync).toHaveBeenCalledTimes(3);
+    expect(manipulateAsync).toHaveBeenNthCalledWith(
+      2,
       'file:///tmp/p1.jpeg',
       [{ resize: { width: 800 } }],
-      expect.objectContaining({ compress: 0.65 }),
+      expect.objectContaining({ compress: 0.65, format: 'JPEG' }),
     );
-    expect(out.uri).toBe('file:///tmp/p2.jpeg');
-    expect(out.contentType).toBe('image/jpeg');
+    expect(manipulateAsync).toHaveBeenLastCalledWith(
+      'file:///tmp/p2.jpeg',
+      [],
+      expect.objectContaining({ compress: 0.65, format: 'WEBP' }),
+    );
+    expect(out.uri).toBe('file:///tmp/p2.webp');
+    expect(out.contentType).toBe('image/webp');
   });
 
-  it('large WebP is recompressed to JPEG (contentType reflects final bytes)', async () => {
+  it('large WebP is downscaled and re-emitted as WebP (contentType reflects final bytes)', async () => {
     let call = 0;
     getInfoAsync.mockImplementation(async () => {
       call += 1;
       return call === 1
         ? { exists: true, size: 3 * 1024 * 1024 }
-        : { exists: true, size: 900_000 };
+        : call === 2
+          ? { exists: true, size: 900_000 }
+          : { exists: true, size: 600_000 };
     });
-    manipulateAsync.mockResolvedValue({ uri: 'file:///tmp/w.jpeg' });
+    manipulateAsync
+      .mockResolvedValueOnce({ uri: 'file:///tmp/w.jpeg' })
+      .mockResolvedValueOnce({ uri: 'file:///tmp/w.webp' });
     const out = await compressIfNeeded('file:///tmp/big.webp', 'image/webp');
-    expect(out.contentType).toBe('image/jpeg');
-    expect(out.uri).toBe('file:///tmp/w.jpeg');
+    expect(out.contentType).toBe('image/webp');
+    expect(out.uri).toBe('file:///tmp/w.webp');
   });
 
   it('throws ImageCompressError when 2 passes still exceed the limit', async () => {
@@ -205,7 +230,7 @@ describe('compressIfNeeded — the passthrough set is ALLOWED_MEDIA_TYPES, exact
     }
   });
 
-  it('normalizes every type OUTSIDE the set to JPEG — so adding one cannot go unnoticed', async () => {
+  it('normalizes every type OUTSIDE the set to WebP — so adding one cannot go unnoticed', async () => {
     const outsideTheSet = ['image/heic', 'image/gif', 'image/tiff', 'image/bmp', 'image/jpg'];
     for (const mime of outsideTheSet) {
       // Guard the guard: each of these must really be outside the shared list,
@@ -214,12 +239,12 @@ describe('compressIfNeeded — the passthrough set is ALLOWED_MEDIA_TYPES, exact
 
       getInfoAsync.mockResolvedValue({ exists: true, size: 500_000 });
       manipulateAsync.mockClear();
-      manipulateAsync.mockResolvedValue({ uri: 'file:///tmp/normalized.jpeg' });
+      manipulateAsync.mockResolvedValue({ uri: 'file:///tmp/normalized.webp' });
 
       const out = await compressIfNeeded('file:///tmp/photo.bin', mime);
       expect({ mime, contentType: out.contentType }).toEqual({
         mime,
-        contentType: 'image/jpeg',
+        contentType: 'image/webp',
       });
       expect(manipulateAsync).toHaveBeenCalledTimes(1);
     }

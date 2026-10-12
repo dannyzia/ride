@@ -1,14 +1,18 @@
 // Client-side compression engine for R2 uploads (plan: MIgrate File Uploads.md
 // Task 1). Guarantees no image > 2 MB is ever handed to the upload pipeline.
 // Format normalization: any source mime outside ALLOWED_MEDIA_TYPES (HEIC, GIF,
-// BMP, TIFF…) is converted to JPEG. That is deliberately the SAME list the presign
+// BMP, TIFF…) is converted to WebP. That is deliberately the SAME list the presign
 // route accepts, so the client cannot produce a type the route rejects — which
 // makes adding a member a two-sided change: the client would start passing that
 // type through UNCHANGED instead of normalizing it. That switch is pinned as a
 // deliberate decision by the passthrough-set tests in
 // lib/__tests__/imageCompress.test.ts, so a new member fails there first, not on a
-// device. A large WebP is recompressed to JPEG (not WebP) because the final
-// contentType must reflect the actual bytes.
+// device. A large allowed image (JPEG, PNG, WebP) is downscaled in JPEG
+// intermediates — never a WebP-on-WebP re-encode, which would compound
+// generational loss — and the FINAL encode emits WebP once, at the last pass's
+// quality. WebP over JPEG: ~25-35% smaller at equal quality on every upload,
+// zero bundle cost (SaveFormat.WEBP ships in expo-image-manipulator ~13.1.7).
+// Every consumer decodes WebP (Android native, iOS 14+, all browsers).
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { logger } from './logger';
@@ -52,17 +56,17 @@ export async function compressIfNeeded(
   try {
     let mime = sniffMime(uri, mimeType);
 
-    // Generalized HEIC rule: non-allowed mime → convert to JPEG regardless of
+    // Generalized HEIC rule: non-allowed mime → convert to WebP regardless of
     // size (a small GIF would pass the picker then 400 at the server).
     if (!mime || !ALLOWED_MIMES.has(mime)) {
       const out = await ImageManipulator.manipulateAsync(
         uri,
         [],
-        { compress: COMPRESS_PASS_1.compress, format: ImageManipulator.SaveFormat.JPEG },
+        { compress: COMPRESS_PASS_1.compress, format: ImageManipulator.SaveFormat.WEBP },
       );
       const info = await FileSystem.getInfoAsync(out.uri);
       if (!info.exists) throw new Error('compressed output missing');
-      return { uri: out.uri, sizeBytes: info.size ?? 0, contentType: 'image/jpeg' };
+      return { uri: out.uri, sizeBytes: info.size ?? 0, contentType: 'image/webp' };
     }
 
     const info = await FileSystem.getInfoAsync(uri);
@@ -74,7 +78,9 @@ export async function compressIfNeeded(
       return { uri, sizeBytes: size, contentType: mime };
     }
 
-    // Large allowed mime → Pass 1 (JPEG), re-check, Pass 2 if needed.
+    // Large allowed mime → Pass 1 (JPEG resize), re-check, Pass 2 if needed.
+    // Intermediates stay JPEG to avoid compounding lossy WebP generations;
+    // the FINAL encode converts to WebP exactly once.
     let current = uri;
     let currentSize = size;
     for (const pass of [COMPRESS_PASS_1, COMPRESS_PASS_2]) {
@@ -94,7 +100,15 @@ export async function compressIfNeeded(
       throw new ImageCompressError('Image could not be compressed under 2MB — try another photo');
     }
 
-    return { uri: current, sizeBytes: currentSize, contentType: 'image/jpeg' };
+    const out = await ImageManipulator.manipulateAsync(
+      current,
+      [],
+      { compress: COMPRESS_PASS_2.compress, format: ImageManipulator.SaveFormat.WEBP },
+    );
+    const outInfo = await FileSystem.getInfoAsync(out.uri);
+    if (!outInfo.exists) throw new Error('compressed output missing');
+
+    return { uri: out.uri, sizeBytes: outInfo.size ?? 0, contentType: 'image/webp' };
   } catch (err) {
     if (err instanceof ImageCompressError) throw err;
     logger.error('[imageCompress] failed', err);
